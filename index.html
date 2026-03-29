@@ -18,16 +18,18 @@
   .score-title { font-size: 11px; color: rgba(255,255,255,0.6); text-align: center; }
   .section-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
   .historique { max-height: 220px; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .historique::-webkit-scrollbar { width: 4px; }
+  .historique::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
   .meal-card { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
   .meal-photo { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,0.1); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
   .meal-info { flex: 1; min-width: 0; }
   .meal-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .meal-ingredients { font-size: 11px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .meal-date { font-size: 10px; color: rgba(255,255,255,0.35); flex-shrink: 0; }
-  .meal-delete { background: none; border: none; color: rgba(255,80,80,0.6); cursor: pointer; font-size: 14px; padding: 2px 4px; }
+  .meal-delete { background: none; border: none; color: rgba(255,80,80,0.6); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 6px; }
   .meal-delete:hover { color: rgba(255,80,80,1); }
   .empty-state { text-align: center; color: rgba(255,255,255,0.3); font-size: 13px; padding: 30px 0; }
-  .btn-add { width: 100%; padding: 13px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-add { width: 100%; padding: 13px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
   .btn-add:hover { background: rgba(255,255,255,0.18); }
   .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
   .popup-overlay.active { display: flex; }
@@ -36,17 +38,21 @@
   .popup-close { float: right; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 20px; cursor: pointer; }
   .form-label { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; display: block; }
   .form-input { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 10px 12px; color: #fff; font-size: 13px; margin-bottom: 14px; outline: none; }
+  .form-input:focus { border-color: rgba(255,255,255,0.4); }
   .form-input::placeholder { color: rgba(255,255,255,0.25); }
   .photo-btns { display: flex; gap: 8px; margin-bottom: 14px; }
-  .photo-btn { flex: 1; padding: 10px; background: rgba(255,255,255,0.07); border: 1px dashed rgba(255,255,255,0.25); border-radius: 10px; color: rgba(255,255,255,0.7); font-size: 12px; cursor: pointer; text-align: center; }
+  .photo-btn { flex: 1; padding: 10px; background: rgba(255,255,255,0.07); border: 1px dashed rgba(255,255,255,0.25); border-radius: 10px; color: rgba(255,255,255,0.7); font-size: 12px; cursor: pointer; text-align: center; transition: background 0.2s; }
+  .photo-btn:hover { background: rgba(255,255,255,0.12); }
   .photo-btn .icon { font-size: 20px; display: block; margin-bottom: 4px; }
   .photo-preview { width: 100%; height: 120px; border-radius: 10px; object-fit: cover; margin-bottom: 14px; display: none; }
   .photo-preview.visible { display: block; }
   .ingredient-row { display: flex; gap: 8px; margin-bottom: 8px; }
   .ingredient-row .form-input { margin-bottom: 0; flex: 1; }
   .ingredient-row .qty { width: 80px; flex: none; }
-  .btn-add-ing { width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px; color: rgba(255,255,255,0.5); font-size: 12px; cursor: pointer; margin-bottom: 16px; }
-  .btn-save { width: 100%; padding: 13px; background: linear-gradient(135deg, #4CAF50, #2e7d32); border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .btn-add-ing { width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px; color: rgba(255,255,255,0.5); font-size: 12px; cursor: pointer; margin-bottom: 16px; transition: background 0.2s; }
+  .btn-add-ing:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .btn-save { width: 100%; padding: 13px; background: linear-gradient(135deg, #4CAF50, #2e7d32); border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+  .btn-save:hover { opacity: 0.9; }
   .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
   .loading { text-align: center; padding: 20px; color: rgba(255,255,255,0.4); font-size: 13px; }
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: #333; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 2000; transition: transform 0.3s; }
@@ -140,6 +146,7 @@
   const USER_ID = params.get("userId");
   console.log("USER_ID depuis URL:", USER_ID);
 
+  let photoFile = null;
   let photoBase64 = null;
 
   if (USER_ID && USER_ID !== "null") {
@@ -227,8 +234,19 @@
       const pertinence = Math.min(100, (recents.length / 21) * 100);
       const avecIng = recents.filter(m => m.meal_ingredients && m.meal_ingredients.length > 0);
       const qualite = recents.length > 0 ? Math.min(100, (avecIng.length / recents.length) * 100) : 0;
-      const scoreData = { user_id: USER_ID, variety_score: Math.round(variete), quality_score: Math.round(qualite), relevance_score: Math.round(pertinence), score_date: new Date().toISOString().split("T")[0], calculated_at: new Date().toISOString() };
-      await supabase("nutrition_scores", { method: "POST", headers: { "Prefer": "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(scoreData) });
+      const scoreData = {
+        user_id: USER_ID,
+        variety_score: Math.round(variete),
+        quality_score: Math.round(qualite),
+        relevance_score: Math.round(pertinence),
+        score_date: new Date().toISOString().split("T")[0],
+        calculated_at: new Date().toISOString()
+      };
+      await supabase("nutrition_scores", {
+        method: "POST",
+        headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify(scoreData)
+      });
       afficherScore("Variete", scoreData.variety_score, "#4CAF50");
       afficherScore("Qualite", scoreData.quality_score, "#FF9800");
       afficherScore("Pertinence", scoreData.relevance_score, "#F44336");
@@ -243,6 +261,7 @@
     document.getElementById("inputNom").value = "";
     document.getElementById("photoPreview").classList.remove("visible");
     document.getElementById("ingredientsList").innerHTML = '<div class="ingredient-row"><input class="form-input" type="text" placeholder="Nom de l\'ingrédient"><input class="form-input qty" type="number" placeholder="g" min="0"></div>';
+    photoFile = null;
     photoBase64 = null;
   }
 
@@ -257,6 +276,7 @@
   function previewPhoto(input) {
     const file = input.files[0];
     if (!file) return;
+    photoFile = file;
     const reader = new FileReader();
     reader.onload = (e) => {
       photoBase64 = e.target.result;
@@ -267,14 +287,21 @@
     reader.readAsDataURL(file);
   }
 
-  async function uploadPhotoCloudinary(base64) {
-    const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD + "/image/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file: base64, upload_preset: CLOUDINARY_PRESET })
-    });
+  async function uploadPhotoCloudinary(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", CLOUDINARY_PRESET);
+
+    const res = await fetch(
+      "https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD + "/image/upload",
+      {
+        method: "POST",
+        body: formData
+      }
+    );
     const data = await res.json();
-    if (!data.secure_url) throw new Error("Upload photo échoué");
+    console.log("Cloudinary response:", JSON.stringify(data));
+    if (!data.secure_url) throw new Error("Upload échoué: " + (data.error ? data.error.message : JSON.stringify(data)));
     return data.secure_url;
   }
 
@@ -286,8 +313,19 @@
     btn.disabled = true; btn.textContent = "Enregistrement...";
     try {
       let photoUrl = null;
-      if (photoBase64) { btn.textContent = "Upload photo..."; photoUrl = await uploadPhotoCloudinary(photoBase64); }
-      const [meal] = await supabase("meals", { method: "POST", body: JSON.stringify({ user_id: USER_ID, name: nom, photo_url: photoUrl, meal_date: new Date().toISOString().split("T")[0] }) });
+      if (photoFile) {
+        btn.textContent = "Upload photo...";
+        photoUrl = await uploadPhotoCloudinary(photoFile);
+      }
+      const [meal] = await supabase("meals", {
+        method: "POST",
+        body: JSON.stringify({
+          user_id: USER_ID,
+          name: nom,
+          photo_url: photoUrl,
+          meal_date: new Date().toISOString().split("T")[0]
+        })
+      });
       const rows = document.querySelectorAll("#ingredientsList .ingredient-row");
       const ingredients = [];
       rows.forEach(row => {
