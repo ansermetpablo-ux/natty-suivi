@@ -1,40 +1,401 @@
-import { currentMember } from 'wix-members-backend';
-
-const SUPABASE_URL = "https://hrsvcelmwdlcswwagxfa.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w";
-
-export async function getMembreId() {
-  try {
-    const member = await currentMember.getMember();
-    return member ? member._id : null;
-  } catch(e) {
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: transparent; color: #fff; padding: 12px; }
+  .container { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; }
+  h2 { text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+  .scores { display: flex; justify-content: space-around; margin-bottom: 20px; }
+  .score-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .score-circle { position: relative; width: 80px; height: 80px; }
+  .score-circle svg { transform: rotate(-90deg); }
+  .score-circle .bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 8; }
+  .score-circle .fg { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 1s ease; }
+  .score-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 13px; font-weight: 700; text-align: center; }
+  .score-title { font-size: 11px; color: rgba(255,255,255,0.6); text-align: center; }
+  .section-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .historique { max-height: 220px; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .historique::-webkit-scrollbar { width: 4px; }
+  .historique::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+  .meal-card { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+  .meal-photo { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,0.1); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .meal-info { flex: 1; min-width: 0; }
+  .meal-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meal-ingredients { font-size: 11px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meal-date { font-size: 10px; color: rgba(255,255,255,0.35); flex-shrink: 0; }
+  .meal-delete { background: none; border: none; color: rgba(255,80,80,0.6); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 6px; }
+  .meal-delete:hover { color: rgba(255,80,80,1); }
+  .empty-state { text-align: center; color: rgba(255,255,255,0.3); font-size: 13px; padding: 30px 0; }
+  .btn-add { width: 100%; padding: 13px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .btn-add:hover { background: rgba(255,255,255,0.18); }
+  .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
+  .popup-overlay.active { display: flex; }
+  .popup { background: #1a1a2e; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 24px; width: 100%; max-width: 380px; max-height: 85vh; overflow-y: auto; }
+  .popup h3 { font-size: 16px; font-weight: 700; margin-bottom: 18px; text-align: center; }
+  .popup-close { float: right; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 20px; cursor: pointer; }
+  .form-label { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; display: block; }
+  .form-input { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 10px 12px; color: #fff; font-size: 13px; margin-bottom: 14px; outline: none; }
+  .form-input:focus { border-color: rgba(255,255,255,0.4); }
+  .form-input::placeholder { color: rgba(255,255,255,0.25); }
+  .photo-btns { display: flex; gap: 8px; margin-bottom: 14px; }
+  .photo-btn { flex: 1; padding: 10px; background: rgba(255,255,255,0.07); border: 1px dashed rgba(255,255,255,0.25); border-radius: 10px; color: rgba(255,255,255,0.7); font-size: 12px; cursor: pointer; text-align: center; transition: background 0.2s; }
+  .photo-btn:hover { background: rgba(255,255,255,0.12); }
+  .photo-btn .icon { font-size: 20px; display: block; margin-bottom: 4px; }
+  .photo-preview { width: 100%; height: 120px; border-radius: 10px; object-fit: cover; margin-bottom: 14px; display: none; }
+  .photo-preview.visible { display: block; }
+  .ingredient-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .ingredient-row .form-input { margin-bottom: 0; flex: 1; }
+  .ingredient-row .qty { width: 80px; flex: none; }
+  .btn-add-ing { width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px; color: rgba(255,255,255,0.5); font-size: 12px; cursor: pointer; margin-bottom: 16px; transition: background 0.2s; }
+  .btn-add-ing:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .btn-save { width: 100%; padding: 13px; background: linear-gradient(135deg, #4CAF50, #2e7d32); border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+  .btn-save:hover { opacity: 0.9; }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+  .loading { text-align: center; padding: 20px; color: rgba(255,255,255,0.4); font-size: 13px; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: #333; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 2000; transition: transform 0.3s; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: #2e7d32; }
+  .toast.error { background: #c62828; }
+  input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>Mon alimentation</h2>
+  <div class="scores">
+    <div class="score-item">
+      <div class="score-circle">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle class="bg" cx="40" cy="40" r="32"/>
+          <circle class="fg" id="circleVariete" cx="40" cy="40" r="32" stroke="#4CAF50" stroke-dasharray="0 201"/>
+        </svg>
+        <div class="score-label" id="labelVariete">–</div>
+      </div>
+      <div class="score-title">Variété</div>
+    </div>
+    <div class="score-item">
+      <div class="score-circle">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle class="bg" cx="40" cy="40" r="32"/>
+          <circle class="fg" id="circleQualite" cx="40" cy="40" r="32" stroke="#FF9800" stroke-dasharray="0 201"/>
+        </svg>
+        <div class="score-label" id="labelQualite">–</div>
+      </div>
+      <div class="score-title">Qualité</div>
+    </div>
+    <div class="score-item">
+      <div class="score-circle">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle class="bg" cx="40" cy="40" r="32"/>
+          <circle class="fg" id="circlePertinence" cx="40" cy="40" r="32" stroke="#F44336" stroke-dasharray="0 201"/>
+        </svg>
+        <div class="score-label" id="labelPertinence">–</div>
+      </div>
+      <div class="score-title">Pertinence</div>
+    </div>
+  </div>
+  <div class="section-title">Historique</div>
+  <div class="historique" id="historique">
+    <div class="loading">Chargement...</div>
+  </div>
+  <button class="btn-add" onclick="ouvrirPopup()">+ Ajouter un plat</button>
+</div>
+ 
+<div class="popup-overlay" id="popupOverlay" onclick="fermerPopupOverlay(event)">
+  <div class="popup">
+    <button class="popup-close" onclick="fermerPopup()">✕</button>
+    <h3>Ajouter un plat</h3>
+    <label class="form-label">Nom du plat</label>
+    <input class="form-input" id="inputNom" type="text" placeholder="Ex: Poulet rôti aux légumes">
+    <label class="form-label">Photo du plat</label>
+    <div class="photo-btns">
+      <div class="photo-btn" onclick="document.getElementById('inputCamera').click()">
+        <span class="icon">📷</span>Prendre une photo
+      </div>
+      <div class="photo-btn" onclick="document.getElementById('inputGalerie').click()">
+        <span class="icon">🖼️</span>Depuis la galerie
+      </div>
+    </div>
+    <input type="file" id="inputCamera" accept="image/*" capture="environment" onchange="previewPhoto(this)">
+    <input type="file" id="inputGalerie" accept="image/*" onchange="previewPhoto(this)">
+    <img class="photo-preview" id="photoPreview" alt="Aperçu">
+    <label class="form-label">Ingrédients</label>
+    <div id="ingredientsList">
+      <div class="ingredient-row">
+        <input class="form-input" type="text" placeholder="Nom de l'ingrédient">
+        <input class="form-input qty" type="number" placeholder="g" min="0">
+      </div>
+    </div>
+    <button class="btn-add-ing" onclick="ajouterLigneIngredient()">+ Ajouter un ingrédient</button>
+    <button class="btn-save" id="btnSave" onclick="enregistrerPlat()">Enregistrer</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+ 
+<script>
+  const SUPABASE_URL = "https://hrsvcelmwdlcswwagxfa.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w";
+  const CLOUDINARY_CLOUD = "dujji1s6g";
+  const CLOUDINARY_PRESET = "meal_photos";
+ 
+  let USER_ID = null;
+  let photoFile = null;
+ 
+  // Récupérer le token ou userId depuis l'URL
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+  const userIdParam = params.get("userId");
+ 
+  async function resolveUserId() {
+    // Si userId direct dans l'URL (fallback)
+    if (userIdParam && userIdParam !== "null" && userIdParam !== "PLACEHOLDER") {
+      console.log("userId direct:", userIdParam);
+      return userIdParam;
+    }
+    // Si token dans l'URL
+    if (token) {
+      try {
+        const res = await fetch(
+          SUPABASE_URL + "/rest/v1/auth_tokens?token=eq." + token + "&select=user_id,expires_at",
+          {
+            headers: {
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY
+            }
+          }
+        );
+        const data = await res.json();
+        console.log("Token résolu:", JSON.stringify(data));
+        if (data && data.length > 0) {
+          const expiry = new Date(data[0].expires_at);
+          if (expiry > new Date()) {
+            return data[0].user_id;
+          } else {
+            console.log("Token expiré");
+          }
+        }
+      } catch(e) {
+        console.log("Erreur token:", e.message);
+      }
+    }
     return null;
   }
-}
-
-export async function creerToken(userId) {
-  try {
-    const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-
-    const res = await fetch(SUPABASE_URL + "/rest/v1/auth_tokens", {
-      method: "POST",
+ 
+  // Initialiser
+  resolveUserId().then(id => {
+    console.log("USER_ID final:", id);
+    if (id) {
+      USER_ID = id;
+      init();
+    } else {
+      document.getElementById("historique").innerHTML =
+        '<div class="empty-state">Connectez-vous pour voir votre suivi</div>';
+    }
+  });
+ 
+  async function init() {
+    document.getElementById("historique").innerHTML = '<div class="loading">Chargement...</div>';
+    await Promise.all([chargerRepas(), chargerScores()]);
+  }
+ 
+  async function supabase(path, options = {}) {
+    const res = await fetch(SUPABASE_URL + "/rest/v1/" + path, {
+      ...options,
       headers: {
         "apikey": SUPABASE_KEY,
         "Authorization": "Bearer " + SUPABASE_KEY,
         "Content-Type": "application/json",
-        "Prefer": "return=representation"
-      },
-      body: JSON.stringify({
-        token: token,
-        user_id: userId,
-        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
-      })
+        "Prefer": "return=representation",
+        ...(options.headers || {})
+      }
     });
-
-    const data = await res.json();
-    if (data && data.length > 0) return data[0].token;
-    throw new Error("Token non créé");
-  } catch(e) {
-    return null;
+    if (!res.ok) throw new Error(await res.text());
+    const text = await res.text();
+    return text ? JSON.parse(text) : [];
   }
-}
+ 
+  async function chargerRepas() {
+    try {
+      const meals = await supabase("meals?user_id=eq." + USER_ID + "&select=*,meal_ingredients(*)&order=created_at.desc");
+      afficherRepas(meals);
+    } catch(e) {
+      document.getElementById("historique").innerHTML = '<div class="empty-state">Erreur de chargement</div>';
+    }
+  }
+ 
+  function afficherRepas(meals) {
+    const el = document.getElementById("historique");
+    if (!meals || meals.length === 0) {
+      el.innerHTML = '<div class="empty-state">Aucun plat enregistré<br>Ajoutez votre premier repas !</div>';
+      return;
+    }
+    el.innerHTML = meals.map(meal => {
+      const ings = meal.meal_ingredients || [];
+      const ingText = ings.map(i => i.name + " " + i.quantity_g + "g").join(", ") || "Aucun ingrédient";
+      const date = new Date(meal.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+      const photo = meal.photo_url
+        ? '<img src="' + meal.photo_url + '" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">'
+        : '<div class="meal-photo">🍽️</div>';
+      return '<div class="meal-card">' + photo + '<div class="meal-info"><div class="meal-name">' + meal.name + '</div><div class="meal-ingredients">' + ingText + '</div></div><div class="meal-date">' + date + '</div><button class="meal-delete" onclick="supprimerRepas(\'' + meal.id + '\')">🗑</button></div>';
+    }).join("");
+  }
+ 
+  async function chargerScores() {
+    try {
+      const scores = await supabase("nutrition_scores?user_id=eq." + USER_ID + "&order=calculated_at.desc&limit=1");
+      if (scores && scores.length > 0) {
+        afficherScore("Variete", scores[0].variety_score, "#4CAF50");
+        afficherScore("Qualite", scores[0].quality_score, "#FF9800");
+        afficherScore("Pertinence", scores[0].relevance_score, "#F44336");
+      }
+    } catch(e) {}
+  }
+ 
+  function afficherScore(nom, valeur, couleur) {
+    const pct = Math.round(valeur || 0);
+    const dash = (pct / 100) * (2 * Math.PI * 32);
+    const circle = document.getElementById("circle" + nom);
+    const label = document.getElementById("label" + nom);
+    if (circle) { circle.style.strokeDasharray = dash + " 201"; circle.style.stroke = couleur; }
+    if (label) label.textContent = pct + "%";
+  }
+ 
+  async function recalculerScores() {
+    try {
+      const meals = await supabase("meals?user_id=eq." + USER_ID + "&select=*,meal_ingredients(*)&order=created_at.desc&limit=30");
+      const sept = new Date(); sept.setDate(sept.getDate() - 7);
+      const recents = meals.filter(m => new Date(m.created_at) > sept);
+      const uniques = new Set();
+      recents.forEach(m => (m.meal_ingredients || []).forEach(i => uniques.add(i.name.toLowerCase())));
+      const variete = Math.min(100, (uniques.size / 15) * 100);
+      const pertinence = Math.min(100, (recents.length / 21) * 100);
+      const avecIng = recents.filter(m => m.meal_ingredients && m.meal_ingredients.length > 0);
+      const qualite = recents.length > 0 ? Math.min(100, (avecIng.length / recents.length) * 100) : 0;
+      const scoreData = {
+        user_id: USER_ID,
+        variety_score: Math.round(variete),
+        quality_score: Math.round(qualite),
+        relevance_score: Math.round(pertinence),
+        score_date: new Date().toISOString().split("T")[0],
+        calculated_at: new Date().toISOString()
+      };
+      await supabase("nutrition_scores", {
+        method: "POST",
+        headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify(scoreData)
+      });
+      afficherScore("Variete", scoreData.variety_score, "#4CAF50");
+      afficherScore("Qualite", scoreData.quality_score, "#FF9800");
+      afficherScore("Pertinence", scoreData.relevance_score, "#F44336");
+    } catch(e) {}
+  }
+ 
+  function ouvrirPopup() { document.getElementById("popupOverlay").classList.add("active"); resetPopup(); }
+  function fermerPopup() { document.getElementById("popupOverlay").classList.remove("active"); }
+  function fermerPopupOverlay(e) { if (e.target === document.getElementById("popupOverlay")) fermerPopup(); }
+ 
+  function resetPopup() {
+    document.getElementById("inputNom").value = "";
+    document.getElementById("photoPreview").classList.remove("visible");
+    document.getElementById("ingredientsList").innerHTML = '<div class="ingredient-row"><input class="form-input" type="text" placeholder="Nom de l\'ingrédient"><input class="form-input qty" type="number" placeholder="g" min="0"></div>';
+    photoFile = null;
+  }
+ 
+  function ajouterLigneIngredient() {
+    const list = document.getElementById("ingredientsList");
+    const row = document.createElement("div");
+    row.className = "ingredient-row";
+    row.innerHTML = '<input class="form-input" type="text" placeholder="Nom de l\'ingrédient"><input class="form-input qty" type="number" placeholder="g" min="0">';
+    list.appendChild(row);
+  }
+ 
+  function previewPhoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    photoFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const preview = document.getElementById("photoPreview");
+      preview.src = e.target.result;
+      preview.classList.add("visible");
+    };
+    reader.readAsDataURL(file);
+  }
+ 
+  async function uploadPhotoCloudinary(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", CLOUDINARY_PRESET);
+    const res = await fetch(
+      "https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD + "/image/upload",
+      { method: "POST", body: formData }
+    );
+    const data = await res.json();
+    console.log("Cloudinary:", JSON.stringify(data));
+    if (!data.secure_url) throw new Error(data.error ? data.error.message : "Upload échoué");
+    return data.secure_url;
+  }
+ 
+  async function enregistrerPlat() {
+    if (!USER_ID) { showToast("Utilisateur non connecté", "error"); return; }
+    const nom = document.getElementById("inputNom").value.trim();
+    if (!nom) { showToast("Donne un nom à ton plat !", "error"); return; }
+    const btn = document.getElementById("btnSave");
+    btn.disabled = true; btn.textContent = "Enregistrement...";
+    try {
+      let photoUrl = null;
+      if (photoFile) {
+        btn.textContent = "Upload photo...";
+        photoUrl = await uploadPhotoCloudinary(photoFile);
+      }
+      const [meal] = await supabase("meals", {
+        method: "POST",
+        body: JSON.stringify({
+          user_id: USER_ID,
+          name: nom,
+          photo_url: photoUrl,
+          meal_date: new Date().toISOString().split("T")[0]
+        })
+      });
+      const rows = document.querySelectorAll("#ingredientsList .ingredient-row");
+      const ingredients = [];
+      rows.forEach(row => {
+        const inputs = row.querySelectorAll("input");
+        const ingNom = inputs[0].value.trim();
+        const qte = parseFloat(inputs[1].value);
+        if (ingNom && qte > 0) ingredients.push({ meal_id: meal.id, name: ingNom, quantity_g: qte });
+      });
+      if (ingredients.length > 0) await supabase("meal_ingredients", { method: "POST", body: JSON.stringify(ingredients) });
+      await recalculerScores();
+      await chargerRepas();
+      fermerPopup();
+      showToast("Plat enregistré !", "success");
+    } catch(e) {
+      showToast("Erreur : " + e.message, "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "Enregistrer";
+    }
+  }
+ 
+  async function supprimerRepas(mealId) {
+    if (!confirm("Supprimer ce repas ?")) return;
+    try {
+      await supabase("meals?id=eq." + mealId, { method: "DELETE" });
+      await recalculerScores();
+      await chargerRepas();
+      showToast("Repas supprimé", "success");
+    } catch(e) { showToast("Erreur lors de la suppression", "error"); }
+  }
+ 
+  function showToast(msg, type) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.className = "toast " + (type || "");
+    setTimeout(() => t.classList.add("show"), 10);
+    setTimeout(() => t.classList.remove("show"), 3000);
+  }
+</script>
+</body>
+</html>
