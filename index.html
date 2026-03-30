@@ -103,7 +103,7 @@
   </div>
   <button class="btn-add" onclick="ouvrirPopup()">+ Ajouter un plat</button>
 </div>
- 
+
 <div class="popup-overlay" id="popupOverlay" onclick="fermerPopupOverlay(event)">
   <div class="popup">
     <button class="popup-close" onclick="fermerPopup()">✕</button>
@@ -134,32 +134,29 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
- 
+
 <script>
   const SUPABASE_URL = "https://hrsvcelmwdlcswwagxfa.supabase.co";
   const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w";
   const CLOUDINARY_CLOUD = "dujji1s6g";
   const CLOUDINARY_PRESET = "meal_photos";
- 
+
   let USER_ID = null;
   let photoFile = null;
- 
-  // Récupérer le token ou userId depuis l'URL
+
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
   const userIdParam = params.get("userId");
- 
+
   async function resolveUserId() {
-    // Si userId direct dans l'URL (fallback)
     if (userIdParam && userIdParam !== "null" && userIdParam !== "PLACEHOLDER") {
       console.log("userId direct:", userIdParam);
       return userIdParam;
     }
-    // Si token dans l'URL
     if (token) {
       try {
         const res = await fetch(
-          SUPABASE_URL + "/rest/v1/auth_tokens?token=eq." + token + "&select=user_id,expires_at",
+          SUPABASE_URL + "/rest/v1/auth_tokens?token=eq." + token + "&select=user_id",
           {
             headers: {
               "apikey": SUPABASE_KEY,
@@ -170,12 +167,7 @@
         const data = await res.json();
         console.log("Token résolu:", JSON.stringify(data));
         if (data && data.length > 0) {
-          const expiry = new Date(data[0].expires_at);
-          if (expiry > new Date()) {
-            return data[0].user_id;
-          } else {
-            console.log("Token expiré");
-          }
+          return data[0].user_id;
         }
       } catch(e) {
         console.log("Erreur token:", e.message);
@@ -183,8 +175,7 @@
     }
     return null;
   }
- 
-  // Initialiser
+
   resolveUserId().then(id => {
     console.log("USER_ID final:", id);
     if (id) {
@@ -195,12 +186,12 @@
         '<div class="empty-state">Connectez-vous pour voir votre suivi</div>';
     }
   });
- 
+
   async function init() {
     document.getElementById("historique").innerHTML = '<div class="loading">Chargement...</div>';
     await Promise.all([chargerRepas(), chargerScores()]);
   }
- 
+
   async function supabase(path, options = {}) {
     const res = await fetch(SUPABASE_URL + "/rest/v1/" + path, {
       ...options,
@@ -216,7 +207,7 @@
     const text = await res.text();
     return text ? JSON.parse(text) : [];
   }
- 
+
   async function chargerRepas() {
     try {
       const meals = await supabase("meals?user_id=eq." + USER_ID + "&select=*,meal_ingredients(*)&order=created_at.desc");
@@ -225,7 +216,7 @@
       document.getElementById("historique").innerHTML = '<div class="empty-state">Erreur de chargement</div>';
     }
   }
- 
+
   function afficherRepas(meals) {
     const el = document.getElementById("historique");
     if (!meals || meals.length === 0) {
@@ -242,7 +233,7 @@
       return '<div class="meal-card">' + photo + '<div class="meal-info"><div class="meal-name">' + meal.name + '</div><div class="meal-ingredients">' + ingText + '</div></div><div class="meal-date">' + date + '</div><button class="meal-delete" onclick="supprimerRepas(\'' + meal.id + '\')">🗑</button></div>';
     }).join("");
   }
- 
+
   async function chargerScores() {
     try {
       const scores = await supabase("nutrition_scores?user_id=eq." + USER_ID + "&order=calculated_at.desc&limit=1");
@@ -253,7 +244,7 @@
       }
     } catch(e) {}
   }
- 
+
   function afficherScore(nom, valeur, couleur) {
     const pct = Math.round(valeur || 0);
     const dash = (pct / 100) * (2 * Math.PI * 32);
@@ -262,7 +253,7 @@
     if (circle) { circle.style.strokeDasharray = dash + " 201"; circle.style.stroke = couleur; }
     if (label) label.textContent = pct + "%";
   }
- 
+
   async function recalculerScores() {
     try {
       const meals = await supabase("meals?user_id=eq." + USER_ID + "&select=*,meal_ingredients(*)&order=created_at.desc&limit=30");
@@ -292,18 +283,18 @@
       afficherScore("Pertinence", scoreData.relevance_score, "#F44336");
     } catch(e) {}
   }
- 
+
   function ouvrirPopup() { document.getElementById("popupOverlay").classList.add("active"); resetPopup(); }
   function fermerPopup() { document.getElementById("popupOverlay").classList.remove("active"); }
   function fermerPopupOverlay(e) { if (e.target === document.getElementById("popupOverlay")) fermerPopup(); }
- 
+
   function resetPopup() {
     document.getElementById("inputNom").value = "";
     document.getElementById("photoPreview").classList.remove("visible");
     document.getElementById("ingredientsList").innerHTML = '<div class="ingredient-row"><input class="form-input" type="text" placeholder="Nom de l\'ingrédient"><input class="form-input qty" type="number" placeholder="g" min="0"></div>';
     photoFile = null;
   }
- 
+
   function ajouterLigneIngredient() {
     const list = document.getElementById("ingredientsList");
     const row = document.createElement("div");
@@ -311,7 +302,7 @@
     row.innerHTML = '<input class="form-input" type="text" placeholder="Nom de l\'ingrédient"><input class="form-input qty" type="number" placeholder="g" min="0">';
     list.appendChild(row);
   }
- 
+
   function previewPhoto(input) {
     const file = input.files[0];
     if (!file) return;
@@ -324,7 +315,7 @@
     };
     reader.readAsDataURL(file);
   }
- 
+
   async function uploadPhotoCloudinary(file) {
     const formData = new FormData();
     formData.append("file", file);
@@ -338,7 +329,7 @@
     if (!data.secure_url) throw new Error(data.error ? data.error.message : "Upload échoué");
     return data.secure_url;
   }
- 
+
   async function enregistrerPlat() {
     if (!USER_ID) { showToast("Utilisateur non connecté", "error"); return; }
     const nom = document.getElementById("inputNom").value.trim();
@@ -379,7 +370,7 @@
       btn.disabled = false; btn.textContent = "Enregistrer";
     }
   }
- 
+
   async function supprimerRepas(mealId) {
     if (!confirm("Supprimer ce repas ?")) return;
     try {
@@ -389,7 +380,7 @@
       showToast("Repas supprimé", "success");
     } catch(e) { showToast("Erreur lors de la suppression", "error"); }
   }
- 
+
   function showToast(msg, type) {
     const t = document.getElementById("toast");
     t.textContent = msg; t.className = "toast " + (type || "");
