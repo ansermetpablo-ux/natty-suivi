@@ -15,13 +15,13 @@ export default async function handler(req) {
   }
 
   try {
-    const { searchParams } = new URL(req.url);
-    const path = searchParams.get('path') || '';
+    const reqUrl = new URL(req.url);
+    const path = reqUrl.searchParams.get('path') || '';
     const url = SUPABASE_URL + '/rest/v1/' + path;
 
-    const body = req.method !== 'GET' && req.method !== 'DELETE'
+    const body = (req.method !== 'GET' && req.method !== 'DELETE')
       ? await req.text()
-      : undefined;
+      : null;
 
     const response = await fetch(url, {
       method: req.method,
@@ -31,21 +31,22 @@ export default async function handler(req) {
         'Content-Type': 'application/json',
         'Prefer': 'return=representation'
       },
-      body: body
+      body: body || undefined
     });
 
     const text = await response.text();
 
     return new Response(text, {
       status: response.status,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ 
+      error: err.message,
+      stack: err.stack,
+      url: req.url
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
