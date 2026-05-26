@@ -471,9 +471,9 @@
     await Promise.all([chargerRepas(), chargerScores()]);
   }
 
-  // ── PROXY VERCEL — toutes les requêtes passent par /api/supabase ──
+  // ── PROXY CLOUDFLARE — toutes les requêtes passent par Cloudflare Workers ──
   async function supabase(path, options = {}) {
-    const res = await fetch("/api/supabase?path=" + encodeURIComponent(path), {
+    const res = await fetch("https://natty-suivi.ansermet-pablo.workers.dev?path=" + encodeURIComponent(path), {
       method: options.method || "GET",
       headers: {
         "Content-Type": "application/json",
