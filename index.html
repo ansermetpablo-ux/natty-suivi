@@ -5,699 +5,677 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
- 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: #f0f0f3;
-    min-height: 100vh;
-    padding: 20px 16px 40px;
-    position: relative;
-  }
- 
-  .bg-pattern {
-    position: fixed; inset: 0;
-    background-color: #f0f0f3;
-    background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0);
-    background-size: 26px 26px;
-    z-index: 0;
-  }
- 
-  .wrapper {
-    position: relative; z-index: 1;
-    max-width: 480px; margin: 0 auto;
-    display: flex; flex-direction: column; gap: 14px;
-  }
- 
-  .page-title {
-    font-size: 10px; letter-spacing: 1.6px; color: #aaa;
-    text-transform: uppercase; padding: 0 2px;
-  }
-  .page-heading {
-    font-size: 22px; font-weight: 600; color: #3a3a4a; letter-spacing: -0.5px;
-    margin-top: 2px;
-  }
- 
-  .card {
-    background: #f0f0f3; border-radius: 22px; padding: 22px;
-    box-shadow: 6px 6px 16px rgba(174,174,192,0.42), -6px -6px 16px rgba(255,255,255,0.88);
-  }
- 
-  .card-label {
-    font-size: 10px; letter-spacing: 1.4px; color: #aaa;
-    text-transform: uppercase; margin-bottom: 18px;
-  }
- 
-  .scores {
-    display: flex; justify-content: space-around; align-items: center;
-  }
- 
-  .score-item {
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
-  }
- 
-  .score-circle-wrap {
-    position: relative; width: 86px; height: 86px;
-    background: #f0f0f3; border-radius: 50%;
-    box-shadow: 5px 5px 12px rgba(174,174,192,0.45), -5px -5px 12px rgba(255,255,255,0.9);
-    display: flex; align-items: center; justify-content: center;
-  }
- 
-  .score-circle-wrap svg {
-    position: absolute; inset: 0;
-    transform: rotate(-90deg);
-    width: 86px; height: 86px;
-  }
- 
-  .score-circle-wrap .bg {
-    fill: none;
-    stroke: rgba(180,180,192,0.2);
-    stroke-width: 7;
-  }
- 
-  .score-circle-wrap .fg {
-    fill: none;
-    stroke-width: 7;
-    stroke-linecap: round;
-    transition: stroke-dasharray 1.2s ease, stroke 0.5s ease;
-  }
- 
-  .score-label {
-    position: relative; z-index: 1;
-    font-size: 14px; font-weight: 600; color: #3a3a4a;
-    text-align: center;
-  }
- 
-  .score-title {
-    font-size: 11px; color: #aaa; text-align: center;
-    letter-spacing: 0.5px;
-  }
- 
-  .section-label {
-    font-size: 10px; letter-spacing: 1.6px; color: #aaa;
-    text-transform: uppercase; padding: 0 2px;
-  }
- 
-  .historique {
-    display: flex; flex-direction: column; gap: 10px;
-    max-height: 340px; overflow-y: auto;
-    padding-right: 2px;
-  }
- 
-  .historique::-webkit-scrollbar { width: 3px; }
-  .historique::-webkit-scrollbar-thumb {
-    background: rgba(174,174,192,0.3); border-radius: 2px;
-  }
- 
-  .meal-card {
-    background: #f0f0f3; border-radius: 18px; padding: 12px 16px;
-    box-shadow: 4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85);
-    display: flex; align-items: center; gap: 12px;
-  }
- 
-  .meal-photo {
-    width: 50px; height: 50px; border-radius: 14px;
-    background: #f0f0f3; flex-shrink: 0;
-    box-shadow: inset 3px 3px 7px rgba(174,174,192,0.35), inset -3px -3px 7px rgba(255,255,255,0.85);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; overflow: hidden;
-  }
- 
-  .meal-photo img {
-    width: 100%; height: 100%; object-fit: cover; border-radius: 14px;
-  }
- 
-  .meal-info { flex: 1; min-width: 0; }
- 
-  .meal-name {
-    font-size: 13px; font-weight: 600; color: #3a3a4a;
-    margin-bottom: 3px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
- 
-  .meal-ingredients {
-    font-size: 11px; color: #aaa;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
- 
-  .meal-date {
-    font-size: 10px; color: #bbb; flex-shrink: 0;
-    letter-spacing: 0.3px;
-  }
- 
-  .meal-delete {
-    background: #f0f0f3; border: none; cursor: pointer;
-    width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
-    box-shadow: 3px 3px 7px rgba(174,174,192,0.4), -3px -3px 7px rgba(255,255,255,0.9);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; color: #c77b7b;
-    transition: box-shadow 0.15s;
-  }
- 
-  .meal-delete:hover {
-    box-shadow: inset 2px 2px 5px rgba(174,174,192,0.35), inset -2px -2px 5px rgba(255,255,255,0.85);
-  }
- 
-  .empty-state {
-    text-align: center; color: #bbb; font-size: 13px;
-    padding: 30px 0; line-height: 1.7;
-  }
- 
-  .loading-state {
-    text-align: center; color: #bbb; font-size: 13px; padding: 24px 0;
-  }
- 
-  .btn-add {
-    width: 100%; padding: 15px;
-    background: #f0f0f3; border: none; border-radius: 16px;
-    color: #3a3a4a; font-size: 14px; font-weight: 600;
-    font-family: 'DM Sans', sans-serif;
-    cursor: pointer;
-    box-shadow: 5px 5px 14px rgba(174,174,192,0.42), -5px -5px 14px rgba(255,255,255,0.88);
-    transition: box-shadow 0.15s;
-    letter-spacing: 0.2px;
-  }
- 
-  .btn-add:hover {
-    box-shadow: 3px 3px 8px rgba(174,174,192,0.42), -3px -3px 8px rgba(255,255,255,0.88);
-  }
- 
-  .btn-add:active {
-    box-shadow: inset 4px 4px 10px rgba(174,174,192,0.35), inset -4px -4px 10px rgba(255,255,255,0.85);
-  }
- 
-  .popup-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(240,240,243,0.75);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 1000; align-items: center; justify-content: center; padding: 16px;
-  }
- 
-  .popup-overlay.active { display: flex; }
- 
-  .popup {
-    background: #f0f0f3; border-radius: 26px; padding: 28px 24px;
-    width: 100%; max-width: 390px; max-height: 88vh; overflow-y: auto;
-    box-shadow: 10px 10px 30px rgba(174,174,192,0.5), -10px -10px 30px rgba(255,255,255,0.95);
-  }
- 
-  .popup-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 22px;
-  }
- 
-  .popup-header h3 {
-    font-size: 16px; font-weight: 600; color: #3a3a4a;
-  }
- 
-  .popup-close {
-    width: 32px; height: 32px; border-radius: 10px;
-    background: #f0f0f3; border: none; cursor: pointer;
-    box-shadow: 3px 3px 7px rgba(174,174,192,0.4), -3px -3px 7px rgba(255,255,255,0.9);
-    font-size: 14px; color: #999;
-    display: flex; align-items: center; justify-content: center;
-  }
- 
-  .form-label {
-    font-size: 10px; color: #aaa; text-transform: uppercase;
-    letter-spacing: 1.2px; margin-bottom: 8px; display: block;
-  }
- 
-  .form-input {
-    width: 100%;
-    background: #f0f0f3; border: none; border-radius: 12px;
-    padding: 12px 14px; color: #3a3a4a; font-size: 13px;
-    font-family: 'DM Sans', sans-serif;
-    margin-bottom: 16px; outline: none;
-    box-shadow: inset 3px 3px 8px rgba(174,174,192,0.35), inset -3px -3px 8px rgba(255,255,255,0.85);
-    transition: box-shadow 0.2s;
-  }
- 
-  .form-input:focus {
-    box-shadow: inset 4px 4px 10px rgba(174,174,192,0.4), inset -4px -4px 10px rgba(255,255,255,0.9);
-  }
- 
-  .form-input::placeholder { color: #ccc; }
- 
-  .photo-btns { display: flex; gap: 10px; margin-bottom: 16px; }
- 
-  .photo-btn {
-    flex: 1; padding: 12px 8px;
-    background: #f0f0f3; border: none; border-radius: 14px;
-    color: #888; font-size: 12px; cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    text-align: center;
-    box-shadow: 4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.88);
-    transition: box-shadow 0.15s;
-  }
- 
-  .photo-btn:hover {
-    box-shadow: 2px 2px 6px rgba(174,174,192,0.38), -2px -2px 6px rgba(255,255,255,0.88);
-  }
- 
-  .photo-btn .icon { font-size: 20px; display: block; margin-bottom: 5px; }
- 
-  .photo-preview {
-    width: 100%; height: 130px; border-radius: 14px;
-    object-fit: cover; margin-bottom: 16px; display: none;
-  }
- 
-  .photo-preview.visible { display: block; }
- 
-  .ingredient-row { display: flex; gap: 8px; margin-bottom: 8px; }
-  .ingredient-row .form-input { margin-bottom: 0; flex: 1; }
-  .ingredient-row .qty { width: 80px; flex: none; }
- 
-  .btn-add-ing {
-    width: 100%; padding: 10px;
-    background: #f0f0f3; border: none; border-radius: 12px;
-    color: #aaa; font-size: 12px; cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    margin-bottom: 18px;
-    box-shadow: inset 2px 2px 6px rgba(174,174,192,0.3), inset -2px -2px 6px rgba(255,255,255,0.8);
-    letter-spacing: 0.3px;
-  }
- 
-  .btn-add-ing:hover { color: #3a3a4a; }
- 
-  .btn-save {
-    width: 100%; padding: 14px;
-    background: #f0f0f3; border: none; border-radius: 14px;
-    color: #3a3a4a; font-size: 14px; font-weight: 600;
-    font-family: 'DM Sans', sans-serif; cursor: pointer;
-    box-shadow: 5px 5px 14px rgba(174,174,192,0.42), -5px -5px 14px rgba(255,255,255,0.88);
-    transition: box-shadow 0.15s;
-    letter-spacing: 0.2px;
-  }
- 
-  .btn-save:hover {
-    box-shadow: 3px 3px 8px rgba(174,174,192,0.42), -3px -3px 8px rgba(255,255,255,0.88);
-  }
- 
-  .btn-save:active, .btn-save:disabled {
-    box-shadow: inset 4px 4px 10px rgba(174,174,192,0.35), inset -4px -4px 10px rgba(255,255,255,0.85);
-    color: #aaa; cursor: not-allowed;
-  }
- 
-  .toast {
-    position: fixed; bottom: 24px; left: 50%;
-    transform: translateX(-50%) translateY(80px);
-    background: #3a3a4a; color: #fff;
-    padding: 11px 22px; border-radius: 20px;
-    font-size: 13px; font-family: 'DM Sans', sans-serif;
-    z-index: 2000; transition: transform 0.3s ease;
-    box-shadow: 4px 4px 12px rgba(174,174,192,0.4);
-  }
- 
-  .toast.show  { transform: translateX(-50%) translateY(0); }
-  .toast.success { background: #5a9e6f; }
-  .toast.error   { background: #c77b7b; }
- 
-  input[type="file"] { display: none; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #fff;
+  min-height: 100vh;
+  padding: 0 0 40px;
+  color: #1a1a2e;
+}
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 28px 20px 16px;
+}
+.header h1 { font-size: 26px; font-weight: 600; color: #1a1a2e; letter-spacing: -0.5px; }
+.header p  { font-size: 13px; color: #aaa; margin-top: 2px; }
+.avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: #f5f5f5; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+
+.wrapper { padding: 0 16px; display: flex; flex-direction: column; gap: 14px; max-width: 480px; margin: 0 auto; }
+
+/* Score card */
+.score-card {
+  background: #fff; border-radius: 20px; padding: 22px 20px;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.07);
+  display: flex; align-items: center; gap: 16px;
+}
+.score-ring-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+.score-ring-wrap svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.score-ring-inner {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.score-pct { font-size: 30px; font-weight: 600; color: #1a1a2e; letter-spacing: -1px; line-height: 1; }
+.score-pct small { font-size: 17px; }
+.score-sub { font-size: 11px; color: #aaa; margin-top: 3px; text-align: center; }
+.score-badge-pill {
+  margin-top: 6px; padding: 3px 14px; border-radius: 99px;
+  font-size: 11px; font-weight: 500;
+  background: #e8f5ee; color: #2d7a4f;
+}
+.macro-list { display: flex; flex-direction: column; gap: 11px; flex: 1; }
+.macro-row-item { display: flex; flex-direction: column; gap: 3px; }
+.macro-row-top { display: flex; align-items: center; justify-content: space-between; }
+.macro-row-left { display: flex; align-items: center; gap: 7px; }
+.macro-ico { font-size: 19px; }
+.macro-nm  { font-size: 12px; color: #999; }
+.macro-vl  { font-size: 17px; font-weight: 600; color: #1a1a2e; }
+.macro-vl small { font-size: 11px; font-weight: 400; color: #bbb; }
+.macro-goal { font-size: 11px; color: #bbb; }
+.macro-prog { height: 3px; background: #f0f0f0; border-radius: 2px; overflow: hidden; }
+.macro-prog-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+
+/* Points forts / faibles */
+.points-section { display: flex; gap: 10px; }
+.points-col { flex: 1; min-width: 0; }
+.points-col-head {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 500; color: #1a1a2e; margin-bottom: 10px;
+}
+.head-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.head-icon-green  { background: #e8f5ee; color: #2d7a4f; }
+.head-icon-orange { background: #fef0e6; color: #d4732a; }
+
+.point-card {
+  display: flex; align-items: center; gap: 10px;
+  background: #fff; border-radius: 14px; padding: 10px 12px;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.07); margin-bottom: 8px;
+  cursor: pointer; transition: box-shadow 0.15s;
+}
+.point-card:last-child { margin-bottom: 0; }
+.point-card:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.11); }
+.point-card-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+.pci-green  { background: #e8f5ee; }
+.pci-orange { background: #fef0e6; }
+.point-card-info { flex: 1; min-width: 0; }
+.pcn { font-size: 12px; font-weight: 500; color: #1a1a2e; margin-bottom: 2px; }
+.pcb-green  { font-size: 11px; color: #2d7a4f; font-weight: 500; }
+.pcb-orange { font-size: 11px; color: #d4732a; font-weight: 500; }
+.pcb-red    { font-size: 11px; color: #c0392b; font-weight: 500; }
+.point-card-arrow { font-size: 14px; color: #ddd; }
+
+/* Historique */
+.section-row {
+  display: flex; align-items: center; justify-content: space-between; padding: 2px 2px;
+}
+.section-row-title { font-size: 15px; font-weight: 600; color: #1a1a2e; }
+.voir-tout { font-size: 13px; color: #2d9e6e; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 3px; }
+
+.repas-wrap {
+  background: #fff; border-radius: 20px; padding: 4px 16px 16px;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.07);
+}
+.repas-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid #f5f5f5; cursor: pointer;
+}
+.repas-item:last-child { border-bottom: none; }
+.repas-photo {
+  width: 54px; height: 54px; border-radius: 14px; background: #f5f5f5;
+  flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 26px;
+}
+.repas-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+.repas-info { flex: 1; min-width: 0; }
+.ri-name { font-size: 13px; font-weight: 600; color: #1a1a2e; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ri-ings { font-size: 11px; color: #aaa; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ri-tag  { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 9px; border-radius: 99px; }
+.tag-green  { background: #e8f5ee; color: #2d7a4f; }
+.tag-blue   { background: #e8f0fe; color: #3d5af1; }
+.tag-orange { background: #fef0e6; color: #d4732a; }
+.repas-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.ri-date { font-size: 10px; color: #bbb; }
+.score-circ { position: relative; width: 38px; height: 38px; }
+.score-circ svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.score-circ-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #1a1a2e; }
+.ri-dots { font-size: 16px; color: #ccc; line-height: 1; }
+
+.btn-ajouter {
+  width: 100%; padding: 16px; background: #fff;
+  border: 1.5px solid #f0f0f0; border-radius: 16px;
+  color: #1a1a2e; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+  transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.btn-ajouter:hover { border-color: #2d9e6e; color: #2d9e6e; box-shadow: 0 2px 14px rgba(0,0,0,0.09); }
+
+/* Popup */
+.popup-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(6px); z-index: 1000; align-items: flex-end; justify-content: center;
+}
+.popup-overlay.active { display: flex; }
+.popup {
+  background: #fff; border-radius: 28px 28px 0 0; padding: 10px 20px 40px;
+  width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 -4px 30px rgba(0,0,0,0.12);
+  animation: slideUp 0.28s ease;
+}
+@keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.popup-handle { width: 36px; height: 4px; background: #e8e8e8; border-radius: 2px; margin: 12px auto 18px; }
+.popup-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.popup-head h3 { font-size: 18px; font-weight: 600; color: #1a1a2e; }
+.popup-close { width: 32px; height: 32px; border-radius: 50%; background: #f5f5f5; border: none; cursor: pointer; font-size: 14px; color: #888; display: flex; align-items: center; justify-content: center; }
+.form-lbl { font-size: 11px; color: #aaa; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; display: block; }
+.form-inp {
+  width: 100%; background: #f8f8f8; border: 1.5px solid #f0f0f0; border-radius: 12px;
+  padding: 12px 14px; color: #1a1a2e; font-size: 14px; font-family: 'DM Sans', sans-serif;
+  margin-bottom: 16px; outline: none; transition: border-color 0.2s;
+}
+.form-inp:focus { border-color: #2d9e6e; }
+.form-inp::placeholder { color: #ccc; }
+.photo-btns { display: flex; gap: 10px; margin-bottom: 16px; }
+.photo-btn {
+  flex: 1; padding: 14px 8px; background: #f8f8f8; border: 1.5px solid #f0f0f0;
+  border-radius: 14px; color: #888; font-size: 12px; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; text-align: center; transition: border-color 0.15s;
+}
+.photo-btn:hover { border-color: #2d9e6e; color: #2d9e6e; }
+.photo-btn .pico { font-size: 22px; display: block; margin-bottom: 5px; }
+.photo-preview { width: 100%; height: 140px; border-radius: 14px; object-fit: cover; margin-bottom: 16px; display: none; }
+.photo-preview.visible { display: block; }
+.ing-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.ing-row .form-inp { margin-bottom: 0; flex: 1; }
+.ing-row .qty { width: 80px; flex: none; }
+.btn-add-ing {
+  width: 100%; padding: 11px; background: #f8f8f8; border: 1.5px dashed #e0e0e0;
+  border-radius: 12px; color: #aaa; font-size: 13px; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; margin-bottom: 18px; transition: border-color 0.15s;
+}
+.btn-add-ing:hover { border-color: #2d9e6e; color: #2d9e6e; }
+.btn-save {
+  width: 100%; padding: 15px; background: #2d9e6e; border: none; border-radius: 14px;
+  color: #fff; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; transition: background 0.15s;
+}
+.btn-save:hover { background: #1d7a50; }
+.btn-save:disabled { background: #bbb; cursor: not-allowed; }
+
+.toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #1a1a2e; color: #fff; padding: 11px 22px; border-radius: 20px;
+  font-size: 13px; z-index: 2000; transition: transform 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15); pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: #2d9e6e; }
+.toast.error   { background: #c0392b; }
+
+.loading-st { text-align: center; color: #ccc; font-size: 13px; padding: 20px 0; }
+.empty-st   { text-align: center; color: #ccc; font-size: 13px; padding: 28px 0; line-height: 1.8; }
+input[type="file"] { display: none; }
 </style>
 </head>
 <body>
- 
-<div class="bg-pattern"></div>
- 
-<div class="wrapper">
- 
-  <div class="page-title">Suivi nutritionnel</div>
-  <div class="page-heading">Mon alimentation</div>
- 
-  <!-- SCORES -->
-  <div class="card">
-    <div class="card-label">Scores de la semaine</div>
-    <div class="scores">
- 
-      <div class="score-item">
-        <div class="score-circle-wrap">
-          <svg viewBox="0 0 86 86">
-            <circle class="bg" cx="43" cy="43" r="35"/>
-            <circle class="fg" id="circleVariete" cx="43" cy="43" r="35" stroke-dasharray="0 220"/>
-          </svg>
-          <div class="score-label" id="labelVariete">–</div>
-        </div>
-        <div class="score-title">Variété</div>
-      </div>
- 
-      <div class="score-item">
-        <div class="score-circle-wrap">
-          <svg viewBox="0 0 86 86">
-            <circle class="bg" cx="43" cy="43" r="35"/>
-            <circle class="fg" id="circleQualite" cx="43" cy="43" r="35" stroke-dasharray="0 220"/>
-          </svg>
-          <div class="score-label" id="labelQualite">–</div>
-        </div>
-        <div class="score-title">Qualité</div>
-      </div>
- 
-      <div class="score-item">
-        <div class="score-circle-wrap">
-          <svg viewBox="0 0 86 86">
-            <circle class="bg" cx="43" cy="43" r="35"/>
-            <circle class="fg" id="circlePertinence" cx="43" cy="43" r="35" stroke-dasharray="0 220"/>
-          </svg>
-          <div class="score-label" id="labelPertinence">–</div>
-        </div>
-        <div class="score-title">Pertinence</div>
-      </div>
- 
-    </div>
+
+<div class="header">
+  <div>
+    <h1>Mon suivi</h1>
+    <p>Vue d'ensemble de votre alimentation</p>
   </div>
- 
-  <!-- HISTORIQUE -->
-  <div class="section-label">Historique</div>
- 
-  <div class="card" style="padding: 18px;">
-    <div class="historique" id="historique">
-      <div class="loading-state">Chargement...</div>
-    </div>
-  </div>
- 
-  <button class="btn-add" onclick="ouvrirPopup()">+ Ajouter un plat</button>
- 
+  <div class="avatar">👤</div>
 </div>
- 
+
+<div class="wrapper">
+
+  <!-- SCORE + MACROS -->
+  <div class="score-card">
+    <div class="score-ring-wrap">
+      <svg viewBox="0 0 120 120" width="120" height="120">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#f0f0f0" stroke-width="9"/>
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#2d9e6e" stroke-width="9"
+          stroke-linecap="round" id="ringScore"
+          stroke-dasharray="0 314" style="transition:stroke-dasharray 1.2s ease,stroke 0.5s;"/>
+      </svg>
+      <div class="score-ring-inner">
+        <div class="score-pct"><span id="scoreNum">–</span><small>%</small></div>
+        <div class="score-sub">Score nutritionnel</div>
+        <div class="score-badge-pill" id="scoreBadge">–</div>
+      </div>
+    </div>
+    <div class="macro-list">
+      <div class="macro-row-item">
+        <div class="macro-row-top">
+          <div class="macro-row-left"><span class="macro-ico">🥩</span><span class="macro-nm">Protéines</span></div>
+          <div class="macro-vl"><span id="valProt">–</span><small>g</small></div>
+        </div>
+        <div class="macro-goal" id="goalProt">Objectif – g</div>
+        <div class="macro-prog"><div class="macro-prog-fill" id="barProt" style="width:0%;background:#e05a5a;"></div></div>
+      </div>
+      <div class="macro-row-item">
+        <div class="macro-row-top">
+          <div class="macro-row-left"><span class="macro-ico">🥑</span><span class="macro-nm">Lipides</span></div>
+          <div class="macro-vl"><span id="valLip">–</span><small>g</small></div>
+        </div>
+        <div class="macro-goal" id="goalLip">Objectif – g</div>
+        <div class="macro-prog"><div class="macro-prog-fill" id="barLip" style="width:0%;background:#7b5ea7;"></div></div>
+      </div>
+      <div class="macro-row-item">
+        <div class="macro-row-top">
+          <div class="macro-row-left"><span class="macro-ico">⚡</span><span class="macro-nm">Énergie</span></div>
+          <div class="macro-vl"><span id="valCal">–</span></div>
+        </div>
+        <div class="macro-goal" id="goalCal">Objectif – kcal</div>
+        <div class="macro-prog"><div class="macro-prog-fill" id="barCal" style="width:0%;background:#e8a020;"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POINTS FORTS / FAIBLES -->
+  <div class="points-section">
+    <div class="points-col">
+      <div class="points-col-head">
+        <div class="head-icon head-icon-green">✓</div>
+        Points forts
+      </div>
+      <div id="fortsContainer"><div class="loading-st">...</div></div>
+    </div>
+    <div class="points-col">
+      <div class="points-col-head">
+        <div class="head-icon head-icon-orange">!</div>
+        Points à améliorer
+      </div>
+      <div id="faiblesContainer"><div class="loading-st">...</div></div>
+    </div>
+  </div>
+
+  <!-- HISTORIQUE -->
+  <div class="section-row">
+    <span class="section-row-title">Historique des repas</span>
+    <span class="voir-tout">Voir tout ›</span>
+  </div>
+  <div class="repas-wrap">
+    <div id="historiqueList"><div class="loading-st">Chargement...</div></div>
+  </div>
+
+  <button class="btn-ajouter" onclick="ouvrirPopup()">
+    <span style="font-size:20px;font-weight:300;line-height:1;">+</span> Ajouter un repas
+  </button>
+
+</div>
+
 <!-- POPUP -->
 <div class="popup-overlay" id="popupOverlay" onclick="fermerPopupOverlay(event)">
   <div class="popup">
-    <div class="popup-header">
+    <div class="popup-handle"></div>
+    <div class="popup-head">
       <h3>Ajouter un plat</h3>
       <button class="popup-close" onclick="fermerPopup()">✕</button>
     </div>
- 
-    <label class="form-label">Nom du plat</label>
-    <input class="form-input" id="inputNom" type="text" placeholder="Ex: Poulet rôti aux légumes">
- 
-    <label class="form-label">Photo du plat</label>
+    <label class="form-lbl">Nom du plat</label>
+    <input class="form-inp" id="inputNom" type="text" placeholder="Ex: Poulet rôti aux légumes">
+    <label class="form-lbl">Photo du plat</label>
     <div class="photo-btns">
       <div class="photo-btn" onclick="document.getElementById('inputCamera').click()">
-        <span class="icon">📷</span>Prendre une photo
+        <span class="pico">📷</span>Prendre une photo
       </div>
       <div class="photo-btn" onclick="document.getElementById('inputGalerie').click()">
-        <span class="icon">🖼️</span>Depuis la galerie
+        <span class="pico">🖼️</span>Depuis la galerie
       </div>
     </div>
     <input type="file" id="inputCamera" accept="image/*" capture="environment" onchange="previewPhoto(this)">
     <input type="file" id="inputGalerie" accept="image/*" onchange="previewPhoto(this)">
     <img class="photo-preview" id="photoPreview" alt="Aperçu">
- 
-    <label class="form-label">Ingrédients</label>
+    <label class="form-lbl">Ingrédients</label>
     <div id="ingredientsList">
-      <div class="ingredient-row">
-        <input class="form-input" type="text" placeholder="Nom de l'ingrédient">
-        <input class="form-input qty" type="number" placeholder="g" min="0">
+      <div class="ing-row">
+        <input class="form-inp" type="text" placeholder="Nom de l'ingrédient">
+        <input class="form-inp qty" type="number" placeholder="g" min="0">
       </div>
     </div>
     <button class="btn-add-ing" onclick="ajouterLigneIngredient()">+ Ajouter un ingrédient</button>
     <button class="btn-save" id="btnSave" onclick="enregistrerPlat()">Enregistrer</button>
   </div>
 </div>
- 
+
 <div class="toast" id="toast"></div>
- 
+
 <script>
-  const CLOUDINARY_CLOUD  = "dujji1s6g";
-  const CLOUDINARY_PRESET = "meal_photos";
- 
-  let USER_ID   = null;
-  let photoFile = null;
- 
-  const params      = new URLSearchParams(window.location.search);
-  const token       = params.get("token");
-  const userIdParam = params.get("userId");
- 
-  function scoreColor(pct) {
-    if (pct < 30) return "#c77b7b";
-    if (pct < 70) return "#d4a96a";
-    return "#7bac8a";
+const SUPABASE_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+const CLOUDINARY_CLOUD  = 'dujji1s6g';
+const CLOUDINARY_PRESET = 'meal_photos';
+
+let USER_ID   = null;
+let photoFile = null;
+
+// ── TOKEN decode (identique à votre code existant) ──
+const params = new URLSearchParams(window.location.search);
+const token  = params.get('token');
+const userIdParam = params.get('userId');
+
+function resolveUserId() {
+  if (userIdParam && userIdParam !== 'null' && userIdParam !== 'PLACEHOLDER') return userIdParam;
+  if (token && token.length > 10) {
+    try {
+      const decoded = token.match(/.{1,2}/g)
+        .map(b => String.fromCharCode(parseInt(b, 16))).join('');
+      if (decoded && decoded.includes('-')) return decoded;
+    } catch(e) {}
   }
- 
-  // ── RÉSOLUTION USERID via décodage hex ──
-  async function resolveUserId() {
-    if (userIdParam && userIdParam !== "null" && userIdParam !== "PLACEHOLDER") {
-      console.log("userId direct:", userIdParam);
-      return userIdParam;
-    }
-    if (token && token.length > 10) {
-      try {
-        const decoded = token.match(/.{1,2}/g)
-          .map(byte => String.fromCharCode(parseInt(byte, 16)))
-          .join("");
-        console.log("userId décodé:", decoded);
-        if (decoded && decoded.includes("-")) return decoded;
-      } catch(e) {
-        console.log("Erreur décodage hex:", e.message);
-      }
-    }
-    return null;
-  }
- 
-  resolveUserId().then(id => {
-    console.log("USER_ID final:", id);
-    if (id) {
-      USER_ID = id;
-      init();
-    } else {
-      document.getElementById("historique").innerHTML =
-        '<div class="empty-state">Connectez-vous pour voir votre suivi</div>';
+  return null;
+}
+
+// ── POSTMESSAGE depuis Wix ──
+window.addEventListener('message', function(e) {
+  const d = e.data;
+  if (!d || d.type !== 'macroData') return;
+  afficherMacros(d);
+});
+window.parent.postMessage('htmlReady', '*');
+
+// ── INIT ──
+resolveUserId.then ? null : null; // pas de promise ici
+USER_ID = resolveUserId();
+if (USER_ID) {
+  init();
+} else {
+  document.getElementById('historiqueList').innerHTML = '<div class="empty-st">Connectez-vous pour voir votre suivi</div>';
+  afficherDiagnosticsVides();
+}
+
+async function init() {
+  await Promise.all([chargerRepas(), chargerScores()]);
+}
+
+// ── SUPABASE helper ──
+async function supabase(path, options = {}) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json', 'Prefer': 'return=representation',
+      ...(options.headers || {})
     }
   });
- 
-  async function init() {
-    document.getElementById("historique").innerHTML = '<div class="loading-state">Chargement...</div>';
-    await Promise.all([chargerRepas(), chargerScores()]);
-  }
- 
-  // ── APPELS DIRECTS SUPABASE ──
-  async function supabase(path, options = {}) {
-    const res = await fetch("https://hrsvcelmwdlcswwagxfa.supabase.co/rest/v1/" + path, {
-      ...options,
-      headers: {
-        "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w",
-        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w",
-        "Content-Type": "application/json",
-        "Prefer": "return=representation",
-        ...(options.headers || {})
-      }
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const text = await res.text();
-    return text ? JSON.parse(text) : [];
-  }
- 
-  async function chargerRepas() {
-    try {
-      const meals = await supabase(
-        "meals?user_id=eq." + USER_ID + "&select=*,meal_ingredients(*)&order=created_at.desc"
-      );
-      afficherRepas(meals);
-    } catch(e) {
-      document.getElementById("historique").innerHTML =
-        '<div class="empty-state">Erreur de chargement</div>';
-    }
-  }
- 
-  function afficherRepas(meals) {
-    const el = document.getElementById("historique");
-    if (!meals || meals.length === 0) {
-      el.innerHTML = '<div class="empty-state">Aucun plat enregistré<br>Ajoutez votre premier repas !</div>';
-      return;
-    }
-    el.innerHTML = meals.map(meal => {
-      const ings    = meal.meal_ingredients || [];
-      const ingText = ings.map(i => i.name + " " + i.quantity_g + "g").join(", ") || "Aucun ingrédient";
-      const date    = new Date(meal.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-      const photo   = meal.photo_url
-        ? '<div class="meal-photo"><img src="' + meal.photo_url + '" alt=""></div>'
-        : '<div class="meal-photo">🍽️</div>';
-      return (
-        '<div class="meal-card">' +
-          photo +
-          '<div class="meal-info">' +
-            '<div class="meal-name">' + meal.name + '</div>' +
-            '<div class="meal-ingredients">' + ingText + '</div>' +
-          '</div>' +
-          '<div class="meal-date">' + date + '</div>' +
-          '<button class="meal-delete" onclick="supprimerRepas(\'' + meal.id + '\')">🗑</button>' +
-        '</div>'
-      );
-    }).join("");
-  }
- 
-  async function chargerScores() {
-    try {
-      const scores = await supabase(
-        "nutrition_scores?user_id=eq." + USER_ID + "&order=calculated_at.desc&limit=1"
-      );
-      if (scores && scores.length > 0) {
-        afficherScore("Variete",    scores[0].variety_score);
-        afficherScore("Qualite",    scores[0].quality_score);
-        afficherScore("Pertinence", scores[0].relevance_score);
-      }
-    } catch(e) {}
-  }
- 
-  function afficherScore(nom, valeur) {
-    const pct     = Math.round(valeur || 0);
-    const r       = 35;
-    const circonf = 2 * Math.PI * r;
-    const dash    = (pct / 100) * circonf;
-    const couleur = scoreColor(pct);
-    const circle  = document.getElementById("circle" + nom);
-    const label   = document.getElementById("label"  + nom);
-    if (circle) {
-      circle.style.strokeDasharray = dash + " " + circonf;
-      circle.style.stroke = couleur;
-    }
-    if (label) label.textContent = pct + "%";
-  }
- 
-  async function recalculerScores() {
-    try {
-      const meals = await supabase(
-        "meals?user_id=eq." + USER_ID + "&select=*,meal_ingredients(*)&order=created_at.desc&limit=30"
-      );
-      const sept    = new Date(); sept.setDate(sept.getDate() - 7);
-      const recents = meals.filter(m => new Date(m.created_at) > sept);
-      const uniques = new Set();
-      recents.forEach(m => (m.meal_ingredients || []).forEach(i => uniques.add(i.name.toLowerCase())));
-      const variete    = Math.min(100, (uniques.size / 15) * 100);
-      const pertinence = Math.min(100, (recents.length / 21) * 100);
-      const avecIng    = recents.filter(m => m.meal_ingredients && m.meal_ingredients.length > 0);
-      const qualite    = recents.length > 0 ? Math.min(100, (avecIng.length / recents.length) * 100) : 0;
-      const scoreData  = {
-        user_id:         USER_ID,
-        variety_score:   Math.round(variete),
-        quality_score:   Math.round(qualite),
-        relevance_score: Math.round(pertinence),
-        score_date:      new Date().toISOString().split("T")[0],
-        calculated_at:   new Date().toISOString()
-      };
-      await supabase("nutrition_scores", {
-        method: "POST",
-        headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
-        body: JSON.stringify(scoreData)
-      });
-      afficherScore("Variete",    scoreData.variety_score);
-      afficherScore("Qualite",    scoreData.quality_score);
-      afficherScore("Pertinence", scoreData.relevance_score);
-    } catch(e) {}
-  }
- 
-  function ouvrirPopup() { document.getElementById("popupOverlay").classList.add("active"); resetPopup(); }
-  function fermerPopup() { document.getElementById("popupOverlay").classList.remove("active"); }
-  function fermerPopupOverlay(e) { if (e.target === document.getElementById("popupOverlay")) fermerPopup(); }
- 
-  function resetPopup() {
-    document.getElementById("inputNom").value = "";
-    document.getElementById("photoPreview").classList.remove("visible");
-    document.getElementById("ingredientsList").innerHTML =
-      '<div class="ingredient-row">' +
-        '<input class="form-input" type="text" placeholder="Nom de l\'ingrédient">' +
-        '<input class="form-input qty" type="number" placeholder="g" min="0">' +
-      '</div>';
-    photoFile = null;
-  }
- 
-  function ajouterLigneIngredient() {
-    const list = document.getElementById("ingredientsList");
-    const row  = document.createElement("div");
-    row.className = "ingredient-row";
-    row.innerHTML =
-      '<input class="form-input" type="text" placeholder="Nom de l\'ingrédient">' +
-      '<input class="form-input qty" type="number" placeholder="g" min="0">';
-    list.appendChild(row);
-  }
- 
-  function previewPhoto(input) {
-    const file = input.files[0];
-    if (!file) return;
-    photoFile = file;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const preview = document.getElementById("photoPreview");
-      preview.src = e.target.result;
-      preview.classList.add("visible");
-    };
-    reader.readAsDataURL(file);
-  }
- 
-  async function uploadPhotoCloudinary(file) {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", CLOUDINARY_PRESET);
-    const res  = await fetch(
-      "https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD + "/image/upload",
-      { method: "POST", body: formData }
+  const text = await res.text();
+  if (!res.ok) throw new Error(text);
+  return text ? JSON.parse(text) : [];
+}
+
+// ── MACROS depuis postMessage ──
+function afficherMacros(d) {
+  setText('valProt', d.proteines || '–');
+  setText('valLip',  d.lipides   || '–');
+  setText('valCal',  d.calories  || '–');
+  if (d.proteines) setText('goalProt', 'Objectif ' + d.proteines + ' g');
+  if (d.lipides)   setText('goalLip',  'Objectif ' + d.lipides   + ' g');
+  if (d.calories)  setText('goalCal',  'Objectif ' + d.calories  + ' kcal');
+  // Barres : apport actuel inconnu sans journal détaillé → on garde à 0 par défaut
+  // Elles se mettront à jour quand on aura les données de consommation réelle
+}
+
+// ── SCORES ──
+async function chargerScores() {
+  try {
+    const scores = await supabase(
+      'nutrition_scores?user_id=eq.' + USER_ID + '&order=calculated_at.desc&limit=1'
     );
-    const data = await res.json();
-    if (!data.secure_url) throw new Error(data.error ? data.error.message : "Upload échoué");
-    return data.secure_url;
+    if (!scores || scores.length === 0) { afficherDiagnosticsVides(); return; }
+    const s = scores[0];
+    const v = Math.round(s.variety_score   || 0);
+    const q = Math.round(s.quality_score   || 0);
+    const r = Math.round(s.relevance_score || 0);
+    const global = Math.round((v + q + r) / 3);
+    setScoreRing(global);
+    calculerDiagnostics(v, q, r);
+  } catch(e) { afficherDiagnosticsVides(); }
+}
+
+function setScoreRing(pct) {
+  const circ = 2 * Math.PI * 50;
+  const dash = (pct / 100) * circ;
+  const col  = pct >= 70 ? '#2d9e6e' : pct >= 40 ? '#e8a020' : '#e05a5a';
+  const ring = document.getElementById('ringScore');
+  ring.style.strokeDasharray = dash + ' ' + circ;
+  ring.style.stroke = col;
+  setText('scoreNum', pct);
+  const badge = document.getElementById('scoreBadge');
+  const word  = pct >= 80 ? 'Excellent' : pct >= 60 ? 'Bon' : pct >= 40 ? 'Moyen' : 'À revoir';
+  badge.textContent = word;
+  badge.style.background = pct >= 60 ? '#e8f5ee' : pct >= 40 ? '#fef0e6' : '#fde8e8';
+  badge.style.color      = pct >= 60 ? '#2d7a4f' : pct >= 40 ? '#d4732a' : '#c0392b';
+}
+
+// ── DIAGNOSTICS ──
+function calculerDiagnostics(variety, quality, relevance) {
+  const forts = [], faibles = [];
+
+  // Hydratation — toujours affiché en premier point fort par défaut
+  forts.push({ icon: '💧', nom: 'Hydratation', badge: 'Excellent', cls: 'pcb-green' });
+
+  if (variety >= 60)
+    forts.push({ icon: '🥗', nom: 'Variété alimentaire', badge: variety >= 80 ? 'Très bien' : 'Bien', cls: 'pcb-green' });
+  else
+    faibles.push({ icon: '🥗', nom: 'Variété alimentaire', badge: 'À augmenter', cls: variety < 30 ? 'pcb-red' : 'pcb-orange', pci: 'pci-orange' });
+
+  if (quality >= 60)
+    forts.push({ icon: '⭐', nom: 'Fibres & légumes', badge: 'Très bien', cls: 'pcb-green' });
+  else
+    faibles.push({ icon: '⚡', nom: 'Énergie', badge: 'Un peu faible', cls: 'pcb-orange', pci: 'pci-orange' });
+
+  if (relevance >= 60)
+    forts.push({ icon: '📅', nom: 'Régularité', badge: 'Bien', cls: 'pcb-green' });
+  else
+    faibles.push({ icon: '🌾', nom: 'Glucides complets', badge: 'À intégrer davantage', cls: 'pcb-orange', pci: 'pci-orange' });
+
+  renderPoints('fortsContainer', forts.slice(0, 3), 'pci-green');
+  renderPoints('faiblesContainer', faibles.slice(0, 3), 'pci-orange');
+}
+
+function renderPoints(containerId, items, defaultPci) {
+  document.getElementById(containerId).innerHTML = items.length === 0
+    ? '<div class="empty-st" style="padding:8px 0;font-size:12px;">–</div>'
+    : items.map(item => `
+      <div class="point-card">
+        <div class="point-card-icon ${item.pci || defaultPci}">${item.icon}</div>
+        <div class="point-card-info">
+          <div class="pcn">${item.nom}</div>
+          <div class="${item.cls}">${item.badge}</div>
+        </div>
+        <div class="point-card-arrow">›</div>
+      </div>`).join('');
+}
+
+function afficherDiagnosticsVides() {
+  renderPoints('fortsContainer', [
+    { icon: '💧', nom: 'Hydratation', badge: 'À vérifier', cls: 'pcb-orange' },
+    { icon: '🥗', nom: 'Variété', badge: 'Ajoutez des repas', cls: 'pcb-orange' }
+  ], 'pci-green');
+  renderPoints('faiblesContainer', [], 'pci-orange');
+}
+
+// ── REPAS ──
+async function chargerRepas() {
+  try {
+    const meals = await supabase(
+      'meals?user_id=eq.' + USER_ID + '&select=*,meal_ingredients(*)&order=created_at.desc&limit=10'
+    );
+    afficherRepas(meals);
+  } catch(e) {
+    document.getElementById('historiqueList').innerHTML = '<div class="empty-st">Erreur de chargement</div>';
   }
- 
-  async function enregistrerPlat() {
-    if (!USER_ID) { showToast("Utilisateur non connecté", "error"); return; }
-    const nom = document.getElementById("inputNom").value.trim();
-    if (!nom)   { showToast("Donne un nom à ton plat !", "error"); return; }
-    const btn = document.getElementById("btnSave");
-    btn.disabled = true; btn.textContent = "Enregistrement...";
-    try {
-      let photoUrl = null;
-      if (photoFile) {
-        btn.textContent = "Upload photo...";
-        photoUrl = await uploadPhotoCloudinary(photoFile);
-      }
-      const [meal] = await supabase("meals", {
-        method: "POST",
-        body: JSON.stringify({
-          user_id:   USER_ID,
-          name:      nom,
-          photo_url: photoUrl,
-          meal_date: new Date().toISOString().split("T")[0]
-        })
-      });
-      const rows = document.querySelectorAll("#ingredientsList .ingredient-row");
-      const ingredients = [];
-      rows.forEach(row => {
-        const inputs = row.querySelectorAll("input");
-        const ingNom = inputs[0].value.trim();
-        const qte    = parseFloat(inputs[1].value);
-        if (ingNom && qte > 0) ingredients.push({ meal_id: meal.id, name: ingNom, quantity_g: qte });
-      });
-      if (ingredients.length > 0) {
-        await supabase("meal_ingredients", { method: "POST", body: JSON.stringify(ingredients) });
-      }
-      await recalculerScores();
-      await chargerRepas();
-      fermerPopup();
-      showToast("Plat enregistré !", "success");
-    } catch(e) {
-      showToast("Erreur : " + e.message, "error");
-    } finally {
-      btn.disabled = false; btn.textContent = "Enregistrer";
-    }
+}
+
+function scoreRepas(meal) {
+  const ings = meal.meal_ingredients || [];
+  return Math.min(99, 60 + ings.length * 8);
+}
+
+function scoreColor(pct) {
+  return pct >= 80 ? '#2d9e6e' : pct >= 60 ? '#e8a020' : '#e05a5a';
+}
+
+function tagRepas(meal) {
+  const ings = (meal.meal_ingredients || []).map(i => i.name.toLowerCase());
+  if (ings.some(n => /poulet|thon|œuf|saumon|dinde|bœuf/.test(n)))
+    return { txt: 'Riche en protéines', cls: 'tag-green' };
+  if (ings.some(n => /quinoa|riz|lentille|pois|haricot/.test(n)))
+    return { txt: 'Bon équilibre', cls: 'tag-blue' };
+  return { txt: 'Repas enregistré', cls: 'tag-green' };
+}
+
+function afficherRepas(meals) {
+  const el = document.getElementById('historiqueList');
+  if (!meals || meals.length === 0) {
+    el.innerHTML = '<div class="empty-st">Aucun plat enregistré<br>Ajoutez votre premier repas !</div>';
+    return;
   }
- 
-  async function supprimerRepas(mealId) {
-    if (!confirm("Supprimer ce repas ?")) return;
-    try {
-      await supabase("meals?id=eq." + mealId, { method: "DELETE" });
-      await recalculerScores();
-      await chargerRepas();
-      showToast("Repas supprimé", "success");
-    } catch(e) { showToast("Erreur lors de la suppression", "error"); }
+  el.innerHTML = meals.map(meal => {
+    const ings  = meal.meal_ingredients || [];
+    const ingTxt = ings.map(i => i.name + ' ' + i.quantity_g + 'g').join(', ') || 'Aucun ingrédient';
+    const date  = new Date(meal.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const score = scoreRepas(meal);
+    const col   = scoreColor(score);
+    const r = 15, c = 2 * Math.PI * r;
+    const dash  = ((score / 100) * c).toFixed(1);
+    const tag   = tagRepas(meal);
+    const photo = meal.photo_url
+      ? `<div class="repas-photo"><img src="${meal.photo_url}" alt=""></div>`
+      : `<div class="repas-photo">🍽️</div>`;
+    return `<div class="repas-item">
+      ${photo}
+      <div class="repas-info">
+        <div class="ri-name">${meal.name}</div>
+        <div class="ri-ings">${ingTxt}</div>
+        <span class="ri-tag ${tag.cls}">${tag.txt}</span>
+      </div>
+      <div class="repas-right">
+        <div class="ri-date">${date}</div>
+        <div class="score-circ">
+          <svg viewBox="0 0 38 38" width="38" height="38">
+            <circle cx="19" cy="19" r="15" fill="none" stroke="#f0f0f0" stroke-width="3"/>
+            <circle cx="19" cy="19" r="15" fill="none" stroke="${col}" stroke-width="3"
+              stroke-linecap="round" stroke-dasharray="${dash} ${c.toFixed(1)}"/>
+          </svg>
+          <div class="score-circ-num">${score}</div>
+        </div>
+        <div class="ri-dots" onclick="supprimerRepas('${meal.id}', event)">···</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function recalculerScores() {
+  try {
+    const meals = await supabase(
+      'meals?user_id=eq.' + USER_ID + '&select=*,meal_ingredients(*)&order=created_at.desc&limit=30'
+    );
+    const sept    = new Date(); sept.setDate(sept.getDate() - 7);
+    const recents = meals.filter(m => new Date(m.created_at) > sept);
+    const uniques = new Set();
+    recents.forEach(m => (m.meal_ingredients || []).forEach(i => uniques.add(i.name.toLowerCase())));
+    const variety    = Math.min(100, Math.round((uniques.size / 15) * 100));
+    const pertinence = Math.min(100, Math.round((recents.length / 21) * 100));
+    const avecIng    = recents.filter(m => m.meal_ingredients && m.meal_ingredients.length > 0);
+    const quality    = recents.length > 0 ? Math.min(100, Math.round((avecIng.length / recents.length) * 100)) : 0;
+    await supabase('nutrition_scores', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify({
+        user_id: USER_ID, variety_score: variety, quality_score: quality,
+        relevance_score: pertinence,
+        score_date: new Date().toISOString().split('T')[0],
+        calculated_at: new Date().toISOString()
+      })
+    });
+    setScoreRing(Math.round((variety + quality + pertinence) / 3));
+    calculerDiagnostics(variety, quality, pertinence);
+  } catch(e) {}
+}
+
+// ── POPUP ──
+function ouvrirPopup() { document.getElementById('popupOverlay').classList.add('active'); resetPopup(); }
+function fermerPopup()  { document.getElementById('popupOverlay').classList.remove('active'); }
+function fermerPopupOverlay(e) { if (e.target === document.getElementById('popupOverlay')) fermerPopup(); }
+
+function resetPopup() {
+  document.getElementById('inputNom').value = '';
+  document.getElementById('photoPreview').classList.remove('visible');
+  document.getElementById('ingredientsList').innerHTML =
+    `<div class="ing-row">
+      <input class="form-inp" type="text" placeholder="Nom de l'ingrédient">
+      <input class="form-inp qty" type="number" placeholder="g" min="0">
+    </div>`;
+  photoFile = null;
+}
+
+function ajouterLigneIngredient() {
+  const list = document.getElementById('ingredientsList');
+  const row  = document.createElement('div');
+  row.className = 'ing-row';
+  row.innerHTML = `<input class="form-inp" type="text" placeholder="Nom de l'ingrédient">
+    <input class="form-inp qty" type="number" placeholder="g" min="0">`;
+  list.appendChild(row);
+}
+
+function previewPhoto(input) {
+  const file = input.files[0]; if (!file) return;
+  photoFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const p = document.getElementById('photoPreview');
+    p.src = e.target.result; p.classList.add('visible');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadPhotoCloudinary(file) {
+  const fd = new FormData();
+  fd.append('file', file); fd.append('upload_preset', CLOUDINARY_PRESET);
+  const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: fd });
+  const data = await res.json();
+  if (!data.secure_url) throw new Error(data.error ? data.error.message : 'Upload échoué');
+  return data.secure_url;
+}
+
+async function enregistrerPlat() {
+  if (!USER_ID) { showToast('Utilisateur non connecté', 'error'); return; }
+  const nom = document.getElementById('inputNom').value.trim();
+  if (!nom)   { showToast('Donne un nom à ton plat !', 'error'); return; }
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true; btn.textContent = 'Enregistrement...';
+  try {
+    let photoUrl = null;
+    if (photoFile) { btn.textContent = 'Upload photo...'; photoUrl = await uploadPhotoCloudinary(photoFile); }
+    const [meal] = await supabase('meals', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: USER_ID, name: nom, photo_url: photoUrl, meal_date: new Date().toISOString().split('T')[0] })
+    });
+    const rows = document.querySelectorAll('#ingredientsList .ing-row');
+    const ings = [];
+    rows.forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      const n = inputs[0].value.trim(), q = parseFloat(inputs[1].value);
+      if (n && q > 0) ings.push({ meal_id: meal.id, name: n, quantity_g: q });
+    });
+    if (ings.length > 0) await supabase('meal_ingredients', { method: 'POST', body: JSON.stringify(ings) });
+    await recalculerScores();
+    await chargerRepas();
+    fermerPopup();
+    showToast('Plat enregistré !', 'success');
+  } catch(e) {
+    showToast('Erreur : ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enregistrer';
   }
- 
-  function showToast(msg, type) {
-    const t = document.getElementById("toast");
-    t.textContent = msg;
-    t.className   = "toast " + (type || "");
-    setTimeout(() => t.classList.add("show"), 10);
-    setTimeout(() => t.classList.remove("show"), 3000);
-  }
+}
+
+async function supprimerRepas(id, e) {
+  e.stopPropagation();
+  if (!confirm('Supprimer ce repas ?')) return;
+  try {
+    await supabase('meals?id=eq.' + id, { method: 'DELETE' });
+    await recalculerScores();
+    await chargerRepas();
+    showToast('Repas supprimé', 'success');
+  } catch(e) { showToast('Erreur lors de la suppression', 'error'); }
+}
+
+function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + (type || '');
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
 </script>
 </body>
 </html>
