@@ -1,57 +1,53 @@
-const https = require('https');
+export const config = { runtime: 'edge' };
 
-module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Prefer');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  const SUPABASE_URL = 'hrsvcelmwdlcswwagxfa.supabase.co';
+export default async function handler(req) {
+  const SUPABASE_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
 
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS, PATCH',
+    'Access-Control-Allow-Headers': 'Content-Type, Prefer',
+  };
+
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
   try {
-    const path = req.query.path || '';
+    const { searchParams } = new URL(req.url);
+    const path = searchParams.get('path') || '';
+    const url = SUPABASE_URL + '/rest/v1/' + path;
 
-    // Lire le body
-    const bodyText = await new Promise((resolve) => {
-      let data = '';
-      req.on('data', chunk => { data += chunk.toString(); });
-      req.on('end', () => resolve(data));
-    });
+    const body = req.method !== 'GET' && req.method !== 'DELETE'
+      ? await req.text()
+      : undefined;
 
-    const options = {
-      hostname: SUPABASE_URL,
-      path: '/rest/v1/' + path,
+    const response = await fetch(url, {
       method: req.method,
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': 'Bearer ' + SUPABASE_KEY,
         'Content-Type': 'application/json',
         'Prefer': 'return=representation'
-      }
-    };
-
-    if (bodyText) {
-      options.headers['Content-Length'] = Buffer.byteLength(bodyText);
-    }
-
-    const result = await new Promise((resolve, reject) => {
-      const request = https.request(options, (response) => {
-        let data = '';
-        response.on('data', chunk => { data += chunk; });
-        response.on('end', () => resolve({ status: response.statusCode, body: data }));
-      });
-      request.on('error', reject);
-      if (bodyText) request.write(bodyText);
-      request.end();
+      },
+      body: body
     });
 
-    res.status(result.status).send(result.body);
+    const text = await response.text();
+
+    return new Response(text, {
+      status: response.status,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
-};
+}
