@@ -218,7 +218,13 @@ async function souscrire() {
       body: JSON.stringify({ priceId, userId, token })
     });
     const data = await res.json();
-    if (data.url) { window.location.href = data.url; }
+    if (data.url) {
+      if (window.self !== window.top) {
+        window.top.location.href = data.url;
+      } else {
+        window.location.href = data.url;
+      }
+    }
     else { showToast("Erreur lors de la création de la session"); btn.disabled=false; btn.textContent="Commencer mon programme →"; }
   } catch(e) { showToast("Erreur réseau"); btn.disabled=false; btn.textContent="Commencer mon programme →"; }
 }
