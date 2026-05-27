@@ -343,7 +343,7 @@ const CLOUDINARY_PRESET = 'meal_photos';
 let USER_ID   = null;
 let photoFile = null;
 
-// ── TOKEN ──
+// ── PARAMS URL ──
 const params      = new URLSearchParams(window.location.search);
 const token       = params.get('token');
 const userIdParam = params.get('userId');
@@ -360,7 +360,21 @@ function resolveUserId() {
   return null;
 }
 
-// ── POSTMESSAGE depuis Wix ──
+// ── MACROS DEPUIS URL (plus fiable que postMessage) ──
+function lireMacrosURL() {
+  const data = {
+    objectif:  params.get('objectif')  || '',
+    calories:  params.get('calories')  || '',
+    bmr:       params.get('bmr')       || '',
+    proteines: params.get('proteines') || '',
+    glucides:  params.get('glucides')  || '',
+    lipides:   params.get('lipides')   || '',
+    tdee:      params.get('tdee')      || '',
+  };
+  if (data.proteines || data.calories) afficherMacros(data);
+}
+
+// ── POSTMESSAGE fallback ──
 window.addEventListener('message', function(e) {
   const d = e.data;
   if (!d || d.type !== 'macroData') return;
@@ -370,6 +384,9 @@ window.parent.postMessage('htmlReady', '*');
 
 // ── INIT ──
 USER_ID = resolveUserId();
+// Lire les macros depuis l'URL immédiatement
+lireMacrosURL();
+
 if (USER_ID) {
   init();
 } else {
@@ -401,12 +418,18 @@ async function supabase(path, options = {}) {
 
 // ── MACROS ──
 function afficherMacros(d) {
-  setText('valProt', d.proteines || '–');
-  setText('valLip',  d.lipides   || '–');
-  setText('valCal',  d.calories  || '–');
-  if (d.proteines) setText('goalProt', 'Objectif ' + d.proteines + ' g');
-  if (d.lipides)   setText('goalLip',  'Objectif ' + d.lipides   + ' g');
-  if (d.calories)  setText('goalCal',  'Objectif ' + d.calories  + ' kcal');
+  if (d.proteines && d.proteines !== '–') {
+    setText('valProt', d.proteines);
+    setText('goalProt', 'Objectif ' + d.proteines + ' g');
+  }
+  if (d.lipides && d.lipides !== '–') {
+    setText('valLip', d.lipides);
+    setText('goalLip', 'Objectif ' + d.lipides + ' g');
+  }
+  if (d.calories && d.calories !== '–') {
+    setText('valCal', d.calories);
+    setText('goalCal', 'Objectif ' + d.calories + ' kcal');
+  }
 }
 
 // ── SCORES ──
