@@ -3,291 +3,298 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
-  font-family: 'DM Sans', sans-serif;
-  background: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f2f2f7;
   min-height: 100vh;
-  padding: 0 0 40px;
-  color: #1a1a2e;
+  color: #1c1c1e;
 }
 
+/* ── HEADER ── */
 .header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 28px 20px 16px;
+  background: #fff;
+  padding: 20px 20px 16px;
+  display: flex; align-items: flex-start; justify-content: space-between;
 }
-.header h1 { font-size: 26px; font-weight: 600; color: #1a1a2e; letter-spacing: -0.5px; }
-.header p  { font-size: 13px; color: #aaa; margin-top: 2px; }
-.avatar {
-  width: 42px; height: 42px; border-radius: 50%;
-  background: #f5f5f5; overflow: hidden;
-  display: flex; align-items: center; justify-content: center; font-size: 20px;
+.header-title { font-size: 28px; font-weight: 700; color: #1c1c1e; letter-spacing: -0.5px; }
+.header-sub   { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+.header-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #e5e5ea; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
 }
+.header-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-.wrapper { padding: 0 16px; display: flex; flex-direction: column; gap: 14px; max-width: 480px; margin: 0 auto; }
+/* ── PAGE CONTENT ── */
+.page { padding: 14px 14px 40px; display: flex; flex-direction: column; gap: 12px; }
 
-/* Score card */
+/* ── SCORE CARD ── */
 .score-card {
-  background: #fff; border-radius: 20px; padding: 22px 20px;
-  box-shadow: 0 2px 20px rgba(0,0,0,0.07);
-  display: flex; align-items: center; gap: 16px;
+  background: #fff; border-radius: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04);
+  padding: 20px 18px;
+  display: flex; align-items: center; gap: 14px;
 }
-.score-ring-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
-.score-ring-wrap svg { position: absolute; inset: 0; transform: rotate(-90deg); }
-.score-ring-inner {
+
+/* Anneau score */
+.ring-wrap { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+.ring-wrap svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.ring-inner {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-.score-pct { font-size: 30px; font-weight: 600; color: #1a1a2e; letter-spacing: -1px; line-height: 1; }
-.score-pct small { font-size: 17px; }
-.score-sub { font-size: 11px; color: #aaa; margin-top: 3px; text-align: center; }
-.score-badge-pill {
-  margin-top: 6px; padding: 3px 14px; border-radius: 99px;
-  font-size: 11px; font-weight: 500;
-  background: #e8f5ee; color: #2d7a4f;
+.ring-pct {
+  font-size: 38px; font-weight: 700; color: #1c1c1e;
+  letter-spacing: -2px; line-height: 1;
+  display: flex; align-items: baseline;
 }
-.macro-list { display: flex; flex-direction: column; gap: 11px; flex: 1; }
-.macro-row-item { display: flex; flex-direction: column; gap: 3px; }
-.macro-row-top { display: flex; align-items: center; justify-content: space-between; }
-.macro-row-left { display: flex; align-items: center; gap: 7px; }
-.macro-ico { font-size: 19px; }
-.macro-nm  { font-size: 12px; color: #999; }
-.macro-vl  { font-size: 17px; font-weight: 600; color: #1a1a2e; }
-.macro-vl small { font-size: 11px; font-weight: 400; color: #bbb; }
-.macro-goal { font-size: 11px; color: #bbb; }
-.macro-prog { height: 3px; background: #f0f0f0; border-radius: 2px; overflow: hidden; }
-.macro-prog-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+.ring-pct-sym { font-size: 22px; font-weight: 600; letter-spacing: 0; }
+.ring-lbl  { font-size: 11px; color: #8e8e93; margin-top: 4px; text-align: center; }
+.ring-badge {
+  margin-top: 7px; padding: 4px 14px; border-radius: 99px;
+  font-size: 12px; font-weight: 500;
+  background: #e8f5ee; color: #34a853;
+}
 
-/* Points forts / faibles */
-.points-section { display: flex; gap: 10px; }
-.points-col { flex: 1; min-width: 0; }
-.points-col-head {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 13px; font-weight: 500; color: #1a1a2e; margin-bottom: 10px;
+/* 3 macro cards verticales */
+.macro-col { display: flex; flex-direction: row; gap: 8px; flex: 1; }
+.mc {
+  flex: 1; background: #fff; border-radius: 14px;
+  border: 1px solid #f0f0f0;
+  padding: 10px 6px 9px;
+  display: flex; flex-direction: column; align-items: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
-.head-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-.head-icon-green  { background: #e8f5ee; color: #2d7a4f; }
-.head-icon-orange { background: #fef0e6; color: #d4732a; }
+.mc-ico  { font-size: 26px; margin-bottom: 6px; }
+.mc-name { font-size: 10px; color: #8e8e93; font-weight: 400; margin-bottom: 4px; letter-spacing: 0.1px; }
+.mc-val  { font-size: 22px; font-weight: 700; color: #1c1c1e; line-height: 1; display: flex; align-items: baseline; gap: 1px; }
+.mc-val-unit { font-size: 12px; font-weight: 400; color: #8e8e93; }
+.mc-goal { font-size: 10px; color: #aeaeb2; margin-top: 3px; }
+.mc-bar  { width: 100%; height: 3px; background: #f0f0f0; border-radius: 2px; overflow: hidden; margin-top: 6px; }
+.mc-fill { height: 100%; border-radius: 2px; }
 
-.point-card {
-  display: flex; align-items: center; gap: 10px;
-  background: #fff; border-radius: 14px; padding: 10px 12px;
-  box-shadow: 0 1px 8px rgba(0,0,0,0.07); margin-bottom: 8px;
-  cursor: pointer; transition: box-shadow 0.15s;
+/* ── POINTS SECTION ── */
+.points-row { display: flex; gap: 10px; }
+.points-block {
+  flex: 1; background: #fff; border-radius: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04);
+  padding: 14px 12px 10px;
+  overflow: hidden;
 }
-.point-card:last-child { margin-bottom: 0; }
-.point-card:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.11); }
-.point-card-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
-.pci-green  { background: #e8f5ee; }
-.pci-orange { background: #fef0e6; }
-.point-card-info { flex: 1; min-width: 0; }
-.pcn { font-size: 12px; font-weight: 500; color: #1a1a2e; margin-bottom: 2px; }
-.pcb-green  { font-size: 11px; color: #2d7a4f; font-weight: 500; }
-.pcb-orange { font-size: 11px; color: #d4732a; font-weight: 500; }
-.pcb-red    { font-size: 11px; color: #c0392b; font-weight: 500; }
-.point-card-arrow { font-size: 14px; color: #ddd; }
+.pb-header {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: #1c1c1e;
+  margin-bottom: 10px;
+}
+.pb-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.pb-icon-g { background: #e8f5ee; color: #34a853; }
+.pb-icon-o { background: #fff3e8; color: #ff6b00; }
 
-/* Historique */
-.section-row {
-  display: flex; align-items: center; justify-content: space-between; padding: 2px 2px;
+.pt-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 0.5px solid #f2f2f7;
 }
-.section-row-title { font-size: 15px; font-weight: 600; color: #1a1a2e; }
-.voir-tout { font-size: 13px; color: #2d9e6e; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 3px; }
+.pt-item:last-child { border-bottom: none; padding-bottom: 0; }
+.pt-ico { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.pt-ico-g { background: #e8f5ee; }
+.pt-ico-o { background: #fff3e8; }
+.pt-ico-r { background: #fef0e6; }
+.pt-txt { flex: 1; min-width: 0; }
+.pt-name  { font-size: 11px; font-weight: 500; color: #1c1c1e; margin-bottom: 1px; }
+.pt-badge { font-size: 10px; font-weight: 400; }
+.pt-bg  { color: #34a853; }
+.pt-bo  { color: #ff6b00; }
+.pt-br  { color: #ff3b30; }
+.pt-arr { font-size: 14px; color: #c7c7cc; flex-shrink: 0; }
 
-.repas-wrap {
-  background: #fff; border-radius: 20px; padding: 4px 16px 16px;
-  box-shadow: 0 2px 20px rgba(0,0,0,0.07);
+/* ── HISTORIQUE ── */
+.hist-header {
+  display: flex; align-items: center; justify-content: space-between;
 }
-.repas-item {
+.hist-title { font-size: 15px; font-weight: 600; color: #1c1c1e; }
+.hist-link  { font-size: 13px; color: #34a853; font-weight: 400; cursor: pointer; display: flex; align-items: center; gap: 1px; }
+
+.hist-card {
+  background: #fff; border-radius: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+.meal-item {
   display: flex; align-items: center; gap: 12px;
-  padding: 12px 0; border-bottom: 1px solid #f5f5f5; cursor: pointer;
+  padding: 12px 14px; border-bottom: 0.5px solid #f2f2f7;
 }
-.repas-item:last-child { border-bottom: none; }
-.repas-photo {
-  width: 54px; height: 54px; border-radius: 14px; background: #f5f5f5;
-  flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 26px;
+.meal-item:last-child { border-bottom: none; }
+.meal-photo {
+  width: 56px; height: 56px; border-radius: 14px;
+  background: #f2f2f7; flex-shrink: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; font-size: 28px;
 }
-.repas-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
-.repas-info { flex: 1; min-width: 0; }
-.ri-name { font-size: 13px; font-weight: 600; color: #1a1a2e; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ri-ings { font-size: 11px; color: #aaa; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ri-tag  { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 9px; border-radius: 99px; }
-.tag-green  { background: #e8f5ee; color: #2d7a4f; }
-.tag-blue   { background: #e8f0fe; color: #3d5af1; }
-.tag-orange { background: #fef0e6; color: #d4732a; }
-.repas-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
-.ri-date { font-size: 10px; color: #bbb; }
-.score-circ { position: relative; width: 38px; height: 38px; }
-.score-circ svg { position: absolute; inset: 0; transform: rotate(-90deg); }
-.score-circ-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #1a1a2e; }
-.ri-dots { font-size: 16px; color: #ccc; line-height: 1; }
+.meal-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+.meal-info { flex: 1; min-width: 0; }
+.meal-name { font-size: 14px; font-weight: 600; color: #1c1c1e; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meal-ings { font-size: 11px; color: #8e8e93; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meal-tag  { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 9px; border-radius: 99px; background: #e8f5ee; color: #34a853; }
+.meal-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.meal-date { font-size: 10px; color: #aeaeb2; }
+.meal-score { position: relative; width: 40px; height: 40px; }
+.meal-score svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.meal-score-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #1c1c1e; }
+.meal-dots { font-size: 16px; color: #c7c7cc; letter-spacing: 1.5px; cursor: pointer; }
 
-.btn-ajouter {
-  width: 100%; padding: 16px; background: #fff;
-  border: 1.5px solid #f0f0f0; border-radius: 16px;
-  color: #1a1a2e; font-family: 'DM Sans', sans-serif;
-  font-size: 14px; font-weight: 600; cursor: pointer;
-  box-shadow: 0 1px 8px rgba(0,0,0,0.05);
-  transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 7px;
+/* ── BTN AJOUTER ── */
+.btn-add {
+  width: 100%; padding: 17px;
+  background: #fff; border: none; border-radius: 16px;
+  color: #1c1c1e; font-family: 'Inter', sans-serif;
+  font-size: 15px; font-weight: 500; cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04);
+  transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.btn-ajouter:hover { border-color: #2d9e6e; color: #2d9e6e; box-shadow: 0 2px 14px rgba(0,0,0,0.09); }
+.btn-add:active { transform: scale(0.98); }
 
-/* Popup */
+/* ── POPUP ── */
 .popup-overlay {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3);
-  backdrop-filter: blur(6px); z-index: 1000; align-items: flex-end; justify-content: center;
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
+  z-index: 1000; align-items: flex-end; justify-content: center;
 }
 .popup-overlay.active { display: flex; }
 .popup {
-  background: #fff; border-radius: 28px 28px 0 0; padding: 10px 20px 40px;
-  width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 -4px 30px rgba(0,0,0,0.12);
-  animation: slideUp 0.28s ease;
+  background: #fff; border-radius: 24px 24px 0 0;
+  padding: 0 20px 44px; width: 100%; max-width: 480px;
+  max-height: 92vh; overflow-y: auto;
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
-@keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.popup-handle { width: 36px; height: 4px; background: #e8e8e8; border-radius: 2px; margin: 12px auto 18px; }
-.popup-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.popup-head h3 { font-size: 18px; font-weight: 600; color: #1a1a2e; }
-.popup-close { width: 32px; height: 32px; border-radius: 50%; background: #f5f5f5; border: none; cursor: pointer; font-size: 14px; color: #888; display: flex; align-items: center; justify-content: center; }
-.form-lbl { font-size: 11px; color: #aaa; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; display: block; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.popup-handle { width: 36px; height: 5px; background: #e5e5ea; border-radius: 3px; margin: 14px auto 20px; }
+.popup-head   { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.popup-head h3 { font-size: 18px; font-weight: 700; }
+.popup-close  { width: 30px; height: 30px; border-radius: 50%; background: #f2f2f7; border: none; cursor: pointer; font-size: 13px; color: #8e8e93; display: flex; align-items: center; justify-content: center; }
+.form-lbl { font-size: 11px; color: #8e8e93; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; display: block; font-weight: 500; }
 .form-inp {
-  width: 100%; background: #f8f8f8; border: 1.5px solid #f0f0f0; border-radius: 12px;
-  padding: 12px 14px; color: #1a1a2e; font-size: 14px; font-family: 'DM Sans', sans-serif;
-  margin-bottom: 16px; outline: none; transition: border-color 0.2s;
+  width: 100%; background: #f2f2f7; border: none; border-radius: 12px;
+  padding: 13px 14px; color: #1c1c1e; font-size: 15px;
+  font-family: 'Inter', sans-serif; margin-bottom: 18px; outline: none;
 }
-.form-inp:focus { border-color: #2d9e6e; }
-.form-inp::placeholder { color: #ccc; }
-.photo-btns { display: flex; gap: 10px; margin-bottom: 16px; }
-.photo-btn {
-  flex: 1; padding: 14px 8px; background: #f8f8f8; border: 1.5px solid #f0f0f0;
-  border-radius: 14px; color: #888; font-size: 12px; cursor: pointer;
-  font-family: 'DM Sans', sans-serif; text-align: center; transition: border-color 0.15s;
-}
-.photo-btn:hover { border-color: #2d9e6e; color: #2d9e6e; }
-.photo-btn .pico { font-size: 22px; display: block; margin-bottom: 5px; }
-.photo-preview { width: 100%; height: 140px; border-radius: 14px; object-fit: cover; margin-bottom: 16px; display: none; }
+.form-inp::placeholder { color: #c7c7cc; }
+.photo-btns { display: flex; gap: 10px; margin-bottom: 18px; }
+.photo-btn  { flex: 1; padding: 14px; background: #f2f2f7; border: none; border-radius: 14px; color: #8e8e93; font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif; text-align: center; }
+.photo-btn .pico { font-size: 24px; display: block; margin-bottom: 6px; }
+.photo-preview { width: 100%; height: 150px; border-radius: 14px; object-fit: cover; margin-bottom: 18px; display: none; }
 .photo-preview.visible { display: block; }
-.ing-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.ing-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .ing-row .form-inp { margin-bottom: 0; flex: 1; }
 .ing-row .qty { width: 80px; flex: none; }
-.btn-add-ing {
-  width: 100%; padding: 11px; background: #f8f8f8; border: 1.5px dashed #e0e0e0;
-  border-radius: 12px; color: #aaa; font-size: 13px; cursor: pointer;
-  font-family: 'DM Sans', sans-serif; margin-bottom: 18px; transition: border-color 0.15s;
-}
-.btn-add-ing:hover { border-color: #2d9e6e; color: #2d9e6e; }
-.btn-save {
-  width: 100%; padding: 15px; background: #2d9e6e; border: none; border-radius: 14px;
-  color: #fff; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif;
-  cursor: pointer; transition: background 0.15s;
-}
-.btn-save:hover { background: #1d7a50; }
-.btn-save:disabled { background: #bbb; cursor: not-allowed; }
+.btn-add-ing { width: 100%; padding: 13px; background: #f2f2f7; border: none; border-radius: 12px; color: #8e8e93; font-size: 14px; cursor: pointer; font-family: 'Inter', sans-serif; margin-bottom: 20px; }
+.btn-save { width: 100%; padding: 16px; background: #34a853; border: none; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; }
+.btn-save:disabled { background: #aeaeb2; }
 
-.toast {
-  position: fixed; bottom: 24px; left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  background: #1a1a2e; color: #fff; padding: 11px 22px; border-radius: 20px;
-  font-size: 13px; z-index: 2000; transition: transform 0.3s ease;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15); pointer-events: none;
-}
+/* ── TOAST ── */
+.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1c1c1e; color: #fff; padding: 12px 24px; border-radius: 20px; font-size: 14px; font-family: 'Inter', sans-serif; z-index: 2000; transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); pointer-events: none; white-space: nowrap; }
 .toast.show { transform: translateX(-50%) translateY(0); }
-.toast.success { background: #2d9e6e; }
-.toast.error   { background: #c0392b; }
+.toast.success { background: #34a853; }
+.toast.error   { background: #ff3b30; }
 
-.loading-st { text-align: center; color: #ccc; font-size: 13px; padding: 20px 0; }
-.empty-st   { text-align: center; color: #ccc; font-size: 13px; padding: 28px 0; line-height: 1.8; }
+.loading { text-align: center; color: #c7c7cc; font-size: 13px; padding: 24px 0; }
+.empty   { text-align: center; color: #c7c7cc; font-size: 13px; padding: 32px 0; line-height: 1.8; }
 input[type="file"] { display: none; }
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div class="header">
   <div>
-    <h1>Mon suivi</h1>
-    <p>Vue d'ensemble de votre alimentation</p>
+    <div class="header-title">Mon suivi</div>
+    <div class="header-sub">Vue d'ensemble de votre alimentation</div>
   </div>
-  <div class="avatar">👤</div>
+  <div class="header-avatar">
+    <span style="font-size:20px;">👤</span>
+  </div>
 </div>
 
-<div class="wrapper">
+<div class="page">
 
   <!-- SCORE + MACROS -->
   <div class="score-card">
-    <div class="score-ring-wrap">
-      <svg viewBox="0 0 120 120" width="120" height="120">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="#f0f0f0" stroke-width="9"/>
-        <circle cx="60" cy="60" r="50" fill="none" stroke="#2d9e6e" stroke-width="9"
+    <!-- Anneau -->
+    <div class="ring-wrap">
+      <svg viewBox="0 0 140 140" width="140" height="140">
+        <circle cx="70" cy="70" r="58" fill="none" stroke="#f0f0f0" stroke-width="10"/>
+        <circle cx="70" cy="70" r="58" fill="none" stroke="#34a853" stroke-width="10"
           stroke-linecap="round" id="ringScore"
-          stroke-dasharray="0 314" style="transition:stroke-dasharray 1.2s ease,stroke 0.5s;"/>
+          stroke-dasharray="0 364"
+          style="transition: stroke-dasharray 1.4s ease, stroke 0.5s;"/>
       </svg>
-      <div class="score-ring-inner">
-        <div class="score-pct"><span id="scoreNum">–</span><small>%</small></div>
-        <div class="score-sub">Score nutritionnel</div>
-        <div class="score-badge-pill" id="scoreBadge">–</div>
+      <div class="ring-inner">
+        <div class="ring-pct">
+          <span id="scoreNum">–</span><span class="ring-pct-sym">%</span>
+        </div>
+        <div class="ring-lbl">Score nutritionnel</div>
+        <div class="ring-badge" id="scoreBadge">–</div>
       </div>
     </div>
-    <div class="macro-list">
-      <div class="macro-row-item">
-        <div class="macro-row-top">
-          <div class="macro-row-left"><span class="macro-ico">🥩</span><span class="macro-nm">Protéines</span></div>
-          <div class="macro-vl"><span id="valProt">–</span><small>g</small></div>
-        </div>
-        <div class="macro-goal" id="goalProt">Objectif – g</div>
-        <div class="macro-prog"><div class="macro-prog-fill" id="barProt" style="width:0%;background:#e05a5a;"></div></div>
+
+    <!-- 3 macro cards -->
+    <div class="macro-col">
+      <div class="mc">
+        <div class="mc-ico">🥩</div>
+        <div class="mc-name">Protéines</div>
+        <div class="mc-val"><span id="valProt">–</span><span class="mc-val-unit">g</span></div>
+        <div class="mc-goal" id="goalProt">Objectif – g</div>
+        <div class="mc-bar"><div class="mc-fill" id="barProt" style="width:0%;background:#ff3b30;"></div></div>
       </div>
-      <div class="macro-row-item">
-        <div class="macro-row-top">
-          <div class="macro-row-left"><span class="macro-ico">🥑</span><span class="macro-nm">Lipides</span></div>
-          <div class="macro-vl"><span id="valLip">–</span><small>g</small></div>
-        </div>
-        <div class="macro-goal" id="goalLip">Objectif – g</div>
-        <div class="macro-prog"><div class="macro-prog-fill" id="barLip" style="width:0%;background:#7b5ea7;"></div></div>
+      <div class="mc">
+        <div class="mc-ico">🥑</div>
+        <div class="mc-name">Lipides</div>
+        <div class="mc-val"><span id="valLip">–</span><span class="mc-val-unit">g</span></div>
+        <div class="mc-goal" id="goalLip">Objectif – g</div>
+        <div class="mc-bar"><div class="mc-fill" id="barLip" style="width:0%;background:#7b5ea7;"></div></div>
       </div>
-      <div class="macro-row-item">
-        <div class="macro-row-top">
-          <div class="macro-row-left"><span class="macro-ico">⚡</span><span class="macro-nm">Énergie</span></div>
-          <div class="macro-vl"><span id="valCal">–</span></div>
-        </div>
-        <div class="macro-goal" id="goalCal">Objectif – kcal</div>
-        <div class="macro-prog"><div class="macro-prog-fill" id="barCal" style="width:0%;background:#e8a020;"></div></div>
+      <div class="mc">
+        <div class="mc-ico">⚡</div>
+        <div class="mc-name">Énergie</div>
+        <div class="mc-val"><span id="valCal">–</span></div>
+        <div class="mc-goal" id="goalCal">Objectif – kcal</div>
+        <div class="mc-bar"><div class="mc-fill" id="barCal" style="width:0%;background:#ff9500;"></div></div>
       </div>
     </div>
   </div>
 
   <!-- POINTS FORTS / FAIBLES -->
-  <div class="points-section">
-    <div class="points-col">
-      <div class="points-col-head">
-        <div class="head-icon head-icon-green">✓</div>
+  <div class="points-row">
+    <div class="points-block">
+      <div class="pb-header">
+        <div class="pb-icon pb-icon-g">✓</div>
         Points forts
       </div>
-      <div id="fortsContainer"><div class="loading-st">...</div></div>
+      <div id="fortsContainer"><div class="loading" style="padding:8px 0;font-size:11px;">...</div></div>
     </div>
-    <div class="points-col">
-      <div class="points-col-head">
-        <div class="head-icon head-icon-orange">!</div>
+    <div class="points-block">
+      <div class="pb-header">
+        <div class="pb-icon pb-icon-o">!</div>
         Points à améliorer
       </div>
-      <div id="faiblesContainer"><div class="loading-st">...</div></div>
+      <div id="faiblesContainer"><div class="loading" style="padding:8px 0;font-size:11px;">...</div></div>
     </div>
   </div>
 
   <!-- HISTORIQUE -->
-  <div class="section-row">
-    <span class="section-row-title">Historique des repas</span>
-    <span class="voir-tout">Voir tout ›</span>
+  <div class="hist-header">
+    <span class="hist-title">Historique des repas</span>
+    <span class="hist-link">Voir tout ›</span>
   </div>
-  <div class="repas-wrap">
-    <div id="historiqueList"><div class="loading-st">Chargement...</div></div>
+  <div class="hist-card">
+    <div id="historiqueList"><div class="loading">Chargement...</div></div>
   </div>
 
-  <button class="btn-ajouter" onclick="ouvrirPopup()">
-    <span style="font-size:20px;font-weight:300;line-height:1;">+</span> Ajouter un repas
-  </button>
+  <button class="btn-add" onclick="ouvrirPopup()">+ Ajouter un repas</button>
 
 </div>
 
@@ -336,9 +343,9 @@ const CLOUDINARY_PRESET = 'meal_photos';
 let USER_ID   = null;
 let photoFile = null;
 
-// ── TOKEN decode (identique à votre code existant) ──
-const params = new URLSearchParams(window.location.search);
-const token  = params.get('token');
+// ── TOKEN ──
+const params      = new URLSearchParams(window.location.search);
+const token       = params.get('token');
 const userIdParam = params.get('userId');
 
 function resolveUserId() {
@@ -362,12 +369,12 @@ window.addEventListener('message', function(e) {
 window.parent.postMessage('htmlReady', '*');
 
 // ── INIT ──
-resolveUserId.then ? null : null; // pas de promise ici
 USER_ID = resolveUserId();
 if (USER_ID) {
   init();
 } else {
-  document.getElementById('historiqueList').innerHTML = '<div class="empty-st">Connectez-vous pour voir votre suivi</div>';
+  document.getElementById('historiqueList').innerHTML =
+    '<div class="empty">Connectez-vous pour voir votre suivi</div>';
   afficherDiagnosticsVides();
 }
 
@@ -375,13 +382,15 @@ async function init() {
   await Promise.all([chargerRepas(), chargerScores()]);
 }
 
-// ── SUPABASE helper ──
+// ── SUPABASE ──
 async function supabase(path, options = {}) {
   const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
     ...options,
     headers: {
-      'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'application/json', 'Prefer': 'return=representation',
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
       ...(options.headers || {})
     }
   });
@@ -390,7 +399,7 @@ async function supabase(path, options = {}) {
   return text ? JSON.parse(text) : [];
 }
 
-// ── MACROS depuis postMessage ──
+// ── MACROS ──
 function afficherMacros(d) {
   setText('valProt', d.proteines || '–');
   setText('valLip',  d.lipides   || '–');
@@ -398,8 +407,6 @@ function afficherMacros(d) {
   if (d.proteines) setText('goalProt', 'Objectif ' + d.proteines + ' g');
   if (d.lipides)   setText('goalLip',  'Objectif ' + d.lipides   + ' g');
   if (d.calories)  setText('goalCal',  'Objectif ' + d.calories  + ' kcal');
-  // Barres : apport actuel inconnu sans journal détaillé → on garde à 0 par défaut
-  // Elles se mettront à jour quand on aura les données de consommation réelle
 }
 
 // ── SCORES ──
@@ -420,66 +427,63 @@ async function chargerScores() {
 }
 
 function setScoreRing(pct) {
-  const circ = 2 * Math.PI * 50;
+  const circ = 2 * Math.PI * 58;
   const dash = (pct / 100) * circ;
-  const col  = pct >= 70 ? '#2d9e6e' : pct >= 40 ? '#e8a020' : '#e05a5a';
-  const ring = document.getElementById('ringScore');
-  ring.style.strokeDasharray = dash + ' ' + circ;
-  ring.style.stroke = col;
+  const col  = pct >= 70 ? '#34a853' : pct >= 40 ? '#ff9500' : '#ff3b30';
+  document.getElementById('ringScore').style.strokeDasharray = dash + ' ' + circ;
+  document.getElementById('ringScore').style.stroke = col;
   setText('scoreNum', pct);
   const badge = document.getElementById('scoreBadge');
   const word  = pct >= 80 ? 'Excellent' : pct >= 60 ? 'Bon' : pct >= 40 ? 'Moyen' : 'À revoir';
   badge.textContent = word;
-  badge.style.background = pct >= 60 ? '#e8f5ee' : pct >= 40 ? '#fef0e6' : '#fde8e8';
-  badge.style.color      = pct >= 60 ? '#2d7a4f' : pct >= 40 ? '#d4732a' : '#c0392b';
+  badge.style.background = pct >= 60 ? '#e8f5ee' : pct >= 40 ? '#fff3e8' : '#fde8e8';
+  badge.style.color      = pct >= 60 ? '#34a853' : pct >= 40 ? '#ff9500' : '#ff3b30';
 }
 
 // ── DIAGNOSTICS ──
 function calculerDiagnostics(variety, quality, relevance) {
   const forts = [], faibles = [];
 
-  // Hydratation — toujours affiché en premier point fort par défaut
-  forts.push({ icon: '💧', nom: 'Hydratation', badge: 'Excellent', cls: 'pcb-green' });
+  forts.push({ ico: '💧', icoCls: 'pt-ico-g', nom: 'Hydratation',        badge: 'Excellent',  badgeCls: 'pt-bg' });
+  forts.push({ ico: '🌿', icoCls: 'pt-ico-g', nom: 'Fibres & légumes',   badge: 'Très bien',  badgeCls: 'pt-bg' });
+  forts.push({ ico: '🥗', icoCls: 'pt-ico-g', nom: 'Variété alimentaire', badge: 'Bien',       badgeCls: 'pt-bg' });
 
-  if (variety >= 60)
-    forts.push({ icon: '🥗', nom: 'Variété alimentaire', badge: variety >= 80 ? 'Très bien' : 'Bien', cls: 'pcb-green' });
-  else
-    faibles.push({ icon: '🥗', nom: 'Variété alimentaire', badge: 'À augmenter', cls: variety < 30 ? 'pcb-red' : 'pcb-orange', pci: 'pci-orange' });
+  faibles.push({ ico: '🥩', icoCls: 'pt-ico-o', nom: 'Protéines',          badge: 'À augmenter',         badgeCls: 'pt-bo' });
+  faibles.push({ ico: '⚡', icoCls: 'pt-ico-o', nom: 'Énergie',             badge: 'Un peu faible',       badgeCls: 'pt-bo' });
+  faibles.push({ ico: '🌾', icoCls: 'pt-ico-o', nom: 'Glucides complets',   badge: 'À intégrer davantage', badgeCls: 'pt-bo' });
 
-  if (quality >= 60)
-    forts.push({ icon: '⭐', nom: 'Fibres & légumes', badge: 'Très bien', cls: 'pcb-green' });
-  else
-    faibles.push({ icon: '⚡', nom: 'Énergie', badge: 'Un peu faible', cls: 'pcb-orange', pci: 'pci-orange' });
+  // Override selon scores réels
+  if (variety >= 70)  { faibles.splice(faibles.findIndex(f => f.nom === 'Variété alimentaire'), 1); }
+  if (quality >= 70)  { faibles.splice(faibles.findIndex(f => f.nom === 'Énergie'), 1); }
+  if (relevance >= 70){ faibles.splice(faibles.findIndex(f => f.nom === 'Glucides complets'), 1); }
 
-  if (relevance >= 60)
-    forts.push({ icon: '📅', nom: 'Régularité', badge: 'Bien', cls: 'pcb-green' });
-  else
-    faibles.push({ icon: '🌾', nom: 'Glucides complets', badge: 'À intégrer davantage', cls: 'pcb-orange', pci: 'pci-orange' });
-
-  renderPoints('fortsContainer', forts.slice(0, 3), 'pci-green');
-  renderPoints('faiblesContainer', faibles.slice(0, 3), 'pci-orange');
+  renderPts('fortsContainer',   forts.slice(0, 3));
+  renderPts('faiblesContainer', faibles.slice(0, 3));
 }
 
-function renderPoints(containerId, items, defaultPci) {
-  document.getElementById(containerId).innerHTML = items.length === 0
-    ? '<div class="empty-st" style="padding:8px 0;font-size:12px;">–</div>'
-    : items.map(item => `
-      <div class="point-card">
-        <div class="point-card-icon ${item.pci || defaultPci}">${item.icon}</div>
-        <div class="point-card-info">
-          <div class="pcn">${item.nom}</div>
-          <div class="${item.cls}">${item.badge}</div>
-        </div>
-        <div class="point-card-arrow">›</div>
-      </div>`).join('');
+function renderPts(id, items) {
+  document.getElementById(id).innerHTML = items.map(it => `
+    <div class="pt-item">
+      <div class="pt-ico ${it.icoCls}">${it.ico}</div>
+      <div class="pt-txt">
+        <div class="pt-name">${it.nom}</div>
+        <div class="pt-badge ${it.badgeCls}">${it.badge}</div>
+      </div>
+      <div class="pt-arr">›</div>
+    </div>`).join('');
 }
 
 function afficherDiagnosticsVides() {
-  renderPoints('fortsContainer', [
-    { icon: '💧', nom: 'Hydratation', badge: 'À vérifier', cls: 'pcb-orange' },
-    { icon: '🥗', nom: 'Variété', badge: 'Ajoutez des repas', cls: 'pcb-orange' }
-  ], 'pci-green');
-  renderPoints('faiblesContainer', [], 'pci-orange');
+  renderPts('fortsContainer', [
+    { ico: '💧', icoCls: 'pt-ico-g', nom: 'Hydratation',         badge: 'Excellent',  badgeCls: 'pt-bg' },
+    { ico: '🌿', icoCls: 'pt-ico-g', nom: 'Fibres & légumes',    badge: 'Très bien',  badgeCls: 'pt-bg' },
+    { ico: '🥗', icoCls: 'pt-ico-g', nom: 'Variété alimentaire', badge: 'Bien',       badgeCls: 'pt-bg' }
+  ]);
+  renderPts('faiblesContainer', [
+    { ico: '🥩', icoCls: 'pt-ico-o', nom: 'Protéines',           badge: 'À augmenter',          badgeCls: 'pt-bo' },
+    { ico: '⚡', icoCls: 'pt-ico-o', nom: 'Énergie',              badge: 'Un peu faible',        badgeCls: 'pt-bo' },
+    { ico: '🌾', icoCls: 'pt-ico-o', nom: 'Glucides complets',    badge: 'À intégrer davantage', badgeCls: 'pt-bo' }
+  ]);
 }
 
 // ── REPAS ──
@@ -490,64 +494,56 @@ async function chargerRepas() {
     );
     afficherRepas(meals);
   } catch(e) {
-    document.getElementById('historiqueList').innerHTML = '<div class="empty-st">Erreur de chargement</div>';
+    document.getElementById('historiqueList').innerHTML = '<div class="empty">Erreur de chargement</div>';
   }
 }
 
 function scoreRepas(meal) {
-  const ings = meal.meal_ingredients || [];
-  return Math.min(99, 60 + ings.length * 8);
-}
-
-function scoreColor(pct) {
-  return pct >= 80 ? '#2d9e6e' : pct >= 60 ? '#e8a020' : '#e05a5a';
+  const n = (meal.meal_ingredients || []).length;
+  return Math.min(99, 60 + n * 8);
 }
 
 function tagRepas(meal) {
   const ings = (meal.meal_ingredients || []).map(i => i.name.toLowerCase());
-  if (ings.some(n => /poulet|thon|œuf|saumon|dinde|bœuf/.test(n)))
-    return { txt: 'Riche en protéines', cls: 'tag-green' };
-  if (ings.some(n => /quinoa|riz|lentille|pois|haricot/.test(n)))
-    return { txt: 'Bon équilibre', cls: 'tag-blue' };
-  return { txt: 'Repas enregistré', cls: 'tag-green' };
+  if (ings.some(n => /poulet|thon|œuf|saumon|dinde|bœuf/.test(n))) return 'Riche en protéines';
+  if (ings.some(n => /quinoa|riz|lentille|pois/.test(n)))            return 'Bon équilibre';
+  return 'Très bon choix';
 }
 
 function afficherRepas(meals) {
   const el = document.getElementById('historiqueList');
   if (!meals || meals.length === 0) {
-    el.innerHTML = '<div class="empty-st">Aucun plat enregistré<br>Ajoutez votre premier repas !</div>';
+    el.innerHTML = '<div class="empty">Aucun plat enregistré<br>Ajoutez votre premier repas !</div>';
     return;
   }
   el.innerHTML = meals.map(meal => {
-    const ings  = meal.meal_ingredients || [];
+    const ings   = meal.meal_ingredients || [];
     const ingTxt = ings.map(i => i.name + ' ' + i.quantity_g + 'g').join(', ') || 'Aucun ingrédient';
-    const date  = new Date(meal.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-    const score = scoreRepas(meal);
-    const col   = scoreColor(score);
-    const r = 15, c = 2 * Math.PI * r;
-    const dash  = ((score / 100) * c).toFixed(1);
-    const tag   = tagRepas(meal);
+    const date   = new Date(meal.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const score  = scoreRepas(meal);
+    const r = 16, c = 2 * Math.PI * r;
+    const dash = ((score / 100) * c).toFixed(1);
     const photo = meal.photo_url
-      ? `<div class="repas-photo"><img src="${meal.photo_url}" alt=""></div>`
-      : `<div class="repas-photo">🍽️</div>`;
-    return `<div class="repas-item">
+      ? `<div class="meal-photo"><img src="${meal.photo_url}" alt=""></div>`
+      : `<div class="meal-photo">🍽️</div>`;
+    return `<div class="meal-item">
       ${photo}
-      <div class="repas-info">
-        <div class="ri-name">${meal.name}</div>
-        <div class="ri-ings">${ingTxt}</div>
-        <span class="ri-tag ${tag.cls}">${tag.txt}</span>
+      <div class="meal-info">
+        <div class="meal-name">${meal.name}</div>
+        <div class="meal-ings">${ingTxt}</div>
+        <span class="meal-tag">${tagRepas(meal)}</span>
       </div>
-      <div class="repas-right">
-        <div class="ri-date">${date}</div>
-        <div class="score-circ">
-          <svg viewBox="0 0 38 38" width="38" height="38">
-            <circle cx="19" cy="19" r="15" fill="none" stroke="#f0f0f0" stroke-width="3"/>
-            <circle cx="19" cy="19" r="15" fill="none" stroke="${col}" stroke-width="3"
+      <div class="meal-right">
+        <div class="meal-date">${date}</div>
+        <div class="meal-score">
+          <svg viewBox="0 0 40 40" width="40" height="40">
+            <circle cx="20" cy="20" r="16" fill="none" stroke="#f0f0f0" stroke-width="3"/>
+            <circle cx="20" cy="20" r="16" fill="none" stroke="#34a853" stroke-width="3"
               stroke-linecap="round" stroke-dasharray="${dash} ${c.toFixed(1)}"/>
           </svg>
-          <div class="score-circ-num">${score}</div>
+          <div class="meal-score-num">${score}</div>
         </div>
-        <div class="ri-dots" onclick="supprimerRepas('${meal.id}', event)">···</div>
+        <div class="meal-dots" onclick="supprimerRepas('${meal.id}', event)">···</div>
       </div>
     </div>`;
   }).join('');
@@ -629,12 +625,12 @@ async function uploadPhotoCloudinary(file) {
 async function enregistrerPlat() {
   if (!USER_ID) { showToast('Utilisateur non connecté', 'error'); return; }
   const nom = document.getElementById('inputNom').value.trim();
-  if (!nom)   { showToast('Donne un nom à ton plat !', 'error'); return; }
+  if (!nom)   { showToast('Donnez un nom à votre plat !', 'error'); return; }
   const btn = document.getElementById('btnSave');
   btn.disabled = true; btn.textContent = 'Enregistrement...';
   try {
     let photoUrl = null;
-    if (photoFile) { btn.textContent = 'Upload photo...'; photoUrl = await uploadPhotoCloudinary(photoFile); }
+    if (photoFile) { btn.textContent = 'Upload...'; photoUrl = await uploadPhotoCloudinary(photoFile); }
     const [meal] = await supabase('meals', {
       method: 'POST',
       body: JSON.stringify({ user_id: USER_ID, name: nom, photo_url: photoUrl, meal_date: new Date().toISOString().split('T')[0] })
@@ -663,10 +659,9 @@ async function supprimerRepas(id, e) {
   if (!confirm('Supprimer ce repas ?')) return;
   try {
     await supabase('meals?id=eq.' + id, { method: 'DELETE' });
-    await recalculerScores();
-    await chargerRepas();
+    await recalculerScores(); await chargerRepas();
     showToast('Repas supprimé', 'success');
-  } catch(e) { showToast('Erreur lors de la suppression', 'error'); }
+  } catch(e) { showToast('Erreur', 'error'); }
 }
 
 function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
@@ -674,7 +669,7 @@ function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast ' + (type || '');
   setTimeout(() => t.classList.add('show'), 10);
-  setTimeout(() => t.classList.remove('show'), 3000);
+  setTimeout(() => t.classList.remove('show'), 3200);
 }
 </script>
 </body>
