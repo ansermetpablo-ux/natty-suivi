@@ -16,7 +16,7 @@
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; color: var(--text); }
 .bg-pattern { position: fixed; inset: 0; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0); background-size: 26px 26px; z-index: 0; }
 .app { position: relative; z-index: 1; }
- 
+
 /* LOGIN */
 .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .login-card { background: var(--bg); border-radius: 24px; padding: 36px 28px; box-shadow: var(--so); width: 100%; max-width: 360px; text-align: center; }
@@ -27,11 +27,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .login-input::placeholder { letter-spacing: 0; color: #ccc; }
 .login-btn { width: 100%; padding: 15px; background: var(--bg); border: none; border-radius: 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: var(--so); }
 .login-err { font-size: 12px; color: var(--red); margin-top: 10px; min-height: 16px; }
- 
+
 /* MAIN */
 .main-app { display: none; min-height: 100vh; }
 .main-app.visible { display: block; }
- 
+
 .top-bar { background: var(--bg); padding: 18px 20px 14px; display: flex; align-items: center; justify-content: space-between; max-width: 900px; margin: 0 auto; }
 .top-title { font-size: 10px; letter-spacing: 1.4px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
 .top-heading { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
@@ -40,28 +40,30 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .search-inp { border: none; background: none; outline: none; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); width: 140px; }
 .search-inp::placeholder { color: #ccc; }
 .logout-btn { background: var(--bg); border: none; cursor: pointer; padding: 9px 14px; border-radius: 12px; box-shadow: var(--sm); font-size: 12px; color: var(--muted); font-family: 'DM Sans', sans-serif; }
- 
+
 /* NAV */
 .nav-tabs { display: flex; gap: 8px; max-width: 900px; margin: 0 auto; padding: 0 20px 14px; overflow-x: auto; scrollbar-width: none; }
 .nav-tabs::-webkit-scrollbar { display: none; }
-.nav-tab { padding: 9px 18px; border-radius: 20px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+.nav-tab { padding: 9px 18px; border-radius: 20px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; white-space: nowrap; position: relative; }
 .nav-tab.active { background: var(--black); color: white; box-shadow: 3px 3px 8px rgba(26,26,46,0.35); }
- 
+.nav-badge { position: absolute; top: -4px; right: -4px; background: var(--red); color: white; border-radius: 99px; font-size: 10px; font-weight: 600; padding: 2px 6px; display: none; }
+.nav-badge.visible { display: block; }
+
 .content { max-width: 900px; margin: 0 auto; padding: 0 20px 40px; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
- 
+
 /* STATS */
 .stats-strip { display: flex; gap: 10px; margin-bottom: 16px; }
 .stat-card { flex: 1; background: var(--bg); border-radius: 18px; padding: 14px 16px; box-shadow: var(--so); text-align: center; }
 .stat-val { font-size: 26px; font-weight: 600; letter-spacing: -1px; }
 .stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 3px; }
- 
+
 /* FILTRES */
 .filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .filter-chip { padding: 8px 14px; border-radius: 99px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; cursor: pointer; color: var(--text); border: 2px solid transparent; }
 .filter-chip.on { box-shadow: var(--si); border-color: var(--green); color: var(--green); background: var(--gl); }
- 
+
 /* CLIENTS */
 .clients-list { display: flex; flex-direction: column; gap: 10px; }
 .client-card { background: var(--bg); border-radius: 20px; padding: 16px 18px; box-shadow: var(--so); cursor: pointer; display: flex; align-items: center; gap: 14px; border: 2px solid transparent; }
@@ -77,100 +79,66 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .ctag-green { background: var(--gl); color: var(--green); box-shadow: none; }
 .ctag-amber { background: var(--al); color: var(--amber); box-shadow: none; }
 .ctag-red   { background: var(--rl); color: var(--red); box-shadow: none; }
+.ctag-msg   { background: var(--black); color: white; box-shadow: none; }
 .client-scores { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; flex-shrink: 0; }
 .score-mini { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
 .score-dot  { width: 8px; height: 8px; border-radius: 50%; }
 .client-date { font-size: 10px; color: var(--muted); }
- 
-/* ── MENU ── */
-.menu-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.menu-title { font-size: 16px; font-weight: 600; }
-.btn-add-plat { background: var(--black); color: white; border: none; border-radius: 12px; padding: 10px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; box-shadow: 3px 3px 8px rgba(26,26,46,0.35); }
-.cat-tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; scrollbar-width: none; }
-.cat-tabs::-webkit-scrollbar { display: none; }
-.cat-tab { padding: 8px 16px; border-radius: 20px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
-.cat-tab.active { box-shadow: var(--si); border: 2px solid var(--black); color: var(--black); }
- 
-.plats-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-.plat-admin-card { background: var(--bg); border-radius: 18px; overflow: hidden; box-shadow: var(--so); position: relative; }
-.plat-admin-thumb { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: linear-gradient(135deg, #e8e8ec, #d8d8dc); display: flex; align-items: center; justify-content: center; font-size: 36px; overflow: hidden; position: relative; }
-.plat-admin-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.plat-admin-body { padding: 12px 14px; }
-.plat-admin-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.plat-admin-info { font-size: 11px; color: var(--muted); margin-bottom: 10px; line-height: 1.4; }
-.plat-admin-actions { display: flex; gap: 8px; }
-.btn-toggle-actif { flex: 1; padding: 8px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; }
-.btn-toggle-actif.actif { background: var(--gl); color: var(--green); }
-.btn-toggle-actif.inactif { background: var(--rl); color: var(--red); }
-.btn-edit-plat { width: 34px; height: 34px; border-radius: 10px; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 13px; }
-.btn-del-plat  { width: 34px; height: 34px; border-radius: 10px; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 13px; }
-.plat-cat-badge { position: absolute; top: 8px; left: 8px; padding: 3px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
-.badge-performance { background: rgba(186,117,23,0.85); color: white; }
-.badge-objectif    { background: rgba(90,158,111,0.85); color: white; }
-.badge-bien_etre   { background: rgba(26,26,46,0.75); color: white; }
-.plat-inactive-overlay { position: absolute; inset: 0; background: rgba(240,240,243,0.6); display: none; }
-.plat-admin-card.inactive .plat-inactive-overlay { display: block; }
- 
-/* FORM PLAT */
-.form-card { background: var(--bg); border-radius: 20px; padding: 20px 18px; box-shadow: var(--so); margin-bottom: 16px; display: none; }
-.form-card.open { display: block; }
-.form-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-.form-group { display: flex; flex-direction: column; gap: 5px; }
-.form-group.full { grid-column: 1 / -1; }
-.form-lbl { font-size: 10px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
-.form-inp { background: var(--bg); border: none; border-radius: 12px; padding: 11px 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); }
-.form-inp::placeholder { color: #ccc; }
-.form-select { background: var(--bg); border: none; border-radius: 12px; padding: 11px 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); appearance: none; cursor: pointer; }
- 
-/* UPLOAD PHOTO */
-.upload-zone { background: var(--bg); border-radius: 12px; box-shadow: var(--si); padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; min-height: 80px; justify-content: center; position: relative; }
-.upload-preview { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; display: none; }
-.upload-preview.visible { display: block; }
-.upload-label { font-size: 12px; color: var(--muted); text-align: center; }
-.upload-icon { font-size: 24px; }
-.upload-progress { width: 100%; height: 4px; background: var(--bg); border-radius: 2px; box-shadow: var(--si); overflow: hidden; display: none; }
-.upload-progress-bar { height: 100%; background: var(--black); border-radius: 2px; transition: width 0.3s; }
-input[type="file"] { display: none; }
- 
-.form-actions { display: flex; gap: 10px; margin-top: 14px; }
-.btn-submit { flex: 1; padding: 13px; background: var(--black); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
-.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-cancel { padding: 13px 18px; background: var(--bg); color: var(--muted); border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; box-shadow: var(--sm); }
- 
-/* ── COMMANDES ── */
-.semaine-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; background: var(--bg); border-radius: 18px; padding: 14px 18px; box-shadow: var(--so); }
-.semaine-label { font-size: 15px; font-weight: 600; }
-.semaine-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.semaine-btns { display: flex; gap: 8px; }
-.btn-semaine { width: 34px; height: 34px; border-radius: 50%; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text); }
-.btn-semaine:active { box-shadow: var(--si); }
- 
-.commandes-stats { display: flex; gap: 10px; margin-bottom: 14px; }
-.cmd-stat { flex: 1; background: var(--bg); border-radius: 14px; padding: 12px 14px; box-shadow: var(--so); text-align: center; }
-.cmd-stat-val { font-size: 22px; font-weight: 600; }
-.cmd-stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
- 
-.commandes-list { display: flex; flex-direction: column; gap: 10px; }
-.cmd-card { background: var(--bg); border-radius: 18px; padding: 16px 18px; box-shadow: var(--so); }
-.cmd-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.cmd-client { font-size: 14px; font-weight: 600; }
-.cmd-client-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.cmd-status { padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 500; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
-.status-en_attente { background: var(--al); color: var(--amber); }
-.status-confirmee  { background: var(--gl); color: var(--green); }
-.status-livree     { background: #e8eaf4; color: var(--black); }
-.cmd-plats { display: flex; flex-wrap: wrap; gap: 6px; }
-.cmd-plat-chip { padding: 5px 10px; border-radius: 99px; font-size: 11px; background: var(--bg); box-shadow: var(--sm); color: var(--text); display: flex; align-items: center; gap: 5px; }
-.cmd-plat-img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
- 
-/* FICHE CLIENT */
+
+/* ── MESSAGES TAB ── */
+.msg-list { display: flex; flex-direction: column; gap: 10px; }
+.msg-thread-card {
+  background: var(--bg); border-radius: 20px; padding: 16px 18px;
+  box-shadow: var(--so); cursor: pointer; display: flex; align-items: center; gap: 14px;
+  border: 2px solid transparent; transition: border-color 0.2s;
+}
+.msg-thread-card.has-unread { border-color: var(--black); }
+.msg-thread-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--gl); display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 600; color: var(--green); box-shadow: var(--sm);
+  flex-shrink: 0;
+}
+.msg-thread-info { flex: 1; min-width: 0; }
+.msg-thread-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+.msg-thread-preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-thread-preview.unread { color: var(--text); font-weight: 500; }
+.msg-thread-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.msg-thread-time { font-size: 10px; color: var(--muted); }
+.msg-unread-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--black); display: none; }
+.msg-unread-dot.visible { display: block; }
+
+/* ── FICHE + CHAT ── */
 .fiche-screen { display: none; }
 .fiche-screen.visible { display: block; }
 .fiche-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; max-width: 900px; margin: 0 auto; }
 .btn-retour { width: 38px; height: 38px; border-radius: 50%; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text); }
-.fiche-title { font-size: 18px; font-weight: 600; }
-.fiche-content { max-width: 900px; margin: 0 auto; padding: 0 20px 40px; display: flex; flex-direction: column; gap: 12px; }
+.fiche-title { font-size: 18px; font-weight: 600; flex: 1; }
+
+/* Switch Fiche / Chat */
+.fiche-switch {
+  display: flex; background: var(--bg); border-radius: 12px;
+  box-shadow: var(--si); padding: 3px; gap: 2px;
+}
+.fiche-switch-btn {
+  padding: 7px 14px; border-radius: 10px; border: none;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+  cursor: pointer; color: var(--muted); background: transparent;
+  position: relative; transition: all 0.2s;
+}
+.fiche-switch-btn.active { background: var(--black); color: white; box-shadow: 2px 2px 6px rgba(26,26,46,0.3); }
+.fiche-switch-badge {
+  position: absolute; top: -4px; right: -4px; background: var(--red); color: white;
+  border-radius: 99px; font-size: 9px; font-weight: 600; padding: 2px 5px; display: none;
+}
+.fiche-switch-badge.visible { display: block; }
+
+.fiche-content { max-width: 900px; margin: 0 auto; padding: 0 20px 40px; }
+.fiche-panel { display: none; }
+.fiche-panel.active { display: block; }
+
+/* FICHE data */
+.fiche-data-content { display: flex; flex-direction: column; gap: 12px; }
 .sec-card { background: var(--bg); border-radius: 20px; padding: 20px 18px; box-shadow: var(--so); }
 .sec-label { font-size: 10px; letter-spacing: 1.4px; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; }
 .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -199,6 +167,134 @@ input[type="file"] { display: none; }
 .action-inp { width: 100%; background: var(--bg); border: none; border-radius: 14px; padding: 13px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); margin-bottom: 10px; }
 .action-inp::placeholder { color: #ccc; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+/* CHAT PANEL */
+.chat-panel {
+  background: var(--bg); border-radius: 20px;
+  box-shadow: var(--so); overflow: hidden;
+  display: flex; flex-direction: column;
+  height: calc(100vh - 180px); min-height: 400px;
+}
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  scroll-behavior: smooth;
+}
+.chat-msg { display: flex; flex-direction: column; gap: 3px; }
+.chat-msg.client { align-items: flex-end; }
+.chat-msg.nutri  { align-items: flex-start; }
+.chat-bubble {
+  max-width: 75%; padding: 10px 14px;
+  border-radius: 16px; font-size: 13px; line-height: 1.5;
+  word-break: break-word;
+}
+.chat-msg.client .chat-bubble { background: var(--black); color: white; border-bottom-right-radius: 4px; }
+.chat-msg.nutri  .chat-bubble { background: white; color: var(--text); border-bottom-left-radius: 4px; box-shadow: 2px 2px 8px rgba(174,174,192,0.2); }
+.chat-time { font-size: 10px; color: var(--muted); padding: 0 4px; }
+.chat-day-sep { text-align: center; font-size: 11px; color: var(--muted); padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+.chat-day-sep::before, .chat-day-sep::after { content: ''; flex: 1; height: 0.5px; background: rgba(174,174,192,0.3); }
+.chat-empty { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: var(--muted); text-align: center; padding: 30px; }
+.chat-input-area {
+  border-top: 1px solid rgba(174,174,192,0.2);
+  padding: 12px 14px; display: flex; gap: 10px; align-items: flex-end;
+  background: var(--bg);
+}
+.chat-textarea {
+  flex: 1; background: var(--bg); border: none; border-radius: 14px;
+  padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px;
+  color: var(--text); outline: none; resize: none; max-height: 100px;
+  box-shadow: var(--si); line-height: 1.4; min-height: 38px;
+}
+.chat-textarea::placeholder { color: #ccc; }
+.chat-send-btn {
+  width: 38px; height: 38px; border-radius: 50%; background: var(--black);
+  border: none; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 14px; color: white; flex-shrink: 0;
+  box-shadow: 3px 3px 8px rgba(26,26,46,0.3);
+}
+.chat-send-btn:active { transform: scale(0.93); }
+.chat-send-btn:disabled { background: var(--muted); }
+.typing-indicator { padding: 0 16px 8px; display: none; }
+.typing-indicator.visible { display: flex; align-items: center; gap: 6px; }
+.typing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-4px)} }
+
+/* ── MENU ── */
+.menu-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.menu-title { font-size: 16px; font-weight: 600; }
+.btn-add-plat { background: var(--black); color: white; border: none; border-radius: 12px; padding: 10px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; box-shadow: 3px 3px 8px rgba(26,26,46,0.35); }
+.cat-tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; scrollbar-width: none; }
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-tab { padding: 8px 16px; border-radius: 20px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+.cat-tab.active { box-shadow: var(--si); border: 2px solid var(--black); color: var(--black); }
+.plats-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.plat-admin-card { background: var(--bg); border-radius: 18px; overflow: hidden; box-shadow: var(--so); position: relative; }
+.plat-admin-thumb { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: linear-gradient(135deg, #e8e8ec, #d8d8dc); display: flex; align-items: center; justify-content: center; font-size: 36px; overflow: hidden; position: relative; }
+.plat-admin-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.plat-admin-body { padding: 12px 14px; }
+.plat-admin-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.plat-admin-info { font-size: 11px; color: var(--muted); margin-bottom: 10px; line-height: 1.4; }
+.plat-admin-actions { display: flex; gap: 8px; }
+.btn-toggle-actif { flex: 1; padding: 8px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; }
+.btn-toggle-actif.actif  { background: var(--gl); color: var(--green); }
+.btn-toggle-actif.inactif{ background: var(--rl); color: var(--red); }
+.btn-edit-plat { width: 34px; height: 34px; border-radius: 10px; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.btn-del-plat  { width: 34px; height: 34px; border-radius: 10px; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.plat-cat-badge { position: absolute; top: 8px; left: 8px; padding: 3px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+.badge-performance { background: rgba(186,117,23,0.85); color: white; }
+.badge-objectif    { background: rgba(90,158,111,0.85); color: white; }
+.badge-bien_etre   { background: rgba(26,26,46,0.75); color: white; }
+.plat-inactive-overlay { position: absolute; inset: 0; background: rgba(240,240,243,0.6); display: none; }
+.plat-admin-card.inactive .plat-inactive-overlay { display: block; }
+.form-card { background: var(--bg); border-radius: 20px; padding: 20px 18px; box-shadow: var(--so); margin-bottom: 16px; display: none; }
+.form-card.open { display: block; }
+.form-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-lbl { font-size: 10px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+.form-inp { background: var(--bg); border: none; border-radius: 12px; padding: 11px 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); }
+.form-inp::placeholder { color: #ccc; }
+.form-select { background: var(--bg); border: none; border-radius: 12px; padding: 11px 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); appearance: none; cursor: pointer; }
+.upload-zone { background: var(--bg); border-radius: 12px; box-shadow: var(--si); padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; min-height: 80px; justify-content: center; position: relative; }
+.upload-preview { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; display: none; }
+.upload-preview.visible { display: block; }
+.upload-label { font-size: 12px; color: var(--muted); text-align: center; }
+.upload-icon { font-size: 24px; }
+.upload-progress { width: 100%; height: 4px; background: var(--bg); border-radius: 2px; box-shadow: var(--si); overflow: hidden; display: none; }
+.upload-progress-bar { height: 100%; background: var(--black); border-radius: 2px; transition: width 0.3s; }
+input[type="file"] { display: none; }
+.form-actions { display: flex; gap: 10px; margin-top: 14px; }
+.btn-submit { flex: 1; padding: 13px; background: var(--black); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-cancel { padding: 13px 18px; background: var(--bg); color: var(--muted); border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; box-shadow: var(--sm); }
+
+/* COMMANDES */
+.semaine-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; background: var(--bg); border-radius: 18px; padding: 14px 18px; box-shadow: var(--so); }
+.semaine-label { font-size: 15px; font-weight: 600; }
+.semaine-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.semaine-btns { display: flex; gap: 8px; }
+.btn-semaine { width: 34px; height: 34px; border-radius: 50%; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text); }
+.btn-semaine:active { box-shadow: var(--si); }
+.commandes-stats { display: flex; gap: 10px; margin-bottom: 14px; }
+.cmd-stat { flex: 1; background: var(--bg); border-radius: 14px; padding: 12px 14px; box-shadow: var(--so); text-align: center; }
+.cmd-stat-val { font-size: 22px; font-weight: 600; }
+.cmd-stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+.commandes-list { display: flex; flex-direction: column; gap: 10px; }
+.cmd-card { background: var(--bg); border-radius: 18px; padding: 16px 18px; box-shadow: var(--so); }
+.cmd-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cmd-client { font-size: 14px; font-weight: 600; }
+.cmd-client-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.cmd-status { padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 500; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
+.status-en_attente { background: var(--al); color: var(--amber); }
+.status-confirmee  { background: var(--gl); color: var(--green); }
+.status-livree     { background: #e8eaf4; color: var(--black); }
+.cmd-plats { display: flex; flex-wrap: wrap; gap: 6px; }
+.cmd-plat-chip { padding: 5px 10px; border-radius: 99px; font-size: 11px; background: var(--bg); box-shadow: var(--sm); color: var(--text); display: flex; align-items: center; gap: 5px; }
+.cmd-plat-img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+
 .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0; line-height: 1.8; }
 .loading { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0; }
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: #fff; padding: 11px 22px; border-radius: 20px; font-size: 13px; z-index: 2000; transition: transform 0.3s; pointer-events: none; box-shadow: 4px 4px 12px rgba(174,174,192,0.4); }
@@ -210,7 +306,7 @@ input[type="file"] { display: none; }
 <body>
 <div class="bg-pattern"></div>
 <div class="app">
- 
+
   <!-- LOGIN -->
   <div class="login-screen" id="loginScreen">
     <div class="login-card">
@@ -222,7 +318,7 @@ input[type="file"] { display: none; }
       <div class="login-err" id="loginErr"></div>
     </div>
   </div>
- 
+
   <!-- MAIN -->
   <div class="main-app" id="mainApp">
     <div id="listView">
@@ -239,15 +335,15 @@ input[type="file"] { display: none; }
           <button class="logout-btn" onclick="logout()">Déconnexion</button>
         </div>
       </div>
- 
+
       <div class="nav-tabs">
-        <button class="nav-tab active" id="navClients"  onclick="switchNav('clients')">👥 Clients</button>
-        <button class="nav-tab"        id="navMenu"     onclick="switchNav('menu')">🍽️ Menu</button>
+        <button class="nav-tab active" id="navClients"   onclick="switchNav('clients')">👥 Clients</button>
+        <button class="nav-tab"        id="navMessages"  onclick="switchNav('messages')">💬 Messages<span class="nav-badge" id="navMsgBadge">0</span></button>
+        <button class="nav-tab"        id="navMenu"      onclick="switchNav('menu')">🍽️ Menu</button>
         <button class="nav-tab"        id="navCommandes" onclick="switchNav('commandes')">📦 Commandes</button>
       </div>
- 
+
       <div class="content">
- 
         <!-- CLIENTS -->
         <div class="tab-content active" id="tabClients">
           <div class="stats-strip">
@@ -264,15 +360,22 @@ input[type="file"] { display: none; }
           </div>
           <div class="clients-list" id="clientsList"><div class="loading">Chargement...</div></div>
         </div>
- 
+
+        <!-- MESSAGES -->
+        <div class="tab-content" id="tabMessages">
+          <div class="stats-strip">
+            <div class="stat-card"><div class="stat-val" id="msgStatTotal">–</div><div class="stat-lbl">Conversations</div></div>
+            <div class="stat-card"><div class="stat-val" id="msgStatUnread">–</div><div class="stat-lbl">Non lus</div></div>
+          </div>
+          <div class="msg-list" id="msgThreadList"><div class="loading">Chargement...</div></div>
+        </div>
+
         <!-- MENU -->
         <div class="tab-content" id="tabMenu">
           <div class="menu-header">
             <div class="menu-title">Menu de la semaine</div>
             <button class="btn-add-plat" onclick="toggleFormPlat()">+ Ajouter un plat</button>
           </div>
- 
-          <!-- FORM -->
           <div class="form-card" id="formPlat">
             <div class="form-title" id="formPlatTitle">Nouveau plat</div>
             <input type="hidden" id="platEditId">
@@ -316,7 +419,6 @@ input[type="file"] { display: none; }
               <button class="btn-submit" onclick="sauvegarderPlat()" id="btnSavePlat">Enregistrer le plat</button>
             </div>
           </div>
- 
           <div class="cat-tabs">
             <button class="cat-tab active" onclick="setCatFilter('all',this)">Tous</button>
             <button class="cat-tab" onclick="setCatFilter('performance',this)">⚡ Performance</button>
@@ -325,7 +427,7 @@ input[type="file"] { display: none; }
           </div>
           <div class="plats-admin-grid" id="platsAdminGrid"><div class="loading" style="grid-column:1/-1;">Chargement...</div></div>
         </div>
- 
+
         <!-- COMMANDES -->
         <div class="tab-content" id="tabCommandes">
           <div class="semaine-nav">
@@ -345,92 +447,120 @@ input[type="file"] { display: none; }
           </div>
           <div class="commandes-list" id="commandesList"><div class="loading">Chargement...</div></div>
         </div>
- 
       </div>
     </div>
- 
+
     <!-- FICHE CLIENT -->
     <div class="fiche-screen" id="ficheView">
       <div class="fiche-header">
         <button class="btn-retour" onclick="retourListe()">‹</button>
         <div class="fiche-title" id="ficheTitle">Fiche client</div>
+        <div class="fiche-switch">
+          <button class="fiche-switch-btn active" id="switchFiche" onclick="switchFichePanel('fiche')">Fiche</button>
+          <button class="fiche-switch-btn" id="switchChat" onclick="switchFichePanel('chat')">
+            💬 Chat
+            <span class="fiche-switch-badge" id="ficheChatBadge">0</span>
+          </button>
+        </div>
       </div>
-      <div class="fiche-content" id="ficheContent"><div class="loading">Chargement...</div></div>
+      <div class="fiche-content">
+        <!-- Fiche panel -->
+        <div class="fiche-panel active" id="panelFiche">
+          <div class="fiche-data-content" id="ficheDataContent"><div class="loading">Chargement...</div></div>
+        </div>
+        <!-- Chat panel -->
+        <div class="fiche-panel" id="panelChat">
+          <div class="chat-panel">
+            <div class="chat-messages" id="ficheMessages"><div class="loading">Chargement...</div></div>
+            <div class="typing-indicator" id="ficheTyping">
+              <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+              <span style="font-size:11px;color:var(--muted);margin-left:4px;">en train d'écrire...</span>
+            </div>
+            <div class="chat-input-area">
+              <textarea class="chat-textarea" id="ficheMessageInput" placeholder="Répondre au client..." rows="1"
+                oninput="autoResizeChat(this)" onkeydown="handleChatKey(event)"></textarea>
+              <button class="chat-send-btn" id="ficheSendBtn" onclick="envoyerReponse()">➤</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
- 
+
 <script>
 const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
 const CLOUDINARY_CLOUD  = 'dujji1s6g';
 const CLOUDINARY_PRESET = 'meal_photos';
 const PWD = 'Nutri26';
- 
-let allClients = [], allPlats = [], currentFilter = 'tous', currentSearch = '', currentCatFilter = 'all', currentClient = null;
-let semaineOffset = 0;
-let uploadedPhotoUrl = null;
- 
+
+let allClients=[], allPlats=[], currentFilter='tous', currentSearch='', currentCatFilter='all', currentClient=null;
+let semaineOffset=0, uploadedPhotoUrl=null;
+let chatMessagesMap={};
+let currentChatWs=null;
+
 // AUTH
 function login() {
-  if (document.getElementById('pwdInput').value === PWD) {
+  if(document.getElementById('pwdInput').value===PWD){
     localStorage.setItem('nutri_auth','1');
-    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display='none';
     document.getElementById('mainApp').classList.add('visible');
-    chargerClients(); chargerPlats();
+    chargerClients(); chargerPlats(); chargerThreadsMessages();
+    subscribeGlobalRealtime();
   } else {
-    document.getElementById('loginErr').textContent = 'Mot de passe incorrect';
-    document.getElementById('pwdInput').value = '';
+    document.getElementById('loginErr').textContent='Mot de passe incorrect';
+    document.getElementById('pwdInput').value='';
   }
 }
-function logout() { localStorage.removeItem('nutri_auth'); document.getElementById('mainApp').classList.remove('visible'); document.getElementById('loginScreen').style.display='flex'; }
-if (localStorage.getItem('nutri_auth')==='1') { document.getElementById('loginScreen').style.display='none'; document.getElementById('mainApp').classList.add('visible'); chargerClients(); chargerPlats(); }
- 
-// SUPABASE
-async function sb(path, options={}) {
-  const res = await fetch(SB_URL+'/rest/v1/'+path, { ...options, headers: { 'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(options.headers||{}) } });
-  const text = await res.text();
-  if(!res.ok) throw new Error(text);
-  return text ? JSON.parse(text) : [];
+function logout(){localStorage.removeItem('nutri_auth');document.getElementById('mainApp').classList.remove('visible');document.getElementById('loginScreen').style.display='flex';}
+if(localStorage.getItem('nutri_auth')==='1'){document.getElementById('loginScreen').style.display='none';document.getElementById('mainApp').classList.add('visible');chargerClients();chargerPlats();chargerThreadsMessages();subscribeGlobalRealtime();}
+
+async function sb(path,options={}){
+  const res=await fetch(SB_URL+'/rest/v1/'+path,{...options,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(options.headers||{})}});
+  const text=await res.text();
+  if(!res.ok)throw new Error(text);
+  return text?JSON.parse(text):[];
 }
- 
+
 // NAV
-function switchNav(tab) {
-  ['clients','menu','commandes'].forEach(t => {
-    document.getElementById('nav'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===tab);
-    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===tab);
+function switchNav(tab){
+  ['clients','messages','menu','commandes'].forEach(t=>{
+    const navId='nav'+t.charAt(0).toUpperCase()+t.slice(1);
+    const tabId='tab'+t.charAt(0).toUpperCase()+t.slice(1);
+    document.getElementById(navId)?.classList.toggle('active',t===tab);
+    document.getElementById(tabId)?.classList.toggle('active',t===tab);
   });
-  const titles = { clients:'Mes clients', menu:'Menu de la semaine', commandes:'Commandes' };
-  document.getElementById('topHeading').textContent = titles[tab];
-  document.getElementById('searchWrap').style.display = tab==='clients' ? 'flex' : 'none';
-  if(tab==='commandes') chargerCommandes();
+  const titles={clients:'Mes clients',messages:'Messages',menu:'Menu de la semaine',commandes:'Commandes'};
+  document.getElementById('topHeading').textContent=titles[tab]||tab;
+  document.getElementById('searchWrap').style.display=tab==='clients'?'flex':'none';
+  if(tab==='commandes')chargerCommandes();
+  if(tab==='messages')chargerThreadsMessages();
 }
- 
+
 // ── CLIENTS ──
-async function chargerClients() {
-  try {
-    allClients = await sb('onboarding?completed=eq.true&order=created_at.desc&select=*');
-    updateStats(allClients); afficherClients(allClients);
-  } catch(e) { document.getElementById('clientsList').innerHTML='<div class="empty">Erreur : '+e.message+'</div>'; }
+async function chargerClients(){
+  try{allClients=await sb('onboarding?completed=eq.true&order=created_at.desc&select=*');updateStats(allClients);afficherClients(allClients);}
+  catch(e){document.getElementById('clientsList').innerHTML='<div class="empty">Erreur : '+e.message+'</div>';}
 }
-function updateStats(data) {
-  const sept = new Date(); sept.setDate(sept.getDate()-7);
-  document.getElementById('statTotal').textContent  = data.length;
-  document.getElementById('statCette').textContent  = data.filter(c=>new Date(c.created_at)>sept).length;
-  document.getElementById('statAlerte').textContent = data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3).length;
+function updateStats(data){
+  const sept=new Date();sept.setDate(sept.getDate()-7);
+  document.getElementById('statTotal').textContent=data.length;
+  document.getElementById('statCette').textContent=data.filter(c=>new Date(c.created_at)>sept).length;
+  document.getElementById('statAlerte').textContent=data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3).length;
 }
-function afficherClients(data) {
-  const el = document.getElementById('clientsList');
+function afficherClients(data){
+  const el=document.getElementById('clientsList');
   if(!data||data.length===0){el.innerHTML='<div class="empty">Aucun client</div>';return;}
   const motivL={mieux_manger:'🥦 Mieux manger',changer_corps:'🏃 Corps',performance:'🏆 Performance',sante:'❤️ Santé'};
   const maturL={debutant:'Débutant',premiers_pas:'Premiers pas',habitudes:'Habitudes',regime_place:'Régime structuré'};
-  el.innerHTML = data.map(c=>{
+  el.innerHTML=data.map(c=>{
     const sm=c.score_motivation||5,sr=c.score_rigueur||5,sn=c.score_nutrition||5;
     const isAlerte=sm<=3||sr<=3,isWarn=(sm<=5||sr<=5)&&!isAlerte;
     const date=new Date(c.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
     const sc=v=>v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
-    return `<div class="client-card ${isAlerte?'alert':isWarn?'warn':''}" onclick="ouvrirFiche('${c.id}')">
+    return`<div class="client-card ${isAlerte?'alert':isWarn?'warn':''}" onclick="ouvrirFiche('${c.id}')">
       <div class="client-avatar ${isAlerte?'red-av':''}">${(c.user_id||'?').substring(0,2).toUpperCase()}</div>
       <div class="client-info">
         <div class="client-name">Client ${(c.user_id||'').substring(0,8)}</div>
@@ -453,263 +583,246 @@ function setFilter(f,el){currentFilter=f;document.querySelectorAll('.filter-chip
 function filtrer(q){currentSearch=q.toLowerCase();appliquerFiltres();}
 function appliquerFiltres(){
   let data=[...allClients];
-  if(currentFilter==='alerte') data=data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3);
-  else if(currentFilter!=='tous') data=data.filter(c=>c.motivation===currentFilter);
-  if(currentSearch) data=data.filter(c=>(c.user_id||'').toLowerCase().includes(currentSearch));
+  if(currentFilter==='alerte')data=data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3);
+  else if(currentFilter!=='tous')data=data.filter(c=>c.motivation===currentFilter);
+  if(currentSearch)data=data.filter(c=>(c.user_id||'').toLowerCase().includes(currentSearch));
   afficherClients(data);
 }
- 
-// ── MENU ──
-async function chargerPlats() {
-  try {
-    allPlats = await sb('plats_menu?order=created_at.desc&select=*');
-    afficherPlatsAdmin(allPlats);
-  } catch(e) { document.getElementById('platsAdminGrid').innerHTML='<div class="loading" style="grid-column:1/-1;">Erreur : '+e.message+'</div>'; }
-}
-function setCatFilter(cat,el){
-  currentCatFilter=cat;
-  document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  afficherPlatsAdmin(cat==='all'?allPlats:allPlats.filter(p=>p.categorie===cat));
-}
-function afficherPlatsAdmin(plats) {
-  const grid = document.getElementById('platsAdminGrid');
-  if(!plats||plats.length===0){grid.innerHTML='<div class="empty" style="grid-column:1/-1;">Aucun plat · Ajoutez votre premier plat !</div>';return;}
-  const catL={performance:'Performance',objectif:'Objectif',bien_etre:'Bien-être'};
-  const catE={performance:'⚡',objectif:'🎯',bien_etre:'🌿'};
-  grid.innerHTML=plats.map(p=>{
-    const media=p.photo_url?`<img src="${p.photo_url}" alt="${p.nom}" style="width:100%;height:100%;object-fit:cover;">`:`<span style="font-size:36px;">${catE[p.categorie]||'🍽️'}</span>`;
-    return `<div class="plat-admin-card ${p.actif?'':'inactive'}">
-      <span class="plat-cat-badge badge-${p.categorie}">${catL[p.categorie]||p.categorie}</span>
-      <div class="plat-admin-thumb">${media}<div class="plat-inactive-overlay"></div></div>
-      <div class="plat-admin-body">
-        <div class="plat-admin-name">${p.nom}</div>
-        <div class="plat-admin-info">${p.description||''}<br>${p.calories||'–'} kcal · ${p.proteines||'–'}g prot.</div>
-        <div class="plat-admin-actions">
-          <button class="btn-toggle-actif ${p.actif?'actif':'inactif'}" data-id="${p.id}" data-actif="${p.actif}" onclick="toggleActif('${p.id}',${p.actif},this)">${p.actif?'✓ Actif':'✗ Inactif'}</button>
-          <button class="btn-edit-plat" onclick="editerPlat('${p.id}')">✏️</button>
-          <button class="btn-del-plat"  onclick="supprimerPlat('${p.id}')">🗑️</button>
+
+// ── MESSAGES ──
+async function chargerThreadsMessages(){
+  const el=document.getElementById('msgThreadList');
+  el.innerHTML='<div class="loading">Chargement...</div>';
+  try{
+    // Get latest message per user
+    const msgs=await sb('messages?order=created_at.desc&select=*');
+    // Group by user_id
+    const threads={};
+    msgs.forEach(m=>{
+      if(!threads[m.user_id])threads[m.user_id]={userId:m.user_id,lastMsg:m,unread:0};
+      if(m.expediteur==='client'&&!m.lu)threads[m.user_id].unread++;
+    });
+    const threadArr=Object.values(threads);
+    const totalUnread=threadArr.reduce((s,t)=>s+t.unread,0);
+
+    // Update badges
+    const badge=document.getElementById('navMsgBadge');
+    badge.textContent=totalUnread;
+    badge.classList.toggle('visible',totalUnread>0);
+    document.getElementById('msgStatTotal').textContent=threadArr.length;
+    document.getElementById('msgStatUnread').textContent=totalUnread;
+
+    if(!threadArr.length){el.innerHTML='<div class="empty">Aucun message pour l\'instant</div>';return;}
+
+    el.innerHTML=threadArr.map(t=>{
+      const isUnread=t.unread>0;
+      const preview=(t.lastMsg.expediteur==='client'?'Client : ':'')+t.lastMsg.contenu;
+      const time=new Date(t.lastMsg.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      const initials=(t.userId||'?').substring(0,2).toUpperCase();
+      return`<div class="msg-thread-card ${isUnread?'has-unread':''}" onclick="ouvrirFicheDepuisMessage('${t.userId}')">
+        <div class="msg-thread-avatar">${initials}</div>
+        <div class="msg-thread-info">
+          <div class="msg-thread-name">Client ${(t.userId||'').substring(0,8)}</div>
+          <div class="msg-thread-preview ${isUnread?'unread':''}">${escHtml(preview)}</div>
         </div>
-      </div></div>`;
-  }).join('');
-}
- 
-// UPLOAD PHOTO
-async function previewAndUpload(input) {
-  const file = input.files[0]; if(!file) return;
-  // Preview
-  const reader = new FileReader();
-  reader.onload = e => {
-    const prev = document.getElementById('uploadPreview');
-    prev.src = e.target.result; prev.classList.add('visible');
-    document.getElementById('uploadIcon').style.display = 'none';
-    document.getElementById('uploadLabel').textContent = 'Upload en cours...';
-  };
-  reader.readAsDataURL(file);
-  // Upload Cloudinary
-  document.getElementById('uploadProgress').style.display = 'block';
-  document.getElementById('uploadProgressBar').style.width = '30%';
-  try {
-    const fd = new FormData();
-    fd.append('file', file); fd.append('upload_preset', CLOUDINARY_PRESET);
-    document.getElementById('uploadProgressBar').style.width = '60%';
-    const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method:'POST', body:fd });
-    const data = await res.json();
-    document.getElementById('uploadProgressBar').style.width = '100%';
-    if(data.secure_url) {
-      uploadedPhotoUrl = data.secure_url;
-      document.getElementById('platPhoto').value = data.secure_url;
-      document.getElementById('uploadLabel').textContent = '✓ Photo uploadée';
-      toast('Photo uploadée !','ok');
-    } else { throw new Error('Upload échoué'); }
-  } catch(e) {
-    document.getElementById('uploadLabel').textContent = '✗ Erreur upload';
-    toast('Erreur upload : '+e.message,'err');
-  }
-  setTimeout(()=>document.getElementById('uploadProgress').style.display='none', 800);
-}
- 
-function toggleFormPlat() {
-  const form = document.getElementById('formPlat');
-  const open = form.classList.toggle('open');
-  if(open) {
-    document.getElementById('platEditId').value='';
-    document.getElementById('platNom').value='';
-    document.getElementById('platDesc').value='';
-    document.getElementById('platPhoto').value='';
-    document.getElementById('platCal').value='';
-    document.getElementById('platProt').value='';
-    document.getElementById('platGluc').value='';
-    document.getElementById('platLip').value='';
-    document.getElementById('uploadPreview').classList.remove('visible');
-    document.getElementById('uploadIcon').style.display='block';
-    document.getElementById('uploadLabel').textContent='Cliquez pour ajouter une photo';
-    document.getElementById('formPlatTitle').textContent='Nouveau plat';
-    document.getElementById('btnSavePlat').textContent='Enregistrer le plat';
-    uploadedPhotoUrl = null;
-    form.scrollIntoView({behavior:'smooth'});
-  }
-}
- 
-function editerPlat(id) {
-  const p = allPlats.find(x=>x.id===id); if(!p) return;
-  document.getElementById('platEditId').value=id;
-  document.getElementById('platNom').value=p.nom||'';
-  document.getElementById('platDesc').value=p.description||'';
-  document.getElementById('platCat').value=p.categorie||'bien_etre';
-  document.getElementById('platPhoto').value=p.photo_url||'';
-  document.getElementById('platCal').value=p.calories||'';
-  document.getElementById('platProt').value=p.proteines||'';
-  document.getElementById('platGluc').value=p.glucides||'';
-  document.getElementById('platLip').value=p.lipides||'';
-  if(p.photo_url) {
-    const prev = document.getElementById('uploadPreview');
-    prev.src=p.photo_url; prev.classList.add('visible');
-    document.getElementById('uploadIcon').style.display='none';
-    document.getElementById('uploadLabel').textContent='Photo existante';
-  }
-  document.getElementById('formPlatTitle').textContent='Modifier le plat';
-  document.getElementById('btnSavePlat').textContent='Mettre à jour';
-  const form = document.getElementById('formPlat');
-  form.classList.add('open'); form.scrollIntoView({behavior:'smooth'});
-}
- 
-async function sauvegarderPlat() {
-  const nom = document.getElementById('platNom').value.trim();
-  if(!nom){toast('Donnez un nom au plat','err');return;}
-  const btn = document.getElementById('btnSavePlat');
-  btn.textContent='Enregistrement...'; btn.disabled=true;
-  const editId = document.getElementById('platEditId').value;
-  const payload = {
-    nom, description: document.getElementById('platDesc').value,
-    categorie: document.getElementById('platCat').value,
-    photo_url: document.getElementById('platPhoto').value || null,
-    calories:  parseInt(document.getElementById('platCal').value)||null,
-    proteines: parseInt(document.getElementById('platProt').value)||null,
-    glucides:  parseInt(document.getElementById('platGluc').value)||null,
-    lipides:   parseInt(document.getElementById('platLip').value)||null,
-    actif: true
-  };
-  try {
-    if(editId) { await sb('plats_menu?id=eq.'+editId, {method:'PATCH',body:JSON.stringify(payload)}); toast('Plat mis à jour !','ok'); }
-    else       { await sb('plats_menu', {method:'POST',body:JSON.stringify(payload)}); toast('Plat ajouté !','ok'); }
-    toggleFormPlat(); await chargerPlats();
-  } catch(e) { toast('Erreur : '+e.message,'err'); }
-  finally { btn.textContent=editId?'Mettre à jour':'Enregistrer le plat'; btn.disabled=false; }
-}
- 
-async function toggleActif(id, actif, btn) {
-  try {
-    await sb('plats_menu?id=eq.'+id, {method:'PATCH',body:JSON.stringify({actif:!actif})});
-    btn.className='btn-toggle-actif '+(!actif?'actif':'inactif');
-    btn.textContent=!actif?'✓ Actif':'✗ Inactif';
-    btn.dataset.actif=String(!actif);
-    const p=allPlats.find(x=>x.id===id); if(p) p.actif=!actif;
-    btn.closest('.plat-admin-card').classList.toggle('inactive', actif);
-    toast(!actif?'Plat activé':'Plat désactivé','ok');
-  } catch(e){toast('Erreur','err');}
-}
- 
-async function supprimerPlat(id) {
-  if(!confirm('Supprimer ce plat définitivement ?')) return;
-  try { await sb('plats_menu?id=eq.'+id,{method:'DELETE'}); toast('Plat supprimé','ok'); await chargerPlats(); }
-  catch(e){toast('Erreur','err');}
-}
- 
-// ── COMMANDES ──
-function getLundi(offset=0) {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = d.getDate()-day+(day===0?-6:1);
-  d.setDate(diff+offset*7); d.setHours(0,0,0,0);
-  return d;
-}
-function formatDate(d) { return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'}); }
- 
-function updateSemaineLabel() {
-  const lundi = getLundi(semaineOffset);
-  const vendredi = new Date(lundi); vendredi.setDate(lundi.getDate()+4);
-  document.getElementById('semaineLabel').textContent = 'Semaine du '+formatDate(lundi);
-  document.getElementById('semaineSub').textContent = formatDate(lundi)+' au '+formatDate(vendredi);
-}
- 
-function changerSemaine(dir) { semaineOffset+=dir; updateSemaineLabel(); chargerCommandes(); }
- 
-async function chargerCommandes() {
-  updateSemaineLabel();
-  const lundi = getLundi(semaineOffset);
-  const lundiStr = lundi.toISOString().split('T')[0];
-  const el = document.getElementById('commandesList');
-  el.innerHTML = '<div class="loading">Chargement...</div>';
-  try {
-    const commandes = await sb('commandes?semaine=eq.'+lundiStr+'&order=created_at.desc&select=*');
-    // Stats
-    document.getElementById('cmdTotal').textContent = commandes.length;
-    document.getElementById('cmdConfirmees').textContent = commandes.filter(c=>c.statut==='confirmee').length;
-    document.getElementById('cmdLivrees').textContent = commandes.filter(c=>c.statut==='livree').length;
-    if(!commandes||commandes.length===0){el.innerHTML='<div class="empty">Aucune commande cette semaine</div>';return;}
-    // Charger les plats pour afficher les noms
-    const platsMap = {};
-    allPlats.forEach(p => platsMap[p.id]=p);
-    el.innerHTML = commandes.map(cmd => {
-      const platsChoisis = (cmd.plats_choisis||[]).map(id => {
-        const p = platsMap[id];
-        if(!p) return `<div class="cmd-plat-chip">Plat ${String(id).substring(0,6)}</div>`;
-        const img = p.photo_url ? `<img class="cmd-plat-img" src="${p.photo_url}" alt="">` : '';
-        return `<div class="cmd-plat-chip">${img}${p.nom}</div>`;
-      }).join('');
-      const date = new Date(cmd.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      const statusClass = 'status-'+cmd.statut;
-      const statusLabels = {en_attente:'⏳ En attente', confirmee:'✓ Confirmée', livree:'🚚 Livrée'};
-      return `<div class="cmd-card">
-        <div class="cmd-header">
-          <div>
-            <div class="cmd-client">Client ${(cmd.user_id||'').substring(0,8)}</div>
-            <div class="cmd-client-sub">${date}</div>
-          </div>
-          <select class="cmd-status ${statusClass}" onchange="changerStatut('${cmd.id}', this)" style="border:none;outline:none;font-family:'DM Sans',sans-serif;cursor:pointer;">
-            <option value="en_attente" ${cmd.statut==='en_attente'?'selected':''}>⏳ En attente</option>
-            <option value="confirmee"  ${cmd.statut==='confirmee'?'selected':''}>✓ Confirmée</option>
-            <option value="livree"     ${cmd.statut==='livree'?'selected':''}>🚚 Livrée</option>
-          </select>
-        </div>
-        <div class="cmd-plats">${platsChoisis||'<span style="color:#aaa;font-size:12px;">Aucun plat</span>'}</div>
-      </div>`;
+        <div class="msg-thread-right">
+          <div class="msg-thread-time">${time}</div>
+          <div class="msg-unread-dot ${isUnread?'visible':''}"></div>
+        </div></div>`;
     }).join('');
-  } catch(e) { el.innerHTML='<div class="empty">Erreur : '+e.message+'</div>'; }
+  }catch(e){el.innerHTML='<div class="empty">Erreur : '+e.message+'</div>';}
 }
- 
-async function changerStatut(id, select) {
-  const newStatut = select.value;
-  select.className = 'cmd-status status-'+newStatut;
-  try {
-    await sb('commandes?id=eq.'+id, {method:'PATCH',body:JSON.stringify({statut:newStatut})});
-    toast('Statut mis à jour','ok');
-    chargerCommandes();
-  } catch(e) { toast('Erreur','err'); }
+
+async function ouvrirFicheDepuisMessage(userId){
+  // Find client by user_id
+  let client=allClients.find(c=>c.user_id===userId);
+  if(!client){
+    // Load from supabase
+    try{const rows=await sb('onboarding?user_id=eq.'+userId+'&limit=1');client=rows[0];}catch(e){}
+  }
+  if(client){
+    await ouvrirFiche(client.id);
+    // Auto-switch to chat
+    setTimeout(()=>switchFichePanel('chat'),100);
+  }
 }
- 
+
+// Global realtime — listen for ALL new client messages
+function subscribeGlobalRealtime(){
+  const wsUrl=SB_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SB_KEY+'&vsn=1.0.0';
+  const ws=new WebSocket(wsUrl);
+  ws.onopen=()=>{
+    ws.send(JSON.stringify({topic:'realtime:public:messages',event:'phx_join',payload:{},ref:'admin_global'}));
+  };
+  ws.onmessage=(e)=>{
+    const data=JSON.parse(e.data);
+    if(data.event==='INSERT'&&data.payload?.record){
+      const msg=data.payload.record;
+      if(msg.expediteur==='client'){
+        // Update badge
+        const badge=document.getElementById('navMsgBadge');
+        const count=(parseInt(badge.textContent)||0)+1;
+        badge.textContent=count; badge.classList.add('visible');
+        // If we're looking at this client's chat, append
+        if(currentClient&&currentClient.user_id===msg.user_id){
+          appendChatMsg(msg);
+        }
+      }
+    }
+  };
+  ws.onclose=()=>setTimeout(subscribeGlobalRealtime,3000);
+  ws.onerror=()=>ws.close();
+}
+
+// ── FICHE + SWITCH ──
+function switchFichePanel(panel){
+  document.getElementById('panelFiche').classList.toggle('active',panel==='fiche');
+  document.getElementById('panelChat').classList.toggle('active',panel==='chat');
+  document.getElementById('switchFiche').classList.toggle('active',panel==='fiche');
+  document.getElementById('switchChat').classList.toggle('active',panel==='chat');
+  if(panel==='chat'&&currentClient){
+    chargerChatFiche(currentClient.user_id);
+  }
+}
+
+async function chargerChatFiche(userId){
+  const el=document.getElementById('ficheMessages');
+  el.innerHTML='<div class="loading">Chargement...</div>';
+  chatMessagesMap={};
+  try{
+    const msgs=await sb('messages?user_id=eq.'+userId+'&order=created_at.asc');
+    // Mark client msgs as read
+    sb('messages?user_id=eq.'+userId+'&expediteur=eq.client&lu=eq.false',{method:'PATCH',body:JSON.stringify({lu:true})}).catch(()=>{});
+    renderChatFiche(msgs);
+    // Clear badge
+    document.getElementById('ficheChatBadge').textContent='0';
+    document.getElementById('ficheChatBadge').classList.remove('visible');
+  }catch(e){el.innerHTML='<div class="empty">Erreur</div>';}
+}
+
+function renderChatFiche(msgs){
+  const el=document.getElementById('ficheMessages');
+  if(!msgs||msgs.length===0){el.innerHTML='<div class="chat-empty"><div style="font-size:32px;">💬</div><div style="font-size:13px;color:var(--muted);">Aucun message. Démarrez la conversation !</div></div>';return;}
+  let lastDay=null, html='';
+  msgs.forEach(m=>{
+    chatMessagesMap[m.id]=true;
+    const day=dayLabel(m.created_at);
+    if(day!==lastDay){html+=`<div class="chat-day-sep">${day}</div>`;lastDay=day;}
+    const isCl=m.expediteur==='client';
+    html+=`<div class="chat-msg ${isCl?'client':'nutri'}" data-id="${m.id}">
+      <div class="chat-bubble">${escHtml(m.contenu)}</div>
+      <div class="chat-time">${fmtTime(m.created_at)}</div>
+    </div>`;
+  });
+  el.innerHTML=html;
+  el.scrollTop=el.scrollHeight;
+}
+
+function appendChatMsg(msg){
+  if(chatMessagesMap[msg.id])return;
+  chatMessagesMap[msg.id]=true;
+  const el=document.getElementById('ficheMessages');
+  const emptyEl=el.querySelector('.chat-empty');
+  if(emptyEl)emptyEl.remove();
+  const isCl=msg.expediteur==='client';
+  const div=document.createElement('div');
+  div.className=`chat-msg ${isCl?'client':'nutri'}`;
+  div.dataset.id=msg.id;
+  div.innerHTML=`<div class="chat-bubble">${escHtml(msg.contenu)}</div><div class="chat-time">${fmtTime(msg.created_at)}</div>`;
+  el.appendChild(div);
+  el.scrollTop=el.scrollHeight;
+  // Update badge if chat panel is not active
+  if(!document.getElementById('panelChat').classList.contains('active')&&isCl){
+    const badge=document.getElementById('ficheChatBadge');
+    const count=(parseInt(badge.textContent)||0)+1;
+    badge.textContent=count; badge.classList.add('visible');
+  }
+}
+
+async function envoyerReponse(){
+  if(!currentClient)return;
+  const input=document.getElementById('ficheMessageInput');
+  const contenu=input.value.trim();
+  if(!contenu)return;
+  const btn=document.getElementById('ficheSendBtn');
+  btn.disabled=true; input.value=''; input.style.height='auto';
+  // Optimistic
+  const tempId='tmp_'+Date.now();
+  appendChatMsg({id:tempId,user_id:currentClient.user_id,expediteur:'nutritionniste',contenu,created_at:new Date().toISOString()});
+  try{
+    const [saved]=await sb('messages',{method:'POST',body:JSON.stringify({
+      user_id:currentClient.user_id,expediteur:'nutritionniste',contenu,lu:false
+    })});
+    // Replace temp
+    const tempEl=document.querySelector(`[data-id="${tempId}"]`);
+    if(tempEl&&saved){tempEl.dataset.id=saved.id;chatMessagesMap[saved.id]=true;delete chatMessagesMap[tempId];}
+    // Send email notification
+    envoyerEmailNotif(currentClient.user_id, contenu);
+    toast('Message envoyé','ok');
+  }catch(e){toast('Erreur : '+e.message,'err');document.querySelector(`[data-id="${tempId}"]`)?.remove();}
+  btn.disabled=false;
+}
+
+async function envoyerEmailNotif(userId, preview){
+  try{
+    // Get client email from onboarding (if stored), otherwise skip
+    const client=allClients.find(c=>c.user_id===userId);
+    const email=client?.email;
+    if(!email)return;
+    await fetch('/api/send-email',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to_email:email,client_name:'Client',message_preview:preview})
+    });
+  }catch(e){}
+}
+
+function handleChatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();envoyerReponse();}}
+function autoResizeChat(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px';}
+
+function dayLabel(iso){
+  const d=new Date(iso),t=new Date(),y=new Date(t);y.setDate(t.getDate()-1);
+  if(d.toDateString()===t.toDateString())return"Aujourd'hui";
+  if(d.toDateString()===y.toDateString())return'Hier';
+  return d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+}
+function fmtTime(iso){return new Date(iso).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
+
 // ── FICHE CLIENT ──
-async function ouvrirFiche(id) {
-  currentClient=allClients.find(c=>c.id===id); if(!currentClient) return;
+async function ouvrirFiche(id){
+  currentClient=allClients.find(c=>c.id===id);
+  if(!currentClient){
+    try{const rows=await sb('onboarding?id=eq.'+id+'&limit=1');currentClient=rows[0];}catch(e){}
+  }
+  if(!currentClient)return;
   document.getElementById('listView').style.display='none';
   document.getElementById('ficheView').classList.add('visible');
   document.getElementById('ficheTitle').textContent='Client '+(currentClient.user_id||'').substring(0,8);
+  // Reset to fiche panel
+  switchFichePanel('fiche');
   afficherFiche(currentClient);
-  try {
-    const [meals,scores]=await Promise.all([
+  // Check unread count for this client
+  try{
+    const unread=await sb('messages?user_id=eq.'+currentClient.user_id+'&expediteur=eq.client&lu=eq.false&select=id');
+    const count=unread.length;
+    const badge=document.getElementById('ficheChatBadge');
+    badge.textContent=count; badge.classList.toggle('visible',count>0);
+  }catch(e){}
+  try{
+    const[meals,scores]=await Promise.all([
       sb('meals?user_id=eq.'+currentClient.user_id+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=5'),
       sb('nutrition_scores?user_id=eq.'+currentClient.user_id+'&order=calculated_at.desc&limit=1')
     ]);
     afficherRepasEtScores(meals,scores);
-  } catch(e){}
-  try {
+  }catch(e){}
+  try{
     const notes=await sb('notes_nutritionniste?client_id=eq.'+currentClient.user_id+'&limit=1');
     if(notes&&notes.length>0){document.getElementById('notesArea').value=notes[0].note||'';document.getElementById('actionInp').value=notes[0].action_semaine||'';}
-  } catch(e){}
+  }catch(e){}
 }
- 
-function afficherFiche(c) {
+
+function afficherFiche(c){
   const motivL={mieux_manger:'🥦 Mieux manger',changer_corps:'🏃 Changer mon corps',performance:'🏆 Performance',sante:'❤️ Santé'};
   const maturL={debutant:'Débutant',premiers_pas:'Premiers pas',habitudes:'Habitudes en place',regime_place:'Régime structuré'};
   const actL={sedentaire:'Sédentaire',leger:'Légèrement actif',modere:'Modérément actif',actif:'Très actif'};
@@ -718,7 +831,7 @@ function afficherFiche(c) {
   const jc=v=>v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
   const jcls=v=>v<=3?'jb-low':v<=6?'jb-mid':'jb-hi';
   const jlbl=v=>v<=3?'Faible':v<=6?'Moyen':'Élevé';
-  document.getElementById('ficheContent').innerHTML=`
+  document.getElementById('ficheDataContent').innerHTML=`
     <div class="sec-card">
       <div class="sec-label">Profil & motivation</div>
       <div class="data-grid">
@@ -757,15 +870,15 @@ function afficherFiche(c) {
     </div>
     <div class="sec-card"><div class="sec-label">📝 Notes privées</div><textarea class="notes-area" id="notesArea" placeholder="Vos observations..."></textarea></div>`;
 }
- 
-function afficherRepasEtScores(meals,scores) {
+
+function afficherRepasEtScores(meals,scores){
   const el=document.getElementById('repasSection');
   if(!meals||meals.length===0){el.innerHTML='<div class="empty">Aucun repas enregistré</div>';}
   else el.innerHTML=meals.map(m=>{
     const ings=(m.meal_ingredients||[]).map(i=>i.name+' '+i.quantity_g+'g').join(', ')||'Aucun ingrédient';
     const date=new Date(m.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
     const photo=m.photo_url?`<div class="repas-photo-sm"><img src="${m.photo_url}" alt=""></div>`:`<div class="repas-photo-sm">🍽️</div>`;
-    return `<div class="repas-mini">${photo}<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;">${m.name}</div><div style="font-size:11px;color:#aaa;">${ings}</div></div><div style="font-size:10px;color:#aaa;">${date}</div></div>`;
+    return`<div class="repas-mini">${photo}<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;">${m.name}</div><div style="font-size:11px;color:#aaa;">${ings}</div></div><div style="font-size:10px;color:#aaa;">${date}</div></div>`;
   }).join('');
   if(scores&&scores.length>0){
     const s=scores[0],v=Math.round(s.variety_score||0),q=Math.round(s.quality_score||0),r=Math.round(s.relevance_score||0);
@@ -777,26 +890,148 @@ function afficherRepasEtScores(meals,scores) {
       <div class="jauge-track"><div class="jauge-fill" style="width:${val}%;background:${sc(val)};"></div></div></div>`).join('');
   }
 }
- 
-async function sauvegarderNotes() {
-  if(!currentClient) return;
-  const btn=document.getElementById('btnSaveNotes'); btn.textContent='Enregistrement...';
-  try {
+
+async function sauvegarderNotes(){
+  if(!currentClient)return;
+  const btn=document.getElementById('btnSaveNotes');btn.textContent='Enregistrement...';
+  try{
     await sb('notes_nutritionniste',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify({client_id:currentClient.user_id,note:document.getElementById('notesArea').value,action_semaine:document.getElementById('actionInp').value,updated_at:new Date().toISOString()})});
-    btn.textContent='✓ Enregistré'; btn.classList.add('saved');
+    btn.textContent='✓ Enregistré';btn.classList.add('saved');
     setTimeout(()=>{btn.textContent='Enregistrer';btn.classList.remove('saved');},2000);
     toast('Notes enregistrées !','ok');
-  } catch(e){toast('Erreur : '+e.message,'err');btn.textContent='Enregistrer';}
+  }catch(e){toast('Erreur : '+e.message,'err');btn.textContent='Enregistrer';}
 }
- 
-function retourListe() { document.getElementById('ficheView').classList.remove('visible'); document.getElementById('listView').style.display='block'; currentClient=null; }
- 
-function toast(msg,type) {
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.className='toast '+type;
-  setTimeout(()=>t.classList.add('show'),10);
-  setTimeout(()=>t.classList.remove('show'),3000);
+
+function retourListe(){document.getElementById('ficheView').classList.remove('visible');document.getElementById('listView').style.display='block';currentClient=null;chatMessagesMap={};}
+
+// ── MENU ──
+async function chargerPlats(){
+  try{allPlats=await sb('plats_menu?order=created_at.desc&select=*');afficherPlatsAdmin(allPlats);}
+  catch(e){document.getElementById('platsAdminGrid').innerHTML='<div class="loading" style="grid-column:1/-1;">Erreur : '+e.message+'</div>';}
 }
+function setCatFilter(cat,el){
+  currentCatFilter=cat;
+  document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  afficherPlatsAdmin(cat==='all'?allPlats:allPlats.filter(p=>p.categorie===cat));
+}
+function afficherPlatsAdmin(plats){
+  const grid=document.getElementById('platsAdminGrid');
+  if(!plats||plats.length===0){grid.innerHTML='<div class="empty" style="grid-column:1/-1;">Aucun plat</div>';return;}
+  const catL={performance:'Performance',objectif:'Objectif',bien_etre:'Bien-être'};
+  const catE={performance:'⚡',objectif:'🎯',bien_etre:'🌿'};
+  grid.innerHTML=plats.map(p=>{
+    const media=p.photo_url?`<img src="${p.photo_url}" alt="${p.nom}" style="width:100%;height:100%;object-fit:cover;">`:`<span style="font-size:36px;">${catE[p.categorie]||'🍽️'}</span>`;
+    return`<div class="plat-admin-card ${p.actif?'':'inactive'}">
+      <span class="plat-cat-badge badge-${p.categorie}">${catL[p.categorie]||p.categorie}</span>
+      <div class="plat-admin-thumb">${media}<div class="plat-inactive-overlay"></div></div>
+      <div class="plat-admin-body">
+        <div class="plat-admin-name">${p.nom}</div>
+        <div class="plat-admin-info">${p.description||''}<br>${p.calories||'–'} kcal · ${p.proteines||'–'}g prot.</div>
+        <div class="plat-admin-actions">
+          <button class="btn-toggle-actif ${p.actif?'actif':'inactif'}" onclick="toggleActif('${p.id}',${p.actif},this)">${p.actif?'✓ Actif':'✗ Inactif'}</button>
+          <button class="btn-edit-plat" onclick="editerPlat('${p.id}')">✏️</button>
+          <button class="btn-del-plat"  onclick="supprimerPlat('${p.id}')">🗑️</button>
+        </div>
+      </div></div>`;
+  }).join('');
+}
+async function previewAndUpload(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{const prev=document.getElementById('uploadPreview');prev.src=e.target.result;prev.classList.add('visible');document.getElementById('uploadIcon').style.display='none';document.getElementById('uploadLabel').textContent='Upload en cours...';};
+  reader.readAsDataURL(file);
+  document.getElementById('uploadProgress').style.display='block';
+  document.getElementById('uploadProgressBar').style.width='30%';
+  try{
+    const fd=new FormData();fd.append('file',file);fd.append('upload_preset',CLOUDINARY_PRESET);
+    document.getElementById('uploadProgressBar').style.width='60%';
+    const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:'POST',body:fd});
+    const data=await res.json();
+    document.getElementById('uploadProgressBar').style.width='100%';
+    if(data.secure_url){uploadedPhotoUrl=data.secure_url;document.getElementById('platPhoto').value=data.secure_url;document.getElementById('uploadLabel').textContent='✓ Photo uploadée';toast('Photo uploadée !','ok');}
+    else throw new Error('Upload échoué');
+  }catch(e){document.getElementById('uploadLabel').textContent='✗ Erreur';toast('Erreur upload','err');}
+  setTimeout(()=>document.getElementById('uploadProgress').style.display='none',800);
+}
+function toggleFormPlat(){
+  const form=document.getElementById('formPlat');
+  const open=form.classList.toggle('open');
+  if(open){['platEditId','platNom','platDesc','platPhoto','platCal','platProt','platGluc','platLip'].forEach(id=>document.getElementById(id).value='');document.getElementById('uploadPreview').classList.remove('visible');document.getElementById('uploadIcon').style.display='block';document.getElementById('uploadLabel').textContent='Cliquez pour ajouter une photo';document.getElementById('formPlatTitle').textContent='Nouveau plat';document.getElementById('btnSavePlat').textContent='Enregistrer le plat';uploadedPhotoUrl=null;form.scrollIntoView({behavior:'smooth'});}
+}
+function editerPlat(id){
+  const p=allPlats.find(x=>x.id===id);if(!p)return;
+  document.getElementById('platEditId').value=id;document.getElementById('platNom').value=p.nom||'';document.getElementById('platDesc').value=p.description||'';document.getElementById('platCat').value=p.categorie||'bien_etre';document.getElementById('platPhoto').value=p.photo_url||'';document.getElementById('platCal').value=p.calories||'';document.getElementById('platProt').value=p.proteines||'';document.getElementById('platGluc').value=p.glucides||'';document.getElementById('platLip').value=p.lipides||'';
+  if(p.photo_url){const prev=document.getElementById('uploadPreview');prev.src=p.photo_url;prev.classList.add('visible');document.getElementById('uploadIcon').style.display='none';document.getElementById('uploadLabel').textContent='Photo existante';}
+  document.getElementById('formPlatTitle').textContent='Modifier le plat';document.getElementById('btnSavePlat').textContent='Mettre à jour';
+  const form=document.getElementById('formPlat');form.classList.add('open');form.scrollIntoView({behavior:'smooth'});
+}
+async function sauvegarderPlat(){
+  const nom=document.getElementById('platNom').value.trim();if(!nom){toast('Donnez un nom au plat','err');return;}
+  const btn=document.getElementById('btnSavePlat');btn.textContent='Enregistrement...';btn.disabled=true;
+  const editId=document.getElementById('platEditId').value;
+  const payload={nom,description:document.getElementById('platDesc').value,categorie:document.getElementById('platCat').value,photo_url:document.getElementById('platPhoto').value||null,calories:parseInt(document.getElementById('platCal').value)||null,proteines:parseInt(document.getElementById('platProt').value)||null,glucides:parseInt(document.getElementById('platGluc').value)||null,lipides:parseInt(document.getElementById('platLip').value)||null,actif:true};
+  try{
+    if(editId)await sb('plats_menu?id=eq.'+editId,{method:'PATCH',body:JSON.stringify(payload)});
+    else await sb('plats_menu',{method:'POST',body:JSON.stringify(payload)});
+    toast(editId?'Plat mis à jour !':'Plat ajouté !','ok');toggleFormPlat();await chargerPlats();
+  }catch(e){toast('Erreur : '+e.message,'err');}
+  finally{btn.textContent=editId?'Mettre à jour':'Enregistrer le plat';btn.disabled=false;}
+}
+async function toggleActif(id,actif,btn){
+  try{
+    await sb('plats_menu?id=eq.'+id,{method:'PATCH',body:JSON.stringify({actif:!actif})});
+    btn.className='btn-toggle-actif '+(!actif?'actif':'inactif');btn.textContent=!actif?'✓ Actif':'✗ Inactif';btn.dataset.actif=String(!actif);
+    const p=allPlats.find(x=>x.id===id);if(p)p.actif=!actif;
+    btn.closest('.plat-admin-card').classList.toggle('inactive',actif);
+    toast(!actif?'Plat activé':'Plat désactivé','ok');
+  }catch(e){toast('Erreur','err');}
+}
+async function supprimerPlat(id){
+  if(!confirm('Supprimer ce plat définitivement ?'))return;
+  try{await sb('plats_menu?id=eq.'+id,{method:'DELETE'});toast('Plat supprimé','ok');await chargerPlats();}
+  catch(e){toast('Erreur','err');}
+}
+
+// ── COMMANDES ──
+function getLundi(offset=0){const d=new Date();const day=d.getDay();const diff=d.getDate()-day+(day===0?-6:1);d.setDate(diff+offset*7);d.setHours(0,0,0,0);return d;}
+function formatDate(d){return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});}
+function updateSemaineLabel(){const lundi=getLundi(semaineOffset);const vendredi=new Date(lundi);vendredi.setDate(lundi.getDate()+4);document.getElementById('semaineLabel').textContent='Semaine du '+formatDate(lundi);document.getElementById('semaineSub').textContent=formatDate(lundi)+' au '+formatDate(vendredi);}
+function changerSemaine(dir){semaineOffset+=dir;updateSemaineLabel();chargerCommandes();}
+async function chargerCommandes(){
+  updateSemaineLabel();
+  const lundi=getLundi(semaineOffset);const lundiStr=lundi.toISOString().split('T')[0];
+  const el=document.getElementById('commandesList');el.innerHTML='<div class="loading">Chargement...</div>';
+  try{
+    const commandes=await sb('commandes?semaine=eq.'+lundiStr+'&order=created_at.desc&select=*');
+    document.getElementById('cmdTotal').textContent=commandes.length;
+    document.getElementById('cmdConfirmees').textContent=commandes.filter(c=>c.statut==='confirmee').length;
+    document.getElementById('cmdLivrees').textContent=commandes.filter(c=>c.statut==='livree').length;
+    if(!commandes||commandes.length===0){el.innerHTML='<div class="empty">Aucune commande cette semaine</div>';return;}
+    const platsMap={};allPlats.forEach(p=>platsMap[p.id]=p);
+    el.innerHTML=commandes.map(cmd=>{
+      const platsChoisis=(cmd.plats_choisis||[]).map(id=>{const p=platsMap[id];if(!p)return`<div class="cmd-plat-chip">Plat ${String(id).substring(0,6)}</div>`;const img=p.photo_url?`<img class="cmd-plat-img" src="${p.photo_url}" alt="">`:'';return`<div class="cmd-plat-chip">${img}${p.nom}</div>`;}).join('');
+      const date=new Date(cmd.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      return`<div class="cmd-card">
+        <div class="cmd-header">
+          <div><div class="cmd-client">Client ${(cmd.user_id||'').substring(0,8)}</div><div class="cmd-client-sub">${date}</div></div>
+          <select class="cmd-status status-${cmd.statut}" onchange="changerStatut('${cmd.id}',this)" style="border:none;outline:none;font-family:'DM Sans',sans-serif;cursor:pointer;">
+            <option value="en_attente" ${cmd.statut==='en_attente'?'selected':''}>⏳ En attente</option>
+            <option value="confirmee"  ${cmd.statut==='confirmee'?'selected':''}>✓ Confirmée</option>
+            <option value="livree"     ${cmd.statut==='livree'?'selected':''}>🚚 Livrée</option>
+          </select>
+        </div>
+        <div class="cmd-plats">${platsChoisis||'<span style="color:#aaa;font-size:12px;">Aucun plat</span>'}</div>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<div class="empty">Erreur : '+e.message+'</div>';}
+}
+async function changerStatut(id,select){
+  const newStatut=select.value;select.className='cmd-status status-'+newStatut;
+  try{await sb('commandes?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:newStatut})});toast('Statut mis à jour','ok');chargerCommandes();}
+  catch(e){toast('Erreur','err');}
+}
+
+function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type;setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3000);}
 </script>
 </body>
 </html>
