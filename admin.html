@@ -11,59 +11,57 @@
   --si: inset 3px 3px 8px rgba(174,174,192,0.35), inset -3px -3px 8px rgba(255,255,255,0.85);
   --sm: 4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85);
   --green: #5a9e6f; --gl: #eaf4ee; --text: #3a3a4a; --muted: #aaa;
-  --red: #c77b7b; --rl: #fde8e8; --amber: #ba7517; --al: #faeeda;
-  --black: #1a1a2e;
+  --red: #c77b7b; --rl: #fde8e8; --amber: #ba7517; --al: #faeeda; --black: #1a1a2e;
 }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; color: var(--text); }
 .bg-pattern { position: fixed; inset: 0; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0); background-size: 26px 26px; z-index: 0; }
 .app { position: relative; z-index: 1; }
-
+ 
 /* LOGIN */
 .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .login-card { background: var(--bg); border-radius: 24px; padding: 36px 28px; box-shadow: var(--so); width: 100%; max-width: 360px; text-align: center; }
 .login-logo { font-size: 40px; margin-bottom: 16px; display: block; }
-.login-title { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-.login-sub   { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.login-title { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+.login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
 .login-input { width: 100%; background: var(--bg); border: none; border-radius: 14px; padding: 14px 16px; font-size: 15px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; box-shadow: var(--si); margin-bottom: 14px; letter-spacing: 2px; }
 .login-input::placeholder { letter-spacing: 0; color: #ccc; }
 .login-btn { width: 100%; padding: 15px; background: var(--bg); border: none; border-radius: 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: var(--so); }
 .login-err { font-size: 12px; color: var(--red); margin-top: 10px; min-height: 16px; }
-
+ 
 /* MAIN */
 .main-app { display: none; min-height: 100vh; }
 .main-app.visible { display: block; }
-
-/* TOP BAR */
+ 
 .top-bar { background: var(--bg); padding: 18px 20px 14px; display: flex; align-items: center; justify-content: space-between; max-width: 900px; margin: 0 auto; }
 .top-title { font-size: 10px; letter-spacing: 1.4px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
-.top-heading { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; }
+.top-heading { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
 .top-right { display: flex; align-items: center; gap: 10px; }
 .search-wrap { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 12px; padding: 9px 14px; box-shadow: var(--si); }
 .search-inp { border: none; background: none; outline: none; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); width: 140px; }
 .search-inp::placeholder { color: #ccc; }
 .logout-btn { background: var(--bg); border: none; cursor: pointer; padding: 9px 14px; border-radius: 12px; box-shadow: var(--sm); font-size: 12px; color: var(--muted); font-family: 'DM Sans', sans-serif; }
-
-/* NAV TABS */
-.nav-tabs { display: flex; gap: 8px; max-width: 900px; margin: 0 auto; padding: 0 20px 14px; }
-.nav-tab { padding: 9px 18px; border-radius: 20px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+ 
+/* NAV */
+.nav-tabs { display: flex; gap: 8px; max-width: 900px; margin: 0 auto; padding: 0 20px 14px; overflow-x: auto; scrollbar-width: none; }
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab { padding: 9px 18px; border-radius: 20px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
 .nav-tab.active { background: var(--black); color: white; box-shadow: 3px 3px 8px rgba(26,26,46,0.35); }
-
-/* CONTENT */
+ 
 .content { max-width: 900px; margin: 0 auto; padding: 0 20px 40px; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
-
+ 
 /* STATS */
 .stats-strip { display: flex; gap: 10px; margin-bottom: 16px; }
 .stat-card { flex: 1; background: var(--bg); border-radius: 18px; padding: 14px 16px; box-shadow: var(--so); text-align: center; }
-.stat-val { font-size: 26px; font-weight: 600; color: var(--text); letter-spacing: -1px; }
+.stat-val { font-size: 26px; font-weight: 600; letter-spacing: -1px; }
 .stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 3px; }
-
+ 
 /* FILTRES */
 .filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .filter-chip { padding: 8px 14px; border-radius: 99px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; cursor: pointer; color: var(--text); border: 2px solid transparent; }
 .filter-chip.on { box-shadow: var(--si); border-color: var(--green); color: var(--green); background: var(--gl); }
-
+ 
 /* CLIENTS */
 .clients-list { display: flex; flex-direction: column; gap: 10px; }
 .client-card { background: var(--bg); border-radius: 20px; padding: 16px 18px; box-shadow: var(--so); cursor: pointer; display: flex; align-items: center; gap: 14px; border: 2px solid transparent; }
@@ -79,44 +77,44 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .ctag-green { background: var(--gl); color: var(--green); box-shadow: none; }
 .ctag-amber { background: var(--al); color: var(--amber); box-shadow: none; }
 .ctag-red   { background: var(--rl); color: var(--red); box-shadow: none; }
-.ctag-black { background: #e8e8f0; color: var(--black); box-shadow: none; }
 .client-scores { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; flex-shrink: 0; }
 .score-mini { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
 .score-dot  { width: 8px; height: 8px; border-radius: 50%; }
 .client-date { font-size: 10px; color: var(--muted); }
-
-/* ── MENU SECTION ── */
+ 
+/* ── MENU ── */
 .menu-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.menu-title { font-size: 16px; font-weight: 600; color: var(--text); }
+.menu-title { font-size: 16px; font-weight: 600; }
 .btn-add-plat { background: var(--black); color: white; border: none; border-radius: 12px; padding: 10px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; box-shadow: 3px 3px 8px rgba(26,26,46,0.35); }
-
-/* CATÉGORIES */
-.cat-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-.cat-tab { padding: 8px 16px; border-radius: 20px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
+.cat-tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; scrollbar-width: none; }
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-tab { padding: 8px 16px; border-radius: 20px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
 .cat-tab.active { box-shadow: var(--si); border: 2px solid var(--black); color: var(--black); }
-
-/* PLATS GRID ADMIN */
+ 
 .plats-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 .plat-admin-card { background: var(--bg); border-radius: 18px; overflow: hidden; box-shadow: var(--so); position: relative; }
-.plat-admin-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: linear-gradient(135deg, #e8e8ec, #d8d8dc); display: flex; align-items: center; justify-content: center; font-size: 36px; }
-.plat-admin-img img { width: 100%; height: 100%; object-fit: cover; }
+.plat-admin-thumb { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: linear-gradient(135deg, #e8e8ec, #d8d8dc); display: flex; align-items: center; justify-content: center; font-size: 36px; overflow: hidden; position: relative; }
+.plat-admin-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .plat-admin-body { padding: 12px 14px; }
-.plat-admin-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.plat-admin-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
 .plat-admin-info { font-size: 11px; color: var(--muted); margin-bottom: 10px; line-height: 1.4; }
 .plat-admin-actions { display: flex; gap: 8px; }
-.btn-toggle { flex: 1; padding: 8px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; }
-.btn-toggle.actif { background: var(--gl); color: var(--green); }
-.btn-toggle.inactif { background: var(--rl); color: var(--red); }
-.btn-delete { width: 34px; height: 34px; border-radius: 10px; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.btn-toggle-actif { flex: 1; padding: 8px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; }
+.btn-toggle-actif.actif { background: var(--gl); color: var(--green); }
+.btn-toggle-actif.inactif { background: var(--rl); color: var(--red); }
+.btn-edit-plat { width: 34px; height: 34px; border-radius: 10px; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.btn-del-plat  { width: 34px; height: 34px; border-radius: 10px; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 13px; }
 .plat-cat-badge { position: absolute; top: 8px; left: 8px; padding: 3px 8px; border-radius: 99px; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
 .badge-performance { background: rgba(186,117,23,0.85); color: white; }
 .badge-objectif    { background: rgba(90,158,111,0.85); color: white; }
 .badge-bien_etre   { background: rgba(26,26,46,0.75); color: white; }
-
-/* FORM AJOUT PLAT */
+.plat-inactive-overlay { position: absolute; inset: 0; background: rgba(240,240,243,0.6); display: none; }
+.plat-admin-card.inactive .plat-inactive-overlay { display: block; }
+ 
+/* FORM PLAT */
 .form-card { background: var(--bg); border-radius: 20px; padding: 20px 18px; box-shadow: var(--so); margin-bottom: 16px; display: none; }
 .form-card.open { display: block; }
-.form-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+.form-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group.full { grid-column: 1 / -1; }
@@ -124,10 +122,48 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .form-inp { background: var(--bg); border: none; border-radius: 12px; padding: 11px 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); }
 .form-inp::placeholder { color: #ccc; }
 .form-select { background: var(--bg); border: none; border-radius: 12px; padding: 11px 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); appearance: none; cursor: pointer; }
+ 
+/* UPLOAD PHOTO */
+.upload-zone { background: var(--bg); border-radius: 12px; box-shadow: var(--si); padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; min-height: 80px; justify-content: center; position: relative; }
+.upload-preview { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; display: none; }
+.upload-preview.visible { display: block; }
+.upload-label { font-size: 12px; color: var(--muted); text-align: center; }
+.upload-icon { font-size: 24px; }
+.upload-progress { width: 100%; height: 4px; background: var(--bg); border-radius: 2px; box-shadow: var(--si); overflow: hidden; display: none; }
+.upload-progress-bar { height: 100%; background: var(--black); border-radius: 2px; transition: width 0.3s; }
+input[type="file"] { display: none; }
+ 
 .form-actions { display: flex; gap: 10px; margin-top: 14px; }
 .btn-submit { flex: 1; padding: 13px; background: var(--black); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-cancel { padding: 13px 18px; background: var(--bg); color: var(--muted); border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; box-shadow: var(--sm); }
-
+ 
+/* ── COMMANDES ── */
+.semaine-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; background: var(--bg); border-radius: 18px; padding: 14px 18px; box-shadow: var(--so); }
+.semaine-label { font-size: 15px; font-weight: 600; }
+.semaine-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.semaine-btns { display: flex; gap: 8px; }
+.btn-semaine { width: 34px; height: 34px; border-radius: 50%; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text); }
+.btn-semaine:active { box-shadow: var(--si); }
+ 
+.commandes-stats { display: flex; gap: 10px; margin-bottom: 14px; }
+.cmd-stat { flex: 1; background: var(--bg); border-radius: 14px; padding: 12px 14px; box-shadow: var(--so); text-align: center; }
+.cmd-stat-val { font-size: 22px; font-weight: 600; }
+.cmd-stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+ 
+.commandes-list { display: flex; flex-direction: column; gap: 10px; }
+.cmd-card { background: var(--bg); border-radius: 18px; padding: 16px 18px; box-shadow: var(--so); }
+.cmd-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cmd-client { font-size: 14px; font-weight: 600; }
+.cmd-client-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.cmd-status { padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 500; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
+.status-en_attente { background: var(--al); color: var(--amber); }
+.status-confirmee  { background: var(--gl); color: var(--green); }
+.status-livree     { background: #e8eaf4; color: var(--black); }
+.cmd-plats { display: flex; flex-wrap: wrap; gap: 6px; }
+.cmd-plat-chip { padding: 5px 10px; border-radius: 99px; font-size: 11px; background: var(--bg); box-shadow: var(--sm); color: var(--text); display: flex; align-items: center; gap: 5px; }
+.cmd-plat-img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+ 
 /* FICHE CLIENT */
 .fiche-screen { display: none; }
 .fiche-screen.visible { display: block; }
@@ -139,42 +175,42 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .sec-label { font-size: 10px; letter-spacing: 1.4px; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; }
 .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .data-cell { background: var(--bg); border-radius: 14px; padding: 12px 14px; box-shadow: var(--si); }
-.dc-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 4px; }
+.dc-lbl { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 .dc-val { font-size: 15px; font-weight: 500; }
-.dc-val.green { color: var(--green); } .dc-val.red { color: var(--red); } .dc-val.amber { color: var(--amber); }
+.dc-val.green { color: var(--green); }
 .jauge-block { margin-bottom: 14px; }
 .jauge-block:last-child { margin-bottom: 0; }
 .jauge-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
 .jauge-name { font-size: 13px; font-weight: 500; }
 .jauge-badge { font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 99px; }
-.jb-low { background: var(--rl); color: var(--red); } .jb-mid { background: var(--al); color: var(--amber); } .jb-hi { background: var(--gl); color: var(--green); }
+.jb-low { background: var(--rl); color: var(--red); }
+.jb-mid { background: var(--al); color: var(--amber); }
+.jb-hi  { background: var(--gl); color: var(--green); }
 .jauge-track { height: 8px; background: var(--bg); border-radius: 4px; box-shadow: var(--si); overflow: hidden; }
 .jauge-fill  { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
 .repas-mini { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(174,174,192,0.15); }
 .repas-mini:last-child { border-bottom: none; }
 .repas-photo-sm { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; background: var(--bg); box-shadow: var(--sm); display: flex; align-items: center; justify-content: center; font-size: 18px; overflow: hidden; }
 .repas-photo-sm img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
-.repas-name-sm { font-size: 13px; font-weight: 500; flex: 1; }
-.repas-ings-sm { font-size: 11px; color: var(--muted); }
-.repas-date-sm { font-size: 10px; color: var(--muted); flex-shrink: 0; }
 .notes-area { width: 100%; background: var(--bg); border: none; border-radius: 14px; padding: 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); resize: none; outline: none; box-shadow: var(--si); min-height: 100px; line-height: 1.6; }
 .notes-area::placeholder { color: #ccc; }
 .btn-save-notes { width: 100%; padding: 13px; background: var(--bg); border: none; border-radius: 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: var(--so); margin-top: 10px; }
 .btn-save-notes.saved { color: var(--green); }
 .action-inp { width: 100%; background: var(--bg); border: none; border-radius: 14px; padding: 13px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); margin-bottom: 10px; }
 .action-inp::placeholder { color: #ccc; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0; line-height: 1.8; }
 .loading { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0; }
-.tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: #fff; padding: 11px 22px; border-radius: 20px; font-size: 13px; z-index: 2000; transition: transform 0.3s; pointer-events: none; box-shadow: 4px 4px 12px rgba(174,174,192,0.4); }
 .toast.show { transform: translateX(-50%) translateY(0); }
-.toast.ok { background: var(--green); } .toast.err { background: var(--red); }
+.toast.ok { background: var(--green); }
+.toast.err { background: var(--red); }
 </style>
 </head>
 <body>
 <div class="bg-pattern"></div>
 <div class="app">
-
+ 
   <!-- LOGIN -->
   <div class="login-screen" id="loginScreen">
     <div class="login-card">
@@ -186,11 +222,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
       <div class="login-err" id="loginErr"></div>
     </div>
   </div>
-
+ 
   <!-- MAIN -->
   <div class="main-app" id="mainApp">
-
-    <!-- LISTE / MENU VIEW -->
     <div id="listView">
       <div class="top-bar">
         <div>
@@ -205,16 +239,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
           <button class="logout-btn" onclick="logout()">Déconnexion</button>
         </div>
       </div>
-
-      <!-- NAV TABS -->
+ 
       <div class="nav-tabs">
-        <button class="nav-tab active" id="navClients" onclick="switchNav('clients')">👥 Clients</button>
-        <button class="nav-tab" id="navMenu" onclick="switchNav('menu')">🍽️ Menu</button>
+        <button class="nav-tab active" id="navClients"  onclick="switchNav('clients')">👥 Clients</button>
+        <button class="nav-tab"        id="navMenu"     onclick="switchNav('menu')">🍽️ Menu</button>
+        <button class="nav-tab"        id="navCommandes" onclick="switchNav('commandes')">📦 Commandes</button>
       </div>
-
+ 
       <div class="content">
-
-        <!-- ONGLET CLIENTS -->
+ 
+        <!-- CLIENTS -->
         <div class="tab-content active" id="tabClients">
           <div class="stats-strip">
             <div class="stat-card"><div class="stat-val" id="statTotal">–</div><div class="stat-lbl">Clients</div></div>
@@ -222,37 +256,31 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
             <div class="stat-card"><div class="stat-val" id="statAlerte">–</div><div class="stat-lbl">Alertes</div></div>
           </div>
           <div class="filters">
-            <div class="filter-chip on" onclick="setFilter('tous', this)">Tous</div>
-            <div class="filter-chip" onclick="setFilter('mieux_manger', this)">🥦 Mieux manger</div>
-            <div class="filter-chip" onclick="setFilter('changer_corps', this)">🏃 Corps</div>
-            <div class="filter-chip" onclick="setFilter('performance', this)">🏆 Performance</div>
-            <div class="filter-chip" onclick="setFilter('alerte', this)">🚨 Alertes</div>
+            <div class="filter-chip on" onclick="setFilter('tous',this)">Tous</div>
+            <div class="filter-chip" onclick="setFilter('mieux_manger',this)">🥦 Mieux manger</div>
+            <div class="filter-chip" onclick="setFilter('changer_corps',this)">🏃 Corps</div>
+            <div class="filter-chip" onclick="setFilter('performance',this)">🏆 Performance</div>
+            <div class="filter-chip" onclick="setFilter('alerte',this)">🚨 Alertes</div>
           </div>
           <div class="clients-list" id="clientsList"><div class="loading">Chargement...</div></div>
         </div>
-
-        <!-- ONGLET MENU -->
+ 
+        <!-- MENU -->
         <div class="tab-content" id="tabMenu">
           <div class="menu-header">
             <div class="menu-title">Menu de la semaine</div>
             <button class="btn-add-plat" onclick="toggleFormPlat()">+ Ajouter un plat</button>
           </div>
-
-          <!-- FORM AJOUT -->
+ 
+          <!-- FORM -->
           <div class="form-card" id="formPlat">
             <div class="form-title" id="formPlatTitle">Nouveau plat</div>
             <input type="hidden" id="platEditId">
             <div class="form-row">
-              <div class="form-group full">
-                <div class="form-lbl">Nom du plat</div>
-                <input class="form-inp" type="text" id="platNom" placeholder="Ex: Bowl poulet quinoa">
-              </div>
+              <div class="form-group full"><div class="form-lbl">Nom du plat</div><input class="form-inp" type="text" id="platNom" placeholder="Ex: Bowl poulet quinoa"></div>
             </div>
             <div class="form-row">
-              <div class="form-group full">
-                <div class="form-lbl">Description</div>
-                <input class="form-inp" type="text" id="platDesc" placeholder="Ex: Poulet grillé, quinoa, légumes rôtis">
-              </div>
+              <div class="form-group full"><div class="form-lbl">Description</div><input class="form-inp" type="text" id="platDesc" placeholder="Ex: Poulet grillé, quinoa, légumes rôtis"></div>
             </div>
             <div class="form-row">
               <div class="form-group">
@@ -264,50 +292,63 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
                 </select>
               </div>
               <div class="form-group">
-                <div class="form-lbl">URL Photo (optionnel)</div>
-                <input class="form-inp" type="text" id="platPhoto" placeholder="https://...">
+                <div class="form-lbl">Photo du plat</div>
+                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('photoFile').click()">
+                  <img class="upload-preview" id="uploadPreview" alt="">
+                  <span class="upload-icon" id="uploadIcon">📷</span>
+                  <span class="upload-label" id="uploadLabel">Cliquez pour ajouter une photo</span>
+                  <div class="upload-progress" id="uploadProgress">
+                    <div class="upload-progress-bar" id="uploadProgressBar" style="width:0%"></div>
+                  </div>
+                </div>
+                <input type="file" id="photoFile" accept="image/*" onchange="previewAndUpload(this)">
+                <input type="hidden" id="platPhoto">
               </div>
             </div>
             <div class="form-row">
-              <div class="form-group">
-                <div class="form-lbl">Calories (kcal)</div>
-                <input class="form-inp" type="number" id="platCal" placeholder="450">
-              </div>
-              <div class="form-group">
-                <div class="form-lbl">Protéines (g)</div>
-                <input class="form-inp" type="number" id="platProt" placeholder="35">
-              </div>
-              <div class="form-group">
-                <div class="form-lbl">Glucides (g)</div>
-                <input class="form-inp" type="number" id="platGluc" placeholder="40">
-              </div>
-              <div class="form-group">
-                <div class="form-lbl">Lipides (g)</div>
-                <input class="form-inp" type="number" id="platLip" placeholder="15">
-              </div>
+              <div class="form-group"><div class="form-lbl">Calories (kcal)</div><input class="form-inp" type="number" id="platCal" placeholder="450"></div>
+              <div class="form-group"><div class="form-lbl">Protéines (g)</div><input class="form-inp" type="number" id="platProt" placeholder="35"></div>
+              <div class="form-group"><div class="form-lbl">Glucides (g)</div><input class="form-inp" type="number" id="platGluc" placeholder="40"></div>
+              <div class="form-group"><div class="form-lbl">Lipides (g)</div><input class="form-inp" type="number" id="platLip" placeholder="15"></div>
             </div>
             <div class="form-actions">
               <button class="btn-cancel" onclick="toggleFormPlat()">Annuler</button>
               <button class="btn-submit" onclick="sauvegarderPlat()" id="btnSavePlat">Enregistrer le plat</button>
             </div>
           </div>
-
-          <!-- CATÉGORIES TABS -->
+ 
           <div class="cat-tabs">
-            <button class="cat-tab active" id="catAll" onclick="setCatFilter('all', this)">Tous</button>
-            <button class="cat-tab" id="catPerf" onclick="setCatFilter('performance', this)">⚡ Performance</button>
-            <button class="cat-tab" id="catObj" onclick="setCatFilter('objectif', this)">🎯 Objectif</button>
-            <button class="cat-tab" id="catBien" onclick="setCatFilter('bien_etre', this)">🌿 Bien-être</button>
+            <button class="cat-tab active" onclick="setCatFilter('all',this)">Tous</button>
+            <button class="cat-tab" onclick="setCatFilter('performance',this)">⚡ Performance</button>
+            <button class="cat-tab" onclick="setCatFilter('objectif',this)">🎯 Objectif</button>
+            <button class="cat-tab" onclick="setCatFilter('bien_etre',this)">🌿 Bien-être</button>
           </div>
-
-          <div class="plats-admin-grid" id="platsAdminGrid">
-            <div class="loading" style="grid-column:1/-1;">Chargement des plats...</div>
-          </div>
+          <div class="plats-admin-grid" id="platsAdminGrid"><div class="loading" style="grid-column:1/-1;">Chargement...</div></div>
         </div>
-
+ 
+        <!-- COMMANDES -->
+        <div class="tab-content" id="tabCommandes">
+          <div class="semaine-nav">
+            <div>
+              <div class="semaine-label" id="semaineLabel">–</div>
+              <div class="semaine-sub" id="semaineSub">–</div>
+            </div>
+            <div class="semaine-btns">
+              <button class="btn-semaine" onclick="changerSemaine(-1)">‹</button>
+              <button class="btn-semaine" onclick="changerSemaine(1)">›</button>
+            </div>
+          </div>
+          <div class="commandes-stats">
+            <div class="cmd-stat"><div class="cmd-stat-val" id="cmdTotal">–</div><div class="cmd-stat-lbl">Commandes</div></div>
+            <div class="cmd-stat"><div class="cmd-stat-val" id="cmdConfirmees">–</div><div class="cmd-stat-lbl">Confirmées</div></div>
+            <div class="cmd-stat"><div class="cmd-stat-val" id="cmdLivrees">–</div><div class="cmd-stat-lbl">Livrées</div></div>
+          </div>
+          <div class="commandes-list" id="commandesList"><div class="loading">Chargement...</div></div>
+        </div>
+ 
       </div>
     </div>
-
+ 
     <!-- FICHE CLIENT -->
     <div class="fiche-screen" id="ficheView">
       <div class="fiche-header">
@@ -316,21 +357,25 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
       </div>
       <div class="fiche-content" id="ficheContent"><div class="loading">Chargement...</div></div>
     </div>
-
   </div>
 </div>
 <div class="toast" id="toast"></div>
-
+ 
 <script>
 const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+const CLOUDINARY_CLOUD  = 'dujji1s6g';
+const CLOUDINARY_PRESET = 'meal_photos';
 const PWD = 'Nutri26';
-
+ 
 let allClients = [], allPlats = [], currentFilter = 'tous', currentSearch = '', currentCatFilter = 'all', currentClient = null;
-
+let semaineOffset = 0;
+let uploadedPhotoUrl = null;
+ 
+// AUTH
 function login() {
   if (document.getElementById('pwdInput').value === PWD) {
-    localStorage.setItem('nutri_auth', '1');
+    localStorage.setItem('nutri_auth','1');
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').classList.add('visible');
     chargerClients(); chargerPlats();
@@ -339,62 +384,52 @@ function login() {
     document.getElementById('pwdInput').value = '';
   }
 }
-function logout() {
-  localStorage.removeItem('nutri_auth');
-  document.getElementById('mainApp').classList.remove('visible');
-  document.getElementById('loginScreen').style.display = 'flex';
-}
-if (localStorage.getItem('nutri_auth') === '1') {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('mainApp').classList.add('visible');
-  chargerClients(); chargerPlats();
-}
-
-async function sb(path, options = {}) {
-  const res = await fetch(SB_URL + '/rest/v1/' + path, {
-    ...options,
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation', ...(options.headers || {}) }
-  });
+function logout() { localStorage.removeItem('nutri_auth'); document.getElementById('mainApp').classList.remove('visible'); document.getElementById('loginScreen').style.display='flex'; }
+if (localStorage.getItem('nutri_auth')==='1') { document.getElementById('loginScreen').style.display='none'; document.getElementById('mainApp').classList.add('visible'); chargerClients(); chargerPlats(); }
+ 
+// SUPABASE
+async function sb(path, options={}) {
+  const res = await fetch(SB_URL+'/rest/v1/'+path, { ...options, headers: { 'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(options.headers||{}) } });
   const text = await res.text();
-  if (!res.ok) throw new Error(text);
+  if(!res.ok) throw new Error(text);
   return text ? JSON.parse(text) : [];
 }
-
+ 
 // NAV
 function switchNav(tab) {
-  document.getElementById('navClients').classList.toggle('active', tab === 'clients');
-  document.getElementById('navMenu').classList.toggle('active', tab === 'menu');
-  document.getElementById('tabClients').classList.toggle('active', tab === 'clients');
-  document.getElementById('tabMenu').classList.toggle('active', tab === 'menu');
-  document.getElementById('topHeading').textContent = tab === 'clients' ? 'Mes clients' : 'Menu de la semaine';
-  document.getElementById('searchWrap').style.display = tab === 'clients' ? 'flex' : 'none';
+  ['clients','menu','commandes'].forEach(t => {
+    document.getElementById('nav'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===tab);
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===tab);
+  });
+  const titles = { clients:'Mes clients', menu:'Menu de la semaine', commandes:'Commandes' };
+  document.getElementById('topHeading').textContent = titles[tab];
+  document.getElementById('searchWrap').style.display = tab==='clients' ? 'flex' : 'none';
+  if(tab==='commandes') chargerCommandes();
 }
-
+ 
 // ── CLIENTS ──
 async function chargerClients() {
   try {
-    const data = await sb('onboarding?completed=eq.true&order=created_at.desc&select=*');
-    allClients = data; updateStats(data); afficherClients(data);
-  } catch(e) { document.getElementById('clientsList').innerHTML = '<div class="empty">Erreur : ' + e.message + '</div>'; }
+    allClients = await sb('onboarding?completed=eq.true&order=created_at.desc&select=*');
+    updateStats(allClients); afficherClients(allClients);
+  } catch(e) { document.getElementById('clientsList').innerHTML='<div class="empty">Erreur : '+e.message+'</div>'; }
 }
-
 function updateStats(data) {
-  const sept = new Date(); sept.setDate(sept.getDate() - 7);
+  const sept = new Date(); sept.setDate(sept.getDate()-7);
   document.getElementById('statTotal').textContent  = data.length;
-  document.getElementById('statCette').textContent  = data.filter(c => new Date(c.created_at) > sept).length;
-  document.getElementById('statAlerte').textContent = data.filter(c => (c.score_motivation||5) <= 3 || (c.score_rigueur||5) <= 3).length;
+  document.getElementById('statCette').textContent  = data.filter(c=>new Date(c.created_at)>sept).length;
+  document.getElementById('statAlerte').textContent = data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3).length;
 }
-
 function afficherClients(data) {
   const el = document.getElementById('clientsList');
-  if (!data || data.length === 0) { el.innerHTML = '<div class="empty">Aucun client</div>'; return; }
-  const motivL = { mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Corps', performance:'🏆 Performance', sante:'❤️ Santé' };
-  const maturL = { debutant:'Débutant', premiers_pas:'Premiers pas', habitudes:'Habitudes', regime_place:'Régime structuré' };
-  el.innerHTML = data.map(c => {
-    const sm = c.score_motivation||5, sr = c.score_rigueur||5, sn = c.score_nutrition||5;
-    const isAlerte = sm<=3||sr<=3, isWarn = (sm<=5||sr<=5)&&!isAlerte;
-    const date = new Date(c.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
-    const sc = v => v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
+  if(!data||data.length===0){el.innerHTML='<div class="empty">Aucun client</div>';return;}
+  const motivL={mieux_manger:'🥦 Mieux manger',changer_corps:'🏃 Corps',performance:'🏆 Performance',sante:'❤️ Santé'};
+  const maturL={debutant:'Débutant',premiers_pas:'Premiers pas',habitudes:'Habitudes',regime_place:'Régime structuré'};
+  el.innerHTML = data.map(c=>{
+    const sm=c.score_motivation||5,sr=c.score_rigueur||5,sn=c.score_nutrition||5;
+    const isAlerte=sm<=3||sr<=3,isWarn=(sm<=5||sr<=5)&&!isAlerte;
+    const date=new Date(c.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+    const sc=v=>v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
     return `<div class="client-card ${isAlerte?'alert':isWarn?'warn':''}" onclick="ouvrirFiche('${c.id}')">
       <div class="client-avatar ${isAlerte?'red-av':''}">${(c.user_id||'?').substring(0,2).toUpperCase()}</div>
       <div class="client-info">
@@ -411,188 +446,279 @@ function afficherClients(data) {
         <div class="score-mini"><div class="score-dot" style="background:${sc(sr)}"></div>Rigueur ${sr}/10</div>
         <div class="score-mini"><div class="score-dot" style="background:${sc(sn)}"></div>Nutri. ${sn}/10</div>
         <div class="client-date">${date}</div>
-      </div>
-    </div>`;
+      </div></div>`;
   }).join('');
 }
-
-function setFilter(f, el) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('on'));
-  el.classList.add('on'); appliquerFiltres();
-}
-function filtrer(q) { currentSearch = q.toLowerCase(); appliquerFiltres(); }
-function appliquerFiltres() {
-  let data = [...allClients];
-  if (currentFilter === 'alerte') data = data.filter(c => (c.score_motivation||5)<=3||(c.score_rigueur||5)<=3);
-  else if (currentFilter !== 'tous') data = data.filter(c => c.motivation === currentFilter);
-  if (currentSearch) data = data.filter(c => (c.user_id||'').toLowerCase().includes(currentSearch));
+function setFilter(f,el){currentFilter=f;document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');appliquerFiltres();}
+function filtrer(q){currentSearch=q.toLowerCase();appliquerFiltres();}
+function appliquerFiltres(){
+  let data=[...allClients];
+  if(currentFilter==='alerte') data=data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3);
+  else if(currentFilter!=='tous') data=data.filter(c=>c.motivation===currentFilter);
+  if(currentSearch) data=data.filter(c=>(c.user_id||'').toLowerCase().includes(currentSearch));
   afficherClients(data);
 }
-
-// ── MENU / PLATS ──
+ 
+// ── MENU ──
 async function chargerPlats() {
   try {
-    const data = await sb('plats_menu?order=created_at.desc&select=*');
-    allPlats = data; afficherPlatsAdmin(data);
-  } catch(e) { document.getElementById('platsAdminGrid').innerHTML = '<div class="loading" style="grid-column:1/-1;">Erreur : ' + e.message + '</div>'; }
+    allPlats = await sb('plats_menu?order=created_at.desc&select=*');
+    afficherPlatsAdmin(allPlats);
+  } catch(e) { document.getElementById('platsAdminGrid').innerHTML='<div class="loading" style="grid-column:1/-1;">Erreur : '+e.message+'</div>'; }
 }
-
-function setCatFilter(cat, el) {
-  currentCatFilter = cat;
-  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+function setCatFilter(cat,el){
+  currentCatFilter=cat;
+  document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  const filtered = cat === 'all' ? allPlats : allPlats.filter(p => p.categorie === cat);
-  afficherPlatsAdmin(filtered);
+  afficherPlatsAdmin(cat==='all'?allPlats:allPlats.filter(p=>p.categorie===cat));
 }
-
 function afficherPlatsAdmin(plats) {
   const grid = document.getElementById('platsAdminGrid');
-  if(!plats || plats.length === 0) {
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">Aucun plat · Ajoutez votre premier plat !</div>';
-    return;
-  }
-  const catLabels = { performance:'Performance', objectif:'Objectif', bien_etre:'Bien-être' };
-  const catEmojis = { performance:'⚡', objectif:'🎯', bien_etre:'🌿' };
-  grid.innerHTML = plats.map(p => {
-    const media = p.photo_url
-      ? `<div class="plat-admin-img"><img src="${p.photo_url}" alt="${p.nom}"></div>`
-      : `<div class="plat-admin-img">${catEmojis[p.categorie]||'🍽️'}</div>`;
-    return `<div class="plat-admin-card">
-      <span class="plat-cat-badge badge-${p.categorie}">${catLabels[p.categorie]||p.categorie}</span>
-      ${media}
+  if(!plats||plats.length===0){grid.innerHTML='<div class="empty" style="grid-column:1/-1;">Aucun plat · Ajoutez votre premier plat !</div>';return;}
+  const catL={performance:'Performance',objectif:'Objectif',bien_etre:'Bien-être'};
+  const catE={performance:'⚡',objectif:'🎯',bien_etre:'🌿'};
+  grid.innerHTML=plats.map(p=>{
+    const media=p.photo_url?`<img src="${p.photo_url}" alt="${p.nom}" style="width:100%;height:100%;object-fit:cover;">`:`<span style="font-size:36px;">${catE[p.categorie]||'🍽️'}</span>`;
+    return `<div class="plat-admin-card ${p.actif?'':'inactive'}">
+      <span class="plat-cat-badge badge-${p.categorie}">${catL[p.categorie]||p.categorie}</span>
+      <div class="plat-admin-thumb">${media}<div class="plat-inactive-overlay"></div></div>
       <div class="plat-admin-body">
         <div class="plat-admin-name">${p.nom}</div>
         <div class="plat-admin-info">${p.description||''}<br>${p.calories||'–'} kcal · ${p.proteines||'–'}g prot.</div>
         <div class="plat-admin-actions">
-          <button class="btn-toggle ${p.actif?'actif':'inactif'}" onclick="toggleActif('${p.id}', ${p.actif}, this)">
-            ${p.actif ? '✓ Actif' : '✗ Inactif'}
-          </button>
-          <button class="btn-toggle" style="flex:none;padding:8px 10px;background:#f0f0f3;box-shadow:var(--sm);color:var(--muted);" onclick="editerPlat('${p.id}')">✏️</button>
-          <button class="btn-delete" onclick="supprimerPlat('${p.id}')">🗑️</button>
+          <button class="btn-toggle-actif ${p.actif?'actif':'inactif'}" data-id="${p.id}" data-actif="${p.actif}" onclick="toggleActif('${p.id}',${p.actif},this)">${p.actif?'✓ Actif':'✗ Inactif'}</button>
+          <button class="btn-edit-plat" onclick="editerPlat('${p.id}')">✏️</button>
+          <button class="btn-del-plat"  onclick="supprimerPlat('${p.id}')">🗑️</button>
         </div>
-      </div>
-    </div>`;
+      </div></div>`;
   }).join('');
 }
-
+ 
+// UPLOAD PHOTO
+async function previewAndUpload(input) {
+  const file = input.files[0]; if(!file) return;
+  // Preview
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('uploadPreview');
+    prev.src = e.target.result; prev.classList.add('visible');
+    document.getElementById('uploadIcon').style.display = 'none';
+    document.getElementById('uploadLabel').textContent = 'Upload en cours...';
+  };
+  reader.readAsDataURL(file);
+  // Upload Cloudinary
+  document.getElementById('uploadProgress').style.display = 'block';
+  document.getElementById('uploadProgressBar').style.width = '30%';
+  try {
+    const fd = new FormData();
+    fd.append('file', file); fd.append('upload_preset', CLOUDINARY_PRESET);
+    document.getElementById('uploadProgressBar').style.width = '60%';
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method:'POST', body:fd });
+    const data = await res.json();
+    document.getElementById('uploadProgressBar').style.width = '100%';
+    if(data.secure_url) {
+      uploadedPhotoUrl = data.secure_url;
+      document.getElementById('platPhoto').value = data.secure_url;
+      document.getElementById('uploadLabel').textContent = '✓ Photo uploadée';
+      toast('Photo uploadée !','ok');
+    } else { throw new Error('Upload échoué'); }
+  } catch(e) {
+    document.getElementById('uploadLabel').textContent = '✗ Erreur upload';
+    toast('Erreur upload : '+e.message,'err');
+  }
+  setTimeout(()=>document.getElementById('uploadProgress').style.display='none', 800);
+}
+ 
 function toggleFormPlat() {
   const form = document.getElementById('formPlat');
-  const isOpen = form.classList.contains('open');
-  form.classList.toggle('open', !isOpen);
-  if(!isOpen) {
-    // Reset form
-    document.getElementById('platEditId').value = '';
-    document.getElementById('platNom').value = '';
-    document.getElementById('platDesc').value = '';
-    document.getElementById('platPhoto').value = '';
-    document.getElementById('platCal').value = '';
-    document.getElementById('platProt').value = '';
-    document.getElementById('platGluc').value = '';
-    document.getElementById('platLip').value = '';
-    document.getElementById('formPlatTitle').textContent = 'Nouveau plat';
-    document.getElementById('btnSavePlat').textContent = 'Enregistrer le plat';
-    form.scrollIntoView({ behavior: 'smooth' });
+  const open = form.classList.toggle('open');
+  if(open) {
+    document.getElementById('platEditId').value='';
+    document.getElementById('platNom').value='';
+    document.getElementById('platDesc').value='';
+    document.getElementById('platPhoto').value='';
+    document.getElementById('platCal').value='';
+    document.getElementById('platProt').value='';
+    document.getElementById('platGluc').value='';
+    document.getElementById('platLip').value='';
+    document.getElementById('uploadPreview').classList.remove('visible');
+    document.getElementById('uploadIcon').style.display='block';
+    document.getElementById('uploadLabel').textContent='Cliquez pour ajouter une photo';
+    document.getElementById('formPlatTitle').textContent='Nouveau plat';
+    document.getElementById('btnSavePlat').textContent='Enregistrer le plat';
+    uploadedPhotoUrl = null;
+    form.scrollIntoView({behavior:'smooth'});
   }
 }
-
+ 
 function editerPlat(id) {
-  const p = allPlats.find(x => x.id === id); if(!p) return;
-  document.getElementById('platEditId').value = id;
-  document.getElementById('platNom').value = p.nom || '';
-  document.getElementById('platDesc').value = p.description || '';
-  document.getElementById('platCat').value = p.categorie || 'bien_etre';
-  document.getElementById('platPhoto').value = p.photo_url || '';
-  document.getElementById('platCal').value = p.calories || '';
-  document.getElementById('platProt').value = p.proteines || '';
-  document.getElementById('platGluc').value = p.glucides || '';
-  document.getElementById('platLip').value = p.lipides || '';
-  document.getElementById('formPlatTitle').textContent = 'Modifier le plat';
-  document.getElementById('btnSavePlat').textContent = 'Mettre à jour';
+  const p = allPlats.find(x=>x.id===id); if(!p) return;
+  document.getElementById('platEditId').value=id;
+  document.getElementById('platNom').value=p.nom||'';
+  document.getElementById('platDesc').value=p.description||'';
+  document.getElementById('platCat').value=p.categorie||'bien_etre';
+  document.getElementById('platPhoto').value=p.photo_url||'';
+  document.getElementById('platCal').value=p.calories||'';
+  document.getElementById('platProt').value=p.proteines||'';
+  document.getElementById('platGluc').value=p.glucides||'';
+  document.getElementById('platLip').value=p.lipides||'';
+  if(p.photo_url) {
+    const prev = document.getElementById('uploadPreview');
+    prev.src=p.photo_url; prev.classList.add('visible');
+    document.getElementById('uploadIcon').style.display='none';
+    document.getElementById('uploadLabel').textContent='Photo existante';
+  }
+  document.getElementById('formPlatTitle').textContent='Modifier le plat';
+  document.getElementById('btnSavePlat').textContent='Mettre à jour';
   const form = document.getElementById('formPlat');
-  form.classList.add('open');
-  form.scrollIntoView({ behavior: 'smooth' });
+  form.classList.add('open'); form.scrollIntoView({behavior:'smooth'});
 }
-
+ 
 async function sauvegarderPlat() {
   const nom = document.getElementById('platNom').value.trim();
-  if(!nom) { toast('Donnez un nom au plat', 'err'); return; }
+  if(!nom){toast('Donnez un nom au plat','err');return;}
   const btn = document.getElementById('btnSavePlat');
-  btn.textContent = 'Enregistrement...'; btn.disabled = true;
+  btn.textContent='Enregistrement...'; btn.disabled=true;
   const editId = document.getElementById('platEditId').value;
   const payload = {
     nom, description: document.getElementById('platDesc').value,
     categorie: document.getElementById('platCat').value,
     photo_url: document.getElementById('platPhoto').value || null,
-    calories: parseInt(document.getElementById('platCal').value) || null,
-    proteines: parseInt(document.getElementById('platProt').value) || null,
-    glucides: parseInt(document.getElementById('platGluc').value) || null,
-    lipides: parseInt(document.getElementById('platLip').value) || null,
+    calories:  parseInt(document.getElementById('platCal').value)||null,
+    proteines: parseInt(document.getElementById('platProt').value)||null,
+    glucides:  parseInt(document.getElementById('platGluc').value)||null,
+    lipides:   parseInt(document.getElementById('platLip').value)||null,
     actif: true
   };
   try {
-    if(editId) {
-      await sb('plats_menu?id=eq.' + editId, { method: 'PATCH', body: JSON.stringify(payload) });
-      toast('Plat mis à jour !', 'ok');
-    } else {
-      await sb('plats_menu', { method: 'POST', body: JSON.stringify(payload) });
-      toast('Plat ajouté !', 'ok');
-    }
-    toggleFormPlat();
-    await chargerPlats();
-  } catch(e) { toast('Erreur : ' + e.message, 'err'); }
-  finally { btn.textContent = editId ? 'Mettre à jour' : 'Enregistrer le plat'; btn.disabled = false; }
+    if(editId) { await sb('plats_menu?id=eq.'+editId, {method:'PATCH',body:JSON.stringify(payload)}); toast('Plat mis à jour !','ok'); }
+    else       { await sb('plats_menu', {method:'POST',body:JSON.stringify(payload)}); toast('Plat ajouté !','ok'); }
+    toggleFormPlat(); await chargerPlats();
+  } catch(e) { toast('Erreur : '+e.message,'err'); }
+  finally { btn.textContent=editId?'Mettre à jour':'Enregistrer le plat'; btn.disabled=false; }
 }
-
+ 
 async function toggleActif(id, actif, btn) {
   try {
-    await sb('plats_menu?id=eq.' + id, { method: 'PATCH', body: JSON.stringify({ actif: !actif }) });
-    btn.className = 'btn-toggle ' + (!actif ? 'actif' : 'inactif');
-    btn.textContent = !actif ? '✓ Actif' : '✗ Inactif';
-    const p = allPlats.find(x => x.id === id); if(p) p.actif = !actif;
-    toast(!actif ? 'Plat activé' : 'Plat désactivé', 'ok');
-  } catch(e) { toast('Erreur', 'err'); }
+    await sb('plats_menu?id=eq.'+id, {method:'PATCH',body:JSON.stringify({actif:!actif})});
+    btn.className='btn-toggle-actif '+(!actif?'actif':'inactif');
+    btn.textContent=!actif?'✓ Actif':'✗ Inactif';
+    btn.dataset.actif=String(!actif);
+    const p=allPlats.find(x=>x.id===id); if(p) p.actif=!actif;
+    btn.closest('.plat-admin-card').classList.toggle('inactive', actif);
+    toast(!actif?'Plat activé':'Plat désactivé','ok');
+  } catch(e){toast('Erreur','err');}
 }
-
+ 
 async function supprimerPlat(id) {
   if(!confirm('Supprimer ce plat définitivement ?')) return;
-  try {
-    await sb('plats_menu?id=eq.' + id, { method: 'DELETE' });
-    toast('Plat supprimé', 'ok');
-    await chargerPlats();
-  } catch(e) { toast('Erreur', 'err'); }
+  try { await sb('plats_menu?id=eq.'+id,{method:'DELETE'}); toast('Plat supprimé','ok'); await chargerPlats(); }
+  catch(e){toast('Erreur','err');}
 }
-
+ 
+// ── COMMANDES ──
+function getLundi(offset=0) {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate()-day+(day===0?-6:1);
+  d.setDate(diff+offset*7); d.setHours(0,0,0,0);
+  return d;
+}
+function formatDate(d) { return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'}); }
+ 
+function updateSemaineLabel() {
+  const lundi = getLundi(semaineOffset);
+  const vendredi = new Date(lundi); vendredi.setDate(lundi.getDate()+4);
+  document.getElementById('semaineLabel').textContent = 'Semaine du '+formatDate(lundi);
+  document.getElementById('semaineSub').textContent = formatDate(lundi)+' au '+formatDate(vendredi);
+}
+ 
+function changerSemaine(dir) { semaineOffset+=dir; updateSemaineLabel(); chargerCommandes(); }
+ 
+async function chargerCommandes() {
+  updateSemaineLabel();
+  const lundi = getLundi(semaineOffset);
+  const lundiStr = lundi.toISOString().split('T')[0];
+  const el = document.getElementById('commandesList');
+  el.innerHTML = '<div class="loading">Chargement...</div>';
+  try {
+    const commandes = await sb('commandes?semaine=eq.'+lundiStr+'&order=created_at.desc&select=*');
+    // Stats
+    document.getElementById('cmdTotal').textContent = commandes.length;
+    document.getElementById('cmdConfirmees').textContent = commandes.filter(c=>c.statut==='confirmee').length;
+    document.getElementById('cmdLivrees').textContent = commandes.filter(c=>c.statut==='livree').length;
+    if(!commandes||commandes.length===0){el.innerHTML='<div class="empty">Aucune commande cette semaine</div>';return;}
+    // Charger les plats pour afficher les noms
+    const platsMap = {};
+    allPlats.forEach(p => platsMap[p.id]=p);
+    el.innerHTML = commandes.map(cmd => {
+      const platsChoisis = (cmd.plats_choisis||[]).map(id => {
+        const p = platsMap[id];
+        if(!p) return `<div class="cmd-plat-chip">Plat ${String(id).substring(0,6)}</div>`;
+        const img = p.photo_url ? `<img class="cmd-plat-img" src="${p.photo_url}" alt="">` : '';
+        return `<div class="cmd-plat-chip">${img}${p.nom}</div>`;
+      }).join('');
+      const date = new Date(cmd.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      const statusClass = 'status-'+cmd.statut;
+      const statusLabels = {en_attente:'⏳ En attente', confirmee:'✓ Confirmée', livree:'🚚 Livrée'};
+      return `<div class="cmd-card">
+        <div class="cmd-header">
+          <div>
+            <div class="cmd-client">Client ${(cmd.user_id||'').substring(0,8)}</div>
+            <div class="cmd-client-sub">${date}</div>
+          </div>
+          <select class="cmd-status ${statusClass}" onchange="changerStatut('${cmd.id}', this)" style="border:none;outline:none;font-family:'DM Sans',sans-serif;cursor:pointer;">
+            <option value="en_attente" ${cmd.statut==='en_attente'?'selected':''}>⏳ En attente</option>
+            <option value="confirmee"  ${cmd.statut==='confirmee'?'selected':''}>✓ Confirmée</option>
+            <option value="livree"     ${cmd.statut==='livree'?'selected':''}>🚚 Livrée</option>
+          </select>
+        </div>
+        <div class="cmd-plats">${platsChoisis||'<span style="color:#aaa;font-size:12px;">Aucun plat</span>'}</div>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML='<div class="empty">Erreur : '+e.message+'</div>'; }
+}
+ 
+async function changerStatut(id, select) {
+  const newStatut = select.value;
+  select.className = 'cmd-status status-'+newStatut;
+  try {
+    await sb('commandes?id=eq.'+id, {method:'PATCH',body:JSON.stringify({statut:newStatut})});
+    toast('Statut mis à jour','ok');
+    chargerCommandes();
+  } catch(e) { toast('Erreur','err'); }
+}
+ 
 // ── FICHE CLIENT ──
 async function ouvrirFiche(id) {
-  currentClient = allClients.find(c => c.id === id); if(!currentClient) return;
-  document.getElementById('listView').style.display = 'none';
+  currentClient=allClients.find(c=>c.id===id); if(!currentClient) return;
+  document.getElementById('listView').style.display='none';
   document.getElementById('ficheView').classList.add('visible');
-  document.getElementById('ficheTitle').textContent = 'Client ' + (currentClient.user_id||'').substring(0,8);
+  document.getElementById('ficheTitle').textContent='Client '+(currentClient.user_id||'').substring(0,8);
   afficherFiche(currentClient);
   try {
-    const [meals, scores] = await Promise.all([
-      sb('meals?user_id=eq.' + currentClient.user_id + '&select=*,meal_ingredients(*)&order=created_at.desc&limit=5'),
-      sb('nutrition_scores?user_id=eq.' + currentClient.user_id + '&order=calculated_at.desc&limit=1')
+    const [meals,scores]=await Promise.all([
+      sb('meals?user_id=eq.'+currentClient.user_id+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=5'),
+      sb('nutrition_scores?user_id=eq.'+currentClient.user_id+'&order=calculated_at.desc&limit=1')
     ]);
-    afficherRepasEtScores(meals, scores);
-  } catch(e) {}
+    afficherRepasEtScores(meals,scores);
+  } catch(e){}
   try {
-    const notes = await sb('notes_nutritionniste?client_id=eq.' + currentClient.user_id + '&limit=1');
-    if(notes && notes.length > 0) { document.getElementById('notesArea').value = notes[0].note||''; document.getElementById('actionInp').value = notes[0].action_semaine||''; }
-  } catch(e) {}
+    const notes=await sb('notes_nutritionniste?client_id=eq.'+currentClient.user_id+'&limit=1');
+    if(notes&&notes.length>0){document.getElementById('notesArea').value=notes[0].note||'';document.getElementById('actionInp').value=notes[0].action_semaine||'';}
+  } catch(e){}
 }
-
+ 
 function afficherFiche(c) {
-  const motivL = { mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Changer mon corps', performance:'🏆 Performance', sante:'❤️ Santé' };
-  const maturL = { debutant:'Débutant', premiers_pas:'Premiers pas', habitudes:'Habitudes en place', regime_place:'Régime structuré' };
-  const actL   = { sedentaire:'Sédentaire', leger:'Légèrement actif', modere:'Modérément actif', actif:'Très actif' };
-  const tpsL   = { moins15:'< 15 min', '15_30':'15-30 min', plus30:'30+ min' };
-  const sm = c.score_motivation||5, sr = c.score_rigueur||5, sn = c.score_nutrition||5;
-  const jc = v => v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
-  const jcls = v => v<=3?'jb-low':v<=6?'jb-mid':'jb-hi';
-  const jlbl = v => v<=3?'Faible':v<=6?'Moyen':'Élevé';
-  document.getElementById('ficheContent').innerHTML = `
+  const motivL={mieux_manger:'🥦 Mieux manger',changer_corps:'🏃 Changer mon corps',performance:'🏆 Performance',sante:'❤️ Santé'};
+  const maturL={debutant:'Débutant',premiers_pas:'Premiers pas',habitudes:'Habitudes en place',regime_place:'Régime structuré'};
+  const actL={sedentaire:'Sédentaire',leger:'Légèrement actif',modere:'Modérément actif',actif:'Très actif'};
+  const tpsL={moins15:'< 15 min','15_30':'15-30 min',plus30:'30+ min'};
+  const sm=c.score_motivation||5,sr=c.score_rigueur||5,sn=c.score_nutrition||5;
+  const jc=v=>v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
+  const jcls=v=>v<=3?'jb-low':v<=6?'jb-mid':'jb-hi';
+  const jlbl=v=>v<=3?'Faible':v<=6?'Moyen':'Élevé';
+  document.getElementById('ficheContent').innerHTML=`
     <div class="sec-card">
       <div class="sec-label">Profil & motivation</div>
       <div class="data-grid">
@@ -627,22 +753,22 @@ function afficherFiche(c) {
     <div class="sec-card">
       <div class="sec-label">⚡ Action de la semaine</div>
       <input class="action-inp" type="text" id="actionInp" placeholder="Ex: Ajoutez des protéines au petit-déjeuner">
-      <button class="btn-save-notes" onclick="sauvegarderNotes()" id="btnSaveNotes">Enregistrer l'action et les notes</button>
+      <button class="btn-save-notes" onclick="sauvegarderNotes()" id="btnSaveNotes">Enregistrer</button>
     </div>
-    <div class="sec-card"><div class="sec-label">📝 Notes privées</div><textarea class="notes-area" id="notesArea" placeholder="Vos observations, points de vigilance..."></textarea></div>`;
+    <div class="sec-card"><div class="sec-label">📝 Notes privées</div><textarea class="notes-area" id="notesArea" placeholder="Vos observations..."></textarea></div>`;
 }
-
-function afficherRepasEtScores(meals, scores) {
-  const el = document.getElementById('repasSection');
-  if(!meals||meals.length===0) { el.innerHTML='<div class="empty">Aucun repas enregistré</div>'; }
-  else el.innerHTML = meals.map(m=>{
+ 
+function afficherRepasEtScores(meals,scores) {
+  const el=document.getElementById('repasSection');
+  if(!meals||meals.length===0){el.innerHTML='<div class="empty">Aucun repas enregistré</div>';}
+  else el.innerHTML=meals.map(m=>{
     const ings=(m.meal_ingredients||[]).map(i=>i.name+' '+i.quantity_g+'g').join(', ')||'Aucun ingrédient';
     const date=new Date(m.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
     const photo=m.photo_url?`<div class="repas-photo-sm"><img src="${m.photo_url}" alt=""></div>`:`<div class="repas-photo-sm">🍽️</div>`;
-    return `<div class="repas-mini">${photo}<div style="flex:1;min-width:0;"><div class="repas-name-sm">${m.name}</div><div class="repas-ings-sm">${ings}</div></div><div class="repas-date-sm">${date}</div></div>`;
+    return `<div class="repas-mini">${photo}<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;">${m.name}</div><div style="font-size:11px;color:#aaa;">${ings}</div></div><div style="font-size:10px;color:#aaa;">${date}</div></div>`;
   }).join('');
-  if(scores&&scores.length>0) {
-    const s=scores[0], v=Math.round(s.variety_score||0), q=Math.round(s.quality_score||0), r=Math.round(s.relevance_score||0);
+  if(scores&&scores.length>0){
+    const s=scores[0],v=Math.round(s.variety_score||0),q=Math.round(s.quality_score||0),r=Math.round(s.relevance_score||0);
     const sc=x=>x>=70?'#5a9e6f':x>=40?'#ba7517':'#c77b7b';
     const cls=x=>x>=70?'jb-hi':x>=40?'jb-mid':'jb-low';
     document.getElementById('scoresSection').style.display='block';
@@ -651,26 +777,21 @@ function afficherRepasEtScores(meals, scores) {
       <div class="jauge-track"><div class="jauge-fill" style="width:${val}%;background:${sc(val)};"></div></div></div>`).join('');
   }
 }
-
+ 
 async function sauvegarderNotes() {
   if(!currentClient) return;
-  const btn = document.getElementById('btnSaveNotes');
-  btn.textContent = 'Enregistrement...';
+  const btn=document.getElementById('btnSaveNotes'); btn.textContent='Enregistrement...';
   try {
-    await sb('notes_nutritionniste', { method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=representation'}, body: JSON.stringify({ client_id: currentClient.user_id, note: document.getElementById('notesArea').value, action_semaine: document.getElementById('actionInp').value, updated_at: new Date().toISOString() }) });
-    btn.textContent = '✓ Enregistré'; btn.classList.add('saved');
-    setTimeout(()=>{btn.textContent="Enregistrer l'action et les notes";btn.classList.remove('saved');},2000);
+    await sb('notes_nutritionniste',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify({client_id:currentClient.user_id,note:document.getElementById('notesArea').value,action_semaine:document.getElementById('actionInp').value,updated_at:new Date().toISOString()})});
+    btn.textContent='✓ Enregistré'; btn.classList.add('saved');
+    setTimeout(()=>{btn.textContent='Enregistrer';btn.classList.remove('saved');},2000);
     toast('Notes enregistrées !','ok');
-  } catch(e) { toast('Erreur : '+e.message,'err'); btn.textContent="Enregistrer l'action et les notes"; }
+  } catch(e){toast('Erreur : '+e.message,'err');btn.textContent='Enregistrer';}
 }
-
-function retourListe() {
-  document.getElementById('ficheView').classList.remove('visible');
-  document.getElementById('listView').style.display='block';
-  currentClient=null;
-}
-
-function toast(msg, type) {
+ 
+function retourListe() { document.getElementById('ficheView').classList.remove('visible'); document.getElementById('listView').style.display='block'; currentClient=null; }
+ 
+function toast(msg,type) {
   const t=document.getElementById('toast');
   t.textContent=msg; t.className='toast '+type;
   setTimeout(()=>t.classList.add('show'),10);
