@@ -171,6 +171,37 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .loading { text-align: center; color: #c7c7cc; font-size: 13px; padding: 24px 0; }
 .empty   { text-align: center; color: #c7c7cc; font-size: 13px; padding: 32px 0; line-height: 1.8; }
 input[type="file"] { display: none; }
+
+/* ONBOARDING CTA */
+.onboarding-cta {
+  background: #fff; border-radius: 22px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+  overflow: hidden; margin-top: 8px;
+}
+.onboarding-hero {
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 100%);
+  padding: 32px 24px 28px; text-align: center;
+}
+.onboarding-emoji { font-size: 48px; display: block; margin-bottom: 14px; }
+.onboarding-title { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px; margin-bottom: 8px; }
+.onboarding-sub { font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.6; }
+.onboarding-features { padding: 20px 20px 4px; display: flex; flex-direction: column; gap: 10px; }
+.onboarding-feat {
+  display: flex; align-items: center; gap: 12px;
+  background: #f9f9fb; border-radius: 14px; padding: 12px 14px;
+}
+.onboarding-feat-ico { font-size: 22px; flex-shrink: 0; }
+.onboarding-feat-txt { font-size: 13px; font-weight: 500; color: #1c1c1e; line-height: 1.4; }
+.onboarding-feat-sub { font-size: 11px; color: #8e8e93; margin-top: 1px; }
+.onboarding-btn-wrap { padding: 16px 20px 24px; }
+.onboarding-btn {
+  width: 100%; padding: 17px; background: #1a1a2e; border: none;
+  border-radius: 16px; color: #fff; font-family: 'Inter', sans-serif;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(26,26,46,0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.onboarding-btn:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(26,26,46,0.2); }
 </style>
 </head>
 <body>
@@ -372,8 +403,63 @@ function ouvrirChat() {
 if (USER_ID) {
   init();
 } else {
-  document.getElementById('historiqueList').innerHTML = '<div class="empty">Connectez-vous pour voir votre suivi</div>';
+  afficherOnboardingCTA();
   afficherDiagnosticsVides();
+}
+
+function afficherOnboardingCTA() {
+  document.querySelector('.score-card').style.display = 'none';
+  document.querySelector('.points-row').style.display = 'none';
+  document.querySelector('.hist-header').style.display = 'none';
+  document.querySelector('.hist-card').style.display = 'none';
+  document.querySelector('.btn-add').style.display = 'none';
+
+  const page = document.querySelector('.page');
+  const cta = document.createElement('div');
+  cta.className = 'onboarding-cta';
+  cta.innerHTML = `
+    <div class="onboarding-hero">
+      <span class="onboarding-emoji">🥗</span>
+      <div class="onboarding-title">Commencez votre suivi</div>
+      <div class="onboarding-sub">Répondez à quelques questions pour que votre nutritionniste personnalise votre programme.</div>
+    </div>
+    <div class="onboarding-features">
+      <div class="onboarding-feat">
+        <div class="onboarding-feat-ico">🧑‍⚕️</div>
+        <div>
+          <div class="onboarding-feat-txt">Nutritionniste personnel</div>
+          <div class="onboarding-feat-sub">Dédié à vos objectifs, disponible par messagerie</div>
+        </div>
+      </div>
+      <div class="onboarding-feat">
+        <div class="onboarding-feat-ico">🍱</div>
+        <div>
+          <div class="onboarding-feat-txt">Repas cuisinés & livrés</div>
+          <div class="onboarding-feat-sub">3 ou 4 plats par semaine, adaptés à votre objectif</div>
+        </div>
+      </div>
+      <div class="onboarding-feat">
+        <div class="onboarding-feat-ico">📊</div>
+        <div>
+          <div class="onboarding-feat-txt">Suivi nutritionnel complet</div>
+          <div class="onboarding-feat-sub">Score, macros, journal alimentaire personnalisé</div>
+        </div>
+      </div>
+    </div>
+    <div class="onboarding-btn-wrap">
+      <button class="onboarding-btn" onclick="demarrerOnboarding()">Analyser mon alimentation →</button>
+    </div>
+  `;
+  page.appendChild(cta);
+}
+
+function demarrerOnboarding() {
+  const url = '/onboarding.html';
+  if (window.self !== window.top) {
+    window.top.location.href = url;
+  } else {
+    window.location.href = url;
+  }
 }
 
 async function init() {
