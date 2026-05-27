@@ -15,8 +15,24 @@ export default async function handler(req) {
     const { priceId, userId, token } = await req.json();
 
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+
+    if (!STRIPE_SECRET_KEY) {
+      return new Response(JSON.stringify({ error: 'Missing Stripe key' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     const reqUrl = new URL(req.url);
     const origin = reqUrl.origin;
+
+    const body = new URLSearchParams();
+    body.append('mode', 'subscription');
+    body.append('line_items[0][price]', priceId);
+    body.append('line_items[0][quantity]', '1');
+    body.append('success_url', origin + '/?token=' + token + '&subscribed=1');
+    body.append('cancel_url', origin + '/offre.html?token=' + token + '&cancelled=1');
+    body.append('metadata[user_id]', userId || '');
+    body.append('subscription_data[metadata][user_id]', userId || '');
 
     const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
@@ -24,15 +40,7 @@ export default async function handler(req) {
         'Authorization': 'Bearer ' + STRIPE_SECRET_KEY,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        'mode': 'subscription',
-        'line_items[0][price]': priceId,
-        'line_items[0][quantity]': '1',
-        'success_url': origin + '/?token=' + token + '&subscribed=1',
-        'cancel_url': origin + '/offre.html?token=' + token + '&cancelled=1',
-        'metadata[user_id]': userId,
-        'subscription_data[metadata][user_id]': userId,
-      })
+      body: body.toString()
     });
 
     const session = await response.json();
@@ -50,7 +58,7 @@ export default async function handler(req) {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
