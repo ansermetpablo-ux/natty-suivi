@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg: #f0f0f3;
+  --so: 6px 6px 16px rgba(174,174,192,0.42), -6px -6px 16px rgba(255,255,255,0.88);
+  --si: inset 3px 3px 8px rgba(174,174,192,0.35), inset -3px -3px 8px rgba(255,255,255,0.85);
+  --sm: 4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85);
+  --green: #5a9e6f;
+  --gl: #eaf4ee;
+  --text: #3a3a4a;
+  --muted: #aaa;
+  --red: #c77b7b;
+  --rl: #fde8e8;
+  --amber: #ba7517;
+  --al: #faeeda;
+}
+
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; color: var(--text); }
+
+.bg-pattern {
+  position: fixed; inset: 0;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0);
+  background-size: 26px 26px; z-index: 0;
+}
+
+.app { position: relative; z-index: 1; }
+
+/* ── LOGIN ── */
+.login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.login-card {
+  background: var(--bg); border-radius: 24px; padding: 36px 28px;
+  box-shadow: var(--so); width: 100%; max-width: 360px; text-align: center;
+}
+.login-logo { font-size: 40px; margin-bottom: 16px; display: block; }
+.login-title { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.login-sub   { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.login-input {
+  width: 100%; background: var(--bg); border: none; border-radius: 14px;
+  padding: 14px 16px; font-size: 15px; font-family: 'DM Sans', sans-serif;
+  color: var(--text); outline: none; box-shadow: var(--si); margin-bottom: 14px;
+  letter-spacing: 2px;
+}
+.login-input::placeholder { letter-spacing: 0; color: #ccc; }
+.login-btn {
+  width: 100%; padding: 15px; background: var(--bg); border: none; border-radius: 14px;
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+  cursor: pointer; box-shadow: var(--so); transition: box-shadow 0.15s;
+}
+.login-btn:active { box-shadow: var(--si); }
+.login-err { font-size: 12px; color: var(--red); margin-top: 10px; min-height: 16px; }
+
+/* ── MAIN APP ── */
+.main-app { display: none; min-height: 100vh; }
+.main-app.visible { display: block; }
+
+/* HEADER */
+.top-bar {
+  background: var(--bg); padding: 18px 20px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 900px; margin: 0 auto;
+}
+.top-title { font-size: 10px; letter-spacing: 1.4px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+.top-heading { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; }
+.top-right { display: flex; align-items: center; gap: 10px; }
+.search-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border-radius: 12px; padding: 9px 14px;
+  box-shadow: var(--si);
+}
+.search-inp {
+  border: none; background: none; outline: none;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); width: 160px;
+}
+.search-inp::placeholder { color: #ccc; }
+.logout-btn {
+  background: var(--bg); border: none; cursor: pointer;
+  padding: 9px 14px; border-radius: 12px; box-shadow: var(--sm);
+  font-size: 12px; color: var(--muted); font-family: 'DM Sans', sans-serif;
+  transition: box-shadow 0.15s;
+}
+.logout-btn:active { box-shadow: var(--si); }
+
+/* CONTENT */
+.content { max-width: 900px; margin: 0 auto; padding: 0 20px 40px; }
+
+/* STATS STRIP */
+.stats-strip { display: flex; gap: 10px; margin-bottom: 16px; }
+.stat-card {
+  flex: 1; background: var(--bg); border-radius: 18px; padding: 14px 16px;
+  box-shadow: var(--so); text-align: center;
+}
+.stat-val  { font-size: 26px; font-weight: 600; color: var(--text); letter-spacing: -1px; }
+.stat-lbl  { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 3px; }
+
+/* FILTRES */
+.filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.filter-chip {
+  padding: 8px 14px; border-radius: 99px; background: var(--bg);
+  box-shadow: var(--sm); font-size: 12px; cursor: pointer; color: var(--text);
+  border: 2px solid transparent; transition: all 0.15s;
+}
+.filter-chip.on { box-shadow: var(--si); border-color: var(--green); color: var(--green); background: var(--gl); }
+
+/* LISTE CLIENTS */
+.clients-list { display: flex; flex-direction: column; gap: 10px; }
+.client-card {
+  background: var(--bg); border-radius: 20px; padding: 16px 18px;
+  box-shadow: var(--so); cursor: pointer; transition: box-shadow 0.15s;
+  display: flex; align-items: center; gap: 14px;
+  border: 2px solid transparent;
+}
+.client-card:active { box-shadow: var(--si); }
+.client-card.alert { border-color: var(--red); }
+.client-card.warn  { border-color: var(--amber); }
+.client-avatar {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  background: var(--gl); display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 600; color: var(--green);
+  box-shadow: var(--sm);
+}
+.client-avatar.red-av { background: var(--rl); color: var(--red); }
+.client-info { flex: 1; min-width: 0; }
+.client-name { font-size: 15px; font-weight: 500; margin-bottom: 3px; }
+.client-meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.client-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.ctag {
+  font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 99px;
+  background: var(--bg); box-shadow: inset 2px 2px 4px rgba(174,174,192,0.3), inset -2px -2px 4px rgba(255,255,255,0.8);
+}
+.ctag-green { background: var(--gl); color: var(--green); box-shadow: none; }
+.ctag-amber { background: var(--al); color: var(--amber); box-shadow: none; }
+.ctag-red   { background: var(--rl); color: var(--red); box-shadow: none; }
+.client-scores { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; flex-shrink: 0; }
+.score-mini { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+.score-dot  { width: 8px; height: 8px; border-radius: 50%; }
+.client-date { font-size: 10px; color: var(--muted); }
+
+/* ── FICHE CLIENT ── */
+.fiche-screen { display: none; }
+.fiche-screen.visible { display: block; }
+
+.fiche-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px; max-width: 900px; margin: 0 auto;
+}
+.btn-retour {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--bg); border: none; cursor: pointer;
+  box-shadow: var(--sm); display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: var(--text);
+}
+.btn-retour:active { box-shadow: var(--si); }
+.fiche-title { font-size: 18px; font-weight: 600; }
+.fiche-content { max-width: 900px; margin: 0 auto; padding: 0 20px 40px; display: flex; flex-direction: column; gap: 12px; }
+
+/* SECTION CARD */
+.sec-card { background: var(--bg); border-radius: 20px; padding: 20px 18px; box-shadow: var(--so); }
+.sec-label { font-size: 10px; letter-spacing: 1.4px; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; }
+.data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.data-cell { background: var(--bg); border-radius: 14px; padding: 12px 14px; box-shadow: var(--si); }
+.dc-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 4px; }
+.dc-val { font-size: 15px; font-weight: 500; }
+.dc-val.green { color: var(--green); }
+.dc-val.red   { color: var(--red); }
+.dc-val.amber { color: var(--amber); }
+
+/* JAUGES */
+.jauge-block { margin-bottom: 14px; }
+.jauge-block:last-child { margin-bottom: 0; }
+.jauge-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.jauge-name { font-size: 13px; font-weight: 500; }
+.jauge-badge { font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 99px; }
+.jb-low  { background: var(--rl); color: var(--red); }
+.jb-mid  { background: var(--al); color: var(--amber); }
+.jb-hi   { background: var(--gl); color: var(--green); }
+.jauge-track { height: 8px; background: var(--bg); border-radius: 4px; box-shadow: var(--si); overflow: hidden; }
+.jauge-fill  { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+
+/* REPAS LISTE */
+.repas-mini { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(174,174,192,0.15); }
+.repas-mini:last-child { border-bottom: none; }
+.repas-photo-sm {
+  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+  background: var(--bg); box-shadow: var(--sm);
+  display: flex; align-items: center; justify-content: center; font-size: 18px; overflow: hidden;
+}
+.repas-photo-sm img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+.repas-name-sm { font-size: 13px; font-weight: 500; flex: 1; }
+.repas-ings-sm { font-size: 11px; color: var(--muted); }
+.repas-date-sm { font-size: 10px; color: var(--muted); flex-shrink: 0; }
+
+/* NOTES */
+.notes-area {
+  width: 100%; background: var(--bg); border: none; border-radius: 14px;
+  padding: 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+  resize: none; outline: none; box-shadow: var(--si); min-height: 100px; line-height: 1.6;
+}
+.notes-area::placeholder { color: #ccc; }
+.btn-save-notes {
+  width: 100%; padding: 13px; background: var(--bg); border: none; border-radius: 14px;
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+  cursor: pointer; box-shadow: var(--so); margin-top: 10px; transition: box-shadow 0.15s;
+}
+.btn-save-notes:active { box-shadow: var(--si); }
+.btn-save-notes.saved { color: var(--green); }
+
+/* ACTION SEMAINE */
+.action-inp {
+  width: 100%; background: var(--bg); border: none; border-radius: 14px;
+  padding: 13px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+  outline: none; box-shadow: var(--si); margin-bottom: 10px;
+}
+.action-inp::placeholder { color: #ccc; }
+
+/* EMPTY / LOADING */
+.empty { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0; line-height: 1.8; }
+.loading { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0; }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--text); color: #fff; padding: 11px 22px;
+  border-radius: 20px; font-size: 13px; z-index: 2000;
+  transition: transform 0.3s; pointer-events: none;
+  box-shadow: 4px 4px 12px rgba(174,174,192,0.4);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.ok  { background: var(--green); }
+.toast.err { background: var(--red); }
+
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="bg-pattern"></div>
+<div class="app">
+
+  <!-- ── LOGIN ── -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <span class="login-logo">🥗</span>
+      <div class="login-title">Espace nutritionniste</div>
+      <div class="login-sub">Accès réservé aux praticiens</div>
+      <input class="login-input" type="password" id="pwdInput" placeholder="Mot de passe" onkeydown="if(event.key==='Enter')login()">
+      <button class="login-btn" onclick="login()">Accéder →</button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+  </div>
+
+  <!-- ── MAIN APP ── -->
+  <div class="main-app" id="mainApp">
+
+    <!-- LISTE CLIENTS -->
+    <div id="listView">
+      <div class="top-bar">
+        <div>
+          <div class="top-title">Back-office</div>
+          <div class="top-heading">Mes clients</div>
+        </div>
+        <div class="top-right">
+          <div class="search-wrap">
+            <span>🔍</span>
+            <input class="search-inp" type="text" placeholder="Rechercher..." oninput="filtrer(this.value)">
+          </div>
+          <button class="logout-btn" onclick="logout()">Déconnexion</button>
+        </div>
+      </div>
+
+      <div class="content">
+        <!-- Stats -->
+        <div class="stats-strip">
+          <div class="stat-card">
+            <div class="stat-val" id="statTotal">–</div>
+            <div class="stat-lbl">Clients</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="statCette">–</div>
+            <div class="stat-lbl">Cette semaine</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="statAlerte">–</div>
+            <div class="stat-lbl">Alertes</div>
+          </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="filters">
+          <div class="filter-chip on" onclick="setFilter('tous', this)">Tous</div>
+          <div class="filter-chip" onclick="setFilter('mieux_manger', this)">🥦 Mieux manger</div>
+          <div class="filter-chip" onclick="setFilter('changer_corps', this)">🏃 Corps</div>
+          <div class="filter-chip" onclick="setFilter('performance', this)">🏆 Performance</div>
+          <div class="filter-chip" onclick="setFilter('alerte', this)">🚨 Alertes</div>
+        </div>
+
+        <!-- Liste -->
+        <div class="clients-list" id="clientsList">
+          <div class="loading">Chargement des clients...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FICHE CLIENT -->
+    <div class="fiche-screen" id="ficheView">
+      <div class="fiche-header">
+        <button class="btn-retour" onclick="retourListe()">‹</button>
+        <div class="fiche-title" id="ficheTitle">Fiche client</div>
+      </div>
+      <div class="fiche-content" id="ficheContent">
+        <div class="loading">Chargement...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+const PWD = 'Nutri26';
+
+let allClients = [];
+let currentFilter = 'tous';
+let currentSearch = '';
+let currentClient = null;
+
+// ── AUTH ──
+function login() {
+  const val = document.getElementById('pwdInput').value;
+  if (val === PWD) {
+    localStorage.setItem('nutri_auth', '1');
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').classList.add('visible');
+    chargerClients();
+  } else {
+    document.getElementById('loginErr').textContent = 'Mot de passe incorrect';
+    document.getElementById('pwdInput').value = '';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('nutri_auth');
+  document.getElementById('mainApp').classList.remove('visible');
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('pwdInput').value = '';
+}
+
+// Auto-login si déjà connecté
+if (localStorage.getItem('nutri_auth') === '1') {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').classList.add('visible');
+  chargerClients();
+}
+
+// ── SUPABASE ──
+async function sb(path, options = {}) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    ...options,
+    headers: {
+      'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json', 'Prefer': 'return=representation',
+      ...(options.headers || {})
+    }
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(text);
+  return text ? JSON.parse(text) : [];
+}
+
+// ── CHARGER CLIENTS ──
+async function chargerClients() {
+  try {
+    const data = await sb('onboarding?completed=eq.true&order=created_at.desc&select=*');
+    allClients = data;
+    updateStats(data);
+    afficherClients(data);
+  } catch(e) {
+    document.getElementById('clientsList').innerHTML =
+      '<div class="empty">Erreur de chargement<br>' + e.message + '</div>';
+  }
+}
+
+function updateStats(data) {
+  const sept = new Date(); sept.setDate(sept.getDate() - 7);
+  const cetteSemaine = data.filter(c => new Date(c.created_at) > sept).length;
+  const alertes = data.filter(c => (c.score_motivation || 5) <= 3 || (c.score_rigueur || 5) <= 3).length;
+  document.getElementById('statTotal').textContent   = data.length;
+  document.getElementById('statCette').textContent   = cetteSemaine;
+  document.getElementById('statAlerte').textContent  = alertes;
+}
+
+function afficherClients(data) {
+  const el = document.getElementById('clientsList');
+  if (!data || data.length === 0) {
+    el.innerHTML = '<div class="empty">Aucun client pour l\'instant</div>';
+    return;
+  }
+
+  const motivLabels = { mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Changer mon corps', performance:'🏆 Performance', sante:'❤️ Santé' };
+  const maturLabels = { debutant:'Débutant', premiers_pas:'Premiers pas', habitudes:'Habitudes', regime_place:'Régime structuré' };
+
+  el.innerHTML = data.map(c => {
+    const sm = c.score_motivation || 5;
+    const sr = c.score_rigueur    || 5;
+    const sn = c.score_nutrition  || 5;
+    const isAlerte = sm <= 3 || sr <= 3;
+    const isWarn   = (sm <= 5 || sr <= 5) && !isAlerte;
+    const initiales = (c.user_id || '?').substring(0,2).toUpperCase();
+    const date = new Date(c.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+
+    const scoreColor = v => v <= 3 ? '#c77b7b' : v <= 6 ? '#ba7517' : '#5a9e6f';
+
+    return `<div class="client-card ${isAlerte?'alert':isWarn?'warn':''}" onclick="ouvrirFiche('${c.id}')">
+      <div class="client-avatar ${isAlerte?'red-av':''}">${initiales}</div>
+      <div class="client-info">
+        <div class="client-name">Client ${c.user_id ? c.user_id.substring(0,8) : '–'}</div>
+        <div class="client-meta">${motivLabels[c.motivation]||c.motivation||'–'} · ${maturLabels[c.maturite]||c.maturite||'–'}</div>
+        <div class="client-tags">
+          ${isAlerte ? '<span class="ctag ctag-red">🚨 Alerte motivation</span>' : ''}
+          ${c.axe ? '<span class="ctag ctag-green">' + (c.axe_amelioration||c.axe||'') + '</span>' : ''}
+          ${c.poids ? '<span class="ctag">' + c.poids + ' kg</span>' : ''}
+        </div>
+      </div>
+      <div class="client-scores">
+        <div class="score-mini"><div class="score-dot" style="background:${scoreColor(sm)}"></div>Motiv. ${sm}/10</div>
+        <div class="score-mini"><div class="score-dot" style="background:${scoreColor(sr)}"></div>Rigueur ${sr}/10</div>
+        <div class="score-mini"><div class="score-dot" style="background:${scoreColor(sn)}"></div>Nutri. ${sn}/10</div>
+        <div class="client-date">${date}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── FILTRES ──
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  appliquerFiltres();
+}
+
+function filtrer(q) {
+  currentSearch = q.toLowerCase();
+  appliquerFiltres();
+}
+
+function appliquerFiltres() {
+  let data = [...allClients];
+  if (currentFilter !== 'tous') {
+    if (currentFilter === 'alerte') {
+      data = data.filter(c => (c.score_motivation||5) <= 3 || (c.score_rigueur||5) <= 3);
+    } else {
+      data = data.filter(c => c.motivation === currentFilter);
+    }
+  }
+  if (currentSearch) {
+    data = data.filter(c => (c.user_id||'').toLowerCase().includes(currentSearch));
+  }
+  afficherClients(data);
+}
+
+// ── FICHE CLIENT ──
+async function ouvrirFiche(id) {
+  currentClient = allClients.find(c => c.id === id);
+  if (!currentClient) return;
+
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('ficheView').classList.add('visible');
+  document.getElementById('ficheTitle').textContent = 'Client ' + (currentClient.user_id||'').substring(0,8);
+
+  afficherFiche(currentClient);
+
+  // Charger repas
+  try {
+    const meals = await sb('meals?user_id=eq.' + currentClient.user_id + '&select=*,meal_ingredients(*)&order=created_at.desc&limit=5');
+    const scores = await sb('nutrition_scores?user_id=eq.' + currentClient.user_id + '&order=calculated_at.desc&limit=1');
+    afficherRepasEtScores(meals, scores);
+  } catch(e) {}
+
+  // Charger notes
+  try {
+    const notes = await sb('notes_nutritionniste?client_id=eq.' + currentClient.user_id + '&limit=1');
+    if (notes && notes.length > 0) {
+      document.getElementById('notesArea').value = notes[0].note || '';
+      document.getElementById('actionInp').value = notes[0].action_semaine || '';
+    }
+  } catch(e) {}
+}
+
+function afficherFiche(c) {
+  const motivLabels = { mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Changer mon corps', performance:'🏆 Performance', sante:'❤️ Santé' };
+  const maturLabels = { debutant:'Débutant', premiers_pas:'Premiers pas', habitudes:'Habitudes en place', regime_place:'Régime structuré' };
+  const actLabels   = { sedentaire:'Sédentaire', leger:'Légèrement actif', modere:'Modérément actif', actif:'Très actif' };
+  const tempsLabels = { moins15:'< 15 min', '15_30':'15-30 min', plus30:'30+ min' };
+
+  const sm = c.score_motivation || 5;
+  const sr = c.score_rigueur    || 5;
+  const sn = c.score_nutrition  || 5;
+
+  const jaugeColor = v => v <= 3 ? '#c77b7b' : v <= 6 ? '#ba7517' : '#5a9e6f';
+  const jaugeCls   = v => v <= 3 ? 'jb-low' : v <= 6 ? 'jb-mid' : 'jb-hi';
+  const jaugeLbl   = v => v <= 3 ? 'Faible' : v <= 6 ? 'Moyen' : 'Élevé';
+  const valCls     = v => !v ? '' : v >= 70 ? 'green' : v >= 40 ? 'amber' : 'red';
+
+  document.getElementById('ficheContent').innerHTML = `
+
+    <!-- Profil -->
+    <div class="sec-card">
+      <div class="sec-label">Profil & motivation</div>
+      <div class="data-grid">
+        <div class="data-cell"><div class="dc-lbl">Maturité alimentaire</div><div class="dc-val">${maturLabels[c.maturite]||c.maturite||'–'}</div></div>
+        <div class="data-cell"><div class="dc-lbl">Objectif principal</div><div class="dc-val">${motivLabels[c.motivation]||c.motivation||'–'}</div></div>
+        <div class="data-cell"><div class="dc-lbl">Axe d'amélioration</div><div class="dc-val">${c.axe_amelioration||'–'}</div></div>
+        <div class="data-cell"><div class="dc-lbl">Onboarding</div><div class="dc-val">${new Date(c.created_at).toLocaleDateString('fr-FR')}</div></div>
+      </div>
+      ${c.freins && c.freins.length > 0 ? `
+      <div style="margin-top:12px;">
+        <div class="dc-lbl" style="margin-bottom:6px;">Freins identifiés</div>
+        <div class="tag-list">${c.freins.map(f=>`<span class="ctag ctag-amber">${f}</span>`).join('')}</div>
+      </div>` : ''}
+    </div>
+
+    <!-- Auto-évaluation -->
+    <div class="sec-card">
+      <div class="sec-label">Auto-évaluation</div>
+      <div class="jauge-block">
+        <div class="jauge-head">
+          <span class="jauge-name">💪 Motivation</span>
+          <span class="jauge-badge ${jaugeCls(sm)}">${sm}/10 · ${jaugeLbl(sm)}</span>
+        </div>
+        <div class="jauge-track"><div class="jauge-fill" style="width:${sm*10}%;background:${jaugeColor(sm)};"></div></div>
+      </div>
+      <div class="jauge-block">
+        <div class="jauge-head">
+          <span class="jauge-name">📅 Rigueur</span>
+          <span class="jauge-badge ${jaugeCls(sr)}">${sr}/10 · ${jaugeLbl(sr)}</span>
+        </div>
+        <div class="jauge-track"><div class="jauge-fill" style="width:${sr*10}%;background:${jaugeColor(sr)};"></div></div>
+      </div>
+      <div class="jauge-block">
+        <div class="jauge-head">
+          <span class="jauge-name">🥗 Connaissance nutrition</span>
+          <span class="jauge-badge ${jaugeCls(sn)}">${sn}/10 · ${jaugeLbl(sn)}</span>
+        </div>
+        <div class="jauge-track"><div class="jauge-fill" style="width:${sn*10}%;background:${jaugeColor(sn)};"></div></div>
+      </div>
+    </div>
+
+    <!-- Données physiques -->
+    <div class="sec-card">
+      <div class="sec-label">Données physiques & BMR</div>
+      <div class="data-grid">
+        <div class="data-cell"><div class="dc-lbl">Âge</div><div class="dc-val">${c.age||'–'} ans</div></div>
+        <div class="data-cell"><div class="dc-lbl">Sexe</div><div class="dc-val">${c.sexe||'–'}</div></div>
+        <div class="data-cell"><div class="dc-lbl">Poids</div><div class="dc-val">${c.poids||'–'} kg</div></div>
+        <div class="data-cell"><div class="dc-lbl">Taille</div><div class="dc-val">${c.taille||'–'} cm</div></div>
+        <div class="data-cell"><div class="dc-lbl">Activité</div><div class="dc-val">${actLabels[c.activite]||c.activite||'–'}</div></div>
+        <div class="data-cell"><div class="dc-lbl">BMR calculé</div><div class="dc-val green">${c.bmr||'–'} kcal</div></div>
+        <div class="data-cell"><div class="dc-lbl">TDEE</div><div class="dc-val green">${c.tdee||'–'} kcal</div></div>
+        <div class="data-cell"><div class="dc-lbl">Temps cuisine</div><div class="dc-val">${tempsLabels[c.temps_cuisine]||c.temps_cuisine||'–'}</div></div>
+      </div>
+    </div>
+
+    <!-- Habitudes -->
+    <div class="sec-card">
+      <div class="sec-label">Habitudes alimentaires</div>
+      <div class="data-grid">
+        <div class="data-cell"><div class="dc-lbl">Repas / jour</div><div class="dc-val">${c.nb_repas||'–'}</div></div>
+        <div class="data-cell"><div class="dc-lbl">Repas sautés</div><div class="dc-val">${c.repas_sautes && c.repas_sautes.length > 0 ? c.repas_sautes.join(', ') : 'Aucun'}</div></div>
+      </div>
+      ${c.regime && c.regime.length > 0 ? `
+      <div style="margin-top:12px;">
+        <div class="dc-lbl" style="margin-bottom:6px;">Régime / restrictions</div>
+        <div class="tag-list">${c.regime.map(r=>`<span class="ctag">${r}</span>`).join('')}</div>
+      </div>` : ''}
+    </div>
+
+    <!-- Journal repas -->
+    <div class="sec-card">
+      <div class="sec-label">Journal alimentaire</div>
+      <div id="repasSection"><div class="loading">Chargement...</div></div>
+    </div>
+
+    <!-- Scores nutrition -->
+    <div class="sec-card" id="scoresSection" style="display:none;">
+      <div class="sec-label">Scores nutritionnels</div>
+      <div id="scoresContent"></div>
+    </div>
+
+    <!-- Action de la semaine -->
+    <div class="sec-card">
+      <div class="sec-label">⚡ Action de la semaine</div>
+      <input class="action-inp" type="text" id="actionInp" placeholder="Ex: Ajoutez des protéines au petit-déjeuner cette semaine">
+      <button class="btn-save-notes" onclick="sauvegarderNotes()" id="btnSaveNotes">Enregistrer l'action et les notes</button>
+    </div>
+
+    <!-- Notes privées -->
+    <div class="sec-card">
+      <div class="sec-label">📝 Notes privées</div>
+      <textarea class="notes-area" id="notesArea" placeholder="Vos observations, points de vigilance, plan de suivi..."></textarea>
+    </div>
+
+  `;
+}
+
+function afficherRepasEtScores(meals, scores) {
+  // Repas
+  const repasEl = document.getElementById('repasSection');
+  if (!meals || meals.length === 0) {
+    repasEl.innerHTML = '<div class="empty">Aucun repas enregistré</div>';
+  } else {
+    repasEl.innerHTML = meals.map(m => {
+      const ings = (m.meal_ingredients||[]).map(i=>i.name+' '+i.quantity_g+'g').join(', ') || 'Aucun ingrédient';
+      const date = new Date(m.created_at).toLocaleDateString('fr-FR', {day:'numeric',month:'short'});
+      const photo = m.photo_url ? `<div class="repas-photo-sm"><img src="${m.photo_url}" alt=""></div>` : `<div class="repas-photo-sm">🍽️</div>`;
+      return `<div class="repas-mini">${photo}<div style="flex:1;min-width:0;"><div class="repas-name-sm">${m.name}</div><div class="repas-ings-sm">${ings}</div></div><div class="repas-date-sm">${date}</div></div>`;
+    }).join('');
+  }
+
+  // Scores
+  if (scores && scores.length > 0) {
+    const s = scores[0];
+    const v = Math.round(s.variety_score||0);
+    const q = Math.round(s.quality_score||0);
+    const r = Math.round(s.relevance_score||0);
+    const scoreColor = x => x>=70?'#5a9e6f':x>=40?'#ba7517':'#c77b7b';
+    document.getElementById('scoresSection').style.display = 'block';
+    document.getElementById('scoresContent').innerHTML = `
+      <div class="jauge-block">
+        <div class="jauge-head"><span class="jauge-name">Variété</span><span class="jauge-badge ${v>=70?'jb-hi':v>=40?'jb-mid':'jb-low'}">${v}%</span></div>
+        <div class="jauge-track"><div class="jauge-fill" style="width:${v}%;background:${scoreColor(v)};"></div></div>
+      </div>
+      <div class="jauge-block">
+        <div class="jauge-head"><span class="jauge-name">Qualité</span><span class="jauge-badge ${q>=70?'jb-hi':q>=40?'jb-mid':'jb-low'}">${q}%</span></div>
+        <div class="jauge-track"><div class="jauge-fill" style="width:${q}%;background:${scoreColor(q)};"></div></div>
+      </div>
+      <div class="jauge-block" style="margin-bottom:0;">
+        <div class="jauge-head"><span class="jauge-name">Pertinence</span><span class="jauge-badge ${r>=70?'jb-hi':r>=40?'jb-mid':'jb-low'}">${r}%</span></div>
+        <div class="jauge-track"><div class="jauge-fill" style="width:${r}%;background:${scoreColor(r)};"></div></div>
+      </div>`;
+  }
+}
+
+async function sauvegarderNotes() {
+  if (!currentClient) return;
+  const note   = document.getElementById('notesArea').value;
+  const action = document.getElementById('actionInp').value;
+  const btn    = document.getElementById('btnSaveNotes');
+  btn.textContent = 'Enregistrement...';
+  try {
+    await sb('notes_nutritionniste', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify({ client_id: currentClient.user_id, note, action_semaine: action, updated_at: new Date().toISOString() })
+    });
+    btn.textContent = '✓ Enregistré';
+    btn.classList.add('saved');
+    setTimeout(() => { btn.textContent = 'Enregistrer l\'action et les notes'; btn.classList.remove('saved'); }, 2000);
+    toast('Notes enregistrées !', 'ok');
+  } catch(e) {
+    toast('Erreur : ' + e.message, 'err');
+    btn.textContent = 'Enregistrer l\'action et les notes';
+  }
+}
+
+function retourListe() {
+  document.getElementById('ficheView').classList.remove('visible');
+  document.getElementById('listView').style.display = 'block';
+  currentClient = null;
+}
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type;
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
