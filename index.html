@@ -463,7 +463,35 @@ function demarrerOnboarding() {
 }
 
 async function init() {
-  await Promise.all([chargerRepas(), chargerScores(), verifierAbonnementEtMessages()]);
+  await Promise.all([chargerRepas(), chargerScores(), verifierAbonnementEtMessages(), chargerMacrosSupabase()]);
+}
+
+async function chargerMacrosSupabase() {
+  try {
+    const rows = await supabase('onboarding?user_id=eq.' + USER_ID + '&completed=eq.true&select=poids,tdee,bmr&limit=1');
+    if (!rows || rows.length === 0) return;
+    const p = rows[0];
+    const tdee  = parseFloat(p.tdee)  || 0;
+    const poids = parseFloat(p.poids) || 0;
+    if (!tdee && !poids) return;
+
+    // Calcul macros standards
+    const proteines = poids  ? Math.round(poids * 2)        : null;
+    const lipides   = tdee   ? Math.round(tdee * 0.25 / 9)  : null;
+    const calories  = tdee   ? Math.round(tdee)              : null;
+
+    if (proteines) { setText('valProt', proteines); setText('goalProt', 'Objectif ' + proteines + ' g'); }
+    if (lipides)   { setText('valLip',  lipides);   setText('goalLip',  'Objectif ' + lipides   + ' g'); }
+    if (calories)  { setText('valCal',  calories);  setText('goalCal',  'Objectif ' + calories  + ' kcal'); }
+
+    // Barres indicatives
+    const barProt = document.getElementById('barProt');
+    const barLip  = document.getElementById('barLip');
+    const barCal  = document.getElementById('barCal');
+    if (barProt) barProt.style.width = '75%';
+    if (barLip)  barLip.style.width  = '60%';
+    if (barCal)  barCal.style.width  = '70%';
+  } catch(e) {}
 }
 
 async function verifierAbonnementEtMessages() {
