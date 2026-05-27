@@ -6,16 +6,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
- 
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f2f2f7; min-height: 100vh; color: #1c1c1e; }
- 
+
 .header { background: #fff; padding: 20px 20px 16px; display: flex; align-items: flex-start; justify-content: space-between; }
 .header-title { font-size: 28px; font-weight: 700; color: #1c1c1e; letter-spacing: -0.5px; }
 .header-sub   { font-size: 13px; color: #8e8e93; margin-top: 2px; }
 .header-avatar { width: 40px; height: 40px; border-radius: 50%; background: #e5e5ea; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
- 
+
 .page { padding: 14px 14px 100px; display: flex; flex-direction: column; gap: 12px; }
- 
+
 /* BANDEAU ABONNEMENT */
 .bandeau-abonnement {
   background: #1a1a2e; border-radius: 16px;
@@ -31,7 +30,54 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .bandeau-sub { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 2px; }
 .bandeau-btn { background: #fff; color: #1a1a2e; border: none; border-radius: 10px; padding: 8px 14px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 .bandeau-btn:active { transform: scale(0.97); }
- 
+
+/* ── MESSAGES NUTRI CARD ── */
+.nutri-chat-card {
+  background: #fff; border-radius: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04);
+  overflow: hidden; cursor: pointer;
+  transition: transform 0.15s;
+}
+.nutri-chat-card:active { transform: scale(0.99); }
+.nutri-chat-header {
+  padding: 14px 16px 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nutri-chat-left { display: flex; align-items: center; gap: 10px; }
+.nutri-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: linear-gradient(135deg, #1a1a2e, #2d2d4e);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0; position: relative;
+}
+.nutri-online-dot {
+  position: absolute; bottom: 1px; right: 1px;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #34a853; border: 2px solid #fff;
+}
+.nutri-chat-name { font-size: 14px; font-weight: 600; color: #1c1c1e; }
+.nutri-chat-role { font-size: 11px; color: #8e8e93; margin-top: 1px; }
+.unread-badge {
+  background: #1a1a2e; color: #fff;
+  border-radius: 99px; font-size: 11px; font-weight: 600;
+  padding: 3px 9px; display: none;
+}
+.unread-badge.visible { display: block; }
+.nutri-last-msg {
+  padding: 0 16px 14px;
+  font-size: 13px; color: #8e8e93;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.nutri-last-msg.unread { color: #1c1c1e; font-weight: 500; }
+.nutri-chat-cta {
+  background: #f2f2f7; margin: 0 16px 14px;
+  border-radius: 12px; padding: 11px 14px;
+  font-size: 13px; color: #1c1c1e; font-weight: 500;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nutri-chat-cta-arr { font-size: 16px; color: #aeaeb2; }
+
 /* SCORE CARD */
 .score-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); padding: 20px 18px; display: flex; align-items: center; gap: 14px; }
 .ring-wrap { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
@@ -50,7 +96,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mc-goal { font-size: 10px; color: #aeaeb2; margin-top: 3px; }
 .mc-bar  { width: 100%; height: 3px; background: #f0f0f0; border-radius: 2px; overflow: hidden; margin-top: 6px; }
 .mc-fill { height: 100%; border-radius: 2px; }
- 
+
 /* POINTS */
 .points-row { display: flex; gap: 10px; }
 .points-block { flex: 1; background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); padding: 14px 12px 10px; overflow: hidden; }
@@ -69,7 +115,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .pt-bg  { color: #34a853; }
 .pt-bo  { color: #ff6b00; }
 .pt-arr { font-size: 14px; color: #c7c7cc; flex-shrink: 0; }
- 
+
 /* HISTORIQUE */
 .hist-header { display: flex; align-items: center; justify-content: space-between; }
 .hist-title { font-size: 15px; font-weight: 600; color: #1c1c1e; }
@@ -89,10 +135,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .meal-score svg { position: absolute; inset: 0; transform: rotate(-90deg); }
 .meal-score-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #1c1c1e; }
 .meal-dots { font-size: 16px; color: #c7c7cc; letter-spacing: 1.5px; cursor: pointer; }
- 
+
 .btn-add { width: 100%; padding: 17px; background: #fff; border: none; border-radius: 16px; color: #1c1c1e; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .btn-add:active { transform: scale(0.98); }
- 
+
 /* POPUP */
 .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); z-index: 1000; align-items: flex-end; justify-content: center; }
 .popup-overlay.active { display: flex; }
@@ -116,19 +162,19 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .btn-add-ing { width: 100%; padding: 13px; background: #f2f2f7; border: none; border-radius: 12px; color: #8e8e93; font-size: 14px; cursor: pointer; font-family: 'Inter', sans-serif; margin-bottom: 20px; }
 .btn-save { width: 100%; padding: 16px; background: #34a853; border: none; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; }
 .btn-save:disabled { background: #aeaeb2; }
- 
+
 .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1c1c1e; color: #fff; padding: 12px 24px; border-radius: 20px; font-size: 14px; font-family: 'Inter', sans-serif; z-index: 2000; transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); pointer-events: none; white-space: nowrap; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.success { background: #34a853; }
 .toast.error   { background: #ff3b30; }
- 
+
 .loading { text-align: center; color: #c7c7cc; font-size: 13px; padding: 24px 0; }
 .empty   { text-align: center; color: #c7c7cc; font-size: 13px; padding: 32px 0; line-height: 1.8; }
 input[type="file"] { display: none; }
 </style>
 </head>
 <body>
- 
+
 <div class="header">
   <div>
     <div class="header-title">Mon suivi</div>
@@ -136,9 +182,9 @@ input[type="file"] { display: none; }
   </div>
   <div class="header-avatar"><span style="font-size:20px;">👤</span></div>
 </div>
- 
+
 <div class="page">
- 
+
   <!-- BANDEAU ABONNEMENT (affiché si pas abonné) -->
   <div class="bandeau-abonnement" id="bandeauAbonnement" style="display:none;">
     <div class="bandeau-left">
@@ -150,7 +196,25 @@ input[type="file"] { display: none; }
     </div>
     <button class="bandeau-btn" id="bandeauBtn">Voir les offres →</button>
   </div>
- 
+
+  <!-- CHAT NUTRITIONNISTE (affiché si abonné) -->
+  <div class="nutri-chat-card" id="nutriChatCard" style="display:none;" onclick="ouvrirChat()">
+    <div class="nutri-chat-header">
+      <div class="nutri-chat-left">
+        <div class="nutri-avatar">
+          🧑‍⚕️
+          <div class="nutri-online-dot"></div>
+        </div>
+        <div>
+          <div class="nutri-chat-name">Votre nutritionniste</div>
+          <div class="nutri-chat-role">Messagerie personnalisée</div>
+        </div>
+      </div>
+      <div class="unread-badge" id="unreadBadge">0</div>
+    </div>
+    <div class="nutri-last-msg" id="nutriLastMsg">Appuyez pour ouvrir la conversation →</div>
+  </div>
+
   <!-- SCORE + MACROS -->
   <div class="score-card">
     <div class="ring-wrap">
@@ -188,7 +252,7 @@ input[type="file"] { display: none; }
       </div>
     </div>
   </div>
- 
+
   <!-- POINTS FORTS / FAIBLES -->
   <div class="points-row">
     <div class="points-block">
@@ -200,7 +264,7 @@ input[type="file"] { display: none; }
       <div id="faiblesContainer"><div class="loading" style="padding:8px 0;font-size:11px;">...</div></div>
     </div>
   </div>
- 
+
   <!-- HISTORIQUE -->
   <div class="hist-header">
     <span class="hist-title">Historique des repas</span>
@@ -209,11 +273,11 @@ input[type="file"] { display: none; }
   <div class="hist-card">
     <div id="historiqueList"><div class="loading">Chargement...</div></div>
   </div>
- 
+
   <button class="btn-add" onclick="ouvrirPopup()">+ Ajouter un repas</button>
- 
+
 </div>
- 
+
 <!-- POPUP AJOUT REPAS -->
 <div class="popup-overlay" id="popupOverlay" onclick="fermerPopupOverlay(event)">
   <div class="popup">
@@ -243,23 +307,23 @@ input[type="file"] { display: none; }
     <button class="btn-save" id="btnSave" onclick="enregistrerPlat()">Enregistrer</button>
   </div>
 </div>
- 
+
 <div class="toast" id="toast"></div>
- 
+
 <script>
 const SUPABASE_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
 const CLOUDINARY_CLOUD  = 'dujji1s6g';
 const CLOUDINARY_PRESET = 'meal_photos';
- 
+
 let USER_ID = null;
 let photoFile = null;
 let token = '';
- 
+
 const params = new URLSearchParams(window.location.search);
 token = params.get('token') || '';
 const userIdParam = params.get('userId');
- 
+
 function resolveUserId() {
   if (userIdParam && userIdParam !== 'null' && userIdParam !== 'PLACEHOLDER') return userIdParam;
   if (token && token.length > 10) {
@@ -270,7 +334,7 @@ function resolveUserId() {
   }
   return null;
 }
- 
+
 function lireMacrosURL() {
   const data = {
     objectif:  params.get('objectif')  || '',
@@ -281,34 +345,42 @@ function lireMacrosURL() {
   };
   if (data.proteines || data.calories) afficherMacros(data);
 }
- 
+
 window.addEventListener('message', function(e) {
   const d = e.data;
   if (!d || d.type !== 'macroData') return;
   afficherMacros(d);
 });
 window.parent.postMessage('htmlReady', '*');
- 
+
 USER_ID = resolveUserId();
 lireMacrosURL();
- 
-// Configurer le bouton bandeau
+
 document.getElementById('bandeauBtn').onclick = function() {
   window.location.href = '/offre.html?token=' + token;
 };
- 
+
+function ouvrirChat() {
+  const chatUrl = '/chat.html?token=' + token;
+  if (window.self !== window.top) {
+    window.top.location.href = chatUrl;
+  } else {
+    window.location.href = chatUrl;
+  }
+}
+
 if (USER_ID) {
   init();
 } else {
   document.getElementById('historiqueList').innerHTML = '<div class="empty">Connectez-vous pour voir votre suivi</div>';
   afficherDiagnosticsVides();
 }
- 
+
 async function init() {
-  await Promise.all([chargerRepas(), chargerScores(), verifierAbonnement()]);
+  await Promise.all([chargerRepas(), chargerScores(), verifierAbonnementEtMessages()]);
 }
- 
-async function verifierAbonnement() {
+
+async function verifierAbonnementEtMessages() {
   if (!USER_ID) return;
   try {
     const res = await fetch(
@@ -317,17 +389,79 @@ async function verifierAbonnement() {
     );
     const data = await res.json();
     const estAbonne = data && data.length > 0;
-    if (!estAbonne) {
-      // Afficher le bandeau avec un léger délai pour ne pas perturber le chargement
-      setTimeout(() => {
+
+    setTimeout(async () => {
+      if (!estAbonne) {
         document.getElementById('bandeauAbonnement').style.display = 'flex';
-      }, 800);
-    }
-  } catch(e) {
-    // En cas d'erreur, on n'affiche pas le bandeau
-  }
+      } else {
+        // Abonné → afficher la card chat
+        document.getElementById('nutriChatCard').style.display = 'block';
+        // Charger dernier message + nb non lus
+        await chargerAperçuMessages();
+        // Realtime pour badge non lu
+        subscribeMessagesRealtime();
+      }
+    }, 800);
+  } catch(e) {}
 }
- 
+
+async function chargerAperçuMessages() {
+  try {
+    const msgs = await supabase(
+      'messages?user_id=eq.' + USER_ID + '&order=created_at.desc&limit=5'
+    );
+    const unreadCount = msgs.filter(m => m.expediteur === 'nutritionniste' && !m.lu).length;
+    const lastMsg = msgs[0];
+
+    const badge = document.getElementById('unreadBadge');
+    const lastMsgEl = document.getElementById('nutriLastMsg');
+
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount;
+      badge.classList.add('visible');
+    }
+
+    if (lastMsg) {
+      const prefix = lastMsg.expediteur === 'client' ? 'Vous : ' : '';
+      lastMsgEl.textContent = prefix + lastMsg.contenu;
+      if (lastMsg.expediteur === 'nutritionniste' && !lastMsg.lu) {
+        lastMsgEl.classList.add('unread');
+      }
+    }
+  } catch(e) {}
+}
+
+function subscribeMessagesRealtime() {
+  if (!USER_ID) return;
+  const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_KEY + '&vsn=1.0.0';
+  const ws = new WebSocket(wsUrl);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({
+      topic: 'realtime:public:messages:user_id=eq.' + USER_ID,
+      event: 'phx_join', payload: {}, ref: '1'
+    }));
+  };
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.event === 'INSERT' && data.payload?.record) {
+      const msg = data.payload.record;
+      if (msg.expediteur === 'nutritionniste') {
+        // Update badge
+        const badge = document.getElementById('unreadBadge');
+        const count = (parseInt(badge.textContent) || 0) + 1;
+        badge.textContent = count;
+        badge.classList.add('visible');
+        // Update last msg
+        const lastMsgEl = document.getElementById('nutriLastMsg');
+        lastMsgEl.textContent = msg.contenu;
+        lastMsgEl.classList.add('unread');
+      }
+    }
+  };
+  ws.onclose = () => setTimeout(subscribeMessagesRealtime, 3000);
+  ws.onerror = () => ws.close();
+}
+
 async function supabase(path, options = {}) {
   const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
     ...options,
@@ -337,13 +471,13 @@ async function supabase(path, options = {}) {
   if (!res.ok) throw new Error(text);
   return text ? JSON.parse(text) : [];
 }
- 
+
 function afficherMacros(d) {
   if (d.proteines && d.proteines !== '–') { setText('valProt', d.proteines); setText('goalProt', 'Objectif ' + d.proteines + ' g'); }
   if (d.lipides && d.lipides !== '–')     { setText('valLip', d.lipides);   setText('goalLip', 'Objectif ' + d.lipides + ' g'); }
   if (d.calories && d.calories !== '–')   { setText('valCal', d.calories);  setText('goalCal', 'Objectif ' + d.calories + ' kcal'); }
 }
- 
+
 async function chargerScores() {
   try {
     const scores = await supabase('nutrition_scores?user_id=eq.' + USER_ID + '&order=calculated_at.desc&limit=1');
@@ -355,7 +489,7 @@ async function chargerScores() {
     calculerDiagnostics(v, q, r);
   } catch(e) { afficherDiagnosticsVides(); }
 }
- 
+
 function setScoreRing(pct) {
   const circ = 2 * Math.PI * 58, dash = (pct / 100) * circ;
   const col = pct >= 70 ? '#34a853' : pct >= 40 ? '#ff9500' : '#ff3b30';
@@ -368,7 +502,7 @@ function setScoreRing(pct) {
   badge.style.background = pct >= 60 ? '#e8f5ee' : pct >= 40 ? '#fff3e8' : '#fde8e8';
   badge.style.color      = pct >= 60 ? '#34a853' : pct >= 40 ? '#ff9500' : '#ff3b30';
 }
- 
+
 function calculerDiagnostics(variety, quality, relevance) {
   const forts = [
     { ico: '💧', icoCls: 'pt-ico-g', nom: 'Hydratation',         badge: 'Excellent',  badgeCls: 'pt-bg' },
@@ -383,7 +517,7 @@ function calculerDiagnostics(variety, quality, relevance) {
   renderPts('fortsContainer', forts.slice(0, 3));
   renderPts('faiblesContainer', faibles.slice(0, 3));
 }
- 
+
 function renderPts(id, items) {
   document.getElementById(id).innerHTML = items.map(it => `
     <div class="pt-item">
@@ -392,7 +526,7 @@ function renderPts(id, items) {
       <div class="pt-arr">›</div>
     </div>`).join('');
 }
- 
+
 function afficherDiagnosticsVides() {
   renderPts('fortsContainer', [
     { ico: '💧', icoCls: 'pt-ico-g', nom: 'Hydratation',         badge: 'Excellent',  badgeCls: 'pt-bg' },
@@ -405,14 +539,14 @@ function afficherDiagnosticsVides() {
     { ico: '🌾', icoCls: 'pt-ico-o', nom: 'Glucides complets',    badge: 'À intégrer davantage', badgeCls: 'pt-bo' }
   ]);
 }
- 
+
 async function chargerRepas() {
   try {
     const meals = await supabase('meals?user_id=eq.' + USER_ID + '&select=*,meal_ingredients(*)&order=created_at.desc&limit=10');
     afficherRepas(meals);
   } catch(e) { document.getElementById('historiqueList').innerHTML = '<div class="empty">Erreur de chargement</div>'; }
 }
- 
+
 function scoreRepas(meal) { return Math.min(99, 60 + (meal.meal_ingredients || []).length * 8); }
 function tagRepas(meal) {
   const ings = (meal.meal_ingredients || []).map(i => i.name.toLowerCase());
@@ -420,7 +554,7 @@ function tagRepas(meal) {
   if (ings.some(n => /quinoa|riz|lentille|pois/.test(n))) return 'Bon équilibre';
   return 'Très bon choix';
 }
- 
+
 function afficherRepas(meals) {
   const el = document.getElementById('historiqueList');
   if (!meals || meals.length === 0) { el.innerHTML = '<div class="empty">Aucun plat enregistré<br>Ajoutez votre premier repas !</div>'; return; }
@@ -442,7 +576,7 @@ function afficherRepas(meals) {
       </div></div>`;
   }).join('');
 }
- 
+
 async function recalculerScores() {
   try {
     const meals = await supabase('meals?user_id=eq.' + USER_ID + '&select=*,meal_ingredients(*)&order=created_at.desc&limit=30');
@@ -459,25 +593,25 @@ async function recalculerScores() {
     calculerDiagnostics(variety, quality, pertinence);
   } catch(e) {}
 }
- 
+
 function ouvrirPopup() { document.getElementById('popupOverlay').classList.add('active'); resetPopup(); }
 function fermerPopup()  { document.getElementById('popupOverlay').classList.remove('active'); }
 function fermerPopupOverlay(e) { if (e.target === document.getElementById('popupOverlay')) fermerPopup(); }
- 
+
 function resetPopup() {
   document.getElementById('inputNom').value = '';
   document.getElementById('photoPreview').classList.remove('visible');
   document.getElementById('ingredientsList').innerHTML = `<div class="ing-row"><input class="form-inp" type="text" placeholder="Nom de l'ingrédient"><input class="form-inp qty" type="number" placeholder="g" min="0"></div>`;
   photoFile = null;
 }
- 
+
 function ajouterLigneIngredient() {
   const list = document.getElementById('ingredientsList'), row = document.createElement('div');
   row.className = 'ing-row';
   row.innerHTML = `<input class="form-inp" type="text" placeholder="Nom de l'ingrédient"><input class="form-inp qty" type="number" placeholder="g" min="0">`;
   list.appendChild(row);
 }
- 
+
 function previewPhoto(input) {
   const file = input.files[0]; if (!file) return;
   photoFile = file;
@@ -485,7 +619,7 @@ function previewPhoto(input) {
   reader.onload = e => { const p = document.getElementById('photoPreview'); p.src = e.target.result; p.classList.add('visible'); };
   reader.readAsDataURL(file);
 }
- 
+
 async function uploadPhotoCloudinary(file) {
   const fd = new FormData(); fd.append('file', file); fd.append('upload_preset', CLOUDINARY_PRESET);
   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: fd });
@@ -493,7 +627,7 @@ async function uploadPhotoCloudinary(file) {
   if (!data.secure_url) throw new Error(data.error ? data.error.message : 'Upload échoué');
   return data.secure_url;
 }
- 
+
 async function enregistrerPlat() {
   if (!USER_ID) { showToast('Utilisateur non connecté', 'error'); return; }
   const nom = document.getElementById('inputNom').value.trim();
@@ -513,14 +647,14 @@ async function enregistrerPlat() {
   } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Enregistrer'; }
 }
- 
+
 async function supprimerRepas(id, e) {
   e.stopPropagation();
   if (!confirm('Supprimer ce repas ?')) return;
   try { await supabase('meals?id=eq.' + id, { method: 'DELETE' }); await recalculerScores(); await chargerRepas(); showToast('Repas supprimé', 'success'); }
   catch(e) { showToast('Erreur', 'error'); }
 }
- 
+
 function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
 function showToast(msg, type) {
   const t = document.getElementById('toast');
