@@ -1,29 +1,26 @@
-export const config = { runtime: 'edge' };
-
-export default async function handler(req) {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { priceId, userId, token } = await req.json();
+    const { priceId, userId, token } = req.body;
 
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
     if (!STRIPE_SECRET_KEY) {
-      return new Response(JSON.stringify({ error: 'Missing Stripe key' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
     }
 
-    const reqUrl = new URL(req.url);
-    const origin = reqUrl.origin;
+    const origin = req.headers.origin || 'https://natty-suivi.vercel.app';
 
     const body = new URLSearchParams();
     body.append('mode', 'subscription');
@@ -46,21 +43,12 @@ export default async function handler(req) {
     const session = await response.json();
 
     if (!session.url) {
-      return new Response(JSON.stringify({ error: 'Session creation failed', details: session }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return res.status(500).json({ error: 'Session creation failed', details: session });
     }
 
-    return new Response(JSON.stringify({ url: session.url }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return res.status(200).json({ url: session.url });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
