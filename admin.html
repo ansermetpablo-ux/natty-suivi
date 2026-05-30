@@ -99,7 +99,58 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .msg-unread-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--black); display: none; }
 .msg-unread-dot.visible { display: block; }
 
-/* ÉQUIPE (admin global) */
+/* ── RDV ADMIN ── */
+.rdv-admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.rdv-admin-title { font-size: 16px; font-weight: 600; }
+.btn-add-creneau { background: var(--black); color: white; border: none; border-radius: 12px; padding: 10px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; box-shadow: 3px 3px 8px rgba(26,26,46,0.35); }
+.rdv-notif-banner { background: var(--al); border-radius: 16px; padding: 14px 16px; margin-bottom: 14px; display: none; }
+.rdv-notif-banner.visible { display: block; }
+.rdv-notif-title { font-size: 13px; font-weight: 600; color: var(--amber); margin-bottom: 8px; }
+.rdv-notif-list { display: flex; flex-direction: column; gap: 8px; }
+.rdv-notif-item { background: white; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rdv-notif-text { font-size: 12px; color: var(--text); flex: 1; }
+.btn-send-recap { background: var(--black); color: white; border: none; border-radius: 10px; padding: 7px 12px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-send-recap:disabled { opacity: 0.5; cursor: not-allowed; }
+.rdv-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.rdv-tab { padding: 8px 16px; border-radius: 20px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
+.rdv-tab.active { box-shadow: var(--si); border: 2px solid var(--black); color: var(--black); }
+.rdv-list-admin { display: flex; flex-direction: column; gap: 10px; }
+.rdv-admin-card { background: var(--bg); border-radius: 18px; padding: 14px 16px; box-shadow: var(--so); display: flex; align-items: center; gap: 12px; }
+.rdv-admin-card.recap-only { border-left: 3px solid var(--amber); }
+.rdv-date-badge { background: var(--black); color: white; border-radius: 12px; padding: 8px 12px; text-align: center; flex-shrink: 0; min-width: 52px; }
+.rdv-date-day { font-size: 20px; font-weight: 700; line-height: 1; }
+.rdv-date-month { font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.7; margin-top: 2px; }
+.rdv-admin-info { flex: 1; }
+.rdv-admin-client { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.rdv-admin-detail { font-size: 12px; color: var(--muted); }
+.rdv-admin-status { font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 99px; }
+.status-confirme { background: var(--gl); color: var(--green); }
+.status-recap    { background: var(--al); color: var(--amber); }
+.creneau-form-card { background: var(--bg); border-radius: 20px; padding: 20px 18px; box-shadow: var(--so); margin-bottom: 16px; display: none; }
+.creneau-form-card.open { display: block; }
+.form-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-lbl { font-size: 10px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+.form-inp { background: var(--bg); border: none; border-radius: 12px; padding: 11px 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); }
+.form-inp::placeholder { color: #ccc; }
+.form-select { background: var(--bg); border: none; border-radius: 12px; padding: 11px 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); appearance: none; cursor: pointer; }
+.form-actions { display: flex; gap: 10px; margin-top: 14px; }
+.btn-submit { flex: 1; padding: 13px; background: var(--black); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-cancel-form { padding: 13px 18px; background: var(--bg); color: var(--muted); border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; box-shadow: var(--sm); }
+.creneaux-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.creneau-item { background: var(--bg); border-radius: 14px; padding: 12px 16px; box-shadow: var(--sm); display: flex; align-items: center; gap: 12px; }
+.creneau-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.creneau-dot.dispo { background: var(--green); }
+.creneau-dot.pris  { background: var(--red); }
+.creneau-info { flex: 1; font-size: 13px; }
+.creneau-date { font-weight: 500; }
+.creneau-heure { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.btn-del-creneau { width: 28px; height: 28px; border-radius: 8px; background: var(--rl); border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+
+/* ÉQUIPE */
 .equipe-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .equipe-title { font-size: 16px; font-weight: 600; }
 .btn-add-nutri { background: var(--black); color: white; border: none; border-radius: 12px; padding: 10px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; box-shadow: 3px 3px 8px rgba(26,26,46,0.35); }
@@ -118,21 +169,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .nutri-actif-badge { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 99px; }
 .nutri-actif-badge.on  { background: var(--gl); color: var(--green); }
 .nutri-actif-badge.off { background: var(--rl); color: var(--red); }
-
-/* FORM NUTRI */
 .form-nutri-card { background: var(--bg); border-radius: 20px; padding: 20px 18px; box-shadow: var(--so); margin-bottom: 16px; display: none; }
 .form-nutri-card.open { display: block; }
-.form-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-.form-group { display: flex; flex-direction: column; gap: 5px; }
-.form-group.full { grid-column: 1 / -1; }
-.form-lbl { font-size: 10px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
-.form-inp { background: var(--bg); border: none; border-radius: 12px; padding: 11px 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); }
-.form-inp::placeholder { color: #ccc; }
-.form-actions { display: flex; gap: 10px; margin-top: 14px; }
-.btn-submit { flex: 1; padding: 13px; background: var(--black); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
-.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-cancel-form { padding: 13px 18px; background: var(--bg); color: var(--muted); border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; box-shadow: var(--sm); }
 .objectifs-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .obj-chip { padding: 8px 12px; border-radius: 99px; background: var(--bg); box-shadow: var(--sm); font-size: 12px; cursor: pointer; border: 2px solid transparent; color: var(--text); }
 .obj-chip.on { box-shadow: var(--si); border-color: var(--green); color: var(--green); background: var(--gl); }
@@ -166,7 +204,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .plat-admin-card.inactive .plat-inactive-overlay { display: block; }
 .form-card { background: var(--bg); border-radius: 20px; padding: 20px 18px; box-shadow: var(--so); margin-bottom: 16px; display: none; }
 .form-card.open { display: block; }
-.form-select { background: var(--bg); border: none; border-radius: 12px; padding: 11px 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); appearance: none; cursor: pointer; }
 .upload-zone { background: var(--bg); border-radius: 12px; box-shadow: var(--si); padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; min-height: 80px; justify-content: center; }
 .upload-preview { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; display: none; }
 .upload-preview.visible { display: block; }
@@ -221,6 +258,14 @@ input[type="file"] { display: none; }
 .dc-lbl { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 .dc-val { font-size: 15px; font-weight: 500; }
 .dc-val.green { color: var(--green); }
+/* Contact email */
+.contact-row { display: flex; align-items: center; gap: 12px; background: var(--bg); border-radius: 16px; padding: 14px 16px; box-shadow: var(--si); margin-bottom: 10px; }
+.contact-icon { font-size: 22px; flex-shrink: 0; }
+.contact-info { flex: 1; min-width: 0; }
+.contact-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.contact-val { font-size: 14px; font-weight: 500; word-break: break-all; }
+.btn-send-recap-fiche { background: var(--black); color: white; border: none; border-radius: 10px; padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0; box-shadow: 3px 3px 8px rgba(26,26,46,0.25); }
+.btn-send-recap-fiche:disabled { opacity: 0.5; cursor: not-allowed; }
 .jauge-block { margin-bottom: 14px; }
 .jauge-block:last-child { margin-bottom: 0; }
 .jauge-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
@@ -242,6 +287,8 @@ input[type="file"] { display: none; }
 .action-inp { width: 100%; background: var(--bg); border: none; border-radius: 14px; padding: 13px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--si); margin-bottom: 10px; }
 .action-inp::placeholder { color: #ccc; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+/* CHAT */
 .chat-panel { background: var(--bg); border-radius: 20px; box-shadow: var(--so); overflow: hidden; display: flex; flex-direction: column; height: calc(100vh - 180px); min-height: 400px; }
 .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
 .chat-msg { display: flex; flex-direction: column; gap: 3px; }
@@ -297,30 +344,23 @@ input[type="file"] { display: none; }
   <div class="main-app" id="mainApp">
     <div id="listView">
       <div class="top-bar">
-        <div>
-          <div class="top-title">Back-office</div>
-          <div class="top-heading" id="topHeading">Mes clients</div>
-        </div>
+        <div><div class="top-title">Back-office</div><div class="top-heading" id="topHeading">Mes clients</div></div>
         <div class="top-right">
           <div class="nutri-badge-top" id="nutriBadgeTop">🧑‍⚕️ <span id="nutriBadgeName">–</span></div>
-          <div class="search-wrap" id="searchWrap">
-            <span>🔍</span>
-            <input class="search-inp" type="text" placeholder="Rechercher..." oninput="filtrer(this.value)">
-          </div>
+          <div class="search-wrap" id="searchWrap"><span>🔍</span><input class="search-inp" type="text" placeholder="Rechercher..." oninput="filtrer(this.value)"></div>
           <button class="logout-btn" onclick="logout()">Déconnexion</button>
         </div>
       </div>
-
       <div class="nav-tabs" id="navTabs">
         <button class="nav-tab active" id="navClients"   onclick="switchNav('clients')">👥 Clients</button>
         <button class="nav-tab"        id="navMessages"  onclick="switchNav('messages')">💬 Messages<span class="nav-badge" id="navMsgBadge">0</span></button>
+        <button class="nav-tab"        id="navRdv"       onclick="switchNav('rdv')">📅 RDV<span class="nav-badge" id="navRdvBadge">0</span></button>
         <button class="nav-tab"        id="navMenu"      onclick="switchNav('menu')">🍽️ Menu</button>
         <button class="nav-tab"        id="navCommandes" onclick="switchNav('commandes')">📦 Commandes</button>
-        <!-- Onglet Équipe visible uniquement admin global -->
         <button class="nav-tab" id="navEquipe" onclick="switchNav('equipe')" style="display:none;">👤 Équipe</button>
       </div>
-
       <div class="content">
+
         <!-- CLIENTS -->
         <div class="tab-content active" id="tabClients">
           <div class="stats-strip">
@@ -347,41 +387,57 @@ input[type="file"] { display: none; }
           <div class="msg-list" id="msgThreadList"><div class="loading">Chargement...</div></div>
         </div>
 
+        <!-- RDV -->
+        <div class="tab-content" id="tabRdv">
+          <!-- Notification récap email -->
+          <div class="rdv-notif-banner" id="rdvNotifBanner">
+            <div class="rdv-notif-title">⚠️ Clients ayant demandé un récapitulatif par email</div>
+            <div class="rdv-notif-list" id="rdvNotifList"></div>
+          </div>
+          <div class="rdv-admin-header">
+            <div class="rdv-admin-title">Gestion des rendez-vous</div>
+            <button class="btn-add-creneau" onclick="toggleFormCreneau()">+ Ajouter un créneau</button>
+          </div>
+          <!-- Formulaire ajout créneau -->
+          <div class="creneau-form-card" id="creneauForm">
+            <div class="form-title">Nouveau créneau disponible</div>
+            <div class="form-row">
+              <div class="form-group"><div class="form-lbl">Date</div><input class="form-inp" type="date" id="creneauDate"></div>
+              <div class="form-group"><div class="form-lbl">Heure</div>
+                <select class="form-select" id="creneauHeure">
+                  <option>08:00</option><option>09:00</option><option>10:00</option><option>11:00</option>
+                  <option>14:00</option><option>15:00</option><option>16:00</option><option>17:00</option><option>18:00</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group full"><div class="form-lbl">Nutritionniste (optionnel)</div><input class="form-inp" type="text" id="creneauNutriNom" placeholder="Nom du nutritionniste"></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-cancel-form" onclick="toggleFormCreneau()">Annuler</button>
+              <button class="btn-submit" onclick="ajouterCreneau()" id="btnSaveCreneau">Ajouter le créneau</button>
+            </div>
+          </div>
+          <!-- Liste RDV -->
+          <div class="rdv-tabs">
+            <button class="rdv-tab active" onclick="setRdvFilter('a_venir',this)">À venir</button>
+            <button class="rdv-tab" onclick="setRdvFilter('passes',this)">Passés</button>
+            <button class="rdv-tab" onclick="setRdvFilter('creneaux',this)">Créneaux libres</button>
+          </div>
+          <div class="rdv-list-admin" id="rdvAdminList"><div class="loading">Chargement...</div></div>
+        </div>
+
         <!-- MENU -->
         <div class="tab-content" id="tabMenu">
-          <div class="menu-header">
-            <div class="menu-title">Menu de la semaine</div>
-            <button class="btn-add-plat" onclick="toggleFormPlat()">+ Ajouter un plat</button>
-          </div>
+          <div class="menu-header"><div class="menu-title">Menu de la semaine</div><button class="btn-add-plat" onclick="toggleFormPlat()">+ Ajouter un plat</button></div>
           <div class="form-card" id="formPlat">
             <div class="form-title" id="formPlatTitle">Nouveau plat</div>
             <input type="hidden" id="platEditId">
+            <div class="form-row"><div class="form-group full"><div class="form-lbl">Nom du plat</div><input class="form-inp" type="text" id="platNom" placeholder="Ex: Bowl poulet quinoa"></div></div>
+            <div class="form-row"><div class="form-group full"><div class="form-lbl">Description</div><input class="form-inp" type="text" id="platDesc" placeholder="Ex: Poulet grillé, quinoa, légumes rôtis"></div></div>
             <div class="form-row">
-              <div class="form-group full"><div class="form-lbl">Nom du plat</div><input class="form-inp" type="text" id="platNom" placeholder="Ex: Bowl poulet quinoa"></div>
-            </div>
-            <div class="form-row">
-              <div class="form-group full"><div class="form-lbl">Description</div><input class="form-inp" type="text" id="platDesc" placeholder="Ex: Poulet grillé, quinoa, légumes rôtis"></div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <div class="form-lbl">Catégorie</div>
-                <select class="form-select" id="platCat">
-                  <option value="performance">⚡ Performance</option>
-                  <option value="objectif">🎯 Objectif</option>
-                  <option value="bien_etre">🌿 Bien-être</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <div class="form-lbl">Photo du plat</div>
-                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('photoFile').click()">
-                  <img class="upload-preview" id="uploadPreview" alt="">
-                  <span class="upload-icon" id="uploadIcon">📷</span>
-                  <span class="upload-label" id="uploadLabel">Cliquez pour ajouter une photo</span>
-                  <div class="upload-progress" id="uploadProgress"><div class="upload-progress-bar" id="uploadProgressBar" style="width:0%"></div></div>
-                </div>
-                <input type="file" id="photoFile" accept="image/*" onchange="previewAndUpload(this)">
-                <input type="hidden" id="platPhoto">
-              </div>
+              <div class="form-group"><div class="form-lbl">Catégorie</div><select class="form-select" id="platCat"><option value="performance">⚡ Performance</option><option value="objectif">🎯 Objectif</option><option value="bien_etre">🌿 Bien-être</option></select></div>
+              <div class="form-group"><div class="form-lbl">Photo</div><div class="upload-zone" id="uploadZone" onclick="document.getElementById('photoFile').click()"><img class="upload-preview" id="uploadPreview" alt=""><span class="upload-icon" id="uploadIcon">📷</span><span class="upload-label" id="uploadLabel">Cliquez pour ajouter</span><div class="upload-progress" id="uploadProgress"><div class="upload-progress-bar" id="uploadProgressBar" style="width:0%"></div></div></div><input type="file" id="photoFile" accept="image/*" onchange="previewAndUpload(this)"><input type="hidden" id="platPhoto"></div>
             </div>
             <div class="form-row">
               <div class="form-group"><div class="form-lbl">Calories</div><input class="form-inp" type="number" id="platCal" placeholder="450"></div>
@@ -389,76 +445,31 @@ input[type="file"] { display: none; }
               <div class="form-group"><div class="form-lbl">Glucides (g)</div><input class="form-inp" type="number" id="platGluc" placeholder="40"></div>
               <div class="form-group"><div class="form-lbl">Lipides (g)</div><input class="form-inp" type="number" id="platLip" placeholder="15"></div>
             </div>
-            <div class="form-actions">
-              <button class="btn-cancel-form" onclick="toggleFormPlat()">Annuler</button>
-              <button class="btn-submit" onclick="sauvegarderPlat()" id="btnSavePlat">Enregistrer le plat</button>
-            </div>
+            <div class="form-actions"><button class="btn-cancel-form" onclick="toggleFormPlat()">Annuler</button><button class="btn-submit" onclick="sauvegarderPlat()" id="btnSavePlat">Enregistrer le plat</button></div>
           </div>
-          <div class="cat-tabs">
-            <button class="cat-tab active" onclick="setCatFilter('all',this)">Tous</button>
-            <button class="cat-tab" onclick="setCatFilter('performance',this)">⚡ Performance</button>
-            <button class="cat-tab" onclick="setCatFilter('objectif',this)">🎯 Objectif</button>
-            <button class="cat-tab" onclick="setCatFilter('bien_etre',this)">🌿 Bien-être</button>
-          </div>
+          <div class="cat-tabs"><button class="cat-tab active" onclick="setCatFilter('all',this)">Tous</button><button class="cat-tab" onclick="setCatFilter('performance',this)">⚡ Performance</button><button class="cat-tab" onclick="setCatFilter('objectif',this)">🎯 Objectif</button><button class="cat-tab" onclick="setCatFilter('bien_etre',this)">🌿 Bien-être</button></div>
           <div class="plats-admin-grid" id="platsAdminGrid"><div class="loading" style="grid-column:1/-1;">Chargement...</div></div>
         </div>
 
         <!-- COMMANDES -->
         <div class="tab-content" id="tabCommandes">
-          <div class="semaine-nav">
-            <div><div class="semaine-label" id="semaineLabel">–</div><div class="semaine-sub" id="semaineSub">–</div></div>
-            <div class="semaine-btns">
-              <button class="btn-semaine" onclick="changerSemaine(-1)">‹</button>
-              <button class="btn-semaine" onclick="changerSemaine(1)">›</button>
-            </div>
-          </div>
-          <div class="commandes-stats">
-            <div class="cmd-stat"><div class="cmd-stat-val" id="cmdTotal">–</div><div class="cmd-stat-lbl">Commandes</div></div>
-            <div class="cmd-stat"><div class="cmd-stat-val" id="cmdConfirmees">–</div><div class="cmd-stat-lbl">Confirmées</div></div>
-            <div class="cmd-stat"><div class="cmd-stat-val" id="cmdLivrees">–</div><div class="cmd-stat-lbl">Livrées</div></div>
-          </div>
+          <div class="semaine-nav"><div><div class="semaine-label" id="semaineLabel">–</div><div class="semaine-sub" id="semaineSub">–</div></div><div class="semaine-btns"><button class="btn-semaine" onclick="changerSemaine(-1)">‹</button><button class="btn-semaine" onclick="changerSemaine(1)">›</button></div></div>
+          <div class="commandes-stats"><div class="cmd-stat"><div class="cmd-stat-val" id="cmdTotal">–</div><div class="cmd-stat-lbl">Commandes</div></div><div class="cmd-stat"><div class="cmd-stat-val" id="cmdConfirmees">–</div><div class="cmd-stat-lbl">Confirmées</div></div><div class="cmd-stat"><div class="cmd-stat-val" id="cmdLivrees">–</div><div class="cmd-stat-lbl">Livrées</div></div></div>
           <div class="commandes-list" id="commandesList"><div class="loading">Chargement...</div></div>
         </div>
 
-        <!-- ÉQUIPE (admin global uniquement) -->
+        <!-- ÉQUIPE -->
         <div class="tab-content" id="tabEquipe">
-          <div class="equipe-header">
-            <div class="equipe-title">Équipe de nutritionnistes</div>
-            <button class="btn-add-nutri" onclick="toggleFormNutri()">+ Ajouter</button>
-          </div>
-          <!-- FORM NUTRI -->
+          <div class="equipe-header"><div class="equipe-title">Équipe de nutritionnistes</div><button class="btn-add-nutri" onclick="toggleFormNutri()">+ Ajouter</button></div>
           <div class="form-nutri-card" id="formNutri">
             <div class="form-title" id="formNutriTitle">Nouveau nutritionniste</div>
             <input type="hidden" id="nutriEditId">
-            <div class="form-row">
-              <div class="form-group"><div class="form-lbl">Prénom & Nom</div><input class="form-inp" type="text" id="nutriNom" placeholder="Sophie Martin"></div>
-              <div class="form-group"><div class="form-lbl">Email</div><input class="form-inp" type="email" id="nutriEmail" placeholder="sophie@natty.fr"></div>
-            </div>
-            <div class="form-row">
-              <div class="form-group"><div class="form-lbl">Mot de passe</div><input class="form-inp" type="password" id="nutriMdp" placeholder="Minimum 6 caractères"></div>
-              <div class="form-group"><div class="form-lbl">Clients max</div><input class="form-inp" type="number" id="nutriClientsMax" placeholder="20" value="20"></div>
-            </div>
-            <div class="form-row">
-              <div class="form-group full"><div class="form-lbl">Bio</div><input class="form-inp" type="text" id="nutriBio" placeholder="Nutritionniste spécialisé..."></div>
-            </div>
-            <div class="form-row">
-              <div class="form-group full"><div class="form-lbl">Spécialités (séparées par des virgules)</div><input class="form-inp" type="text" id="nutriSpecs" placeholder="Prise de masse, Performance sportive"></div>
-            </div>
-            <div class="form-row">
-              <div class="form-group full">
-                <div class="form-lbl">Objectifs cibles (clients recommandés)</div>
-                <div class="objectifs-chips" style="margin-top:8px;">
-                  <div class="obj-chip" onclick="toggleObjChip(this,'mieux_manger')">🥦 Mieux manger</div>
-                  <div class="obj-chip" onclick="toggleObjChip(this,'changer_corps')">🏃 Corps</div>
-                  <div class="obj-chip" onclick="toggleObjChip(this,'performance')">🏆 Performance</div>
-                  <div class="obj-chip" onclick="toggleObjChip(this,'sante')">❤️ Santé</div>
-                </div>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button class="btn-cancel-form" onclick="toggleFormNutri()">Annuler</button>
-              <button class="btn-submit" onclick="sauvegarderNutri()" id="btnSaveNutri">Enregistrer</button>
-            </div>
+            <div class="form-row"><div class="form-group"><div class="form-lbl">Prénom & Nom</div><input class="form-inp" type="text" id="nutriNom" placeholder="Sophie Martin"></div><div class="form-group"><div class="form-lbl">Email</div><input class="form-inp" type="email" id="nutriEmail" placeholder="sophie@natty.fr"></div></div>
+            <div class="form-row"><div class="form-group"><div class="form-lbl">Mot de passe</div><input class="form-inp" type="password" id="nutriMdp" placeholder="Minimum 6 caractères"></div><div class="form-group"><div class="form-lbl">Clients max</div><input class="form-inp" type="number" id="nutriClientsMax" placeholder="20" value="20"></div></div>
+            <div class="form-row"><div class="form-group full"><div class="form-lbl">Bio</div><input class="form-inp" type="text" id="nutriBio" placeholder="Nutritionniste spécialisé..."></div></div>
+            <div class="form-row"><div class="form-group full"><div class="form-lbl">Spécialités (séparées par virgules)</div><input class="form-inp" type="text" id="nutriSpecs" placeholder="Prise de masse, Performance sportive"></div></div>
+            <div class="form-row"><div class="form-group full"><div class="form-lbl">Objectifs cibles</div><div class="objectifs-chips" style="margin-top:8px;"><div class="obj-chip" onclick="toggleObjChip(this,'mieux_manger')">🥦 Mieux manger</div><div class="obj-chip" onclick="toggleObjChip(this,'changer_corps')">🏃 Corps</div><div class="obj-chip" onclick="toggleObjChip(this,'performance')">🏆 Performance</div><div class="obj-chip" onclick="toggleObjChip(this,'sante')">❤️ Santé</div></div></div></div>
+            <div class="form-actions"><button class="btn-cancel-form" onclick="toggleFormNutri()">Annuler</button><button class="btn-submit" onclick="sauvegarderNutri()" id="btnSaveNutri">Enregistrer</button></div>
           </div>
           <div class="nutri-admin-list" id="nutriAdminList"><div class="loading">Chargement...</div></div>
         </div>
@@ -472,9 +483,7 @@ input[type="file"] { display: none; }
         <div class="fiche-title" id="ficheTitle">Fiche client</div>
         <div class="fiche-switch">
           <button class="fiche-switch-btn active" id="switchFiche" onclick="switchFichePanel('fiche')">Fiche</button>
-          <button class="fiche-switch-btn" id="switchChat" onclick="switchFichePanel('chat')">
-            💬 Chat<span class="fiche-switch-badge" id="ficheChatBadge">0</span>
-          </button>
+          <button class="fiche-switch-btn" id="switchChat" onclick="switchFichePanel('chat')">💬 Chat<span class="fiche-switch-badge" id="ficheChatBadge">0</span></button>
         </div>
       </div>
       <div class="fiche-content">
@@ -484,12 +493,9 @@ input[type="file"] { display: none; }
         <div class="fiche-panel" id="panelChat">
           <div class="chat-panel">
             <div class="chat-messages" id="ficheMessages"><div class="loading">Chargement...</div></div>
-            <div class="typing-indicator" id="ficheTyping">
-              <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
-            </div>
+            <div class="typing-indicator" id="ficheTyping"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
             <div class="chat-input-area">
-              <textarea class="chat-textarea" id="ficheMessageInput" placeholder="Répondre au client..." rows="1"
-                oninput="autoResizeChat(this)" onkeydown="handleChatKey(event)"></textarea>
+              <textarea class="chat-textarea" id="ficheMessageInput" placeholder="Répondre au client..." rows="1" oninput="autoResizeChat(this)" onkeydown="handleChatKey(event)"></textarea>
               <button class="chat-send-btn" id="ficheSendBtn" onclick="envoyerReponse()">➤</button>
             </div>
           </div>
@@ -505,149 +511,86 @@ const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
 const CLOUDINARY_CLOUD = 'dujji1s6g';
 const CLOUDINARY_PRESET = 'meal_photos';
-const MASTER_PWD = 'Natty2026!'; // Mot de passe admin global
+const MASTER_PWD = 'Natty2026!';
 
-let allClients=[], allPlats=[], allNutris=[];
-let currentFilter='tous', currentSearch='', currentCatFilter='all', currentClient=null;
-let semaineOffset=0, uploadedPhotoUrl=null;
-let chatMessagesMap={};
-let currentNutri = null; // nutritionniste connecté
-let isMasterAdmin = false;
-let selectedObjChips = [];
+let allClients=[], allPlats=[], allNutris=[], allRdv=[];
+let currentFilter='tous', currentSearch='', currentCatFilter='all', currentRdvFilter='a_venir';
+let currentClient=null, semaineOffset=0, uploadedPhotoUrl=null;
+let chatMessagesMap={}, currentNutri=null, isMasterAdmin=false, selectedObjChips=[];
 
 // ── AUTH ──
-function toggleMasterLogin() {
-  const sub = document.getElementById('loginSubtitle');
-  const emailWrap = document.getElementById('emailInput').parentElement;
-  if (document.getElementById('emailInput').style.display === 'none') {
-    document.getElementById('emailInput').style.display = 'block';
-    sub.textContent = 'Connectez-vous à votre espace';
-  } else {
-    document.getElementById('emailInput').style.display = 'none';
-    sub.textContent = 'Accès administrateur global';
-  }
+function toggleMasterLogin(){
+  const sub=document.getElementById('loginSubtitle');
+  if(document.getElementById('emailInput').style.display==='none'){document.getElementById('emailInput').style.display='block';sub.textContent='Connectez-vous à votre espace';}
+  else{document.getElementById('emailInput').style.display='none';sub.textContent='Accès administrateur global';}
 }
-
-async function login() {
-  const email = document.getElementById('emailInput').value.trim();
-  const pwd = document.getElementById('pwdInput').value;
-  const errEl = document.getElementById('loginErr');
-  errEl.textContent = '';
-
-  // Test admin global
-  if (document.getElementById('emailInput').style.display === 'none') {
-    if (pwd === MASTER_PWD) {
-      isMasterAdmin = true;
-      currentNutri = { nom: 'Admin', id: null };
-      demarrerApp();
-    } else {
-      errEl.textContent = 'Mot de passe incorrect';
-    }
+async function login(){
+  const email=document.getElementById('emailInput').value.trim();
+  const pwd=document.getElementById('pwdInput').value;
+  const errEl=document.getElementById('loginErr');errEl.textContent='';
+  if(document.getElementById('emailInput').style.display==='none'){
+    if(pwd===MASTER_PWD){isMasterAdmin=true;currentNutri={nom:'Admin',id:null};demarrerApp();}
+    else errEl.textContent='Mot de passe incorrect';
     return;
   }
-
-  if (!email || !pwd) { errEl.textContent = 'Email et mot de passe requis'; return; }
-
-  try {
-    // Chercher le nutritionniste par email
-    const nutris = await sb('nutritionnistes?email=eq.'+encodeURIComponent(email)+'&actif=eq.true&select=*');
-    if (!nutris || nutris.length === 0) { errEl.textContent = 'Email introuvable'; return; }
-    const nutri = nutris[0];
-    // Vérifier mdp (base64 simple pour démo)
-    const hash = btoa(pwd);
-    if (hash !== nutri.mdp_hash) { errEl.textContent = 'Mot de passe incorrect'; return; }
-    currentNutri = nutri;
-    isMasterAdmin = false;
-    localStorage.setItem('nutri_session', JSON.stringify({ id: nutri.id, email: nutri.email }));
+  if(!email||!pwd){errEl.textContent='Email et mot de passe requis';return;}
+  try{
+    const nutris=await sb('nutritionnistes?email=eq.'+encodeURIComponent(email)+'&actif=eq.true&select=*');
+    if(!nutris||!nutris.length){errEl.textContent='Email introuvable';return;}
+    const nutri=nutris[0];
+    if(btoa(pwd)!==nutri.mdp_hash){errEl.textContent='Mot de passe incorrect';return;}
+    currentNutri=nutri;isMasterAdmin=false;
+    localStorage.setItem('nutri_session',JSON.stringify({id:nutri.id,email:nutri.email}));
     demarrerApp();
-  } catch(e) {
-    errEl.textContent = 'Erreur : ' + e.message;
-  }
+  }catch(e){errEl.textContent='Erreur : '+e.message;}
 }
-
-function demarrerApp() {
-  document.getElementById('loginScreen').style.display = 'none';
+function demarrerApp(){
+  document.getElementById('loginScreen').style.display='none';
   document.getElementById('mainApp').classList.add('visible');
-  // Badge nom
-  document.getElementById('nutriBadgeName').textContent = isMasterAdmin ? 'Admin' : currentNutri.nom.split(' ')[0];
-  // Onglet Équipe visible si admin global
-  document.getElementById('navEquipe').style.display = isMasterAdmin ? 'block' : 'none';
-  chargerClients();
-  chargerPlats();
-  chargerThreadsMessages();
-  if (isMasterAdmin) chargerEquipe();
+  document.getElementById('nutriBadgeName').textContent=isMasterAdmin?'Admin':currentNutri.nom.split(' ')[0];
+  document.getElementById('navEquipe').style.display=isMasterAdmin?'block':'none';
+  chargerClients();chargerPlats();chargerThreadsMessages();chargerRdvAdmin();
+  if(isMasterAdmin)chargerEquipe();
   subscribeGlobalRealtime();
 }
-
-function logout() {
-  localStorage.removeItem('nutri_session');
-  currentNutri = null; isMasterAdmin = false;
-  document.getElementById('mainApp').classList.remove('visible');
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('pwdInput').value = '';
-  document.getElementById('emailInput').value = '';
-}
-
-// Restaurer session
-window.addEventListener('load', async () => {
-  const saved = localStorage.getItem('nutri_session');
-  if (saved) {
-    try {
-      const s = JSON.parse(saved);
-      const nutris = await sb('nutritionnistes?id=eq.'+s.id+'&actif=eq.true&select=*');
-      if (nutris && nutris.length > 0) {
-        currentNutri = nutris[0];
-        isMasterAdmin = false;
-        demarrerApp();
-      } else {
-        localStorage.removeItem('nutri_session');
-      }
-    } catch(e) { localStorage.removeItem('nutri_session'); }
-  }
+function logout(){localStorage.removeItem('nutri_session');currentNutri=null;isMasterAdmin=false;document.getElementById('mainApp').classList.remove('visible');document.getElementById('loginScreen').style.display='flex';document.getElementById('pwdInput').value='';document.getElementById('emailInput').value='';}
+window.addEventListener('load',async()=>{
+  const saved=localStorage.getItem('nutri_session');
+  if(saved){try{const s=JSON.parse(saved);const nutris=await sb('nutritionnistes?id=eq.'+s.id+'&actif=eq.true&select=*');if(nutris&&nutris.length>0){currentNutri=nutris[0];isMasterAdmin=false;demarrerApp();}else localStorage.removeItem('nutri_session');}catch(e){localStorage.removeItem('nutri_session');}}
 });
 
-async function sb(path, options={}) {
-  const res = await fetch(SB_URL+'/rest/v1/'+path, { ...options, headers: { 'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(options.headers||{}) } });
-  const text = await res.text();
-  if(!res.ok) throw new Error(text);
-  return text ? JSON.parse(text) : [];
+async function sb(path,options={}){
+  const res=await fetch(SB_URL+'/rest/v1/'+path,{...options,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(options.headers||{})}});
+  const text=await res.text();if(!res.ok)throw new Error(text);return text?JSON.parse(text):[];
 }
 
 // NAV
-function switchNav(tab) {
-  ['clients','messages','menu','commandes','equipe'].forEach(t => {
-    document.getElementById('nav'+t.charAt(0).toUpperCase()+t.slice(1))?.classList.toggle('active', t===tab);
-    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1))?.classList.toggle('active', t===tab);
+function switchNav(tab){
+  ['clients','messages','rdv','menu','commandes','equipe'].forEach(t=>{
+    document.getElementById('nav'+t.charAt(0).toUpperCase()+t.slice(1))?.classList.toggle('active',t===tab);
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1))?.classList.toggle('active',t===tab);
   });
-  const titles = {clients:'Mes clients',messages:'Messages',menu:'Menu',commandes:'Commandes',equipe:'Équipe'};
-  document.getElementById('topHeading').textContent = titles[tab]||tab;
-  document.getElementById('searchWrap').style.display = tab==='clients'?'flex':'none';
-  if(tab==='commandes') chargerCommandes();
-  if(tab==='messages') chargerThreadsMessages();
-  if(tab==='equipe') chargerEquipe();
+  const titles={clients:'Mes clients',messages:'Messages',rdv:'Rendez-vous',menu:'Menu',commandes:'Commandes',equipe:'Équipe'};
+  document.getElementById('topHeading').textContent=titles[tab]||tab;
+  document.getElementById('searchWrap').style.display=tab==='clients'?'flex':'none';
+  if(tab==='commandes')chargerCommandes();
+  if(tab==='messages')chargerThreadsMessages();
+  if(tab==='equipe')chargerEquipe();
+  if(tab==='rdv')chargerRdvAdmin();
 }
 
-// ── CLIENTS (filtrés par nutritionniste sauf si admin global) ──
-async function chargerClients() {
-  try {
-    let query = 'onboarding?completed=eq.true&order=created_at.desc&select=*';
-    if (!isMasterAdmin && currentNutri?.id) {
-      query += '&nutritionniste_id=eq.' + currentNutri.id;
-    }
-    allClients = await sb(query);
-    updateStats(allClients);
-    afficherClients(allClients);
-  } catch(e) { document.getElementById('clientsList').innerHTML='<div class="empty">Erreur : '+e.message+'</div>'; }
+// ── CLIENTS ──
+async function chargerClients(){
+  try{
+    let query='onboarding?completed=eq.true&order=created_at.desc&select=*';
+    if(!isMasterAdmin&&currentNutri?.id)query+='&nutritionniste_id=eq.'+currentNutri.id;
+    allClients=await sb(query);updateStats(allClients);afficherClients(allClients);
+  }catch(e){document.getElementById('clientsList').innerHTML='<div class="empty">Erreur : '+e.message+'</div>';}
 }
-function updateStats(data) {
-  const sept=new Date(); sept.setDate(sept.getDate()-7);
-  document.getElementById('statTotal').textContent=data.length;
-  document.getElementById('statCette').textContent=data.filter(c=>new Date(c.created_at)>sept).length;
-  document.getElementById('statAlerte').textContent=data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3).length;
-}
-function afficherClients(data) {
+function updateStats(data){const sept=new Date();sept.setDate(sept.getDate()-7);document.getElementById('statTotal').textContent=data.length;document.getElementById('statCette').textContent=data.filter(c=>new Date(c.created_at)>sept).length;document.getElementById('statAlerte').textContent=data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3).length;}
+function afficherClients(data){
   const el=document.getElementById('clientsList');
-  if(!data||data.length===0){el.innerHTML='<div class="empty">Aucun client assigné</div>';return;}
+  if(!data||!data.length){el.innerHTML='<div class="empty">Aucun client assigné</div>';return;}
   const motivL={mieux_manger:'🥦 Mieux manger',changer_corps:'🏃 Corps',performance:'🏆 Performance',sante:'❤️ Santé'};
   const maturL={debutant:'Débutant',premiers_pas:'Premiers pas',habitudes:'Habitudes',regime_place:'Régime structuré'};
   el.innerHTML=data.map(c=>{
@@ -655,16 +598,13 @@ function afficherClients(data) {
     const isAlerte=sm<=3||sr<=3,isWarn=(sm<=5||sr<=5)&&!isAlerte;
     const date=new Date(c.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
     const sc=v=>v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
+    const emailTag=c.email?`<span class="ctag ctag-green">✉️ ${c.email}</span>`:'';
     return`<div class="client-card ${isAlerte?'alert':isWarn?'warn':''}" onclick="ouvrirFiche('${c.id}')">
       <div class="client-avatar ${isAlerte?'red-av':''}">${(c.user_id||'?').substring(0,2).toUpperCase()}</div>
       <div class="client-info">
         <div class="client-name">Client ${(c.user_id||'').substring(0,8)}</div>
         <div class="client-meta">${motivL[c.motivation]||c.motivation||'–'} · ${maturL[c.maturite]||c.maturite||'–'}</div>
-        <div class="client-tags">
-          ${isAlerte?'<span class="ctag ctag-red">🚨 Alerte</span>':''}
-          ${c.axe_amelioration?'<span class="ctag ctag-green">'+c.axe_amelioration+'</span>':''}
-          ${c.poids?'<span class="ctag">'+c.poids+' kg</span>':''}
-        </div>
+        <div class="client-tags">${isAlerte?'<span class="ctag ctag-red">🚨 Alerte</span>':''}${c.axe_amelioration?'<span class="ctag ctag-green">'+c.axe_amelioration+'</span>':''}${c.poids?'<span class="ctag">'+c.poids+' kg</span>':''}${emailTag}</div>
       </div>
       <div class="client-scores">
         <div class="score-mini"><div class="score-dot" style="background:${sc(sm)}"></div>Motiv. ${sm}/10</div>
@@ -676,449 +616,145 @@ function afficherClients(data) {
 }
 function setFilter(f,el){currentFilter=f;document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');appliquerFiltres();}
 function filtrer(q){currentSearch=q.toLowerCase();appliquerFiltres();}
-function appliquerFiltres(){
-  let data=[...allClients];
-  if(currentFilter==='alerte')data=data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3);
-  else if(currentFilter!=='tous')data=data.filter(c=>c.motivation===currentFilter);
-  if(currentSearch)data=data.filter(c=>(c.user_id||'').toLowerCase().includes(currentSearch));
-  afficherClients(data);
+function appliquerFiltres(){let data=[...allClients];if(currentFilter==='alerte')data=data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3);else if(currentFilter!=='tous')data=data.filter(c=>c.motivation===currentFilter);if(currentSearch)data=data.filter(c=>(c.user_id||'').toLowerCase().includes(currentSearch)||(c.email||'').toLowerCase().includes(currentSearch));afficherClients(data);}
+
+// ── RDV ADMIN ──
+async function chargerRdvAdmin(){
+  try{
+    allRdv=await sb('rdv?order=date_rdv.asc&select=*');
+    // Notifications récap email
+    const recaps=allRdv.filter(r=>r.statut==='recap_demande');
+    const banner=document.getElementById('rdvNotifBanner');
+    if(recaps.length>0){
+      banner.classList.add('visible');
+      const badge=document.getElementById('navRdvBadge');badge.textContent=recaps.length;badge.classList.add('visible');
+      document.getElementById('rdvNotifList').innerHTML=recaps.map(r=>{
+        const client=allClients.find(c=>c.user_id===r.user_id);
+        const email=client?.email||'Email non renseigné';
+        const date=new Date(r.date_rdv).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+        return`<div class="rdv-notif-item">
+          <div class="rdv-notif-text">Client ${(r.user_id||'').substring(0,8)} · ${date} · <strong>${email}</strong></div>
+          <button class="btn-send-recap" onclick="envoyerRecapRDV('${r.id}','${r.user_id}',this)">📧 Envoyer récap</button>
+        </div>`;
+      }).join('');
+    } else {
+      banner.classList.remove('visible');
+    }
+    afficherRdvAdmin(currentRdvFilter);
+  }catch(e){document.getElementById('rdvAdminList').innerHTML='<div class="empty">Erreur : '+e.message+'</div>';}
 }
 
-// ── ÉQUIPE ──
-async function chargerEquipe() {
-  try {
-    allNutris = await sb('nutritionnistes?select=*&order=created_at.asc');
-    // Compter clients par nutri
-    const clients = await sb('onboarding?completed=eq.true&select=nutritionniste_id');
-    const counts = {};
-    clients.forEach(c => { if(c.nutritionniste_id) counts[c.nutritionniste_id] = (counts[c.nutritionniste_id]||0)+1; });
-    afficherEquipe(allNutris, counts);
-  } catch(e) { document.getElementById('nutriAdminList').innerHTML='<div class="empty">Erreur : '+e.message+'</div>'; }
-}
+function setRdvFilter(f,el){currentRdvFilter=f;document.querySelectorAll('.rdv-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');afficherRdvAdmin(f);}
 
-function afficherEquipe(nutris, counts={}) {
-  const el = document.getElementById('nutriAdminList');
-  if(!nutris||nutris.length===0){el.innerHTML='<div class="empty">Aucun nutritionniste</div>';return;}
-  el.innerHTML = nutris.map(n => {
-    const avatarHtml = n.photo_url ? `<img src="${n.photo_url}" alt="">` : ['👨‍⚕️','👩‍⚕️','🧑‍⚕️'][0];
-    const specs = (n.specialites||[]).map(s=>`<span class="nutri-spec-tag">${s}</span>`).join('');
-    const clientCount = counts[n.id]||0;
-    return `<div class="nutri-admin-card">
-      <div class="nutri-admin-avatar">${avatarHtml}</div>
-      <div class="nutri-admin-info">
-        <div class="nutri-admin-name">${n.nom} <span class="nutri-actif-badge ${n.actif?'on':'off'}">${n.actif?'Actif':'Inactif'}</span></div>
-        <div class="nutri-admin-email">${n.email}</div>
-        <div class="nutri-admin-specs">${specs}</div>
-        <div class="nutri-clients-count">👥 ${clientCount} / ${n.clients_max} clients</div>
+async function afficherRdvAdmin(filter){
+  const el=document.getElementById('rdvAdminList');
+  const now=new Date();
+  let data=[];
+  if(filter==='creneaux'){
+    try{data=await sb('creneaux_rdv?disponible=eq.true&order=date_creneau.asc&select=*');}catch(e){}
+    if(!data.length){el.innerHTML='<div class="empty">Aucun créneau libre</div>';return;}
+    el.innerHTML=`<div class="creneaux-list">`+data.map(c=>`
+      <div class="creneau-item">
+        <div class="creneau-dot dispo"></div>
+        <div class="creneau-info"><div class="creneau-date">${new Date(c.date_creneau+'T00:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</div><div class="creneau-heure">${c.heure} · ${c.nutritionniste_nom||'Tout nutritionniste'}</div></div>
+        <button class="btn-del-creneau" onclick="supprimerCreneau('${c.id}')">🗑️</button>
+      </div>`).join('')+`</div>`;
+    return;
+  }
+  data=allRdv.filter(r=>r.statut!=='recap_demande');
+  if(filter==='a_venir')data=data.filter(r=>new Date(r.date_rdv)>=now);
+  else data=data.filter(r=>new Date(r.date_rdv)<now);
+  if(!data.length){el.innerHTML='<div class="empty">Aucun rendez-vous</div>';return;}
+  el.innerHTML=data.map(r=>{
+    const d=new Date(r.date_rdv);
+    const client=allClients.find(c=>c.user_id===r.user_id);
+    const email=client?.email?`<span style="font-size:11px;color:var(--green);">✉️ ${client.email}</span>`:'';
+    const isRecap=r.statut==='recap_demande';
+    const mois=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    return`<div class="rdv-admin-card ${isRecap?'recap-only':''}">
+      <div class="rdv-date-badge"><div class="rdv-date-day">${d.getDate()}</div><div class="rdv-date-month">${mois[d.getMonth()]}</div></div>
+      <div class="rdv-admin-info">
+        <div class="rdv-admin-client">Client ${(r.user_id||'').substring(0,8)} ${email}</div>
+        <div class="rdv-admin-detail">${r.heure||''} · ${r.type_rdv==='recap_email'?'Récap email demandé':'Consultation'}</div>
       </div>
-      <div class="nutri-admin-actions">
-        <button class="btn-nutri-edit" onclick="editerNutri('${n.id}')">✏️</button>
-        <button class="btn-nutri-edit" onclick="toggleNutriActif('${n.id}',${n.actif})">${n.actif?'🔴':'🟢'}</button>
-      </div>
+      <span class="rdv-admin-status ${r.statut==='confirme'?'status-confirme':'status-recap'}">${r.statut==='confirme'?'Confirmé':'Récap'}</span>
     </div>`;
   }).join('');
 }
 
-function toggleObjChip(el, val) {
-  el.classList.toggle('on');
-  if(el.classList.contains('on')) { if(!selectedObjChips.includes(val)) selectedObjChips.push(val); }
-  else selectedObjChips = selectedObjChips.filter(x=>x!==val);
-}
+function toggleFormCreneau(){document.getElementById('creneauForm').classList.toggle('open');}
 
-function toggleFormNutri() {
-  const form = document.getElementById('formNutri');
-  const open = form.classList.toggle('open');
-  if(open) {
-    ['nutriEditId','nutriNom','nutriEmail','nutriMdp','nutriBio','nutriSpecs'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('nutriClientsMax').value='20';
-    document.getElementById('formNutriTitle').textContent='Nouveau nutritionniste';
-    document.getElementById('btnSaveNutri').textContent='Enregistrer';
-    selectedObjChips=[];
-    document.querySelectorAll('.obj-chip').forEach(c=>c.classList.remove('on'));
-    form.scrollIntoView({behavior:'smooth'});
-  }
-}
-
-function editerNutri(id) {
-  const n = allNutris.find(x=>x.id===id); if(!n) return;
-  document.getElementById('nutriEditId').value=id;
-  document.getElementById('nutriNom').value=n.nom||'';
-  document.getElementById('nutriEmail').value=n.email||'';
-  document.getElementById('nutriMdp').value='';
-  document.getElementById('nutriBio').value=n.bio||'';
-  document.getElementById('nutriSpecs').value=(n.specialites||[]).join(', ');
-  document.getElementById('nutriClientsMax').value=n.clients_max||20;
-  selectedObjChips=[...(n.objectifs_cibles||[])];
-  document.querySelectorAll('.obj-chip').forEach(c=>{
-    const val=c.getAttribute('onclick').match(/'([^']+)'\)/)[1];
-    c.classList.toggle('on', selectedObjChips.includes(val));
-  });
-  document.getElementById('formNutriTitle').textContent='Modifier le nutritionniste';
-  document.getElementById('btnSaveNutri').textContent='Mettre à jour';
-  const form=document.getElementById('formNutri');form.classList.add('open');form.scrollIntoView({behavior:'smooth'});
-}
-
-async function sauvegarderNutri() {
-  const nom=document.getElementById('nutriNom').value.trim();
-  const email=document.getElementById('nutriEmail').value.trim();
-  const pwd=document.getElementById('nutriMdp').value;
-  const editId=document.getElementById('nutriEditId').value;
-  if(!nom||!email){toast('Nom et email requis','err');return;}
-  if(!editId&&!pwd){toast('Mot de passe requis','err');return;}
-  const btn=document.getElementById('btnSaveNutri');btn.disabled=true;btn.textContent='Enregistrement...';
-  const specs=document.getElementById('nutriSpecs').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const payload={
-    nom, email, bio:document.getElementById('nutriBio').value,
-    specialites:specs, objectifs_cibles:selectedObjChips,
-    clients_max:parseInt(document.getElementById('nutriClientsMax').value)||20, actif:true
-  };
-  if(pwd) payload.mdp_hash=btoa(pwd);
-  try {
-    if(editId) await sb('nutritionnistes?id=eq.'+editId,{method:'PATCH',body:JSON.stringify(payload)});
-    else await sb('nutritionnistes',{method:'POST',body:JSON.stringify(payload)});
-    toast(editId?'Mis à jour !':'Nutritionniste ajouté !','ok');
-    toggleFormNutri(); await chargerEquipe();
+async function ajouterCreneau(){
+  const date=document.getElementById('creneauDate').value;
+  const heure=document.getElementById('creneauHeure').value;
+  if(!date){toast('Choisissez une date','err');return;}
+  const btn=document.getElementById('btnSaveCreneau');btn.disabled=true;btn.textContent='Ajout...';
+  try{
+    await sb('creneaux_rdv',{method:'POST',body:JSON.stringify({date_creneau:date,heure,nutritionniste_nom:document.getElementById('creneauNutriNom').value||null,disponible:true,created_at:new Date().toISOString()})});
+    toast('Créneau ajouté !','ok');toggleFormCreneau();chargerRdvAdmin();
   }catch(e){toast('Erreur : '+e.message,'err');}
-  finally{btn.disabled=false;btn.textContent=editId?'Mettre à jour':'Enregistrer';}
+  btn.disabled=false;btn.textContent='Ajouter le créneau';
 }
 
-async function toggleNutriActif(id, actif) {
-  try{await sb('nutritionnistes?id=eq.'+id,{method:'PATCH',body:JSON.stringify({actif:!actif})});toast(!actif?'Activé':'Désactivé','ok');await chargerEquipe();}
-  catch(e){toast('Erreur','err');}
+async function supprimerCreneau(id){if(!confirm('Supprimer ce créneau ?'))return;try{await sb('creneaux_rdv?id=eq.'+id,{method:'DELETE'});toast('Supprimé','ok');chargerRdvAdmin();}catch(e){toast('Erreur','err');}}
+
+async function envoyerRecapRDV(rdvId, userId, btn){
+  btn.disabled=true;btn.textContent='Envoi...';
+  const client=allClients.find(c=>c.user_id===userId);
+  const email=client?.email;
+  if(!email){toast('Email client non renseigné','err');btn.disabled=false;btn.textContent='📧 Envoyer récap';return;}
+  try{
+    // Construire le récap client
+    const motivL={mieux_manger:'Mieux manger',changer_corps:'Changer mon corps',performance:'Performance sportive',sante:'Santé'};
+    const recap=`Bonjour,\n\nVoici votre récapitulatif nutritionnel Natty :\n\n• Objectif : ${motivL[client.motivation]||client.motivation||'–'}\n• Poids : ${client.poids||'–'} kg\n• BMR : ${client.bmr||'–'} kcal/jour\n• TDEE : ${client.tdee||'–'} kcal/jour\n• Activité : ${client.activite||'–'}\n\nVotre nutritionniste reviendra vers vous prochainement.\n\nL'équipe Natty`;
+    await fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to_email:email,subject:'Votre récapitulatif Natty',message:recap})});
+    // Mettre à jour le statut du RDV
+    await sb('rdv?id=eq.'+rdvId,{method:'PATCH',body:JSON.stringify({statut:'recap_envoye'})});
+    toast('Récap envoyé à '+email,'ok');
+    chargerRdvAdmin();
+  }catch(e){toast('Erreur envoi : '+e.message,'err');}
+  btn.disabled=false;btn.textContent='📧 Envoyer récap';
 }
+
+// ── ÉQUIPE ──
+async function chargerEquipe(){
+  try{
+    allNutris=await sb('nutritionnistes?select=*&order=created_at.asc');
+    const clients=await sb('onboarding?completed=eq.true&select=nutritionniste_id');
+    const counts={};clients.forEach(c=>{if(c.nutritionniste_id)counts[c.nutritionniste_id]=(counts[c.nutritionniste_id]||0)+1;});
+    afficherEquipe(allNutris,counts);
+  }catch(e){document.getElementById('nutriAdminList').innerHTML='<div class="empty">Erreur</div>';}
+}
+function afficherEquipe(nutris,counts={}){
+  const el=document.getElementById('nutriAdminList');
+  if(!nutris||!nutris.length){el.innerHTML='<div class="empty">Aucun nutritionniste</div>';return;}
+  el.innerHTML=nutris.map(n=>{
+    const av=n.photo_url?`<img src="${n.photo_url}" alt="">`:'👨‍⚕️';
+    const specs=(n.specialites||[]).map(s=>`<span class="nutri-spec-tag">${s}</span>`).join('');
+    return`<div class="nutri-admin-card"><div class="nutri-admin-avatar">${av}</div><div class="nutri-admin-info"><div class="nutri-admin-name">${n.nom} <span class="nutri-actif-badge ${n.actif?'on':'off'}">${n.actif?'Actif':'Inactif'}</span></div><div class="nutri-admin-email">${n.email}</div><div class="nutri-admin-specs">${specs}</div><div class="nutri-clients-count">👥 ${counts[n.id]||0} / ${n.clients_max} clients</div></div><div class="nutri-admin-actions"><button class="btn-nutri-edit" onclick="editerNutri('${n.id}')">✏️</button><button class="btn-nutri-edit" onclick="toggleNutriActif('${n.id}',${n.actif})">${n.actif?'🔴':'🟢'}</button></div></div>`;
+  }).join('');
+}
+function toggleObjChip(el,val){el.classList.toggle('on');if(el.classList.contains('on')){if(!selectedObjChips.includes(val))selectedObjChips.push(val);}else selectedObjChips=selectedObjChips.filter(x=>x!==val);}
+function toggleFormNutri(){const form=document.getElementById('formNutri');const open=form.classList.toggle('open');if(open){['nutriEditId','nutriNom','nutriEmail','nutriMdp','nutriBio','nutriSpecs'].forEach(id=>document.getElementById(id).value='');document.getElementById('nutriClientsMax').value='20';document.getElementById('formNutriTitle').textContent='Nouveau nutritionniste';document.getElementById('btnSaveNutri').textContent='Enregistrer';selectedObjChips=[];document.querySelectorAll('.obj-chip').forEach(c=>c.classList.remove('on'));form.scrollIntoView({behavior:'smooth'});}}
+function editerNutri(id){const n=allNutris.find(x=>x.id===id);if(!n)return;document.getElementById('nutriEditId').value=id;document.getElementById('nutriNom').value=n.nom||'';document.getElementById('nutriEmail').value=n.email||'';document.getElementById('nutriMdp').value='';document.getElementById('nutriBio').value=n.bio||'';document.getElementById('nutriSpecs').value=(n.specialites||[]).join(', ');document.getElementById('nutriClientsMax').value=n.clients_max||20;selectedObjChips=[...(n.objectifs_cibles||[])];document.querySelectorAll('.obj-chip').forEach(c=>{const val=c.getAttribute('onclick').match(/'([^']+)'\)/)[1];c.classList.toggle('on',selectedObjChips.includes(val));});document.getElementById('formNutriTitle').textContent='Modifier';document.getElementById('btnSaveNutri').textContent='Mettre à jour';const form=document.getElementById('formNutri');form.classList.add('open');form.scrollIntoView({behavior:'smooth'});}
+async function sauvegarderNutri(){const nom=document.getElementById('nutriNom').value.trim();const email=document.getElementById('nutriEmail').value.trim();const pwd=document.getElementById('nutriMdp').value;const editId=document.getElementById('nutriEditId').value;if(!nom||!email){toast('Nom et email requis','err');return;}if(!editId&&!pwd){toast('Mot de passe requis','err');return;}const btn=document.getElementById('btnSaveNutri');btn.disabled=true;btn.textContent='Enregistrement...';const specs=document.getElementById('nutriSpecs').value.split(',').map(s=>s.trim()).filter(Boolean);const payload={nom,email,bio:document.getElementById('nutriBio').value,specialites:specs,objectifs_cibles:selectedObjChips,clients_max:parseInt(document.getElementById('nutriClientsMax').value)||20,actif:true};if(pwd)payload.mdp_hash=btoa(pwd);try{if(editId)await sb('nutritionnistes?id=eq.'+editId,{method:'PATCH',body:JSON.stringify(payload)});else await sb('nutritionnistes',{method:'POST',body:JSON.stringify(payload)});toast(editId?'Mis à jour !':'Ajouté !','ok');toggleFormNutri();await chargerEquipe();}catch(e){toast('Erreur : '+e.message,'err');}finally{btn.disabled=false;btn.textContent=editId?'Mettre à jour':'Enregistrer';}}
+async function toggleNutriActif(id,actif){try{await sb('nutritionnistes?id=eq.'+id,{method:'PATCH',body:JSON.stringify({actif:!actif})});toast(!actif?'Activé':'Désactivé','ok');await chargerEquipe();}catch(e){toast('Erreur','err');}}
 
 // ── MESSAGES ──
-async function chargerThreadsMessages() {
-  const el=document.getElementById('msgThreadList');
-  el.innerHTML='<div class="loading">Chargement...</div>';
-  try {
-    // Filtrer par clients assignés si pas admin global
-    let clientIds = [];
-    if (!isMasterAdmin && currentNutri?.id) {
-      clientIds = allClients.map(c=>c.user_id).filter(Boolean);
-      if(clientIds.length===0){el.innerHTML='<div class="empty">Aucun message</div>';return;}
-    }
-    let path = 'messages?order=created_at.desc&select=*';
-    // On charge tous et on filtre côté client
-    const msgs = await sb(path);
-    const filtered = isMasterAdmin ? msgs : msgs.filter(m=>clientIds.includes(m.user_id));
-    const threads={};
-    filtered.forEach(m=>{
-      if(!threads[m.user_id])threads[m.user_id]={userId:m.user_id,lastMsg:m,unread:0};
-      if(m.expediteur==='client'&&!m.lu)threads[m.user_id].unread++;
-    });
+async function chargerThreadsMessages(){
+  const el=document.getElementById('msgThreadList');el.innerHTML='<div class="loading">Chargement...</div>';
+  try{
+    let clientIds=[];
+    if(!isMasterAdmin&&currentNutri?.id){clientIds=allClients.map(c=>c.user_id).filter(Boolean);if(!clientIds.length){el.innerHTML='<div class="empty">Aucun message</div>';return;}}
+    const msgs=await sb('messages?order=created_at.desc&select=*');
+    const filtered=isMasterAdmin?msgs:msgs.filter(m=>clientIds.includes(m.user_id));
+    const threads={};filtered.forEach(m=>{if(!threads[m.user_id])threads[m.user_id]={userId:m.user_id,lastMsg:m,unread:0};if(m.expediteur==='client'&&!m.lu)threads[m.user_id].unread++;});
     const threadArr=Object.values(threads);
     const totalUnread=threadArr.reduce((s,t)=>s+t.unread,0);
-    const badge=document.getElementById('navMsgBadge');
-    badge.textContent=totalUnread; badge.classList.toggle('visible',totalUnread>0);
-    document.getElementById('msgStatTotal').textContent=threadArr.length;
-    document.getElementById('msgStatUnread').textContent=totalUnread;
+    const badge=document.getElementById('navMsgBadge');badge.textContent=totalUnread;badge.classList.toggle('visible',totalUnread>0);
+    document.getElementById('msgStatTotal').textContent=threadArr.length;document.getElementById('msgStatUnread').textContent=totalUnread;
     if(!threadArr.length){el.innerHTML='<div class="empty">Aucun message</div>';return;}
     el.innerHTML=threadArr.map(t=>{
-      const isUnread=t.unread>0;
-      const preview=(t.lastMsg.expediteur==='client'?'Client : ':'')+t.lastMsg.contenu;
+      const isUnread=t.unread>0;const preview=(t.lastMsg.expediteur==='client'?'Client : ':'')+t.lastMsg.contenu;
       const time=new Date(t.lastMsg.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      return`<div class="msg-thread-card ${isUnread?'has-unread':''}" onclick="ouvrirFicheDepuisMessage('${t.userId}')">
-        <div class="msg-thread-avatar">${(t.userId||'?').substring(0,2).toUpperCase()}</div>
-        <div class="msg-thread-info">
-          <div class="msg-thread-name">Client ${(t.userId||'').substring(0,8)}</div>
-          <div class="msg-thread-preview ${isUnread?'unread':''}">${escHtml(preview)}</div>
-        </div>
-        <div class="msg-thread-right">
-          <div class="msg-thread-time">${time}</div>
-          <div class="msg-unread-dot ${isUnread?'visible':''}"></div>
-        </div></div>`;
-    }).join('');
-  }catch(e){el.innerHTML='<div class="empty">Erreur : '+e.message+'</div>';}
-}
-
-async function ouvrirFicheDepuisMessage(userId) {
-  let client=allClients.find(c=>c.user_id===userId);
-  if(!client){try{const rows=await sb('onboarding?user_id=eq.'+userId+'&limit=1');client=rows[0];}catch(e){}}
-  if(client){await ouvrirFiche(client.id);setTimeout(()=>switchFichePanel('chat'),100);}
-}
-
-function subscribeGlobalRealtime() {
-  const wsUrl=SB_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SB_KEY+'&vsn=1.0.0';
-  const ws=new WebSocket(wsUrl);
-  ws.onopen=()=>{ws.send(JSON.stringify({topic:'realtime:public:messages',event:'phx_join',payload:{},ref:'admin_global'}));};
-  ws.onmessage=(e)=>{
-    const data=JSON.parse(e.data);
-    if(data.event==='INSERT'&&data.payload?.record){
-      const msg=data.payload.record;
-      if(msg.expediteur==='client'){
-        const badge=document.getElementById('navMsgBadge');
-        const count=(parseInt(badge.textContent)||0)+1;
-        badge.textContent=count; badge.classList.add('visible');
-        if(currentClient&&currentClient.user_id===msg.user_id) appendChatMsg(msg);
-      }
-    }
-  };
-  ws.onclose=()=>setTimeout(subscribeGlobalRealtime,3000);
-  ws.onerror=()=>ws.close();
-}
-
-// ── FICHE + CHAT ──
-function switchFichePanel(panel) {
-  document.getElementById('panelFiche').classList.toggle('active',panel==='fiche');
-  document.getElementById('panelChat').classList.toggle('active',panel==='chat');
-  document.getElementById('switchFiche').classList.toggle('active',panel==='fiche');
-  document.getElementById('switchChat').classList.toggle('active',panel==='chat');
-  if(panel==='chat'&&currentClient) chargerChatFiche(currentClient.user_id);
-}
-
-async function chargerChatFiche(userId) {
-  const el=document.getElementById('ficheMessages');
-  el.innerHTML='<div class="loading">Chargement...</div>';
-  chatMessagesMap={};
-  try {
-    const msgs=await sb('messages?user_id=eq.'+userId+'&order=created_at.asc');
-    sb('messages?user_id=eq.'+userId+'&expediteur=eq.client&lu=eq.false',{method:'PATCH',body:JSON.stringify({lu:true})}).catch(()=>{});
-    renderChatFiche(msgs);
-    document.getElementById('ficheChatBadge').textContent='0';
-    document.getElementById('ficheChatBadge').classList.remove('visible');
-  }catch(e){el.innerHTML='<div class="empty">Erreur</div>';}
-}
-
-function renderChatFiche(msgs) {
-  const el=document.getElementById('ficheMessages');
-  if(!msgs||msgs.length===0){el.innerHTML='<div class="chat-empty"><div style="font-size:32px;">💬</div><div>Aucun message. Démarrez la conversation !</div></div>';return;}
-  let lastDay=null, html='';
-  msgs.forEach(m=>{
-    chatMessagesMap[m.id]=true;
-    const day=dayLabel(m.created_at);
-    if(day!==lastDay){html+=`<div class="chat-day-sep">${day}</div>`;lastDay=day;}
-    const isCl=m.expediteur==='client';
-    html+=`<div class="chat-msg ${isCl?'client':'nutri'}" data-id="${m.id}">
-      <div class="chat-bubble">${escHtml(m.contenu)}</div>
-      <div class="chat-time">${fmtTime(m.created_at)}</div></div>`;
-  });
-  el.innerHTML=html;
-  el.scrollTop=el.scrollHeight;
-}
-
-function appendChatMsg(msg) {
-  if(chatMessagesMap[msg.id])return;
-  chatMessagesMap[msg.id]=true;
-  const el=document.getElementById('ficheMessages');
-  el.querySelector('.chat-empty')?.remove();
-  const isCl=msg.expediteur==='client';
-  const div=document.createElement('div');
-  div.className=`chat-msg ${isCl?'client':'nutri'}`;div.dataset.id=msg.id;
-  div.innerHTML=`<div class="chat-bubble">${escHtml(msg.contenu)}</div><div class="chat-time">${fmtTime(msg.created_at)}</div>`;
-  el.appendChild(div); el.scrollTop=el.scrollHeight;
-  if(!document.getElementById('panelChat').classList.contains('active')&&isCl){
-    const badge=document.getElementById('ficheChatBadge');
-    badge.textContent=(parseInt(badge.textContent)||0)+1; badge.classList.add('visible');
-  }
-}
-
-async function envoyerReponse() {
-  if(!currentClient)return;
-  const input=document.getElementById('ficheMessageInput');
-  const contenu=input.value.trim(); if(!contenu)return;
-  const btn=document.getElementById('ficheSendBtn');btn.disabled=true;input.value='';input.style.height='auto';
-  const tempId='tmp_'+Date.now();
-  appendChatMsg({id:tempId,user_id:currentClient.user_id,expediteur:'nutritionniste',contenu,created_at:new Date().toISOString()});
-  try {
-    const[saved]=await sb('messages',{method:'POST',body:JSON.stringify({user_id:currentClient.user_id,expediteur:'nutritionniste',contenu,lu:false})});
-    const tempEl=document.querySelector(`[data-id="${tempId}"]`);
-    if(tempEl&&saved){tempEl.dataset.id=saved.id;chatMessagesMap[saved.id]=true;delete chatMessagesMap[tempId];}
-    // Email notif
-    const client=allClients.find(c=>c.user_id===currentClient.user_id);
-    if(client?.email){fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to_email:client.email,message_preview:contenu})}).catch(()=>{});}
-    toast('Message envoyé','ok');
-  }catch(e){toast('Erreur','err');document.querySelector(`[data-id="${tempId}"]`)?.remove();}
-  btn.disabled=false;
-}
-
-function handleChatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();envoyerReponse();}}
-function autoResizeChat(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px';}
-function dayLabel(iso){const d=new Date(iso),t=new Date(),y=new Date(t);y.setDate(t.getDate()-1);if(d.toDateString()===t.toDateString())return"Aujourd'hui";if(d.toDateString()===y.toDateString())return'Hier';return d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});}
-function fmtTime(iso){return new Date(iso).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
-function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
-
-// ── FICHE CLIENT ──
-async function ouvrirFiche(id) {
-  currentClient=allClients.find(c=>c.id===id);
-  if(!currentClient){try{const rows=await sb('onboarding?id=eq.'+id+'&limit=1');currentClient=rows[0];}catch(e){}}
-  if(!currentClient)return;
-  document.getElementById('listView').style.display='none';
-  document.getElementById('ficheView').classList.add('visible');
-  document.getElementById('ficheTitle').textContent='Client '+(currentClient.user_id||'').substring(0,8);
-  switchFichePanel('fiche');
-  afficherFiche(currentClient);
-  try{
-    const unread=await sb('messages?user_id=eq.'+currentClient.user_id+'&expediteur=eq.client&lu=eq.false&select=id');
-    const badge=document.getElementById('ficheChatBadge');
-    badge.textContent=unread.length; badge.classList.toggle('visible',unread.length>0);
-  }catch(e){}
-  try{
-    const[meals,scores]=await Promise.all([
-      sb('meals?user_id=eq.'+currentClient.user_id+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=5'),
-      sb('nutrition_scores?user_id=eq.'+currentClient.user_id+'&order=calculated_at.desc&limit=1')
-    ]);
-    afficherRepasEtScores(meals,scores);
-  }catch(e){}
-  try{
-    const notes=await sb('notes_nutritionniste?client_id=eq.'+currentClient.user_id+'&limit=1');
-    if(notes&&notes.length>0){document.getElementById('notesArea').value=notes[0].note||'';document.getElementById('actionInp').value=notes[0].action_semaine||'';}
-  }catch(e){}
-}
-
-function afficherFiche(c) {
-  const motivL={mieux_manger:'🥦 Mieux manger',changer_corps:'🏃 Changer mon corps',performance:'🏆 Performance',sante:'❤️ Santé'};
-  const maturL={debutant:'Débutant',premiers_pas:'Premiers pas',habitudes:'Habitudes en place',regime_place:'Régime structuré'};
-  const actL={sedentaire:'Sédentaire',leger:'Légèrement actif',modere:'Modérément actif',actif:'Très actif'};
-  const tpsL={moins15:'< 15 min','15_30':'15-30 min',plus30:'30+ min'};
-  const sm=c.score_motivation||5,sr=c.score_rigueur||5,sn=c.score_nutrition||5;
-  const jc=v=>v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
-  const jcls=v=>v<=3?'jb-low':v<=6?'jb-mid':'jb-hi';
-  const jlbl=v=>v<=3?'Faible':v<=6?'Moyen':'Élevé';
-  document.getElementById('ficheDataContent').innerHTML=`
-    <div class="sec-card">
-      <div class="sec-label">Profil & motivation</div>
-      <div class="data-grid">
-        <div class="data-cell"><div class="dc-lbl">Maturité</div><div class="dc-val">${maturL[c.maturite]||c.maturite||'–'}</div></div>
-        <div class="data-cell"><div class="dc-lbl">Objectif</div><div class="dc-val">${motivL[c.motivation]||c.motivation||'–'}</div></div>
-        <div class="data-cell"><div class="dc-lbl">Axe d'amélioration</div><div class="dc-val">${c.axe_amelioration||'–'}</div></div>
-        <div class="data-cell"><div class="dc-lbl">Onboarding</div><div class="dc-val">${new Date(c.created_at).toLocaleDateString('fr-FR')}</div></div>
-      </div>
-      ${c.freins&&c.freins.length>0?`<div style="margin-top:12px;"><div class="dc-lbl" style="margin-bottom:6px;">Freins</div><div class="tag-list">${c.freins.map(f=>'<span class="ctag ctag-amber">'+f+'</span>').join('')}</div></div>`:''}
-    </div>
-    <div class="sec-card">
-      <div class="sec-label">Auto-évaluation</div>
-      ${[['💪 Motivation',sm],['📅 Rigueur',sr],['🥗 Nutrition',sn]].map(([n,v])=>`
-        <div class="jauge-block"><div class="jauge-head"><span class="jauge-name">${n}</span><span class="jauge-badge ${jcls(v)}">${v}/10 · ${jlbl(v)}</span></div>
-        <div class="jauge-track"><div class="jauge-fill" style="width:${v*10}%;background:${jc(v)};"></div></div></div>`).join('')}
-    </div>
-    <div class="sec-card">
-      <div class="sec-label">Données physiques</div>
-      <div class="data-grid">
-        <div class="data-cell"><div class="dc-lbl">Âge</div><div class="dc-val">${c.age||'–'} ans</div></div>
-        <div class="data-cell"><div class="dc-lbl">Sexe</div><div class="dc-val">${c.sexe||'–'}</div></div>
-        <div class="data-cell"><div class="dc-lbl">Poids</div><div class="dc-val">${c.poids||'–'} kg</div></div>
-        <div class="data-cell"><div class="dc-lbl">Taille</div><div class="dc-val">${c.taille||'–'} cm</div></div>
-        <div class="data-cell"><div class="dc-lbl">BMR</div><div class="dc-val green">${c.bmr||'–'} kcal</div></div>
-        <div class="data-cell"><div class="dc-lbl">TDEE</div><div class="dc-val green">${c.tdee||'–'} kcal</div></div>
-        <div class="data-cell"><div class="dc-lbl">Activité</div><div class="dc-val">${actL[c.activite]||c.activite||'–'}</div></div>
-        <div class="data-cell"><div class="dc-lbl">Cuisine</div><div class="dc-val">${tpsL[c.temps_cuisine]||c.temps_cuisine||'–'}</div></div>
-      </div>
-    </div>
-    <div class="sec-card"><div class="sec-label">Journal alimentaire</div><div id="repasSection"><div class="loading">Chargement...</div></div></div>
-    <div class="sec-card" id="scoresSection" style="display:none;"><div class="sec-label">Scores nutritionnels</div><div id="scoresContent"></div></div>
-    <div class="sec-card">
-      <div class="sec-label">⚡ Action de la semaine</div>
-      <input class="action-inp" type="text" id="actionInp" placeholder="Ex: Ajoutez des protéines au petit-déjeuner">
-      <button class="btn-save-notes" onclick="sauvegarderNotes()" id="btnSaveNotes">Enregistrer</button>
-    </div>
-    <div class="sec-card"><div class="sec-label">📝 Notes privées</div><textarea class="notes-area" id="notesArea" placeholder="Vos observations..."></textarea></div>`;
-}
-
-function afficherRepasEtScores(meals,scores) {
-  const el=document.getElementById('repasSection');
-  if(!meals||meals.length===0){el.innerHTML='<div class="empty">Aucun repas enregistré</div>';}
-  else el.innerHTML=meals.map(m=>{
-    const ings=(m.meal_ingredients||[]).map(i=>i.name+' '+i.quantity_g+'g').join(', ')||'Aucun ingrédient';
-    const date=new Date(m.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
-    const photo=m.photo_url?`<div class="repas-photo-sm"><img src="${m.photo_url}" alt=""></div>`:`<div class="repas-photo-sm">🍽️</div>`;
-    return`<div class="repas-mini">${photo}<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;">${m.name}</div><div style="font-size:11px;color:#aaa;">${ings}</div></div><div style="font-size:10px;color:#aaa;">${date}</div></div>`;
-  }).join('');
-  if(scores&&scores.length>0){
-    const s=scores[0],v=Math.round(s.variety_score||0),q=Math.round(s.quality_score||0),r=Math.round(s.relevance_score||0);
-    const sc=x=>x>=70?'#5a9e6f':x>=40?'#ba7517':'#c77b7b';
-    const cls=x=>x>=70?'jb-hi':x>=40?'jb-mid':'jb-low';
-    document.getElementById('scoresSection').style.display='block';
-    document.getElementById('scoresContent').innerHTML=[['Variété',v],['Qualité',q],['Pertinence',r]].map(([n,val])=>
-      `<div class="jauge-block"><div class="jauge-head"><span class="jauge-name">${n}</span><span class="jauge-badge ${cls(val)}">${val}%</span></div>
-      <div class="jauge-track"><div class="jauge-fill" style="width:${val}%;background:${sc(val)};"></div></div></div>`).join('');
-  }
-}
-
-async function sauvegarderNotes() {
-  if(!currentClient)return;
-  const btn=document.getElementById('btnSaveNotes');btn.textContent='Enregistrement...';
-  try{
-    await sb('notes_nutritionniste',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify({client_id:currentClient.user_id,note:document.getElementById('notesArea').value,action_semaine:document.getElementById('actionInp').value,updated_at:new Date().toISOString()})});
-    btn.textContent='✓ Enregistré';btn.classList.add('saved');
-    setTimeout(()=>{btn.textContent='Enregistrer';btn.classList.remove('saved');},2000);
-    toast('Notes enregistrées !','ok');
-  }catch(e){toast('Erreur','err');btn.textContent='Enregistrer';}
-}
-
-function retourListe(){document.getElementById('ficheView').classList.remove('visible');document.getElementById('listView').style.display='block';currentClient=null;chatMessagesMap={};}
-
-// ── MENU ──
-async function chargerPlats(){
-  try{allPlats=await sb('plats_menu?order=created_at.desc&select=*');afficherPlatsAdmin(allPlats);}
-  catch(e){document.getElementById('platsAdminGrid').innerHTML='<div class="loading" style="grid-column:1/-1;">Erreur</div>';}
-}
-function setCatFilter(cat,el){currentCatFilter=cat;document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');afficherPlatsAdmin(cat==='all'?allPlats:allPlats.filter(p=>p.categorie===cat));}
-function afficherPlatsAdmin(plats){
-  const grid=document.getElementById('platsAdminGrid');
-  if(!plats||plats.length===0){grid.innerHTML='<div class="empty" style="grid-column:1/-1;">Aucun plat</div>';return;}
-  const catL={performance:'Performance',objectif:'Objectif',bien_etre:'Bien-être'};
-  const catE={performance:'⚡',objectif:'🎯',bien_etre:'🌿'};
-  grid.innerHTML=plats.map(p=>{
-    const media=p.photo_url?`<img src="${p.photo_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`:`<span style="font-size:36px;">${catE[p.categorie]||'🍽️'}</span>`;
-    return`<div class="plat-admin-card ${p.actif?'':'inactive'}">
-      <span class="plat-cat-badge badge-${p.categorie}">${catL[p.categorie]||p.categorie}</span>
-      <div class="plat-admin-thumb">${media}<div class="plat-inactive-overlay"></div></div>
-      <div class="plat-admin-body">
-        <div class="plat-admin-name">${p.nom}</div>
-        <div class="plat-admin-info">${p.description||''}<br>${p.calories||'–'} kcal · ${p.proteines||'–'}g prot.</div>
-        <div class="plat-admin-actions">
-          <button class="btn-toggle-actif ${p.actif?'actif':'inactif'}" onclick="toggleActif('${p.id}',${p.actif},this)">${p.actif?'✓ Actif':'✗ Inactif'}</button>
-          <button class="btn-edit-plat" onclick="editerPlat('${p.id}')">✏️</button>
-          <button class="btn-del-plat"  onclick="supprimerPlat('${p.id}')">🗑️</button>
-        </div>
-      </div></div>`;
-  }).join('');
-}
-async function previewAndUpload(input){
-  const file=input.files[0];if(!file)return;
-  const reader=new FileReader();reader.onload=e=>{const prev=document.getElementById('uploadPreview');prev.src=e.target.result;prev.classList.add('visible');document.getElementById('uploadIcon').style.display='none';document.getElementById('uploadLabel').textContent='Upload en cours...';};reader.readAsDataURL(file);
-  document.getElementById('uploadProgress').style.display='block';document.getElementById('uploadProgressBar').style.width='30%';
-  try{const fd=new FormData();fd.append('file',file);fd.append('upload_preset',CLOUDINARY_PRESET);document.getElementById('uploadProgressBar').style.width='60%';const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:'POST',body:fd});const data=await res.json();document.getElementById('uploadProgressBar').style.width='100%';if(data.secure_url){uploadedPhotoUrl=data.secure_url;document.getElementById('platPhoto').value=data.secure_url;document.getElementById('uploadLabel').textContent='✓ Photo uploadée';toast('Photo uploadée !','ok');}else throw new Error('Échec');}
-  catch(e){document.getElementById('uploadLabel').textContent='✗ Erreur';toast('Erreur upload','err');}
-  setTimeout(()=>document.getElementById('uploadProgress').style.display='none',800);
-}
-function toggleFormPlat(){const form=document.getElementById('formPlat');const open=form.classList.toggle('open');if(open){['platEditId','platNom','platDesc','platPhoto','platCal','platProt','platGluc','platLip'].forEach(id=>document.getElementById(id).value='');document.getElementById('uploadPreview').classList.remove('visible');document.getElementById('uploadIcon').style.display='block';document.getElementById('uploadLabel').textContent='Cliquez pour ajouter une photo';document.getElementById('formPlatTitle').textContent='Nouveau plat';document.getElementById('btnSavePlat').textContent='Enregistrer le plat';uploadedPhotoUrl=null;form.scrollIntoView({behavior:'smooth'});}}
-function editerPlat(id){const p=allPlats.find(x=>x.id===id);if(!p)return;document.getElementById('platEditId').value=id;document.getElementById('platNom').value=p.nom||'';document.getElementById('platDesc').value=p.description||'';document.getElementById('platCat').value=p.categorie||'bien_etre';document.getElementById('platPhoto').value=p.photo_url||'';document.getElementById('platCal').value=p.calories||'';document.getElementById('platProt').value=p.proteines||'';document.getElementById('platGluc').value=p.glucides||'';document.getElementById('platLip').value=p.lipides||'';if(p.photo_url){const prev=document.getElementById('uploadPreview');prev.src=p.photo_url;prev.classList.add('visible');document.getElementById('uploadIcon').style.display='none';document.getElementById('uploadLabel').textContent='Photo existante';}document.getElementById('formPlatTitle').textContent='Modifier le plat';document.getElementById('btnSavePlat').textContent='Mettre à jour';const form=document.getElementById('formPlat');form.classList.add('open');form.scrollIntoView({behavior:'smooth'});}
-async function sauvegarderPlat(){const nom=document.getElementById('platNom').value.trim();if(!nom){toast('Donnez un nom','err');return;}const btn=document.getElementById('btnSavePlat');btn.textContent='Enregistrement...';btn.disabled=true;const editId=document.getElementById('platEditId').value;const payload={nom,description:document.getElementById('platDesc').value,categorie:document.getElementById('platCat').value,photo_url:document.getElementById('platPhoto').value||null,calories:parseInt(document.getElementById('platCal').value)||null,proteines:parseInt(document.getElementById('platProt').value)||null,glucides:parseInt(document.getElementById('platGluc').value)||null,lipides:parseInt(document.getElementById('platLip').value)||null,actif:true};try{if(editId)await sb('plats_menu?id=eq.'+editId,{method:'PATCH',body:JSON.stringify(payload)});else await sb('plats_menu',{method:'POST',body:JSON.stringify(payload)});toast(editId?'Mis à jour !':'Plat ajouté !','ok');toggleFormPlat();await chargerPlats();}catch(e){toast('Erreur : '+e.message,'err');}finally{btn.textContent=editId?'Mettre à jour':'Enregistrer le plat';btn.disabled=false;}}
-async function toggleActif(id,actif,btn){try{await sb('plats_menu?id=eq.'+id,{method:'PATCH',body:JSON.stringify({actif:!actif})});btn.className='btn-toggle-actif '+(!actif?'actif':'inactif');btn.textContent=!actif?'✓ Actif':'✗ Inactif';const p=allPlats.find(x=>x.id===id);if(p)p.actif=!actif;btn.closest('.plat-admin-card').classList.toggle('inactive',actif);toast(!actif?'Activé':'Désactivé','ok');}catch(e){toast('Erreur','err');}}
-async function supprimerPlat(id){if(!confirm('Supprimer ?'))return;try{await sb('plats_menu?id=eq.'+id,{method:'DELETE'});toast('Supprimé','ok');await chargerPlats();}catch(e){toast('Erreur','err');}}
-
-// ── COMMANDES ──
-function getLundi(offset=0){const d=new Date();const day=d.getDay();const diff=d.getDate()-day+(day===0?-6:1);d.setDate(diff+offset*7);d.setHours(0,0,0,0);return d;}
-function formatDate(d){return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});}
-function updateSemaineLabel(){const lundi=getLundi(semaineOffset);const vendredi=new Date(lundi);vendredi.setDate(lundi.getDate()+4);document.getElementById('semaineLabel').textContent='Semaine du '+formatDate(lundi);document.getElementById('semaineSub').textContent=formatDate(lundi)+' au '+formatDate(vendredi);}
-function changerSemaine(dir){semaineOffset+=dir;updateSemaineLabel();chargerCommandes();}
-async function chargerCommandes(){
-  updateSemaineLabel();const lundi=getLundi(semaineOffset);const lundiStr=lundi.toISOString().split('T')[0];
-  const el=document.getElementById('commandesList');el.innerHTML='<div class="loading">Chargement...</div>';
-  try{
-    const commandes=await sb('commandes?semaine=eq.'+lundiStr+'&order=created_at.desc&select=*');
-    document.getElementById('cmdTotal').textContent=commandes.length;
-    document.getElementById('cmdConfirmees').textContent=commandes.filter(c=>c.statut==='confirmee').length;
-    document.getElementById('cmdLivrees').textContent=commandes.filter(c=>c.statut==='livree').length;
-    if(!commandes||commandes.length===0){el.innerHTML='<div class="empty">Aucune commande cette semaine</div>';return;}
-    const platsMap={};allPlats.forEach(p=>platsMap[p.id]=p);
-    el.innerHTML=commandes.map(cmd=>{
-      const platsChoisis=(cmd.plats_choisis||[]).map(id=>{const p=platsMap[id];if(!p)return`<div class="cmd-plat-chip">Plat</div>`;const img=p.photo_url?`<img class="cmd-plat-img" src="${p.photo_url}" alt="">`:'';return`<div class="cmd-plat-chip">${img}${p.nom}</div>`;}).join('');
-      const date=new Date(cmd.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      return`<div class="cmd-card"><div class="cmd-header"><div><div class="cmd-client">Client ${(cmd.user_id||'').substring(0,8)}</div><div class="cmd-client-sub">${date}</div></div>
-        <select class="cmd-status status-${cmd.statut}" onchange="changerStatut('${cmd.id}',this)" style="border:none;outline:none;font-family:'DM Sans',sans-serif;cursor:pointer;">
-          <option value="en_attente" ${cmd.statut==='en_attente'?'selected':''}>⏳ En attente</option>
-          <option value="confirmee"  ${cmd.statut==='confirmee'?'selected':''}>✓ Confirmée</option>
-          <option value="livree"     ${cmd.statut==='livree'?'selected':''}>🚚 Livrée</option>
-        </select></div><div class="cmd-plats">${platsChoisis||'<span style="color:#aaa;font-size:12px;">Aucun plat</span>'}</div></div>`;
-    }).join('');
-  }catch(e){el.innerHTML='<div class="empty">Erreur</div>';}
-}
-async function changerStatut(id,select){const newStatut=select.value;select.className='cmd-status status-'+newStatut;try{await sb('commandes?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:newStatut})});toast('Statut mis à jour','ok');chargerCommandes();}catch(e){toast('Erreur','err');}}
-
-function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type;setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3000);}
-</script>
-</body>
-</html>
+      return`<div class="msg-thread-card ${isUnread?'has-unread':''}" onclick="ouvrirFicheDepuisMessage('${t.userId}')"><div class="msg-thread-avatar">${(t.userId||'?').substring(0,2).toUpperCase()}</div><div class="msg-thread-info"><div class="msg-thread-name">Client ${(t
