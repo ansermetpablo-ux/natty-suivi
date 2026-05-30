@@ -75,106 +75,49 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .pt-bo  { color: #ff6b00; }
 .pt-arr { font-size: 14px; color: #c7c7cc; flex-shrink: 0; }
 
-/* RDV SECTION */
-.rdv-section { display: flex; flex-direction: column; gap: 10px; }
-.section-header { display: flex; align-items: center; justify-content: space-between; }
-.section-title { font-size: 15px; font-weight: 600; color: #1c1c1e; }
-.rdv-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); overflow: hidden; position: relative; }
-.rdv-lock-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.88); backdrop-filter: blur(4px); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border-radius: 18px; cursor: pointer; }
-.rdv-lock-icon { font-size: 30px; }
-.rdv-lock-text { font-size: 13px; font-weight: 600; color: #1c1c1e; text-align: center; line-height: 1.5; }
-.rdv-lock-sub { font-size: 11px; color: #8e8e93; text-align: center; }
-.rdv-lock-btn { background: #1a1a2e; color: white; border: none; border-radius: 12px; padding: 11px 22px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; margin-top: 2px; }
-.rdv-list { padding: 4px 0; }
-.rdv-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 0.5px solid #f2f2f7; }
-.rdv-item:last-child { border-bottom: none; }
-.rdv-date-block { width: 44px; height: 50px; background: #f2f2f7; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
-.rdv-day-num { font-size: 18px; font-weight: 700; color: #1c1c1e; line-height: 1; }
-.rdv-day-name { font-size: 9px; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
-.rdv-item.upcoming .rdv-date-block { background: #1a1a2e; }
-.rdv-item.upcoming .rdv-day-num { color: white; }
-.rdv-item.upcoming .rdv-day-name { color: rgba(255,255,255,0.6); }
-.rdv-info { flex: 1; }
-.rdv-type { font-size: 13px; font-weight: 600; color: #1c1c1e; margin-bottom: 2px; }
-.rdv-nutri-name { font-size: 11px; color: #8e8e93; }
-.rdv-badge { font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 99px; flex-shrink: 0; }
-.rdv-badge-upcoming { background: #e8f5ee; color: #34a853; }
-.rdv-badge-passed { background: #f2f2f7; color: #8e8e93; }
-.rdv-empty { text-align: center; padding: 28px 16px; color: #c7c7cc; font-size: 13px; line-height: 1.8; }
+/* ── MODULE RDV NOIR ── */
+.rdv-module { background: #1a1a2e; border-radius: 22px; overflow: hidden; }
+.rdv-module-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 12px; }
+.rdv-module-title { font-size: 15px; font-weight: 600; color: #fff; }
+.rdv-add-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.12); border: none; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; }
+.rdv-add-btn:active { background: rgba(255,255,255,0.22); }
+.rdv-slots-list { display: flex; flex-direction: column; gap: 0; padding: 0 14px 14px; }
+.rdv-slot { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: rgba(255,255,255,0.06); border-radius: 14px; margin-bottom: 8px; }
+.rdv-slot:last-child { margin-bottom: 0; }
+.rdv-slot-date { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 42px; height: 46px; background: rgba(255,255,255,0.1); border-radius: 10px; flex-shrink: 0; }
+.rdv-slot-day { font-size: 18px; font-weight: 700; color: #fff; line-height: 1; }
+.rdv-slot-month { font-size: 9px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+.rdv-slot-info { flex: 1; min-width: 0; }
+.rdv-slot-type { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+.rdv-slot-detail { font-size: 11px; color: rgba(255,255,255,0.5); }
+.rdv-slot-badge { font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; }
+.rdv-slot-badge.a-programmer { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); }
+.rdv-slot-badge.confirme { background: #e8f5ee; color: #34a853; }
+.rdv-slot-badge.passe { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.35); }
+.rdv-slot-icon { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.rdv-request-row { margin: 0 14px 14px; padding: 12px 14px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.15); display: flex; align-items: center; gap: 10px; }
+.rdv-request-text { font-size: 12px; color: rgba(255,255,255,0.5); flex: 1; }
+.rdv-request-badge { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: rgba(255,165,0,0.2); color: #ffb347; }
 
-/* CALENDRIER */
-.cal-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); padding: 18px 16px; position: relative; overflow: hidden; }
-.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.cal-month { font-size: 15px; font-weight: 600; color: #1c1c1e; }
-.cal-arrow { width: 30px; height: 30px; border-radius: 50%; background: #f2f2f7; border: none; cursor: pointer; font-size: 14px; color: #1c1c1e; display: flex; align-items: center; justify-content: center; }
-.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
-.cal-day-lbl { text-align: center; font-size: 10px; color: #8e8e93; font-weight: 500; padding-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
-.cal-day { aspect-ratio: 1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; color: #1c1c1e; border: none; background: transparent; font-family: 'Inter', sans-serif; transition: background 0.15s; width: 100%; }
-.cal-day:hover:not(.disabled):not(.empty) { background: #f2f2f7; }
-.cal-day.disabled { color: #c7c7cc; cursor: not-allowed; }
-.cal-day.empty { pointer-events: none; }
-.cal-day.has-slot { background: #e8f5ee; color: #34a853; font-weight: 600; }
-.cal-day.selected { background: #1a1a2e !important; color: white !important; font-weight: 600; }
-.cal-day.today { outline: 1.5px solid #1a1a2e; }
-.cal-slots { margin-top: 16px; border-top: 0.5px solid #f2f2f7; padding-top: 14px; display: none; }
-.cal-slots.visible { display: block; }
-.cal-slots-title { font-size: 12px; font-weight: 600; color: #1c1c1e; margin-bottom: 10px; }
-.cal-slots-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-.slot-btn { padding: 9px 14px; border-radius: 10px; background: #f2f2f7; border: 1.5px solid transparent; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: #1c1c1e; cursor: pointer; transition: all 0.15s; }
-.slot-btn.selected { background: #1a1a2e; color: white; border-color: #1a1a2e; }
-.recap-opt-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 12px 14px; background: #f9f9fb; border-radius: 12px; cursor: pointer; }
-.recap-opt-check { width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; background: #f2f2f7; border: 1.5px solid #e5e5ea; display: flex; align-items: center; justify-content: center; font-size: 11px; color: transparent; margin-top: 1px; }
-.recap-opt-check.on { background: #1a1a2e; border-color: #1a1a2e; color: white; }
-.recap-opt-text { font-size: 12px; color: #8e8e93; line-height: 1.5; }
-.slot-confirm-btn { width: 100%; margin-top: 14px; padding: 14px; background: #1a1a2e; border: none; border-radius: 14px; color: white; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; display: none; transition: opacity 0.2s; }
-.slot-confirm-btn.visible { display: block; }
-
-/* HISTORIQUE */
-.hist-header { display: flex; align-items: center; justify-content: space-between; }
-.hist-title { font-size: 15px; font-weight: 600; color: #1c1c1e; }
-.hist-link  { font-size: 13px; color: #34a853; font-weight: 400; cursor: pointer; }
-.hist-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); overflow: hidden; }
-.meal-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 0.5px solid #f2f2f7; }
-.meal-item:last-child { border-bottom: none; }
-.meal-photo { width: 56px; height: 56px; border-radius: 14px; background: #f2f2f7; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 28px; }
-.meal-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
-.meal-info { flex: 1; min-width: 0; }
-.meal-name { font-size: 14px; font-weight: 600; color: #1c1c1e; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.meal-ings { font-size: 11px; color: #8e8e93; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.meal-tag  { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 9px; border-radius: 99px; background: #e8f5ee; color: #34a853; }
-.meal-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
-.meal-date { font-size: 10px; color: #aeaeb2; }
-.meal-score { position: relative; width: 40px; height: 40px; }
-.meal-score svg { position: absolute; inset: 0; transform: rotate(-90deg); }
-.meal-score-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #1c1c1e; }
-.meal-dots { font-size: 16px; color: #c7c7cc; letter-spacing: 1.5px; cursor: pointer; }
-
-.btn-add { width: 100%; padding: 17px; background: #fff; border: none; border-radius: 16px; color: #1c1c1e; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.btn-add:active { transform: scale(0.98); }
-
-/* POPUP AJOUT REPAS */
-.popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); z-index: 1000; align-items: flex-end; justify-content: center; }
-.popup-overlay.active { display: flex; }
-.popup { background: #fff; border-radius: 24px 24px 0 0; padding: 0 20px 44px; width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.32,0.72,0,1); }
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.popup-handle { width: 36px; height: 5px; background: #e5e5ea; border-radius: 3px; margin: 14px auto 20px; }
-.popup-head   { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
-.popup-head h3 { font-size: 18px; font-weight: 700; }
-.popup-close  { width: 30px; height: 30px; border-radius: 50%; background: #f2f2f7; border: none; cursor: pointer; font-size: 13px; color: #8e8e93; display: flex; align-items: center; justify-content: center; }
-.form-lbl { font-size: 11px; color: #8e8e93; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; display: block; font-weight: 500; }
-.form-inp { width: 100%; background: #f2f2f7; border: none; border-radius: 12px; padding: 13px 14px; color: #1c1c1e; font-size: 15px; font-family: 'Inter', sans-serif; margin-bottom: 18px; outline: none; }
-.form-inp::placeholder { color: #c7c7cc; }
-.photo-btns { display: flex; gap: 10px; margin-bottom: 18px; }
-.photo-btn  { flex: 1; padding: 14px; background: #f2f2f7; border: none; border-radius: 14px; color: #8e8e93; font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif; text-align: center; }
-.photo-btn .pico { font-size: 24px; display: block; margin-bottom: 6px; }
-.photo-preview { width: 100%; height: 150px; border-radius: 14px; object-fit: cover; margin-bottom: 18px; display: none; }
-.photo-preview.visible { display: block; }
-.ing-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.ing-row .form-inp { margin-bottom: 0; flex: 1; }
-.ing-row .qty { width: 80px; flex: none; }
-.btn-add-ing { width: 100%; padding: 13px; background: #f2f2f7; border: none; border-radius: 12px; color: #8e8e93; font-size: 14px; cursor: pointer; font-family: 'Inter', sans-serif; margin-bottom: 20px; }
-.btn-save { width: 100%; padding: 16px; background: #34a853; border: none; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; }
-.btn-save:disabled { background: #aeaeb2; }
+/* ── CALENDRIER SEMAINE SOBRE ── */
+.week-cal { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); overflow: hidden; }
+.week-cal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 1px solid #f2f2f7; }
+.week-cal-title { font-size: 14px; font-weight: 600; color: #1c1c1e; }
+.week-nav-btn { width: 28px; height: 28px; border-radius: 50%; background: #f2f2f7; border: none; cursor: pointer; font-size: 14px; color: #1c1c1e; display: flex; align-items: center; justify-content: center; }
+.week-days-row { display: grid; grid-template-columns: repeat(7, 1fr); }
+.week-day-col { display: flex; flex-direction: column; border-right: 1px solid #f2f2f7; }
+.week-day-col:last-child { border-right: none; }
+.week-day-header { text-align: center; padding: 10px 4px 8px; border-bottom: 1px solid #f2f2f7; }
+.week-day-name { font-size: 9px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; }
+.week-day-num { font-size: 16px; font-weight: 700; color: #1c1c1e; margin-top: 3px; line-height: 1; }
+.week-day-col.today .week-day-num { background: #1a1a2e; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 3px auto 0; font-size: 13px; }
+.week-day-events { min-height: 80px; padding: 6px 4px; display: flex; flex-direction: column; gap: 4px; }
+.week-event { background: #1a1a2e; color: #fff; border-radius: 6px; padding: 4px 6px; font-size: 10px; font-weight: 500; line-height: 1.3; cursor: pointer; }
+.week-event .ev-time { font-size: 9px; opacity: 0.6; display: block; margin-bottom: 1px; }
+.week-event .ev-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.week-event.type-onboarding { background: #1a1a2e; }
+.week-event.type-suivi { background: #2d5a3d; }
+.week-event.type-client { background: #5a2d2d; }
 
 /* BOUTON CHAT FLOTTANT */
 .chat-fab { position: fixed; bottom: 28px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: #1a1a2e; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 20px rgba(26,26,46,0.5); z-index: 500; transition: transform 0.2s; }
@@ -275,58 +218,31 @@ input[type="file"] { display: none; }
     </div>
   </div>
 
-  <!-- ── PROCHAINS RDV ── -->
-  <div class="rdv-section">
-    <div class="section-header">
-      <span class="section-title">📅 Prochains rendez-vous</span>
+  <!-- ── MODULE RDV ── -->
+  <div class="rdv-module" id="rdvModule">
+    <div class="rdv-module-header">
+      <span class="rdv-module-title">📅 Rendez-vous</span>
+      <button class="rdv-add-btn" id="rdvAddBtn" title="Demander un RDV">+</button>
     </div>
-    <div class="rdv-card" id="rdvCard">
-      <!-- Lock overlay pour non-abonnés -->
-      <div class="rdv-lock-overlay" id="rdvLockOverlay" style="display:none;" onclick="goToOffre()">
-        <div class="rdv-lock-icon">🔒</div>
-        <div class="rdv-lock-text">Réservez vos RDV nutritionniste</div>
-        <div class="rdv-lock-sub">Disponible avec un abonnement Natty</div>
-        <button class="rdv-lock-btn">Voir les offres →</button>
-      </div>
-      <div class="rdv-list" id="rdvList">
-        <div class="loading">Chargement...</div>
-      </div>
+    <div class="rdv-slots-list" id="rdvSlotsList">
+      <!-- Rempli par JS -->
+      <div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:13px;">Chargement...</div>
     </div>
   </div>
 
-  <!-- ── CALENDRIER RÉSERVATION ── -->
-  <div class="rdv-section">
-    <div class="section-header">
-      <span class="section-title">🗓️ Prendre un rendez-vous</span>
+  <!-- ── CALENDRIER SEMAINE ── -->
+  <div class="week-cal" id="weekCal">
+    <div class="week-cal-header">
+      <button class="week-nav-btn" id="weekPrev">‹</button>
+      <div class="week-cal-title" id="weekTitle">–</div>
+      <button class="week-nav-btn" id="weekNext">›</button>
     </div>
-    <div class="cal-card" id="calCard">
-      <!-- Lock overlay pour non-abonnés -->
-      <div class="rdv-lock-overlay" id="calLockOverlay" style="display:none;" onclick="goToOffre()">
-        <div class="rdv-lock-icon">🔒</div>
-        <div class="rdv-lock-text">Planifiez votre prochain RDV</div>
-        <div class="rdv-lock-sub">Disponible avec un abonnement Natty</div>
-        <button class="rdv-lock-btn">Voir les offres →</button>
-      </div>
-      <div class="cal-nav">
-        <button class="cal-arrow" onclick="calPrev()">‹</button>
-        <div class="cal-month" id="calMonth">–</div>
-        <button class="cal-arrow" onclick="calNext()">›</button>
-      </div>
-      <div class="cal-grid" id="calGrid"></div>
-      <div class="cal-slots" id="calSlots">
-        <div class="cal-slots-title" id="calSlotsTitle">Créneaux disponibles</div>
-        <div class="cal-slots-grid" id="calSlotsGrid"></div>
-        <!-- Option récap email à la place du RDV -->
-        <div class="recap-opt-row" id="recapOptRow" onclick="toggleRecapOpt()">
-          <div class="recap-opt-check" id="recapOptCheck">✓</div>
-          <div class="recap-opt-text">Je préfère recevoir mon récapitulatif par email plutôt que de faire le RDV en visio</div>
-        </div>
-        <button class="slot-confirm-btn" id="slotConfirmBtn" onclick="confirmerRDV()">Confirmer le rendez-vous →</button>
-      </div>
+    <div class="week-days-row" id="weekDaysRow">
+      <!-- Rempli par JS -->
     </div>
   </div>
 
-  <!-- HISTORIQUE REPAS -->
+<!-- HISTORIQUE REPAS -->
   <div class="hist-header">
     <span class="hist-title">Historique des repas</span>
     <span class="hist-link">Voir tout ›</span>
@@ -498,164 +414,161 @@ function subscribeMessagesRealtime() {
 
 // ── RDV ──
 function afficherRDVLocked() {
-  document.getElementById('rdvLockOverlay').style.display = 'flex';
-  document.getElementById('calLockOverlay').style.display = 'flex';
-  document.getElementById('rdvList').innerHTML = '<div class="rdv-empty">Aucun rendez-vous planifié</div>';
+  // Non-abonné : afficher RDV verrouillés avec lock visuel
+  const list = document.getElementById('rdvSlotsList');
+  list.innerHTML = '<div style="padding:16px 14px 4px;">'
+    + rdvSlotHTML({type:'Bilan onboarding', detail:'RDV de départ avec votre nutritionniste', badge:'a-programmer', badgeLabel:'À programmer', icon:'🎯'})
+    + rdvSlotHTML({type:'RDV de suivi', detail:'Bilan à 2 semaines', badge:'a-programmer', badgeLabel:'À programmer', icon:'📊'})
+    + '</div>'
+    + '<div style="margin:0 14px 14px;padding:12px 14px;background:rgba(255,255,255,0.05);border-radius:12px;border:1px solid rgba(255,255,255,0.1);text-align:center;">'
+    + '<div style="font-size:12px;color:rgba(255,255,255,0.35);">🔒 Souscrivez à une offre pour débloquer vos RDV</div>'
+    + '<button onclick="goToOffre()" style="margin-top:10px;background:rgba(255,255,255,0.12);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:600;padding:8px 18px;cursor:pointer;font-family:'Inter',sans-serif;">Voir les offres →</button>'
+    + '</div>';
+  renderWeekCal([]);
+}
+
+function rdvSlotHTML({type, detail, badge, badgeLabel, icon, date, heure, id}) {
+  let dateBlock = '<div class="rdv-slot-icon">'+icon+'</div>';
+  if (date) {
+    const d = new Date(date+'T00:00:00');
+    const mois = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    dateBlock = '<div class="rdv-slot-date"><div class="rdv-slot-day">'+d.getDate()+'</div><div class="rdv-slot-month">'+mois[d.getMonth()]+'</div></div>';
+  }
+  return '<div class="rdv-slot">'
+    + dateBlock
+    + '<div class="rdv-slot-info"><div class="rdv-slot-type">'+type+'</div><div class="rdv-slot-detail">'+detail+'</div></div>'
+    + '<span class="rdv-slot-badge '+badge+'">'+badgeLabel+'</span>'
+    + '</div>';
 }
 
 async function chargerRDV() {
   try {
     const rdvs = await sbFetch('rdv?user_id=eq.'+USER_ID+'&order=date_rdv.asc&select=*');
     const now = new Date();
-    const futurs = rdvs.filter(r => new Date(r.date_rdv) >= now);
-    const el = document.getElementById('rdvList');
-    if (!futurs.length) {
-      el.innerHTML = '<div class="rdv-empty">Aucun rendez-vous à venir<br><span style="font-size:11px;">Prenez un RDV dans le calendrier ci-dessous</span></div>';
-      return;
+    const list = document.getElementById('rdvSlotsList');
+    const mois = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+    // Séparer RDV confirmés / passés / à programmer
+    const confirmes = rdvs.filter(r => r.statut === 'confirme' && new Date(r.date_rdv) >= now);
+    const passes = rdvs.filter(r => new Date(r.date_rdv) < now);
+    const types = rdvs.map(r => r.type_rdv);
+
+    let html = '';
+
+    // RDV onboarding
+    const onboarding = confirmes.find(r => r.type_rdv==='onboarding') || rdvs.find(r=>r.type_rdv==='onboarding');
+    if (onboarding && new Date(onboarding.date_rdv) >= now) {
+      const d = new Date(onboarding.date_rdv);
+      html += rdvSlotHTML({type:'Bilan onboarding', detail: onboarding.heure ? onboarding.heure+' · '+( onboarding.nutritionniste_nom||'Votre nutritionniste') : onboarding.nutritionniste_nom||'Votre nutritionniste', badge:'confirme', badgeLabel:'Confirmé', date: onboarding.date_rdv.split('T')[0], icon:'🎯'});
+    } else if (!types.includes('onboarding')) {
+      html += rdvSlotHTML({type:'Bilan onboarding', detail:'RDV de départ — à programmer par votre nutritionniste', badge:'a-programmer', badgeLabel:'À programmer', icon:'🎯'});
     }
-    const jours = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-    el.innerHTML = futurs.slice(0,4).map((r,i) => {
+
+    // RDV suivi
+    const suivi = confirmes.find(r => r.type_rdv==='suivi') || rdvs.find(r=>r.type_rdv==='suivi');
+    if (suivi && new Date(suivi.date_rdv) >= now) {
+      html += rdvSlotHTML({type:'RDV de suivi', detail: suivi.heure ? suivi.heure+' · '+(suivi.nutritionniste_nom||'Votre nutritionniste') : suivi.nutritionniste_nom||'Votre nutritionniste', badge:'confirme', badgeLabel:'Confirmé', date: suivi.date_rdv.split('T')[0], icon:'📊'});
+    } else if (!types.includes('suivi') || !confirmes.find(r=>r.type_rdv==='suivi')) {
+      html += rdvSlotHTML({type:'RDV de suivi', detail:'Bilan à 2 semaines — à programmer par votre nutritionniste', badge:'a-programmer', badgeLabel:'À programmer', icon:'📊'});
+    }
+
+    // Autres RDV confirmés (demandés par client)
+    confirmes.filter(r => r.type_rdv!=='onboarding'&&r.type_rdv!=='suivi'&&r.type_rdv!=='recap_email').forEach(r => {
       const d = new Date(r.date_rdv);
-      const isNext = i===0;
-      return `<div class="rdv-item ${isNext?'upcoming':''}">
-        <div class="rdv-date-block">
-          <div class="rdv-day-num">${d.getDate()}</div>
-          <div class="rdv-day-name">${jours[d.getDay()]}</div>
-        </div>
-        <div class="rdv-info">
-          <div class="rdv-type">${r.type_rdv||'Consultation nutritionniste'}</div>
-          <div class="rdv-nutri-name">${r.heure||''} · ${r.nutritionniste_nom||'Votre nutritionniste'}</div>
-        </div>
-        <div class="rdv-badge ${isNext?'rdv-badge-upcoming':'rdv-badge-passed'}">${isNext?'Prochain':'À venir'}</div>
-      </div>`;
-    }).join('');
-  } catch(e) {
-    document.getElementById('rdvList').innerHTML = '<div class="rdv-empty">Aucun rendez-vous à venir</div>';
-  }
-}
-
-async function chargerSlotsDisponibles() {
-  try {
-    const slots = await sbFetch('creneaux_rdv?disponible=eq.true&select=*&order=date_creneau.asc');
-    availableSlots = {};
-    slots.forEach(s => {
-      if(!availableSlots[s.date_creneau]) availableSlots[s.date_creneau] = [];
-      availableSlots[s.date_creneau].push({ heure: s.heure, id: s.id });
+      html += rdvSlotHTML({type:'Consultation', detail: (r.heure||'')+' · '+(r.nutritionniste_nom||'Votre nutritionniste'), badge:'confirme', badgeLabel:'Confirmé', date:r.date_rdv.split('T')[0], icon:'💬'});
     });
-    renderCalendar();
-  } catch(e) { renderCalendar(); }
-}
 
-// ── CALENDRIER ──
-function renderCalendar() {
-  const moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  document.getElementById('calMonth').textContent = moisNoms[calDate.getMonth()] + ' ' + calDate.getFullYear();
-  const firstDay = new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay();
-  const daysInMonth = new Date(calDate.getFullYear(), calDate.getMonth()+1, 0).getDate();
-  const today = new Date(); today.setHours(0,0,0,0);
-  const offset = firstDay===0 ? 6 : firstDay-1; // lundi en premier
-  const grid = document.getElementById('calGrid');
-  const jours = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
-  let html = jours.map(j=>`<div class="cal-day-lbl">${j}</div>`).join('');
-  for(let i=0;i<offset;i++) html+=`<div class="cal-day empty"></div>`;
-  for(let d=1;d<=daysInMonth;d++){
-    const dateStr = calDate.getFullYear()+'-'+String(calDate.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const dateObj = new Date(calDate.getFullYear(), calDate.getMonth(), d);
-    const isPast = dateObj < today;
-    const hasSlot = availableSlots[dateStr] && availableSlots[dateStr].length > 0;
-    const isToday = dateObj.getTime()===today.getTime();
-    const isSel = selectedCalDay===dateStr;
-    let cls = 'cal-day';
-    if(isPast) cls+=' disabled';
-    else if(hasSlot) cls+=' has-slot';
-    if(isToday) cls+=' today';
-    if(isSel) cls+=' selected';
-    html+=`<button class="${cls}" onclick="selectCalDay('${dateStr}',${isPast||!hasSlot})">${d}</button>`;
-  }
-  grid.innerHTML = html;
-}
+    // RDV passés
+    passes.slice(0,2).forEach(r => {
+      html += rdvSlotHTML({type: r.type_rdv==='onboarding'?'Bilan onboarding':r.type_rdv==='suivi'?'RDV de suivi':'Consultation', detail:'Terminé', badge:'passe', badgeLabel:'Passé', date:r.date_rdv.split('T')[0], icon:'✓'});
+    });
 
-function calPrev() { calDate.setMonth(calDate.getMonth()-1); selectedCalDay=null; document.getElementById('calSlots').classList.remove('visible'); renderCalendar(); }
-function calNext() { calDate.setMonth(calDate.getMonth()+1); selectedCalDay=null; document.getElementById('calSlots').classList.remove('visible'); renderCalendar(); }
-
-function selectCalDay(dateStr, disabled) {
-  if(disabled) return;
-  if(!estAbonne && USER_ID) { goToOffre(); return; }
-  if(!USER_ID) { goToOffre(); return; }
-  selectedCalDay = dateStr;
-  selectedSlot = null; recapOptOnly = false;
-  renderCalendar();
-  const slots = availableSlots[dateStr]||[];
-  const slotsDiv = document.getElementById('calSlots');
-  const d = new Date(dateStr+'T00:00:00');
-  document.getElementById('calSlotsTitle').textContent = 'Créneaux — '+d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-  document.getElementById('calSlotsGrid').innerHTML = slots.map(s=>`<button class="slot-btn" onclick="selectSlot('${s.id}','${s.heure}',this)">${s.heure}</button>`).join('');
-  document.getElementById('recapOptCheck').classList.remove('on');
-  document.getElementById('slotConfirmBtn').classList.remove('visible');
-  slotsDiv.classList.add('visible');
-}
-
-function selectSlot(id, heure, btn) {
-  document.querySelectorAll('.slot-btn').forEach(b=>b.classList.remove('selected'));
-  btn.classList.add('selected');
-  selectedSlot = { id, heure };
-  recapOptOnly = false;
-  document.getElementById('recapOptCheck').classList.remove('on');
-  document.getElementById('slotConfirmBtn').textContent = 'Confirmer le rendez-vous →';
-  document.getElementById('slotConfirmBtn').classList.add('visible');
-}
-
-function toggleRecapOpt() {
-  recapOptOnly = !recapOptOnly;
-  document.getElementById('recapOptCheck').classList.toggle('on', recapOptOnly);
-  if(recapOptOnly) {
-    document.querySelectorAll('.slot-btn').forEach(b=>b.classList.remove('selected'));
-    selectedSlot = null;
-    document.getElementById('slotConfirmBtn').textContent = 'Recevoir mon récapitulatif par email →';
-    document.getElementById('slotConfirmBtn').classList.add('visible');
-  } else {
-    document.getElementById('slotConfirmBtn').classList.remove('visible');
-  }
-}
-
-async function confirmerRDV() {
-  const btn = document.getElementById('slotConfirmBtn');
-  btn.disabled = true; btn.textContent = 'Enregistrement...';
-  try {
-    if(recapOptOnly) {
-      // Notifier via Supabase que le client veut un récap email
-      await sbPost('rdv', {
-        user_id: USER_ID,
-        date_rdv: selectedCalDay+'T00:00:00',
-        type_rdv: 'recap_email',
-        statut: 'recap_demande',
-        created_at: new Date().toISOString()
-      });
-      showToast('Demande envoyée ! Vous recevrez votre récap par email.', 'success');
-    } else {
-      // Réserver le créneau
-      await sbPost('rdv', {
-        user_id: USER_ID,
-        creneau_id: selectedSlot.id,
-        date_rdv: selectedCalDay+'T'+selectedSlot.heure+':00',
-        heure: selectedSlot.heure,
-        type_rdv: 'consultation',
-        statut: 'confirme',
-        created_at: new Date().toISOString()
-      });
-      // Marquer créneau comme non dispo
-      await fetch(SUPABASE_URL+'/rest/v1/creneaux_rdv?id=eq.'+selectedSlot.id, {
-        method:'PATCH', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'},
-        body: JSON.stringify({disponible:false})
-      });
-      showToast('RDV confirmé ! À bientôt 🎉', 'success');
+    // Demandes en attente de confirmation
+    const demandes = rdvs.filter(r=>r.statut==='recap_demande'||r.statut==='demande_client');
+    if (demandes.length > 0) {
+      html += '<div class="rdv-request-row"><div class="rdv-request-text">Demande de RDV supplémentaire envoyée</div><span class="rdv-request-badge">En attente</span></div>';
     }
-    document.getElementById('calSlots').classList.remove('visible');
-    selectedCalDay = null; selectedSlot = null;
-    renderCalendar();
-    await chargerRDV();
-  } catch(e) { showToast('Erreur : '+e.message, 'error'); }
-  btn.disabled = false;
+
+    list.innerHTML = html || '<div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:13px;">Aucun rendez-vous</div>';
+    renderWeekCal(rdvs);
+  } catch(e) {
+    document.getElementById('rdvSlotsList').innerHTML = '<div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:13px;">Erreur chargement</div>';
+    renderWeekCal([]);
+  }
+}
+
+// ── CALENDRIER SEMAINE ──
+let weekOffset = 0;
+
+function getWeekStart(offset) {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day===0 ? -6 : 1) + offset*7;
+  d.setDate(diff); d.setHours(0,0,0,0);
+  return d;
+}
+
+function renderWeekCal(rdvs) {
+  const lundi = getWeekStart(weekOffset);
+  const dimanche = new Date(lundi); dimanche.setDate(lundi.getDate()+6);
+  const opts = {day:'numeric', month:'long'};
+  document.getElementById('weekTitle').textContent =
+    lundi.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) + ' – ' +
+    dimanche.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const joursNoms = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
+  const mois = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  let html = '';
+
+  for (let i=0; i<7; i++) {
+    const jour = new Date(lundi); jour.setDate(lundi.getDate()+i);
+    const isToday = jour.getTime() === today.getTime();
+    const dateStr = jour.toISOString().split('T')[0];
+
+    // RDV ce jour
+    const jourdRdv = rdvs.filter(r => r.date_rdv && r.date_rdv.startsWith(dateStr) && r.statut==='confirme');
+
+    let eventsHtml = '';
+    jourdRdv.forEach(r => {
+      const typeClass = r.type_rdv==='onboarding' ? 'type-onboarding' : r.type_rdv==='suivi' ? 'type-suivi' : 'type-client';
+      const label = r.type_rdv==='onboarding'?'Onboarding':r.type_rdv==='suivi'?'Suivi':'RDV';
+      eventsHtml += '<div class="week-event '+typeClass+'"><span class="ev-time">'+(r.heure||'')+'</span><span class="ev-name">'+label+'</span></div>';
+    });
+
+    html += '<div class="week-day-col'+(isToday?' today':'')+'">'
+      + '<div class="week-day-header">'
+      + '<div class="week-day-name">'+joursNoms[i]+'</div>'
+      + '<div class="week-day-num">'+jour.getDate()+'</div>'
+      + '</div>'
+      + '<div class="week-day-events">'+eventsHtml+'</div>'
+      + '</div>';
+  }
+  document.getElementById('weekDaysRow').innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('weekPrev')?.addEventListener('click', () => { weekOffset--; if(USER_ID) chargerRDV(); else renderWeekCal([]); });
+  document.getElementById('weekNext')?.addEventListener('click', () => { weekOffset++; if(USER_ID) chargerRDV(); else renderWeekCal([]); });
+  document.getElementById('rdvAddBtn')?.addEventListener('click', () => {
+    if(!estAbonne) { goToOffre(); return; }
+    demanderRDV();
+  });
+});
+
+async function demanderRDV() {
+  // Client demande un RDV supplémentaire → notif admin
+  if (!USER_ID) return;
+  try {
+    await sbPost('rdv', {
+      user_id: USER_ID,
+      type_rdv: 'demande_client',
+      statut: 'demande_client',
+      date_rdv: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    });
+    showToast('Demande envoyée à votre nutritionniste !', 'success');
+  } catch(e) { showToast('Erreur', 'error'); }
 }
 
 // ── MACROS ──
