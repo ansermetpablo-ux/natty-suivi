@@ -13,70 +13,29 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .header-sub   { font-size: 13px; color: #8e8e93; margin-top: 2px; }
 .header-avatar { width: 40px; height: 40px; border-radius: 50%; background: #e5e5ea; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-.page { padding: 14px 14px 100px; display: flex; flex-direction: column; gap: 12px; }
+.page { padding: 14px 14px 120px; display: flex; flex-direction: column; gap: 12px; }
 
 /* BANDEAU ABONNEMENT */
-.bandeau-abonnement {
-  background: #1a1a2e; border-radius: 16px;
-  padding: 14px 16px; display: flex; align-items: center;
-  justify-content: space-between; gap: 12px;
-  box-shadow: 0 4px 16px rgba(26,26,46,0.25);
-  animation: slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1);
-}
-@keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+.bandeau-abonnement { background: #1a1a2e; border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 16px rgba(26,26,46,0.25); }
 .bandeau-left { display: flex; align-items: center; gap: 10px; }
 .bandeau-icon { font-size: 22px; }
 .bandeau-title { font-size: 13px; font-weight: 600; color: #fff; }
 .bandeau-sub { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 2px; }
 .bandeau-btn { background: #fff; color: #1a1a2e; border: none; border-radius: 10px; padding: 8px 14px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
-.bandeau-btn:active { transform: scale(0.97); }
 
-/* ── MESSAGES NUTRI CARD ── */
-.nutri-chat-card {
-  background: #fff; border-radius: 18px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04);
-  overflow: hidden; cursor: pointer;
-  transition: transform 0.15s;
-}
+/* NUTRI CHAT CARD */
+.nutri-chat-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); overflow: hidden; cursor: pointer; transition: transform 0.15s; }
 .nutri-chat-card:active { transform: scale(0.99); }
-.nutri-chat-header {
-  padding: 14px 16px 10px;
-  display: flex; align-items: center; justify-content: space-between;
-}
+.nutri-chat-header { padding: 14px 16px 10px; display: flex; align-items: center; justify-content: space-between; }
 .nutri-chat-left { display: flex; align-items: center; gap: 10px; }
-.nutri-avatar {
-  width: 42px; height: 42px; border-radius: 50%;
-  background: linear-gradient(135deg, #1a1a2e, #2d2d4e);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; flex-shrink: 0; position: relative;
-}
-.nutri-online-dot {
-  position: absolute; bottom: 1px; right: 1px;
-  width: 11px; height: 11px; border-radius: 50%;
-  background: #34a853; border: 2px solid #fff;
-}
+.nutri-avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #1a1a2e, #2d2d4e); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; position: relative; }
+.nutri-online-dot { position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; border-radius: 50%; background: #34a853; border: 2px solid #fff; }
 .nutri-chat-name { font-size: 14px; font-weight: 600; color: #1c1c1e; }
 .nutri-chat-role { font-size: 11px; color: #8e8e93; margin-top: 1px; }
-.unread-badge {
-  background: #1a1a2e; color: #fff;
-  border-radius: 99px; font-size: 11px; font-weight: 600;
-  padding: 3px 9px; display: none;
-}
+.unread-badge { background: #1a1a2e; color: #fff; border-radius: 99px; font-size: 11px; font-weight: 600; padding: 3px 9px; display: none; }
 .unread-badge.visible { display: block; }
-.nutri-last-msg {
-  padding: 0 16px 14px;
-  font-size: 13px; color: #8e8e93;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  line-height: 1.4;
-}
+.nutri-last-msg { padding: 0 16px 14px; font-size: 13px; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
 .nutri-last-msg.unread { color: #1c1c1e; font-weight: 500; }
-.nutri-chat-cta {
-  background: #f2f2f7; margin: 0 16px 14px;
-  border-radius: 12px; padding: 11px 14px;
-  font-size: 13px; color: #1c1c1e; font-weight: 500;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.nutri-chat-cta-arr { font-size: 16px; color: #aeaeb2; }
 
 /* SCORE CARD */
 .score-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); padding: 20px 18px; display: flex; align-items: center; gap: 14px; }
@@ -116,6 +75,60 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .pt-bo  { color: #ff6b00; }
 .pt-arr { font-size: 14px; color: #c7c7cc; flex-shrink: 0; }
 
+/* RDV SECTION */
+.rdv-section { display: flex; flex-direction: column; gap: 10px; }
+.section-header { display: flex; align-items: center; justify-content: space-between; }
+.section-title { font-size: 15px; font-weight: 600; color: #1c1c1e; }
+.rdv-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); overflow: hidden; position: relative; }
+.rdv-lock-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.88); backdrop-filter: blur(4px); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border-radius: 18px; cursor: pointer; }
+.rdv-lock-icon { font-size: 30px; }
+.rdv-lock-text { font-size: 13px; font-weight: 600; color: #1c1c1e; text-align: center; line-height: 1.5; }
+.rdv-lock-sub { font-size: 11px; color: #8e8e93; text-align: center; }
+.rdv-lock-btn { background: #1a1a2e; color: white; border: none; border-radius: 12px; padding: 11px 22px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; margin-top: 2px; }
+.rdv-list { padding: 4px 0; }
+.rdv-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 0.5px solid #f2f2f7; }
+.rdv-item:last-child { border-bottom: none; }
+.rdv-date-block { width: 44px; height: 50px; background: #f2f2f7; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+.rdv-day-num { font-size: 18px; font-weight: 700; color: #1c1c1e; line-height: 1; }
+.rdv-day-name { font-size: 9px; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+.rdv-item.upcoming .rdv-date-block { background: #1a1a2e; }
+.rdv-item.upcoming .rdv-day-num { color: white; }
+.rdv-item.upcoming .rdv-day-name { color: rgba(255,255,255,0.6); }
+.rdv-info { flex: 1; }
+.rdv-type { font-size: 13px; font-weight: 600; color: #1c1c1e; margin-bottom: 2px; }
+.rdv-nutri-name { font-size: 11px; color: #8e8e93; }
+.rdv-badge { font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 99px; flex-shrink: 0; }
+.rdv-badge-upcoming { background: #e8f5ee; color: #34a853; }
+.rdv-badge-passed { background: #f2f2f7; color: #8e8e93; }
+.rdv-empty { text-align: center; padding: 28px 16px; color: #c7c7cc; font-size: 13px; line-height: 1.8; }
+
+/* CALENDRIER */
+.cal-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); padding: 18px 16px; position: relative; overflow: hidden; }
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.cal-month { font-size: 15px; font-weight: 600; color: #1c1c1e; }
+.cal-arrow { width: 30px; height: 30px; border-radius: 50%; background: #f2f2f7; border: none; cursor: pointer; font-size: 14px; color: #1c1c1e; display: flex; align-items: center; justify-content: center; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+.cal-day-lbl { text-align: center; font-size: 10px; color: #8e8e93; font-weight: 500; padding-bottom: 8px; text-transform: uppercase; letter-spacing: 0.3px; }
+.cal-day { aspect-ratio: 1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; color: #1c1c1e; border: none; background: transparent; font-family: 'Inter', sans-serif; transition: background 0.15s; width: 100%; }
+.cal-day:hover:not(.disabled):not(.empty) { background: #f2f2f7; }
+.cal-day.disabled { color: #c7c7cc; cursor: not-allowed; }
+.cal-day.empty { pointer-events: none; }
+.cal-day.has-slot { background: #e8f5ee; color: #34a853; font-weight: 600; }
+.cal-day.selected { background: #1a1a2e !important; color: white !important; font-weight: 600; }
+.cal-day.today { outline: 1.5px solid #1a1a2e; }
+.cal-slots { margin-top: 16px; border-top: 0.5px solid #f2f2f7; padding-top: 14px; display: none; }
+.cal-slots.visible { display: block; }
+.cal-slots-title { font-size: 12px; font-weight: 600; color: #1c1c1e; margin-bottom: 10px; }
+.cal-slots-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.slot-btn { padding: 9px 14px; border-radius: 10px; background: #f2f2f7; border: 1.5px solid transparent; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: #1c1c1e; cursor: pointer; transition: all 0.15s; }
+.slot-btn.selected { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+.recap-opt-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 12px 14px; background: #f9f9fb; border-radius: 12px; cursor: pointer; }
+.recap-opt-check { width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; background: #f2f2f7; border: 1.5px solid #e5e5ea; display: flex; align-items: center; justify-content: center; font-size: 11px; color: transparent; margin-top: 1px; }
+.recap-opt-check.on { background: #1a1a2e; border-color: #1a1a2e; color: white; }
+.recap-opt-text { font-size: 12px; color: #8e8e93; line-height: 1.5; }
+.slot-confirm-btn { width: 100%; margin-top: 14px; padding: 14px; background: #1a1a2e; border: none; border-radius: 14px; color: white; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; display: none; transition: opacity 0.2s; }
+.slot-confirm-btn.visible { display: block; }
+
 /* HISTORIQUE */
 .hist-header { display: flex; align-items: center; justify-content: space-between; }
 .hist-title { font-size: 15px; font-weight: 600; color: #1c1c1e; }
@@ -139,10 +152,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .btn-add { width: 100%; padding: 17px; background: #fff; border: none; border-radius: 16px; color: #1c1c1e; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .btn-add:active { transform: scale(0.98); }
 
-/* POPUP */
+/* POPUP AJOUT REPAS */
 .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); z-index: 1000; align-items: flex-end; justify-content: center; }
 .popup-overlay.active { display: flex; }
-.popup { background: #fff; border-radius: 24px 24px 0 0; padding: 0 20px 44px; width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+.popup { background: #fff; border-radius: 24px 24px 0 0; padding: 0 20px 44px; width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.32,0.72,0,1); }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .popup-handle { width: 36px; height: 5px; background: #e5e5ea; border-radius: 3px; margin: 14px auto 20px; }
 .popup-head   { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
@@ -163,45 +176,32 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .btn-save { width: 100%; padding: 16px; background: #34a853; border: none; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; }
 .btn-save:disabled { background: #aeaeb2; }
 
-.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1c1c1e; color: #fff; padding: 12px 24px; border-radius: 20px; font-size: 14px; font-family: 'Inter', sans-serif; z-index: 2000; transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); pointer-events: none; white-space: nowrap; }
-.toast.show { transform: translateX(-50%) translateY(0); }
-.toast.success { background: #34a853; }
-.toast.error   { background: #ff3b30; }
+/* BOUTON CHAT FLOTTANT */
+.chat-fab { position: fixed; bottom: 28px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: #1a1a2e; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 20px rgba(26,26,46,0.5); z-index: 500; transition: transform 0.2s; }
+.chat-fab:active { transform: scale(0.92); }
+.chat-fab-badge { position: absolute; top: -3px; right: -3px; width: 20px; height: 20px; border-radius: 50%; background: #ff3b30; border: 2.5px solid #f2f2f7; display: none; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: white; }
+.chat-fab-badge.visible { display: flex; }
 
-.loading { text-align: center; color: #c7c7cc; font-size: 13px; padding: 24px 0; }
-.empty   { text-align: center; color: #c7c7cc; font-size: 13px; padding: 32px 0; line-height: 1.8; }
-input[type="file"] { display: none; }
-
-/* ONBOARDING CTA */
-.onboarding-cta {
-  background: #fff; border-radius: 22px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
-  overflow: hidden; margin-top: 8px;
-}
-.onboarding-hero {
-  background: linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 100%);
-  padding: 32px 24px 28px; text-align: center;
-}
+.onboarding-cta { background: #fff; border-radius: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06); overflow: hidden; margin-top: 8px; }
+.onboarding-hero { background: linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 100%); padding: 32px 24px 28px; text-align: center; }
 .onboarding-emoji { font-size: 48px; display: block; margin-bottom: 14px; }
 .onboarding-title { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px; margin-bottom: 8px; }
 .onboarding-sub { font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.6; }
 .onboarding-features { padding: 20px 20px 4px; display: flex; flex-direction: column; gap: 10px; }
-.onboarding-feat {
-  display: flex; align-items: center; gap: 12px;
-  background: #f9f9fb; border-radius: 14px; padding: 12px 14px;
-}
+.onboarding-feat { display: flex; align-items: center; gap: 12px; background: #f9f9fb; border-radius: 14px; padding: 12px 14px; }
 .onboarding-feat-ico { font-size: 22px; flex-shrink: 0; }
 .onboarding-feat-txt { font-size: 13px; font-weight: 500; color: #1c1c1e; line-height: 1.4; }
 .onboarding-feat-sub { font-size: 11px; color: #8e8e93; margin-top: 1px; }
 .onboarding-btn-wrap { padding: 16px 20px 24px; }
-.onboarding-btn {
-  width: 100%; padding: 17px; background: #1a1a2e; border: none;
-  border-radius: 16px; color: #fff; font-family: 'Inter', sans-serif;
-  font-size: 16px; font-weight: 600; cursor: pointer;
-  box-shadow: 0 4px 16px rgba(26,26,46,0.3);
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-.onboarding-btn:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(26,26,46,0.2); }
+.onboarding-btn { width: 100%; padding: 17px; background: #1a1a2e; border: none; border-radius: 16px; color: #fff; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 16px rgba(26,26,46,0.3); }
+
+.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1c1c1e; color: #fff; padding: 12px 24px; border-radius: 20px; font-size: 14px; font-family: 'Inter', sans-serif; z-index: 2000; transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); pointer-events: none; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: #34a853; }
+.toast.error   { background: #ff3b30; }
+.loading { text-align: center; color: #c7c7cc; font-size: 13px; padding: 24px 0; }
+.empty   { text-align: center; color: #c7c7cc; font-size: 13px; padding: 32px 0; line-height: 1.8; }
+input[type="file"] { display: none; }
 </style>
 </head>
 <body>
@@ -216,7 +216,7 @@ input[type="file"] { display: none; }
 
 <div class="page">
 
-  <!-- BANDEAU ABONNEMENT (affiché si pas abonné) -->
+  <!-- BANDEAU ABONNEMENT -->
   <div class="bandeau-abonnement" id="bandeauAbonnement" style="display:none;">
     <div class="bandeau-left">
       <div class="bandeau-icon">🧑‍⚕️</div>
@@ -228,14 +228,11 @@ input[type="file"] { display: none; }
     <button class="bandeau-btn" id="bandeauBtn">Voir les offres →</button>
   </div>
 
-  <!-- CHAT NUTRITIONNISTE (affiché si abonné) -->
+  <!-- CHAT NUTRITIONNISTE (abonné seulement) -->
   <div class="nutri-chat-card" id="nutriChatCard" style="display:none;" onclick="ouvrirChat()">
     <div class="nutri-chat-header">
       <div class="nutri-chat-left">
-        <div class="nutri-avatar">
-          🧑‍⚕️
-          <div class="nutri-online-dot"></div>
-        </div>
+        <div class="nutri-avatar">🧑‍⚕️<div class="nutri-online-dot"></div></div>
         <div>
           <div class="nutri-chat-name">Votre nutritionniste</div>
           <div class="nutri-chat-role">Messagerie personnalisée</div>
@@ -251,7 +248,7 @@ input[type="file"] { display: none; }
     <div class="ring-wrap">
       <svg viewBox="0 0 140 140" width="140" height="140">
         <circle cx="70" cy="70" r="58" fill="none" stroke="#f0f0f0" stroke-width="10"/>
-        <circle cx="70" cy="70" r="58" fill="none" stroke="#34a853" stroke-width="10" stroke-linecap="round" id="ringScore" stroke-dasharray="0 364" style="transition: stroke-dasharray 1.4s ease, stroke 0.5s;"/>
+        <circle cx="70" cy="70" r="58" fill="none" stroke="#34a853" stroke-width="10" stroke-linecap="round" id="ringScore" stroke-dasharray="0 364" style="transition:stroke-dasharray 1.4s ease,stroke 0.5s;"/>
       </svg>
       <div class="ring-inner">
         <div class="ring-pct"><span id="scoreNum">–</span><span class="ring-pct-sym">%</span></div>
@@ -260,27 +257,9 @@ input[type="file"] { display: none; }
       </div>
     </div>
     <div class="macro-col">
-      <div class="mc">
-        <div class="mc-ico">🥩</div>
-        <div class="mc-name">Protéines</div>
-        <div class="mc-val"><span id="valProt">–</span><span class="mc-val-unit">g</span></div>
-        <div class="mc-goal" id="goalProt">Objectif – g</div>
-        <div class="mc-bar"><div class="mc-fill" id="barProt" style="width:0%;background:#ff3b30;"></div></div>
-      </div>
-      <div class="mc">
-        <div class="mc-ico">🥑</div>
-        <div class="mc-name">Lipides</div>
-        <div class="mc-val"><span id="valLip">–</span><span class="mc-val-unit">g</span></div>
-        <div class="mc-goal" id="goalLip">Objectif – g</div>
-        <div class="mc-bar"><div class="mc-fill" id="barLip" style="width:0%;background:#7b5ea7;"></div></div>
-      </div>
-      <div class="mc">
-        <div class="mc-ico">⚡</div>
-        <div class="mc-name">Énergie</div>
-        <div class="mc-val"><span id="valCal">–</span></div>
-        <div class="mc-goal" id="goalCal">Objectif – kcal</div>
-        <div class="mc-bar"><div class="mc-fill" id="barCal" style="width:0%;background:#ff9500;"></div></div>
-      </div>
+      <div class="mc"><div class="mc-ico">🥩</div><div class="mc-name">Protéines</div><div class="mc-val"><span id="valProt">–</span><span class="mc-val-unit">g</span></div><div class="mc-goal" id="goalProt">Objectif – g</div><div class="mc-bar"><div class="mc-fill" id="barProt" style="width:0%;background:#ff3b30;"></div></div></div>
+      <div class="mc"><div class="mc-ico">🥑</div><div class="mc-name">Lipides</div><div class="mc-val"><span id="valLip">–</span><span class="mc-val-unit">g</span></div><div class="mc-goal" id="goalLip">Objectif – g</div><div class="mc-bar"><div class="mc-fill" id="barLip" style="width:0%;background:#7b5ea7;"></div></div></div>
+      <div class="mc"><div class="mc-ico">⚡</div><div class="mc-name">Énergie</div><div class="mc-val"><span id="valCal">–</span></div><div class="mc-goal" id="goalCal">Objectif – kcal</div><div class="mc-bar"><div class="mc-fill" id="barCal" style="width:0%;background:#ff9500;"></div></div></div>
     </div>
   </div>
 
@@ -291,12 +270,63 @@ input[type="file"] { display: none; }
       <div id="fortsContainer"><div class="loading" style="padding:8px 0;font-size:11px;">...</div></div>
     </div>
     <div class="points-block">
-      <div class="pb-header"><div class="pb-icon pb-icon-o">!</div>Points à améliorer</div>
+      <div class="pb-header"><div class="pb-icon pb-icon-o">!</div>À améliorer</div>
       <div id="faiblesContainer"><div class="loading" style="padding:8px 0;font-size:11px;">...</div></div>
     </div>
   </div>
 
-  <!-- HISTORIQUE -->
+  <!-- ── PROCHAINS RDV ── -->
+  <div class="rdv-section">
+    <div class="section-header">
+      <span class="section-title">📅 Prochains rendez-vous</span>
+    </div>
+    <div class="rdv-card" id="rdvCard">
+      <!-- Lock overlay pour non-abonnés -->
+      <div class="rdv-lock-overlay" id="rdvLockOverlay" style="display:none;" onclick="goToOffre()">
+        <div class="rdv-lock-icon">🔒</div>
+        <div class="rdv-lock-text">Réservez vos RDV nutritionniste</div>
+        <div class="rdv-lock-sub">Disponible avec un abonnement Natty</div>
+        <button class="rdv-lock-btn">Voir les offres →</button>
+      </div>
+      <div class="rdv-list" id="rdvList">
+        <div class="loading">Chargement...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CALENDRIER RÉSERVATION ── -->
+  <div class="rdv-section">
+    <div class="section-header">
+      <span class="section-title">🗓️ Prendre un rendez-vous</span>
+    </div>
+    <div class="cal-card" id="calCard">
+      <!-- Lock overlay pour non-abonnés -->
+      <div class="rdv-lock-overlay" id="calLockOverlay" style="display:none;" onclick="goToOffre()">
+        <div class="rdv-lock-icon">🔒</div>
+        <div class="rdv-lock-text">Planifiez votre prochain RDV</div>
+        <div class="rdv-lock-sub">Disponible avec un abonnement Natty</div>
+        <button class="rdv-lock-btn">Voir les offres →</button>
+      </div>
+      <div class="cal-nav">
+        <button class="cal-arrow" onclick="calPrev()">‹</button>
+        <div class="cal-month" id="calMonth">–</div>
+        <button class="cal-arrow" onclick="calNext()">›</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-slots" id="calSlots">
+        <div class="cal-slots-title" id="calSlotsTitle">Créneaux disponibles</div>
+        <div class="cal-slots-grid" id="calSlotsGrid"></div>
+        <!-- Option récap email à la place du RDV -->
+        <div class="recap-opt-row" id="recapOptRow" onclick="toggleRecapOpt()">
+          <div class="recap-opt-check" id="recapOptCheck">✓</div>
+          <div class="recap-opt-text">Je préfère recevoir mon récapitulatif par email plutôt que de faire le RDV en visio</div>
+        </div>
+        <button class="slot-confirm-btn" id="slotConfirmBtn" onclick="confirmerRDV()">Confirmer le rendez-vous →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORIQUE REPAS -->
   <div class="hist-header">
     <span class="hist-title">Historique des repas</span>
     <span class="hist-link">Voir tout ›</span>
@@ -304,10 +334,15 @@ input[type="file"] { display: none; }
   <div class="hist-card">
     <div id="historiqueList"><div class="loading">Chargement...</div></div>
   </div>
-
   <button class="btn-add" onclick="ouvrirPopup()">+ Ajouter un repas</button>
 
 </div>
+
+<!-- BOUTON CHAT FLOTTANT (toujours visible) -->
+<button class="chat-fab" id="chatFab" onclick="ouvrirChat()">
+  💬
+  <div class="chat-fab-badge" id="chatFabBadge"></div>
+</button>
 
 <!-- POPUP AJOUT REPAS -->
 <div class="popup-overlay" id="popupOverlay" onclick="fermerPopupOverlay(event)">
@@ -347,9 +382,11 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const CLOUDINARY_CLOUD  = 'dujji1s6g';
 const CLOUDINARY_PRESET = 'meal_photos';
 
-let USER_ID = null;
-let photoFile = null;
-let token = '';
+let USER_ID = null, token = '', photoFile = null;
+let estAbonne = false;
+let calDate = new Date(); calDate.setDate(1);
+let selectedCalDay = null, selectedSlot = null, recapOptOnly = false;
+let availableSlots = {}; // { 'YYYY-MM-DD': ['10:00','11:00',...] }
 
 const params = new URLSearchParams(window.location.search);
 token = params.get('token') || '';
@@ -358,46 +395,28 @@ const userIdParam = params.get('userId');
 function resolveUserId() {
   if (userIdParam && userIdParam !== 'null' && userIdParam !== 'PLACEHOLDER') return userIdParam;
   if (token && token.length > 10) {
-    try {
-      const decoded = token.match(/.{1,2}/g).map(b => String.fromCharCode(parseInt(b, 16))).join('');
-      if (decoded && decoded.includes('-')) return decoded;
-    } catch(e) {}
+    try { const d = token.match(/.{1,2}/g).map(b=>String.fromCharCode(parseInt(b,16))).join(''); if(d&&d.includes('-'))return d; } catch(e){}
   }
   return null;
 }
 
-function lireMacrosURL() {
-  const data = {
-    objectif:  params.get('objectif')  || '',
-    calories:  params.get('calories')  || '',
-    proteines: params.get('proteines') || '',
-    lipides:   params.get('lipides')   || '',
-    tdee:      params.get('tdee')      || '',
-  };
-  if (data.proteines || data.calories) afficherMacros(data);
+USER_ID = resolveUserId();
+
+document.getElementById('bandeauBtn').onclick = () => goToOffre();
+
+window.addEventListener('message', e => { if(e.data?.type==='macroData') afficherMacros(e.data); });
+window.parent.postMessage('htmlReady','*');
+
+function goToOffre() {
+  const url = '/offre.html?token=' + token;
+  if(window.self!==window.top) window.top.location.href=url;
+  else window.location.href=url;
 }
 
-window.addEventListener('message', function(e) {
-  const d = e.data;
-  if (!d || d.type !== 'macroData') return;
-  afficherMacros(d);
-});
-window.parent.postMessage('htmlReady', '*');
-
-USER_ID = resolveUserId();
-lireMacrosURL();
-
-document.getElementById('bandeauBtn').onclick = function() {
-  window.location.href = '/offre.html?token=' + token;
-};
-
 function ouvrirChat() {
-  const chatUrl = '/chat.html?token=' + token;
-  if (window.self !== window.top) {
-    window.top.location.href = chatUrl;
-  } else {
-    window.location.href = chatUrl;
-  }
+  const url = '/chat.html?token=' + token;
+  if(window.self!==window.top) window.top.location.href=url;
+  else window.location.href=url;
 }
 
 if (USER_ID) {
@@ -405,377 +424,398 @@ if (USER_ID) {
 } else {
   afficherOnboardingCTA();
   afficherDiagnosticsVides();
-}
-
-function afficherOnboardingCTA() {
-  document.querySelector('.score-card').style.display = 'none';
-  document.querySelector('.points-row').style.display = 'none';
-  document.querySelector('.hist-header').style.display = 'none';
-  document.querySelector('.hist-card').style.display = 'none';
-  document.querySelector('.btn-add').style.display = 'none';
-
-  const page = document.querySelector('.page');
-  const cta = document.createElement('div');
-  cta.className = 'onboarding-cta';
-  cta.innerHTML = `
-    <div class="onboarding-hero">
-      <span class="onboarding-emoji">🥗</span>
-      <div class="onboarding-title">Commencez votre suivi</div>
-      <div class="onboarding-sub">Répondez à quelques questions pour que votre nutritionniste personnalise votre programme.</div>
-    </div>
-    <div class="onboarding-features">
-      <div class="onboarding-feat">
-        <div class="onboarding-feat-ico">🧑‍⚕️</div>
-        <div>
-          <div class="onboarding-feat-txt">Nutritionniste personnel</div>
-          <div class="onboarding-feat-sub">Dédié à vos objectifs, disponible par messagerie</div>
-        </div>
-      </div>
-      <div class="onboarding-feat">
-        <div class="onboarding-feat-ico">🍱</div>
-        <div>
-          <div class="onboarding-feat-txt">Repas cuisinés & livrés</div>
-          <div class="onboarding-feat-sub">3 ou 4 plats par semaine, adaptés à votre objectif</div>
-        </div>
-      </div>
-      <div class="onboarding-feat">
-        <div class="onboarding-feat-ico">📊</div>
-        <div>
-          <div class="onboarding-feat-txt">Suivi nutritionnel complet</div>
-          <div class="onboarding-feat-sub">Score, macros, journal alimentaire personnalisé</div>
-        </div>
-      </div>
-    </div>
-    <div class="onboarding-btn-wrap">
-      <button class="onboarding-btn" onclick="demarrerOnboarding()">Analyser mon alimentation →</button>
-    </div>
-  `;
-  page.appendChild(cta);
-}
-
-function demarrerOnboarding() {
-  const url = '/onboarding.html';
-  if (window.self !== window.top) {
-    window.top.location.href = url;
-  } else {
-    window.location.href = url;
-  }
+  afficherRDVLocked();
+  renderCalendar();
 }
 
 async function init() {
-  await Promise.all([chargerRepas(), chargerScores(), verifierAbonnementEtMessages(), chargerMacrosSupabase()]);
+  await Promise.all([
+    chargerRepas(), chargerScores(),
+    verifierAbonnementEtMessages(),
+    chargerMacrosSupabase(),
+    chargerRDV()
+  ]);
+  renderCalendar();
 }
 
-async function chargerMacrosSupabase() {
-  try {
-    const rows = await supabase('onboarding?user_id=eq.' + USER_ID + '&completed=eq.true&select=poids,tdee,bmr&limit=1');
-    if (!rows || rows.length === 0) return;
-    const p = rows[0];
-    const tdee  = parseFloat(p.tdee)  || 0;
-    const poids = parseFloat(p.poids) || 0;
-    if (!tdee && !poids) return;
-
-    // Calcul macros standards
-    const proteines = poids  ? Math.round(poids * 2)        : null;
-    const lipides   = tdee   ? Math.round(tdee * 0.25 / 9)  : null;
-    const calories  = tdee   ? Math.round(tdee)              : null;
-
-    if (proteines) { setText('valProt', proteines); setText('goalProt', 'Objectif ' + proteines + ' g'); }
-    if (lipides)   { setText('valLip',  lipides);   setText('goalLip',  'Objectif ' + lipides   + ' g'); }
-    if (calories)  { setText('valCal',  calories);  setText('goalCal',  'Objectif ' + calories  + ' kcal'); }
-
-    // Barres indicatives
-    const barProt = document.getElementById('barProt');
-    const barLip  = document.getElementById('barLip');
-    const barCal  = document.getElementById('barCal');
-    if (barProt) barProt.style.width = '75%';
-    if (barLip)  barLip.style.width  = '60%';
-    if (barCal)  barCal.style.width  = '70%';
-  } catch(e) {}
-}
-
+// ── ABONNEMENT + MESSAGES ──
 async function verifierAbonnementEtMessages() {
-  if (!USER_ID) return;
   try {
-    const res = await fetch(
-      SUPABASE_URL + '/rest/v1/abonnements?user_id=eq.' + USER_ID + '&statut=eq.actif&select=id&limit=1',
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-    );
+    const res = await fetch(SUPABASE_URL+'/rest/v1/abonnements?user_id=eq.'+USER_ID+'&statut=eq.actif&select=id&limit=1',
+      { headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY} });
     const data = await res.json();
-    const estAbonne = data && data.length > 0;
-
+    estAbonne = data && data.length > 0;
     setTimeout(async () => {
       if (!estAbonne) {
         document.getElementById('bandeauAbonnement').style.display = 'flex';
+        afficherRDVLocked();
       } else {
-        // Abonné → afficher la card chat
         document.getElementById('nutriChatCard').style.display = 'block';
-        // Charger dernier message + nb non lus
         await chargerAperçuMessages();
-        // Realtime pour badge non lu
         subscribeMessagesRealtime();
       }
-    }, 800);
+      chargerSlotsDisponibles();
+    }, 600);
   } catch(e) {}
 }
 
 async function chargerAperçuMessages() {
   try {
-    const msgs = await supabase(
-      'messages?user_id=eq.' + USER_ID + '&order=created_at.desc&limit=5'
-    );
-    const unreadCount = msgs.filter(m => m.expediteur === 'nutritionniste' && !m.lu).length;
-    const lastMsg = msgs[0];
-
+    const msgs = await sbFetch('messages?user_id=eq.'+USER_ID+'&order=created_at.desc&limit=5');
+    const unread = msgs.filter(m=>m.expediteur==='nutritionniste'&&!m.lu).length;
+    const last = msgs[0];
     const badge = document.getElementById('unreadBadge');
-    const lastMsgEl = document.getElementById('nutriLastMsg');
-
-    if (unreadCount > 0) {
-      badge.textContent = unreadCount;
-      badge.classList.add('visible');
+    const fabBadge = document.getElementById('chatFabBadge');
+    if (unread > 0) {
+      badge.textContent = unread; badge.classList.add('visible');
+      fabBadge.textContent = unread; fabBadge.classList.add('visible');
     }
-
-    if (lastMsg) {
-      const prefix = lastMsg.expediteur === 'client' ? 'Vous : ' : '';
-      lastMsgEl.textContent = prefix + lastMsg.contenu;
-      if (lastMsg.expediteur === 'nutritionniste' && !lastMsg.lu) {
-        lastMsgEl.classList.add('unread');
-      }
+    if (last) {
+      const el = document.getElementById('nutriLastMsg');
+      el.textContent = (last.expediteur==='client'?'Vous : ':'')+last.contenu;
+      if(last.expediteur==='nutritionniste'&&!last.lu) el.classList.add('unread');
     }
   } catch(e) {}
 }
 
 function subscribeMessagesRealtime() {
-  if (!USER_ID) return;
-  const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_KEY + '&vsn=1.0.0';
-  const ws = new WebSocket(wsUrl);
-  ws.onopen = () => {
-    ws.send(JSON.stringify({
-      topic: 'realtime:public:messages:user_id=eq.' + USER_ID,
-      event: 'phx_join', payload: {}, ref: '1'
-    }));
-  };
-  ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (data.event === 'INSERT' && data.payload?.record) {
-      const msg = data.payload.record;
-      if (msg.expediteur === 'nutritionniste') {
-        // Update badge
-        const badge = document.getElementById('unreadBadge');
-        const count = (parseInt(badge.textContent) || 0) + 1;
-        badge.textContent = count;
-        badge.classList.add('visible');
-        // Update last msg
-        const lastMsgEl = document.getElementById('nutriLastMsg');
-        lastMsgEl.textContent = msg.contenu;
-        lastMsgEl.classList.add('unread');
-      }
+  const ws = new WebSocket(SUPABASE_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPABASE_KEY+'&vsn=1.0.0');
+  ws.onopen = () => ws.send(JSON.stringify({topic:'realtime:public:messages:user_id=eq.'+USER_ID,event:'phx_join',payload:{},ref:'1'}));
+  ws.onmessage = e => {
+    const d = JSON.parse(e.data);
+    if(d.event==='INSERT'&&d.payload?.record?.expediteur==='nutritionniste'){
+      const b1=document.getElementById('unreadBadge'), b2=document.getElementById('chatFabBadge');
+      const n=(parseInt(b1.textContent)||0)+1;
+      b1.textContent=n; b1.classList.add('visible');
+      b2.textContent=n; b2.classList.add('visible');
+      document.getElementById('nutriLastMsg').textContent=d.payload.record.contenu;
+      document.getElementById('nutriLastMsg').classList.add('unread');
     }
   };
   ws.onclose = () => setTimeout(subscribeMessagesRealtime, 3000);
   ws.onerror = () => ws.close();
 }
 
-async function supabase(path, options = {}) {
-  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
-    ...options,
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation', ...(options.headers || {}) }
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error(text);
-  return text ? JSON.parse(text) : [];
+// ── RDV ──
+function afficherRDVLocked() {
+  document.getElementById('rdvLockOverlay').style.display = 'flex';
+  document.getElementById('calLockOverlay').style.display = 'flex';
+  document.getElementById('rdvList').innerHTML = '<div class="rdv-empty">Aucun rendez-vous planifié</div>';
+}
+
+async function chargerRDV() {
+  try {
+    const rdvs = await sbFetch('rdv?user_id=eq.'+USER_ID+'&order=date_rdv.asc&select=*');
+    const now = new Date();
+    const futurs = rdvs.filter(r => new Date(r.date_rdv) >= now);
+    const el = document.getElementById('rdvList');
+    if (!futurs.length) {
+      el.innerHTML = '<div class="rdv-empty">Aucun rendez-vous à venir<br><span style="font-size:11px;">Prenez un RDV dans le calendrier ci-dessous</span></div>';
+      return;
+    }
+    const jours = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+    el.innerHTML = futurs.slice(0,4).map((r,i) => {
+      const d = new Date(r.date_rdv);
+      const isNext = i===0;
+      return `<div class="rdv-item ${isNext?'upcoming':''}">
+        <div class="rdv-date-block">
+          <div class="rdv-day-num">${d.getDate()}</div>
+          <div class="rdv-day-name">${jours[d.getDay()]}</div>
+        </div>
+        <div class="rdv-info">
+          <div class="rdv-type">${r.type_rdv||'Consultation nutritionniste'}</div>
+          <div class="rdv-nutri-name">${r.heure||''} · ${r.nutritionniste_nom||'Votre nutritionniste'}</div>
+        </div>
+        <div class="rdv-badge ${isNext?'rdv-badge-upcoming':'rdv-badge-passed'}">${isNext?'Prochain':'À venir'}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('rdvList').innerHTML = '<div class="rdv-empty">Aucun rendez-vous à venir</div>';
+  }
+}
+
+async function chargerSlotsDisponibles() {
+  try {
+    const slots = await sbFetch('creneaux_rdv?disponible=eq.true&select=*&order=date_creneau.asc');
+    availableSlots = {};
+    slots.forEach(s => {
+      if(!availableSlots[s.date_creneau]) availableSlots[s.date_creneau] = [];
+      availableSlots[s.date_creneau].push({ heure: s.heure, id: s.id });
+    });
+    renderCalendar();
+  } catch(e) { renderCalendar(); }
+}
+
+// ── CALENDRIER ──
+function renderCalendar() {
+  const moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  document.getElementById('calMonth').textContent = moisNoms[calDate.getMonth()] + ' ' + calDate.getFullYear();
+  const firstDay = new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay();
+  const daysInMonth = new Date(calDate.getFullYear(), calDate.getMonth()+1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const offset = firstDay===0 ? 6 : firstDay-1; // lundi en premier
+  const grid = document.getElementById('calGrid');
+  const jours = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
+  let html = jours.map(j=>`<div class="cal-day-lbl">${j}</div>`).join('');
+  for(let i=0;i<offset;i++) html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr = calDate.getFullYear()+'-'+String(calDate.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const dateObj = new Date(calDate.getFullYear(), calDate.getMonth(), d);
+    const isPast = dateObj < today;
+    const hasSlot = availableSlots[dateStr] && availableSlots[dateStr].length > 0;
+    const isToday = dateObj.getTime()===today.getTime();
+    const isSel = selectedCalDay===dateStr;
+    let cls = 'cal-day';
+    if(isPast) cls+=' disabled';
+    else if(hasSlot) cls+=' has-slot';
+    if(isToday) cls+=' today';
+    if(isSel) cls+=' selected';
+    html+=`<button class="${cls}" onclick="selectCalDay('${dateStr}',${isPast||!hasSlot})">${d}</button>`;
+  }
+  grid.innerHTML = html;
+}
+
+function calPrev() { calDate.setMonth(calDate.getMonth()-1); selectedCalDay=null; document.getElementById('calSlots').classList.remove('visible'); renderCalendar(); }
+function calNext() { calDate.setMonth(calDate.getMonth()+1); selectedCalDay=null; document.getElementById('calSlots').classList.remove('visible'); renderCalendar(); }
+
+function selectCalDay(dateStr, disabled) {
+  if(disabled) return;
+  if(!estAbonne && USER_ID) { goToOffre(); return; }
+  if(!USER_ID) { goToOffre(); return; }
+  selectedCalDay = dateStr;
+  selectedSlot = null; recapOptOnly = false;
+  renderCalendar();
+  const slots = availableSlots[dateStr]||[];
+  const slotsDiv = document.getElementById('calSlots');
+  const d = new Date(dateStr+'T00:00:00');
+  document.getElementById('calSlotsTitle').textContent = 'Créneaux — '+d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('calSlotsGrid').innerHTML = slots.map(s=>`<button class="slot-btn" onclick="selectSlot('${s.id}','${s.heure}',this)">${s.heure}</button>`).join('');
+  document.getElementById('recapOptCheck').classList.remove('on');
+  document.getElementById('slotConfirmBtn').classList.remove('visible');
+  slotsDiv.classList.add('visible');
+}
+
+function selectSlot(id, heure, btn) {
+  document.querySelectorAll('.slot-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedSlot = { id, heure };
+  recapOptOnly = false;
+  document.getElementById('recapOptCheck').classList.remove('on');
+  document.getElementById('slotConfirmBtn').textContent = 'Confirmer le rendez-vous →';
+  document.getElementById('slotConfirmBtn').classList.add('visible');
+}
+
+function toggleRecapOpt() {
+  recapOptOnly = !recapOptOnly;
+  document.getElementById('recapOptCheck').classList.toggle('on', recapOptOnly);
+  if(recapOptOnly) {
+    document.querySelectorAll('.slot-btn').forEach(b=>b.classList.remove('selected'));
+    selectedSlot = null;
+    document.getElementById('slotConfirmBtn').textContent = 'Recevoir mon récapitulatif par email →';
+    document.getElementById('slotConfirmBtn').classList.add('visible');
+  } else {
+    document.getElementById('slotConfirmBtn').classList.remove('visible');
+  }
+}
+
+async function confirmerRDV() {
+  const btn = document.getElementById('slotConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Enregistrement...';
+  try {
+    if(recapOptOnly) {
+      // Notifier via Supabase que le client veut un récap email
+      await sbPost('rdv', {
+        user_id: USER_ID,
+        date_rdv: selectedCalDay+'T00:00:00',
+        type_rdv: 'recap_email',
+        statut: 'recap_demande',
+        created_at: new Date().toISOString()
+      });
+      showToast('Demande envoyée ! Vous recevrez votre récap par email.', 'success');
+    } else {
+      // Réserver le créneau
+      await sbPost('rdv', {
+        user_id: USER_ID,
+        creneau_id: selectedSlot.id,
+        date_rdv: selectedCalDay+'T'+selectedSlot.heure+':00',
+        heure: selectedSlot.heure,
+        type_rdv: 'consultation',
+        statut: 'confirme',
+        created_at: new Date().toISOString()
+      });
+      // Marquer créneau comme non dispo
+      await fetch(SUPABASE_URL+'/rest/v1/creneaux_rdv?id=eq.'+selectedSlot.id, {
+        method:'PATCH', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'},
+        body: JSON.stringify({disponible:false})
+      });
+      showToast('RDV confirmé ! À bientôt 🎉', 'success');
+    }
+    document.getElementById('calSlots').classList.remove('visible');
+    selectedCalDay = null; selectedSlot = null;
+    renderCalendar();
+    await chargerRDV();
+  } catch(e) { showToast('Erreur : '+e.message, 'error'); }
+  btn.disabled = false;
+}
+
+// ── MACROS ──
+async function chargerMacrosSupabase() {
+  try {
+    const rows = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&completed=eq.true&select=poids,tdee,bmr&limit=1');
+    if(!rows||!rows.length)return;
+    const p=rows[0], tdee=parseFloat(p.tdee)||0, poids=parseFloat(p.poids)||0;
+    if(!tdee&&!poids)return;
+    const prot=poids?Math.round(poids*2):null, lip=tdee?Math.round(tdee*0.25/9):null, cal=tdee?Math.round(tdee):null;
+    if(prot){setText('valProt',prot);setText('goalProt','Objectif '+prot+' g');}
+    if(lip) {setText('valLip',lip); setText('goalLip','Objectif '+lip+' g');}
+    if(cal) {setText('valCal',cal); setText('goalCal','Objectif '+cal+' kcal');}
+    if(document.getElementById('barProt'))document.getElementById('barProt').style.width='75%';
+    if(document.getElementById('barLip')) document.getElementById('barLip').style.width='60%';
+    if(document.getElementById('barCal')) document.getElementById('barCal').style.width='70%';
+  } catch(e){}
 }
 
 function afficherMacros(d) {
-  if (d.proteines && d.proteines !== '–') { setText('valProt', d.proteines); setText('goalProt', 'Objectif ' + d.proteines + ' g'); }
-  if (d.lipides && d.lipides !== '–')     { setText('valLip', d.lipides);   setText('goalLip', 'Objectif ' + d.lipides + ' g'); }
-  if (d.calories && d.calories !== '–')   { setText('valCal', d.calories);  setText('goalCal', 'Objectif ' + d.calories + ' kcal'); }
+  if(d.proteines&&d.proteines!=='–'){setText('valProt',d.proteines);setText('goalProt','Objectif '+d.proteines+' g');}
+  if(d.lipides&&d.lipides!=='–')   {setText('valLip',d.lipides);   setText('goalLip','Objectif '+d.lipides+' g');}
+  if(d.calories&&d.calories!=='–') {setText('valCal',d.calories);  setText('goalCal','Objectif '+d.calories+' kcal');}
 }
 
+// ── SCORES ──
 async function chargerScores() {
   try {
-    const scores = await supabase('nutrition_scores?user_id=eq.' + USER_ID + '&order=calculated_at.desc&limit=1');
-    if (!scores || scores.length === 0) { afficherDiagnosticsVides(); return; }
-    const s = scores[0];
-    const v = Math.round(s.variety_score || 0), q = Math.round(s.quality_score || 0), r = Math.round(s.relevance_score || 0);
-    const global = Math.round((v + q + r) / 3);
-    setScoreRing(global);
-    calculerDiagnostics(v, q, r);
-  } catch(e) { afficherDiagnosticsVides(); }
+    const s=await sbFetch('nutrition_scores?user_id=eq.'+USER_ID+'&order=calculated_at.desc&limit=1');
+    if(!s||!s.length){afficherDiagnosticsVides();return;}
+    const v=Math.round(s[0].variety_score||0),q=Math.round(s[0].quality_score||0),r=Math.round(s[0].relevance_score||0);
+    setScoreRing(Math.round((v+q+r)/3));
+    calculerDiagnostics(v,q,r);
+  }catch(e){afficherDiagnosticsVides();}
 }
 
-function setScoreRing(pct) {
-  const circ = 2 * Math.PI * 58, dash = (pct / 100) * circ;
-  const col = pct >= 70 ? '#34a853' : pct >= 40 ? '#ff9500' : '#ff3b30';
-  document.getElementById('ringScore').style.strokeDasharray = dash + ' ' + circ;
-  document.getElementById('ringScore').style.stroke = col;
-  setText('scoreNum', pct);
-  const badge = document.getElementById('scoreBadge');
-  const word = pct >= 80 ? 'Excellent' : pct >= 60 ? 'Bon' : pct >= 40 ? 'Moyen' : 'À revoir';
-  badge.textContent = word;
-  badge.style.background = pct >= 60 ? '#e8f5ee' : pct >= 40 ? '#fff3e8' : '#fde8e8';
-  badge.style.color      = pct >= 60 ? '#34a853' : pct >= 40 ? '#ff9500' : '#ff3b30';
+function setScoreRing(pct){
+  const circ=2*Math.PI*58,dash=(pct/100)*circ,col=pct>=70?'#34a853':pct>=40?'#ff9500':'#ff3b30';
+  document.getElementById('ringScore').style.strokeDasharray=dash+' '+circ;
+  document.getElementById('ringScore').style.stroke=col;
+  setText('scoreNum',pct);
+  const badge=document.getElementById('scoreBadge');
+  badge.textContent=pct>=80?'Excellent':pct>=60?'Bon':pct>=40?'Moyen':'À revoir';
+  badge.style.background=pct>=60?'#e8f5ee':pct>=40?'#fff3e8':'#fde8e8';
+  badge.style.color=pct>=60?'#34a853':pct>=40?'#ff9500':'#ff3b30';
 }
 
-function calculerDiagnostics(variety, quality, relevance) {
-  const forts = [
-    { ico: '💧', icoCls: 'pt-ico-g', nom: 'Hydratation',         badge: 'Excellent',  badgeCls: 'pt-bg' },
-    { ico: '🌿', icoCls: 'pt-ico-g', nom: 'Fibres & légumes',    badge: 'Très bien',  badgeCls: 'pt-bg' },
-    { ico: '🥗', icoCls: 'pt-ico-g', nom: 'Variété alimentaire', badge: 'Bien',       badgeCls: 'pt-bg' },
-  ];
-  const faibles = [
-    { ico: '🥩', icoCls: 'pt-ico-o', nom: 'Protéines',           badge: 'À augmenter',          badgeCls: 'pt-bo' },
-    { ico: '⚡', icoCls: 'pt-ico-o', nom: 'Énergie',              badge: 'Un peu faible',        badgeCls: 'pt-bo' },
-    { ico: '🌾', icoCls: 'pt-ico-o', nom: 'Glucides complets',    badge: 'À intégrer davantage', badgeCls: 'pt-bo' },
-  ];
-  renderPts('fortsContainer', forts.slice(0, 3));
-  renderPts('faiblesContainer', faibles.slice(0, 3));
-}
-
-function renderPts(id, items) {
-  document.getElementById(id).innerHTML = items.map(it => `
-    <div class="pt-item">
-      <div class="pt-ico ${it.icoCls}">${it.ico}</div>
-      <div class="pt-txt"><div class="pt-name">${it.nom}</div><div class="pt-badge ${it.badgeCls}">${it.badge}</div></div>
-      <div class="pt-arr">›</div>
-    </div>`).join('');
-}
-
-function afficherDiagnosticsVides() {
-  renderPts('fortsContainer', [
-    { ico: '💧', icoCls: 'pt-ico-g', nom: 'Hydratation',         badge: 'Excellent',  badgeCls: 'pt-bg' },
-    { ico: '🌿', icoCls: 'pt-ico-g', nom: 'Fibres & légumes',    badge: 'Très bien',  badgeCls: 'pt-bg' },
-    { ico: '🥗', icoCls: 'pt-ico-g', nom: 'Variété alimentaire', badge: 'Bien',       badgeCls: 'pt-bg' }
+function calculerDiagnostics(v,q,r){
+  renderPts('fortsContainer',[
+    {ico:'💧',icoCls:'pt-ico-g',nom:'Hydratation',badge:'Excellent',badgeCls:'pt-bg'},
+    {ico:'🌿',icoCls:'pt-ico-g',nom:'Fibres & légumes',badge:'Très bien',badgeCls:'pt-bg'},
+    {ico:'🥗',icoCls:'pt-ico-g',nom:'Variété alimentaire',badge:'Bien',badgeCls:'pt-bg'},
   ]);
-  renderPts('faiblesContainer', [
-    { ico: '🥩', icoCls: 'pt-ico-o', nom: 'Protéines',           badge: 'À augmenter',          badgeCls: 'pt-bo' },
-    { ico: '⚡', icoCls: 'pt-ico-o', nom: 'Énergie',              badge: 'Un peu faible',        badgeCls: 'pt-bo' },
-    { ico: '🌾', icoCls: 'pt-ico-o', nom: 'Glucides complets',    badge: 'À intégrer davantage', badgeCls: 'pt-bo' }
+  renderPts('faiblesContainer',[
+    {ico:'🥩',icoCls:'pt-ico-o',nom:'Protéines',badge:'À augmenter',badgeCls:'pt-bo'},
+    {ico:'⚡',icoCls:'pt-ico-o',nom:'Énergie',badge:'Un peu faible',badgeCls:'pt-bo'},
+    {ico:'🌾',icoCls:'pt-ico-o',nom:'Glucides complets',badge:'À intégrer',badgeCls:'pt-bo'},
   ]);
 }
 
-async function chargerRepas() {
-  try {
-    const meals = await supabase('meals?user_id=eq.' + USER_ID + '&select=*,meal_ingredients(*)&order=created_at.desc&limit=10');
+function renderPts(id,items){
+  document.getElementById(id).innerHTML=items.map(it=>`<div class="pt-item"><div class="pt-ico ${it.icoCls}">${it.ico}</div><div class="pt-txt"><div class="pt-name">${it.nom}</div><div class="pt-badge ${it.badgeCls}">${it.badge}</div></div><div class="pt-arr">›</div></div>`).join('');
+}
+function afficherDiagnosticsVides(){calculerDiagnostics(0,0,0);}
+
+// ── REPAS ──
+async function chargerRepas(){
+  try{
+    const meals=await sbFetch('meals?user_id=eq.'+USER_ID+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=10');
     afficherRepas(meals);
-  } catch(e) { document.getElementById('historiqueList').innerHTML = '<div class="empty">Erreur de chargement</div>'; }
+  }catch(e){document.getElementById('historiqueList').innerHTML='<div class="empty">Erreur de chargement</div>';}
 }
 
-function scoreRepas(meal) { return Math.min(99, 60 + (meal.meal_ingredients || []).length * 8); }
-function tagRepas(meal) {
-  const ings = (meal.meal_ingredients || []).map(i => i.name.toLowerCase());
-  if (ings.some(n => /poulet|thon|œuf|saumon|dinde|bœuf/.test(n))) return 'Riche en protéines';
-  if (ings.some(n => /quinoa|riz|lentille|pois/.test(n))) return 'Bon équilibre';
-  return 'Très bon choix';
-}
+function scoreRepas(m){return Math.min(99,60+(m.meal_ingredients||[]).length*8);}
+function tagRepas(m){const i=(m.meal_ingredients||[]).map(x=>x.name.toLowerCase());if(i.some(n=>/poulet|thon|œuf|saumon|dinde|bœuf/.test(n)))return'Riche en protéines';if(i.some(n=>/quinoa|riz|lentille|pois/.test(n)))return'Bon équilibre';return'Très bon choix';}
 
-function afficherRepas(meals) {
-  const el = document.getElementById('historiqueList');
-  if (!meals || meals.length === 0) { el.innerHTML = '<div class="empty">Aucun plat enregistré<br>Ajoutez votre premier repas !</div>'; return; }
-  el.innerHTML = meals.map(meal => {
-    const ings = meal.meal_ingredients || [];
-    const ingTxt = ings.map(i => i.name + ' ' + i.quantity_g + 'g').join(', ') || 'Aucun ingrédient';
-    const date = new Date(meal.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-    const score = scoreRepas(meal), r = 16, c = 2 * Math.PI * r, dash = ((score / 100) * c).toFixed(1);
-    const photo = meal.photo_url ? `<div class="meal-photo"><img src="${meal.photo_url}" alt=""></div>` : `<div class="meal-photo">🍽️</div>`;
-    return `<div class="meal-item">${photo}
-      <div class="meal-info"><div class="meal-name">${meal.name}</div><div class="meal-ings">${ingTxt}</div><span class="meal-tag">${tagRepas(meal)}</span></div>
-      <div class="meal-right">
-        <div class="meal-date">${date}</div>
-        <div class="meal-score">
-          <svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="16" fill="none" stroke="#f0f0f0" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="#34a853" stroke-width="3" stroke-linecap="round" stroke-dasharray="${dash} ${c.toFixed(1)}"/></svg>
-          <div class="meal-score-num">${score}</div>
-        </div>
-        <div class="meal-dots" onclick="supprimerRepas('${meal.id}', event)">···</div>
-      </div></div>`;
+function afficherRepas(meals){
+  const el=document.getElementById('historiqueList');
+  if(!meals||!meals.length){el.innerHTML='<div class="empty">Aucun plat enregistré<br>Ajoutez votre premier repas !</div>';return;}
+  el.innerHTML=meals.map(meal=>{
+    const ings=(meal.meal_ingredients||[]).map(i=>i.name+' '+i.quantity_g+'g').join(', ')||'Aucun ingrédient';
+    const date=new Date(meal.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+    const score=scoreRepas(meal),r=16,c=2*Math.PI*r,dash=((score/100)*c).toFixed(1);
+    const photo=meal.photo_url?`<div class="meal-photo"><img src="${meal.photo_url}" alt=""></div>`:`<div class="meal-photo">🍽️</div>`;
+    return`<div class="meal-item">${photo}<div class="meal-info"><div class="meal-name">${meal.name}</div><div class="meal-ings">${ings}</div><span class="meal-tag">${tagRepas(meal)}</span></div>
+      <div class="meal-right"><div class="meal-date">${date}</div><div class="meal-score"><svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="16" fill="none" stroke="#f0f0f0" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="#34a853" stroke-width="3" stroke-linecap="round" stroke-dasharray="${dash} ${c.toFixed(1)}"/></svg><div class="meal-score-num">${score}</div></div><div class="meal-dots" onclick="supprimerRepas('${meal.id}',event)">···</div></div></div>`;
   }).join('');
 }
 
-async function recalculerScores() {
-  try {
-    const meals = await supabase('meals?user_id=eq.' + USER_ID + '&select=*,meal_ingredients(*)&order=created_at.desc&limit=30');
-    const sept = new Date(); sept.setDate(sept.getDate() - 7);
-    const recents = meals.filter(m => new Date(m.created_at) > sept);
-    const uniques = new Set();
-    recents.forEach(m => (m.meal_ingredients || []).forEach(i => uniques.add(i.name.toLowerCase())));
-    const variety = Math.min(100, Math.round((uniques.size / 15) * 100));
-    const pertinence = Math.min(100, Math.round((recents.length / 21) * 100));
-    const avecIng = recents.filter(m => m.meal_ingredients && m.meal_ingredients.length > 0);
-    const quality = recents.length > 0 ? Math.min(100, Math.round((avecIng.length / recents.length) * 100)) : 0;
-    await supabase('nutrition_scores', { method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' }, body: JSON.stringify({ user_id: USER_ID, variety_score: variety, quality_score: quality, relevance_score: pertinence, score_date: new Date().toISOString().split('T')[0], calculated_at: new Date().toISOString() }) });
-    setScoreRing(Math.round((variety + quality + pertinence) / 3));
-    calculerDiagnostics(variety, quality, pertinence);
-  } catch(e) {}
+async function recalculerScores(){
+  try{
+    const meals=await sbFetch('meals?user_id=eq.'+USER_ID+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=30');
+    const sept=new Date();sept.setDate(sept.getDate()-7);
+    const recents=meals.filter(m=>new Date(m.created_at)>sept);
+    const uniques=new Set();recents.forEach(m=>(m.meal_ingredients||[]).forEach(i=>uniques.add(i.name.toLowerCase())));
+    const variety=Math.min(100,Math.round((uniques.size/15)*100));
+    const pertinence=Math.min(100,Math.round((recents.length/21)*100));
+    const avecIng=recents.filter(m=>m.meal_ingredients&&m.meal_ingredients.length>0);
+    const quality=recents.length>0?Math.min(100,Math.round((avecIng.length/recents.length)*100)):0;
+    await sbPost('nutrition_scores',{user_id:USER_ID,variety_score:variety,quality_score:quality,relevance_score:pertinence,score_date:new Date().toISOString().split('T')[0],calculated_at:new Date().toISOString()},true);
+    setScoreRing(Math.round((variety+quality+pertinence)/3));
+  }catch(e){}
 }
 
-function ouvrirPopup() { document.getElementById('popupOverlay').classList.add('active'); resetPopup(); }
-function fermerPopup()  { document.getElementById('popupOverlay').classList.remove('active'); }
-function fermerPopupOverlay(e) { if (e.target === document.getElementById('popupOverlay')) fermerPopup(); }
+// ── ONBOARDING CTA ──
+function afficherOnboardingCTA(){
+  document.querySelector('.score-card').style.display='none';
+  document.querySelector('.points-row').style.display='none';
+  document.querySelector('.hist-header').style.display='none';
+  document.querySelector('.hist-card').style.display='none';
+  document.querySelector('.btn-add').style.display='none';
+  const page=document.querySelector('.page');
+  const cta=document.createElement('div');cta.className='onboarding-cta';
+  cta.innerHTML=`<div class="onboarding-hero"><span class="onboarding-emoji">🥗</span><div class="onboarding-title">Commencez votre suivi</div><div class="onboarding-sub">Répondez à quelques questions pour personnaliser votre programme.</div></div>
+    <div class="onboarding-features">
+      <div class="onboarding-feat"><div class="onboarding-feat-ico">🧑‍⚕️</div><div><div class="onboarding-feat-txt">Nutritionniste personnel</div><div class="onboarding-feat-sub">Dédié à vos objectifs, disponible par messagerie</div></div></div>
+      <div class="onboarding-feat"><div class="onboarding-feat-ico">🍱</div><div><div class="onboarding-feat-txt">Repas cuisinés & livrés</div><div class="onboarding-feat-sub">3 ou 4 plats par semaine, adaptés à votre objectif</div></div></div>
+      <div class="onboarding-feat"><div class="onboarding-feat-ico">📊</div><div><div class="onboarding-feat-txt">Suivi nutritionnel complet</div><div class="onboarding-feat-sub">Score, macros, journal alimentaire personnalisé</div></div></div>
+    </div>
+    <div class="onboarding-btn-wrap"><button class="onboarding-btn" onclick="demarrerOnboarding()">Analyser mon alimentation →</button></div>`;
+  page.insertBefore(cta, page.children[2]||null);
+}
+function demarrerOnboarding(){const url='/onboarding.html';if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;}
 
-function resetPopup() {
-  document.getElementById('inputNom').value = '';
-  document.getElementById('photoPreview').classList.remove('visible');
-  document.getElementById('ingredientsList').innerHTML = `<div class="ing-row"><input class="form-inp" type="text" placeholder="Nom de l'ingrédient"><input class="form-inp qty" type="number" placeholder="g" min="0"></div>`;
-  photoFile = null;
+// ── POPUP REPAS ──
+function ouvrirPopup(){document.getElementById('popupOverlay').classList.add('active');resetPopup();}
+function fermerPopup(){document.getElementById('popupOverlay').classList.remove('active');}
+function fermerPopupOverlay(e){if(e.target===document.getElementById('popupOverlay'))fermerPopup();}
+function resetPopup(){document.getElementById('inputNom').value='';document.getElementById('photoPreview').classList.remove('visible');document.getElementById('ingredientsList').innerHTML=`<div class="ing-row"><input class="form-inp" type="text" placeholder="Nom de l'ingrédient"><input class="form-inp qty" type="number" placeholder="g" min="0"></div>`;photoFile=null;}
+function ajouterLigneIngredient(){const list=document.getElementById('ingredientsList'),row=document.createElement('div');row.className='ing-row';row.innerHTML=`<input class="form-inp" type="text" placeholder="Nom de l'ingrédient"><input class="form-inp qty" type="number" placeholder="g" min="0">`;list.appendChild(row);}
+function previewPhoto(input){const file=input.files[0];if(!file)return;photoFile=file;const reader=new FileReader();reader.onload=e=>{const p=document.getElementById('photoPreview');p.src=e.target.result;p.classList.add('visible');};reader.readAsDataURL(file);}
+
+async function uploadPhotoCloudinary(file){const fd=new FormData();fd.append('file',file);fd.append('upload_preset',CLOUDINARY_PRESET);const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:'POST',body:fd});const d=await res.json();if(!d.secure_url)throw new Error(d.error?.message||'Upload échoué');return d.secure_url;}
+
+async function enregistrerPlat(){
+  if(!USER_ID){showToast('Utilisateur non connecté','error');return;}
+  const nom=document.getElementById('inputNom').value.trim();
+  if(!nom){showToast('Donnez un nom à votre plat !','error');return;}
+  const btn=document.getElementById('btnSave');btn.disabled=true;btn.textContent='Enregistrement...';
+  try{
+    let photoUrl=null;
+    if(photoFile){btn.textContent='Upload...';photoUrl=await uploadPhotoCloudinary(photoFile);}
+    const[meal]=await sbPostReturn('meals',{user_id:USER_ID,name:nom,photo_url:photoUrl,meal_date:new Date().toISOString().split('T')[0]});
+    const rows=document.querySelectorAll('#ingredientsList .ing-row');
+    const ings=[];rows.forEach(row=>{const inputs=row.querySelectorAll('input');const n=inputs[0].value.trim(),q=parseFloat(inputs[1].value);if(n&&q>0)ings.push({meal_id:meal.id,name:n,quantity_g:q});});
+    if(ings.length>0)await sbPost('meal_ingredients',ings);
+    await recalculerScores();await chargerRepas();
+    fermerPopup();showToast('Plat enregistré !','success');
+  }catch(e){showToast('Erreur : '+e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Enregistrer';}
 }
 
-function ajouterLigneIngredient() {
-  const list = document.getElementById('ingredientsList'), row = document.createElement('div');
-  row.className = 'ing-row';
-  row.innerHTML = `<input class="form-inp" type="text" placeholder="Nom de l'ingrédient"><input class="form-inp qty" type="number" placeholder="g" min="0">`;
-  list.appendChild(row);
-}
+async function supprimerRepas(id,e){e.stopPropagation();if(!confirm('Supprimer ce repas ?'))return;try{await fetch(SUPABASE_URL+'/rest/v1/meals?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});await recalculerScores();await chargerRepas();showToast('Repas supprimé','success');}catch(e){showToast('Erreur','error');}}
 
-function previewPhoto(input) {
-  const file = input.files[0]; if (!file) return;
-  photoFile = file;
-  const reader = new FileReader();
-  reader.onload = e => { const p = document.getElementById('photoPreview'); p.src = e.target.result; p.classList.add('visible'); };
-  reader.readAsDataURL(file);
-}
-
-async function uploadPhotoCloudinary(file) {
-  const fd = new FormData(); fd.append('file', file); fd.append('upload_preset', CLOUDINARY_PRESET);
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: fd });
-  const data = await res.json();
-  if (!data.secure_url) throw new Error(data.error ? data.error.message : 'Upload échoué');
-  return data.secure_url;
-}
-
-async function enregistrerPlat() {
-  if (!USER_ID) { showToast('Utilisateur non connecté', 'error'); return; }
-  const nom = document.getElementById('inputNom').value.trim();
-  if (!nom) { showToast('Donnez un nom à votre plat !', 'error'); return; }
-  const btn = document.getElementById('btnSave');
-  btn.disabled = true; btn.textContent = 'Enregistrement...';
-  try {
-    let photoUrl = null;
-    if (photoFile) { btn.textContent = 'Upload...'; photoUrl = await uploadPhotoCloudinary(photoFile); }
-    const [meal] = await supabase('meals', { method: 'POST', body: JSON.stringify({ user_id: USER_ID, name: nom, photo_url: photoUrl, meal_date: new Date().toISOString().split('T')[0] }) });
-    const rows = document.querySelectorAll('#ingredientsList .ing-row');
-    const ings = [];
-    rows.forEach(row => { const inputs = row.querySelectorAll('input'); const n = inputs[0].value.trim(), q = parseFloat(inputs[1].value); if (n && q > 0) ings.push({ meal_id: meal.id, name: n, quantity_g: q }); });
-    if (ings.length > 0) await supabase('meal_ingredients', { method: 'POST', body: JSON.stringify(ings) });
-    await recalculerScores(); await chargerRepas();
-    fermerPopup(); showToast('Plat enregistré !', 'success');
-  } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
-  finally { btn.disabled = false; btn.textContent = 'Enregistrer'; }
-}
-
-async function supprimerRepas(id, e) {
-  e.stopPropagation();
-  if (!confirm('Supprimer ce repas ?')) return;
-  try { await supabase('meals?id=eq.' + id, { method: 'DELETE' }); await recalculerScores(); await chargerRepas(); showToast('Repas supprimé', 'success'); }
-  catch(e) { showToast('Erreur', 'error'); }
-}
-
-function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
-function showToast(msg, type) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast ' + (type || '');
-  setTimeout(() => t.classList.add('show'), 10);
-  setTimeout(() => t.classList.remove('show'), 3200);
-}
+// ── HELPERS ──
+async function sbFetch(path){const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});const t=await res.text();if(!res.ok)throw new Error(t);return t?JSON.parse(t):[];}
+async function sbPost(path,body,merge=false){const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':merge?'resolution=merge-duplicates':'return=minimal'},body:JSON.stringify(body)});if(!res.ok)throw new Error(await res.text());}
+async function sbPostReturn(path,body){const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(body)});const t=await res.text();if(!res.ok)throw new Error(t);return JSON.parse(t);}
+function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'');setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3200);}
 </script>
 </body>
 </html>
