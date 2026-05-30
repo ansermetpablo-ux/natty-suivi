@@ -288,6 +288,30 @@ input[type="file"] { display: none; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.ok { background: var(--green); }
 .toast.err { background: var(--red); }
+.rdv-fiche-card { background: var(--bg); border-radius: 18px; padding: 18px; box-shadow: var(--so); }
+.rdv-fiche-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.rdv-fiche-item { display: flex; align-items: center; gap: 12px; background: var(--bg); border-radius: 14px; padding: 12px 14px; box-shadow: var(--si); }
+.rdv-fiche-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--black); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.rdv-fiche-info { flex: 1; }
+.rdv-fiche-type { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.rdv-fiche-detail { font-size: 11px; color: var(--muted); }
+.rdv-fiche-badge { font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 99px; flex-shrink: 0; }
+.rfb-programme { background: var(--gl); color: var(--green); }
+.rfb-attente { background: var(--al); color: var(--amber); }
+.rfb-demande { background: var(--rl); color: var(--red); }
+.rdv-prog-form { background: var(--bg); border-radius: 14px; padding: 14px; box-shadow: var(--si); display: none; margin-top: 4px; }
+.rdv-prog-form.open { display: block; }
+.rdv-prog-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.rdv-prog-inp { flex: 1; min-width: 100px; background: var(--bg); border: none; border-radius: 10px; padding: 10px 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); outline: none; box-shadow: var(--si); }
+.rdv-prog-inp::placeholder { color: #ccc; }
+.rdv-prog-select { flex: 1; min-width: 100px; background: var(--bg); border: none; border-radius: 10px; padding: 10px 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); outline: none; box-shadow: var(--si); appearance: none; cursor: pointer; }
+.btn-prog-rdv { width: 100%; padding: 12px; background: var(--black); color: white; border: none; border-radius: 11px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-prog-rdv:disabled { opacity: 0.5; }
+.btn-open-prog { background: var(--black); color: white; border: none; border-radius: 10px; padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+.rdv-notif-new { background: var(--rl); border-radius: 14px; padding: 12px 16px; margin-bottom: 14px; display: none; }
+.rdv-notif-new.visible { display: flex; align-items: center; gap: 10px; }
+.rdv-notif-new-text { flex: 1; font-size: 13px; color: var(--red); font-weight: 500; }
+
 </style>
 </head>
 <body>
@@ -697,6 +721,14 @@ function appliquerFiltres() {
 async function chargerRdvAdmin() {
   try {
     allRdv = await sb('rdv?order=date_rdv.asc&select=*');
+    // Notifs nouveaux abonnés (2 RDV à programmer)
+    const demandesClient = allRdv.filter(r => r.statut==='demande_client');
+    if (demandesClient.length > 0) {
+      const badge = document.getElementById('navRdvBadge');
+      badge.textContent = (parseInt(badge.textContent)||0) + demandesClient.length;
+      badge.classList.add('visible');
+    }
+
     const recaps = allRdv.filter(r => r.statut==='recap_demande');
     const banner = document.getElementById('rdvNotifBanner');
     const badge = document.getElementById('navRdvBadge');
@@ -947,6 +979,7 @@ async function ouvrirFiche(id) {
   document.getElementById('ficheView').classList.add('visible');
   document.getElementById('ficheTitle').textContent = 'Client '+(currentClient.user_id||'').substring(0,8);
   switchFichePanel('fiche'); afficherFiche(currentClient);
+  setTimeout(() => chargerFicheRdv(currentClient.user_id), 100);
   try {
     const unread = await sb('messages?user_id=eq.'+currentClient.user_id+'&expediteur=eq.client&lu=eq.false&select=id');
     const badge = document.getElementById('ficheChatBadge');
@@ -998,6 +1031,20 @@ function afficherFiche(c) {
     +'<div class="data-cell"><div class="dc-lbl">Activité</div><div class="dc-val">'+(actL[c.activite]||c.activite||'–')+'</div></div></div></div>'
     +'<div class="sec-card"><div class="sec-label">Journal alimentaire</div><div id="repasSection"><div class="loading">Chargement...</div></div></div>'
     +'<div class="sec-card" id="scoresSection" style="display:none;"><div class="sec-label">Scores nutritionnels</div><div id="scoresContent"></div></div>'
+    +'<div class="sec-card rdv-fiche-card"><div class="sec-label">📅 Rendez-vous programmés</div><div class="rdv-fiche-list" id="fichRdvList"><div class="loading">Chargement...</div></div>'
+    +'<div class="rdv-prog-form" id="rdvProgForm">'
+    +'<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;">Programmer un rendez-vous</div>'
+    +'<div class="rdv-prog-row">'
+    +'<select class="rdv-prog-select" id="rdvProgType"><option value="onboarding">🎯 Bilan onboarding</option><option value="suivi">📊 RDV de suivi</option><option value="consultation">💬 Consultation</option></select>'
+    +'</div>'
+    +'<div class="rdv-prog-row">'
+    +'<input class="rdv-prog-inp" type="date" id="rdvProgDate">'
+    +'<select class="rdv-prog-select" id="rdvProgHeure"><option>08:00</option><option>09:00</option><option>10:00</option><option>11:00</option><option>14:00</option><option>15:00</option><option>16:00</option><option>17:00</option><option>18:00</option></select>'
+    +'</div>'
+    +'<button class="btn-prog-rdv" id="btnProgRdv">Envoyer au client →</button>'
+    +'</div>'
+    +'<button class="btn-open-prog" id="btnOpenProgRdv" style="width:100%;margin-top:10px;background:var(--bg);color:var(--text);box-shadow:var(--sm);">+ Programmer un RDV</button>'
+    +'</div>'
     +'<div class="sec-card"><div class="sec-label">⚡ Action de la semaine</div><input class="action-inp" type="text" id="actionInp" placeholder="Ex: Ajoutez des protéines au petit-déjeuner"><button class="btn-save-notes" id="btnSaveNotes">Enregistrer</button></div>'
     +'<div class="sec-card"><div class="sec-label">📝 Notes privées</div><textarea class="notes-area" id="notesArea" placeholder="Vos observations..."></textarea></div>';
   document.querySelector('.btn-send-recap-fiche')?.addEventListener('click', function() {
@@ -1034,6 +1081,92 @@ function afficherRepasEtScores(meals, scores) {
     document.getElementById('scoresSection').style.display='block';
     document.getElementById('scoresContent').innerHTML = [['Variété',v],['Qualité',q],['Pertinence',r]].map(([n,val])=>'<div class="jauge-block"><div class="jauge-head"><span class="jauge-name">'+n+'</span><span class="jauge-badge '+cls(val)+'">'+val+'%</span></div><div class="jauge-track"><div class="jauge-fill" style="width:'+val+'%;background:'+sc(val)+';"></div></div></div>').join('');
   }
+}
+
+// ── RDV FICHE ──
+async function chargerFicheRdv(userId) {
+  const el = document.getElementById('fichRdvList');
+  if (!el) return;
+  try {
+    const rdvs = await sb('rdv?user_id=eq.'+userId+'&order=date_rdv.asc&select=*');
+    const now = new Date();
+    const moisL = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    const typeL = {onboarding:'🎯 Bilan onboarding', suivi:'📊 RDV de suivi', consultation:'💬 Consultation', demande_client:'💬 Demande client'};
+
+    // Toujours afficher les 2 RDV de base
+    const types = rdvs.map(r=>r.type_rdv);
+    let html = '';
+
+    ['onboarding','suivi'].forEach(t => {
+      const rdv = rdvs.find(r=>r.type_rdv===t && r.statut==='confirme');
+      if (rdv) {
+        const d = new Date(rdv.date_rdv);
+        const isPast = d < now;
+        html += '<div class="rdv-fiche-item">'
+          +'<div class="rdv-fiche-icon">'+(t==='onboarding'?'🎯':'📊')+'</div>'
+          +'<div class="rdv-fiche-info"><div class="rdv-fiche-type">'+(t==='onboarding'?'Bilan onboarding':'RDV de suivi')+'</div>'
+          +'<div class="rdv-fiche-detail">'+d.getDate()+' '+moisL[d.getMonth()]+' · '+(rdv.heure||'')+'</div></div>'
+          +'<span class="rdv-fiche-badge '+(isPast?'rfb-attente':'rfb-programme')+'">'+(isPast?'Passé':'Confirmé')+'</span>'
+          +'</div>';
+      } else {
+        html += '<div class="rdv-fiche-item">'
+          +'<div class="rdv-fiche-icon" style="background:rgba(26,26,46,0.15);">'+(t==='onboarding'?'🎯':'📊')+'</div>'
+          +'<div class="rdv-fiche-info"><div class="rdv-fiche-type">'+(t==='onboarding'?'Bilan onboarding':'RDV de suivi')+'</div>'
+          +'<div class="rdv-fiche-detail">À programmer</div></div>'
+          +'<span class="rdv-fiche-badge rfb-attente">À programmer</span>'
+          +'</div>';
+      }
+    });
+
+    // Autres RDV
+    rdvs.filter(r=>r.type_rdv!=='onboarding'&&r.type_rdv!=='suivi').forEach(r => {
+      const d = new Date(r.date_rdv);
+      const isClient = r.statut==='demande_client';
+      html += '<div class="rdv-fiche-item">'
+        +'<div class="rdv-fiche-icon" style="'+(isClient?'background:#fde8e8;':'')+'">💬</div>'
+        +'<div class="rdv-fiche-info"><div class="rdv-fiche-type">'+(isClient?'Demande client':'Consultation')+'</div>'
+        +'<div class="rdv-fiche-detail">'+(r.statut==='confirme'?d.getDate()+' '+moisL[d.getMonth()]+' · '+(r.heure||''):'En attente de confirmation')+'</div></div>'
+        +'<span class="rdv-fiche-badge '+(isClient?'rfb-demande':r.statut==='confirme'?'rfb-programme':'rfb-attente')+'">'+(isClient?'Demande':'Confirmé')+'</span>'
+        +'</div>';
+    });
+
+    el.innerHTML = html || '<div style="font-size:13px;color:var(--muted);padding:4px 0;">Aucun RDV programmé</div>';
+
+    // Listeners form
+    document.getElementById('btnOpenProgRdv')?.addEventListener('click', () => {
+      const form = document.getElementById('rdvProgForm');
+      form.classList.toggle('open');
+      document.getElementById('btnOpenProgRdv').textContent = form.classList.contains('open') ? '✕ Annuler' : '+ Programmer un RDV';
+    });
+    document.getElementById('btnProgRdv')?.addEventListener('click', () => programmerRdv(userId));
+
+  } catch(e) { el.innerHTML = '<div style="font-size:13px;color:var(--muted);">Erreur</div>'; }
+}
+
+async function programmerRdv(userId) {
+  const date = document.getElementById('rdvProgDate').value;
+  const heure = document.getElementById('rdvProgHeure').value;
+  const type = document.getElementById('rdvProgType').value;
+  if (!date) { toast('Choisissez une date','err'); return; }
+  const btn = document.getElementById('btnProgRdv');
+  btn.disabled=true; btn.textContent='Envoi...';
+  const nutriNom = currentNutri?.nom || null;
+  try {
+    await sb('rdv', {method:'POST', body: JSON.stringify({
+      user_id: userId,
+      type_rdv: type,
+      statut: 'confirme',
+      date_rdv: date+'T'+heure+':00',
+      heure: heure,
+      nutritionniste_nom: nutriNom,
+      created_at: new Date().toISOString()
+    })});
+    toast('RDV envoyé au client ✓','ok');
+    document.getElementById('rdvProgForm').classList.remove('open');
+    document.getElementById('btnOpenProgRdv').textContent='+ Programmer un RDV';
+    await chargerFicheRdv(userId);
+  } catch(e) { toast('Erreur : '+e.message,'err'); }
+  btn.disabled=false; btn.textContent='Envoyer au client →';
 }
 
 async function sauvegarderNotes() {
