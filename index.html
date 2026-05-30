@@ -339,6 +339,15 @@ const params = new URLSearchParams(window.location.search);
 token = params.get('token') || '';
 const userIdParam = params.get('userId');
 
+// Macros passées directement dans l'URL (depuis Wix)
+const urlObjectif  = params.get('objectif')  || '';
+const urlCalories  = params.get('calories')  || '';
+const urlBmr       = params.get('bmr')       || '';
+const urlProteines = params.get('proteines') || '';
+const urlGlucides  = params.get('glucides')  || '';
+const urlLipides   = params.get('lipides')   || '';
+const urlTdee      = params.get('tdee')      || '';
+
 function resolveUserId() {
   if (userIdParam && userIdParam !== 'null' && userIdParam !== 'PLACEHOLDER') return userIdParam;
   if (token && token.length > 10) {
@@ -595,16 +604,29 @@ async function demanderRDV() {
 
 // ── MACROS ──
 async function chargerMacrosSupabase() {
+  // Priorité 1 : paramètres URL (passés par Wix depuis l'onboarding)
+  var prot = parseInt(urlProteines) || 0;
+  var lip  = parseInt(urlLipides)  || 0;
+  var cal  = parseInt(urlCalories) || 0;
+  var gluc = parseInt(urlGlucides) || 0;
+
+  if (prot || lip || cal) {
+    if (prot) { setText('valProt', prot); setText('goalProt', 'Objectif ' + prot + ' g'); document.getElementById('barProt').style.width = '75%'; }
+    if (lip)  { setText('valLip', lip);   setText('goalLip', 'Objectif ' + lip + ' g');   document.getElementById('barLip').style.width = '60%'; }
+    if (cal)  { setText('valCal', cal);   setText('goalCal', 'Objectif ' + cal + ' kcal'); document.getElementById('barCal').style.width = '70%'; }
+    return;
+  }
+  // Priorité 2 : Supabase
   try {
     var rows = await sbFetch('onboarding?user_id=eq.' + USER_ID + '&completed=eq.true&select=poids,tdee,bmr&limit=1');
     if (!rows || !rows.length) return;
     var p = rows[0], tdee = parseFloat(p.tdee) || 0, poids = parseFloat(p.poids) || 0;
-    var prot = poids ? Math.round(poids * 2) : null;
-    var lip = tdee ? Math.round(tdee * 0.25 / 9) : null;
-    var cal = tdee ? Math.round(tdee) : null;
-    if (prot) { setText('valProt', prot); setText('goalProt', 'Objectif ' + prot + ' g'); }
-    if (lip)  { setText('valLip', lip);   setText('goalLip', 'Objectif ' + lip + ' g'); }
-    if (cal)  { setText('valCal', cal);   setText('goalCal', 'Objectif ' + cal + ' kcal'); }
+    var prot2 = poids ? Math.round(poids * 2) : null;
+    var lip2  = tdee  ? Math.round(tdee * 0.25 / 9) : null;
+    var cal2  = tdee  ? Math.round(tdee) : null;
+    if (prot2) { setText('valProt', prot2); setText('goalProt', 'Objectif ' + prot2 + ' g'); }
+    if (lip2)  { setText('valLip', lip2);   setText('goalLip', 'Objectif ' + lip2 + ' g'); }
+    if (cal2)  { setText('valCal', cal2);   setText('goalCal', 'Objectif ' + cal2 + ' kcal'); }
     if (document.getElementById('barProt')) document.getElementById('barProt').style.width = '75%';
     if (document.getElementById('barLip'))  document.getElementById('barLip').style.width = '60%';
     if (document.getElementById('barCal'))  document.getElementById('barCal').style.width = '70%';
@@ -738,13 +760,13 @@ function fermerPopup() { document.getElementById('popupOverlay').classList.remov
 function resetPopup() {
   document.getElementById('inputNom').value = '';
   document.getElementById('photoPreview').classList.remove('visible');
-  document.getElementById('ingredientsList').innerHTML = '<div class="ing-row"><input class="form-inp" type="text" placeholder="Nom de l'ingredient"><input class="form-inp qty" type="number" placeholder="g" min="0"></div>';
+  document.getElementById('ingredientsList').innerHTML = '<div class="ing-row"><input class="form-inp" type="text" placeholder="Ingredient"><input class="form-inp qty" type="number" placeholder="g" min="0"></div>';
   photoFile = null;
 }
 function ajouterLigneIngredient() {
   var list = document.getElementById('ingredientsList');
   var row = document.createElement('div'); row.className = 'ing-row';
-  row.innerHTML = '<input class="form-inp" type="text" placeholder="Nom de l'ingredient"><input class="form-inp qty" type="number" placeholder="g" min="0">';
+  row.innerHTML = '<input class="form-inp" type="text" placeholder="Ingredient"><input class="form-inp qty" type="number" placeholder="g" min="0">';
   list.appendChild(row);
 }
 function previewPhoto(input) {
