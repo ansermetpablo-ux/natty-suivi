@@ -7,15 +7,13 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f2f2f7; min-height: 100vh; color: #1c1c1e; }
-
 .header { background: #fff; padding: 20px 20px 16px; display: flex; align-items: flex-start; justify-content: space-between; }
 .header-title { font-size: 28px; font-weight: 700; color: #1c1c1e; letter-spacing: -0.5px; }
-.header-sub   { font-size: 13px; color: #8e8e93; margin-top: 2px; }
-.header-avatar { width: 40px; height: 40px; border-radius: 50%; background: #e5e5ea; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-
+.header-sub { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+.header-avatar { width: 40px; height: 40px; border-radius: 50%; background: #e5e5ea; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .page { padding: 14px 14px 120px; display: flex; flex-direction: column; gap: 12px; }
 
-/* BANDEAU ABONNEMENT */
+/* BANDEAU */
 .bandeau-abonnement { background: #1a1a2e; border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 16px rgba(26,26,46,0.25); }
 .bandeau-left { display: flex; align-items: center; gap: 10px; }
 .bandeau-icon { font-size: 22px; }
@@ -23,9 +21,8 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .bandeau-sub { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 2px; }
 .bandeau-btn { background: #fff; color: #1a1a2e; border: none; border-radius: 10px; padding: 8px 14px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 
-/* NUTRI CHAT CARD */
-.nutri-chat-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); overflow: hidden; cursor: pointer; transition: transform 0.15s; }
-.nutri-chat-card:active { transform: scale(0.99); }
+/* NUTRI CHAT */
+.nutri-chat-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); overflow: hidden; cursor: pointer; }
 .nutri-chat-header { padding: 14px 16px 10px; display: flex; align-items: center; justify-content: space-between; }
 .nutri-chat-left { display: flex; align-items: center; gap: 10px; }
 .nutri-avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #1a1a2e, #2d2d4e); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; position: relative; }
@@ -34,26 +31,26 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .nutri-chat-role { font-size: 11px; color: #8e8e93; margin-top: 1px; }
 .unread-badge { background: #1a1a2e; color: #fff; border-radius: 99px; font-size: 11px; font-weight: 600; padding: 3px 9px; display: none; }
 .unread-badge.visible { display: block; }
-.nutri-last-msg { padding: 0 16px 14px; font-size: 13px; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
+.nutri-last-msg { padding: 0 16px 14px; font-size: 13px; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nutri-last-msg.unread { color: #1c1c1e; font-weight: 500; }
 
-/* SCORE CARD */
+/* SCORE */
 .score-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); padding: 20px 18px; display: flex; align-items: center; gap: 14px; }
 .ring-wrap { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
 .ring-wrap svg { position: absolute; inset: 0; transform: rotate(-90deg); }
 .ring-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ring-pct { font-size: 38px; font-weight: 700; color: #1c1c1e; letter-spacing: -2px; line-height: 1; display: flex; align-items: baseline; }
 .ring-pct-sym { font-size: 22px; font-weight: 600; letter-spacing: 0; }
-.ring-lbl  { font-size: 11px; color: #8e8e93; margin-top: 4px; text-align: center; }
+.ring-lbl { font-size: 11px; color: #8e8e93; margin-top: 4px; text-align: center; }
 .ring-badge { margin-top: 7px; padding: 4px 14px; border-radius: 99px; font-size: 12px; font-weight: 500; background: #e8f5ee; color: #34a853; }
 .macro-col { display: flex; flex-direction: row; gap: 8px; flex: 1; }
 .mc { flex: 1; background: #fff; border-radius: 14px; border: 1px solid #f0f0f0; padding: 10px 6px 9px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.mc-ico  { font-size: 26px; margin-bottom: 6px; }
-.mc-name { font-size: 10px; color: #8e8e93; font-weight: 400; margin-bottom: 4px; letter-spacing: 0.1px; }
-.mc-val  { font-size: 22px; font-weight: 700; color: #1c1c1e; line-height: 1; display: flex; align-items: baseline; gap: 1px; }
+.mc-ico { font-size: 26px; margin-bottom: 6px; }
+.mc-name { font-size: 10px; color: #8e8e93; font-weight: 400; margin-bottom: 4px; }
+.mc-val { font-size: 22px; font-weight: 700; color: #1c1c1e; line-height: 1; display: flex; align-items: baseline; gap: 1px; }
 .mc-val-unit { font-size: 12px; font-weight: 400; color: #8e8e93; }
 .mc-goal { font-size: 10px; color: #aeaeb2; margin-top: 3px; }
-.mc-bar  { width: 100%; height: 3px; background: #f0f0f0; border-radius: 2px; overflow: hidden; margin-top: 6px; }
+.mc-bar { width: 100%; height: 3px; background: #f0f0f0; border-radius: 2px; overflow: hidden; margin-top: 6px; }
 .mc-fill { height: 100%; border-radius: 2px; }
 
 /* POINTS */
@@ -69,24 +66,24 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .pt-ico-g { background: #e8f5ee; }
 .pt-ico-o { background: #fff3e8; }
 .pt-txt { flex: 1; min-width: 0; }
-.pt-name  { font-size: 11px; font-weight: 500; color: #1c1c1e; margin-bottom: 1px; }
+.pt-name { font-size: 11px; font-weight: 500; color: #1c1c1e; margin-bottom: 1px; }
 .pt-badge { font-size: 10px; font-weight: 400; }
-.pt-bg  { color: #34a853; }
-.pt-bo  { color: #ff6b00; }
+.pt-bg { color: #34a853; }
+.pt-bo { color: #ff6b00; }
 .pt-arr { font-size: 14px; color: #c7c7cc; flex-shrink: 0; }
 
-/* ── MODULE RDV NOIR ── */
+/* MODULE RDV NOIR */
 .rdv-module { background: #1a1a2e; border-radius: 22px; overflow: hidden; }
 .rdv-module-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 12px; }
 .rdv-module-title { font-size: 15px; font-weight: 600; color: #fff; }
-.rdv-add-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.12); border: none; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; }
-.rdv-add-btn:active { background: rgba(255,255,255,0.22); }
+.rdv-add-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.12); border: none; color: #fff; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; }
 .rdv-slots-list { display: flex; flex-direction: column; gap: 0; padding: 0 14px 14px; }
 .rdv-slot { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: rgba(255,255,255,0.06); border-radius: 14px; margin-bottom: 8px; }
 .rdv-slot:last-child { margin-bottom: 0; }
 .rdv-slot-date { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 42px; height: 46px; background: rgba(255,255,255,0.1); border-radius: 10px; flex-shrink: 0; }
 .rdv-slot-day { font-size: 18px; font-weight: 700; color: #fff; line-height: 1; }
 .rdv-slot-month { font-size: 9px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+.rdv-slot-icon { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
 .rdv-slot-info { flex: 1; min-width: 0; }
 .rdv-slot-type { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 2px; }
 .rdv-slot-detail { font-size: 11px; color: rgba(255,255,255,0.5); }
@@ -94,15 +91,14 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .rdv-slot-badge.a-programmer { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); }
 .rdv-slot-badge.confirme { background: #e8f5ee; color: #34a853; }
 .rdv-slot-badge.passe { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.35); }
-.rdv-slot-icon { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-.rdv-request-row { margin: 0 14px 14px; padding: 12px 14px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.15); display: flex; align-items: center; gap: 10px; }
+.rdv-request-row { margin: 0 0 8px; padding: 12px 14px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.15); display: flex; align-items: center; gap: 10px; }
 .rdv-request-text { font-size: 12px; color: rgba(255,255,255,0.5); flex: 1; }
 .rdv-request-badge { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: rgba(255,165,0,0.2); color: #ffb347; }
 
-/* ── CALENDRIER SEMAINE SOBRE ── */
+/* CALENDRIER SEMAINE */
 .week-cal { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); overflow: hidden; }
-.week-cal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 1px solid #f2f2f7; }
-.week-cal-title { font-size: 14px; font-weight: 600; color: #1c1c1e; }
+.week-cal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 12px; border-bottom: 1px solid #f2f2f7; }
+.week-cal-title { font-size: 13px; font-weight: 600; color: #1c1c1e; }
 .week-nav-btn { width: 28px; height: 28px; border-radius: 50%; background: #f2f2f7; border: none; cursor: pointer; font-size: 14px; color: #1c1c1e; display: flex; align-items: center; justify-content: center; }
 .week-days-row { display: grid; grid-template-columns: repeat(7, 1fr); }
 .week-day-col { display: flex; flex-direction: column; border-right: 1px solid #f2f2f7; }
@@ -110,22 +106,65 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .week-day-header { text-align: center; padding: 10px 4px 8px; border-bottom: 1px solid #f2f2f7; }
 .week-day-name { font-size: 9px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; }
 .week-day-num { font-size: 16px; font-weight: 700; color: #1c1c1e; margin-top: 3px; line-height: 1; }
-.week-day-col.today .week-day-num { background: #1a1a2e; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 3px auto 0; font-size: 13px; }
-.week-day-events { min-height: 80px; padding: 6px 4px; display: flex; flex-direction: column; gap: 4px; }
-.week-event { background: #1a1a2e; color: #fff; border-radius: 6px; padding: 4px 6px; font-size: 10px; font-weight: 500; line-height: 1.3; cursor: pointer; }
-.week-event .ev-time { font-size: 9px; opacity: 0.6; display: block; margin-bottom: 1px; }
+.week-day-col.today .week-day-num-wrap { background: #1a1a2e; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 3px auto 0; font-size: 13px; font-weight: 700; }
+.week-day-events { min-height: 72px; padding: 5px 4px; display: flex; flex-direction: column; gap: 3px; }
+.week-event { background: #1a1a2e; color: #fff; border-radius: 5px; padding: 4px 5px; font-size: 9px; font-weight: 500; line-height: 1.3; cursor: default; }
+.week-event .ev-time { font-size: 8px; opacity: 0.55; display: block; margin-bottom: 1px; }
 .week-event .ev-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.week-event.type-onboarding { background: #1a1a2e; }
-.week-event.type-suivi { background: #2d5a3d; }
-.week-event.type-client { background: #5a2d2d; }
+.week-event.type-suivi { background: #1e4d2b; }
+.week-event.type-client { background: #4d1e1e; }
 
-/* BOUTON CHAT FLOTTANT */
-.chat-fab { position: fixed; bottom: 28px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: #1a1a2e; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 20px rgba(26,26,46,0.5); z-index: 500; transition: transform 0.2s; }
-.chat-fab:active { transform: scale(0.92); }
+/* HISTORIQUE */
+.hist-header { display: flex; align-items: center; justify-content: space-between; }
+.hist-title { font-size: 15px; font-weight: 600; color: #1c1c1e; }
+.hist-link { font-size: 13px; color: #34a853; font-weight: 400; cursor: pointer; }
+.hist-card { background: #fff; border-radius: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); overflow: hidden; }
+.meal-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 0.5px solid #f2f2f7; }
+.meal-item:last-child { border-bottom: none; }
+.meal-photo { width: 56px; height: 56px; border-radius: 14px; background: #f2f2f7; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+.meal-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+.meal-info { flex: 1; min-width: 0; }
+.meal-name { font-size: 14px; font-weight: 600; color: #1c1c1e; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meal-ings { font-size: 11px; color: #8e8e93; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meal-tag { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 9px; border-radius: 99px; background: #e8f5ee; color: #34a853; }
+.meal-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.meal-date { font-size: 10px; color: #aeaeb2; }
+.meal-score { position: relative; width: 40px; height: 40px; }
+.meal-score svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.meal-score-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #1c1c1e; }
+.meal-dots { font-size: 16px; color: #c7c7cc; letter-spacing: 1.5px; cursor: pointer; }
+.btn-add { width: 100%; padding: 17px; background: #fff; border: none; border-radius: 16px; color: #1c1c1e; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 14px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* POPUP */
+.popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); z-index: 1000; align-items: flex-end; justify-content: center; }
+.popup-overlay.active { display: flex; }
+.popup { background: #fff; border-radius: 24px 24px 0 0; padding: 0 20px 44px; width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.32,0.72,0,1); }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.popup-handle { width: 36px; height: 5px; background: #e5e5ea; border-radius: 3px; margin: 14px auto 20px; }
+.popup-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.popup-head h3 { font-size: 18px; font-weight: 700; }
+.popup-close { width: 30px; height: 30px; border-radius: 50%; background: #f2f2f7; border: none; cursor: pointer; font-size: 13px; color: #8e8e93; display: flex; align-items: center; justify-content: center; }
+.form-lbl { font-size: 11px; color: #8e8e93; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; display: block; font-weight: 500; }
+.form-inp { width: 100%; background: #f2f2f7; border: none; border-radius: 12px; padding: 13px 14px; color: #1c1c1e; font-size: 15px; font-family: 'Inter', sans-serif; margin-bottom: 18px; outline: none; }
+.form-inp::placeholder { color: #c7c7cc; }
+.photo-btns { display: flex; gap: 10px; margin-bottom: 18px; }
+.photo-btn { flex: 1; padding: 14px; background: #f2f2f7; border: none; border-radius: 14px; color: #8e8e93; font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif; text-align: center; }
+.photo-btn .pico { font-size: 24px; display: block; margin-bottom: 6px; }
+.photo-preview { width: 100%; height: 150px; border-radius: 14px; object-fit: cover; margin-bottom: 18px; display: none; }
+.photo-preview.visible { display: block; }
+.ing-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.ing-row .form-inp { margin-bottom: 0; flex: 1; }
+.ing-row .qty { width: 80px; flex: none; }
+.btn-add-ing { width: 100%; padding: 13px; background: #f2f2f7; border: none; border-radius: 12px; color: #8e8e93; font-size: 14px; cursor: pointer; font-family: 'Inter', sans-serif; margin-bottom: 20px; }
+.btn-save { width: 100%; padding: 16px; background: #34a853; border: none; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; }
+.btn-save:disabled { background: #aeaeb2; }
+
+/* FAB CHAT */
+.chat-fab { position: fixed; bottom: 28px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: #1a1a2e; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 20px rgba(26,26,46,0.5); z-index: 500; }
 .chat-fab-badge { position: absolute; top: -3px; right: -3px; width: 20px; height: 20px; border-radius: 50%; background: #ff3b30; border: 2.5px solid #f2f2f7; display: none; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: white; }
 .chat-fab-badge.visible { display: flex; }
 
-.onboarding-cta { background: #fff; border-radius: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06); overflow: hidden; margin-top: 8px; }
+.onboarding-cta { background: #fff; border-radius: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06); overflow: hidden; }
 .onboarding-hero { background: linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 100%); padding: 32px 24px 28px; text-align: center; }
 .onboarding-emoji { font-size: 48px; display: block; margin-bottom: 14px; }
 .onboarding-title { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px; margin-bottom: 8px; }
@@ -133,17 +172,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .onboarding-features { padding: 20px 20px 4px; display: flex; flex-direction: column; gap: 10px; }
 .onboarding-feat { display: flex; align-items: center; gap: 12px; background: #f9f9fb; border-radius: 14px; padding: 12px 14px; }
 .onboarding-feat-ico { font-size: 22px; flex-shrink: 0; }
-.onboarding-feat-txt { font-size: 13px; font-weight: 500; color: #1c1c1e; line-height: 1.4; }
+.onboarding-feat-txt { font-size: 13px; font-weight: 500; color: #1c1c1e; }
 .onboarding-feat-sub { font-size: 11px; color: #8e8e93; margin-top: 1px; }
 .onboarding-btn-wrap { padding: 16px 20px 24px; }
-.onboarding-btn { width: 100%; padding: 17px; background: #1a1a2e; border: none; border-radius: 16px; color: #fff; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 16px rgba(26,26,46,0.3); }
+.onboarding-btn { width: 100%; padding: 17px; background: #1a1a2e; border: none; border-radius: 16px; color: #fff; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; }
 
 .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1c1c1e; color: #fff; padding: 12px 24px; border-radius: 20px; font-size: 14px; font-family: 'Inter', sans-serif; z-index: 2000; transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); pointer-events: none; white-space: nowrap; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.success { background: #34a853; }
-.toast.error   { background: #ff3b30; }
+.toast.error { background: #ff3b30; }
 .loading { text-align: center; color: #c7c7cc; font-size: 13px; padding: 24px 0; }
-.empty   { text-align: center; color: #c7c7cc; font-size: 13px; padding: 32px 0; line-height: 1.8; }
 input[type="file"] { display: none; }
 </style>
 </head>
@@ -159,20 +197,18 @@ input[type="file"] { display: none; }
 
 <div class="page">
 
-  <!-- BANDEAU ABONNEMENT -->
   <div class="bandeau-abonnement" id="bandeauAbonnement" style="display:none;">
     <div class="bandeau-left">
       <div class="bandeau-icon">🧑‍⚕️</div>
       <div>
         <div class="bandeau-title">Nutritionniste inclus</div>
-        <div class="bandeau-sub">Repas livrés + suivi personnalisé · 9€ le plat</div>
+        <div class="bandeau-sub">Repas livrés + suivi personnalisé</div>
       </div>
     </div>
     <button class="bandeau-btn" id="bandeauBtn">Voir les offres →</button>
   </div>
 
-  <!-- CHAT NUTRITIONNISTE (abonné seulement) -->
-  <div class="nutri-chat-card" id="nutriChatCard" style="display:none;" onclick="ouvrirChat()">
+  <div class="nutri-chat-card" id="nutriChatCard" style="display:none;" id="nutriChatCardInner">
     <div class="nutri-chat-header">
       <div class="nutri-chat-left">
         <div class="nutri-avatar">🧑‍⚕️<div class="nutri-online-dot"></div></div>
@@ -191,7 +227,7 @@ input[type="file"] { display: none; }
     <div class="ring-wrap">
       <svg viewBox="0 0 140 140" width="140" height="140">
         <circle cx="70" cy="70" r="58" fill="none" stroke="#f0f0f0" stroke-width="10"/>
-        <circle cx="70" cy="70" r="58" fill="none" stroke="#34a853" stroke-width="10" stroke-linecap="round" id="ringScore" stroke-dasharray="0 364" style="transition:stroke-dasharray 1.4s ease,stroke 0.5s;"/>
+        <circle cx="70" cy="70" r="58" fill="none" stroke="#34a853" stroke-width="10" stroke-linecap="round" id="ringScore" stroke-dasharray="0 364" style="transition:stroke-dasharray 1.4s ease;"/>
       </svg>
       <div class="ring-inner">
         <div class="ring-pct"><span id="scoreNum">–</span><span class="ring-pct-sym">%</span></div>
@@ -200,9 +236,9 @@ input[type="file"] { display: none; }
       </div>
     </div>
     <div class="macro-col">
-      <div class="mc"><div class="mc-ico">🥩</div><div class="mc-name">Protéines</div><div class="mc-val"><span id="valProt">–</span><span class="mc-val-unit">g</span></div><div class="mc-goal" id="goalProt">Objectif – g</div><div class="mc-bar"><div class="mc-fill" id="barProt" style="width:0%;background:#ff3b30;"></div></div></div>
-      <div class="mc"><div class="mc-ico">🥑</div><div class="mc-name">Lipides</div><div class="mc-val"><span id="valLip">–</span><span class="mc-val-unit">g</span></div><div class="mc-goal" id="goalLip">Objectif – g</div><div class="mc-bar"><div class="mc-fill" id="barLip" style="width:0%;background:#7b5ea7;"></div></div></div>
-      <div class="mc"><div class="mc-ico">⚡</div><div class="mc-name">Énergie</div><div class="mc-val"><span id="valCal">–</span></div><div class="mc-goal" id="goalCal">Objectif – kcal</div><div class="mc-bar"><div class="mc-fill" id="barCal" style="width:0%;background:#ff9500;"></div></div></div>
+      <div class="mc"><div class="mc-ico">🥩</div><div class="mc-name">Protéines</div><div class="mc-val"><span id="valProt">–</span><span class="mc-val-unit">g</span></div><div class="mc-goal" id="goalProt">– g</div><div class="mc-bar"><div class="mc-fill" id="barProt" style="width:0%;background:#ff3b30;"></div></div></div>
+      <div class="mc"><div class="mc-ico">🥑</div><div class="mc-name">Lipides</div><div class="mc-val"><span id="valLip">–</span><span class="mc-val-unit">g</span></div><div class="mc-goal" id="goalLip">– g</div><div class="mc-bar"><div class="mc-fill" id="barLip" style="width:0%;background:#7b5ea7;"></div></div></div>
+      <div class="mc"><div class="mc-ico">⚡</div><div class="mc-name">Énergie</div><div class="mc-val"><span id="valCal">–</span></div><div class="mc-goal" id="goalCal">– kcal</div><div class="mc-bar"><div class="mc-fill" id="barCal" style="width:0%;background:#ff9500;"></div></div></div>
     </div>
   </div>
 
@@ -218,31 +254,7 @@ input[type="file"] { display: none; }
     </div>
   </div>
 
-  <!-- ── MODULE RDV ── -->
-  <div class="rdv-module" id="rdvModule">
-    <div class="rdv-module-header">
-      <span class="rdv-module-title">📅 Rendez-vous</span>
-      <button class="rdv-add-btn" id="rdvAddBtn" title="Demander un RDV">+</button>
-    </div>
-    <div class="rdv-slots-list" id="rdvSlotsList">
-      <!-- Rempli par JS -->
-      <div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:13px;">Chargement...</div>
-    </div>
-  </div>
-
-  <!-- ── CALENDRIER SEMAINE ── -->
-  <div class="week-cal" id="weekCal">
-    <div class="week-cal-header">
-      <button class="week-nav-btn" id="weekPrev">‹</button>
-      <div class="week-cal-title" id="weekTitle">–</div>
-      <button class="week-nav-btn" id="weekNext">›</button>
-    </div>
-    <div class="week-days-row" id="weekDaysRow">
-      <!-- Rempli par JS -->
-    </div>
-  </div>
-
-<!-- HISTORIQUE REPAS -->
+  <!-- HISTORIQUE REPAS -->
   <div class="hist-header">
     <span class="hist-title">Historique des repas</span>
     <span class="hist-link">Voir tout ›</span>
@@ -250,33 +262,54 @@ input[type="file"] { display: none; }
   <div class="hist-card">
     <div id="historiqueList"><div class="loading">Chargement...</div></div>
   </div>
-  <button class="btn-add" onclick="ouvrirPopup()">+ Ajouter un repas</button>
+  <button class="btn-add" id="btnAddRepas">+ Ajouter un repas</button>
+
+  <!-- MODULE RDV NOIR -->
+  <div class="rdv-module" id="rdvModule">
+    <div class="rdv-module-header">
+      <span class="rdv-module-title">📅 Rendez-vous</span>
+      <button class="rdv-add-btn" id="rdvAddBtn" title="Demander un RDV">+</button>
+    </div>
+    <div class="rdv-slots-list" id="rdvSlotsList">
+      <div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:13px;">Chargement...</div>
+    </div>
+  </div>
+
+  <!-- CALENDRIER SEMAINE -->
+  <div class="week-cal">
+    <div class="week-cal-header">
+      <button class="week-nav-btn" id="weekPrev">‹</button>
+      <div class="week-cal-title" id="weekTitle">–</div>
+      <button class="week-nav-btn" id="weekNext">›</button>
+    </div>
+    <div class="week-days-row" id="weekDaysRow"></div>
+  </div>
 
 </div>
 
-<!-- BOUTON CHAT FLOTTANT (toujours visible) -->
-<button class="chat-fab" id="chatFab" onclick="ouvrirChat()">
+<!-- FAB CHAT -->
+<button class="chat-fab" id="chatFab">
   💬
   <div class="chat-fab-badge" id="chatFabBadge"></div>
 </button>
 
 <!-- POPUP AJOUT REPAS -->
-<div class="popup-overlay" id="popupOverlay" onclick="fermerPopupOverlay(event)">
+<div class="popup-overlay" id="popupOverlay">
   <div class="popup">
     <div class="popup-handle"></div>
     <div class="popup-head">
       <h3>Ajouter un plat</h3>
-      <button class="popup-close" onclick="fermerPopup()">✕</button>
+      <button class="popup-close" id="popupCloseBtn">✕</button>
     </div>
     <label class="form-lbl">Nom du plat</label>
     <input class="form-inp" id="inputNom" type="text" placeholder="Ex: Poulet rôti aux légumes">
     <label class="form-lbl">Photo du plat</label>
     <div class="photo-btns">
-      <div class="photo-btn" onclick="document.getElementById('inputCamera').click()"><span class="pico">📷</span>Prendre une photo</div>
-      <div class="photo-btn" onclick="document.getElementById('inputGalerie').click()"><span class="pico">🖼️</span>Depuis la galerie</div>
+      <div class="photo-btn" id="btnCamera"><span class="pico">📷</span>Prendre une photo</div>
+      <div class="photo-btn" id="btnGalerie"><span class="pico">🖼️</span>Depuis la galerie</div>
     </div>
-    <input type="file" id="inputCamera" accept="image/*" capture="environment" onchange="previewPhoto(this)">
-    <input type="file" id="inputGalerie" accept="image/*" onchange="previewPhoto(this)">
+    <input type="file" id="inputCamera" accept="image/*" capture="environment">
+    <input type="file" id="inputGalerie" accept="image/*">
     <img class="photo-preview" id="photoPreview" alt="Aperçu">
     <label class="form-lbl">Ingrédients</label>
     <div id="ingredientsList">
@@ -285,8 +318,8 @@ input[type="file"] { display: none; }
         <input class="form-inp qty" type="number" placeholder="g" min="0">
       </div>
     </div>
-    <button class="btn-add-ing" onclick="ajouterLigneIngredient()">+ Ajouter un ingrédient</button>
-    <button class="btn-save" id="btnSave" onclick="enregistrerPlat()">Enregistrer</button>
+    <button class="btn-add-ing" id="btnAddIng">+ Ajouter un ingrédient</button>
+    <button class="btn-save" id="btnSave">Enregistrer</button>
   </div>
 </div>
 
@@ -300,9 +333,7 @@ const CLOUDINARY_PRESET = 'meal_photos';
 
 let USER_ID = null, token = '', photoFile = null;
 let estAbonne = false;
-let calDate = new Date(); calDate.setDate(1);
-let selectedCalDay = null, selectedSlot = null, recapOptOnly = false;
-let availableSlots = {}; // { 'YYYY-MM-DD': ['10:00','11:00',...] }
+let weekOffset = 0;
 
 const params = new URLSearchParams(window.location.search);
 token = params.get('token') || '';
@@ -311,28 +342,47 @@ const userIdParam = params.get('userId');
 function resolveUserId() {
   if (userIdParam && userIdParam !== 'null' && userIdParam !== 'PLACEHOLDER') return userIdParam;
   if (token && token.length > 10) {
-    try { const d = token.match(/.{1,2}/g).map(b=>String.fromCharCode(parseInt(b,16))).join(''); if(d&&d.includes('-'))return d; } catch(e){}
+    try {
+      const d = token.match(/.{1,2}/g).map(b => String.fromCharCode(parseInt(b, 16))).join('');
+      if (d && d.includes('-')) return d;
+    } catch(e) {}
   }
   return null;
 }
 
 USER_ID = resolveUserId();
 
-document.getElementById('bandeauBtn').onclick = () => goToOffre();
-
-window.addEventListener('message', e => { if(e.data?.type==='macroData') afficherMacros(e.data); });
-window.parent.postMessage('htmlReady','*');
+// DOM events
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('bandeauBtn').addEventListener('click', goToOffre);
+  document.getElementById('nutriChatCard').addEventListener('click', ouvrirChat);
+  document.getElementById('chatFab').addEventListener('click', ouvrirChat);
+  document.getElementById('btnAddRepas').addEventListener('click', ouvrirPopup);
+  document.getElementById('popupCloseBtn').addEventListener('click', fermerPopup);
+  document.getElementById('popupOverlay').addEventListener('click', function(e) { if(e.target===this) fermerPopup(); });
+  document.getElementById('btnAddIng').addEventListener('click', ajouterLigneIngredient);
+  document.getElementById('btnSave').addEventListener('click', enregistrerPlat);
+  document.getElementById('btnCamera').addEventListener('click', function() { document.getElementById('inputCamera').click(); });
+  document.getElementById('btnGalerie').addEventListener('click', function() { document.getElementById('inputGalerie').click(); });
+  document.getElementById('inputCamera').addEventListener('change', function() { previewPhoto(this); });
+  document.getElementById('inputGalerie').addEventListener('change', function() { previewPhoto(this); });
+  document.getElementById('weekPrev').addEventListener('click', function() { weekOffset--; renderWeekCal(window._lastRdvs || []); });
+  document.getElementById('weekNext').addEventListener('click', function() { weekOffset++; renderWeekCal(window._lastRdvs || []); });
+  document.getElementById('rdvAddBtn').addEventListener('click', function() {
+    if (!estAbonne) { goToOffre(); return; }
+    demanderRDV();
+  });
+});
 
 function goToOffre() {
   const url = '/offre.html?token=' + token;
-  if(window.self!==window.top) window.top.location.href=url;
-  else window.location.href=url;
+  if (window.self !== window.top) window.top.location.href = url;
+  else window.location.href = url;
 }
-
 function ouvrirChat() {
   const url = '/chat.html?token=' + token;
-  if(window.self!==window.top) window.top.location.href=url;
-  else window.location.href=url;
+  if (window.self !== window.top) window.top.location.href = url;
+  else window.location.href = url;
 }
 
 if (USER_ID) {
@@ -341,70 +391,59 @@ if (USER_ID) {
   afficherOnboardingCTA();
   afficherDiagnosticsVides();
   afficherRDVLocked();
-  renderCalendar();
 }
 
 async function init() {
-  await Promise.all([
-    chargerRepas(), chargerScores(),
-    verifierAbonnementEtMessages(),
-    chargerMacrosSupabase(),
-    chargerRDV()
-  ]);
-  renderCalendar();
+  await Promise.all([chargerRepas(), chargerScores(), chargerMacrosSupabase()]);
+  await verifierAbonnementEtMessages();
+  await chargerRDV();
 }
 
-// ── ABONNEMENT + MESSAGES ──
+// ── ABONNEMENT ──
 async function verifierAbonnementEtMessages() {
   try {
-    const res = await fetch(SUPABASE_URL+'/rest/v1/abonnements?user_id=eq.'+USER_ID+'&statut=eq.actif&select=id&limit=1',
-      { headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY} });
-    const data = await res.json();
-    estAbonne = data && data.length > 0;
-    setTimeout(async () => {
-      if (!estAbonne) {
-        document.getElementById('bandeauAbonnement').style.display = 'flex';
-        afficherRDVLocked();
-      } else {
-        document.getElementById('nutriChatCard').style.display = 'block';
-        await chargerAperçuMessages();
-        subscribeMessagesRealtime();
-      }
-      chargerSlotsDisponibles();
-    }, 600);
+    const res = await sbFetch('abonnements?user_id=eq.' + USER_ID + '&statut=eq.actif&select=id&limit=1');
+    estAbonne = res && res.length > 0;
+    if (!estAbonne) {
+      document.getElementById('bandeauAbonnement').style.display = 'flex';
+    } else {
+      document.getElementById('nutriChatCard').style.display = 'block';
+      await chargerApercuMessages();
+      subscribeMessagesRealtime();
+    }
   } catch(e) {}
 }
 
-async function chargerAperçuMessages() {
+async function chargerApercuMessages() {
   try {
-    const msgs = await sbFetch('messages?user_id=eq.'+USER_ID+'&order=created_at.desc&limit=5');
-    const unread = msgs.filter(m=>m.expediteur==='nutritionniste'&&!m.lu).length;
+    const msgs = await sbFetch('messages?user_id=eq.' + USER_ID + '&order=created_at.desc&limit=5');
+    const unread = msgs.filter(m => m.expediteur === 'nutritionniste' && !m.lu).length;
     const last = msgs[0];
-    const badge = document.getElementById('unreadBadge');
-    const fabBadge = document.getElementById('chatFabBadge');
     if (unread > 0) {
-      badge.textContent = unread; badge.classList.add('visible');
-      fabBadge.textContent = unread; fabBadge.classList.add('visible');
+      document.getElementById('unreadBadge').textContent = unread;
+      document.getElementById('unreadBadge').classList.add('visible');
+      document.getElementById('chatFabBadge').textContent = unread;
+      document.getElementById('chatFabBadge').classList.add('visible');
     }
     if (last) {
       const el = document.getElementById('nutriLastMsg');
-      el.textContent = (last.expediteur==='client'?'Vous : ':'')+last.contenu;
-      if(last.expediteur==='nutritionniste'&&!last.lu) el.classList.add('unread');
+      el.textContent = (last.expediteur === 'client' ? 'Vous : ' : '') + last.contenu;
+      if (last.expediteur === 'nutritionniste' && !last.lu) el.classList.add('unread');
     }
   } catch(e) {}
 }
 
 function subscribeMessagesRealtime() {
-  const ws = new WebSocket(SUPABASE_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPABASE_KEY+'&vsn=1.0.0');
-  ws.onopen = () => ws.send(JSON.stringify({topic:'realtime:public:messages:user_id=eq.'+USER_ID,event:'phx_join',payload:{},ref:'1'}));
+  const ws = new WebSocket(SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_KEY + '&vsn=1.0.0');
+  ws.onopen = () => ws.send(JSON.stringify({topic: 'realtime:public:messages:user_id=eq.' + USER_ID, event: 'phx_join', payload: {}, ref: '1'}));
   ws.onmessage = e => {
     const d = JSON.parse(e.data);
-    if(d.event==='INSERT'&&d.payload?.record?.expediteur==='nutritionniste'){
-      const b1=document.getElementById('unreadBadge'), b2=document.getElementById('chatFabBadge');
-      const n=(parseInt(b1.textContent)||0)+1;
-      b1.textContent=n; b1.classList.add('visible');
-      b2.textContent=n; b2.classList.add('visible');
-      document.getElementById('nutriLastMsg').textContent=d.payload.record.contenu;
+    if (d.event === 'INSERT' && d.payload?.record?.expediteur === 'nutritionniste') {
+      const b1 = document.getElementById('unreadBadge'), b2 = document.getElementById('chatFabBadge');
+      const n = (parseInt(b1.textContent) || 0) + 1;
+      b1.textContent = n; b1.classList.add('visible');
+      b2.textContent = n; b2.classList.add('visible');
+      document.getElementById('nutriLastMsg').textContent = d.payload.record.contenu;
       document.getElementById('nutriLastMsg').classList.add('unread');
     }
   };
@@ -413,80 +452,80 @@ function subscribeMessagesRealtime() {
 }
 
 // ── RDV ──
-function afficherRDVLocked() {
-  // Non-abonné : afficher RDV verrouillés avec lock visuel
-  const list = document.getElementById('rdvSlotsList');
-  list.innerHTML = '<div style="padding:16px 14px 4px;">'
-    + rdvSlotHTML({type:'Bilan onboarding', detail:'RDV de départ avec votre nutritionniste', badge:'a-programmer', badgeLabel:'À programmer', icon:'🎯'})
-    + rdvSlotHTML({type:'RDV de suivi', detail:'Bilan à 2 semaines', badge:'a-programmer', badgeLabel:'À programmer', icon:'📊'})
-    + '</div>'
-    + '<div style="margin:0 14px 14px;padding:12px 14px;background:rgba(255,255,255,0.05);border-radius:12px;border:1px solid rgba(255,255,255,0.1);text-align:center;">'
-    + '<div style="font-size:12px;color:rgba(255,255,255,0.35);">🔒 Souscrivez à une offre pour débloquer vos RDV</div>'
-    + '<button onclick="goToOffre()" style="margin-top:10px;background:rgba(255,255,255,0.12);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:600;padding:8px 18px;cursor:pointer;font-family:'Inter',sans-serif;">Voir les offres →</button>'
+function rdvSlotHTML(opts) {
+  var type = opts.type, detail = opts.detail, badge = opts.badge, badgeLabel = opts.badgeLabel, icon = opts.icon, date = opts.date;
+  var dateBlock;
+  if (date) {
+    var d = new Date(date + 'T00:00:00');
+    var moisArr = ['Jan','Fev','Mar','Avr','Mai','Jun','Jul','Aou','Sep','Oct','Nov','Dec'];
+    dateBlock = '<div class="rdv-slot-date"><div class="rdv-slot-day">' + d.getDate() + '</div><div class="rdv-slot-month">' + moisArr[d.getMonth()] + '</div></div>';
+  } else {
+    dateBlock = '<div class="rdv-slot-icon">' + icon + '</div>';
+  }
+  return '<div class="rdv-slot">' + dateBlock
+    + '<div class="rdv-slot-info"><div class="rdv-slot-type">' + type + '</div><div class="rdv-slot-detail">' + detail + '</div></div>'
+    + '<span class="rdv-slot-badge ' + badge + '">' + badgeLabel + '</span>'
     + '</div>';
-  renderWeekCal([]);
 }
 
-function rdvSlotHTML({type, detail, badge, badgeLabel, icon, date, heure, id}) {
-  let dateBlock = '<div class="rdv-slot-icon">'+icon+'</div>';
-  if (date) {
-    const d = new Date(date+'T00:00:00');
-    const mois = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-    dateBlock = '<div class="rdv-slot-date"><div class="rdv-slot-day">'+d.getDate()+'</div><div class="rdv-slot-month">'+mois[d.getMonth()]+'</div></div>';
-  }
-  return '<div class="rdv-slot">'
-    + dateBlock
-    + '<div class="rdv-slot-info"><div class="rdv-slot-type">'+type+'</div><div class="rdv-slot-detail">'+detail+'</div></div>'
-    + '<span class="rdv-slot-badge '+badge+'">'+badgeLabel+'</span>'
+function afficherRDVLocked() {
+  var list = document.getElementById('rdvSlotsList');
+  if (!list) return;
+  var html = '<div style="padding:0 0 4px;">'
+    + rdvSlotHTML({type:'Bilan onboarding', detail:'RDV de depart avec votre nutritionniste', badge:'a-programmer', badgeLabel:'A programmer', icon:'🎯'})
+    + rdvSlotHTML({type:'RDV de suivi', detail:'Bilan a 2 semaines', badge:'a-programmer', badgeLabel:'A programmer', icon:'📊'})
+    + '</div>'
+    + '<div style="margin-bottom:4px;padding:12px 14px;background:rgba(255,255,255,0.05);border-radius:12px;text-align:center;">'
+    + '<div style="font-size:12px;color:rgba(255,255,255,0.35);">Souscrivez a une offre pour debloquer vos RDV</div>'
+    + '<button id="lockOffreBtn" style="margin-top:10px;background:rgba(255,255,255,0.12);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:600;padding:8px 18px;cursor:pointer;">Voir les offres</button>'
     + '</div>';
+  list.innerHTML = html;
+  document.getElementById('lockOffreBtn').addEventListener('click', goToOffre);
+  renderWeekCal([]);
 }
 
 async function chargerRDV() {
   try {
-    const rdvs = await sbFetch('rdv?user_id=eq.'+USER_ID+'&order=date_rdv.asc&select=*');
-    const now = new Date();
-    const list = document.getElementById('rdvSlotsList');
-    const mois = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    var rdvs = await sbFetch('rdv?user_id=eq.' + USER_ID + '&order=date_rdv.asc&select=*');
+    window._lastRdvs = rdvs;
+    var now = new Date();
+    var list = document.getElementById('rdvSlotsList');
+    var confirmes = rdvs.filter(function(r) { return r.statut === 'confirme' && new Date(r.date_rdv) >= now; });
+    var passes = rdvs.filter(function(r) { return new Date(r.date_rdv) < now; });
+    var types = rdvs.map(function(r) { return r.type_rdv; });
+    var html = '';
 
-    // Séparer RDV confirmés / passés / à programmer
-    const confirmes = rdvs.filter(r => r.statut === 'confirme' && new Date(r.date_rdv) >= now);
-    const passes = rdvs.filter(r => new Date(r.date_rdv) < now);
-    const types = rdvs.map(r => r.type_rdv);
-
-    let html = '';
-
-    // RDV onboarding
-    const onboarding = confirmes.find(r => r.type_rdv==='onboarding') || rdvs.find(r=>r.type_rdv==='onboarding');
-    if (onboarding && new Date(onboarding.date_rdv) >= now) {
-      const d = new Date(onboarding.date_rdv);
-      html += rdvSlotHTML({type:'Bilan onboarding', detail: onboarding.heure ? onboarding.heure+' · '+( onboarding.nutritionniste_nom||'Votre nutritionniste') : onboarding.nutritionniste_nom||'Votre nutritionniste', badge:'confirme', badgeLabel:'Confirmé', date: onboarding.date_rdv.split('T')[0], icon:'🎯'});
-    } else if (!types.includes('onboarding')) {
-      html += rdvSlotHTML({type:'Bilan onboarding', detail:'RDV de départ — à programmer par votre nutritionniste', badge:'a-programmer', badgeLabel:'À programmer', icon:'🎯'});
+    // Onboarding
+    var onboarding = confirmes.find(function(r) { return r.type_rdv === 'onboarding'; });
+    if (onboarding) {
+      html += rdvSlotHTML({type:'Bilan onboarding', detail:(onboarding.heure || '') + ' · ' + (onboarding.nutritionniste_nom || 'Votre nutritionniste'), badge:'confirme', badgeLabel:'Confirme', date:onboarding.date_rdv.split('T')[0], icon:'🎯'});
+    } else {
+      html += rdvSlotHTML({type:'Bilan onboarding', detail:'A programmer par votre nutritionniste', badge:'a-programmer', badgeLabel:'A programmer', icon:'🎯'});
     }
 
-    // RDV suivi
-    const suivi = confirmes.find(r => r.type_rdv==='suivi') || rdvs.find(r=>r.type_rdv==='suivi');
-    if (suivi && new Date(suivi.date_rdv) >= now) {
-      html += rdvSlotHTML({type:'RDV de suivi', detail: suivi.heure ? suivi.heure+' · '+(suivi.nutritionniste_nom||'Votre nutritionniste') : suivi.nutritionniste_nom||'Votre nutritionniste', badge:'confirme', badgeLabel:'Confirmé', date: suivi.date_rdv.split('T')[0], icon:'📊'});
-    } else if (!types.includes('suivi') || !confirmes.find(r=>r.type_rdv==='suivi')) {
-      html += rdvSlotHTML({type:'RDV de suivi', detail:'Bilan à 2 semaines — à programmer par votre nutritionniste', badge:'a-programmer', badgeLabel:'À programmer', icon:'📊'});
+    // Suivi
+    var suivi = confirmes.find(function(r) { return r.type_rdv === 'suivi'; });
+    if (suivi) {
+      html += rdvSlotHTML({type:'RDV de suivi', detail:(suivi.heure || '') + ' · ' + (suivi.nutritionniste_nom || 'Votre nutritionniste'), badge:'confirme', badgeLabel:'Confirme', date:suivi.date_rdv.split('T')[0], icon:'📊'});
+    } else {
+      html += rdvSlotHTML({type:'RDV de suivi', detail:'Bilan a 2 semaines - a programmer', badge:'a-programmer', badgeLabel:'A programmer', icon:'📊'});
     }
 
-    // Autres RDV confirmés (demandés par client)
-    confirmes.filter(r => r.type_rdv!=='onboarding'&&r.type_rdv!=='suivi'&&r.type_rdv!=='recap_email').forEach(r => {
-      const d = new Date(r.date_rdv);
-      html += rdvSlotHTML({type:'Consultation', detail: (r.heure||'')+' · '+(r.nutritionniste_nom||'Votre nutritionniste'), badge:'confirme', badgeLabel:'Confirmé', date:r.date_rdv.split('T')[0], icon:'💬'});
+    // Autres confirmés
+    confirmes.filter(function(r) { return r.type_rdv !== 'onboarding' && r.type_rdv !== 'suivi'; }).forEach(function(r) {
+      html += rdvSlotHTML({type:'Consultation', detail:(r.heure || '') + ' · ' + (r.nutritionniste_nom || 'Votre nutritionniste'), badge:'confirme', badgeLabel:'Confirme', date:r.date_rdv.split('T')[0], icon:'💬'});
     });
 
-    // RDV passés
-    passes.slice(0,2).forEach(r => {
-      html += rdvSlotHTML({type: r.type_rdv==='onboarding'?'Bilan onboarding':r.type_rdv==='suivi'?'RDV de suivi':'Consultation', detail:'Terminé', badge:'passe', badgeLabel:'Passé', date:r.date_rdv.split('T')[0], icon:'✓'});
+    // Passés (max 2)
+    passes.slice(0, 2).forEach(function(r) {
+      var label = r.type_rdv === 'onboarding' ? 'Bilan onboarding' : r.type_rdv === 'suivi' ? 'RDV de suivi' : 'Consultation';
+      html += rdvSlotHTML({type:label, detail:'Termine', badge:'passe', badgeLabel:'Passe', date:r.date_rdv.split('T')[0], icon:'✓'});
     });
 
-    // Demandes en attente de confirmation
-    const demandes = rdvs.filter(r=>r.statut==='recap_demande'||r.statut==='demande_client');
+    // Demandes en attente
+    var demandes = rdvs.filter(function(r) { return r.statut === 'demande_client'; });
     if (demandes.length > 0) {
-      html += '<div class="rdv-request-row"><div class="rdv-request-text">Demande de RDV supplémentaire envoyée</div><span class="rdv-request-badge">En attente</span></div>';
+      html += '<div class="rdv-request-row"><div class="rdv-request-text">Demande de RDV envoyee a votre nutritionniste</div><span class="rdv-request-badge">En attente</span></div>';
     }
 
     list.innerHTML = html || '<div style="padding:20px;text-align:center;color:rgba(255,255,255,0.3);font-size:13px;">Aucun rendez-vous</div>';
@@ -498,237 +537,283 @@ async function chargerRDV() {
 }
 
 // ── CALENDRIER SEMAINE ──
-let weekOffset = 0;
-
 function getWeekStart(offset) {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day===0 ? -6 : 1) + offset*7;
-  d.setDate(diff); d.setHours(0,0,0,0);
+  var d = new Date();
+  var day = d.getDay();
+  var diff = d.getDate() - day + (day === 0 ? -6 : 1) + offset * 7;
+  d.setDate(diff); d.setHours(0, 0, 0, 0);
   return d;
 }
 
 function renderWeekCal(rdvs) {
-  const lundi = getWeekStart(weekOffset);
-  const dimanche = new Date(lundi); dimanche.setDate(lundi.getDate()+6);
-  const opts = {day:'numeric', month:'long'};
+  window._lastRdvs = rdvs;
+  var lundi = getWeekStart(weekOffset);
+  var dimanche = new Date(lundi); dimanche.setDate(lundi.getDate() + 6);
+  var moisCourts = ['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'];
   document.getElementById('weekTitle').textContent =
-    lundi.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) + ' – ' +
-    dimanche.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+    lundi.getDate() + ' ' + moisCourts[lundi.getMonth()] + ' - ' +
+    dimanche.getDate() + ' ' + moisCourts[dimanche.getMonth()] + ' ' + dimanche.getFullYear();
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  const joursNoms = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
-  const mois = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  let html = '';
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var joursNoms = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
+  var html = '';
 
-  for (let i=0; i<7; i++) {
-    const jour = new Date(lundi); jour.setDate(lundi.getDate()+i);
-    const isToday = jour.getTime() === today.getTime();
-    const dateStr = jour.toISOString().split('T')[0];
+  for (var i = 0; i < 7; i++) {
+    var jour = new Date(lundi); jour.setDate(lundi.getDate() + i);
+    var isToday = jour.getTime() === today.getTime();
+    var dateStr = jour.getFullYear() + '-' + String(jour.getMonth()+1).padStart(2,'0') + '-' + String(jour.getDate()).padStart(2,'0');
 
-    // RDV ce jour
-    const jourdRdv = rdvs.filter(r => r.date_rdv && r.date_rdv.startsWith(dateStr) && r.statut==='confirme');
+    var jourdRdv = rdvs.filter(function(r) { return r.date_rdv && r.date_rdv.startsWith(dateStr) && r.statut === 'confirme'; });
 
-    let eventsHtml = '';
-    jourdRdv.forEach(r => {
-      const typeClass = r.type_rdv==='onboarding' ? 'type-onboarding' : r.type_rdv==='suivi' ? 'type-suivi' : 'type-client';
-      const label = r.type_rdv==='onboarding'?'Onboarding':r.type_rdv==='suivi'?'Suivi':'RDV';
-      eventsHtml += '<div class="week-event '+typeClass+'"><span class="ev-time">'+(r.heure||'')+'</span><span class="ev-name">'+label+'</span></div>';
+    var numHtml = isToday
+      ? '<div class="week-day-num-wrap">' + jour.getDate() + '</div>'
+      : '<div class="week-day-num">' + jour.getDate() + '</div>';
+
+    var evHtml = '';
+    jourdRdv.forEach(function(r) {
+      var tc = r.type_rdv === 'suivi' ? 'type-suivi' : r.type_rdv === 'onboarding' ? 'type-onboarding' : 'type-client';
+      var label = r.type_rdv === 'onboarding' ? 'Onboarding' : r.type_rdv === 'suivi' ? 'Suivi' : 'RDV';
+      evHtml += '<div class="week-event ' + tc + '"><span class="ev-time">' + (r.heure || '') + '</span><span class="ev-name">' + label + '</span></div>';
     });
 
-    html += '<div class="week-day-col'+(isToday?' today':'')+'">'
-      + '<div class="week-day-header">'
-      + '<div class="week-day-name">'+joursNoms[i]+'</div>'
-      + '<div class="week-day-num">'+jour.getDate()+'</div>'
-      + '</div>'
-      + '<div class="week-day-events">'+eventsHtml+'</div>'
+    html += '<div class="week-day-col' + (isToday ? ' today' : '') + '">'
+      + '<div class="week-day-header"><div class="week-day-name">' + joursNoms[i] + '</div>' + numHtml + '</div>'
+      + '<div class="week-day-events">' + evHtml + '</div>'
       + '</div>';
   }
   document.getElementById('weekDaysRow').innerHTML = html;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('weekPrev')?.addEventListener('click', () => { weekOffset--; if(USER_ID) chargerRDV(); else renderWeekCal([]); });
-  document.getElementById('weekNext')?.addEventListener('click', () => { weekOffset++; if(USER_ID) chargerRDV(); else renderWeekCal([]); });
-  document.getElementById('rdvAddBtn')?.addEventListener('click', () => {
-    if(!estAbonne) { goToOffre(); return; }
-    demanderRDV();
-  });
-});
-
 async function demanderRDV() {
-  // Client demande un RDV supplémentaire → notif admin
   if (!USER_ID) return;
   try {
-    await sbPost('rdv', {
-      user_id: USER_ID,
-      type_rdv: 'demande_client',
-      statut: 'demande_client',
-      date_rdv: new Date().toISOString(),
-      created_at: new Date().toISOString()
-    });
-    showToast('Demande envoyée à votre nutritionniste !', 'success');
+    await sbPost('rdv', {user_id: USER_ID, type_rdv: 'demande_client', statut: 'demande_client', date_rdv: new Date().toISOString(), created_at: new Date().toISOString()});
+    showToast('Demande envoyee a votre nutritionniste', 'success');
+    await chargerRDV();
   } catch(e) { showToast('Erreur', 'error'); }
 }
 
 // ── MACROS ──
 async function chargerMacrosSupabase() {
   try {
-    const rows = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&completed=eq.true&select=poids,tdee,bmr&limit=1');
-    if(!rows||!rows.length)return;
-    const p=rows[0], tdee=parseFloat(p.tdee)||0, poids=parseFloat(p.poids)||0;
-    if(!tdee&&!poids)return;
-    const prot=poids?Math.round(poids*2):null, lip=tdee?Math.round(tdee*0.25/9):null, cal=tdee?Math.round(tdee):null;
-    if(prot){setText('valProt',prot);setText('goalProt','Objectif '+prot+' g');}
-    if(lip) {setText('valLip',lip); setText('goalLip','Objectif '+lip+' g');}
-    if(cal) {setText('valCal',cal); setText('goalCal','Objectif '+cal+' kcal');}
-    if(document.getElementById('barProt'))document.getElementById('barProt').style.width='75%';
-    if(document.getElementById('barLip')) document.getElementById('barLip').style.width='60%';
-    if(document.getElementById('barCal')) document.getElementById('barCal').style.width='70%';
-  } catch(e){}
-}
-
-function afficherMacros(d) {
-  if(d.proteines&&d.proteines!=='–'){setText('valProt',d.proteines);setText('goalProt','Objectif '+d.proteines+' g');}
-  if(d.lipides&&d.lipides!=='–')   {setText('valLip',d.lipides);   setText('goalLip','Objectif '+d.lipides+' g');}
-  if(d.calories&&d.calories!=='–') {setText('valCal',d.calories);  setText('goalCal','Objectif '+d.calories+' kcal');}
+    var rows = await sbFetch('onboarding?user_id=eq.' + USER_ID + '&completed=eq.true&select=poids,tdee,bmr&limit=1');
+    if (!rows || !rows.length) return;
+    var p = rows[0], tdee = parseFloat(p.tdee) || 0, poids = parseFloat(p.poids) || 0;
+    var prot = poids ? Math.round(poids * 2) : null;
+    var lip = tdee ? Math.round(tdee * 0.25 / 9) : null;
+    var cal = tdee ? Math.round(tdee) : null;
+    if (prot) { setText('valProt', prot); setText('goalProt', 'Objectif ' + prot + ' g'); }
+    if (lip)  { setText('valLip', lip);   setText('goalLip', 'Objectif ' + lip + ' g'); }
+    if (cal)  { setText('valCal', cal);   setText('goalCal', 'Objectif ' + cal + ' kcal'); }
+    if (document.getElementById('barProt')) document.getElementById('barProt').style.width = '75%';
+    if (document.getElementById('barLip'))  document.getElementById('barLip').style.width = '60%';
+    if (document.getElementById('barCal'))  document.getElementById('barCal').style.width = '70%';
+  } catch(e) {}
 }
 
 // ── SCORES ──
 async function chargerScores() {
   try {
-    const s=await sbFetch('nutrition_scores?user_id=eq.'+USER_ID+'&order=calculated_at.desc&limit=1');
-    if(!s||!s.length){afficherDiagnosticsVides();return;}
-    const v=Math.round(s[0].variety_score||0),q=Math.round(s[0].quality_score||0),r=Math.round(s[0].relevance_score||0);
-    setScoreRing(Math.round((v+q+r)/3));
-    calculerDiagnostics(v,q,r);
-  }catch(e){afficherDiagnosticsVides();}
+    var s = await sbFetch('nutrition_scores?user_id=eq.' + USER_ID + '&order=calculated_at.desc&limit=1');
+    if (!s || !s.length) { afficherDiagnosticsVides(); return; }
+    var v = Math.round(s[0].variety_score || 0), q = Math.round(s[0].quality_score || 0), r2 = Math.round(s[0].relevance_score || 0);
+    setScoreRing(Math.round((v + q + r2) / 3));
+    calculerDiagnostics(v, q, r2);
+  } catch(e) { afficherDiagnosticsVides(); }
 }
 
-function setScoreRing(pct){
-  const circ=2*Math.PI*58,dash=(pct/100)*circ,col=pct>=70?'#34a853':pct>=40?'#ff9500':'#ff3b30';
-  document.getElementById('ringScore').style.strokeDasharray=dash+' '+circ;
-  document.getElementById('ringScore').style.stroke=col;
-  setText('scoreNum',pct);
-  const badge=document.getElementById('scoreBadge');
-  badge.textContent=pct>=80?'Excellent':pct>=60?'Bon':pct>=40?'Moyen':'À revoir';
-  badge.style.background=pct>=60?'#e8f5ee':pct>=40?'#fff3e8':'#fde8e8';
-  badge.style.color=pct>=60?'#34a853':pct>=40?'#ff9500':'#ff3b30';
+function setScoreRing(pct) {
+  var circ = 2 * Math.PI * 58, dash = (pct / 100) * circ;
+  var col = pct >= 70 ? '#34a853' : pct >= 40 ? '#ff9500' : '#ff3b30';
+  var ring = document.getElementById('ringScore');
+  ring.style.strokeDasharray = dash + ' ' + circ;
+  ring.style.stroke = col;
+  setText('scoreNum', pct);
+  var badge = document.getElementById('scoreBadge');
+  badge.textContent = pct >= 80 ? 'Excellent' : pct >= 60 ? 'Bon' : pct >= 40 ? 'Moyen' : 'A revoir';
+  badge.style.background = pct >= 60 ? '#e8f5ee' : pct >= 40 ? '#fff3e8' : '#fde8e8';
+  badge.style.color = pct >= 60 ? '#34a853' : pct >= 40 ? '#ff9500' : '#ff3b30';
 }
 
-function calculerDiagnostics(v,q,r){
-  renderPts('fortsContainer',[
-    {ico:'💧',icoCls:'pt-ico-g',nom:'Hydratation',badge:'Excellent',badgeCls:'pt-bg'},
-    {ico:'🌿',icoCls:'pt-ico-g',nom:'Fibres & légumes',badge:'Très bien',badgeCls:'pt-bg'},
-    {ico:'🥗',icoCls:'pt-ico-g',nom:'Variété alimentaire',badge:'Bien',badgeCls:'pt-bg'},
+function calculerDiagnostics(v, q, r) {
+  renderPts('fortsContainer', [
+    {ico:'💧', icoCls:'pt-ico-g', nom:'Hydratation', badge:'Excellent', badgeCls:'pt-bg'},
+    {ico:'🌿', icoCls:'pt-ico-g', nom:'Fibres', badge:'Tres bien', badgeCls:'pt-bg'},
+    {ico:'🥗', icoCls:'pt-ico-g', nom:'Variete', badge:'Bien', badgeCls:'pt-bg'},
   ]);
-  renderPts('faiblesContainer',[
-    {ico:'🥩',icoCls:'pt-ico-o',nom:'Protéines',badge:'À augmenter',badgeCls:'pt-bo'},
-    {ico:'⚡',icoCls:'pt-ico-o',nom:'Énergie',badge:'Un peu faible',badgeCls:'pt-bo'},
-    {ico:'🌾',icoCls:'pt-ico-o',nom:'Glucides complets',badge:'À intégrer',badgeCls:'pt-bo'},
+  renderPts('faiblesContainer', [
+    {ico:'🥩', icoCls:'pt-ico-o', nom:'Proteines', badge:'A augmenter', badgeCls:'pt-bo'},
+    {ico:'⚡', icoCls:'pt-ico-o', nom:'Energie', badge:'Un peu faible', badgeCls:'pt-bo'},
+    {ico:'🌾', icoCls:'pt-ico-o', nom:'Glucides complets', badge:'A integrer', badgeCls:'pt-bo'},
   ]);
 }
 
-function renderPts(id,items){
-  document.getElementById(id).innerHTML=items.map(it=>`<div class="pt-item"><div class="pt-ico ${it.icoCls}">${it.ico}</div><div class="pt-txt"><div class="pt-name">${it.nom}</div><div class="pt-badge ${it.badgeCls}">${it.badge}</div></div><div class="pt-arr">›</div></div>`).join('');
-}
-function afficherDiagnosticsVides(){calculerDiagnostics(0,0,0);}
-
-// ── REPAS ──
-async function chargerRepas(){
-  try{
-    const meals=await sbFetch('meals?user_id=eq.'+USER_ID+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=10');
-    afficherRepas(meals);
-  }catch(e){document.getElementById('historiqueList').innerHTML='<div class="empty">Erreur de chargement</div>';}
-}
-
-function scoreRepas(m){return Math.min(99,60+(m.meal_ingredients||[]).length*8);}
-function tagRepas(m){const i=(m.meal_ingredients||[]).map(x=>x.name.toLowerCase());if(i.some(n=>/poulet|thon|œuf|saumon|dinde|bœuf/.test(n)))return'Riche en protéines';if(i.some(n=>/quinoa|riz|lentille|pois/.test(n)))return'Bon équilibre';return'Très bon choix';}
-
-function afficherRepas(meals){
-  const el=document.getElementById('historiqueList');
-  if(!meals||!meals.length){el.innerHTML='<div class="empty">Aucun plat enregistré<br>Ajoutez votre premier repas !</div>';return;}
-  el.innerHTML=meals.map(meal=>{
-    const ings=(meal.meal_ingredients||[]).map(i=>i.name+' '+i.quantity_g+'g').join(', ')||'Aucun ingrédient';
-    const date=new Date(meal.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
-    const score=scoreRepas(meal),r=16,c=2*Math.PI*r,dash=((score/100)*c).toFixed(1);
-    const photo=meal.photo_url?`<div class="meal-photo"><img src="${meal.photo_url}" alt=""></div>`:`<div class="meal-photo">🍽️</div>`;
-    return`<div class="meal-item">${photo}<div class="meal-info"><div class="meal-name">${meal.name}</div><div class="meal-ings">${ings}</div><span class="meal-tag">${tagRepas(meal)}</span></div>
-      <div class="meal-right"><div class="meal-date">${date}</div><div class="meal-score"><svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="16" fill="none" stroke="#f0f0f0" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="#34a853" stroke-width="3" stroke-linecap="round" stroke-dasharray="${dash} ${c.toFixed(1)}"/></svg><div class="meal-score-num">${score}</div></div><div class="meal-dots" onclick="supprimerRepas('${meal.id}',event)">···</div></div></div>`;
+function renderPts(id, items) {
+  document.getElementById(id).innerHTML = items.map(function(it) {
+    return '<div class="pt-item"><div class="pt-ico ' + it.icoCls + '">' + it.ico + '</div><div class="pt-txt"><div class="pt-name">' + it.nom + '</div><div class="pt-badge ' + it.badgeCls + '">' + it.badge + '</div></div><div class="pt-arr">›</div></div>';
   }).join('');
 }
+function afficherDiagnosticsVides() { calculerDiagnostics(0, 0, 0); }
 
-async function recalculerScores(){
-  try{
-    const meals=await sbFetch('meals?user_id=eq.'+USER_ID+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=30');
-    const sept=new Date();sept.setDate(sept.getDate()-7);
-    const recents=meals.filter(m=>new Date(m.created_at)>sept);
-    const uniques=new Set();recents.forEach(m=>(m.meal_ingredients||[]).forEach(i=>uniques.add(i.name.toLowerCase())));
-    const variety=Math.min(100,Math.round((uniques.size/15)*100));
-    const pertinence=Math.min(100,Math.round((recents.length/21)*100));
-    const avecIng=recents.filter(m=>m.meal_ingredients&&m.meal_ingredients.length>0);
-    const quality=recents.length>0?Math.min(100,Math.round((avecIng.length/recents.length)*100)):0;
-    await sbPost('nutrition_scores',{user_id:USER_ID,variety_score:variety,quality_score:quality,relevance_score:pertinence,score_date:new Date().toISOString().split('T')[0],calculated_at:new Date().toISOString()},true);
-    setScoreRing(Math.round((variety+quality+pertinence)/3));
-  }catch(e){}
+// ── REPAS ──
+async function chargerRepas() {
+  try {
+    var meals = await sbFetch('meals?user_id=eq.' + USER_ID + '&select=*,meal_ingredients(*)&order=created_at.desc&limit=10');
+    afficherRepas(meals);
+  } catch(e) { document.getElementById('historiqueList').innerHTML = '<div style="text-align:center;color:#c7c7cc;font-size:13px;padding:24px;">Erreur de chargement</div>'; }
+}
+
+function scoreRepas(m) { return Math.min(99, 60 + (m.meal_ingredients || []).length * 8); }
+function tagRepas(m) {
+  var ings = (m.meal_ingredients || []).map(function(x) { return x.name.toLowerCase(); });
+  if (ings.some(function(n) { return /poulet|thon|oeuf|saumon|dinde|boeuf/.test(n); })) return 'Riche en proteines';
+  if (ings.some(function(n) { return /quinoa|riz|lentille|pois/.test(n); })) return 'Bon equilibre';
+  return 'Tres bon choix';
+}
+
+function afficherRepas(meals) {
+  var el = document.getElementById('historiqueList');
+  if (!meals || !meals.length) { el.innerHTML = '<div style="text-align:center;color:#c7c7cc;font-size:13px;padding:32px;">Aucun plat — ajoutez votre premier repas</div>'; return; }
+  el.innerHTML = meals.map(function(meal) {
+    var ings = (meal.meal_ingredients || []).map(function(i) { return i.name + ' ' + i.quantity_g + 'g'; }).join(', ') || 'Aucun ingredient';
+    var date = new Date(meal.created_at).toLocaleDateString('fr-FR', {day:'numeric', month:'short'});
+    var score = scoreRepas(meal), r = 16, c = 2 * Math.PI * r, dash = ((score / 100) * c).toFixed(1);
+    var photo = meal.photo_url ? '<div class="meal-photo"><img src="' + meal.photo_url + '" alt=""></div>' : '<div class="meal-photo">🍽️</div>';
+    return '<div class="meal-item">' + photo
+      + '<div class="meal-info"><div class="meal-name">' + meal.name + '</div><div class="meal-ings">' + ings + '</div><span class="meal-tag">' + tagRepas(meal) + '</span></div>'
+      + '<div class="meal-right"><div class="meal-date">' + date + '</div>'
+      + '<div class="meal-score"><svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="16" fill="none" stroke="#f0f0f0" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="#34a853" stroke-width="3" stroke-linecap="round" stroke-dasharray="' + dash + ' ' + c.toFixed(1) + '"/></svg><div class="meal-score-num">' + score + '</div></div>'
+      + '<div class="meal-dots" data-id="' + meal.id + '">···</div></div></div>';
+  }).join('');
+  el.querySelectorAll('.meal-dots').forEach(function(btn) {
+    btn.addEventListener('click', function(e) { e.stopPropagation(); supprimerRepas(btn.dataset.id); });
+  });
+}
+
+async function recalculerScores() {
+  try {
+    var meals = await sbFetch('meals?user_id=eq.' + USER_ID + '&select=*,meal_ingredients(*)&order=created_at.desc&limit=30');
+    var sept = new Date(); sept.setDate(sept.getDate() - 7);
+    var recents = meals.filter(function(m) { return new Date(m.created_at) > sept; });
+    var uniques = new Set();
+    recents.forEach(function(m) { (m.meal_ingredients || []).forEach(function(i) { uniques.add(i.name.toLowerCase()); }); });
+    var variety = Math.min(100, Math.round((uniques.size / 15) * 100));
+    var pertinence = Math.min(100, Math.round((recents.length / 21) * 100));
+    var avecIng = recents.filter(function(m) { return m.meal_ingredients && m.meal_ingredients.length > 0; });
+    var quality = recents.length > 0 ? Math.min(100, Math.round((avecIng.length / recents.length) * 100)) : 0;
+    await sbPost('nutrition_scores', {user_id:USER_ID, variety_score:variety, quality_score:quality, relevance_score:pertinence, score_date:new Date().toISOString().split('T')[0], calculated_at:new Date().toISOString()}, true);
+    setScoreRing(Math.round((variety + quality + pertinence) / 3));
+  } catch(e) {}
 }
 
 // ── ONBOARDING CTA ──
-function afficherOnboardingCTA(){
-  document.querySelector('.score-card').style.display='none';
-  document.querySelector('.points-row').style.display='none';
-  document.querySelector('.hist-header').style.display='none';
-  document.querySelector('.hist-card').style.display='none';
-  document.querySelector('.btn-add').style.display='none';
-  const page=document.querySelector('.page');
-  const cta=document.createElement('div');cta.className='onboarding-cta';
-  cta.innerHTML=`<div class="onboarding-hero"><span class="onboarding-emoji">🥗</span><div class="onboarding-title">Commencez votre suivi</div><div class="onboarding-sub">Répondez à quelques questions pour personnaliser votre programme.</div></div>
-    <div class="onboarding-features">
-      <div class="onboarding-feat"><div class="onboarding-feat-ico">🧑‍⚕️</div><div><div class="onboarding-feat-txt">Nutritionniste personnel</div><div class="onboarding-feat-sub">Dédié à vos objectifs, disponible par messagerie</div></div></div>
-      <div class="onboarding-feat"><div class="onboarding-feat-ico">🍱</div><div><div class="onboarding-feat-txt">Repas cuisinés & livrés</div><div class="onboarding-feat-sub">3 ou 4 plats par semaine, adaptés à votre objectif</div></div></div>
-      <div class="onboarding-feat"><div class="onboarding-feat-ico">📊</div><div><div class="onboarding-feat-txt">Suivi nutritionnel complet</div><div class="onboarding-feat-sub">Score, macros, journal alimentaire personnalisé</div></div></div>
-    </div>
-    <div class="onboarding-btn-wrap"><button class="onboarding-btn" onclick="demarrerOnboarding()">Analyser mon alimentation →</button></div>`;
-  page.insertBefore(cta, page.children[2]||null);
+function afficherOnboardingCTA() {
+  document.querySelector('.score-card').style.display = 'none';
+  document.querySelector('.points-row').style.display = 'none';
+  document.querySelector('.hist-header').style.display = 'none';
+  document.querySelector('.hist-card').style.display = 'none';
+  document.getElementById('btnAddRepas').style.display = 'none';
+  var page = document.querySelector('.page');
+  var cta = document.createElement('div');
+  cta.className = 'onboarding-cta';
+  cta.innerHTML = '<div class="onboarding-hero"><span class="onboarding-emoji">🥗</span><div class="onboarding-title">Commencez votre suivi</div><div class="onboarding-sub">Repondez a quelques questions pour personnaliser votre programme.</div></div>'
+    + '<div class="onboarding-features">'
+    + '<div class="onboarding-feat"><div class="onboarding-feat-ico">🧑‍⚕️</div><div><div class="onboarding-feat-txt">Nutritionniste personnel</div><div class="onboarding-feat-sub">Dedie a vos objectifs</div></div></div>'
+    + '<div class="onboarding-feat"><div class="onboarding-feat-ico">🍱</div><div><div class="onboarding-feat-txt">Repas cuisines & livres</div><div class="onboarding-feat-sub">3 ou 4 plats par semaine</div></div></div>'
+    + '<div class="onboarding-feat"><div class="onboarding-feat-ico">📊</div><div><div class="onboarding-feat-txt">Suivi nutritionnel complet</div><div class="onboarding-feat-sub">Score, macros, journal</div></div></div>'
+    + '</div>'
+    + '<div class="onboarding-btn-wrap"><button class="onboarding-btn" id="btnStartOnboarding">Analyser mon alimentation →</button></div>';
+  page.insertBefore(cta, page.children[2] || null);
+  document.getElementById('btnStartOnboarding').addEventListener('click', function() {
+    var url = '/onboarding.html';
+    if (window.self !== window.top) window.top.location.href = url;
+    else window.location.href = url;
+  });
+  afficherRDVLocked();
 }
-function demarrerOnboarding(){const url='/onboarding.html';if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;}
 
 // ── POPUP REPAS ──
-function ouvrirPopup(){document.getElementById('popupOverlay').classList.add('active');resetPopup();}
-function fermerPopup(){document.getElementById('popupOverlay').classList.remove('active');}
-function fermerPopupOverlay(e){if(e.target===document.getElementById('popupOverlay'))fermerPopup();}
-function resetPopup(){document.getElementById('inputNom').value='';document.getElementById('photoPreview').classList.remove('visible');document.getElementById('ingredientsList').innerHTML=`<div class="ing-row"><input class="form-inp" type="text" placeholder="Nom de l'ingrédient"><input class="form-inp qty" type="number" placeholder="g" min="0"></div>`;photoFile=null;}
-function ajouterLigneIngredient(){const list=document.getElementById('ingredientsList'),row=document.createElement('div');row.className='ing-row';row.innerHTML=`<input class="form-inp" type="text" placeholder="Nom de l'ingrédient"><input class="form-inp qty" type="number" placeholder="g" min="0">`;list.appendChild(row);}
-function previewPhoto(input){const file=input.files[0];if(!file)return;photoFile=file;const reader=new FileReader();reader.onload=e=>{const p=document.getElementById('photoPreview');p.src=e.target.result;p.classList.add('visible');};reader.readAsDataURL(file);}
-
-async function uploadPhotoCloudinary(file){const fd=new FormData();fd.append('file',file);fd.append('upload_preset',CLOUDINARY_PRESET);const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:'POST',body:fd});const d=await res.json();if(!d.secure_url)throw new Error(d.error?.message||'Upload échoué');return d.secure_url;}
-
-async function enregistrerPlat(){
-  if(!USER_ID){showToast('Utilisateur non connecté','error');return;}
-  const nom=document.getElementById('inputNom').value.trim();
-  if(!nom){showToast('Donnez un nom à votre plat !','error');return;}
-  const btn=document.getElementById('btnSave');btn.disabled=true;btn.textContent='Enregistrement...';
-  try{
-    let photoUrl=null;
-    if(photoFile){btn.textContent='Upload...';photoUrl=await uploadPhotoCloudinary(photoFile);}
-    const[meal]=await sbPostReturn('meals',{user_id:USER_ID,name:nom,photo_url:photoUrl,meal_date:new Date().toISOString().split('T')[0]});
-    const rows=document.querySelectorAll('#ingredientsList .ing-row');
-    const ings=[];rows.forEach(row=>{const inputs=row.querySelectorAll('input');const n=inputs[0].value.trim(),q=parseFloat(inputs[1].value);if(n&&q>0)ings.push({meal_id:meal.id,name:n,quantity_g:q});});
-    if(ings.length>0)await sbPost('meal_ingredients',ings);
-    await recalculerScores();await chargerRepas();
-    fermerPopup();showToast('Plat enregistré !','success');
-  }catch(e){showToast('Erreur : '+e.message,'error');}
-  finally{btn.disabled=false;btn.textContent='Enregistrer';}
+function ouvrirPopup() { document.getElementById('popupOverlay').classList.add('active'); resetPopup(); }
+function fermerPopup() { document.getElementById('popupOverlay').classList.remove('active'); }
+function resetPopup() {
+  document.getElementById('inputNom').value = '';
+  document.getElementById('photoPreview').classList.remove('visible');
+  document.getElementById('ingredientsList').innerHTML = '<div class="ing-row"><input class="form-inp" type="text" placeholder="Nom de l'ingredient"><input class="form-inp qty" type="number" placeholder="g" min="0"></div>';
+  photoFile = null;
+}
+function ajouterLigneIngredient() {
+  var list = document.getElementById('ingredientsList');
+  var row = document.createElement('div'); row.className = 'ing-row';
+  row.innerHTML = '<input class="form-inp" type="text" placeholder="Nom de l'ingredient"><input class="form-inp qty" type="number" placeholder="g" min="0">';
+  list.appendChild(row);
+}
+function previewPhoto(input) {
+  var file = input.files[0]; if (!file) return;
+  photoFile = file;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var p = document.getElementById('photoPreview'); p.src = e.target.result; p.classList.add('visible');
+  };
+  reader.readAsDataURL(file);
+}
+async function uploadPhotoCloudinary(file) {
+  var fd = new FormData(); fd.append('file', file); fd.append('upload_preset', CLOUDINARY_PRESET);
+  var res = await fetch('https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD + '/image/upload', {method:'POST', body:fd});
+  var d = await res.json();
+  if (!d.secure_url) throw new Error(d.error?.message || 'Upload echoue');
+  return d.secure_url;
+}
+async function enregistrerPlat() {
+  if (!USER_ID) { showToast('Utilisateur non connecte', 'error'); return; }
+  var nom = document.getElementById('inputNom').value.trim();
+  if (!nom) { showToast('Donnez un nom a votre plat', 'error'); return; }
+  var btn = document.getElementById('btnSave'); btn.disabled = true; btn.textContent = 'Enregistrement...';
+  try {
+    var photoUrl = null;
+    if (photoFile) { btn.textContent = 'Upload...'; photoUrl = await uploadPhotoCloudinary(photoFile); }
+    var saved = await sbPostReturn('meals', {user_id:USER_ID, name:nom, photo_url:photoUrl, meal_date:new Date().toISOString().split('T')[0]});
+    var meal = saved[0];
+    var rows = document.querySelectorAll('#ingredientsList .ing-row');
+    var ings = [];
+    rows.forEach(function(row) {
+      var inputs = row.querySelectorAll('input');
+      var n = inputs[0].value.trim(), q = parseFloat(inputs[1].value);
+      if (n && q > 0) ings.push({meal_id: meal.id, name: n, quantity_g: q});
+    });
+    if (ings.length > 0) await sbPost('meal_ingredients', ings);
+    await recalculerScores(); await chargerRepas();
+    fermerPopup(); showToast('Plat enregistre !', 'success');
+  } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Enregistrer'; }
+}
+async function supprimerRepas(id) {
+  if (!confirm('Supprimer ce repas ?')) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/meals?id=eq.' + id, {method:'DELETE', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
+    await recalculerScores(); await chargerRepas();
+    showToast('Repas supprime', 'success');
+  } catch(e) { showToast('Erreur', 'error'); }
 }
 
-async function supprimerRepas(id,e){e.stopPropagation();if(!confirm('Supprimer ce repas ?'))return;try{await fetch(SUPABASE_URL+'/rest/v1/meals?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});await recalculerScores();await chargerRepas();showToast('Repas supprimé','success');}catch(e){showToast('Erreur','error');}}
-
 // ── HELPERS ──
-async function sbFetch(path){const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});const t=await res.text();if(!res.ok)throw new Error(t);return t?JSON.parse(t):[];}
-async function sbPost(path,body,merge=false){const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':merge?'resolution=merge-duplicates':'return=minimal'},body:JSON.stringify(body)});if(!res.ok)throw new Error(await res.text());}
-async function sbPostReturn(path,body){const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(body)});const t=await res.text();if(!res.ok)throw new Error(t);return JSON.parse(t);}
-function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
-function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'');setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3200);}
+async function sbFetch(path) {
+  var res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {headers: {'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY}});
+  var t = await res.text(); if (!res.ok) throw new Error(t); return t ? JSON.parse(t) : [];
+}
+async function sbPost(path, body, merge) {
+  var res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {method:'POST', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':merge?'resolution=merge-duplicates':'return=minimal'}, body:JSON.stringify(body)});
+  if (!res.ok) throw new Error(await res.text());
+}
+async function sbPostReturn(path, body) {
+  var res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {method:'POST', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'}, body:JSON.stringify(body)});
+  var t = await res.text(); if (!res.ok) throw new Error(t); return JSON.parse(t);
+}
+function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+function showToast(msg, type) {
+  var t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + (type || '');
+  setTimeout(function() { t.classList.add('show'); }, 10);
+  setTimeout(function() { t.classList.remove('show'); }, 3200);
+}
 </script>
 </body>
 </html>
