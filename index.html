@@ -559,7 +559,6 @@ const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 const CLD_CLD = 'dujji1s6g';
 const CLD_PRE = 'meal_photos';
 const CLAUDE_API = 'https://natty-suivi.vercel.app/api/claude';
-const SCAN_API  = 'https://natty-suivi.vercel.app/api/scan-plat';
 
 // ═══ NUTRI TABLE (~100 ingredients, per 100g) ═══
 const NT = {
@@ -1163,26 +1162,34 @@ async function analyserAvecIA() {
   document.getElementById('aiAnalyseWrap').style.display = 'block';
   document.getElementById('aiResultCont').innerHTML = '';
   document.getElementById('btnSaveIA').style.display = 'none';
-  setText('aiStatus', 'Identification du plat...');
-  setText('aiStatusSub', 'LogMeal analyse votre photo');
+  setText('aiStatus', 'Analyse de votre plat...');
+  setText('aiStatusSub', 'Identification des aliments et calcul des macros');
   var b64 = await new Promise(function(resolve) {
     var r = new FileReader();
     r.onload = function(e) { resolve(e.target.result.split(',')[1]); };
     r.readAsDataURL(photoIAFile);
   });
   try {
-    var res = await fetch(SCAN_API, {
+    var prompt = 'Analyse cette photo de plat avec precision. '
+      + 'Observe attentivement la couleur, la texture, la forme et le contexte de chaque aliment visible. '
+      + 'Fais la distinction entre les proteines (poisson = texture feuilletee rosee/blanche, poulet = texture fibreuse doree/blanche, boeuf = rouge/brun). '
+      + 'Identifie tous les aliments visibles, estime les quantites en grammes selon la taille de l'assiette, '
+      + 'et calcule les macronutriments. '
+      + 'Reponds UNIQUEMENT en JSON sans backticks: '
+      + '{"nom":"...","ingredients":[{"emoji":"...","nom":"...","quantite_g":0}],"macros":{"prot":0,"lip":0,"gluc":0,"cal":0},"description":"..."}';
+
+    var res = await fetch(CLAUDE_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: b64, media_type: photoIAFile.type })
+      body: JSON.stringify({ prompt: prompt, max_tokens: 700, image: b64, media_type: photoIAFile.type })
     });
     var d = await res.json();
-    if (!res.ok) throw new Error(d.error || 'Erreur scan ' + res.status);
-    aiMealData = d;
+    if (!res.ok) throw new Error(d.error || 'Erreur ' + res.status);
+    aiMealData = JSON.parse((d.text || '{}').replace(/```[a-z]*|```/g, '').trim());
     document.getElementById('aiAnalyseWrap').style.display = 'none';
     var mac = aiMealData.macros || {};
     var html = '<div class="ai-result-card">'
-      + '<div class="ai-result-name">' + (aiMealData.nom||'Plat analyse') + '</div>'
+      + '<div class="ai-result-name">' + (aiMealData.nom || 'Plat analyse') + '</div>'
       + '<div class="ai-macros-row">'
       + '<div class="ai-macro-chip">🥩 ' + (mac.prot||0) + 'g prot.</div>'
       + '<div class="ai-macro-chip">🌾 ' + (mac.gluc||0) + 'g gluc.</div>'
@@ -1192,7 +1199,6 @@ async function analyserAvecIA() {
       + '<div class="ai-ings-list">' + (aiMealData.ingredients||[]).map(function(i){
           return '<div class="ai-ing-row">' + (i.emoji||'🍽️') + ' ' + i.nom + ' — ' + i.quantite_g + 'g</div>';
         }).join('') + '</div>'
-      + (aiMealData.message ? '<div style="font-size:11px;color:#ff9500;margin-top:8px;">' + aiMealData.message + '</div>' : '')
       + '</div>';
     document.getElementById('aiResultCont').innerHTML = html;
     document.getElementById('btnSaveIA').style.display = 'block';
