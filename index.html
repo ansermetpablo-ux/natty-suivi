@@ -559,6 +559,7 @@ const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 const CLD_CLD = 'dujji1s6g';
 const CLD_PRE = 'meal_photos';
 const CLAUDE_API = 'https://natty-suivi.vercel.app/api/claude';
+const SCAN_API  = 'https://natty-suivi.vercel.app/api/scan-plat';
 
 // ═══ NUTRI TABLE (~100 ingredients, per 100g) ═══
 const NT = {
@@ -1158,35 +1159,48 @@ function addIngRow(){var r=document.createElement('div');r.className='ing-row';r
 function previewPhoto(input,prevId){var f=input.files[0];if(!f)return;var reader=new FileReader();reader.onload=function(e){var p=document.getElementById(prevId);p.src=e.target.result;p.classList.add('visible');};reader.readAsDataURL(f);}
 
 async function analyserAvecIA() {
-  if(!photoIAFile)return;
-  document.getElementById('aiAnalyseWrap').style.display='block';
-  document.getElementById('aiResultCont').innerHTML='';
-  document.getElementById('btnSaveIA').style.display='none';
-  // Convert to base64
-  var b64=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result.split(',')[1]);};r.readAsDataURL(photoIAFile);});
-  try{
-    var prompt='Analyse cette photo de plat. Identifie les aliments visibles, estime les quantites en grammes, et calcule les macronutriments approximatifs.'
-      +' Reponds UNIQUEMENT en JSON sans backticks: {"nom":"...","ingredients":[{"emoji":"...","nom":"...","quantite_g":0}],"macros":{"prot":0,"lip":0,"gluc":0,"cal":0},"description":"..."}';
-    var res=await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:600,image:b64,media_type:photoIAFile.type})});
-    var d=await res.json(); var text=d.text||'{}';
-    aiMealData=JSON.parse(text.replace(/```[a-z]*|```/g,'').trim());
-    document.getElementById('aiAnalyseWrap').style.display='none';
-    var mac=aiMealData.macros||{};
-    var html='<div class="ai-result-card">'
-      +'<div class="ai-result-name">'+aiMealData.nom+'</div>'
-      +'<div class="ai-macros-row">'
-      +'<div class="ai-macro-chip">🥩 '+mac.prot+'g prot.</div>'
-      +'<div class="ai-macro-chip">🌾 '+mac.gluc+'g gluc.</div>'
-      +'<div class="ai-macro-chip">🥑 '+mac.lip+'g lip.</div>'
-      +'<div class="ai-macro-chip">⚡ '+mac.cal+' kcal</div>'
-      +'</div>'
-      +'<div class="ai-ings-list">'+(aiMealData.ingredients||[]).map(function(i){return'<div class="ai-ing-row">'+i.emoji+' '+i.nom+' — '+i.quantite_g+'g</div>';}).join('')+'</div>'
-      +'</div>';
-    document.getElementById('aiResultCont').innerHTML=html;
-    document.getElementById('btnSaveIA').style.display='block';
-  }catch(e){document.getElementById('aiAnalyseWrap').style.display='none';document.getElementById('aiResultCont').innerHTML='<div style="color:#ff3b30;font-size:13px;">Erreur d\'analyse. Essayez une photo plus nette.</div>';}
+  if (!photoIAFile) return;
+  document.getElementById('aiAnalyseWrap').style.display = 'block';
+  document.getElementById('aiResultCont').innerHTML = '';
+  document.getElementById('btnSaveIA').style.display = 'none';
+  setText('aiStatus', 'Identification du plat...');
+  setText('aiStatusSub', 'LogMeal analyse votre photo');
+  var b64 = await new Promise(function(resolve) {
+    var r = new FileReader();
+    r.onload = function(e) { resolve(e.target.result.split(',')[1]); };
+    r.readAsDataURL(photoIAFile);
+  });
+  try {
+    var res = await fetch(SCAN_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: b64, media_type: photoIAFile.type })
+    });
+    var d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Erreur scan ' + res.status);
+    aiMealData = d;
+    document.getElementById('aiAnalyseWrap').style.display = 'none';
+    var mac = aiMealData.macros || {};
+    var html = '<div class="ai-result-card">'
+      + '<div class="ai-result-name">' + (aiMealData.nom||'Plat analyse') + '</div>'
+      + '<div class="ai-macros-row">'
+      + '<div class="ai-macro-chip">🥩 ' + (mac.prot||0) + 'g prot.</div>'
+      + '<div class="ai-macro-chip">🌾 ' + (mac.gluc||0) + 'g gluc.</div>'
+      + '<div class="ai-macro-chip">🥑 ' + (mac.lip||0) + 'g lip.</div>'
+      + '<div class="ai-macro-chip">⚡ ' + (mac.cal||0) + ' kcal</div>'
+      + '</div>'
+      + '<div class="ai-ings-list">' + (aiMealData.ingredients||[]).map(function(i){
+          return '<div class="ai-ing-row">' + (i.emoji||'🍽️') + ' ' + i.nom + ' — ' + i.quantite_g + 'g</div>';
+        }).join('') + '</div>'
+      + (aiMealData.message ? '<div style="font-size:11px;color:#ff9500;margin-top:8px;">' + aiMealData.message + '</div>' : '')
+      + '</div>';
+    document.getElementById('aiResultCont').innerHTML = html;
+    document.getElementById('btnSaveIA').style.display = 'block';
+  } catch(e) {
+    document.getElementById('aiAnalyseWrap').style.display = 'none';
+    document.getElementById('aiResultCont').innerHTML = '<div style="color:#ff3b30;font-size:13px;">Erreur : ' + e.message + '</div>';
+  }
 }
-
 async function saveIA(){
   if(!aiMealData||!USER_ID)return;
   var btn=document.getElementById('btnSaveIA');btn.disabled=true;btn.textContent='Enregistrement...';
