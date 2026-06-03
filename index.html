@@ -373,6 +373,7 @@ input[type="file"] { display:none; }
   <div class="tabs-bar">
     <button class="tab-btn active" id="tabSuivi"  onclick="switchTab('suivi')">Suivi</button>
     <button class="tab-btn" id="tabProg" onclick="switchTab('prog')">Progression</button>
+    <button class="tab-btn" id="tabChal" onclick="goToChallenges()">🏆 Challenges</button>
   </div>
 </div>
 
@@ -451,6 +452,16 @@ input[type="file"] { display:none; }
   </div>
 
   <button onclick="openRepasOverlay()" style="width:100%;padding:16px;background:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.06);">+ Ajouter un repas</button>
+
+  <!-- CHALLENGES BANNER -->
+  <div onclick="goToChallenges()" style="background:linear-gradient(135deg,#1c1c1e,#2d2d4e);border-radius:20px;padding:18px 20px;display:flex;align-items:center;gap:14px;cursor:pointer;">
+    <div style="font-size:36px;">🏆</div>
+    <div style="flex:1;">
+      <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:3px;">Challenges</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.55);">Défis personnels · Duo · Entreprise</div>
+    </div>
+    <div style="font-size:20px;color:rgba(255,255,255,0.35);">›</div>
+  </div>
 
   <!-- RDV -->
   <div class="rdv-mod">
@@ -1623,6 +1634,7 @@ function drawDonutMeal(id, data, colors) {
 }
 
 function closeOverlay(id){document.getElementById(id).classList.remove('active');}
+function goToChallenges(){var url='/challenges.html?token='+TOKEN;if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;}
 function goToOffre(){var url='/offre.html?token='+TOKEN;if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;}
 function ouvrirChat(){var url='/chat.html?token='+TOKEN;if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;}
 async function sbFetch(path){var r=await fetch(SB_URL+'/rest/v1/'+path,{headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});var t=await r.text();if(!r.ok)throw new Error(t);return t?JSON.parse(t):[];}
