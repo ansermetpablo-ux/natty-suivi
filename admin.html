@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"> 
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -288,6 +288,48 @@ input[type="file"] { display: none; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.ok { background: var(--green); }
 .toast.err { background: var(--red); }
+
+/* Search highlight */
+.search-match { background: var(--amber-light); border-radius: 4px; }
+
+/* Fiche onglets étendus */
+.fiche-switch { flex-wrap: wrap; }
+.fiche-switch-btn { font-size: 11px; padding: 6px 10px; }
+
+/* Edit field */
+.edit-field-wrap { position: relative; margin-bottom: 10px; }
+.edit-field-lbl { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
+.edit-field-lbl button { background: none; border: none; cursor: pointer; font-size: 11px; color: var(--green); font-family: 'DM Sans', sans-serif; font-weight: 500; }
+.edit-field-inp { width: 100%; background: var(--bg); border: none; border-radius: 10px; padding: 10px 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--shadow-in, var(--si)); }
+.edit-field-inp:focus { box-shadow: var(--si), 0 0 0 2px var(--green); }
+.edit-field-inp::placeholder { color: #ccc; }
+.edit-save-btn { width: 100%; padding: 12px; background: var(--black); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px; }
+.edit-cancel-btn { width: 100%; padding: 10px; background: var(--bg); color: var(--muted); border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; margin-top: 4px; box-shadow: var(--sm); }
+
+/* Alim panel */
+.alim-section { margin-bottom: 16px; }
+.alim-section-title { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.alim-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.alim-chip { font-size: 11px; padding: 4px 10px; border-radius: 99px; background: var(--bg); box-shadow: var(--sm); color: var(--text); }
+.alim-chip-red { background: var(--rl); color: var(--red); }
+.alim-chip-green { background: var(--gl); color: var(--green); }
+.alim-chip-dark { background: #e8e8f0; color: var(--black); }
+.alim-note { font-size: 13px; color: var(--text); line-height: 1.6; background: var(--bg); border-radius: 12px; padding: 12px 14px; box-shadow: var(--si); }
+.alim-stars { font-size: 18px; }
+.alim-empty { font-size: 13px; color: var(--muted); font-style: italic; }
+
+/* RDV fiche edit */
+.rdv-edit-row { display: flex; gap: 8px; align-items: center; }
+.rdv-edit-row .edit-field-inp { flex: 1; }
+.btn-prog-rdv-sm { padding: 10px 14px; background: var(--black); color: white; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-del-rdv { padding: 8px 10px; background: var(--rl); color: var(--red); border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; }
+
+/* Progression panel */
+.prog-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.prog-stat-card { background: var(--bg); border-radius: 14px; padding: 12px 14px; box-shadow: var(--si); }
+.prog-stat-val { font-size: 22px; font-weight: 600; margin-bottom: 2px; }
+.prog-stat-lbl { font-size: 10px; color: var(--muted); }
+
 .rdv-fiche-card { background: var(--bg); border-radius: 18px; padding: 18px; box-shadow: var(--so); }
 .rdv-fiche-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .rdv-fiche-item { display: flex; align-items: center; gap: 12px; background: var(--bg); border-radius: 14px; padding: 12px 14px; box-shadow: var(--si); }
@@ -470,12 +512,24 @@ input[type="file"] { display: none; }
         <div class="fiche-title" id="ficheTitle">Fiche client</div>
         <div class="fiche-switch">
           <button class="fiche-switch-btn active" id="switchFiche">Fiche</button>
+          <button class="fiche-switch-btn" id="switchAlim">🥗 Alim.</button>
+          <button class="fiche-switch-btn" id="switchRdvFiche">📅 RDV</button>
+          <button class="fiche-switch-btn" id="switchProg">📊 Prog.</button>
           <button class="fiche-switch-btn" id="switchChat">💬 Chat<span class="fiche-switch-badge" id="ficheChatBadge">0</span></button>
         </div>
       </div>
       <div class="fiche-content">
         <div class="fiche-panel active" id="panelFiche">
           <div class="fiche-data-content" id="ficheDataContent"><div class="loading">Chargement...</div></div>
+        </div>
+        <div class="fiche-panel" id="panelAlim">
+          <div class="fiche-data-content" id="ficheAlimContent"><div class="loading">Chargement...</div></div>
+        </div>
+        <div class="fiche-panel" id="panelRdvFiche">
+          <div class="fiche-data-content" id="ficheRdvContent"><div class="loading">Chargement...</div></div>
+        </div>
+        <div class="fiche-panel" id="panelProgFiche">
+          <div class="fiche-data-content" id="ficheProgContent"><div class="loading">Chargement...</div></div>
         </div>
         <div class="fiche-panel" id="panelChat">
           <div class="chat-panel">
@@ -582,7 +636,10 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('masterLink').addEventListener('click', toggleMasterLogin);
   document.getElementById('logoutBtn').addEventListener('click', logout);
   document.getElementById('pwdInput').addEventListener('keydown', function(e) { if(e.key==='Enter') login(); });
-  document.getElementById('searchInp').addEventListener('input', function() { currentSearch=this.value.toLowerCase(); appliquerFiltres(); });
+  document.getElementById('searchInp').addEventListener('input', function() {
+    currentSearch = this.value.toLowerCase();
+    appliquerFiltres();
+  });
   // Nav tabs
   document.getElementById('navClients').addEventListener('click', () => switchNav('clients'));
   document.getElementById('navMessages').addEventListener('click', () => switchNav('messages'));
@@ -627,7 +684,10 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btnSemNext').addEventListener('click', () => changerSemaine(1));
   // Fiche
   document.getElementById('btnRetour').addEventListener('click', retourListe);
-  document.getElementById('switchFiche').addEventListener('click', () => switchFichePanel('fiche'));
+  document.getElementById('switchFiche').addEventListener('click', function(){ switchFichePanel('fiche'); });
+  document.getElementById('switchAlim').addEventListener('click', function(){ switchFichePanel('alim'); });
+  document.getElementById('switchRdvFiche').addEventListener('click', function(){ switchFichePanel('rdvFiche'); });
+  document.getElementById('switchProg').addEventListener('click', function(){ switchFichePanel('progFiche'); });
   document.getElementById('switchChat').addEventListener('click', () => switchFichePanel('chat'));
   document.getElementById('ficheSendBtn').addEventListener('click', envoyerReponse);
   document.getElementById('ficheMessageInput').addEventListener('keydown', function(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();envoyerReponse();} });
@@ -653,7 +713,7 @@ function switchNav(tab) {
   });
   const titles = {clients:'Mes clients', messages:'Messages', rdv:'Rendez-vous', menu:'Menu', commandes:'Commandes', equipe:'Équipe'};
   document.getElementById('topHeading').textContent = titles[tab]||tab;
-  document.getElementById('searchWrap').style.display = tab==='clients' ? 'flex' : 'none';
+  document.getElementById('searchWrap').style.display = (tab==='clients'||tab==='messages') ? 'flex' : 'none';
   if (tab==='commandes') chargerCommandes();
   if (tab==='messages') chargerThreadsMessages();
   if (tab==='equipe') chargerEquipe();
@@ -710,44 +770,25 @@ function setFilter(f, el) {
 }
 
 function appliquerFiltres() {
-  let data = [...allClients];
-  if (currentFilter==='alerte') data = data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3);
-  else if (currentFilter!=='tous') data = data.filter(c=>c.motivation===currentFilter);
-  if (currentSearch) data = data.filter(c=>(c.user_id||'').toLowerCase().includes(currentSearch)||(c.email||'').toLowerCase().includes(currentSearch));
-  afficherClients(data);
-}
-
-// ── RDV ──
-async function chargerRdvAdmin() {
-  try {
-    allRdv = await sb('rdv?order=date_rdv.asc&select=*');
-    // Notifs nouveaux abonnés (2 RDV à programmer)
-    const demandesClient = allRdv.filter(r => r.statut==='demande_client');
-    if (demandesClient.length > 0) {
-      const badge = document.getElementById('navRdvBadge');
-      badge.textContent = (parseInt(badge.textContent)||0) + demandesClient.length;
-      badge.classList.add('visible');
-    }
-
-    const recaps = allRdv.filter(r => r.statut==='recap_demande');
-    const banner = document.getElementById('rdvNotifBanner');
-    const badge = document.getElementById('navRdvBadge');
-    if (recaps.length > 0) {
-      banner.classList.add('visible');
-      badge.textContent = recaps.length; badge.classList.add('visible');
-      document.getElementById('rdvNotifList').innerHTML = recaps.map(r => {
-        const client = allClients.find(c=>c.user_id===r.user_id);
-        const email = client?.email || 'Email non renseigné';
-        const date = new Date(r.date_rdv).toLocaleDateString('fr-FR', {day:'numeric', month:'short'});
-        return '<div class="rdv-notif-item"><div class="rdv-notif-text">Client '+(r.user_id||'').substring(0,8)+' · '+date+' · <strong>'+email+'</strong></div>'
-          +'<button class="btn-send-recap" data-rdv="'+r.id+'" data-uid="'+r.user_id+'">📧 Envoyer récap</button></div>';
-      }).join('');
-      document.querySelectorAll('.btn-send-recap').forEach(btn => {
-        btn.addEventListener('click', function() { envoyerRecapRDV(this.dataset.rdv, this.dataset.uid, this); });
-      });
-    } else { banner.classList.remove('visible'); }
-    afficherRdvAdmin(currentRdvFilter);
-  } catch(e) { document.getElementById('rdvAdminList').innerHTML='<div class="empty">Erreur : '+e.message+'</div>'; }
+  var search = currentSearch.toLowerCase().trim();
+  var filtered = allClients.filter(function(cl) {
+    if (!search) return true;
+    var prenom = (cl.prenom||'').toLowerCase();
+    var nom    = (cl.nom||'').toLowerCase();
+    var email  = (cl.email||'').toLowerCase();
+    var uid    = (cl.user_id||'').toLowerCase();
+    var motiv  = (cl.motivation||'').toLowerCase();
+    return prenom.includes(search) || nom.includes(search) || email.includes(search) || uid.includes(search) || motiv.includes(search) || (prenom+' '+nom).includes(search);
+  });
+  var abonnFilter = currentAbonnFilter;
+  if (abonnFilter && abonnFilter !== 'tous') {
+    filtered = filtered.filter(function(cl) {
+      if (abonnFilter === 'abonne') return cl._abonne;
+      if (abonnFilter === 'non_abonne') return !cl._abonne;
+      return true;
+    });
+  }
+  afficherClients(filtered);
 }
 
 function setRdvFilter(f, el) {
@@ -899,11 +940,19 @@ function subscribeGlobalRealtime() {
 
 // ── FICHE ──
 function switchFichePanel(panel) {
-  document.getElementById('panelFiche').classList.toggle('active', panel==='fiche');
-  document.getElementById('panelChat').classList.toggle('active', panel==='chat');
-  document.getElementById('switchFiche').classList.toggle('active', panel==='fiche');
-  document.getElementById('switchChat').classList.toggle('active', panel==='chat');
+  var panels = ['fiche','alim','rdvFiche','progFiche','chat'];
+  panels.forEach(function(p) {
+    var pid = 'panel'+p.charAt(0).toUpperCase()+p.slice(1);
+    var sid = 'switch'+p.charAt(0).toUpperCase()+p.slice(1);
+    var el = document.getElementById(pid);
+    var sel = document.getElementById(sid);
+    if(el) el.classList.toggle('active', p===panel);
+    if(sel) sel.classList.toggle('active', p===panel);
+  });
   if (panel==='chat'&&currentClient) chargerChatFiche(currentClient.user_id);
+  if (panel==='alim'&&currentClient) chargerFicheAlim(currentClient.user_id);
+  if (panel==='rdvFiche'&&currentClient) chargerFicheRdvPanel(currentClient.user_id);
+  if (panel==='progFiche'&&currentClient) chargerFicheProg(currentClient.user_id);
 }
 
 async function chargerChatFiche(userId) {
@@ -1002,57 +1051,325 @@ async function ouvrirFiche(id) {
   } catch(e) {}
 }
 
-function afficherFiche(c) {
-  const motivL = {mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Changer mon corps', performance:'🏆 Performance', sante:'❤️ Santé'};
-  const maturL = {debutant:'Débutant', premiers_pas:'Premiers pas', habitudes:'Habitudes en place', regime_place:'Régime structuré'};
-  const actL = {sedentaire:'Sédentaire', leger:'Légèrement actif', modere:'Modérément actif', actif:'Très actif'};
-  const sm=c.score_motivation||5, sr=c.score_rigueur||5, sn=c.score_nutrition||5;
-  const jc = v => v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
-  const jcls = v => v<=3?'jb-low':v<=6?'jb-mid':'jb-hi';
-  const jlbl = v => v<=3?'Faible':v<=6?'Moyen':'Élevé';
-  const emailBloc = c.email
-    ? '<div class="sec-card"><div class="sec-label">📬 Contact</div><div class="contact-row"><div class="contact-icon">✉️</div><div class="contact-info"><div class="contact-label">Adresse email</div><div class="contact-val">'+c.email+'</div></div><button class="btn-send-recap-fiche" data-uid="'+c.user_id+'" data-email="'+c.email+'">📧 Envoyer le récap</button></div></div>'
-    : '<div class="sec-card"><div class="sec-label">📬 Contact</div><div style="font-size:13px;color:var(--muted);padding:8px 0;">Email non renseigné.</div></div>';
-  document.getElementById('ficheDataContent').innerHTML = emailBloc
-    +(c.prenom?'<div class="sec-card" style="background:var(--black);color:white;padding:16px 18px;"><div style="font-size:20px;font-weight:600;">'+c.prenom+' '+(c.nom||'')+'</div><div style="font-size:12px;opacity:0.6;margin-top:2px;">'+(c.email||'')+'</div></div>':'')
-    +'<div class="sec-card"><div class="sec-label">Profil & motivation</div><div class="data-grid">'
-    +'<div class="data-cell"><div class="dc-lbl">Maturité</div><div class="dc-val">'+(maturL[c.maturite]||c.maturite||'–')+'</div></div>'
-    +'<div class="data-cell"><div class="dc-lbl">Objectif</div><div class="dc-val">'+(motivL[c.motivation]||c.motivation||'–')+'</div></div>'
-    +'<div class="data-cell"><div class="dc-lbl">Axe</div><div class="dc-val">'+(c.axe_amelioration||'–')+'</div></div>'
-    +'<div class="data-cell"><div class="dc-lbl">Inscription</div><div class="dc-val">'+new Date(c.created_at).toLocaleDateString('fr-FR')+'</div></div></div></div>'
-    +'<div class="sec-card"><div class="sec-label">Auto-évaluation</div>'
-    +[['💪 Motivation',sm],['📅 Rigueur',sr],['🥗 Nutrition',sn]].map(([n,v])=>'<div class="jauge-block"><div class="jauge-head"><span class="jauge-name">'+n+'</span><span class="jauge-badge '+jcls(v)+'">'+v+'/10 · '+jlbl(v)+'</span></div><div class="jauge-track"><div class="jauge-fill" style="width:'+v*10+'%;background:'+jc(v)+';"></div></div></div>').join('')
-    +'</div>'
-    +'<div class="sec-card"><div class="sec-label">Données physiques</div><div class="data-grid">'
-    +'<div class="data-cell"><div class="dc-lbl">Âge</div><div class="dc-val">'+(c.age||'–')+' ans</div></div>'
-    +'<div class="data-cell"><div class="dc-lbl">Sexe</div><div class="dc-val">'+(c.sexe||'–')+'</div></div>'
-    +'<div class="data-cell"><div class="dc-lbl">Poids</div><div class="dc-val">'+(c.poids||'–')+' kg</div></div>'
-    +'<div class="data-cell"><div class="dc-lbl">Taille</div><div class="dc-val">'+(c.taille||'–')+' cm</div></div>'
-    +'<div class="data-cell"><div class="dc-lbl">BMR</div><div class="dc-val green">'+(c.bmr||'–')+' kcal</div></div>'
-    +'<div class="data-cell"><div class="dc-lbl">TDEE</div><div class="dc-val green">'+(c.tdee||'–')+' kcal</div></div>'
-    +'<div class="data-cell"><div class="dc-lbl">Activité</div><div class="dc-val">'+(actL[c.activite]||c.activite||'–')+'</div></div></div></div>'
-    +'<div class="sec-card"><div class="sec-label">Journal alimentaire</div><div id="repasSection"><div class="loading">Chargement...</div></div></div>'
-    +'<div class="sec-card" id="scoresSection" style="display:none;"><div class="sec-label">Scores nutritionnels</div><div id="scoresContent"></div></div>'
-    +'<div class="sec-card rdv-fiche-card"><div class="sec-label">📅 Rendez-vous programmés</div><div class="rdv-fiche-list" id="fichRdvList"><div class="loading">Chargement...</div></div>'
-    +'<div class="rdv-prog-form" id="rdvProgForm">'
-    +'<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;">Programmer un rendez-vous</div>'
-    +'<div class="rdv-prog-row">'
-    +'<select class="rdv-prog-select" id="rdvProgType"><option value="onboarding">🎯 Bilan onboarding</option><option value="suivi">📊 RDV de suivi</option><option value="consultation">💬 Consultation</option></select>'
-    +'</div>'
-    +'<div class="rdv-prog-row">'
-    +'<input class="rdv-prog-inp" type="date" id="rdvProgDate">'
-    +'<select class="rdv-prog-select" id="rdvProgHeure"><option>08:00</option><option>09:00</option><option>10:00</option><option>11:00</option><option>14:00</option><option>15:00</option><option>16:00</option><option>17:00</option><option>18:00</option></select>'
-    +'</div>'
-    +'<button class="btn-prog-rdv" id="btnProgRdv">Envoyer au client →</button>'
-    +'</div>'
-    +'<button class="btn-open-prog" id="btnOpenProgRdv" style="width:100%;margin-top:10px;background:var(--bg);color:var(--text);box-shadow:var(--sm);">+ Programmer un RDV</button>'
-    +'</div>'
-    +'<div class="sec-card"><div class="sec-label">⚡ Action de la semaine</div><input class="action-inp" type="text" id="actionInp" placeholder="Ex: Ajoutez des protéines au petit-déjeuner"><button class="btn-save-notes" id="btnSaveNotes">Enregistrer</button></div>'
+function afficherFiche(cl) {
+  var motivL = {mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Corps', performance:'🏆 Performance', sante:'❤️ Santé'};
+  var maturL = {debutant:'Débutant', premiers_pas:'Premiers pas', habitudes:'Habitudes', regime_place:'Régime structuré'};
+  var actL   = {sedentaire:'Sédentaire', leger:'Légèrement actif', modere:'Modérément actif', actif:'Très actif'};
+  var sm=cl.score_motivation||5, sr=cl.score_rigueur||5, sn=cl.score_nutrition||5;
+  var jc=function(v){return v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';};
+  var jcls=function(v){return v<=3?'jb-low':v<=6?'jb-mid':'jb-hi';};
+  var jlbl=function(v){return v<=3?'Faible':v<=6?'Moyen':'Élevé';};
+
+  // Contact card
+  var emailBloc = '<div class="sec-card"><div class="sec-label">📬 Contact</div>';
+  emailBloc += '<div class="edit-field-wrap"><div class="edit-field-lbl">Email<button onclick="editField('email',''+( cl.email||'')+'')">✏️ Modifier</button></div>';
+  emailBloc += '<div class="dc-val">'+(cl.email||'<span style="color:var(--muted)">Non renseigné</span>')+'</div></div>';
+  if (cl.email) emailBloc += '<button class="btn-send-recap-fiche" data-uid="'+cl.user_id+'" data-email="'+cl.email+'">📧 Envoyer le récap</button>';
+  emailBloc += '</div>';
+
+  // Profil card with edit buttons
+  var profilBloc = '<div class="sec-card"><div class="sec-label">👤 Profil</div>';
+  profilBloc += '<div class="edit-field-wrap"><div class="edit-field-lbl">Prénom<button onclick="editField('prenom',''+(cl.prenom||'')+'')">✏️ Modifier</button></div><div class="dc-val">'+(cl.prenom||'–')+'</div></div>';
+  profilBloc += '<div class="edit-field-wrap"><div class="edit-field-lbl">Nom<button onclick="editField('nom',''+(cl.nom||'')+'')">✏️ Modifier</button></div><div class="dc-val">'+(cl.nom||'–')+'</div></div>';
+  profilBloc += '<div class="data-grid">';
+  profilBloc += '<div class="data-cell"><div class="dc-lbl">Objectif</div><div class="dc-val">'+(motivL[cl.motivation]||'–')+'</div></div>';
+  profilBloc += '<div class="data-cell"><div class="dc-lbl">Maturité</div><div class="dc-val">'+(maturL[cl.maturite]||'–')+'</div></div>';
+  profilBloc += '<div class="data-cell"><div class="dc-lbl">Axe</div><div class="dc-val">'+(cl.axe_amelioration||'–')+'</div></div>';
+  profilBloc += '<div class="data-cell"><div class="dc-lbl">Inscription</div><div class="dc-val">'+new Date(cl.created_at).toLocaleDateString('fr-FR')+'</div></div>';
+  profilBloc += '</div></div>';
+
+  // Auto-évaluation
+  var evalBloc = '<div class="sec-card"><div class="sec-label">Auto-évaluation</div>'
+    +[['💪 Motivation',sm],['📅 Rigueur',sr],['🥗 Nutrition',sn]].map(function(arr){
+      return '<div class="jauge-block"><div class="jauge-head"><span class="jauge-name">'+arr[0]+'</span><span class="jauge-badge '+jcls(arr[1])+'">'+arr[1]+'/10 · '+jlbl(arr[1])+'</span></div><div class="jauge-track"><div class="jauge-fill" style="width:'+arr[1]*10+'%;background:'+jc(arr[1])+';"></div></div></div>';
+    }).join('')+'</div>';
+
+  // Données physiques with edit
+  var physBloc = '<div class="sec-card"><div class="sec-label">📏 Données physiques</div><div class="data-grid">';
+  [['Âge','age',cl.age,'ans'],['Sexe','sexe',cl.sexe,''],['Poids','poids',cl.poids,'kg'],['Taille','taille',cl.taille,'cm'],['BMR','bmr',cl.bmr,'kcal'],['TDEE','tdee',cl.tdee,'kcal'],['Activité','activite',actL[cl.activite]||cl.activite,'']].forEach(function(f){
+    physBloc += '<div class="data-cell"><div class="dc-lbl">'+f[0]+' <button onclick="editField(''+f[1]+'',''+(cl[f[1]]||'')+'')" style="background:none;border:none;cursor:pointer;font-size:10px;color:var(--green);">✏️</button></div><div class="dc-val green">'+(f[2]||'–')+(f[3]?' '+f[3]:'')+'</div></div>';
+  });
+  physBloc += '</div></div>';
+
+  // Journal + notes
+  var journalBloc = '<div class="sec-card"><div class="sec-label">Journal alimentaire</div><div id="repasSection"><div class="loading">Chargement...</div></div></div>'
+    +'<div class="sec-card" id="scoresSection" style="display:none;"><div class="sec-label">Scores</div><div id="scoresContent"></div></div>'
+    +'<div class="sec-card"><div class="sec-label">⚡ Action de la semaine</div><input class="action-inp" type="text" id="actionInp" placeholder="Ex: Ajoutez des protéines..."><button class="btn-save-notes" id="btnSaveNotes">Enregistrer</button></div>'
     +'<div class="sec-card"><div class="sec-label">📝 Notes privées</div><textarea class="notes-area" id="notesArea" placeholder="Vos observations..."></textarea></div>';
+
+  // Edit modal
+  var editModal = '<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);z-index:500;align-items:center;justify-content:center;">'
+    +'<div style="background:var(--bg);border-radius:20px;padding:24px;max-width:340px;width:90%;box-shadow:var(--so);">'
+    +'<div style="font-size:15px;font-weight:600;margin-bottom:16px;" id="editModalTitle">Modifier</div>'
+    +'<input class="edit-field-inp" type="text" id="editModalInp" style="margin-bottom:14px;">'
+    +'<button class="edit-save-btn" onclick="saveEditField()">Enregistrer</button>'
+    +'<button class="edit-cancel-btn" onclick="closeEditModal()">Annuler</button>'
+    +'</div></div>';
+
+  document.getElementById('ficheDataContent').innerHTML = emailBloc + profilBloc + evalBloc + physBloc + journalBloc + editModal;
+
   document.querySelector('.btn-send-recap-fiche')?.addEventListener('click', function() {
     envoyerRecapFiche(this.dataset.uid, this.dataset.email, this);
   });
   document.getElementById('btnSaveNotes').addEventListener('click', sauvegarderNotes);
+}
+
+var _editField = null;
+function editField(field, currentVal) {
+  _editField = field;
+  var labels = {prenom:'Prénom', nom:'Nom', email:'Email', age:'Âge', poids:'Poids (kg)', taille:'Taille (cm)', bmr:'BMR (kcal)', tdee:'TDEE (kcal)', sexe:'Sexe', activite:'Activité'};
+  document.getElementById('editModalTitle').textContent = 'Modifier ' + (labels[field]||field);
+  document.getElementById('editModalInp').value = currentVal||'';
+  var modal = document.getElementById('editModal');
+  modal.style.display = 'flex';
+  document.getElementById('editModalInp').focus();
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  _editField = null;
+}
+
+async function saveEditField() {
+  if (!_editField || !currentClient) return;
+  var val = document.getElementById('editModalInp').value.trim();
+  var payload = {};
+  payload[_editField] = val;
+  try {
+    await sb('onboarding?user_id=eq.'+currentClient.user_id, {method:'PATCH', body:JSON.stringify(payload)});
+    // Update local
+    currentClient[_editField] = val;
+    var idx = allClients.findIndex(function(c){return c.user_id===currentClient.user_id;});
+    if (idx>=0) allClients[idx][_editField] = val;
+    closeEditModal();
+    afficherFiche(currentClient);
+    toast('Mis à jour !', 'ok');
+  } catch(e) { toast('Erreur : '+e.message, 'err'); }
+}
+
+
+// ── ONGLET ALIMENTATION ──
+async function chargerFicheAlim(userId) {
+  document.getElementById('ficheAlimContent').innerHTML = '<div class="loading">Chargement...</div>';
+  try {
+    var data = await sbFetch('questionnaire_alim?user_id=eq.'+userId+'&limit=1');
+    if (!data||!data.length) {
+      document.getElementById('ficheAlimContent').innerHTML = '<div class="alim-empty" style="padding:20px;">Questionnaire alimentaire non complété.</div>';
+      return;
+    }
+    var q = data[0];
+    var html = '';
+
+    // Allergies
+    html += '<div class="sec-card"><div class="alim-section"><div class="alim-section-title">🚫 Allergies & Régimes</div>';
+    var allergies = (q.allergies||[]);
+    var regime = (q.regime||[]);
+    if (allergies.length||regime.length) {
+      html += '<div class="alim-chips">';
+      allergies.forEach(function(a){ html += '<span class="alim-chip alim-chip-red">'+a+'</span>'; });
+      regime.forEach(function(r){ html += '<span class="alim-chip alim-chip-dark">'+r+'</span>'; });
+      html += '</div>';
+    } else html += '<div class="alim-empty">Aucune allergie signalée</div>';
+    html += '</div>';
+
+    // Aliments aimés
+    var aimes = q.aliments_aimes||{};
+    if (Object.keys(aimes).length) {
+      html += '<div class="alim-section"><div class="alim-section-title">✅ Aliments aimés</div><div class="alim-chips">';
+      Object.values(aimes).flat().forEach(function(a){ html += '<span class="alim-chip alim-chip-green">'+a+'</span>'; });
+      html += '</div></div>';
+    }
+
+    // Aliments évités
+    var evites = q.aliments_evites||{};
+    if (Object.keys(evites).length) {
+      html += '<div class="alim-section"><div class="alim-section-title">❌ Aliments évités</div><div class="alim-chips">';
+      Object.values(evites).flat().forEach(function(a){ html += '<span class="alim-chip alim-chip-red">'+a+'</span>'; });
+      html += '</div></div>';
+    }
+
+    // Habitudes
+    html += '<div class="alim-section"><div class="alim-section-title">🕐 Habitudes</div><div class="data-grid">';
+    if (q.frequence_cuisine) html += '<div class="data-cell"><div class="dc-lbl">Cuisine</div><div class="dc-val">'+q.frequence_cuisine+'</div></div>';
+    if (q.nb_repas)          html += '<div class="data-cell"><div class="dc-lbl">Repas/jour</div><div class="dc-val">'+q.nb_repas+'</div></div>';
+    if (q.repas_sautes)      html += '<div class="data-cell"><div class="dc-lbl">Repas sautés</div><div class="dc-val">'+q.repas_sautes+'</div></div>';
+    html += '</div></div>';
+
+    // Snacking
+    if ((q.snacking||[]).length) {
+      html += '<div class="alim-section"><div class="alim-section-title">🍿 Snacking</div><div class="alim-chips">';
+      q.snacking.forEach(function(s){ html += '<span class="alim-chip">'+s+'</span>'; });
+      html += '</div></div>';
+    }
+
+    // Ressenti
+    if ((q.ressenti||[]).length) {
+      html += '<div class="alim-section"><div class="alim-section-title">💭 Ressenti</div><div class="alim-chips">';
+      q.ressenti.forEach(function(r){ html += '<span class="alim-chip alim-chip-dark">'+r+'</span>'; });
+      html += '</div></div>';
+    }
+
+    // Satisfaction
+    if (q.satisfaction_stars) {
+      html += '<div class="alim-section"><div class="alim-section-title">⭐ Satisfaction</div>';
+      html += '<div class="alim-stars">'+Array(q.satisfaction_stars).fill('⭐').join('')+'</div>';
+      html += '</div>';
+    }
+
+    // Commentaire libre
+    if (q.commentaire_libre) {
+      html += '<div class="alim-section"><div class="alim-section-title">📝 Commentaire libre</div>';
+      html += '<div class="alim-note">'+q.commentaire_libre+'</div></div>';
+    }
+
+    html += '</div>';
+    document.getElementById('ficheAlimContent').innerHTML = html;
+  } catch(e) {
+    document.getElementById('ficheAlimContent').innerHTML = '<div class="alim-empty" style="padding:20px;">Erreur : '+e.message+'</div>';
+  }
+}
+
+// ── ONGLET RDV ──
+async function chargerFicheRdvPanel(userId) {
+  document.getElementById('ficheRdvContent').innerHTML = '<div class="loading">Chargement...</div>';
+  try {
+    var rdvs = await sbFetch('rdv?user_id=eq.'+userId+'&order=date_rdv.desc&select=*');
+    var MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+    var html = '<div class="sec-card">';
+    html += '<div class="sec-label" style="margin-bottom:12px;">📅 Rendez-vous</div>';
+
+    if (rdvs.length) {
+      html += rdvs.map(function(r) {
+        var d = new Date(r.date_rdv);
+        var isPast = d < new Date();
+        var statCol = r.statut==='confirme'?'var(--green)':r.statut==='demande_client'?'var(--amber)':'var(--muted)';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:.5px solid var(--bdr);">'
+          +'<div style="width:44px;height:48px;background:var(--bg);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--si);">'
+          +'<div style="font-size:17px;font-weight:700;">'+(isNaN(d)?'–':d.getDate())+'</div>'
+          +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase;">'+(isNaN(d)?'–':MOIS[d.getMonth()])+'</div>'
+          +'</div>'
+          +'<div style="flex:1;">'
+          +'<div style="font-size:13px;font-weight:600;">'+( r.type_rdv==='onboarding'?'Bilan onboarding':r.type_rdv==='suivi'?'Suivi':r.type_rdv==='demande_client'?'Demande client':'Consultation')+'</div>'
+          +'<div style="font-size:11px;color:var(--muted);">'+(r.heure||'')+'</div>'
+          +'</div>'
+          +'<div style="display:flex;align-items:center;gap:6px;">'
+          +'<span style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--gl);color:'+statCol+';">'+(r.statut==='confirme'?'Confirmé':r.statut==='demande_client'?'En attente':r.statut)+'</span>'
+          +'<button onclick="confirmerRdvAdmin(''+r.id+'')" style="padding:5px 9px;background:var(--black);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;">✓</button>'
+          +'<button onclick="supprimerRdv(''+r.id+'')" style="padding:5px 9px;background:var(--rl);color:var(--red);border:none;border-radius:8px;font-size:11px;cursor:pointer;">✕</button>'
+          +'</div>'
+          +'</div>';
+      }).join('');
+    } else {
+      html += '<div class="alim-empty">Aucun rendez-vous</div>';
+    }
+
+    html += '</div><div class="sec-card"><div class="sec-label">+ Programmer un RDV</div>';
+    html += '<div class="rdv-edit-row" style="margin-bottom:8px;">';
+    html += '<input class="edit-field-inp" type="date" id="rdvAdminDate" placeholder="Date">';
+    html += '<input class="edit-field-inp" type="time" id="rdvAdminHeure" placeholder="Heure" style="width:90px;">';
+    html += '</div>';
+    html += '<select class="edit-field-inp" id="rdvAdminType" style="margin-bottom:10px;">';
+    html += '<option value="onboarding">Bilan onboarding</option><option value="suivi">Suivi</option><option value="consultation">Consultation</option>';
+    html += '</select>';
+    html += '<button class="btn-prog-rdv-sm" style="width:100%;" onclick="programmerRdvAdmin(''+userId+'')">Programmer ce RDV</button>';
+    html += '</div>';
+
+    document.getElementById('ficheRdvContent').innerHTML = html;
+  } catch(e) {
+    document.getElementById('ficheRdvContent').innerHTML = '<div class="alim-empty" style="padding:20px;">Erreur : '+e.message+'</div>';
+  }
+}
+
+async function confirmerRdvAdmin(rdvId) {
+  try {
+    await sb('rdv?id=eq.'+rdvId, {method:'PATCH', body:JSON.stringify({statut:'confirme'})});
+    toast('RDV confirmé', 'ok');
+    chargerFicheRdvPanel(currentClient.user_id);
+  } catch(e) { toast('Erreur', 'err'); }
+}
+
+async function supprimerRdv(rdvId) {
+  if (!confirm('Supprimer ce RDV ?')) return;
+  try {
+    await sb('rdv?id=eq.'+rdvId, {method:'DELETE'});
+    toast('RDV supprimé', 'ok');
+    chargerFicheRdvPanel(currentClient.user_id);
+  } catch(e) { toast('Erreur', 'err'); }
+}
+
+async function programmerRdvAdmin(userId) {
+  var date = document.getElementById('rdvAdminDate').value;
+  var heure = document.getElementById('rdvAdminHeure').value;
+  var type = document.getElementById('rdvAdminType').value;
+  if (!date) { toast('Choisissez une date', 'err'); return; }
+  try {
+    await sb('rdv', {method:'POST', body:JSON.stringify({
+      user_id: userId, type_rdv: type, statut: 'confirme',
+      date_rdv: date+'T'+(heure||'09:00')+':00',
+      heure: heure||'09:00', created_at: new Date().toISOString()
+    })});
+    toast('RDV programmé', 'ok');
+    chargerFicheRdvPanel(userId);
+  } catch(e) { toast('Erreur : '+e.message, 'err'); }
+}
+
+// ── ONGLET PROGRESSION ──
+async function chargerFicheProg(userId) {
+  document.getElementById('ficheProgContent').innerHTML = '<div class="loading">Chargement...</div>';
+  try {
+    var [daily, meals, onb] = await Promise.all([
+      sbFetch('daily_macros?user_id=eq.'+userId+'&order=date.desc&limit=30'),
+      sbFetch('meals?user_id=eq.'+userId+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=20'),
+      sbFetch('onboarding?user_id=eq.'+userId+'&select=poids,tdee,bmr,proteines,lipides,glucides&limit=1')
+    ]);
+    var obj = onb[0]||{};
+    var avgProt=0, avgLip=0, avgGluc=0, avgCal=0;
+    if (daily.length) {
+      daily.forEach(function(d){avgProt+=d.prot_g||0;avgLip+=d.lip_g||0;avgGluc+=d.gluc_g||0;avgCal+=d.cal_kcal||0;});
+      avgProt=Math.round(avgProt/daily.length); avgLip=Math.round(avgLip/daily.length);
+      avgGluc=Math.round(avgGluc/daily.length); avgCal=Math.round(avgCal/daily.length);
+    }
+    var html = '<div class="sec-card"><div class="sec-label">Moyennes 30 derniers jours</div>';
+    html += '<div class="prog-stat-grid">';
+    html += '<div class="prog-stat-card"><div class="prog-stat-val green">'+avgProt+'g</div><div class="prog-stat-lbl">Protéines moy.</div></div>';
+    html += '<div class="prog-stat-card"><div class="prog-stat-val green">'+avgGluc+'g</div><div class="prog-stat-lbl">Glucides moy.</div></div>';
+    html += '<div class="prog-stat-card"><div class="prog-stat-val green">'+avgLip+'g</div><div class="prog-stat-lbl">Lipides moy.</div></div>';
+    html += '<div class="prog-stat-card"><div class="prog-stat-val green">'+avgCal+'</div><div class="prog-stat-lbl">Calories moy.</div></div>';
+    html += '</div>';
+
+    // Bars vs objectif
+    if (obj.tdee) {
+      var oprot = obj.proteines||0, olip = obj.lipides||0, ogluc = obj.glucides||0, ocal = obj.tdee||0;
+      html += '<div style="margin-top:10px;">';
+      [[' Protéines',avgProt,oprot,'#ff6b35'],[' Glucides',avgGluc,ogluc,'#ff9500'],[' Lipides',avgLip,olip,'#7b5ea7'],[' Calories',avgCal,ocal,'#34c759']].forEach(function(arr){
+        var pct = arr[2]>0?Math.min(100,Math.round((arr[1]/arr[2])*100)):0;
+        html += '<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;"><span>'+arr[0]+'</span><span>'+arr[1]+' / '+arr[2]+(arr[0].includes('Cal')?' kcal':' g')+' ('+pct+'%)</span></div>';
+        html += '<div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden;box-shadow:var(--si);"><div style="height:100%;border-radius:3px;background:'+arr[3]+';width:'+pct+'%;transition:width 1s;"></div></div></div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Derniers repas
+    html += '<div class="sec-card"><div class="sec-label">Derniers repas ('+meals.length+')</div>';
+    if (meals.length) {
+      html += meals.slice(0,8).map(function(m){
+        var ings = (m.meal_ingredients||[]).map(function(i){return i.name;}).join(', ')||'Aucun ingrédient';
+        var date = new Date(m.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:.5px solid var(--bdr);">'
+          +(m.photo_url?'<img src="'+m.photo_url+'" style="width:40px;height:40px;border-radius:10px;object-fit:cover;flex-shrink:0;">':'<div style="width:40px;height:40px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">🍽️</div>')
+          +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+m.name+'</div><div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+ings+'</div></div>'
+          +'<div style="font-size:11px;color:var(--muted);flex-shrink:0;">'+date+'</div></div>';
+      }).join('');
+    } else {
+      html += '<div class="alim-empty">Aucun repas enregistré</div>';
+    }
+    html += '</div>';
+
+    document.getElementById('ficheProgContent').innerHTML = html;
+  } catch(e) {
+    document.getElementById('ficheProgContent').innerHTML = '<div class="alim-empty" style="padding:20px;">Erreur : '+e.message+'</div>';
+  }
 }
 
 async function envoyerRecapFiche(userId, email, btn) {
