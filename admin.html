@@ -690,7 +690,7 @@ function afficherClients(data) {
     const emailTag = c.email ? '<span class="ctag ctag-green">✉️ '+c.email+'</span>' : '';
     return '<div class="client-card '+(isAlerte?'alert':isWarn?'warn':'')+'" data-id="'+c.id+'">'
       +'<div class="client-avatar '+(isAlerte?'red-av':'')+'">'+((c.user_id||'?').substring(0,2).toUpperCase())+'</div>'
-      +'<div class="client-info"><div class="client-name">Client '+((c.user_id||'').substring(0,8))+'</div>'
+      +'<div class="client-info"><div class="client-name">'+(c.prenom ? (c.prenom+' '+(c.nom||'')).trim() : c.email ? c.email.split("@")[0] : 'Client '+(c.user_id||'').substring(0,8))+'</div>'
       +'<div class="client-meta">'+(motivL[c.motivation]||c.motivation||'–')+' · '+(maturL[c.maturite]||c.maturite||'–')+'</div>'
       +'<div class="client-tags">'+(isAlerte?'<span class="ctag ctag-red">🚨 Alerte</span>':'')+(c.axe_amelioration?'<span class="ctag ctag-green">'+c.axe_amelioration+'</span>':'')+(c.poids?'<span class="ctag">'+c.poids+' kg</span>':'')+emailTag+'</div></div>'
       +'<div class="client-scores"><div class="score-mini"><div class="score-dot" style="background:'+sc(sm)+'"></div>Motiv. '+sm+'/10</div>'
@@ -785,7 +785,7 @@ async function afficherRdvAdmin(filter) {
     const client = allClients.find(c=>c.user_id===r.user_id);
     const email = client?.email ? '<span style="font-size:11px;color:var(--green);">✉️ '+client.email+'</span>' : '';
     return '<div class="rdv-admin-card '+(r.statut==='recap_demande'?'recap-only':'')+'"><div class="rdv-date-badge"><div class="rdv-date-day">'+d.getDate()+'</div><div class="rdv-date-month">'+mois[d.getMonth()]+'</div></div>'
-      +'<div class="rdv-admin-info"><div class="rdv-admin-client">Client '+(r.user_id||'').substring(0,8)+' '+email+'</div>'
+      +'<div class="rdv-admin-info"><div class="rdv-admin-client">'+(function(){var cl=allClients.find(function(c){return c.user_id===r.user_id;});var n=cl?(cl.prenom?(cl.prenom+' '+(cl.nom||'')).trim():cl.email?cl.email.split('@')[0]:'Client '+(r.user_id||'').substring(0,8)):'Client '+(r.user_id||'').substring(0,8);return n+' '+email;})()+'</div>'
       +'<div class="rdv-admin-detail">'+(r.heure||'')+' · '+(r.type_rdv==='recap_email'?'Récap email':'Consultation')+'</div></div>'
       +'<span class="rdv-admin-status '+(r.statut==='confirme'?'status-confirme':'status-recap')+'">'+( r.statut==='confirme'?'Confirmé':'Récap')+'</span></div>';
   }).join('');
@@ -858,7 +858,7 @@ async function chargerThreadsMessages() {
       const time = new Date(t.lastMsg.created_at).toLocaleDateString('fr-FR', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       return '<div class="msg-thread-card '+(isUnread?'has-unread':'')+'" data-uid="'+t.userId+'">'
         +'<div class="msg-thread-avatar">'+(t.userId||'?').substring(0,2).toUpperCase()+'</div>'
-        +'<div class="msg-thread-info"><div class="msg-thread-name">Client '+(t.userId||'').substring(0,8)+'</div>'
+        +'<div class="msg-thread-info"><div class="msg-thread-name">'+(function(){var cl=allClients.find(function(c){return c.user_id===t.userId;});return cl?(cl.prenom?(cl.prenom+' '+(cl.nom||'')).trim():cl.email?cl.email.split('@')[0]:'Client '+(t.userId||'').substring(0,8)):'Client '+(t.userId||'').substring(0,8);})()+'</div>'
         +'<div class="msg-thread-preview '+(isUnread?'unread':'')+'">'+escHtml(preview)+'</div></div>'
         +'<div class="msg-thread-right"><div class="msg-thread-time">'+time+'</div>'
         +'<div class="msg-unread-dot '+(isUnread?'visible':'')+'"></div></div></div>';
@@ -977,7 +977,8 @@ async function ouvrirFiche(id) {
   if (!currentClient) return;
   document.getElementById('listView').style.display = 'none';
   document.getElementById('ficheView').classList.add('visible');
-  document.getElementById('ficheTitle').textContent = 'Client '+(currentClient.user_id||'').substring(0,8);
+  var clientLabel = currentClient.prenom ? (currentClient.prenom+' '+(currentClient.nom||'')).trim() : currentClient.email ? currentClient.email.split('@')[0] : 'Client '+(currentClient.user_id||'').substring(0,8);
+  document.getElementById('ficheTitle').textContent = clientLabel;
   switchFichePanel('fiche'); afficherFiche(currentClient);
   setTimeout(() => chargerFicheRdv(currentClient.user_id), 100);
   try {
@@ -1013,6 +1014,7 @@ function afficherFiche(c) {
     ? '<div class="sec-card"><div class="sec-label">📬 Contact</div><div class="contact-row"><div class="contact-icon">✉️</div><div class="contact-info"><div class="contact-label">Adresse email</div><div class="contact-val">'+c.email+'</div></div><button class="btn-send-recap-fiche" data-uid="'+c.user_id+'" data-email="'+c.email+'">📧 Envoyer le récap</button></div></div>'
     : '<div class="sec-card"><div class="sec-label">📬 Contact</div><div style="font-size:13px;color:var(--muted);padding:8px 0;">Email non renseigné.</div></div>';
   document.getElementById('ficheDataContent').innerHTML = emailBloc
+    +(c.prenom?'<div class="sec-card" style="background:var(--black);color:white;padding:16px 18px;"><div style="font-size:20px;font-weight:600;">'+c.prenom+' '+(c.nom||'')+'</div><div style="font-size:12px;opacity:0.6;margin-top:2px;">'+(c.email||'')+'</div></div>':'')
     +'<div class="sec-card"><div class="sec-label">Profil & motivation</div><div class="data-grid">'
     +'<div class="data-cell"><div class="dc-lbl">Maturité</div><div class="dc-val">'+(maturL[c.maturite]||c.maturite||'–')+'</div></div>'
     +'<div class="data-cell"><div class="dc-lbl">Objectif</div><div class="dc-val">'+(motivL[c.motivation]||c.motivation||'–')+'</div></div>'
