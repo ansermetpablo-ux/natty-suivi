@@ -20,8 +20,26 @@ export default async function handler(req, res) {
       try { body = JSON.parse(raw); } catch(e) { body = {}; }
     }
 
-    const { prompt, max_tokens } = body;
+    const { prompt, max_tokens, image, media_type } = body;
     if (!prompt) return res.status(400).json({ error: 'prompt required' });
+
+    // Build message content — text only OR text + image
+    let content;
+    if (image) {
+      content = [
+        {
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: media_type || 'image/jpeg',
+            data: image
+          }
+        },
+        { type: 'text', text: prompt }
+      ];
+    } else {
+      content = prompt;
+    }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -33,18 +51,21 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: max_tokens || 800,
-        messages: [{ role: 'user', content: prompt }]
+        messages: [{ role: 'user', content }]
       })
     });
 
     const data = await response.json();
-    if (!response.ok) return res.status(500).json({ error: data.error?.message || 'Claude API error' });
+    if (!response.ok) {
+      console.error('Anthropic error:', JSON.stringify(data));
+      return res.status(500).json({ error: data.error?.message || 'Claude API error', details: data });
+    }
 
     const text = data.content && data.content[0] ? data.content[0].text : '';
     return res.status(200).json({ text });
 
   } catch (err) {
-    console.error('claude.js error:', err);
+    console.error('claude.js error:', err.message, err.stack);
     return res.status(500).json({ error: err.message });
   }
 }
