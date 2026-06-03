@@ -128,6 +128,12 @@ input[type=range]::-webkit-slider-thumb:active { transform: scale(1.15); }
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.ok  { background: var(--green); }
 .toast.err { background: #c77b7b; }
+.num-inp:focus { box-shadow: var(--si), 0 0 0 2px var(--acc); }
+.name-row { display: flex; gap: 10px; margin-bottom: 12px; }
+.name-inp { flex: 1; background: var(--bg); border: none; border-radius: 14px; padding: 14px 16px; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text); outline: none; box-shadow: var(--si); }
+.name-inp::placeholder { color: #ccc; }
+.name-inp:focus { box-shadow: var(--si), 0 0 0 2px var(--acc); }
+.name-lbl { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
 </style>
 </head>
 <body>
@@ -226,6 +232,11 @@ input[type=range]::-webkit-slider-thumb:active { transform: scale(1.15); }
       <div class="q-label">Données physiques</div>
       <div class="q-title">Vos informations personnelles</div>
       <div class="q-sub">Utilisées uniquement pour calculer vos besoins caloriques.</div>
+      <div class="sec-div">Votre identité</div>
+      <div class="name-lbl">Prénom</div>
+      <div class="name-row"><input class="name-inp" type="text" id="iPrenom" placeholder="Marie" oninput="chk()" autocomplete="given-name"></div>
+      <div class="name-lbl">Nom</div>
+      <div class="name-row"><input class="name-inp" type="text" id="iNom" placeholder="Dupont" oninput="chk()" autocomplete="family-name"></div>
       <div class="sec-div">Sexe</div>
       <div class="crow">
         <div class="cc" onclick="scc(this,'sexe','homme','sex')"><span class="cc-i">👨</span><div class="cc-v" style="font-size:14px;">Homme</div></div>
@@ -293,6 +304,7 @@ const A = {
   maturite: null, motivation: null,
   sm: 5, sr: 5, sn: 5,
   axe: null,
+  prenom: null, nom: null,
   sexe: null, activite: null, age: null, poids: null, taille: null
 };
 
@@ -332,7 +344,8 @@ function chk() {
     2: () => !!A.motivation,
     3: () => true,
     4: () => !!A.axe,
-    5: () => !!A.sexe && !!A.activite &&
+    5: () => !!document.getElementById('iPrenom').value.trim() &&
+              !!A.sexe && !!A.activite &&
               !!document.getElementById('iAge').value &&
               !!document.getElementById('iPoids').value &&
               !!document.getElementById('iTaille').value,
@@ -382,6 +395,8 @@ async function save() {
   const btn = document.getElementById('btnC');
   btn.disabled = true; btn.textContent = 'Enregistrement...';
 
+  A.prenom = document.getElementById('iPrenom').value.trim() || null;
+  A.nom    = document.getElementById('iNom').value.trim() || null;
   A.age    = parseInt(document.getElementById('iAge').value) || null;
   A.poids  = parseFloat(document.getElementById('iPoids').value) || null;
   A.taille = parseFloat(document.getElementById('iTaille').value) || null;
@@ -393,6 +408,7 @@ async function save() {
     maturite: A.maturite, motivation: A.motivation,
     score_motivation: A.sm, score_rigueur: A.sr, score_nutrition: A.sn,
     axe_amelioration: A.axe,
+    prenom: A.prenom, nom: A.nom,
     sexe: A.sexe, age: A.age, poids: A.poids, taille: A.taille, activite: A.activite,
     bmr: b, tdee: t, deficit: t ? Math.round(t * 0.15) : null,
     completed: true
