@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+:root {
+  --bg: #f0eeeb;
+  --bg2: #e8e6e2;
+  --card: #efefef;
+  --so: 6px 6px 14px #d4d2ce, -6px -6px 14px #ffffff;
+  --si: inset 4px 4px 10px #d4d2ce, inset -4px -4px 10px #ffffff;
+  --sm: 3px 3px 8px #d4d2ce, -3px -3px 8px #ffffff;
+  --text: #1a1a1a;
+  --muted: #8e8e8e;
+}
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+.page { max-width: 480px; margin: 0 auto; padding: 0 0 60px; }
+
+/* ── HERO ── */
+.hero {
+  padding: 56px 28px 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 84px;
+  font-weight: 300;
+  letter-spacing: 14px;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.brand-line {
+  width: 52px;
+  height: 1px;
+  background: var(--text);
+  margin: 0 auto 38px;
+}
+
+/* Plat circulaire */
+.plat-wrap {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  margin-bottom: 36px;
+}
+
+.plat-ring {
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  box-shadow: var(--so);
+  overflow: hidden;
+  background: var(--card);
+}
+
+.plat-ring img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.hero-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.75;
+  color: #5a5a5a;
+  text-align: center;
+  max-width: 300px;
+  margin-bottom: 36px;
+  letter-spacing: 0.2px;
+}
+
+/* CTA */
+.btn-commencer {
+  background: var(--text);
+  color: #fff;
+  border: none;
+  border-radius: 99px;
+  padding: 16px 52px;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 6px 6px 16px #c0bebc, -2px -2px 8px #ffffff;
+  transition: all 0.2s;
+}
+.btn-commencer:active {
+  box-shadow: var(--si);
+  transform: scale(0.97);
+}
+
+/* ── OFFRE CARD ── */
+.section { padding: 0 20px; margin-bottom: 16px; }
+
+.offre-card {
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--so);
+  background: var(--card);
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.offre-card:active { transform: scale(0.98); }
+
+.offre-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.offre-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.18) 100%);
+}
+
+.offre-badge-left {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(18,18,18,0.85);
+  color: #fff;
+  border-radius: 99px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 8px 16px;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.offre-badge-right {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  color: var(--text);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  text-shadow: 0 1px 8px rgba(255,255,255,0.6);
+}
+
+.offre-footer {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.offre-footer-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: 0.3px;
+}
+.offre-footer-arr {
+  font-size: 18px;
+  color: var(--muted);
+}
+
+/* ── BLOCS CHALLENGES + SUIVI ── */
+.bloc-grid {
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.bloc-card {
+  border-radius: 22px;
+  padding: 22px 16px 18px;
+  box-shadow: var(--so);
+  background: var(--card);
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.bloc-card:active { box-shadow: var(--si); transform: scale(0.97); }
+
+.bloc-icon { font-size: 30px; margin-bottom: 10px; display: block; }
+
+.bloc-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 5px;
+  letter-spacing: 0.3px;
+}
+
+.bloc-sub {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.bloc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.bloc-chip {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 99px;
+  letter-spacing: 0.5px;
+  box-shadow: inset 2px 2px 5px #d0cec9, inset -2px -2px 5px #f8f6f2;
+  color: var(--text);
+  background: var(--bg2);
+}
+
+.bloc-arr {
+  font-size: 16px;
+  color: #c0bebb;
+  margin-top: 10px;
+  display: block;
+}
+
+/* ── NUTRI SCORE ── */
+.nutri-card {
+  margin: 0 20px 14px;
+  border-radius: 22px;
+  padding: 18px 20px;
+  box-shadow: var(--so);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nutri-card:active { box-shadow: var(--si); }
+
+.nutri-ring { width: 60px; height: 60px; position: relative; flex-shrink: 0; }
+.nutri-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.nutri-ring-num {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 700; font-family: 'Cormorant Garamond', serif;
+}
+
+.nutri-info { flex: 1; }
+.nutri-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px; font-weight: 600; margin-bottom: 3px; color: var(--text);
+}
+.nutri-sub { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.nutri-arr { font-size: 18px; color: var(--muted); }
+
+/* ── FOOTER ── */
+.footer { padding: 28px; text-align: center; }
+.footer-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 13px; font-weight: 300; color: var(--muted);
+  letter-spacing: 6px; text-transform: uppercase;
+}
+.footer-sub { font-size: 11px; color: #b8b4b0; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="brand">NATTY</div>
+    <div class="brand-line"></div>
+    <div class="plat-wrap">
+      <div class="plat-ring">
+        <img src="plat-hero.png" alt="Plat Natty" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:72px;\'>🥗</div>'">
+      </div>
+    </div>
+    <p class="hero-text">
+      Comprendre le corps humain est essentiel pour la performance. Natty transforme votre alimentation en carburant de haute précision, en fournissant les macronutriments essentiels au métabolisme pour une récupération et une force optimales.
+    </p>
+    <button class="btn-commencer" id="btnCommencer">Commencer</button>
+  </div>
+
+  <!-- OFFRE -->
+  <div class="section">
+    <div class="offre-card" id="offreCard">
+      <img class="offre-img" src="offre-plats.png" alt="3 plats" onerror="this.style.display='none'">
+      <div class="offre-overlay"></div>
+      <div class="offre-badge-left">3 plats par semaine</div>
+      <div class="offre-badge-right">27€</div>
+      <div class="offre-footer">
+        <span class="offre-footer-text">Découvrir nos formules</span>
+        <span class="offre-footer-arr">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHALLENGES + SUIVI -->
+  <div class="bloc-grid">
+    <div class="bloc-card" id="blocChallenges">
+      <div>
+        <span class="bloc-icon">🏆</span>
+        <div class="bloc-title">Challenges</div>
+        <div class="bloc-sub">Défis personnels, duo et entreprise</div>
+        <div class="bloc-chips">
+          <span class="bloc-chip">🎯 Perso</span>
+          <span class="bloc-chip">👥 Duo</span>
+          <span class="bloc-chip">🏢 Équipe</span>
+        </div>
+      </div>
+      <span class="bloc-arr">→</span>
+    </div>
+    <div class="bloc-card" id="blocSuivi">
+      <div>
+        <span class="bloc-icon">📊</span>
+        <div class="bloc-title">Mon suivi</div>
+        <div class="bloc-sub">Macros, repas et progression quotidienne</div>
+        <div class="bloc-chips">
+          <span class="bloc-chip">🥩 Macros</span>
+          <span class="bloc-chip">📈 Courbes</span>
+        </div>
+      </div>
+      <span class="bloc-arr">→</span>
+    </div>
+  </div>
+
+  <!-- SCORE NUTRITIONNEL -->
+  <div class="nutri-card" id="nutriCard">
+    <div class="nutri-ring">
+      <svg viewBox="0 0 60 60" width="60" height="60">
+        <circle cx="30" cy="30" r="24" fill="none" stroke="#e0ddd8" stroke-width="5.5"/>
+        <circle cx="30" cy="30" r="24" fill="none" stroke="#1a1a1a" stroke-width="5.5"
+                stroke-linecap="round" id="nutriArc"
+                stroke-dasharray="0 151" style="transition:stroke-dasharray 1.4s ease;"/>
+      </svg>
+      <div class="nutri-ring-num" id="nutriNum">–</div>
+    </div>
+    <div class="nutri-info">
+      <div class="nutri-title">Score Nutritionnel</div>
+      <div class="nutri-sub" id="nutriSub">Connectez-vous pour voir votre score</div>
+    </div>
+    <div class="nutri-arr">›</div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-logo">Natty</div>
+    <div class="footer-sub">Nutrition de haute précision</div>
+  </div>
+
+</div>
+
+<script>
+var TOKEN = '', USER_ID = null;
+var SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+
+var params = new URLSearchParams(window.location.search);
+TOKEN = params.get('token') || '';
+var uP = params.get('userId');
+if (uP && uP !== 'null') USER_ID = uP;
+else if (TOKEN.length > 10) {
+  try {
+    var d = TOKEN.match(/.{1,2}/g).map(function(b){ return String.fromCharCode(parseInt(b,16)); }).join('');
+    if (d.includes('-')) USER_ID = d;
+  } catch(e) {}
+}
+
+function naviguer(type, url) {
+  if (window.self !== window.top) {
+    window.parent.postMessage({ type: type, url: url, token: TOKEN }, '*');
+  } else {
+    window.location.href = url;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btnCommencer').addEventListener('click', function() {
+    naviguer('onboarding', 'https://natty-suivi.vercel.app/onboarding.html?token=' + TOKEN);
+  });
+  document.getElementById('offreCard').addEventListener('click', function() {
+    naviguer('offre', 'https://natty-suivi.vercel.app/offre.html?token=' + TOKEN);
+  });
+  document.getElementById('blocChallenges').addEventListener('click', function() {
+    naviguer('challenges', 'https://natty-suivi.vercel.app/challenges.html?token=' + TOKEN);
+  });
+  document.getElementById('blocSuivi').addEventListener('click', function() {
+    var url = 'https://natty-suivi.vercel.app/suivi.html?token=' + TOKEN;
+    if (params.get('proteines')) url += '&proteines=' + params.get('proteines') + '&glucides=' + params.get('glucides') + '&lipides=' + params.get('lipides') + '&calories=' + params.get('calories');
+    naviguer('suivi', url);
+  });
+  document.getElementById('nutriCard').addEventListener('click', function() {
+    naviguer('suivi', 'https://natty-suivi.vercel.app/suivi.html?token=' + TOKEN);
+  });
+  if (USER_ID) chargerScore();
+});
+
+async function chargerScore() {
+  try {
+    var res = await fetch(SB_URL + '/rest/v1/nutrition_scores?user_id=eq.' + USER_ID + '&order=calculated_at.desc&limit=1', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    var data = await res.json();
+    var score = 0;
+    if (data && data.length) {
+      score = Math.round(((data[0].variety_score||0) + (data[0].quality_score||0) + (data[0].relevance_score||0)) / 3);
+    } else {
+      var mRes = await fetch(SB_URL + '/rest/v1/meals?user_id=eq.' + USER_ID + '&select=id&limit=5', {
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+      });
+      var meals = await mRes.json();
+      score = meals && meals.length ? Math.min(75, meals.length * 15) : 0;
+    }
+    var circ = 2 * Math.PI * 24;
+    var dash = (score / 100) * circ;
+    document.getElementById('nutriArc').style.strokeDasharray = dash.toFixed(1) + ' ' + circ.toFixed(1);
+    document.getElementById('nutriNum').textContent = score;
+    document.getElementById('nutriSub').textContent = score >= 80 ? 'Excellent — continuez !' : score >= 60 ? 'Bon équilibre nutritionnel' : score >= 40 ? 'En progression' : score > 0 ? 'Ajoutez des repas pour progresser' : 'Commencez votre suivi';
+    if (score >= 70) document.getElementById('nutriArc').style.stroke = '#2a7a3e';
+    else if (score >= 40) document.getElementById('nutriArc').style.stroke = '#b86c00';
+  } catch(e) {}
+}
+</script>
+</body>
+</html>
