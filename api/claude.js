@@ -6,9 +6,11 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+  console.log('ANTHROPIC_API_KEY present:', !!ANTHROPIC_KEY, 'length:', ANTHROPIC_KEY ? ANTHROPIC_KEY.length : 0);
   if (!ANTHROPIC_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   try {
+    // Parse body
     let body = req.body;
     if (!body || typeof body === 'string') {
       const raw = await new Promise((resolve, reject) => {
@@ -21,9 +23,10 @@ export default async function handler(req, res) {
     }
 
     const { prompt, max_tokens, image, media_type } = body;
+    console.log('prompt length:', prompt ? prompt.length : 0, 'has image:', !!image);
     if (!prompt) return res.status(400).json({ error: 'prompt required' });
 
-    // Build message content — text only OR text + image
+    // Build content
     let content;
     if (image) {
       content = [
@@ -41,7 +44,7 @@ export default async function handler(req, res) {
       content = prompt;
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -55,17 +58,22 @@ export default async function handler(req, res) {
       })
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('Anthropic error:', JSON.stringify(data));
-      return res.status(500).json({ error: data.error?.message || 'Claude API error', details: data });
+    const data = await anthropicRes.json();
+    console.log('Anthropic status:', anthropicRes.status, 'error:', data.error?.message);
+
+    if (!anthropicRes.ok) {
+      return res.status(500).json({
+        error: data.error?.message || 'Claude API error',
+        type: data.error?.type,
+        status: anthropicRes.status
+      });
     }
 
     const text = data.content && data.content[0] ? data.content[0].text : '';
     return res.status(200).json({ text });
 
   } catch (err) {
-    console.error('claude.js error:', err.message, err.stack);
+    console.error('claude.js exception:', err.message);
     return res.status(500).json({ error: err.message });
   }
 }
