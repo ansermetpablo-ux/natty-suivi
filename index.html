@@ -1514,56 +1514,7 @@ function afficherOnboardingCTA(){
 // ═══ HELPERS ═══
 
 // ═══ AI RESULT EDITABLE ═══
-function renderAIResult() {
-  if (!aiMealData) return;
-  var mac = recalcMacros();
-  var ingsHtml = (aiMealData.ingredients||[]).map(function(ing, i) {
-    return '<div class="ai-ing-edit-row">'
-      + '<span class="ai-ing-edit-em">' + (ing.emoji||'🍽️') + '</span>'
-      + '<input class="ai-ing-edit-name" type="text" value="' + ing.nom + '" onchange="updateIng(' + i + ','nom',this.value)">'
-      + '<input class="ai-ing-edit-qty" type="number" value="' + ing.quantite_g + '" min="0" onchange="updateIng(' + i + ','quantite_g',parseFloat(this.value)||0)">'
-      + '<span class="ai-ing-edit-unit">g</span>'
-      + '<button class="ai-ing-del" onclick="deleteIng(' + i + ')">✕</button>'
-      + '</div>';
-  }).join('');
-  var html = '<div class="ai-result-card">'
-    + '<div class="ai-result-name">' + (aiMealData.nom||'Plat analyse') + '</div>'
-    + '<div class="ai-macros-row" id="aiMacrosRow">'
-    + '<div class="ai-macro-chip">🥩 ' + mac.p + 'g prot.</div>'
-    + '<div class="ai-macro-chip">🌾 ' + mac.g + 'g gluc.</div>'
-    + '<div class="ai-macro-chip">🥑 ' + mac.l + 'g lip.</div>'
-    + '<div class="ai-macro-chip">⚡ ' + mac.c + ' kcal</div>'
-    + '</div>'
-    + '<div style="font-size:11px;color:#8e8e93;margin:8px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Ingrédients — modifiables</div>'
-    + '<div class="ai-ings-edit" id="aiIngsEdit">' + ingsHtml + '</div>'
-    + '<button class="ai-add-ing-btn" onclick="addAIIng()">+ Ajouter un ingrédient</button>'
-    + '<button class="ai-recalc-btn" onclick="recalcAndRender()">Recalculer les macros</button>'
-    + '</div>';
-  document.getElementById('aiResultCont').innerHTML = html;
-}
 
-function recalcMacros() {
-  var tot = {p:0,l:0,g:0,c:0};
-  (aiMealData.ingredients||[]).forEach(function(ing) {
-    var r = getNutri(ing.nom, ing.quantite_g||0);
-    if (r) { tot.p+=r.p; tot.l+=r.l; tot.g+=r.g; tot.c+=r.c; }
-  });
-  return { p:Math.round(tot.p*10)/10, l:Math.round(tot.l*10)/10, g:Math.round(tot.g*10)/10, c:Math.round(tot.c) };
-}
-
-function updateIng(i, key, val) {
-  if (aiMealData.ingredients[i]) aiMealData.ingredients[i][key] = val;
-}
-function deleteIng(i) {
-  aiMealData.ingredients.splice(i, 1);
-  renderAIResult();
-}
-function addAIIng() {
-  aiMealData.ingredients.push({emoji:'🍽️', nom:'', quantite_g:100});
-  renderAIResult();
-  var inputs = document.querySelectorAll('.ai-ing-edit-name');
-  if (inputs.length) inputs[inputs.length-1].focus();
-}
 function recalcAndRender() {
   var mac = recalcMacros();
   if (aiMealData.macros) { aiMealData.macros.prot=mac.p; aiMealData.macros.lip=mac.l; aiMealData.macros.gluc=mac.g; aiMealData.macros.cal=mac.c; }
