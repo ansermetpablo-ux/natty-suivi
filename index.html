@@ -1283,7 +1283,10 @@ async function analyserAvecIA() {
 }
 function renderAIResult() {
   var mac = recalcAIMacros();
-  var html = '<div class="ai-result-card">'
+  var cont = document.getElementById('aiResultCont');
+
+  // Build container
+  cont.innerHTML = '<div class="ai-result-card">'
     + '<div style="font-size:15px;font-weight:700;margin-bottom:10px;">' + (aiMealData.nom||'Plat analyse') + '</div>'
     + '<div class="ai-macros-live" id="aiMacrosLive">'
     + '<span class="ai-macro-live-chip">🥩 ' + mac.p + 'g prot.</span>'
@@ -1291,21 +1294,53 @@ function renderAIResult() {
     + '<span class="ai-macro-live-chip">🥑 ' + mac.l + 'g lip.</span>'
     + '<span class="ai-macro-live-chip">⚡ ' + mac.c + ' kcal</span>'
     + '</div>'
-    + '<div style="font-size:11px;color:#8e8e93;margin-bottom:8px;">Modifiez les ingrédients si nécessaire</div>'
-    + '<div id="aiIngsList">'
-    + (aiMealData.ingredients||[]).map(function(ing, idx) {
-        return '<div class="ai-ing-edit-row" data-idx="'+idx+'">'
-          + '<span class="ai-ing-emoji">'+(ing.emoji||'🍽️')+'</span>'
-          + '<input class="ai-ing-name-inp" type="text" value="'+ing.nom+'" oninput="updateAIIng('+idx+','nom',this.value)">'
-          + '<input class="ai-ing-qty-inp" type="number" value="'+ing.quantite_g+'" min="0" oninput="updateAIIng('+idx+','qty',this.value)">'
-          + '<span class="ai-ing-unit">g</span>'
-          + '<button class="ai-ing-del" onclick="deleteAIIng('+idx+')">✕</button>'
-          + '</div>';
-      }).join('')
-    + '</div>'
-    + '<button class="ai-add-ing-btn" onclick="addAIIng()">+ Ajouter un ingrédient</button>'
+    + '<div style="font-size:11px;color:#8e8e93;margin-bottom:8px;">Modifiez les ingredients si necessaire</div>'
+    + '<div id="aiIngsList"></div>'
     + '</div>';
-  document.getElementById('aiResultCont').innerHTML = html;
+
+  // Build ingredient rows via DOM (no inline handlers)
+  var list = document.getElementById('aiIngsList');
+  (aiMealData.ingredients||[]).forEach(function(ing, idx) {
+    var row = document.createElement('div');
+    row.className = 'ai-ing-edit-row';
+    row.dataset.idx = idx;
+
+    var em = document.createElement('span');
+    em.className = 'ai-ing-emoji';
+    em.textContent = ing.emoji||'🍽️';
+
+    var nameInp = document.createElement('input');
+    nameInp.className = 'ai-ing-name-inp';
+    nameInp.type = 'text';
+    nameInp.value = ing.nom;
+    nameInp.addEventListener('input', (function(i){ return function(){ updateAIIng(i, 'nom', this.value); }; })(idx));
+
+    var qtyInp = document.createElement('input');
+    qtyInp.className = 'ai-ing-qty-inp';
+    qtyInp.type = 'number';
+    qtyInp.value = ing.quantite_g;
+    qtyInp.min = 0;
+    qtyInp.addEventListener('input', (function(i){ return function(){ updateAIIng(i, 'qty', this.value); }; })(idx));
+
+    var unit = document.createElement('span');
+    unit.className = 'ai-ing-unit';
+    unit.textContent = 'g';
+
+    var del = document.createElement('button');
+    del.className = 'ai-ing-del';
+    del.textContent = '✕';
+    del.addEventListener('click', (function(i){ return function(){ deleteAIIng(i); }; })(idx));
+
+    row.appendChild(em); row.appendChild(nameInp); row.appendChild(qtyInp); row.appendChild(unit); row.appendChild(del);
+    list.appendChild(row);
+  });
+
+  var addBtn = document.createElement('button');
+  addBtn.className = 'ai-add-ing-btn';
+  addBtn.textContent = '+ Ajouter un ingredient';
+  addBtn.addEventListener('click', addAIIng);
+  list.after(addBtn);
+
   document.getElementById('btnSaveIA').style.display = 'block';
 }
 
