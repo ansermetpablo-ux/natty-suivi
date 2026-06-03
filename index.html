@@ -905,7 +905,9 @@ async function fetchAnalyseIA(type) {
     +' Reponds UNIQUEMENT en JSON sans backticks: [{"titre":"...","valeur":"...","explication":"...","conseil":"..."}]';
   try {
     var res=await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:700})});
-    var d=await res.json(); var text=d.text||'[]';
+    var d=await res.json();
+    if(!res.ok){console.error('Claude analyse error:',d);throw new Error(d.error||'Claude error '+res.status);}
+    var text=d.text||'[]';
     var pts=JSON.parse(text.replace(/```[a-z]*|```/g,'').trim());
     var isForts2=type==='forts';
     var html=pts.map(function(p){
