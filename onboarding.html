@@ -445,6 +445,31 @@ async function save() {
     if (b) { document.getElementById('bmrBox').style.display = 'block'; document.getElementById('bmrVal').textContent = b; }
 
     toast('Profil enregistré !', 'ok');
+
+    // Notify parent iframe (Wix) that onboarding is done
+    window.parent.postMessage({ type: 'onboardingComplete', userId: UID }, '*');
+
+    // Send welcome email
+    try {
+      const poids = parseFloat(A.poids)||0, tdee = parseFloat(A.tdee)||0;
+      const macros = {
+        proteines: poids ? Math.round(poids*2) : 0,
+        glucides:  tdee  ? Math.round(tdee*0.5/4) : 0,
+        lipides:   tdee  ? Math.round(tdee*0.25/9) : 0,
+        calories:  tdee  ? Math.round(tdee) : 0
+      };
+      fetch('https://natty-suivi.vercel.app/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to_email: A.email || '',
+          type: 'onboarding_recap',
+          prenom: A.prenom || '',
+          macros: macros
+        })
+      }).catch(function(){});
+    } catch(emailErr) {}
+
     setTimeout(() => { document.getElementById('offreOverlay').classList.add('on'); }, 1000);
 
   } catch(e) {
