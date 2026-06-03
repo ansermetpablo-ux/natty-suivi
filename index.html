@@ -293,11 +293,73 @@ body { font-family:'Inter',-apple-system,sans-serif; background:#f5f5f7; min-hei
 .ob-btn   { width:100%; padding:16px; background:#1c1c1e; border:none; border-radius:15px; color:#fff; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; }
 
 .close-btn { width:100%; padding:14px; background:#e5e5ea; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; }
+
+/* Editable ingredients */
+.ai-ing-edit-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:.5px solid #f0f0f0; }
+.ai-ing-edit-row:last-child { border-bottom:none; }
+.ai-ing-emoji { font-size:20px; flex-shrink:0; }
+.ai-ing-name-inp { flex:1; background:#f5f5f7; border:none; border-radius:8px; padding:7px 10px; font-family:'Inter',sans-serif; font-size:13px; color:#1c1c1e; outline:none; }
+.ai-ing-qty-inp  { width:64px; background:#f5f5f7; border:none; border-radius:8px; padding:7px 8px; font-family:'Inter',sans-serif; font-size:13px; color:#1c1c1e; outline:none; text-align:center; }
+.ai-ing-unit { font-size:11px; color:#8e8e93; flex-shrink:0; }
+.ai-ing-del  { width:26px; height:26px; border-radius:50%; background:#ffecec; border:none; cursor:pointer; font-size:12px; color:#ff3b30; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ai-add-ing-btn { width:100%; padding:10px; background:#f5f5f7; border:none; border-radius:10px; font-family:'Inter',sans-serif; font-size:13px; color:#8e8e93; cursor:pointer; margin-top:8px; }
+.ai-macros-live { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 4px; }
+.ai-macro-live-chip { background:#1c1c1e; color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:4px 12px; }
+
+/* Meal analysis popup */
+.meal-ap-header { display:flex; gap:14px; align-items:center; background:#fff; border-radius:18px; padding:14px; margin-bottom:16px; }
+.meal-ap-photo  { width:80px; height:80px; border-radius:14px; overflow:hidden; flex-shrink:0; background:#f5f5f7; display:flex; align-items:center; justify-content:center; font-size:28px; }
+.meal-ap-photo img { width:100%; height:100%; object-fit:cover; }
+.meal-ap-name  { font-size:17px; font-weight:700; margin-bottom:6px; }
+.meal-ap-macros { display:flex; gap:6px; flex-wrap:wrap; }
+.meal-ap-chip  { background:#f5f5f7; border-radius:99px; font-size:11px; font-weight:600; padding:4px 10px; }
+.meal-score-big { display:flex; align-items:center; gap:14px; background:#fff; border-radius:18px; padding:16px; margin-bottom:14px; }
+.meal-score-ring { position:relative; width:70px; height:70px; flex-shrink:0; }
+.meal-score-ring svg { position:absolute; inset:0; transform:rotate(-90deg); }
+.meal-score-num  { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; }
+.meal-score-info { flex:1; }
+.meal-score-label { font-size:15px; font-weight:700; margin-bottom:3px; }
+.meal-score-sub   { font-size:12px; color:#8e8e93; }
+.close-btn { width:100%; padding:14px; background:#e5e5ea; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; }
 .toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:#1c1c1e; color:#fff; padding:12px 22px; border-radius:20px; font-size:14px; z-index:1000; transition:transform .3s; pointer-events:none; white-space:nowrap; }
 .toast.show { transform:translateX(-50%) translateY(0); }
 .toast.ok  { background:#34c759; }
 .toast.err { background:#ff3b30; }
 .loading { text-align:center; color:#c7c7cc; font-size:13px; padding:24px; }
+
+/* INGREDIENTS EDITABLES */
+.ai-ings-edit { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.ai-ing-edit-row { display:flex; align-items:center; gap:8px; background:#f5f5f7; border-radius:12px; padding:8px 12px; }
+.ai-ing-edit-em { font-size:20px; flex-shrink:0; }
+.ai-ing-edit-name { flex:1; border:none; background:transparent; font-family:"Inter",sans-serif; font-size:13px; color:#1c1c1e; outline:none; }
+.ai-ing-edit-qty { width:60px; border:none; background:transparent; font-family:"Inter",sans-serif; font-size:13px; color:#1c1c1e; outline:none; text-align:right; }
+.ai-ing-edit-unit { font-size:12px; color:#8e8e93; flex-shrink:0; }
+.ai-ing-del { width:24px; height:24px; border-radius:50%; background:#ffecec; border:none; cursor:pointer; font-size:12px; color:#ff3b30; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ai-add-ing-btn { width:100%; padding:10px; background:#f5f5f7; border:none; border-radius:12px; font-family:"Inter",sans-serif; font-size:13px; color:#8e8e93; cursor:pointer; margin-top:4px; }
+.ai-recalc-btn { width:100%; padding:12px; background:#1c1c1e; color:#fff; border:none; border-radius:12px; font-family:"Inter",sans-serif; font-size:13px; font-weight:600; cursor:pointer; margin-top:8px; }
+
+/* POPUP ANALYSE PLAT */
+.meal-detail-header { display:flex; align-items:center; gap:14px; background:#fff; border-radius:18px; padding:16px; margin-bottom:14px; }
+.meal-detail-photo { width:70px; height:70px; border-radius:14px; background:#f5f5f7; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; }
+.meal-detail-photo img { width:100%; height:100%; object-fit:cover; border-radius:14px; }
+.meal-detail-name { font-size:18px; font-weight:800; color:#1c1c1e; margin-bottom:4px; }
+.meal-detail-macros { display:flex; gap:6px; flex-wrap:wrap; }
+.mdm-chip { font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; background:#f5f5f7; color:#1c1c1e; }
+.meal-critique-section { margin-bottom:14px; }
+.mc-title { font-size:13px; font-weight:700; color:#1c1c1e; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.mc-card { background:#fff; border-radius:14px; padding:12px 14px; margin-bottom:8px; }
+.mc-card-title { font-size:13px; font-weight:600; margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+.mc-card-desc { font-size:12px; color:#8e8e93; line-height:1.6; }
+.mc-card-tip { font-size:12px; font-weight:600; margin-top:6px; }
+.tip-g { color:#34c759; }
+.tip-o { color:#ff9500; }
+.compo-donut-mini { display:flex; gap:16px; align-items:center; background:#fff; border-radius:14px; padding:14px 16px; margin-bottom:14px; }
+.donut-mini-wrap { position:relative; width:80px; height:80px; flex-shrink:0; }
+.donut-mini-wrap canvas { position:absolute; inset:0; }
+.donut-mini-legend { flex:1; display:flex; flex-direction:column; gap:6px; }
+.dml-row { display:flex; align-items:center; gap:8px; font-size:12px; color:#1c1c1e; }
+.dml-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.dml-val { margin-left:auto; font-weight:600; font-size:12px; }
 input[type="file"] { display:none; }
 </style>
 </head>
@@ -550,7 +612,25 @@ input[type="file"] { display:none; }
   </div>
 </div>
 
+<!-- ══ OVERLAY ANALYSE PLAT ══ -->
+<div class="overlay" id="ovMealAnalyse">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div id="mealAnalyseContent"><div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Analyse du plat...</div></div>
+    <button class="close-btn" onclick="closeOverlay('ovMealAnalyse')">Fermer</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
+
+<!-- OVERLAY ANALYSE PLAT -->
+<div class="overlay" id="ovMealDetail">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div id="mealDetailContent"><div class="loading">Chargement...</div></div>
+    <button class="close-btn" onclick="closeOverlay('ovMealDetail')">Fermer</button>
+  </div>
+</div>
 
 <script>
 // ═══ CONFIG ═══
@@ -639,7 +719,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputGalManu').addEventListener('change', function(){ previewPhoto(this,'prevManu'); photoManuFile=this.files[0]; });
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
-  ['ovMacro','ovAnalyse','ovRepas'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
+  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
   if (USER_ID) init(); else afficherOnboardingCTA();
 });
 
@@ -786,13 +866,20 @@ function afficherMeals(meals) {
     var col=sc>=80?'#34c759':sc>=60?'#ff9500':'#ff3b30';
     var circ=2*Math.PI*16, dash=((sc/100)*circ).toFixed(1);
     var photo=m.photo_url?'<div class="meal-photo"><img src="'+m.photo_url+'" alt=""></div>':'<div class="meal-photo">🍽️</div>';
-    return '<div class="meal-item">'+photo+'<div class="meal-info"><div class="meal-name">'+m.name+'</div><div class="meal-ings">'+ings+'</div><span class="meal-tag '+tag.c+'">'+tag.l+'</span></div>'
+    return '<div class="meal-item" style="cursor:pointer;" onclick="openMealDetail(\'' + m.id + '\')">'+ photo+'<div class="meal-info"><div class="meal-name">'+m.name+'</div><div class="meal-ings">'+ings+'</div><span class="meal-tag '+tag.c+'">'+tag.l+'</span></div>'
       +'<div class="meal-right"><div class="meal-date">'+date+'</div>'
       +'<div class="sr-wrap"><svg viewBox="0 0 42 42" width="42" height="42"><circle cx="21" cy="21" r="16" fill="none" stroke="#f0f0f0" stroke-width="3.5"/><circle cx="21" cy="21" r="16" fill="none" stroke="'+col+'" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="'+dash+' '+circ.toFixed(1)+'" transform="rotate(-90 21 21)"/></svg><div class="sr-num">'+sc+'</div></div>'
       +'<div class="meal-dots" data-id="'+m.id+'">···</div></div></div>';
   }).join('');
   el.querySelectorAll('.meal-dots').forEach(function(btn){
     btn.addEventListener('click',function(e){e.stopPropagation();deleteRepas(btn.dataset.id);});
+  });
+  el.querySelectorAll('.meal-item').forEach(function(item){
+    item.style.cursor='pointer';
+    item.addEventListener('click',function(){
+      var meal=allMeals.find(function(m){return m.id===item.dataset.id;});
+      if(meal) ouvrirAnalysePlat(meal);
+    });
   });
 }
 
@@ -1187,26 +1274,154 @@ async function analyserAvecIA() {
     if (!res.ok) throw new Error(d.error || 'Erreur ' + res.status);
     aiMealData = JSON.parse((d.text || '{}').replace(/```[a-z]*|```/g, '').trim());
     document.getElementById('aiAnalyseWrap').style.display = 'none';
-    var mac = aiMealData.macros || {};
-    var html = '<div class="ai-result-card">'
-      + '<div class="ai-result-name">' + (aiMealData.nom || 'Plat analyse') + '</div>'
-      + '<div class="ai-macros-row">'
-      + '<div class="ai-macro-chip">🥩 ' + (mac.prot||0) + 'g prot.</div>'
-      + '<div class="ai-macro-chip">🌾 ' + (mac.gluc||0) + 'g gluc.</div>'
-      + '<div class="ai-macro-chip">🥑 ' + (mac.lip||0) + 'g lip.</div>'
-      + '<div class="ai-macro-chip">⚡ ' + (mac.cal||0) + ' kcal</div>'
-      + '</div>'
-      + '<div class="ai-ings-list">' + (aiMealData.ingredients||[]).map(function(i){
-          return '<div class="ai-ing-row">' + (i.emoji||'🍽️') + ' ' + i.nom + ' — ' + i.quantite_g + 'g</div>';
-        }).join('') + '</div>'
-      + '</div>';
-    document.getElementById('aiResultCont').innerHTML = html;
+    renderAIResult();
     document.getElementById('btnSaveIA').style.display = 'block';
   } catch(e) {
     document.getElementById('aiAnalyseWrap').style.display = 'none';
     document.getElementById('aiResultCont').innerHTML = '<div style="color:#ff3b30;font-size:13px;">Erreur : ' + e.message + '</div>';
   }
 }
+function renderAIResult() {
+  var mac = recalcAIMacros();
+  var html = '<div class="ai-result-card">'
+    + '<div style="font-size:15px;font-weight:700;margin-bottom:10px;">' + (aiMealData.nom||'Plat analyse') + '</div>'
+    + '<div class="ai-macros-live" id="aiMacrosLive">'
+    + '<span class="ai-macro-live-chip">🥩 ' + mac.p + 'g prot.</span>'
+    + '<span class="ai-macro-live-chip">🌾 ' + mac.g + 'g gluc.</span>'
+    + '<span class="ai-macro-live-chip">🥑 ' + mac.l + 'g lip.</span>'
+    + '<span class="ai-macro-live-chip">⚡ ' + mac.c + ' kcal</span>'
+    + '</div>'
+    + '<div style="font-size:11px;color:#8e8e93;margin-bottom:8px;">Modifiez les ingrédients si nécessaire</div>'
+    + '<div id="aiIngsList">'
+    + (aiMealData.ingredients||[]).map(function(ing, idx) {
+        return '<div class="ai-ing-edit-row" data-idx="'+idx+'">'
+          + '<span class="ai-ing-emoji">'+(ing.emoji||'🍽️')+'</span>'
+          + '<input class="ai-ing-name-inp" type="text" value="'+ing.nom+'" oninput="updateAIIng('+idx+','nom',this.value)">'
+          + '<input class="ai-ing-qty-inp" type="number" value="'+ing.quantite_g+'" min="0" oninput="updateAIIng('+idx+','qty',this.value)">'
+          + '<span class="ai-ing-unit">g</span>'
+          + '<button class="ai-ing-del" onclick="deleteAIIng('+idx+')">✕</button>'
+          + '</div>';
+      }).join('')
+    + '</div>'
+    + '<button class="ai-add-ing-btn" onclick="addAIIng()">+ Ajouter un ingrédient</button>'
+    + '</div>';
+  document.getElementById('aiResultCont').innerHTML = html;
+  document.getElementById('btnSaveIA').style.display = 'block';
+}
+
+function recalcAIMacros() {
+  var t = {p:0,l:0,g:0,c:0};
+  (aiMealData.ingredients||[]).forEach(function(ing) {
+    var r = getNutri(ing.nom, ing.quantite_g||0);
+    if(r){t.p+=r.p;t.l+=r.l;t.g+=r.g;t.c+=r.c;}
+  });
+  aiMealData.macros = {prot:Math.round(t.p*10)/10, lip:Math.round(t.l*10)/10, gluc:Math.round(t.g*10)/10, cal:Math.round(t.c)};
+  return {p:aiMealData.macros.prot, l:aiMealData.macros.lip, g:aiMealData.macros.gluc, c:aiMealData.macros.cal};
+}
+
+function updateAIIng(idx, field, val) {
+  if (!aiMealData.ingredients[idx]) return;
+  if (field === 'nom') aiMealData.ingredients[idx].nom = val;
+  if (field === 'qty') aiMealData.ingredients[idx].quantite_g = parseFloat(val)||0;
+  // Update macros display
+  var mac = recalcAIMacros();
+  var live = document.getElementById('aiMacrosLive');
+  if (live) live.innerHTML = '<span class="ai-macro-live-chip">🥩 '+mac.p+'g prot.</span>'
+    +'<span class="ai-macro-live-chip">🌾 '+mac.g+'g gluc.</span>'
+    +'<span class="ai-macro-live-chip">🥑 '+mac.l+'g lip.</span>'
+    +'<span class="ai-macro-live-chip">⚡ '+mac.c+' kcal</span>';
+}
+
+function deleteAIIng(idx) {
+  aiMealData.ingredients.splice(idx, 1);
+  renderAIResult();
+}
+
+function addAIIng() {
+  if (!aiMealData.ingredients) aiMealData.ingredients = [];
+  aiMealData.ingredients.push({emoji:'🍽️', nom:'', quantite_g:100});
+  renderAIResult();
+  // Focus last name input
+  var rows = document.querySelectorAll('.ai-ing-edit-row');
+  if (rows.length) rows[rows.length-1].querySelector('.ai-ing-name-inp').focus();
+}
+
+// ── ANALYSE PLAT (clic historique) ──
+function ouvrirAnalysePlat(meal) {
+  var mac = calcMac(meal.meal_ingredients);
+  var sc  = mealScore(meal);
+  var col = sc>=80?'#34c759':sc>=60?'#ff9500':'#ff3b30';
+  var circ = 2*Math.PI*28, dash = ((sc/100)*circ).toFixed(1);
+  var photo = meal.photo_url
+    ? '<div class="meal-ap-photo"><img src="'+meal.photo_url+'" alt=""></div>'
+    : '<div class="meal-ap-photo">🍽️</div>';
+  var ings = (meal.meal_ingredients||[]).map(function(i){return i.name+' '+i.quantity_g+'g';}).join(', ')||'Aucun ingred.';
+  var html = '<div class="meal-ap-header">'
+    + photo
+    + '<div><div class="meal-ap-name">'+meal.name+'</div>'
+    + '<div class="meal-ap-macros">'
+    + '<span class="meal-ap-chip">🥩 '+mac.p+'g</span>'
+    + '<span class="meal-ap-chip">🌾 '+mac.g+'g</span>'
+    + '<span class="meal-ap-chip">🥑 '+mac.l+'g</span>'
+    + '<span class="meal-ap-chip">⚡ '+mac.c+' kcal</span>'
+    + '</div></div></div>'
+    + '<div class="meal-score-big">'
+    + '<div class="meal-score-ring"><svg viewBox="0 0 70 70" width="70" height="70"><circle cx="35" cy="35" r="28" fill="none" stroke="#f0f0f0" stroke-width="6"/><circle cx="35" cy="35" r="28" fill="none" stroke="'+col+'" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+dash+' '+circ.toFixed(1)+'"/></svg><div class="meal-score-num" style="color:'+col+'">'+sc+'</div></div>'
+    + '<div class="meal-score-info"><div class="meal-score-label">'+(sc>=80?'Excellent':sc>=60?'Bon équilibre':sc>=40?'Correct':'À améliorer')+'</div><div class="meal-score-sub">Score nutritionnel basé sur la composition</div></div>'
+    + '</div>'
+    + '<div id="mealAnalyseIA"><div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Analyse critique en cours...</div></div>';
+  document.getElementById('mealAnalyseContent').innerHTML = html;
+  document.getElementById('ovMealAnalyse').classList.add('active');
+  fetchAnalysePlat(meal, mac);
+}
+
+async function fetchAnalysePlat(meal, mac) {
+  var ings = (meal.meal_ingredients||[]).map(function(i){return i.name+' '+i.quantity_g+'g';}).join(', ');
+  var prompt = 'Analyse critique nutritionnelle de ce plat : "'+meal.name+'".'
+    + ' Composition : '+ings+'.'
+    + ' Macros calculées : proteines='+mac.p+'g, lipides='+mac.l+'g, glucides='+mac.g+'g, calories='+mac.c+'kcal.'
+    + ' Objectifs du client : prot='+macObj.p+'g, lip='+macObj.l+'g, gluc='+macObj.g+'g, cal='+macObj.c+'kcal.'
+    + ' Donne une analyse critique courte et 3 conseils concrets pour améliorer ce plat.'
+    + ' Reponds UNIQUEMENT en JSON sans backticks: {"note":"Bon/Correct/A ameliorer","points_positifs":["..."],"points_negatifs":["..."],"conseils":["...","...","..."],"substitutions":[{"remplacer":"...","par":"...","pourquoi":"..."}]}';
+  try {
+    var res = await fetch(CLAUDE_API, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({prompt:prompt, max_tokens:700})
+    });
+    var d = await res.json();
+    if (!res.ok) throw new Error(d.error||'erreur');
+    var data = JSON.parse((d.text||'{}').replace(/```[a-z]*|```/g,'').trim());
+    var html = '';
+    if (data.points_positifs&&data.points_positifs.length) {
+      html += '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#34c759;">✅ Points positifs</div>';
+      html += data.points_positifs.map(function(p){
+        return '<div class="ap-card" style="border-left:3px solid #34c759;"><div class="ap-desc">'+p+'</div></div>';
+      }).join('');
+    }
+    if (data.points_negatifs&&data.points_negatifs.length) {
+      html += '<div style="font-size:13px;font-weight:700;margin:14px 0 8px;color:#ff9500;">⚠️ Points à améliorer</div>';
+      html += data.points_negatifs.map(function(p){
+        return '<div class="ap-card" style="border-left:3px solid #ff9500;"><div class="ap-desc">'+p+'</div></div>';
+      }).join('');
+    }
+    if (data.conseils&&data.conseils.length) {
+      html += '<div style="font-size:13px;font-weight:700;margin:14px 0 8px;">💡 Conseils</div>';
+      html += data.conseils.map(function(c){
+        return '<div class="ap-card"><div class="ap-desc">→ '+c+'</div></div>';
+      }).join('');
+    }
+    if (data.substitutions&&data.substitutions.length) {
+      html += '<div style="font-size:13px;font-weight:700;margin:14px 0 8px;">🔄 Substitutions suggérées</div>';
+      html += data.substitutions.map(function(s){
+        return '<div class="ap-card"><div style="font-size:13px;font-weight:600;">'+s.remplacer+' → '+s.par+'</div><div class="ap-desc">'+s.pourquoi+'</div></div>';
+      }).join('');
+    }
+    document.getElementById('mealAnalyseIA').innerHTML = html || '<div style="color:#c7c7cc;font-size:13px;">Analyse indisponible.</div>';
+  } catch(e) {
+    document.getElementById('mealAnalyseIA').innerHTML = '<div style="color:#c7c7cc;font-size:13px;">Analyse indisponible — vérifiez votre connexion.</div>';
+  }
+}
+
 async function saveIA(){
   if(!aiMealData||!USER_ID)return;
   var btn=document.getElementById('btnSaveIA');btn.disabled=true;btn.textContent='Enregistrement...';
@@ -1262,6 +1477,165 @@ function afficherOnboardingCTA(){
 }
 
 // ═══ HELPERS ═══
+
+// ═══ AI RESULT EDITABLE ═══
+function renderAIResult() {
+  if (!aiMealData) return;
+  var mac = recalcMacros();
+  var ingsHtml = (aiMealData.ingredients||[]).map(function(ing, i) {
+    return '<div class="ai-ing-edit-row">'
+      + '<span class="ai-ing-edit-em">' + (ing.emoji||'🍽️') + '</span>'
+      + '<input class="ai-ing-edit-name" type="text" value="' + ing.nom + '" onchange="updateIng(' + i + ','nom',this.value)">'
+      + '<input class="ai-ing-edit-qty" type="number" value="' + ing.quantite_g + '" min="0" onchange="updateIng(' + i + ','quantite_g',parseFloat(this.value)||0)">'
+      + '<span class="ai-ing-edit-unit">g</span>'
+      + '<button class="ai-ing-del" onclick="deleteIng(' + i + ')">✕</button>'
+      + '</div>';
+  }).join('');
+  var html = '<div class="ai-result-card">'
+    + '<div class="ai-result-name">' + (aiMealData.nom||'Plat analyse') + '</div>'
+    + '<div class="ai-macros-row" id="aiMacrosRow">'
+    + '<div class="ai-macro-chip">🥩 ' + mac.p + 'g prot.</div>'
+    + '<div class="ai-macro-chip">🌾 ' + mac.g + 'g gluc.</div>'
+    + '<div class="ai-macro-chip">🥑 ' + mac.l + 'g lip.</div>'
+    + '<div class="ai-macro-chip">⚡ ' + mac.c + ' kcal</div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:#8e8e93;margin:8px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Ingrédients — modifiables</div>'
+    + '<div class="ai-ings-edit" id="aiIngsEdit">' + ingsHtml + '</div>'
+    + '<button class="ai-add-ing-btn" onclick="addAIIng()">+ Ajouter un ingrédient</button>'
+    + '<button class="ai-recalc-btn" onclick="recalcAndRender()">Recalculer les macros</button>'
+    + '</div>';
+  document.getElementById('aiResultCont').innerHTML = html;
+}
+
+function recalcMacros() {
+  var tot = {p:0,l:0,g:0,c:0};
+  (aiMealData.ingredients||[]).forEach(function(ing) {
+    var r = getNutri(ing.nom, ing.quantite_g||0);
+    if (r) { tot.p+=r.p; tot.l+=r.l; tot.g+=r.g; tot.c+=r.c; }
+  });
+  return { p:Math.round(tot.p*10)/10, l:Math.round(tot.l*10)/10, g:Math.round(tot.g*10)/10, c:Math.round(tot.c) };
+}
+
+function updateIng(i, key, val) {
+  if (aiMealData.ingredients[i]) aiMealData.ingredients[i][key] = val;
+}
+function deleteIng(i) {
+  aiMealData.ingredients.splice(i, 1);
+  renderAIResult();
+}
+function addAIIng() {
+  aiMealData.ingredients.push({emoji:'🍽️', nom:'', quantite_g:100});
+  renderAIResult();
+  var inputs = document.querySelectorAll('.ai-ing-edit-name');
+  if (inputs.length) inputs[inputs.length-1].focus();
+}
+function recalcAndRender() {
+  var mac = recalcMacros();
+  if (aiMealData.macros) { aiMealData.macros.prot=mac.p; aiMealData.macros.lip=mac.l; aiMealData.macros.gluc=mac.g; aiMealData.macros.cal=mac.c; }
+  renderAIResult();
+  showToast('Macros recalculées', 'ok');
+}
+
+// ═══ ANALYSE PLAT (clic historique) ═══
+function openMealDetail(mealId) {
+  var meal = allMeals.find(function(m){ return m.id === mealId; });
+  if (!meal) return;
+  document.getElementById('mealDetailContent').innerHTML = '<div class="loading">Analyse en cours...</div>';
+  document.getElementById('ovMealDetail').classList.add('active');
+  buildMealDetail(meal);
+}
+
+async function buildMealDetail(meal) {
+  var mac = calcMac(meal.meal_ingredients);
+  var total = mac.p + mac.l + mac.g + 0.01;
+  var protPct = Math.round(mac.p/total*100);
+  var lipPct  = Math.round(mac.l/total*100);
+  var glucPct = Math.round(mac.g/total*100);
+  var photo = meal.photo_url
+    ? '<div class="meal-detail-photo"><img src="'+meal.photo_url+'" alt=""></div>'
+    : '<div class="meal-detail-photo">🍽️</div>';
+
+  // Header
+  var html = '<div class="meal-detail-header">'
+    + photo
+    + '<div><div class="meal-detail-name">'+meal.name+'</div>'
+    + '<div class="meal-detail-macros">'
+    + '<span class="mdm-chip">🥩 '+mac.p+'g</span>'
+    + '<span class="mdm-chip">🌾 '+mac.g+'g</span>'
+    + '<span class="mdm-chip">🥑 '+mac.l+'g</span>'
+    + '<span class="mdm-chip">⚡ '+mac.c+' kcal</span>'
+    + '</div></div></div>';
+
+  // Donut composition
+  html += '<div class="compo-donut-mini">'
+    + '<div class="donut-mini-wrap"><canvas id="donutMeal" width="80" height="80"></canvas></div>'
+    + '<div class="donut-mini-legend">'
+    + '<div class="dml-row"><div class="dml-dot" style="background:#ff6b35;"></div>Protéines<span class="dml-val">'+protPct+'%</span></div>'
+    + '<div class="dml-row"><div class="dml-dot" style="background:#ff9500;"></div>Glucides<span class="dml-val">'+glucPct+'%</span></div>'
+    + '<div class="dml-row"><div class="dml-dot" style="background:#7b5ea7;"></div>Lipides<span class="dml-val">'+lipPct+'%</span></div>'
+    + '</div></div>';
+
+  html += '<div id="critiqueContent"><div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Analyse IA en cours...</div></div>';
+
+  document.getElementById('mealDetailContent').innerHTML = html;
+
+  // Draw donut
+  setTimeout(function() {
+    drawDonutMeal('donutMeal', [protPct, glucPct, lipPct], ['#ff6b35','#ff9500','#7b5ea7']);
+  }, 50);
+
+  // Claude critique
+  try {
+    var ingsDesc = (meal.meal_ingredients||[]).map(function(i){ return i.name+' '+i.quantity_g+'g'; }).join(', ');
+    var prompt = 'Fais une analyse critique nutritionnelle de ce plat: "'+meal.name+'" compose de: '+ingsDesc+'.'
+      + ' Macros calculees: prot='+mac.p+'g, lip='+mac.l+'g, gluc='+mac.g+'g, cal='+mac.c+'kcal.'
+      + ' Objectifs client: prot='+macObj.p+'g, lip='+macObj.l+'g, gluc='+macObj.g+'g, cal='+macObj.c+'kcal.'
+      + ' Donne 2 points forts et 2 points a ameliorer de ce plat specifique, avec des conseils concrets.'
+      + ' Reponds UNIQUEMENT en JSON sans backticks: {"forts":[{"titre":"...","desc":"...","conseil":"..."}],"faibles":[{"titre":"...","desc":"...","conseil":"..."}]}';
+
+    var res = await fetch(CLAUDE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt, max_tokens: 700 })
+    });
+    var d = await res.json();
+    if (!res.ok) throw new Error(d.error);
+    var data = JSON.parse((d.text||'{}').replace(/```[a-z]*|```/g,'').trim());
+
+    var critiqueHtml = '<div class="meal-critique-section">'
+      + '<div class="mc-title"><span>✅</span> Points forts de ce plat</div>'
+      + (data.forts||[]).map(function(p){
+          return '<div class="mc-card"><div class="mc-card-title"><span>👍</span>'+p.titre+'</div><div class="mc-card-desc">'+p.desc+'</div><div class="mc-card-tip tip-g">→ '+p.conseil+'</div></div>';
+        }).join('')
+      + '</div>'
+      + '<div class="meal-critique-section">'
+      + '<div class="mc-title"><span>⚠️</span> A améliorer</div>'
+      + (data.faibles||[]).map(function(p){
+          return '<div class="mc-card"><div class="mc-card-title"><span>💡</span>'+p.titre+'</div><div class="mc-card-desc">'+p.desc+'</div><div class="mc-card-tip tip-o">→ '+p.conseil+'</div></div>';
+        }).join('')
+      + '</div>';
+
+    document.getElementById('critiqueContent').innerHTML = critiqueHtml;
+  } catch(e) {
+    document.getElementById('critiqueContent').innerHTML = '<div style="color:#c7c7cc;font-size:13px;padding:8px;">Analyse indisponible — ajoutez des ingrédients pour obtenir une critique.</div>';
+  }
+}
+
+function drawDonutMeal(id, data, colors) {
+  var canvas = document.getElementById(id); if(!canvas) return;
+  var ctx = canvas.getContext('2d'), W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  var cx=W/2, cy=H/2, r=W/2-4, ri=r*0.5, start=-Math.PI/2, total=data.reduce(function(a,b){return a+b;},0)||1;
+  data.forEach(function(val,i){
+    var angle=(val/total)*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx+ri*Math.cos(start),cy+ri*Math.sin(start));
+    ctx.arc(cx,cy,r,start,start+angle); ctx.arc(cx,cy,ri,start+angle,start,true);
+    ctx.closePath(); ctx.fillStyle=colors[i]; ctx.fill();
+    start+=angle;
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,ri*0.85,0,Math.PI*2); ctx.fillStyle='#f5f5f7'; ctx.fill();
+}
+
 function closeOverlay(id){document.getElementById(id).classList.remove('active');}
 function goToOffre(){var url='/offre.html?token='+TOKEN;if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;}
 function ouvrirChat(){var url='/chat.html?token='+TOKEN;if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;}
