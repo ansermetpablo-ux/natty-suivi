@@ -669,7 +669,15 @@ async function loadOnboarding() {
 
 async function loadMeals() {
   try {
-    allMeals = await sbFetch('meals?user_id=eq.'+USER_ID+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=30');
+    var mealsRaw = await sbFetch('meals?user_id=eq.'+USER_ID+'&select=*&order=created_at.desc&limit=30');
+    // Fetch ingredients separately to avoid join issues
+    allMeals = await Promise.all(mealsRaw.map(async function(m) {
+      try {
+        var ings = await sbFetch('meal_ingredients?meal_id=eq.'+m.id+'&select=*');
+        m.meal_ingredients = ings;
+      } catch(e) { m.meal_ingredients = []; }
+      return m;
+    }));
     afficherMeals(allMeals.slice(0,10));
     var today = new Date().toISOString().split('T')[0];
     macAuj = {p:0,l:0,g:0,c:0};
