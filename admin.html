@@ -1245,54 +1245,58 @@ async function chargerFicheAlim(userId) {
 
 // ── ONGLET RDV ──
 async function chargerFicheRdvPanel(userId) {
-  document.getElementById('ficheRdvContent').innerHTML = '<div class="loading">Chargement...</div>';
+  var el = document.getElementById('ficheRdvContent');
+  el.innerHTML = '<div class="loading">Chargement...</div>';
   try {
     var rdvs = await sbFetch('rdv?user_id=eq.'+userId+'&order=date_rdv.desc&select=*');
-    var MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
-    var html = '<div class="sec-card">';
-    html += '<div class="sec-label" style="margin-bottom:12px;">📅 Rendez-vous</div>';
+    var MOIS = ['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'];
+    el.innerHTML = '<div class="sec-card" id="rdvListeAdmin"><div class="sec-label" style="margin-bottom:12px;">Rendez-vous</div><div id="rdvItems"></div></div>'
+      + '<div class="sec-card"><div class="sec-label">+ Programmer un RDV</div>'
+      + '<div style="display:flex;gap:8px;margin-bottom:8px;"><input class="edit-field-inp" type="date" id="rdvAdminDate" style="flex:1;"><input class="edit-field-inp" type="time" id="rdvAdminHeure" style="width:90px;"></div>'
+      + '<select class="edit-field-inp" id="rdvAdminType" style="margin-bottom:10px;"><option value="onboarding">Bilan onboarding</option><option value="suivi">Suivi</option><option value="consultation">Consultation</option></select>'
+      + '<button class="btn-prog-rdv-sm" id="btnProgRdv" style="width:100%;">Programmer ce RDV</button></div>';
 
-    if (rdvs.length) {
-      html += rdvs.map(function(r) {
-        var d = new Date(r.date_rdv);
-        var isPast = d < new Date();
-        var statCol = r.statut==='confirme'?'var(--green)':r.statut==='demande_client'?'var(--amber)':'var(--muted)';
-        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:.5px solid var(--bdr);">'
-          +'<div style="width:44px;height:48px;background:var(--bg);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--si);">'
-          +'<div style="font-size:17px;font-weight:700;">'+(isNaN(d)?'–':d.getDate())+'</div>'
-          +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase;">'+(isNaN(d)?'–':MOIS[d.getMonth()])+'</div>'
-          +'</div>'
-          +'<div style="flex:1;">'
-          +'<div style="font-size:13px;font-weight:600;">'+( r.type_rdv==='onboarding'?'Bilan onboarding':r.type_rdv==='suivi'?'Suivi':r.type_rdv==='demande_client'?'Demande client':'Consultation')+'</div>'
-          +'<div style="font-size:11px;color:var(--muted);">'+(r.heure||'')+'</div>'
-          +'</div>'
-          +'<div style="display:flex;align-items:center;gap:6px;">'
-          +'<span style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--gl);color:'+statCol+';">'+(r.statut==='confirme'?'Confirmé':r.statut==='demande_client'?'En attente':r.statut)+'</span>'
-          +'<button onclick="confirmerRdvAdmin(''+r.id+'')" style="padding:5px 9px;background:var(--black);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;">✓</button>'
-          +'<button onclick="supprimerRdv(''+r.id+'')" style="padding:5px 9px;background:var(--rl);color:var(--red);border:none;border-radius:8px;font-size:11px;cursor:pointer;">✕</button>'
-          +'</div>'
-          +'</div>';
-      }).join('');
+    var rdvItems = document.getElementById('rdvItems');
+    if (!rdvs||!rdvs.length) {
+      rdvItems.innerHTML = '<div class="alim-empty">Aucun rendez-vous</div>';
     } else {
-      html += '<div class="alim-empty">Aucun rendez-vous</div>';
+      rdvs.forEach(function(r) {
+        var d = new Date(r.date_rdv);
+        var typeLabel = r.type_rdv==='onboarding'?'Bilan onboarding':r.type_rdv==='suivi'?'Suivi':r.type_rdv==='demande_client'?'Demande client':'Consultation';
+        var statColor = r.statut==='confirme'?'var(--green)':r.statut==='demande_client'?'var(--amber)':'var(--muted)';
+        var statLabel = r.statut==='confirme'?'Confirme':r.statut==='demande_client'?'En attente':r.statut;
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:.5px solid var(--bdr);';
+        var dateNum = isNaN(d)?'–':d.getDate();
+        var dateMois = isNaN(d)?'–':MOIS[d.getMonth()];
+        row.innerHTML = '<div style="width:44px;height:48px;background:var(--bg);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--si);">'
+          + '<div style="font-size:17px;font-weight:700;">'+dateNum+'</div>'
+          + '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;">'+dateMois+'</div>'
+          + '</div>'
+          + '<div style="flex:1;">'
+          + '<div style="font-size:13px;font-weight:600;">'+typeLabel+'</div>'
+          + '<div style="font-size:11px;color:var(--muted);">'+(r.heure||'')+'</div>'
+          + '</div>'
+          + '<span style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--gl);color:'+statColor+';">'+statLabel+'</span>';
+        var btnOk = document.createElement('button');
+        btnOk.textContent = 'OK';
+        btnOk.style.cssText = 'padding:5px 9px;background:var(--black);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;';
+        btnOk.addEventListener('click', (function(id){ return function(){ confirmerRdvAdmin(id); }; })(r.id));
+        var btnDel = document.createElement('button');
+        btnDel.textContent = 'X';
+        btnDel.style.cssText = 'padding:5px 9px;background:var(--rl);color:var(--red);border:none;border-radius:8px;font-size:11px;cursor:pointer;';
+        btnDel.addEventListener('click', (function(id){ return function(){ supprimerRdv(id); }; })(r.id));
+        row.appendChild(btnOk);
+        row.appendChild(btnDel);
+        rdvItems.appendChild(row);
+      });
     }
-
-    html += '</div><div class="sec-card"><div class="sec-label">+ Programmer un RDV</div>';
-    html += '<div class="rdv-edit-row" style="margin-bottom:8px;">';
-    html += '<input class="edit-field-inp" type="date" id="rdvAdminDate" placeholder="Date">';
-    html += '<input class="edit-field-inp" type="time" id="rdvAdminHeure" placeholder="Heure" style="width:90px;">';
-    html += '</div>';
-    html += '<select class="edit-field-inp" id="rdvAdminType" style="margin-bottom:10px;">';
-    html += '<option value="onboarding">Bilan onboarding</option><option value="suivi">Suivi</option><option value="consultation">Consultation</option>';
-    html += '</select>';
-    html += '<button class="btn-prog-rdv-sm" style="width:100%;" onclick="programmerRdvAdmin(''+userId+'')">Programmer ce RDV</button>';
-    html += '</div>';
-
-    document.getElementById('ficheRdvContent').innerHTML = html;
+    document.getElementById('btnProgRdv').addEventListener('click', function(){ programmerRdvAdmin(userId); });
   } catch(e) {
-    document.getElementById('ficheRdvContent').innerHTML = '<div class="alim-empty" style="padding:20px;">Erreur : '+e.message+'</div>';
+    el.innerHTML = '<div class="alim-empty" style="padding:20px;">Erreur : '+e.message+'</div>';
   }
 }
+
 
 async function confirmerRdvAdmin(rdvId) {
   try {
