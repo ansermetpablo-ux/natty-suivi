@@ -732,6 +732,31 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
   if (USER_ID) init(); else afficherOnboardingCTA();
+
+  // Écouter le postMessage de Wix quand l'utilisateur se connecte
+  window.addEventListener('message', function(event) {
+    var data = event.data;
+    if (!data || typeof data !== 'object') return;
+
+    // Connexion détectée depuis masterPage.js
+    if (data.type === 'userConnected' && data.token && data.userId) {
+      TOKEN = data.token;
+      USER_ID = data.userId;
+      // Recharger la page avec le bon token
+      var url = new URL(window.location.href);
+      url.searchParams.set('token', data.token);
+      if (data.proteines) url.searchParams.set('proteines', data.proteines);
+      if (data.glucides)  url.searchParams.set('glucides',  data.glucides);
+      if (data.lipides)   url.searchParams.set('lipides',   data.lipides);
+      if (data.calories)  url.searchParams.set('calories',  data.calories);
+      window.location.href = url.toString();
+    }
+
+    // Onboarding terminé depuis onboarding.html
+    if (data.type === 'onboardingComplete') {
+      window.location.reload();
+    }
+  });
 });
 
 async function init() {
