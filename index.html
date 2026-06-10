@@ -379,7 +379,7 @@ input[type="file"] { display:none; }
   <div class="tabs-bar">
     <button class="tab-btn active" id="tabSuivi"  onclick="switchTab('suivi')">Suivi</button>
     <button class="tab-btn" id="tabProg" onclick="switchTab('prog')">Progression</button>
-    <button class="tab-btn" id="tabChal" onclick="goToChallenges()">🏆 Challenges</button>
+    <button class="tab-btn" id="tabChal" onclick="switchTab('chal')">🏆 Challenges</button>
   </div>
 </div>
 
@@ -528,6 +528,18 @@ input[type="file"] { display:none; }
     <div class="compo-inner" id="compoIdeale"><div class="loading">Chargement...</div></div>
   </div>
 
+</div>
+
+<!-- ══ ONGLET CHALLENGES ══ -->
+<div class="tab-page" id="pageChal">
+  <div class="card" style="overflow:hidden;">
+    <iframe 
+      src="" 
+      id="chalFrame"
+      style="width:100%;height:calc(100vh - 120px);border:none;display:block;"
+      allow="camera; microphone"
+    ></iframe>
+  </div>
 </div>
 
 <!-- FAB -->
@@ -1053,11 +1065,19 @@ async function fetchAnalyseIA(type) {
 
 // ═══ PROGRESSION ═══
 function switchTab(t) {
-  document.getElementById('pageSuivi').classList.toggle('active',t==='suivi');
-  document.getElementById('pageProg').classList.toggle('active',t==='prog');
-  document.getElementById('tabSuivi').classList.toggle('active',t==='suivi');
-  document.getElementById('tabProg').classList.toggle('active',t==='prog');
-  if (t==='prog') setTimeout(dessinerProgression,50);
+  document.getElementById('pageSuivi').classList.toggle('active', t==='suivi');
+  document.getElementById('pageProg').classList.toggle('active',  t==='prog');
+  document.getElementById('pageChal').classList.toggle('active',  t==='chal');
+  document.getElementById('tabSuivi').classList.toggle('active',  t==='suivi');
+  document.getElementById('tabProg').classList.toggle('active',   t==='prog');
+  document.getElementById('tabChal').classList.toggle('active',   t==='chal');
+  if (t==='prog') setTimeout(dessinerProgression, 50);
+  if (t==='chal') {
+    var frame = document.getElementById('chalFrame');
+    if (!frame.src || frame.src === window.location.href) {
+      frame.src = 'https://natty-suivi.vercel.app/challenges.html?token=' + TOKEN;
+    }
+  }
 }
 
 function switchPeriod(p,el) {
@@ -1562,6 +1582,7 @@ function afficherOnboardingCTA(){
     // Dans Wix (iframe) → postMessage
     if (window.self !== window.top) {
       window.parent.postMessage({ type: 'demandeConnexion' }, '*');
+    console.log('postMessage demandeConnexion sent');
     } else {
       // PWA standalone → afficher formulaire de connexion
       var f = document.getElementById('loginForm');
@@ -1722,17 +1743,13 @@ function drawDonutMeal(id, data, colors) {
 
 function closeOverlay(id){document.getElementById(id).classList.remove('active');}
 function goToChallenges(){
-  var url='https://natty-suivi.vercel.app/challenges.html?token='+TOKEN;
-  if(window.self!==window.top){
-    window.parent.postMessage({type:'challenges',url:url,token:TOKEN},'*');
-  } else {
-    window.location.href='/challenges.html?token='+TOKEN;
-  }
+  switchTab('chal');
 }
 function goToOffre(){
   var url='https://natty-suivi.vercel.app/offre.html?token='+TOKEN;
   if(window.self!==window.top){
     window.parent.postMessage({type:'offre',url:url,token:TOKEN},'*');
+    console.log('postMessage offre sent');
   } else {
     window.location.href='/offre.html?token='+TOKEN;
   }
