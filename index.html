@@ -1543,7 +1543,14 @@ function afficherOnboardingCTA(){
     +'<div class="ob-feat"><div class="ob-fic">📊</div><div><div class="ob-ft">Suivi nutritionnel complet</div><div class="ob-fs">Score, macros, journal</div></div></div></div>'
     +'<div class="ob-btn-w"><button class="ob-btn" id="btnStartOB">Commencer →</button></div>';
   page.insertBefore(cta,page.children[0]);
-  document.getElementById('btnStartOB').addEventListener('click',function(){var url='https://www.natty-nutrition.com/login?redirect='+encodeURIComponent(window.location.href);if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;});
+  document.getElementById('btnStartOB').addEventListener('click', function() {
+    // Envoyer message à Wix pour ouvrir la connexion
+    if (window.self !== window.top) {
+      window.parent.postMessage({ type: 'demandeConnexion' }, '*');
+    } else {
+      window.location.href = 'https://www.natty-nutrition.com/login';
+    }
+  });
   chargerRdv();
 }
 
