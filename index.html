@@ -1721,9 +1721,30 @@ function drawDonutMeal(id, data, colors) {
 }
 
 function closeOverlay(id){document.getElementById(id).classList.remove('active');}
-function goToChallenges(){var url='/challenges.html?token='+TOKEN;if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;}
-function goToOffre(){var url='/offre.html?token='+TOKEN;if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;}
-function ouvrirChat(){var url='/chat.html?token='+TOKEN;if(window.self!==window.top)window.top.location.href=url;else window.location.href=url;}
+function goToChallenges(){
+  var url='https://natty-suivi.vercel.app/challenges.html?token='+TOKEN;
+  if(window.self!==window.top){
+    window.parent.postMessage({type:'challenges',url:url,token:TOKEN},'*');
+  } else {
+    window.location.href='/challenges.html?token='+TOKEN;
+  }
+}
+function goToOffre(){
+  var url='https://natty-suivi.vercel.app/offre.html?token='+TOKEN;
+  if(window.self!==window.top){
+    window.parent.postMessage({type:'offre',url:url,token:TOKEN},'*');
+  } else {
+    window.location.href='/offre.html?token='+TOKEN;
+  }
+}
+function ouvrirChat(){
+  var url='https://natty-suivi.vercel.app/chat.html?token='+TOKEN;
+  if(window.self!==window.top){
+    window.parent.postMessage({type:'chat',url:url,token:TOKEN},'*');
+  } else {
+    window.location.href='/chat.html?token='+TOKEN;
+  }
+}
 async function sbFetch(path){var r=await fetch(SB_URL+'/rest/v1/'+path,{headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});var t=await r.text();if(!r.ok)throw new Error(t);return t?JSON.parse(t):[];}
 async function sbPost(path,body){var r=await fetch(SB_URL+'/rest/v1/'+path,{method:'POST',headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)});if(!r.ok)throw new Error(await r.text());}
 async function sbPostR(path,body){var r=await fetch(SB_URL+'/rest/v1/'+path,{method:'POST',headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(body)});var t=await r.text();if(!r.ok)throw new Error(t);return JSON.parse(t);}
