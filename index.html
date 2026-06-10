@@ -1545,11 +1545,7 @@ function afficherOnboardingCTA(){
   page.insertBefore(cta,page.children[0]);
   document.getElementById('btnStartOB').addEventListener('click', function() {
     // Envoyer message à Wix pour ouvrir la connexion
-    if (window.self !== window.top) {
-      window.parent.postMessage({ type: 'demandeConnexion' }, '*');
-    } else {
-      window.location.href = 'https://www.natty-nutrition.com/login';
-    }
+    window.parent.postMessage({ type: 'demandeConnexion' }, '*');
   });
   chargerRdv();
 }
