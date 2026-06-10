@@ -2029,7 +2029,7 @@ function chalAfficherSetup() {
     +'<div class="ch-title">Atteignez votre objectif</div>'
     +'<div class="ch-sub">Fixez-vous un défi. Si vous réussissez, une semaine de repas vous est offerte.</div>'
     +'<div class="ch-reward"><div class="ch-reward-icon">🎁</div><div><div class="ch-reward-text">1 semaine offerte si vous réussissez</div></div></div>'
-    +'<button class="ch-btn" onclick="openOverlay('ovPersoSetup')">Lancer un challenge →</button>'
+    +'<button class="ch-btn" onclick="openOverlay(&quot;ovPersoSetup&quot;)">Lancer un challenge →</button>'
     +'</div>';
 }
 
@@ -2049,7 +2049,7 @@ function chalAfficherActif(ch) {
     +'<div class="pa-stats"><div class="pa-stat"><div class="pa-stat-val">'+prog+'%</div><div class="pa-stat-lbl">Progression</div></div>'
     +'<div class="pa-stat"><div class="pa-stat-val">'+remain+'</div><div class="pa-stat-lbl">Jours restants</div></div></div>'
     +'<div class="pa-reward"><div class="pa-reward-em">🎁</div><div><div class="pa-reward-t">1 semaine offerte vous attend</div></div></div>'
-    +'<button class="pa-abandon" onclick="chalAbandonner(''+ch.id+'')">Abandonner</button>'
+    +'<button class="pa-abandon" onclick="chalAbandonner(&quot;'+ch.id+'&quot;)">Abandonner</button>'
     +'</div>';
 }
 
@@ -2093,7 +2093,7 @@ async function chalChargerDuo() {
 
 function chalAfficherSetupDuo() {
   document.getElementById('duoContent').innerHTML =
-    '<div class="challenge-hero"><div class="ch-type-badge">Challenge Duo</div><div class="ch-title">Défiez quelqu'un</div><div class="ch-sub">Le gagnant reçoit une semaine de repas offerte.</div><div class="ch-reward"><div class="ch-reward-icon">🥊</div><div><div class="ch-reward-text">1 semaine pour le gagnant</div></div></div><button class="ch-btn" onclick="openOverlay('ovDuoSetup')">Lancer un duel →</button></div>';
+    '<div class="challenge-hero"><div class="ch-type-badge">Challenge Duo</div><div class="ch-title">Défiez quelqu&#39;un</div><div class="ch-sub">Le gagnant reçoit une semaine de repas offerte.</div><div class="ch-reward"><div class="ch-reward-icon">🥊</div><div><div class="ch-reward-text">1 semaine pour le gagnant</div></div></div><button class="ch-btn" onclick="openOverlay('ovDuoSetup')">Lancer un duel →</button></div>';
 }
 
 function chalAfficherDuoActif(ch) {
