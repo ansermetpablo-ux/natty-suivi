@@ -2093,7 +2093,7 @@ async function chalChargerDuo() {
 
 function chalAfficherSetupDuo() {
   document.getElementById('duoContent').innerHTML =
-    '<div class="challenge-hero"><div class="ch-type-badge">Challenge Duo</div><div class="ch-title">Défiez quelqu&#39;un</div><div class="ch-sub">Le gagnant reçoit une semaine de repas offerte.</div><div class="ch-reward"><div class="ch-reward-icon">🥊</div><div><div class="ch-reward-text">1 semaine pour le gagnant</div></div></div><button class="ch-btn" onclick="openOverlay('ovDuoSetup')">Lancer un duel →</button></div>';
+    '<div class="challenge-hero"><div class="ch-type-badge">Challenge Duo</div><div class="ch-title">Défiez quelqu&#39;un</div><div class="ch-sub">Le gagnant reçoit une semaine de repas offerte.</div><div class="ch-reward"><div class="ch-reward-icon">🥊</div><div><div class="ch-reward-text">1 semaine pour le gagnant</div></div></div><button class="ch-btn" onclick="openOverlay(&quot;ovDuoSetup&quot;)">Lancer un duel →</button></div>';
 }
 
 function chalAfficherDuoActif(ch) {
@@ -2199,5 +2199,3 @@ function chalSubscribeRT() {
           .catch(e => console.log('SW error:', e));
       });
     }
-  
-
