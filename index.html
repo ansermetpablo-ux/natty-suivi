@@ -490,7 +490,7 @@ input[type="file"] { display:none; }
 </div>
 
 <!-- ══ ONGLET SUIVI ══ -->
-<div class="tab-page active" id="pageSuivi">
+<div class="tab-page" id="pageSuivi" style="display:flex;">
 
   <div class="bandeau" id="bandeauNP" style="display:none;">
     <div class="bandeau-l"><div class="bandeau-icon">🧑‍⚕️</div><div><div class="bandeau-title">Nutritionniste inclus</div><div class="bandeau-sub">Repas livrés + suivi personnalisé</div></div></div>
@@ -593,7 +593,7 @@ input[type="file"] { display:none; }
 </div>
 
 <!-- ══ ONGLET PROGRESSION ══ -->
-<div class="tab-page" id="pageProg">
+<div class="tab-page" id="pageProg" style="display:none;">
 
   <div class="card prog-avg">
     <div class="prog-avg-title">Votre moyenne</div>
@@ -637,7 +637,7 @@ input[type="file"] { display:none; }
 </div>
 
 <!-- ══ ONGLET CHALLENGES ══ -->
-<div class="tab-page" id="pageChal">
+<div class="tab-page" id="pageChal" style="display:none;">
 
   <!-- CHALLENGES TABS -->
   <div class="tabs">
@@ -1765,14 +1765,27 @@ async function fetchAnalyseIA(type) {
 
 // ═══ PROGRESSION ═══
 function switchTab(t) {
-  document.getElementById('pageSuivi').classList.toggle('active', t==='suivi');
-  document.getElementById('pageProg').classList.toggle('active',  t==='prog');
-  document.getElementById('pageChal').classList.toggle('active',  t==='chal');
-  document.getElementById('tabSuivi').classList.toggle('active',  t==='suivi');
-  document.getElementById('tabProg').classList.toggle('active',   t==='prog');
-  document.getElementById('tabChal').classList.toggle('active',   t==='chal');
-  if (t==='prog') setTimeout(dessinerProgression, 50);
-  if (t==='chal') {
+  // Pages
+  ['pageSuivi','pageProg','pageChal'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  // Tab buttons
+  ['tabSuivi','tabProg','tabChal'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+
+  if (t==='suivi') {
+    document.getElementById('pageSuivi').style.display = 'flex';
+    document.getElementById('tabSuivi').classList.add('active');
+  } else if (t==='prog') {
+    document.getElementById('pageProg').style.display = 'flex';
+    document.getElementById('tabProg').classList.add('active');
+    setTimeout(dessinerProgression, 50);
+  } else if (t==='chal') {
+    document.getElementById('pageChal').style.display = 'flex';
+    document.getElementById('tabChal').classList.add('active');
     chalInit();
   }
 }
