@@ -1,4 +1,4 @@
-const CACHE = 'natty-v1';
+const CACHE = 'natty-v2';
 const ASSETS = [
   '/',
   '/index.html',
@@ -11,7 +11,6 @@ const ASSETS = [
   '/icon-512.png'
 ];
 
-// Installation : mise en cache des assets
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE).then(cache => cache.addAll(ASSETS))
@@ -19,7 +18,6 @@ self.addEventListener('install', (e) => {
   self.skipWaiting();
 });
 
-// Activation : suppression des anciens caches
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -29,9 +27,7 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// Fetch : réseau d'abord, cache en fallback
 self.addEventListener('fetch', (e) => {
-  // Ne pas intercepter les appels API
   if (e.request.url.includes('/api/') || 
       e.request.url.includes('supabase') ||
       e.request.url.includes('anthropic') ||
@@ -42,7 +38,6 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        // Mettre en cache la réponse fraîche
         if (res.ok) {
           const clone = res.clone();
           caches.open(CACHE).then(cache => cache.put(e.request, clone));
