@@ -1014,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
-  if (USER_ID) init(); else afficherOnboardingCTA();
+  if (USER_ID) { init().then(function(){ qaStartTimer(); }); } else afficherOnboardingCTA();
 
   // Écouter le postMessage de Wix quand l'utilisateur se connecte
   window.addEventListener('message', function(event) {
@@ -2492,18 +2492,32 @@ document.getElementById('qaBtn7').addEventListener('click', async function(){
   }
 });
 
-// Intercepter le premier clic sur n'importe quel bouton
+// Déclencher le questionnaire : au premier clic n'importe où OU 3s après connexion
 var qaIntercepted = false;
+var qaTimer = null;
+
+function qaTrigger() {
+  if (qaIntercepted) return;
+  qaIntercepted = true;
+  if (qaTimer) clearTimeout(qaTimer);
+  qaVerifierEtAfficher();
+}
+
+// Premier clic n'importe où sur la page (hors questionnaire)
 document.addEventListener('click', function(e) {
   if (qaIntercepted) return;
   if (!USER_ID) return;
-  var btn = e.target.closest('button, [onclick], .tab-btn, .macro-row, .pts-card, .offres-banner, .bandeau-btn, .sec-link');
-  if (!btn) return;
-  // Ignorer les boutons du questionnaire lui-même
-  if (btn.closest('#qalimOverlay')) return;
-  qaIntercepted = true;
-  qaVerifierEtAfficher();
+  if (e.target.closest('#qalimOverlay') || e.target.closest('#qaSaving')) return;
+  qaTrigger();
 }, true);
+
+// 3 secondes après init si USER_ID disponible
+function qaStartTimer() {
+  if (!USER_ID || qaIntercepted) return;
+  qaTimer = setTimeout(function() {
+    qaTrigger();
+  }, 3000);
+}
 
 </script>
 
