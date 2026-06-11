@@ -285,20 +285,26 @@ body { font-family:'Inter',-apple-system,sans-serif; background:#fff; min-height
 .ai-ings-list  { display:flex; flex-direction:column; gap:4px; }
 .ai-ing-row    { font-size:13px; color:#888; }
 
-/* ── ONBOARDING ── */
-.ob-card { background:#fff; border-radius:20px; overflow:hidden; border:.5px solid #eee; }
-.ob-hero { background:#111; padding:30px 22px 26px; text-align:center; }
-.ob-em { font-size:44px; display:block; margin-bottom:12px; }
-.ob-title { font-size:22px; font-weight:700; color:#fff; letter-spacing:-.5px; margin-bottom:6px; }
-.ob-sub   { font-size:13px; color:rgba(255,255,255,0.5); line-height:1.6; }
-.ob-feats { padding:18px 18px 4px; display:flex; flex-direction:column; gap:9px; }
-.ob-feat  { display:flex; align-items:center; gap:12px; background:#f5f5f5; border-radius:12px; padding:11px 13px; }
-.ob-fic   { font-size:18px; flex-shrink:0; }
-.ob-ft    { font-size:13px; font-weight:600; color:#111; }
-.ob-fs    { font-size:11px; color:#aaa; margin-top:1px; }
-.ob-btn-w { padding:14px 18px 22px; }
-.ob-btn   { width:100%; padding:16px; background:#111; border:none; border-radius:14px; color:#fff; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; }
-.close-btn { width:100%; padding:14px; background:#f5f5f5; border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; color:#111; }
+/* ── ONBOARDING CAROUSEL ── */
+#onbPopup { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(12px); z-index:400; align-items:center; justify-content:center; padding:20px; }
+#onbPopup.active { display:flex; }
+.onb-popup-card { background:#fff; border-radius:24px; width:100%; max-width:400px; overflow:hidden; animation:popIn .35s cubic-bezier(.34,1.56,.64,1); border:.5px solid #eee; position:relative; }
+@keyframes popIn { from{opacity:0;transform:scale(.95)} to{opacity:1;transform:none} }
+.onb-track { display:flex; transition:transform .45s cubic-bezier(.4,0,.2,1); }
+.onb-slide { min-width:100%; padding:28px 24px 80px; display:flex; flex-direction:column; gap:16px; }
+.onb-step-num { font-size:11px; color:#aaa; letter-spacing:.8px; text-transform:uppercase; font-weight:500; }
+.onb-slide-title { font-size:22px; font-weight:700; color:#111; line-height:1.25; letter-spacing:-.4px; }
+.onb-phone { width:160px; height:280px; border-radius:24px; border:1.5px solid #e0e0e0; background:#f7f7f7; margin:0 auto; overflow:hidden; position:relative; box-shadow:0 8px 28px rgba(0,0,0,0.08); flex-shrink:0; }
+.onb-phone-inner { width:100%; height:100%; display:flex; flex-direction:column; padding:12px 10px; gap:7px; }
+.onb-slide-desc { font-size:14px; color:#888; line-height:1.65; }
+.onb-footer { position:absolute; bottom:22px; left:24px; right:24px; display:flex; align-items:center; justify-content:space-between; }
+.onb-dots { display:flex; gap:5px; }
+.onb-dot { width:6px; height:6px; border-radius:50%; background:#ddd; transition:all .3s; }
+.onb-dot.active { width:18px; border-radius:3px; background:#111; }
+.onb-next-btn { background:#111; color:#fff; border:none; border-radius:20px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:5px; }
+.onb-bar { height:3px; background:#f0f0f0; border-radius:2px; overflow:hidden; margin-bottom:2px; }
+.onb-bar-fill { height:100%; border-radius:2px; transition:width 1.2s ease; }
+
 
 /* ── EDITABLE INGREDIENTS ── */
 .ai-ing-edit-row { display:flex; align-items:center; gap:8px; background:#f5f5f5; border-radius:11px; padding:8px 12px; }
@@ -2344,13 +2350,93 @@ async function fetchProfilConseils() {
   }
 }
 
-// ══ ONBOARDING POPUP ══
+// ══ ONBOARDING CAROUSEL ══
+var onbCurrent = 0;
+var onbTotal = 4;
+var onbAnimated = [false, false, false, false];
+
+function onbGoTo(n) {
+  onbCurrent = n;
+  document.getElementById('onbTrack').style.transform = 'translateX(-' + (n * 100) + '%)';
+  for (var i = 0; i < onbTotal; i++) {
+    var d = document.getElementById('onbD' + i);
+    if (d) d.classList.toggle('active', i === n);
+  }
+  var btn = document.getElementById('onbNextBtn');
+  if (btn) btn.textContent = n === onbTotal - 1 ? 'Commencer !' : 'Suite ›';
+  setTimeout(function(){ onbAnimateSlide(n); }, 300);
+}
+
+function onbAnimateSlide(n) {
+  if (onbAnimated[n]) return;
+  onbAnimated[n] = true;
+  if (n === 0) {
+    var arc = 2 * Math.PI * 40, pct = 72;
+    var r0 = document.getElementById('onbR0');
+    if (r0) r0.style.strokeDasharray = (pct/100*arc) + ' ' + arc;
+    var sc = document.getElementById('onbScore');
+    if (sc) sc.textContent = pct + '%';
+    setTimeout(function(){ var e=document.getElementById('onbPb'); if(e)e.style.width='78%'; var t=document.getElementById('onbPv'); if(t)t.textContent='124/160g'; }, 150);
+    setTimeout(function(){ var e=document.getElementById('onbGb'); if(e)e.style.width='55%'; var t=document.getElementById('onbGv'); if(t)t.textContent='121/220g'; }, 350);
+    setTimeout(function(){ var e=document.getElementById('onbLb'); if(e)e.style.width='62%'; var t=document.getElementById('onbLv'); if(t)t.textContent='40/65g'; }, 550);
+  }
+  if (n === 1) {
+    var chips = ['🍗 Poulet', '🥦 Brocoli', '🌾 Riz'];
+    var cont = document.getElementById('onbAiChips');
+    var txt = document.getElementById('onbAiTxt');
+    var ci = 0;
+    var iv = setInterval(function(){
+      if (!cont) { clearInterval(iv); return; }
+      if (ci < chips.length) {
+        var sp = document.createElement('span');
+        sp.textContent = chips[ci];
+        sp.style.cssText = 'background:rgba(255,255,255,0.15);color:#fff;font-size:6px;padding:2px 6px;border-radius:99px;';
+        cont.appendChild(sp); ci++;
+      } else { clearInterval(iv); if(txt) txt.textContent = 'Analyse terminée ✓'; }
+    }, 400);
+  }
+  if (n === 2) {
+    var conseils = ['Ajoutez des légumineuses pour vos fibres.', 'Réduisez les lipides saturés ce soir.', 'Super apport protéique ce midi !'];
+    var ci2 = 0;
+    setInterval(function(){
+      ci2 = (ci2 + 1) % conseils.length;
+      var el = document.getElementById('onbConseil');
+      if (!el) return;
+      el.style.opacity = '0';
+      setTimeout(function(){ if(el){ el.textContent = conseils[ci2]; el.style.opacity = '1'; } }, 200);
+    }, 2000);
+  }
+  if (n === 3) {
+    var vals = [82, 67, 74];
+    var ids3 = ['onbDp1', 'onbDp2', 'onbDp3'];
+    var tids3 = ['onbDp1t', 'onbDp2t', 'onbDp3t'];
+    var arc3 = 2 * Math.PI * 28;
+    vals.forEach(function(v, i) {
+      setTimeout(function(){
+        var el = document.getElementById(ids3[i]);
+        var tel = document.getElementById(tids3[i]);
+        if (el) el.style.strokeDasharray = (v/100*arc3) + ' ' + arc3;
+        if (tel) tel.textContent = v + '%';
+      }, i * 200);
+    });
+  }
+}
+
 function checkShowOnbPopup() {
   if (!USER_ID) return;
   var key = 'natty_onb_popup_' + USER_ID;
   if (!localStorage.getItem(key)) {
     setTimeout(function() {
+      onbCurrent = 0;
+      onbAnimated = [false, false, false, false];
+      var track = document.getElementById('onbTrack');
+      if (track) track.style.transform = 'translateX(0)';
+      for (var i = 0; i < onbTotal; i++) {
+        var d = document.getElementById('onbD' + i);
+        if (d) d.classList.toggle('active', i === 0);
+      }
       document.getElementById('onbPopup').classList.add('active');
+      setTimeout(function(){ onbAnimateSlide(0); }, 600);
     }, 1500);
   }
 }
@@ -2359,6 +2445,14 @@ function closeOnbPopup() {
   document.getElementById('onbPopup').classList.remove('active');
   if (USER_ID) localStorage.setItem('natty_onb_popup_' + USER_ID, '1');
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('onbNextBtn');
+  if (btn) btn.addEventListener('click', function() {
+    if (onbCurrent < onbTotal - 1) onbGoTo(onbCurrent + 1);
+    else closeOnbPopup();
+  });
+});
 
 </script>
   <script>
@@ -2433,33 +2527,123 @@ function closeOnbPopup() {
 </div>
 
 <!-- ══ ONBOARDING POPUP ══ -->
-<div id="onbPopup">
+<div id="onbPopup" onclick="if(event.target===this)closeOnbPopup()">
   <div class="onb-popup-card">
-    <div class="onb-popup-hero">
-      <span class="onb-popup-emoji">🥗</span>
-      <div class="onb-popup-title">Bienvenue sur Natty !</div>
-      <div class="onb-popup-sub">Votre suivi nutritionnel personnalisé est prêt. Voici comment tirer le meilleur de l'application.</div>
+    <div class="onb-track" id="onbTrack">
+
+      <!-- SLIDE 1 : Macros -->
+      <div class="onb-slide">
+        <div class="onb-step-num">1 / 4</div>
+        <div class="onb-slide-title">Suivez vos macros en temps réel</div>
+        <div class="onb-phone">
+          <div class="onb-phone-inner">
+            <div style="font-size:8px;color:#aaa;margin-bottom:2px">Aujourd'hui</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <svg width="52" height="52" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#eee" stroke-width="7"/>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#111" stroke-width="7" stroke-linecap="round" id="onbR0" stroke-dasharray="0 251" transform="rotate(-90 50 50)" style="transition:stroke-dasharray 1.2s ease"/>
+              </svg>
+              <div><div style="font-size:18px;font-weight:700;color:#111" id="onbScore">0%</div><div style="font-size:7px;color:#aaa">Score nutri.</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div><div style="display:flex;justify-content:space-between;font-size:7px;color:#aaa;margin-bottom:2px"><span>Protéines 🥩</span><span id="onbPv">0/160g</span></div><div class="onb-bar"><div class="onb-bar-fill" id="onbPb" style="width:0%;background:#ff6b35"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:7px;color:#aaa;margin-bottom:2px"><span>Glucides 🌾</span><span id="onbGv">0/220g</span></div><div class="onb-bar"><div class="onb-bar-fill" id="onbGb" style="width:0%;background:#ff9500"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:7px;color:#aaa;margin-bottom:2px"><span>Lipides 🥑</span><span id="onbLv">0/65g</span></div><div class="onb-bar"><div class="onb-bar-fill" id="onbLb" style="width:0%;background:#7b5ea7"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="onb-slide-desc">Votre tableau de bord affiche vos macros du jour et votre progression vers votre objectif personnalisé.</div>
+      </div>
+
+      <!-- SLIDE 2 : Photo IA -->
+      <div class="onb-slide">
+        <div class="onb-step-num">2 / 4</div>
+        <div class="onb-slide-title">Photographiez vos plats, l'IA fait le reste</div>
+        <div class="onb-phone">
+          <div class="onb-phone-inner">
+            <div style="font-size:8px;font-weight:600;color:#111;margin-bottom:5px">Ajouter un repas</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:7px">
+              <div style="background:#fff;border:1px solid #eee;border-radius:9px;padding:8px;text-align:center"><div style="font-size:16px">📷</div><div style="font-size:6px;margin-top:2px;color:#aaa">Photo IA</div></div>
+              <div style="background:#fff;border:1px solid #eee;border-radius:9px;padding:8px;text-align:center"><div style="font-size:16px">✍️</div><div style="font-size:6px;margin-top:2px;color:#aaa">Manuel</div></div>
+            </div>
+            <div style="background:#111;border-radius:9px;padding:9px">
+              <div style="font-size:7px;color:rgba(255,255,255,0.5);margin-bottom:4px" id="onbAiTxt">Analyse en cours...</div>
+              <div style="display:flex;gap:3px;flex-wrap:wrap" id="onbAiChips"></div>
+            </div>
+          </div>
+        </div>
+        <div class="onb-slide-desc">Prenez une photo et l'IA identifie les aliments, estime les quantités et calcule vos macros instantanément.</div>
+      </div>
+
+      <!-- SLIDE 3 : Analyse -->
+      <div class="onb-slide">
+        <div class="onb-step-num">3 / 4</div>
+        <div class="onb-slide-title">Chaque repas analysé et noté</div>
+        <div class="onb-phone">
+          <div class="onb-phone-inner">
+            <div style="font-size:8px;font-weight:600;color:#111;margin-bottom:4px">Historique</div>
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:.5px solid #eee">
+              <div style="width:28px;height:28px;border-radius:8px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🍗</div>
+              <div style="flex:1"><div style="font-size:7px;font-weight:600;color:#111">Poulet quinoa</div><div style="font-size:6px;color:#aaa">410 kcal · 38g prot.</div></div>
+              <svg width="24" height="24" viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" fill="none" stroke="#eee" stroke-width="4"/><circle cx="24" cy="24" r="18" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" stroke-dasharray="90 113" transform="rotate(-90 24 24)"/><text x="24" y="28" text-anchor="middle" font-size="8" font-weight="700" fill="#111">80</text></svg>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:.5px solid #eee">
+              <div style="width:28px;height:28px;border-radius:8px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🥗</div>
+              <div style="flex:1"><div style="font-size:7px;font-weight:600;color:#111">Salade caesar</div><div style="font-size:6px;color:#aaa">290 kcal · 18g prot.</div></div>
+              <svg width="24" height="24" viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" fill="none" stroke="#eee" stroke-width="4"/><circle cx="24" cy="24" r="18" fill="none" stroke="#888" stroke-width="4" stroke-linecap="round" stroke-dasharray="65 113" transform="rotate(-90 24 24)"/><text x="24" y="28" text-anchor="middle" font-size="8" font-weight="700" fill="#111">58</text></svg>
+            </div>
+            <div style="margin-top:5px;background:#f5f5f5;border-radius:7px;padding:6px">
+              <div style="font-size:6px;font-weight:600;color:#111;margin-bottom:2px">Conseil IA</div>
+              <div id="onbConseil" style="font-size:6px;color:#888;line-height:1.4;transition:opacity .3s">Ajoutez des légumineuses pour vos fibres.</div>
+            </div>
+          </div>
+        </div>
+        <div class="onb-slide-desc">Chaque repas reçoit un score nutritionnel et des suggestions concrètes pour améliorer votre alimentation.</div>
+      </div>
+
+      <!-- SLIDE 4 : Progression -->
+      <div class="onb-slide">
+        <div class="onb-step-num">4 / 4</div>
+        <div class="onb-slide-title">Visualisez votre progression semaine après semaine</div>
+        <div class="onb-phone">
+          <div class="onb-phone-inner">
+            <div style="font-size:8px;font-weight:600;color:#111;margin-bottom:5px">Progression</div>
+            <div style="display:flex;justify-content:space-around;margin-bottom:7px">
+              <div style="text-align:center">
+                <svg width="38" height="38" viewBox="0 0 76 76"><circle cx="38" cy="38" r="28" fill="none" stroke="#eee" stroke-width="5"/><circle cx="38" cy="38" r="28" fill="none" stroke="#ff6b35" stroke-width="5" stroke-linecap="round" id="onbDp1" stroke-dasharray="0 176" transform="rotate(-90 38 38)" style="transition:stroke-dasharray 1.4s ease"/></svg>
+                <div style="font-size:6px;color:#aaa;margin-top:1px">Protéines</div>
+                <div style="font-size:8px;font-weight:700;color:#111" id="onbDp1t">0%</div>
+              </div>
+              <div style="text-align:center">
+                <svg width="38" height="38" viewBox="0 0 76 76"><circle cx="38" cy="38" r="28" fill="none" stroke="#eee" stroke-width="5"/><circle cx="38" cy="38" r="28" fill="none" stroke="#ff9500" stroke-width="5" stroke-linecap="round" id="onbDp2" stroke-dasharray="0 176" transform="rotate(-90 38 38)" style="transition:stroke-dasharray 1.4s ease"/></svg>
+                <div style="font-size:6px;color:#aaa;margin-top:1px">Glucides</div>
+                <div style="font-size:8px;font-weight:700;color:#111" id="onbDp2t">0%</div>
+              </div>
+              <div style="text-align:center">
+                <svg width="38" height="38" viewBox="0 0 76 76"><circle cx="38" cy="38" r="28" fill="none" stroke="#eee" stroke-width="5"/><circle cx="38" cy="38" r="28" fill="none" stroke="#7b5ea7" stroke-width="5" stroke-linecap="round" id="onbDp3" stroke-dasharray="0 176" transform="rotate(-90 38 38)" style="transition:stroke-dasharray 1.4s ease"/></svg>
+                <div style="font-size:6px;color:#aaa;margin-top:1px">Lipides</div>
+                <div style="font-size:8px;font-weight:700;color:#111" id="onbDp3t">0%</div>
+              </div>
+            </div>
+            <div style="font-size:6px;color:#aaa;margin-bottom:3px">Évolution 7 jours</div>
+            <svg width="100%" height="32" viewBox="0 0 140 32" preserveAspectRatio="none">
+              <polyline points="0,28 18,22 36,24 54,15 72,17 90,10 108,7 140,5" fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="0,30 18,29 36,27 54,25 72,23 90,21 108,19 140,16" fill="none" stroke="#ccc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2"/>
+            </svg>
+          </div>
+        </div>
+        <div class="onb-slide-desc">Consultez vos moyennes, votre évolution et la composition de vos repas face à vos objectifs personnalisés.</div>
+      </div>
+
     </div>
-    <div class="onb-popup-steps">
-      <div class="onb-step">
-        <div class="onb-step-icon">📸</div>
-        <div><div class="onb-step-title">Photographiez vos repas</div><div class="onb-step-desc">L'IA analyse automatiquement vos aliments et calcule vos macros en temps réel.</div></div>
+    <div class="onb-footer">
+      <div class="onb-dots">
+        <div class="onb-dot active" id="onbD0"></div>
+        <div class="onb-dot" id="onbD1"></div>
+        <div class="onb-dot" id="onbD2"></div>
+        <div class="onb-dot" id="onbD3"></div>
       </div>
-      <div class="onb-step">
-        <div class="onb-step-icon">📊</div>
-        <div><div class="onb-step-title">Suivez vos macros</div><div class="onb-step-desc">Protéines, glucides, lipides — visualisez votre progression vers vos objectifs du jour.</div></div>
-      </div>
-      <div class="onb-step">
-        <div class="onb-step-icon">🏆</div>
-        <div><div class="onb-step-title">Relevez des challenges</div><div class="onb-step-desc">Défis personnels, duos avec des amis ou classement en entreprise.</div></div>
-      </div>
-      <div class="onb-step">
-        <div class="onb-step-icon">🧑‍⚕️</div>
-        <div><div class="onb-step-title">Votre nutritionniste</div><div class="onb-step-desc">Échangez directement avec votre expert nutrition pour un suivi personnalisé.</div></div>
-      </div>
-    </div>
-    <div class="onb-popup-btn-wrap">
-      <button class="onb-popup-btn" onclick="closeOnbPopup()">C'est parti ! →</button>
+      <button class="onb-next-btn" id="onbNextBtn">Suite ›</button>
     </div>
   </div>
 </div>
