@@ -1537,7 +1537,7 @@ function renderWeekCal(rdvs){
 async function verifierAbonnement(){
   try{var r=await sbFetch('abonnements?user_id=eq.'+USER_ID+'&statut=eq.actif&select=id&limit=1');estAbonne=r&&r.length>0;
     if(!estAbonne)document.getElementById('bandeauNP').style.display='flex';
-    else{document.getElementById('nutriCard').style.display='block';document.getElementById('offresBanner').style.display='none';chargerMessages();subscribeRT();}
+    else{document.getElementById('nutriCard').style.display='block';document.getElementById('offresBanner').style.display='none';chargerMessages();// subscribeRT désactivé}
   }catch(e){}
 }
 async function chargerMessages(){
@@ -1547,12 +1547,7 @@ async function chargerMessages(){
     if(msgs[0]){var el=document.getElementById('nutriPrev');el.textContent=(msgs[0].expediteur==='client'?'Vous : ':'')+msgs[0].contenu;if(msgs[0].expediteur==='nutritionniste'&&!msgs[0].lu)el.classList.add('unread');}
   }catch(e){}
 }
-function subscribeRT(){
-  var ws=new WebSocket(SB_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SB_KEY+'&vsn=1.0.0');
-  ws.onopen=function(){ws.send(JSON.stringify({topic:'realtime:public:messages:user_id=eq.'+USER_ID,event:'phx_join',payload:{},ref:'1'}));ws.send(JSON.stringify({topic:'realtime:public:rdv:user_id=eq.'+USER_ID,event:'phx_join',payload:{},ref:'2'}));};
-  ws.onmessage=function(e){var d=JSON.parse(e.data);if(d.event==='INSERT'&&d.payload&&d.payload.record){var r=d.payload.record;if(r.expediteur==='nutritionniste'){var b=document.getElementById('fabBadge');b.textContent=(parseInt(b.textContent)||0)+1;b.classList.add('visible');}if(r.user_id===USER_ID&&r.statut==='confirme')chargerRdv();}};
-  ws.onclose=function(){setTimeout(subscribeRT,3000);};ws.onerror=function(){ws.close();};
-}
+// subscribeRT supprimé (WebSocket non supporté dans ce contexte)
 
 // ═══ REPAS OVERLAY ═══
 function openRepasOverlay(){
@@ -2077,7 +2072,7 @@ async function chalInit() {
 
   try { var r = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&select=prenom&limit=1'); if(r&&r.length&&r[0].prenom) chalUserPrenom=r[0].prenom; } catch(e) {}
   await Promise.all([chalChargerPerso(), chalChargerDuo(), chalChargerEntreprise()]);
-  chalSubscribeRT();
+  // chalSubscribeRT désactivé
 }
 
 async function chalChargerPerso() {
@@ -2249,13 +2244,7 @@ async function chalRejoindrEntreprise() {
   } catch(e){ showToast('Erreur','err'); }
 }
 
-function chalSubscribeRT() {
-  var ws = new WebSocket(SB_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SB_KEY+'&vsn=1.0.0');
-  ws.onopen=function(){ ws.send(JSON.stringify({topic:'realtime:public:challenges',event:'phx_join',payload:{},ref:'c1'})); };
-  ws.onmessage=function(e){ var d=JSON.parse(e.data); if((d.event==='UPDATE'||d.event==='INSERT')&&d.payload&&d.payload.record&&d.payload.record.user_id===USER_ID) chalChargerPerso(); };
-  ws.onclose=function(){ setTimeout(chalSubscribeRT,3000); };
-  ws.onerror=function(){ ws.close(); };
-}
+// chalSubscribeRT supprimé (WebSocket non supporté dans ce contexte)
 
 
 
@@ -2305,6 +2294,24 @@ function qaGoTo(step) {
   if (step===7) qaBuilRecap();
   document.getElementById('qalimOverlay').scrollTop = 0;
 }
+
+var qaIntercepted = false;
+var qaTimer = null;
+
+function qaTrigger() {
+  if (qaIntercepted) return;
+  qaIntercepted = true;
+  if (qaTimer) clearTimeout(qaTimer);
+  qaVerifierEtAfficher();
+}
+
+// Premier clic n'importe où (hors questionnaire)
+document.addEventListener('click', function(e) {
+  if (qaIntercepted) return;
+  if (!USER_ID) return;
+  if (e.target.closest('#qalimOverlay') || e.target.closest('#qaSaving')) return;
+  qaTrigger();
+}, true);
 
 function qaInitListeners() {
   // Use event delegation on the overlay — safe even if elements load late
