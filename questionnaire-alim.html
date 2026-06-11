@@ -17,31 +17,23 @@
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; padding-bottom: 48px; color: var(--text); }
 .bg-pattern { position: fixed; inset: 0; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.18) 1px, transparent 0); background-size: 26px 26px; z-index: 0; pointer-events: none; }
 .app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 18px; }
-
-/* HEADER */
 .top-bar { display: flex; align-items: center; gap: 12px; padding: 20px 0 14px; }
 .btn-back { width: 38px; height: 38px; border-radius: 50%; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text); flex-shrink: 0; }
 .progress-wrap { flex: 1; }
 .progress-bar { height: 6px; background: var(--bg); border-radius: 3px; box-shadow: var(--shadow-in); overflow: hidden; margin-bottom: 5px; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #7fba95); border-radius: 3px; transition: width 0.4s cubic-bezier(0.34,1.56,0.64,1); }
 .step-counter { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
-
-/* CARDS */
 .card { background: var(--bg); border-radius: 22px; padding: 26px 20px 20px; box-shadow: var(--shadow-out); margin-bottom: 14px; animation: popIn 0.28s cubic-bezier(0.34,1.56,0.64,1); }
 @keyframes popIn { from { opacity: 0; transform: translateY(12px) scale(0.97); } to { opacity: 1; transform: none; } }
 .q-emoji { font-size: 40px; display: block; margin-bottom: 12px; }
 .q-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
 .q-title { font-size: 21px; font-weight: 600; letter-spacing: -0.4px; line-height: 1.25; margin-bottom: 6px; }
 .q-sub { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 20px; }
-
-/* CHOICE CHIPS */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { padding: 9px 16px; border-radius: 99px; background: var(--bg); box-shadow: var(--shadow-sm); font-size: 13px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; color: var(--text); display: flex; align-items: center; gap: 6px; }
 .chip:active { transform: scale(0.96); }
 .chip.on { box-shadow: var(--shadow-in); border-color: var(--green); color: var(--green); background: var(--green-light); }
 .chip.bad.on { border-color: var(--red); color: var(--red); background: var(--red-light); }
-
-/* CATEGORY BLOCKS */
 .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
 .cat-block { background: var(--bg); border-radius: 16px; padding: 16px 14px; box-shadow: var(--shadow-sm); cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
 .cat-block.active { box-shadow: var(--shadow-in); border-color: var(--green); }
@@ -49,8 +41,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .cat-icon { font-size: 28px; margin-bottom: 8px; display: block; }
 .cat-name { font-size: 13px; font-weight: 600; color: var(--text); }
 .cat-count { font-size: 11px; color: var(--muted); margin-top: 2px; }
-
-/* FOOD ITEMS PANEL */
 .food-panel { display: none; margin-top: 12px; }
 .food-panel.open { display: block; }
 .search-wrap { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 14px; padding: 11px 14px; box-shadow: var(--shadow-in); margin-bottom: 12px; }
@@ -65,14 +55,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .food-chip .fn { font-size: 10px; font-weight: 500; color: var(--text); text-align: center; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .food-chip.liked .fn { color: var(--green); }
 .food-chip.disliked .fn { color: var(--red); }
-
-/* MODE TOGGLE (aime/n'aime pas) */
 .mode-toggle { display: flex; background: var(--bg); border-radius: 12px; box-shadow: var(--shadow-in); padding: 3px; margin-bottom: 14px; }
 .mode-btn { flex: 1; padding: 9px 14px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--muted); background: transparent; transition: all 0.15s; }
 .mode-btn.active-like { background: var(--green-light); color: var(--green); box-shadow: 2px 2px 6px rgba(90,158,111,0.2); }
 .mode-btn.active-dislike { background: var(--red-light); color: var(--red); box-shadow: 2px 2px 6px rgba(199,123,123,0.2); }
-
-/* DISCOVERY BLOCS */
 .disco-tabs { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .disco-tabs::-webkit-scrollbar { display: none; }
 .disco-tab { padding: 8px 16px; border-radius: 99px; background: var(--bg); box-shadow: var(--shadow-sm); font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; white-space: nowrap; border: 2px solid transparent; transition: all 0.15s; }
@@ -83,44 +69,29 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .disco-chip { padding: 9px 14px; border-radius: 12px; background: var(--bg); box-shadow: var(--shadow-sm); font-size: 13px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
 .disco-chip:active { transform: scale(0.96); }
 .disco-chip.on { box-shadow: var(--shadow-in); border-color: var(--black); background: #e8e8f0; }
-
-/* SLIDER (étoiles) */
 .stars-row { display: flex; gap: 8px; justify-content: center; margin: 10px 0; }
 .star { font-size: 32px; cursor: pointer; transition: transform 0.15s; filter: grayscale(1) opacity(0.4); }
 .star.on { filter: none; transform: scale(1.1); }
-
-/* TEXTAREA */
 .q-textarea { width: 100%; background: var(--bg); border: none; border-radius: 16px; padding: 16px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); resize: none; outline: none; box-shadow: var(--shadow-in); min-height: 100px; line-height: 1.6; }
 .q-textarea::placeholder { color: #ccc; }
 .char-count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 6px; }
-
-/* FEELING CARDS */
 .feeling-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .feeling-card { background: var(--bg); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-sm); cursor: pointer; border: 2px solid transparent; text-align: center; transition: all 0.15s; }
 .feeling-card.on { box-shadow: var(--shadow-in); border-color: var(--green); }
 .feeling-card:active { transform: scale(0.97); }
 .feeling-icon { font-size: 28px; display: block; margin-bottom: 6px; }
 .feeling-label { font-size: 12px; font-weight: 500; color: var(--text); }
-
-/* SECTION DIVIDER */
 .sec-div { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin: 20px 0 12px; font-weight: 500; }
-
-/* SELECTED SUMMARY */
 .sel-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; min-height: 28px; }
 .sel-tag { font-size: 11px; padding: 4px 10px; border-radius: 99px; background: var(--green-light); color: var(--green); font-weight: 500; }
 .sel-tag.bad { background: var(--red-light); color: var(--red); }
-
-/* CTA BUTTON */
 .btn-c { width: 100%; padding: 17px; border-radius: 16px; background: var(--black); border: none; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 4px 4px 14px rgba(26,26,46,0.35); transition: all 0.15s; letter-spacing: -0.2px; }
 .btn-c:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 .btn-c:not(:disabled):active { transform: scale(0.98); }
-
-/* RECAP FINAL */
 .recap-bloc { background: var(--bg); border-radius: 16px; padding: 16px 18px; box-shadow: var(--shadow-in); margin-bottom: 10px; }
 .recap-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
 .recap-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .recap-tag { font-size: 12px; padding: 4px 10px; border-radius: 99px; background: #e8e8f0; color: var(--text); }
-
 .step-screen { display: none; }
 .step-screen.active { display: block; animation: popIn 0.28s cubic-bezier(0.34,1.56,0.64,1); }
 .saving-overlay { display: none; position: fixed; inset: 0; background: rgba(240,240,243,0.85); backdrop-filter: blur(6px); z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
@@ -134,229 +105,172 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 <div class="bg-pattern"></div>
 <div class="app">
 
-  <!-- TOP BAR -->
   <div class="top-bar">
-    <button class="btn-back" id="btnBack">‹</button>
+    <button class="btn-back" id="btnBack">&#8249;</button>
     <div class="progress-wrap">
       <div class="progress-bar"><div class="progress-fill" id="pFill" style="width:14%;"></div></div>
       <div class="step-counter" id="sCtr">1 / 7</div>
     </div>
   </div>
 
-  <!-- ═══ ÉTAPE 1 : Allergies & intolérances ═══ -->
+  <!-- ETAPE 1 -->
   <div class="step-screen active" id="s1">
     <div class="card">
-      <span class="q-emoji">⚠️</span>
-      <div class="q-label">Sécurité alimentaire</div>
-      <div class="q-title">Avez-vous des allergies ou intolérances ?</div>
-      <div class="q-sub">Vos repas seront adaptés en conséquence.</div>
+      <span class="q-emoji">&#9888;&#65039;</span>
+      <div class="q-label">Securite alimentaire</div>
+      <div class="q-title">Avez-vous des allergies ou intolerances ?</div>
+      <div class="q-sub">Vos repas seront adaptes en consequence.</div>
       <div class="chips" id="allergyChips">
-        <div class="chip bad" data-v="gluten">🌾 Gluten</div>
-        <div class="chip bad" data-v="lactose">🥛 Lactose</div>
-        <div class="chip bad" data-v="noix">🥜 Noix</div>
-        <div class="chip bad" data-v="oeufs">🥚 Oeufs</div>
-        <div class="chip bad" data-v="poisson">🐟 Poisson</div>
-        <div class="chip bad" data-v="fruits_mer">🦐 Fruits de mer</div>
-        <div class="chip bad" data-v="soja">🫘 Soja</div>
-        <div class="chip bad" data-v="sesame">🌿 Sésame</div>
-        <div class="chip bad" data-v="sulfites">🍷 Sulfites</div>
-        <div class="chip bad" data-v="aucun" id="chipAucun">✓ Aucune allergie</div>
+        <div class="chip bad" data-v="gluten">Gluten</div>
+        <div class="chip bad" data-v="lactose">Lactose</div>
+        <div class="chip bad" data-v="noix">Noix</div>
+        <div class="chip bad" data-v="oeufs">Oeufs</div>
+        <div class="chip bad" data-v="poisson">Poisson</div>
+        <div class="chip bad" data-v="fruits_mer">Fruits de mer</div>
+        <div class="chip bad" data-v="soja">Soja</div>
+        <div class="chip bad" data-v="sesame">Sesame</div>
+        <div class="chip bad" data-v="sulfites">Sulfites</div>
+        <div class="chip bad" data-v="aucun" id="chipAucun">Aucune allergie</div>
       </div>
     </div>
     <div class="card">
-      <div class="sec-div">Régime particulier</div>
+      <div class="sec-div">Regime particulier</div>
       <div class="chips" id="regimeChips">
-        <div class="chip" data-v="vegetarien">🥬 Végétarien</div>
-        <div class="chip" data-v="vegan">🌱 Vegan</div>
-        <div class="chip" data-v="halal">☪️ Halal</div>
-        <div class="chip" data-v="casher">✡️ Casher</div>
-        <div class="chip" data-v="sans_gluten">🚫🌾 Sans gluten</div>
-        <div class="chip" data-v="sans_lactose">🚫🥛 Sans lactose</div>
-        <div class="chip" data-v="aucun_regime">✓ Aucun</div>
+        <div class="chip" data-v="vegetarien">Vegetarien</div>
+        <div class="chip" data-v="vegan">Vegan</div>
+        <div class="chip" data-v="halal">Halal</div>
+        <div class="chip" data-v="casher">Casher</div>
+        <div class="chip" data-v="sans_gluten">Sans gluten</div>
+        <div class="chip" data-v="sans_lactose">Sans lactose</div>
+        <div class="chip" data-v="aucun_regime">Aucun</div>
       </div>
     </div>
-    <button class="btn-c" id="btn1">Continuer →</button>
+    <button class="btn-c" id="btn1">Continuer</button>
   </div>
 
-  <!-- ═══ ÉTAPE 2 : Aliments aimés / pas aimés ═══ -->
+  <!-- ETAPE 2 -->
   <div class="step-screen" id="s2">
     <div class="card">
-      <span class="q-emoji">🍽️</span>
-      <div class="q-label">Vos préférences</div>
-      <div class="q-title">Quels aliments aimez-vous ou évitez-vous ?</div>
-      <div class="q-sub">Sélectionnez une catégorie puis indiquez ce que vous aimez ✓ ou évitez ✗.</div>
-
-      <!-- Mode toggle -->
+      <span class="q-emoji">&#127829;</span>
+      <div class="q-label">Vos preferences</div>
+      <div class="q-title">Quels aliments aimez-vous ou evitez-vous ?</div>
+      <div class="q-sub">Selectionnez une categorie puis indiquez ce que vous aimez ou evitez.</div>
       <div class="mode-toggle">
-        <button class="mode-btn active-like" id="modeGood" onclick="setMode('like')">✓ J'aime</button>
-        <button class="mode-btn" id="modeBad" onclick="setMode('dislike')">✗ J'évite</button>
+        <button class="mode-btn active-like" id="modeGood" onclick="setMode('like')">J'aime</button>
+        <button class="mode-btn" id="modeBad" onclick="setMode('dislike')">J'evite</button>
       </div>
-
-      <!-- Catégories -->
       <div class="cat-grid" id="foodCatGrid">
-        <div class="cat-block" data-cat="fruits" onclick="openFoodCat('fruits')">
-          <span class="cat-icon">🍎</span>
-          <div class="cat-name">Fruits</div>
-          <div class="cat-count" id="cnt-fruits">0 sélectionné</div>
-        </div>
-        <div class="cat-block" data-cat="legumes" onclick="openFoodCat('legumes')">
-          <span class="cat-icon">🥦</span>
-          <div class="cat-name">Légumes</div>
-          <div class="cat-count" id="cnt-legumes">0 sélectionné</div>
-        </div>
-        <div class="cat-block" data-cat="proteines" onclick="openFoodCat('proteines')">
-          <span class="cat-icon">🥩</span>
-          <div class="cat-name">Protéines</div>
-          <div class="cat-count" id="cnt-proteines">0 sélectionné</div>
-        </div>
-        <div class="cat-block" data-cat="feculents" onclick="openFoodCat('feculents')">
-          <span class="cat-icon">🍚</span>
-          <div class="cat-name">Féculents</div>
-          <div class="cat-count" id="cnt-feculents">0 sélectionné</div>
-        </div>
-        <div class="cat-block" data-cat="laitiers" onclick="openFoodCat('laitiers')">
-          <span class="cat-icon">🧀</span>
-          <div class="cat-name">Produits laitiers</div>
-          <div class="cat-count" id="cnt-laitiers">0 sélectionné</div>
-        </div>
-        <div class="cat-block" data-cat="herbes" onclick="openFoodCat('herbes')">
-          <span class="cat-icon">🌿</span>
-          <div class="cat-name">Herbes & épices</div>
-          <div class="cat-count" id="cnt-herbes">0 sélectionné</div>
-        </div>
+        <div class="cat-block" data-cat="fruits" onclick="openFoodCat('fruits')"><span class="cat-icon">&#127822;</span><div class="cat-name">Fruits</div><div class="cat-count" id="cnt-fruits">0 selectionne</div></div>
+        <div class="cat-block" data-cat="legumes" onclick="openFoodCat('legumes')"><span class="cat-icon">&#129382;</span><div class="cat-name">Legumes</div><div class="cat-count" id="cnt-legumes">0 selectionne</div></div>
+        <div class="cat-block" data-cat="proteines" onclick="openFoodCat('proteines')"><span class="cat-icon">&#129385;</span><div class="cat-name">Proteines</div><div class="cat-count" id="cnt-proteines">0 selectionne</div></div>
+        <div class="cat-block" data-cat="feculents" onclick="openFoodCat('feculents')"><span class="cat-icon">&#127834;</span><div class="cat-name">Feculents</div><div class="cat-count" id="cnt-feculents">0 selectionne</div></div>
+        <div class="cat-block" data-cat="laitiers" onclick="openFoodCat('laitiers')"><span class="cat-icon">&#129472;</span><div class="cat-name">Produits laitiers</div><div class="cat-count" id="cnt-laitiers">0 selectionne</div></div>
+        <div class="cat-block" data-cat="herbes" onclick="openFoodCat('herbes')"><span class="cat-icon">&#127807;</span><div class="cat-name">Herbes et epices</div><div class="cat-count" id="cnt-herbes">0 selectionne</div></div>
       </div>
-
-      <!-- Food item panel -->
       <div class="food-panel" id="foodPanel">
-        <div class="search-wrap">
-          <span>🔍</span>
-          <input type="text" id="foodSearch" placeholder="Rechercher un aliment..." oninput="filterFoods()">
-        </div>
+        <div class="search-wrap"><span>&#128269;</span><input type="text" id="foodSearch" placeholder="Rechercher un aliment..." oninput="filterFoods()"></div>
         <div class="food-grid" id="foodGrid"></div>
-        <button style="width:100%;padding:12px;background:var(--bg);border:none;border-radius:12px;box-shadow:var(--shadow-sm);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:10px;" onclick="closeFoodCat()">← Retour aux catégories</button>
+        <button style="width:100%;padding:12px;background:var(--bg);border:none;border-radius:12px;box-shadow:var(--shadow-sm);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:10px;" onclick="closeFoodCat()">Retour aux categories</button>
       </div>
-
-      <!-- Summary -->
       <div id="foodSummary" style="margin-top:14px;display:none;">
-        <div class="sec-div">Mes sélections</div>
+        <div class="sec-div">Mes selections</div>
         <div class="sel-summary" id="likedSummary"></div>
         <div style="margin-top:8px;"><div class="sel-summary" id="dislikedSummary"></div></div>
       </div>
     </div>
-    <button class="btn-c" id="btn2">Continuer →</button>
+    <button class="btn-c" id="btn2">Continuer</button>
   </div>
 
-  <!-- ═══ ÉTAPE 3 : Découvertes ═══ -->
+  <!-- ETAPE 3 -->
   <div class="step-screen" id="s3">
     <div class="card">
-      <span class="q-emoji">🌍</span>
-      <div class="q-label">Découvertes & curiosités</div>
+      <span class="q-emoji">&#127757;</span>
+      <div class="q-label">Decouvertes et curiosites</div>
       <div class="q-title">Qu'aimeriez-vous explorer ?</div>
-      <div class="q-sub">Plusieurs réponses possibles — on s'adapte à vos envies.</div>
-
+      <div class="q-sub">Plusieurs reponses possibles.</div>
       <div class="disco-tabs" id="discoTabs">
-        <div class="disco-tab active" onclick="switchDisco('monde', this)">🌍 Cuisines du monde</div>
-        <div class="disco-tab" onclick="switchDisco('styles', this)">🍳 Styles culinaires</div>
-        <div class="disco-tab" onclick="switchDisco('ingredients', this)">🧪 Ingrédients à découvrir</div>
-        <div class="disco-tab" onclick="switchDisco('variantes', this)">🍝 Variantes de recettes</div>
+        <div class="disco-tab active" onclick="switchDisco('monde', this)">Cuisines du monde</div>
+        <div class="disco-tab" onclick="switchDisco('styles', this)">Styles culinaires</div>
+        <div class="disco-tab" onclick="switchDisco('ingredients', this)">Ingredients</div>
+        <div class="disco-tab" onclick="switchDisco('variantes', this)">Variantes</div>
       </div>
-
-      <!-- Cuisines du monde -->
-      <div class="disco-content active" id="disco-monde">
-        <div class="disco-chips">
-          <div class="disco-chip" data-disco="monde" data-v="japonaise">🇯🇵 Japonaise</div>
-          <div class="disco-chip" data-disco="monde" data-v="indienne">🇮🇳 Indienne</div>
-          <div class="disco-chip" data-disco="monde" data-v="marocaine">🇲🇦 Marocaine</div>
-          <div class="disco-chip" data-disco="monde" data-v="mexicaine">🇲🇽 Mexicaine</div>
-          <div class="disco-chip" data-disco="monde" data-v="grecque">🇬🇷 Grecque</div>
-          <div class="disco-chip" data-disco="monde" data-v="thailandaise">🇹🇭 Thaïlandaise</div>
-          <div class="disco-chip" data-disco="monde" data-v="coreenne">🇰🇷 Coréenne</div>
-          <div class="disco-chip" data-disco="monde" data-v="libanaise">🇱🇧 Libanaise</div>
-          <div class="disco-chip" data-disco="monde" data-v="ethiopienne">🇪🇹 Éthiopienne</div>
-          <div class="disco-chip" data-disco="monde" data-v="peruvienne">🇵🇪 Péruvienne</div>
-          <div class="disco-chip" data-disco="monde" data-v="vietnamienne">🇻🇳 Vietnamienne</div>
-          <div class="disco-chip" data-disco="monde" data-v="turque">🇹🇷 Turque</div>
-        </div>
-      </div>
-
-      <!-- Styles culinaires -->
-      <div class="disco-content" id="disco-styles">
-        <div class="disco-chips">
-          <div class="disco-chip" data-disco="styles" data-v="bistrot">🇫🇷 Cuisine bistrot</div>
-          <div class="disco-chip" data-disco="styles" data-v="one_pot">🫕 One pot / one pan</div>
-          <div class="disco-chip" data-disco="styles" data-v="grill">🔥 Grill & plancha</div>
-          <div class="disco-chip" data-disco="styles" data-v="bowl">🥣 Bowl culture</div>
-          <div class="disco-chip" data-disco="styles" data-v="street_food">🧆 Street food maison</div>
-          <div class="disco-chip" data-disco="styles" data-v="marche">🌿 Cuisine du marché</div>
-          <div class="disco-chip" data-disco="styles" data-v="batch_cooking">🫙 Batch cooking</div>
-          <div class="disco-chip" data-disco="styles" data-v="bento">🍱 Bento & meal prep</div>
-          <div class="disco-chip" data-disco="styles" data-v="cru">🔪 Cuisine crue</div>
-          <div class="disco-chip" data-disco="styles" data-v="vapeur">💨 Cuisson douce vapeur</div>
-        </div>
-      </div>
-
-      <!-- Ingrédients à découvrir -->
-      <div class="disco-content" id="disco-ingredients">
-        <div class="disco-chips">
-          <div class="disco-chip" data-disco="ingredients" data-v="butternut">🎃 Butternut</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="pak_choi">🥬 Pak choï</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="fenouil">🌿 Fenouil</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="artichaut">🌱 Artichaut</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="shiitake">🍄 Shiitake</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="pleurote">🍄 Pleurote</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="maquereau">🐟 Maquereau</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="poulpe">🐙 Poulpe</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="sarrasin">🌾 Sarrasin</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="polenta">🌽 Polenta</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="miso">🫙 Miso</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="tahini">🥜 Tahini</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="tempeh">🫘 Tempeh</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="edamame">🟢 Edamame</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="zaatar">🌿 Zaatar</div>
-          <div class="disco-chip" data-disco="ingredients" data-v="sumac">🔴 Sumac</div>
-        </div>
-      </div>
-
-      <!-- Variantes de recettes -->
-      <div class="disco-content" id="disco-variantes">
-        <div class="disco-chips">
-          <div class="disco-chip" data-disco="variantes" data-v="pates_variees">🍝 Pâtes variées</div>
-          <div class="disco-chip" data-disco="variantes" data-v="poulet_monde">🍗 Poulet du monde</div>
-          <div class="disco-chip" data-disco="variantes" data-v="oeufs_autrement">🥚 Oeufs autrement</div>
-          <div class="disco-chip" data-disco="variantes" data-v="salades_repas">🥗 Salades-repas</div>
-          <div class="disco-chip" data-disco="variantes" data-v="soupes_copieuses">🍲 Soupes copieuses</div>
-          <div class="disco-chip" data-disco="variantes" data-v="burger_revisite">🍔 Burgers revisités</div>
-          <div class="disco-chip" data-disco="variantes" data-v="tacos_wraps">🌮 Tacos & wraps</div>
-          <div class="disco-chip" data-disco="variantes" data-v="riz_monde">🍚 Riz du monde</div>
-          <div class="disco-chip" data-disco="variantes" data-v="pizza_revisite">🍕 Pizza revisitée</div>
-          <div class="disco-chip" data-disco="variantes" data-v="porridge_bowl">🥣 Porridge & bowls chauds</div>
-        </div>
-      </div>
-
-      <!-- Curiosité libre -->
-      <div class="sec-div" style="margin-top:20px;">Une envie particulière ?</div>
-      <textarea class="q-textarea" id="curiositeLibre" placeholder="Ex: j'aimerais apprendre à faire des sushis, explorer la cuisine péruvienne..." style="min-height:70px;" oninput="countChars(this,'charCurio')"></textarea>
+      <div class="disco-content active" id="disco-monde"><div class="disco-chips">
+        <div class="disco-chip" data-disco="monde" data-v="japonaise">Japonaise</div>
+        <div class="disco-chip" data-disco="monde" data-v="indienne">Indienne</div>
+        <div class="disco-chip" data-disco="monde" data-v="marocaine">Marocaine</div>
+        <div class="disco-chip" data-disco="monde" data-v="mexicaine">Mexicaine</div>
+        <div class="disco-chip" data-disco="monde" data-v="grecque">Grecque</div>
+        <div class="disco-chip" data-disco="monde" data-v="thailandaise">Thailandaise</div>
+        <div class="disco-chip" data-disco="monde" data-v="coreenne">Coreenne</div>
+        <div class="disco-chip" data-disco="monde" data-v="libanaise">Libanaise</div>
+        <div class="disco-chip" data-disco="monde" data-v="ethiopienne">Ethiopienne</div>
+        <div class="disco-chip" data-disco="monde" data-v="peruvienne">Peruvienne</div>
+        <div class="disco-chip" data-disco="monde" data-v="vietnamienne">Vietnamienne</div>
+        <div class="disco-chip" data-disco="monde" data-v="turque">Turque</div>
+      </div></div>
+      <div class="disco-content" id="disco-styles"><div class="disco-chips">
+        <div class="disco-chip" data-disco="styles" data-v="bistrot">Cuisine bistrot</div>
+        <div class="disco-chip" data-disco="styles" data-v="one_pot">One pot</div>
+        <div class="disco-chip" data-disco="styles" data-v="grill">Grill</div>
+        <div class="disco-chip" data-disco="styles" data-v="bowl">Bowl</div>
+        <div class="disco-chip" data-disco="styles" data-v="street_food">Street food</div>
+        <div class="disco-chip" data-disco="styles" data-v="marche">Cuisine du marche</div>
+        <div class="disco-chip" data-disco="styles" data-v="batch_cooking">Batch cooking</div>
+        <div class="disco-chip" data-disco="styles" data-v="bento">Bento</div>
+        <div class="disco-chip" data-disco="styles" data-v="cru">Cuisine crue</div>
+        <div class="disco-chip" data-disco="styles" data-v="vapeur">Vapeur</div>
+      </div></div>
+      <div class="disco-content" id="disco-ingredients"><div class="disco-chips">
+        <div class="disco-chip" data-disco="ingredients" data-v="butternut">Butternut</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="pak_choi">Pak choi</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="fenouil">Fenouil</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="artichaut">Artichaut</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="shiitake">Shiitake</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="pleurote">Pleurote</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="maquereau">Maquereau</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="poulpe">Poulpe</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="sarrasin">Sarrasin</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="polenta">Polenta</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="miso">Miso</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="tahini">Tahini</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="tempeh">Tempeh</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="edamame">Edamame</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="zaatar">Zaatar</div>
+        <div class="disco-chip" data-disco="ingredients" data-v="sumac">Sumac</div>
+      </div></div>
+      <div class="disco-content" id="disco-variantes"><div class="disco-chips">
+        <div class="disco-chip" data-disco="variantes" data-v="pates_variees">Pates variees</div>
+        <div class="disco-chip" data-disco="variantes" data-v="poulet_monde">Poulet du monde</div>
+        <div class="disco-chip" data-disco="variantes" data-v="oeufs_autrement">Oeufs autrement</div>
+        <div class="disco-chip" data-disco="variantes" data-v="salades_repas">Salades-repas</div>
+        <div class="disco-chip" data-disco="variantes" data-v="soupes_copieuses">Soupes copieuses</div>
+        <div class="disco-chip" data-disco="variantes" data-v="burger_revisite">Burgers revisites</div>
+        <div class="disco-chip" data-disco="variantes" data-v="tacos_wraps">Tacos et wraps</div>
+        <div class="disco-chip" data-disco="variantes" data-v="riz_monde">Riz du monde</div>
+        <div class="disco-chip" data-disco="variantes" data-v="pizza_revisite">Pizza revisitee</div>
+        <div class="disco-chip" data-disco="variantes" data-v="porridge_bowl">Porridge et bowls</div>
+      </div></div>
+      <div class="sec-div" style="margin-top:20px;">Une envie particuliere ?</div>
+      <textarea class="q-textarea" id="curiositeLibre" placeholder="Ex: j'aimerais apprendre a faire des sushis..." style="min-height:70px;" oninput="countChars(this,'charCurio')"></textarea>
       <div class="char-count" id="charCurio">0 / 200</div>
     </div>
-    <button class="btn-c" id="btn3">Continuer →</button>
+    <button class="btn-c" id="btn3">Continuer</button>
   </div>
 
-  <!-- ═══ ÉTAPE 4 : Habitudes alimentaires ═══ -->
+  <!-- ETAPE 4 -->
   <div class="step-screen" id="s4">
     <div class="card">
-      <span class="q-emoji">🕐</span>
-      <div class="q-label">Rythme & habitudes</div>
+      <span class="q-emoji">&#128336;</span>
+      <div class="q-label">Rythme et habitudes</div>
       <div class="q-title">Comment mangez-vous au quotidien ?</div>
-      <div class="q-sub">Aucune bonne ou mauvaise réponse.</div>
-
-      <div class="sec-div">Fréquence de cuisine</div>
+      <div class="q-sub">Aucune bonne ou mauvaise reponse.</div>
+      <div class="sec-div">Frequence de cuisine</div>
       <div class="chips" id="cuisineChips">
-        <div class="chip" data-v="jamais">🚫 Jamais ou presque</div>
-        <div class="chip" data-v="parfois">🍳 Parfois (2-3x/sem)</div>
-        <div class="chip" data-v="souvent">👨‍🍳 Souvent (5x/sem+)</div>
-        <div class="chip" data-v="quotidien">🔥 Tous les jours</div>
+        <div class="chip" data-v="jamais">Jamais ou presque</div>
+        <div class="chip" data-v="parfois">Parfois (2-3x/sem)</div>
+        <div class="chip" data-v="souvent">Souvent (5x/sem+)</div>
+        <div class="chip" data-v="quotidien">Tous les jours</div>
       </div>
-
       <div class="sec-div">Nombre de repas par jour</div>
       <div class="chips" id="repasChips">
         <div class="chip" data-v="1_2">1-2 repas</div>
@@ -364,147 +278,106 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
         <div class="chip" data-v="3_collations">3 repas + collations</div>
         <div class="chip" data-v="grignotage">Je grignote souvent</div>
       </div>
-
       <div class="sec-div">Snacking</div>
       <div class="chips" id="snackChips">
         <div class="chip" data-v="non">Non, jamais</div>
         <div class="chip" data-v="soir">Le soir</div>
         <div class="chip" data-v="bureau">Au bureau 16h</div>
-        <div class="chip" data-v="stress">Quand je suis stressé(e)</div>
+        <div class="chip" data-v="stress">Quand je suis stresse(e)</div>
         <div class="chip" data-v="weekend">Le week-end</div>
       </div>
-
-      <div class="sec-div">Repas sautés</div>
+      <div class="sec-div">Repas sautes</div>
       <div class="chips" id="sautesChips">
         <div class="chip" data-v="jamais">Jamais</div>
-        <div class="chip" data-v="petit_dej">Petit-déjeuner souvent</div>
-        <div class="chip" data-v="dejeuner">Déjeuner parfois</div>
+        <div class="chip" data-v="petit_dej">Petit-dejeuner souvent</div>
+        <div class="chip" data-v="dejeuner">Dejeuner parfois</div>
         <div class="chip" data-v="souvent_repas">Souvent par manque de temps</div>
       </div>
     </div>
-    <button class="btn-c" id="btn4" disabled>Continuer →</button>
+    <button class="btn-c" id="btn4" disabled>Continuer</button>
   </div>
 
-  <!-- ═══ ÉTAPE 5 : Ressenti ═══ -->
+  <!-- ETAPE 5 -->
   <div class="step-screen" id="s5">
     <div class="card">
-      <span class="q-emoji">💭</span>
-      <div class="q-label">Ressenti & énergie</div>
-      <div class="q-title">Comment vous sentez-vous après un repas ?</div>
-      <div class="q-sub">En général, pas forcément à chaque fois.</div>
-
+      <span class="q-emoji">&#128173;</span>
+      <div class="q-label">Ressenti et energie</div>
+      <div class="q-title">Comment vous sentez-vous apres un repas ?</div>
+      <div class="q-sub">En general, pas forcement a chaque fois.</div>
       <div class="feeling-grid" id="feelingGrid">
-        <div class="feeling-card" data-v="fatigue">
-          <span class="feeling-icon">😴</span>
-          <div class="feeling-label">Souvent fatigué(e)</div>
-        </div>
-        <div class="feeling-card" data-v="bien">
-          <span class="feeling-icon">😊</span>
-          <div class="feeling-label">Bien en général</div>
-        </div>
-        <div class="feeling-card" data-v="lourd">
-          <span class="feeling-icon">🤢</span>
-          <div class="feeling-label">Lourd / ballonnements</div>
-        </div>
-        <div class="feeling-card" data-v="energie">
-          <span class="feeling-icon">⚡</span>
-          <div class="feeling-label">Plein(e) d'énergie</div>
-        </div>
-        <div class="feeling-card" data-v="variable">
-          <span class="feeling-icon">🎢</span>
-          <div class="feeling-label">Variable selon les jours</div>
-        </div>
-        <div class="feeling-card" data-v="fringale">
-          <span class="feeling-icon">🍫</span>
-          <div class="feeling-label">Fringales fréquentes</div>
-        </div>
+        <div class="feeling-card" data-v="fatigue"><span class="feeling-icon">&#128564;</span><div class="feeling-label">Souvent fatigue(e)</div></div>
+        <div class="feeling-card" data-v="bien"><span class="feeling-icon">&#128522;</span><div class="feeling-label">Bien en general</div></div>
+        <div class="feeling-card" data-v="lourd"><span class="feeling-icon">&#129314;</span><div class="feeling-label">Lourd / ballonnements</div></div>
+        <div class="feeling-card" data-v="energie"><span class="feeling-icon">&#9889;</span><div class="feeling-label">Plein(e) d'energie</div></div>
+        <div class="feeling-card" data-v="variable"><span class="feeling-icon">&#127906;</span><div class="feeling-label">Variable selon les jours</div></div>
+        <div class="feeling-card" data-v="fringale"><span class="feeling-icon">&#127851;</span><div class="feeling-label">Fringales frequentes</div></div>
       </div>
-
       <div class="sec-div">Moment de craquage</div>
       <div class="chips" id="craquageChips">
-        <div class="chip" data-v="soir_tv">🌙 Le soir devant la TV</div>
-        <div class="chip" data-v="bureau_16h">🕓 Au bureau vers 16h</div>
-        <div class="chip" data-v="weekend">📅 Le week-end</div>
-        <div class="chip" data-v="stress">😤 Quand stressé(e)</div>
-        <div class="chip" data-v="rarement">✓ Rarement</div>
+        <div class="chip" data-v="soir_tv">Le soir devant la TV</div>
+        <div class="chip" data-v="bureau_16h">Au bureau vers 16h</div>
+        <div class="chip" data-v="weekend">Le week-end</div>
+        <div class="chip" data-v="stress">Quand stresse(e)</div>
+        <div class="chip" data-v="rarement">Rarement</div>
       </div>
-
       <div class="sec-div">Satisfaction de votre alimentation actuelle</div>
       <div class="stars-row" id="starsRow">
-        <span class="star" data-v="1">⭐</span>
-        <span class="star" data-v="2">⭐</span>
-        <span class="star" data-v="3">⭐</span>
-        <span class="star" data-v="4">⭐</span>
-        <span class="star" data-v="5">⭐</span>
+        <span class="star" data-v="1">&#11088;</span>
+        <span class="star" data-v="2">&#11088;</span>
+        <span class="star" data-v="3">&#11088;</span>
+        <span class="star" data-v="4">&#11088;</span>
+        <span class="star" data-v="5">&#11088;</span>
       </div>
     </div>
-    <button class="btn-c" id="btn5" disabled>Continuer →</button>
+    <button class="btn-c" id="btn5" disabled>Continuer</button>
   </div>
 
-  <!-- ═══ ÉTAPE 6 : Commentaire libre ═══ -->
+  <!-- ETAPE 6 -->
   <div class="step-screen" id="s6">
     <div class="card">
-      <span class="q-emoji">✍️</span>
+      <span class="q-emoji">&#9997;&#65039;</span>
       <div class="q-label">En vos propres mots</div>
-      <div class="q-title">Comment décririez-vous votre alimentation actuelle ?</div>
-      <div class="q-sub">Quelques mots suffisent — c'est votre ressenti qui compte.</div>
-      <textarea class="q-textarea" id="commentaireLibre" placeholder="Ex: Je mange souvent sur le pouce, j'ai du mal à cuisiner le soir après le travail, j'aimerais manger plus varié..." oninput="countChars(this,'charComment')"></textarea>
+      <div class="q-title">Comment decririez-vous votre alimentation actuelle ?</div>
+      <div class="q-sub">Quelques mots suffisent.</div>
+      <textarea class="q-textarea" id="commentaireLibre" placeholder="Ex: Je mange souvent sur le pouce..." oninput="countChars(this,'charComment')"></textarea>
       <div class="char-count" id="charComment">0 / 400</div>
     </div>
     <div class="card">
-      <span class="q-emoji">🎯</span>
+      <span class="q-emoji">&#127919;</span>
       <div class="q-label">Votre objectif alimentaire</div>
-      <div class="q-title">Quel est votre principal défi alimentaire ?</div>
+      <div class="q-title">Quel est votre principal defi alimentaire ?</div>
       <div class="chips" id="defiChips">
-        <div class="chip" data-v="temps">⏱ Manque de temps pour cuisiner</div>
-        <div class="chip" data-v="variete">🌈 Manger plus varié</div>
-        <div class="chip" data-v="portions">⚖️ Contrôler les portions</div>
-        <div class="chip" data-v="sucre">🍬 Réduire le sucre</div>
-        <div class="chip" data-v="proteines">🥩 Augmenter les protéines</div>
-        <div class="chip" data-v="legumes">🥦 Manger plus de légumes</div>
-        <div class="chip" data-v="hydratation">💧 Mieux m'hydrater</div>
-        <div class="chip" data-v="equilibre">⚖️ Trouver l'équilibre</div>
+        <div class="chip" data-v="temps">Manque de temps pour cuisiner</div>
+        <div class="chip" data-v="variete">Manger plus varie</div>
+        <div class="chip" data-v="portions">Controler les portions</div>
+        <div class="chip" data-v="sucre">Reduire le sucre</div>
+        <div class="chip" data-v="proteines">Augmenter les proteines</div>
+        <div class="chip" data-v="legumes">Manger plus de legumes</div>
+        <div class="chip" data-v="hydratation">Mieux m'hydrater</div>
+        <div class="chip" data-v="equilibre">Trouver l'equilibre</div>
       </div>
     </div>
-    <button class="btn-c" id="btn6">Continuer →</button>
+    <button class="btn-c" id="btn6">Continuer</button>
   </div>
 
-  <!-- ═══ ÉTAPE 7 : Récapitulatif ═══ -->
+  <!-- ETAPE 7 -->
   <div class="step-screen" id="s7">
     <div class="card">
-      <span class="q-emoji">🎉</span>
-      <div class="q-label">Questionnaire terminé</div>
-      <div class="q-title">Votre profil alimentaire est prêt !</div>
-      <div class="q-sub">Voici un récap de vos réponses. Votre nutritionniste les recevra et personnalisera votre suivi.</div>
+      <span class="q-emoji">&#127881;</span>
+      <div class="q-label">Questionnaire termine</div>
+      <div class="q-title">Votre profil alimentaire est pret !</div>
+      <div class="q-sub">Votre nutritionniste les recevra et personnalisera votre suivi.</div>
     </div>
-
-    <div class="recap-bloc">
-      <div class="recap-label">Allergies & régime</div>
-      <div class="recap-tags" id="recapAllergies"></div>
-    </div>
-    <div class="recap-bloc">
-      <div class="recap-label">Aliments aimés</div>
-      <div class="recap-tags" id="recapLiked"></div>
-    </div>
-    <div class="recap-bloc">
-      <div class="recap-label">Aliments évités</div>
-      <div class="recap-tags" id="recapDisliked"></div>
-    </div>
-    <div class="recap-bloc">
-      <div class="recap-label">Envies de découverte</div>
-      <div class="recap-tags" id="recapDisco"></div>
-    </div>
-    <div class="recap-bloc">
-      <div class="recap-label">Habitudes & ressenti</div>
-      <div class="recap-tags" id="recapHabitudes"></div>
-    </div>
-
-    <button class="btn-c" id="btn7">Enregistrer mon profil →</button>
+    <div class="recap-bloc"><div class="recap-label">Allergies et regime</div><div class="recap-tags" id="recapAllergies"></div></div>
+    <div class="recap-bloc"><div class="recap-label">Aliments aimes</div><div class="recap-tags" id="recapLiked"></div></div>
+    <div class="recap-bloc"><div class="recap-label">Aliments evites</div><div class="recap-tags" id="recapDisliked"></div></div>
+    <div class="recap-bloc"><div class="recap-label">Envies de decouverte</div><div class="recap-tags" id="recapDisco"></div></div>
+    <div class="recap-bloc"><div class="recap-label">Habitudes et ressenti</div><div class="recap-tags" id="recapHabitudes"></div></div>
+    <button class="btn-c" id="btn7">Enregistrer mon profil</button>
   </div>
 
 </div>
 
-<!-- SAVING -->
 <div class="saving-overlay" id="savingOverlay">
   <div class="saving-spinner"></div>
   <div class="saving-text">Enregistrement de votre profil...</div>
@@ -514,7 +387,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
 
-// State
 const A = {
   allergies: [], regime: [],
   liked: {}, disliked: {},
@@ -530,7 +402,6 @@ let currentFoodCat = null;
 let currentMode = 'like';
 let USER_ID = null, token = '';
 
-// URL params
 const params = new URLSearchParams(window.location.search);
 token = params.get('token') || '';
 if (token && token.length > 10) {
@@ -541,45 +412,43 @@ if (token && token.length > 10) {
 }
 if (!USER_ID) USER_ID = params.get('userId') || null;
 
-// Food database
 const FOODS = {
   fruits: [
     {e:'🍎',n:'Pomme'},{e:'🍌',n:'Banane'},{e:'🍓',n:'Fraise'},{e:'🍇',n:'Raisin'},{e:'🍊',n:'Orange'},
-    {e:'🥭',n:'Mangue'},{e:'🍑',n:'Pêche'},{e:'🍒',n:'Cerise'},{e:'🥝',n:'Kiwi'},{e:'🍍',n:'Ananas'},
+    {e:'🥭',n:'Mangue'},{e:'🍑',n:'Peche'},{e:'🍒',n:'Cerise'},{e:'🥝',n:'Kiwi'},{e:'🍍',n:'Ananas'},
     {e:'🫐',n:'Myrtille'},{e:'🍋',n:'Citron'},{e:'🍐',n:'Poire'},{e:'🥥',n:'Coco'},{e:'🍈',n:'Melon'},
-    {e:'🍉',n:'Pastèque'},{e:'🍏',n:'Pomme verte'},{e:'🫒',n:'Olive'}
+    {e:'🍉',n:'Pasteque'},{e:'🍏',n:'Pomme verte'},{e:'🫒',n:'Olive'}
   ],
   legumes: [
     {e:'🥦',n:'Brocoli'},{e:'🥕',n:'Carotte'},{e:'🍅',n:'Tomate'},{e:'🥒',n:'Concombre'},{e:'🫑',n:'Poivron'},
-    {e:'🧅',n:'Oignon'},{e:'🧄',n:'Ail'},{e:'🥬',n:'Salade'},{e:'🌽',n:'Maïs'},{e:'🥑',n:'Avocat'},
+    {e:'🧅',n:'Oignon'},{e:'🧄',n:'Ail'},{e:'🥬',n:'Salade'},{e:'🌽',n:'Mais'},{e:'🥑',n:'Avocat'},
     {e:'🍆',n:'Aubergine'},{e:'🫛',n:'Petits pois'},{e:'🥔',n:'Pomme de terre'},{e:'🍠',n:'Patate douce'},
-    {e:'🧅',n:'Echalote'},{e:'🌿',n:'Épinards'},{e:'🥗',n:'Roquette'},{e:'🫚',n:'Courgette'}
+    {e:'🧅',n:'Echalote'},{e:'🌿',n:'Epinards'},{e:'🥗',n:'Roquette'},{e:'🫚',n:'Courgette'}
   ],
   proteines: [
-    {e:'🥩',n:'Bœuf'},{e:'🍗',n:'Poulet'},{e:'🥓',n:'Lardons'},{e:'🐟',n:'Saumon'},{e:'🐠',n:'Thon'},
+    {e:'🥩',n:'Boeuf'},{e:'🍗',n:'Poulet'},{e:'🥓',n:'Lardons'},{e:'🐟',n:'Saumon'},{e:'🐠',n:'Thon'},
     {e:'🥚',n:'Oeufs'},{e:'🫘',n:'Lentilles'},{e:'🫘',n:'Pois chiches'},{e:'🌱',n:'Tofu'},{e:'🦐',n:'Crevettes'},
     {e:'🐟',n:'Cabillaud'},{e:'🥩',n:'Agneau'},{e:'🍗',n:'Dinde'},{e:'🐖',n:'Porc'},{e:'🦑',n:'Calamars'},
     {e:'🦞',n:'Homard'},{e:'🧈',n:'Tempeh'},{e:'🫙',n:'Sardines'}
   ],
   feculents: [
-    {e:'🍚',n:'Riz blanc'},{e:'🍝',n:'Pâtes'},{e:'🍞',n:'Pain'},{e:'🥔',n:'Pomme de terre'},{e:'🌽',n:'Polenta'},
-    {e:'🌾',n:'Quinoa'},{e:'🌾',n:'Boulgour'},{e:'🌾',n:'Sarrasin'},{e:'🌾',n:'Épeautre'},{e:'🥖',n:'Baguette'},
+    {e:'🍚',n:'Riz blanc'},{e:'🍝',n:'Pates'},{e:'🍞',n:'Pain'},{e:'🥔',n:'Pomme de terre'},{e:'🌽',n:'Polenta'},
+    {e:'🌾',n:'Quinoa'},{e:'🌾',n:'Boulgour'},{e:'🌾',n:'Sarrasin'},{e:'🌾',n:'Epeautre'},{e:'🥖',n:'Baguette'},
     {e:'🫓',n:'Pain complet'},{e:'🍠',n:'Patate douce'},{e:'🌾',n:'Riz basmati'},{e:'🌾',n:'Avoine'}
   ],
   laitiers: [
-    {e:'🥛',n:'Lait'},{e:'🧀',n:'Fromage'},{e:'🥛',n:'Yaourt nature'},{e:'🧈',n:'Beurre'},{e:'🍦',n:'Crème fraîche'},
-    {e:'🧀',n:'Feta'},{e:'🧀',n:'Parmesan'},{e:'🧀',n:'Mozzarella'},{e:'🥛',n:'Kéfir'},{e:'🧀',n:'Gruyère'},
-    {e:'🍮',n:'Fromage blanc'},{e:'🥛',n:'Lait de coco'},{e:'🥛',n:'Lait d'amande'}
+    {e:'🥛',n:'Lait'},{e:'🧀',n:'Fromage'},{e:'🥛',n:'Yaourt nature'},{e:'🧈',n:'Beurre'},{e:'🍦',n:'Creme fraiche'},
+    {e:'🧀',n:'Feta'},{e:'🧀',n:'Parmesan'},{e:'🧀',n:'Mozzarella'},{e:'🥛',n:'Kefir'},{e:'🧀',n:'Gruyere'},
+    {e:'🍮',n:'Fromage blanc'},{e:'🥛',n:'Lait de coco'},{e:'🥛',n:"Lait d'amande"}
   ],
   herbes: [
     {e:'🌿',n:'Basilic'},{e:'🌿',n:'Persil'},{e:'🌿',n:'Coriandre'},{e:'🌿',n:'Thym'},{e:'🌿',n:'Romarin'},
     {e:'🌿',n:'Menthe'},{e:'🌿',n:'Estragon'},{e:'🧄',n:'Ciboulette'},{e:'🌶️',n:'Piment'},{e:'🫚',n:'Cumin'},
-    {e:'🟡',n:'Curcuma'},{e:'🟠',n:'Paprika'},{e:'🟤',n:'Cannelle'},{e:'⭐',n:'Anis étoilé'},
+    {e:'🟡',n:'Curcuma'},{e:'🟠',n:'Paprika'},{e:'🟤',n:'Cannelle'},{e:'⭐',n:'Anis etoile'},
     {e:'🌿',n:'Zaatar'},{e:'🔴',n:'Sumac'},{e:'🟡',n:'Safran'},{e:'🌿',n:'Curry'}
   ]
 };
 
-// ── NAVIGATION ──
 function goTo(step) {
   document.getElementById('s' + currentStep).classList.remove('active');
   currentStep = step;
@@ -593,13 +462,11 @@ function goTo(step) {
 
 document.getElementById('btnBack').addEventListener('click', function() {
   if (currentStep > 1) goTo(currentStep - 1);
-  else history.back();
+  else window.location.href = '/index.html?token=' + token;
 });
 
-// ── STEP 1 : Allergies ──
 document.getElementById('allergyChips').addEventListener('click', function(e) {
-  const chip = e.target.closest('.chip');
-  if (!chip) return;
+  const chip = e.target.closest('.chip'); if (!chip) return;
   const v = chip.dataset.v;
   if (v === 'aucun') {
     document.querySelectorAll('#allergyChips .chip').forEach(c => c.classList.remove('on'));
@@ -625,22 +492,18 @@ document.getElementById('regimeChips').addEventListener('click', function(e) {
 });
 document.getElementById('btn1').addEventListener('click', function() { goTo(2); });
 
-// ── STEP 2 : Aliments ──
 function setMode(mode) {
   currentMode = mode;
   document.getElementById('modeGood').className = 'mode-btn' + (mode === 'like' ? ' active-like' : '');
   document.getElementById('modeBad').className = 'mode-btn' + (mode === 'dislike' ? ' active-dislike' : '');
 }
-
 function openFoodCat(cat) {
   currentFoodCat = cat;
   document.getElementById('foodCatGrid').style.display = 'none';
-  const panel = document.getElementById('foodPanel');
-  panel.classList.add('open');
+  document.getElementById('foodPanel').classList.add('open');
   document.getElementById('foodSearch').value = '';
   renderFoodGrid(cat, '');
 }
-
 function closeFoodCat() {
   currentFoodCat = null;
   document.getElementById('foodCatGrid').style.display = 'grid';
@@ -648,7 +511,6 @@ function closeFoodCat() {
   updateFoodSummary();
   updateCatCounts();
 }
-
 function renderFoodGrid(cat, search) {
   const items = FOODS[cat] || [];
   const filtered = search ? items.filter(f => f.n.toLowerCase().includes(search.toLowerCase())) : items;
@@ -662,60 +524,46 @@ function renderFoodGrid(cat, search) {
     chip.addEventListener('click', function() { toggleFood(chip.dataset.cat, chip.dataset.name, chip); });
   });
 }
-
 function toggleFood(cat, name, el) {
   if (!A.liked[cat]) A.liked[cat] = [];
   if (!A.disliked[cat]) A.disliked[cat] = [];
   if (currentMode === 'like') {
-    const idx = A.liked[cat].indexOf(name);
-    const didx = A.disliked[cat].indexOf(name);
+    const idx = A.liked[cat].indexOf(name), didx = A.disliked[cat].indexOf(name);
     if (didx > -1) A.disliked[cat].splice(didx, 1);
     if (idx > -1) { A.liked[cat].splice(idx, 1); el.className = 'food-chip'; }
     else { A.liked[cat].push(name); el.className = 'food-chip liked'; }
   } else {
-    const idx = A.disliked[cat].indexOf(name);
-    const lidx = A.liked[cat].indexOf(name);
+    const idx = A.disliked[cat].indexOf(name), lidx = A.liked[cat].indexOf(name);
     if (lidx > -1) A.liked[cat].splice(lidx, 1);
     if (idx > -1) { A.disliked[cat].splice(idx, 1); el.className = 'food-chip'; }
     else { A.disliked[cat].push(name); el.className = 'food-chip disliked'; }
   }
 }
-
-function filterFoods() {
-  if (currentFoodCat) renderFoodGrid(currentFoodCat, document.getElementById('foodSearch').value);
-}
-
+function filterFoods() { if (currentFoodCat) renderFoodGrid(currentFoodCat, document.getElementById('foodSearch').value); }
 function updateCatCounts() {
   Object.keys(FOODS).forEach(cat => {
-    const l = (A.liked[cat] || []).length;
-    const d = (A.disliked[cat] || []).length;
-    const total = l + d;
+    const total = (A.liked[cat] || []).length + (A.disliked[cat] || []).length;
     const el = document.getElementById('cnt-' + cat);
-    if (el) el.textContent = total > 0 ? total + ' sélectionné' + (total > 1 ? 's' : '') : '0 sélectionné';
+    if (el) el.textContent = total > 0 ? total + ' selectionne' + (total > 1 ? 's' : '') : '0 selectionne';
     const block = document.querySelector('[data-cat="' + cat + '"]');
     if (block) block.classList.toggle('active', total > 0);
   });
 }
-
 function updateFoodSummary() {
   const allLiked = Object.values(A.liked).flat();
   const allDisliked = Object.values(A.disliked).flat();
-  const sumDiv = document.getElementById('foodSummary');
-  sumDiv.style.display = (allLiked.length + allDisliked.length) > 0 ? 'block' : 'none';
-  document.getElementById('likedSummary').innerHTML = allLiked.slice(0, 8).map(n => '<span class="sel-tag">✓ ' + n + '</span>').join('') + (allLiked.length > 8 ? '<span class="sel-tag">+' + (allLiked.length - 8) + '</span>' : '');
-  document.getElementById('dislikedSummary').innerHTML = allDisliked.slice(0, 8).map(n => '<span class="sel-tag bad">✗ ' + n + '</span>').join('') + (allDisliked.length > 8 ? '<span class="sel-tag bad">+' + (allDisliked.length - 8) + '</span>' : '');
+  document.getElementById('foodSummary').style.display = (allLiked.length + allDisliked.length) > 0 ? 'block' : 'none';
+  document.getElementById('likedSummary').innerHTML = allLiked.slice(0, 8).map(n => '<span class="sel-tag">' + n + '</span>').join('');
+  document.getElementById('dislikedSummary').innerHTML = allDisliked.slice(0, 8).map(n => '<span class="sel-tag bad">' + n + '</span>').join('');
 }
-
 document.getElementById('btn2').addEventListener('click', function() { closeFoodCat(); goTo(3); });
 
-// ── STEP 3 : Découvertes ──
 function switchDisco(tab, el) {
   document.querySelectorAll('.disco-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.disco-content').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('disco-' + tab).classList.add('active');
 }
-
 document.querySelectorAll('.disco-chip').forEach(chip => {
   chip.addEventListener('click', function() {
     chip.classList.toggle('on');
@@ -723,18 +571,12 @@ document.querySelectorAll('.disco-chip').forEach(chip => {
     const v = chip.dataset.v;
     if (!A[key]) A[key] = [];
     const idx = A[key].indexOf(v);
-    if (idx > -1) A[key].splice(idx, 1);
-    else A[key].push(v);
+    if (idx > -1) A[key].splice(idx, 1); else A[key].push(v);
   });
 });
-
-document.getElementById('curiositeLibre').addEventListener('input', function() {
-  A.curiosite_libre = this.value.slice(0, 200);
-});
-
+document.getElementById('curiositeLibre').addEventListener('input', function() { A.curiosite_libre = this.value.slice(0, 200); });
 document.getElementById('btn3').addEventListener('click', function() { goTo(4); });
 
-// ── STEP 4 : Habitudes ──
 function makeChipsGroup(containerId, key, multiple) {
   document.getElementById(containerId).addEventListener('click', function(e) {
     const chip = e.target.closest('.chip'); if (!chip) return;
@@ -753,26 +595,20 @@ makeChipsGroup('cuisineChips', 'frequence_cuisine', false);
 makeChipsGroup('repasChips', 'nb_repas', false);
 makeChipsGroup('snackChips', 'snacking', true);
 makeChipsGroup('sautesChips', 'repas_sautes', false);
-
-function checkStep4() {
-  document.getElementById('btn4').disabled = !(A.frequence_cuisine && A.nb_repas && A.repas_sautes);
-}
+function checkStep4() { document.getElementById('btn4').disabled = !(A.frequence_cuisine && A.nb_repas && A.repas_sautes); }
 document.getElementById('btn4').addEventListener('click', function() { goTo(5); });
 
-// ── STEP 5 : Ressenti ──
 document.getElementById('feelingGrid').addEventListener('click', function(e) {
   const card = e.target.closest('.feeling-card'); if (!card) return;
   card.classList.toggle('on');
   A.ressenti = [...document.querySelectorAll('#feelingGrid .feeling-card.on')].map(c => c.dataset.v);
   checkStep5();
 });
-
 document.getElementById('craquageChips').addEventListener('click', function(e) {
   const chip = e.target.closest('.chip'); if (!chip) return;
   chip.classList.toggle('on');
   A.craquage = [...document.querySelectorAll('#craquageChips .chip.on')].map(c => c.dataset.v);
 });
-
 document.querySelectorAll('.star').forEach((star, i) => {
   star.addEventListener('click', function() {
     A.satisfaction_stars = i + 1;
@@ -786,94 +622,54 @@ document.querySelectorAll('.star').forEach((star, i) => {
 document.getElementById('starsRow').addEventListener('mouseleave', function() {
   document.querySelectorAll('.star').forEach((s, j) => s.style.filter = j < A.satisfaction_stars ? 'none' : 'grayscale(1) opacity(0.4)');
 });
-
-function checkStep5() {
-  document.getElementById('btn5').disabled = !(A.ressenti.length > 0 && A.satisfaction_stars > 0);
-}
+function checkStep5() { document.getElementById('btn5').disabled = !(A.ressenti.length > 0 && A.satisfaction_stars > 0); }
 document.getElementById('btn5').addEventListener('click', function() { goTo(6); });
 
-// ── STEP 6 : Commentaire ──
-document.getElementById('commentaireLibre').addEventListener('input', function() {
-  A.commentaire_libre = this.value.slice(0, 400);
-});
-
+document.getElementById('commentaireLibre').addEventListener('input', function() { A.commentaire_libre = this.value.slice(0, 400); });
 document.getElementById('defiChips').addEventListener('click', function(e) {
   const chip = e.target.closest('.chip'); if (!chip) return;
   chip.classList.toggle('on');
   A.defi = [...document.querySelectorAll('#defiChips .chip.on')].map(c => c.dataset.v);
 });
-
 document.getElementById('btn6').addEventListener('click', function() { goTo(7); });
 
-// ── STEP 7 : Récap ──
 function buildRecap() {
   const allergiesTags = [...A.allergies, ...A.regime].filter(v => v !== 'aucun' && v !== 'aucun_regime');
-  document.getElementById('recapAllergies').innerHTML = allergiesTags.length
-    ? allergiesTags.map(t => '<span class="recap-tag">' + t.replace(/_/g, ' ') + '</span>').join('')
-    : '<span class="recap-tag" style="color:var(--muted)">Aucune restriction</span>';
-
+  document.getElementById('recapAllergies').innerHTML = allergiesTags.length ? allergiesTags.map(t => '<span class="recap-tag">' + t.replace(/_/g, ' ') + '</span>').join('') : '<span class="recap-tag" style="color:var(--muted)">Aucune restriction</span>';
   const allLiked = Object.values(A.liked).flat().slice(0, 10);
   const allDisliked = Object.values(A.disliked).flat().slice(0, 10);
-  document.getElementById('recapLiked').innerHTML = allLiked.length
-    ? allLiked.map(n => '<span class="recap-tag">✓ ' + n + '</span>').join('')
-    : '<span class="recap-tag" style="color:var(--muted)">Non renseigné</span>';
-  document.getElementById('recapDisliked').innerHTML = allDisliked.length
-    ? allDisliked.map(n => '<span class="recap-tag">✗ ' + n + '</span>').join('')
-    : '<span class="recap-tag" style="color:var(--muted)">Non renseigné</span>';
-
+  document.getElementById('recapLiked').innerHTML = allLiked.length ? allLiked.map(n => '<span class="recap-tag">' + n + '</span>').join('') : '<span class="recap-tag" style="color:var(--muted)">Non renseigne</span>';
+  document.getElementById('recapDisliked').innerHTML = allDisliked.length ? allDisliked.map(n => '<span class="recap-tag">' + n + '</span>').join('') : '<span class="recap-tag" style="color:var(--muted)">Non renseigne</span>';
   const discoAll = [...A.disco_monde, ...A.disco_styles, ...A.disco_ingredients, ...A.disco_variantes];
-  document.getElementById('recapDisco').innerHTML = discoAll.length
-    ? discoAll.slice(0, 8).map(v => '<span class="recap-tag">' + v.replace(/_/g, ' ') + '</span>').join('')
-    : '<span class="recap-tag" style="color:var(--muted)">Non renseigné</span>';
-
-  const habitudes = [
-    A.frequence_cuisine, A.nb_repas, A.repas_sautes,
-    ...(A.ressenti || []), ...(A.defi || [])
-  ].filter(Boolean);
-  document.getElementById('recapHabitudes').innerHTML = habitudes.length
-    ? habitudes.map(v => '<span class="recap-tag">' + v.replace(/_/g, ' ') + '</span>').join('')
-    : '<span class="recap-tag" style="color:var(--muted)">Non renseigné</span>';
+  document.getElementById('recapDisco').innerHTML = discoAll.length ? discoAll.slice(0, 8).map(v => '<span class="recap-tag">' + v.replace(/_/g, ' ') + '</span>').join('') : '<span class="recap-tag" style="color:var(--muted)">Non renseigne</span>';
+  const habitudes = [A.frequence_cuisine, A.nb_repas, A.repas_sautes, ...(A.ressenti || []), ...(A.defi || [])].filter(Boolean);
+  document.getElementById('recapHabitudes').innerHTML = habitudes.length ? habitudes.map(v => '<span class="recap-tag">' + v.replace(/_/g, ' ') + '</span>').join('') : '<span class="recap-tag" style="color:var(--muted)">Non renseigne</span>';
 }
 
-// ── SAVE ──
 document.getElementById('btn7').addEventListener('click', async function() {
   document.getElementById('savingOverlay').classList.add('active');
   const payload = {
     user_id: USER_ID || 'anonymous',
-    allergies: A.allergies,
-    regime: A.regime,
-    aliments_aimes: A.liked,
-    aliments_evites: A.disliked,
-    decouverte_cuisines: A.disco_monde,
-    decouverte_styles: A.disco_styles,
-    decouverte_ingredients: A.disco_ingredients,
-    decouverte_variantes: A.disco_variantes,
+    allergies: A.allergies, regime: A.regime,
+    aliments_aimes: A.liked, aliments_evites: A.disliked,
+    decouverte_cuisines: A.disco_monde, decouverte_styles: A.disco_styles,
+    decouverte_ingredients: A.disco_ingredients, decouverte_variantes: A.disco_variantes,
     curiosite_libre: A.curiosite_libre,
-    frequence_cuisine: A.frequence_cuisine,
-    nb_repas: A.nb_repas,
-    snacking: A.snacking,
-    repas_sautes: A.repas_sautes,
-    ressenti: A.ressenti,
-    craquage: A.craquage,
+    frequence_cuisine: A.frequence_cuisine, nb_repas: A.nb_repas,
+    snacking: A.snacking, repas_sautes: A.repas_sautes,
+    ressenti: A.ressenti, craquage: A.craquage,
     satisfaction_stars: A.satisfaction_stars,
-    commentaire_libre: A.commentaire_libre,
-    defi_principal: A.defi,
+    commentaire_libre: A.commentaire_libre, defi_principal: A.defi,
     completed_at: new Date().toISOString()
   };
-
   try {
     const res = await fetch(SB_URL + '/rest/v1/questionnaire_alim', {
       method: 'POST',
-      headers: {
-        'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
-        'Content-Type': 'application/json', 'Prefer': 'return=minimal'
-      },
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('Erreur Supabase');
-    // Notify parent (Wix) that questionnaire is done
     window.parent.postMessage({ type: 'questionnaireAlimDone', userId: USER_ID }, '*');
-    // Redirect to suivi
     setTimeout(function() {
       const url = '/index.html?token=' + token + '&qalim=1';
       if (window.self !== window.top) window.top.location.href = url;
@@ -881,11 +677,10 @@ document.getElementById('btn7').addEventListener('click', async function() {
     }, 800);
   } catch(e) {
     document.getElementById('savingOverlay').classList.remove('active');
-    alert('Erreur lors de la sauvegarde. Veuillez réessayer.');
+    alert('Erreur lors de la sauvegarde. Veuillez reessayer.');
   }
 });
 
-// ── UTILS ──
 function countChars(el, counterId) {
   const max = el.id === 'commentaireLibre' ? 400 : 200;
   if (el.value.length > max) el.value = el.value.slice(0, max);
