@@ -502,6 +502,22 @@ input[type="file"] { display:none; }
 .onb-step-desc { font-size:11px; color:#aaa; line-height:1.4; }
 .onb-popup-btn-wrap { padding:16px 18px 22px; }
 .onb-popup-btn { width:100%; padding:16px; background:#111; color:#fff; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; letter-spacing:-.2px; }
+
+/* ── ONBOARDING CTA (page déconnectée) ── */
+.ob-card { background:#f0f0f3; border-radius:24px; overflow:hidden; box-shadow:6px 6px 16px rgba(174,174,192,0.42),-6px -6px 16px rgba(255,255,255,0.88); }
+.ob-hero { background:#1a1a2e; padding:30px 22px 26px; text-align:center; }
+.ob-em { font-size:44px; display:block; margin-bottom:12px; }
+.ob-title { font-size:22px; font-weight:700; color:#fff; letter-spacing:-.5px; margin-bottom:6px; }
+.ob-sub   { font-size:13px; color:rgba(255,255,255,0.5); line-height:1.6; }
+.ob-feats { background:#f0f0f3; padding:18px 18px 4px; display:flex; flex-direction:column; gap:9px; }
+.ob-feat  { display:flex; align-items:center; gap:12px; background:#f0f0f3; border-radius:14px; padding:11px 13px; box-shadow:3px 3px 8px rgba(174,174,192,0.35),-3px -3px 8px rgba(255,255,255,0.85); }
+.ob-fic   { font-size:20px; flex-shrink:0; }
+.ob-ft    { font-size:13px; font-weight:600; color:#3a3a4a; }
+.ob-fs    { font-size:11px; color:#aaa; margin-top:1px; }
+.ob-btn-w { background:#f0f0f3; padding:14px 18px 22px; }
+.ob-btn   { width:100%; padding:16px; background:#f0f0f3; border:none; border-radius:14px; color:#3a3a4a; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; box-shadow:6px 6px 16px rgba(174,174,192,0.42),-6px -6px 16px rgba(255,255,255,0.88); }
+.ob-btn:active { box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); }
+
 </style>
 </head>
 <body>
@@ -1789,6 +1805,9 @@ async function deleteRepas(id){if(!confirm('Supprimer ?'))return;try{await fetch
 
 // ═══ ONBOARDING CTA ═══
 function afficherOnboardingCTA(){
+  document.body.style.background = '#f0f0f3';
+  document.body.style.backgroundImage = 'radial-gradient(circle at 1px 1px, rgba(180,180,200,0.18) 1px, transparent 0)';
+  document.body.style.backgroundSize = '26px 26px';
   document.querySelector('.score-macro').style.display='none';
   document.querySelector('.pts-grid').style.display='none';
   document.getElementById('rdvPlusBtn').closest('.rdv-mod').style.display='none';
