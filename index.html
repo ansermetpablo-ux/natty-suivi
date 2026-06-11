@@ -2211,7 +2211,7 @@ async function qaVerifier() {
       {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
     var data = await res.json();
     if (!data || data.length === 0) {
-      window.location.href = '/questionnaire.html?token=' + token;
+      window.location.href = '/questionnaire-alim.html?token=' + token;
     }
   } catch(e) { console.log('[QA] Erreur:', e.message); }
 }
