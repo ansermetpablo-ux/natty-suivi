@@ -42,8 +42,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 /* ══════════════════════════════════
    SCORE + MACROS — structure image 1
 ══════════════════════════════════ */
-.score-macro { padding:22px 18px 18px; display:flex; flex-direction:column; align-items:stretch; gap:14px; background:var(--bg); border-radius:22px; box-shadow:var(--so); }
-.score-bottom-row { display:flex; align-items:stretch; gap:12px; }
+.score-macro { padding:22px 18px; display:flex; align-items:stretch; gap:14px; background:var(--bg); border-radius:22px; box-shadow:var(--so); }
 
 /* Colonne gauche : calories */
 .cal-col { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:var(--bg); border-radius:18px; padding:14px 10px; box-shadow:var(--si); min-width:76px; flex-shrink:0; }
@@ -56,16 +55,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 
 /* Colonne centre : score ring */
 .score-col { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-.ring-zone {
-  position:relative; width:164px; height:164px; cursor:pointer; flex-shrink:0;
-  border-radius:50%;
-  background:var(--bg);
-  box-shadow:
-    10px 10px 24px rgba(174,174,192,0.55),
-    -10px -10px 24px rgba(255,255,255,1),
-    inset 6px 6px 14px rgba(174,174,192,0.38),
-    inset -6px -6px 14px rgba(255,255,255,1);
-}
+.ring-zone { position:relative; width:150px; height:150px; cursor:pointer; flex-shrink:0; }
 .ring-zone svg { position:absolute; inset:0; transform:rotate(-90deg); }
 .ring-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
 .ring-pct { font-size:40px; font-weight:800; color:var(--black); letter-spacing:-2px; line-height:1; }
@@ -534,13 +524,21 @@ input[type="file"] { display:none; }
 
   <!-- SCORE + MACROS -->
   <div class="card score-macro">
-    <!-- Score ring (haut, pleine largeur) -->
-    <div class="score-col" style="align-self:center;">
+    <!-- Calories (gauche) -->
+    <div class="cal-col">
+      <div class="cal-lbl">Calories</div>
+      <div class="cal-val" id="vCal">–</div>
+      <div class="cal-unit">kcal</div>
+      <div class="cal-bar"><div class="cal-fill" id="bCal" style="width:0%;"></div></div>
+      <div class="cal-obj" id="oCal">/ – kcal</div>
+    </div>
+    <!-- Score ring (centre) -->
+    <div class="score-col">
       <div class="ring-zone" id="ringZone" onclick="switchTab('prog')">
-        <svg viewBox="0 0 164 164" width="164" height="164">
-          <circle cx="82" cy="82" r="72" fill="none" stroke="rgba(174,174,192,0.18)" stroke-width="5"/>
-          <circle cx="82" cy="82" r="72" fill="none" stroke="#34c759" stroke-width="5" stroke-linecap="round"
-                  id="ringArc" stroke-dasharray="0 452" style="transition:stroke-dasharray 1.4s ease;"/>
+        <svg viewBox="0 0 160 160" width="160" height="160">
+          <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(174,174,192,0.3)" stroke-width="10"/>
+          <circle cx="80" cy="80" r="68" fill="none" stroke="#34c759" stroke-width="10" stroke-linecap="round"
+                  id="ringArc" stroke-dasharray="0 427" style="transition:stroke-dasharray 1.4s ease;"/>
         </svg>
         <div class="ring-center">
           <div class="ring-pct"><span id="scorePct">–</span><span class="ring-pct-s">%</span></div>
@@ -548,19 +546,9 @@ input[type="file"] { display:none; }
           <div class="ring-badge" id="ringBadge" style="background:#e8f9ee;color:#34c759;">–</div>
         </div>
       </div>
-    </div><!-- /.score-col -->
-    <!-- Ligne basse : calories + macros -->
-    <div class="score-bottom-row">
-      <!-- Calories -->
-      <div class="cal-col">
-        <div class="cal-lbl">Calories</div>
-        <div class="cal-val" id="vCal">–</div>
-        <div class="cal-unit">kcal</div>
-        <div class="cal-bar"><div class="cal-fill" id="bCal" style="width:0%;"></div></div>
-        <div class="cal-obj" id="oCal">/ – kcal</div>
-      </div>
-      <!-- Macros -->
-      <div class="macros-col">
+    </div>
+    <!-- Macros (droite) -->
+    <div class="macros-col">
       <div class="macro-row" onclick="openMacroPopup('prot')">
         <div class="macro-top"><div class="macro-icon-name"><span class="m-emoji">🥩</span><span class="m-name">Protéines</span></div><span class="m-val"><span id="vProt">–</span><span class="m-unit">g</span></span></div>
         <div class="m-obj" id="oProt">Objectif – g</div>
@@ -576,9 +564,8 @@ input[type="file"] { display:none; }
         <div class="m-obj" id="oLip">Objectif – g</div>
         <div class="m-track"><div class="m-fill" id="bLip" style="width:0%;background:#7b5ea7;"></div></div>
       </div>
-      </div><!-- /.macros-col -->
-    </div><!-- /.score-bottom-row -->
-  </div><!-- /.score-macro card -->
+    </div>
+  </div>
 
   <!-- OFFRES / NUTRI -->
   <div class="offres-banner" id="offresBanner" onclick="goToOffre()">
@@ -1125,7 +1112,7 @@ function afficherMacros() {
 
 // ═══ SCORE ═══
 function setScore(pct) {
-  var circ=2*Math.PI*72, dash=(pct/100)*circ;
+  var circ=2*Math.PI*68, dash=(pct/100)*circ;
   var col=pct>=70?'#34c759':pct>=40?'#ff9500':'#ff3b30';
   var arc=document.getElementById('ringArc');
   arc.style.strokeDasharray=dash+' '+circ; arc.style.stroke=col;
@@ -2317,10 +2304,84 @@ function renderProfilMacros() {
 }
 
 var profilConseillsLoaded = false;
+// ═══════════════════════════════════════════════════════════════
+// CONSEILS IA — cache Supabase 7 jours
+// Table: profil_conseils (user_id, conseils_json, generated_at)
+// Logique :
+//   1. Charger depuis Supabase → afficher immédiatement si < 7j
+//   2. Si absent ou expiré → générer avec Claude → sauvegarder
+//   3. profilConseillsLoaded évite les doubles appels dans la session
+// ═══════════════════════════════════════════════════════════════
+var profilConseillsLoaded = false;
+
+function conseilsRenderHTML(data) {
+  return data.map(function(c) {
+    var recipes = (c.recettes || []).map(function(r) {
+      return '<span class="pcc-recipe-chip">🍽️ ' + r + '</span>';
+    }).join('');
+    var ings = (c.ingredients || []).map(function(i) {
+      return '<span class="pcc-ing-chip">✓ ' + i + '</span>';
+    }).join('');
+    return '<div class="profil-conseil-card">'
+      + '<div class="pcc-theme">' + (c.emoji||'') + ' ' + (c.theme||'') + '</div>'
+      + '<div class="pcc-title">' + (c.titre||'') + '</div>'
+      + '<div class="pcc-desc">' + (c.desc||'') + '</div>'
+      + (recipes ? '<div style="font-size:10px;color:#8e8e93;margin-bottom:4px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">Recettes suggérées</div><div class="pcc-recipes">' + recipes + '</div>' : '')
+      + (ings ? '<div style="font-size:10px;color:#34c759;margin:8px 0 4px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">Ingrédients à privilégier</div><div class="pcc-ings">' + ings + '</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function conseilsRenderFooter(dateStr) {
+  var d = new Date(dateStr);
+  var label = d.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
+  var next = new Date(d.getTime() + 7*24*3600*1000);
+  var nextLabel = next.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
+  return '<div style="margin-top:14px;padding:12px 14px;background:rgba(174,174,192,0.1);border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+    + '<div style="font-size:11px;color:var(--muted);">📅 Générés le ' + label + '<br>Prochaine mise à jour : ' + nextLabel + '</div>'
+    + '<button onclick="conseilsForceRefresh()" style="font-size:11px;font-weight:600;color:var(--black);background:var(--bg);border:none;border-radius:10px;padding:7px 12px;cursor:pointer;box-shadow:var(--sm);">↻ Actualiser</button>'
+    + '</div>';
+}
+
 async function fetchProfilConseils() {
   if (profilConseillsLoaded) return;
+  if (!USER_ID) return;
+
   var cont = document.getElementById('profilConseilsCont');
-  cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Analyse personnalisée...</div>';
+
+  // ── Étape 1 : charger depuis Supabase et afficher immédiatement si valides
+  try {
+    var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID + '&select=conseils_json,generated_at&limit=1');
+    if (cached && cached.length && cached[0].conseils_json) {
+      var generatedAt = new Date(cached[0].generated_at);
+      var ageMs = Date.now() - generatedAt.getTime();
+      var data = JSON.parse(cached[0].conseils_json);
+
+      // Afficher immédiatement les conseils en cache
+      cont.innerHTML = conseilsRenderHTML(data) + conseilsRenderFooter(cached[0].generated_at);
+      profilConseillsLoaded = true;
+
+      // Si < 7 jours : on s'arrête là
+      if (ageMs < 7 * 24 * 3600 * 1000) return;
+
+      // Si >= 7 jours : régénérer en arrière-plan (le user voit déjà les anciens)
+      conseilsGenererEtSauvegarder(true);
+      return;
+    }
+  } catch(e) {
+    // Table absente ou erreur réseau → on génère directement
+  }
+
+  // ── Étape 2 : aucun cache → afficher loader et générer
+  cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Analyse personnalisée en cours...</div>';
+  await conseilsGenererEtSauvegarder(false);
+}
+
+async function conseilsGenererEtSauvegarder(silentRefresh) {
+  var cont = document.getElementById('profilConseilsCont');
+  if (!silentRefresh) {
+    cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Analyse personnalisée en cours...</div>';
+  }
 
   var mealsDesc = allMeals.slice(0, 15).map(function(m) {
     var mac = calcMac(m.meal_ingredients);
@@ -2343,28 +2404,49 @@ async function fetchProfilConseils() {
     });
     var d = await res.json();
     var data = JSON.parse((d.text || '[]').replace(/```[a-z]*/g, '').replace(/```/g, '').trim());
+    if (!data || !data.length) throw new Error('Réponse vide');
 
-    var html = data.map(function(c) {
-      var recipes = (c.recettes || []).map(function(r) {
-        return '<span class="pcc-recipe-chip">🍽️ ' + r + '</span>';
-      }).join('');
-      var ings = (c.ingredients || []).map(function(i) {
-        return '<span class="pcc-ing-chip">✓ ' + i + '</span>';
-      }).join('');
-      return '<div class="profil-conseil-card">'
-        + '<div class="pcc-theme">' + (c.emoji||'') + ' ' + (c.theme||'') + '</div>'
-        + '<div class="pcc-title">' + (c.titre||'') + '</div>'
-        + '<div class="pcc-desc">' + (c.desc||'') + '</div>'
-        + (recipes ? '<div style="font-size:10px;color:#8e8e93;margin-bottom:4px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">Recettes suggérées</div><div class="pcc-recipes">' + recipes + '</div>' : '')
-        + (ings ? '<div style="font-size:10px;color:#34c759;margin:8px 0 4px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">Ingrédients à privilégier</div><div class="pcc-ings">' + ings + '</div>' : '')
-        + '</div>';
-    }).join('');
+    var now = new Date().toISOString();
 
-    cont.innerHTML = html || '<div style="color:#8e8e93;font-size:13px;padding:16px;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
+    // Sauvegarder en Supabase (upsert)
+    await fetch(SB_URL + '/rest/v1/profil_conseils', {
+      method: 'POST',
+      headers: {
+        apikey: SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify({
+        user_id: USER_ID,
+        conseils_json: JSON.stringify(data),
+        generated_at: now
+      })
+    });
+
+    // Mettre à jour l'affichage (même en silentRefresh)
+    cont.innerHTML = conseilsRenderHTML(data) + conseilsRenderFooter(now);
     profilConseillsLoaded = true;
+
   } catch(e) {
-    cont.innerHTML = '<div style="color:#8e8e93;font-size:13px;padding:16px;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
+    if (!silentRefresh) {
+      cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
+    }
+    // En silentRefresh, on laisse les anciens conseils affichés
   }
+}
+
+// Bouton "Actualiser" : force une nouvelle génération
+async function conseilsForceRefresh() {
+  profilConseillsLoaded = false;
+  // Supprimer le cache en base
+  try {
+    await fetch(SB_URL + '/rest/v1/profil_conseils?user_id=eq.' + USER_ID, {
+      method: 'DELETE',
+      headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+  } catch(e) {}
+  await conseilsGenererEtSauvegarder(false);
 }
 
 // ══ ONBOARDING CAROUSEL ══
