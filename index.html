@@ -2273,15 +2273,20 @@ var QA_FOODS = {
 async function qaVerifierEtAfficher() {
   if (!USER_ID || qaChecked) return;
   qaChecked = true;
+  console.log('[QA] Vérification questionnaire pour', USER_ID);
   try {
     var res = await fetch(SB_URL+'/rest/v1/questionnaire_alim?user_id=eq.'+USER_ID+'&select=id&limit=1',
       {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
     var data = await res.json();
+    console.log('[QA] Résultat:', data);
     if (!data || data.length === 0) {
+      console.log('[QA] Questionnaire absent → affichage');
       document.getElementById('qalimOverlay').classList.add('active');
       document.body.style.overflow = 'hidden';
+    } else {
+      console.log('[QA] Questionnaire déjà rempli → rien');
     }
-  } catch(e) {}
+  } catch(e) { console.log('[QA] Erreur:', e.message); }
 }
 
 function qaGoTo(step) {
@@ -2474,5 +2479,3 @@ if (document.readyState === 'loading') {
           .catch(e => console.log('SW error:', e));
       });
     }
-  
-
