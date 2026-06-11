@@ -1,4 +1,4 @@
-const CACHE = 'natty-v2';
+const CACHE = 'natty-v3';
 const ASSETS = [
   '/',
   '/index.html',
