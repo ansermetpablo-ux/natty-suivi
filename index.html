@@ -518,6 +518,33 @@ input[type="file"] { display:none; }
 .ob-btn   { width:100%; padding:16px; background:#f0f0f3; border:none; border-radius:14px; color:#3a3a4a; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; box-shadow:6px 6px 16px rgba(174,174,192,0.42),-6px -6px 16px rgba(255,255,255,0.88); }
 .ob-btn:active { box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); }
 
+
+/* ── SCORE CARD (centré) ── */
+.score-card { padding:28px 20px 20px; display:flex; flex-direction:column; align-items:center; gap:0; }
+.ring-zone { position:relative; width:180px; height:180px; flex-shrink:0; cursor:pointer; margin-bottom:12px; }
+.ring-zone svg { position:absolute; inset:0; transform:rotate(-90deg); }
+.ring-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+.ring-pct { font-size:48px; font-weight:800; color:#111; letter-spacing:-2px; line-height:1; }
+.ring-pct-s { font-size:22px; font-weight:700; }
+.ring-lbl   { font-size:13px; color:#aaa; margin-top:2px; }
+.ring-badge { font-size:12px; font-weight:600; padding:4px 14px; border-radius:99px; margin-top:6px; }
+
+/* ── MACROS CARD ── */
+.macros-card { padding:20px 20px 16px; display:flex; flex-direction:column; gap:0; }
+.macro-row  { display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:.5px solid #f5f5f5; cursor:pointer; }
+.macro-row:last-child { border-bottom:none; }
+.macro-row:active { background:#f9f9f9; border-radius:12px; }
+.macro-icon { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.macro-icon img, .macro-icon span { font-size:20px; }
+.macro-info { flex:1; }
+.macro-name-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:3px; }
+.m-name  { font-size:15px; font-weight:500; color:#111; }
+.m-val   { font-size:22px; font-weight:800; color:#111; display:flex; align-items:baseline; gap:2px; }
+.m-unit  { font-size:12px; font-weight:400; color:#aaa; }
+.m-obj   { font-size:12px; color:#aaa; }
+.m-track { height:3px; background:#f0f0f0; border-radius:2px; overflow:hidden; margin-top:4px; }
+.m-fill  { height:100%; border-radius:2px; transition:width 1.2s cubic-bezier(.34,1.56,.64,1); }
+
 </style>
 </head>
 <body>
@@ -552,33 +579,53 @@ input[type="file"] { display:none; }
     <div class="nutri-prev" id="nutriPrev">Appuyez pour ouvrir la conversation</div>
   </div>
 
-  <!-- SCORE + MACROS -->
-  <div class="card score-macro">
-    <div class="ring-zone" id="ringZone">
-      <svg viewBox="0 0 120 120" width="120" height="120">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="#f0f0f0" stroke-width="9"/>
-        <circle cx="60" cy="60" r="50" fill="none" stroke="#34c759" stroke-width="9" stroke-linecap="round"
-                id="ringArc" stroke-dasharray="0 314" style="transition:stroke-dasharray 1.4s ease;"/>
+  <!-- SCORE -->
+  <div class="card score-card">
+    <div class="ring-zone" id="ringZone" onclick="switchTab('prog')">
+      <svg viewBox="0 0 200 200" width="200" height="200">
+        <circle cx="100" cy="100" r="85" fill="none" stroke="#f0f0f0" stroke-width="12"/>
+        <circle cx="100" cy="100" r="85" fill="none" stroke="#34c759" stroke-width="12" stroke-linecap="round"
+                id="ringArc" stroke-dasharray="0 534" style="transition:stroke-dasharray 1.4s ease;"/>
       </svg>
       <div class="ring-center">
         <div class="ring-pct"><span id="scorePct">–</span><span class="ring-pct-s">%</span></div>
-        <div class="ring-lbl">Score nutri.</div>
+        <div class="ring-lbl">Score nutritionnel</div>
         <div class="ring-badge" id="ringBadge" style="background:#e8f9ee;color:#34c759;">–</div>
       </div>
     </div>
-    <div class="macros-col">
-      <div class="macro-row" onclick="openMacroPopup('prot')">
-        <div class="macro-top"><div class="macro-icon-name"><span class="m-emoji">🥩</span><span class="m-name">Protéines</span></div><span class="m-val"><span id="vProt">–</span><span class="m-unit">g</span></span></div>
+  </div>
+
+  <!-- MACROS -->
+  <div class="card macros-card">
+    <div class="macro-row" onclick="openMacroPopup('prot')">
+      <div class="macro-icon" style="background:#fff3ee;"><span>🥩</span></div>
+      <div class="macro-info">
+        <div class="macro-name-row">
+          <span class="m-name">Protéines</span>
+          <span class="m-val"><span id="vProt">–</span><span class="m-unit">g</span></span>
+        </div>
         <div class="m-obj" id="oProt">Objectif – g</div>
         <div class="m-track"><div class="m-fill" id="bProt" style="width:0%;background:#ff6b35;"></div></div>
       </div>
-      <div class="macro-row" onclick="openMacroPopup('gluc')">
-        <div class="macro-top"><div class="macro-icon-name"><span class="m-emoji">🌾</span><span class="m-name">Glucides</span></div><span class="m-val"><span id="vGluc">–</span><span class="m-unit">g</span></span></div>
+    </div>
+    <div class="macro-row" onclick="openMacroPopup('gluc')">
+      <div class="macro-icon" style="background:#fff8ee;"><span>🌾</span></div>
+      <div class="macro-info">
+        <div class="macro-name-row">
+          <span class="m-name">Glucides</span>
+          <span class="m-val"><span id="vGluc">–</span><span class="m-unit">g</span></span>
+        </div>
         <div class="m-obj" id="oGluc">Objectif – g</div>
         <div class="m-track"><div class="m-fill" id="bGluc" style="width:0%;background:#ff9500;"></div></div>
       </div>
-      <div class="macro-row" onclick="openMacroPopup('lip')">
-        <div class="macro-top"><div class="macro-icon-name"><span class="m-emoji">🥑</span><span class="m-name">Lipides</span></div><span class="m-val"><span id="vLip">–</span><span class="m-unit">g</span></span></div>
+    </div>
+    <div class="macro-row" onclick="openMacroPopup('lip')">
+      <div class="macro-icon" style="background:#f5f0ff;"><span>🥑</span></div>
+      <div class="macro-info">
+        <div class="macro-name-row">
+          <span class="m-name">Lipides</span>
+          <span class="m-val"><span id="vLip">–</span><span class="m-unit">g</span></span>
+        </div>
         <div class="m-obj" id="oLip">Objectif – g</div>
         <div class="m-track"><div class="m-fill" id="bLip" style="width:0%;background:#7b5ea7;"></div></div>
       </div>
@@ -1127,7 +1174,7 @@ function afficherMacros() {
 
 // ═══ SCORE ═══
 function setScore(pct) {
-  var circ=2*Math.PI*50, dash=(pct/100)*circ;
+  var circ=2*Math.PI*85, dash=(pct/100)*circ;
   var col=pct>=70?'#34c759':pct>=40?'#ff9500':'#ff3b30';
   var arc=document.getElementById('ringArc');
   arc.style.strokeDasharray=dash+' '+circ; arc.style.stroke=col;
