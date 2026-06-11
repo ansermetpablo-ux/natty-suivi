@@ -474,77 +474,12 @@ input[type="file"] { display:none; }
 .realtime-dot { width:8px; height:8px; border-radius:50%; background:#34c759; display:inline-block; margin-right:4px; animation:pulse 2s infinite; }
 
 
-/* ══ QUESTIONNAIRE ALIMENTAIRE OVERLAY ══ */
-#qalimOverlay { display:none; position:fixed; inset:0; background:rgba(240,240,243,0.97); backdrop-filter:blur(8px); z-index:9999; overflow-y:auto; }
-#qalimOverlay.active { display:block; }
-#qalimInner { max-width:480px; margin:0 auto; padding:0 18px 60px; font-family:'Inter',sans-serif; }
-.qa-top-bar { display:flex; align-items:center; gap:12px; padding:20px 0 14px; }
-.qa-btn-back { width:38px; height:38px; border-radius:50%; background:#f0f0f3; border:none; cursor:pointer; box-shadow:4px 4px 10px rgba(174,174,192,0.38),-4px -4px 10px rgba(255,255,255,0.85); display:flex; align-items:center; justify-content:center; font-size:18px; color:#3a3a4a; flex-shrink:0; }
-.qa-progress-wrap { flex:1; }
-.qa-progress-bar { height:6px; background:#f0f0f3; border-radius:3px; box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); overflow:hidden; margin-bottom:5px; }
-.qa-progress-fill { height:100%; background:linear-gradient(90deg,#5a9e6f,#7fba95); border-radius:3px; transition:width 0.4s cubic-bezier(0.34,1.56,0.64,1); }
-.qa-step-counter { font-size:11px; color:#aaa; letter-spacing:0.5px; }
-.qa-card { background:#f0f0f3; border-radius:22px; padding:26px 20px 20px; box-shadow:6px 6px 16px rgba(174,174,192,0.42),-6px -6px 16px rgba(255,255,255,0.88); margin-bottom:14px; }
-.qa-emoji { font-size:40px; display:block; margin-bottom:12px; }
-.qa-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#aaa; margin-bottom:8px; font-weight:500; }
-.qa-title { font-size:21px; font-weight:600; letter-spacing:-0.4px; line-height:1.25; margin-bottom:6px; color:#3a3a4a; }
-.qa-sub { font-size:13px; color:#aaa; line-height:1.5; margin-bottom:20px; }
-.qa-chips { display:flex; flex-wrap:wrap; gap:8px; }
-.qa-chip { padding:9px 16px; border-radius:99px; background:#f0f0f3; box-shadow:4px 4px 10px rgba(174,174,192,0.38),-4px -4px 10px rgba(255,255,255,0.85); font-size:13px; cursor:pointer; border:2px solid transparent; transition:all 0.15s; color:#3a3a4a; display:flex; align-items:center; gap:6px; }
-.qa-chip.on { box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); border-color:#5a9e6f; color:#5a9e6f; background:#eaf4ee; }
-.qa-chip.bad.on { border-color:#c77b7b; color:#c77b7b; background:#fde8e8; }
-.qa-cat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
-.qa-cat-block { background:#f0f0f3; border-radius:16px; padding:16px 14px; box-shadow:4px 4px 10px rgba(174,174,192,0.38),-4px -4px 10px rgba(255,255,255,0.85); cursor:pointer; border:2px solid transparent; transition:all 0.15s; }
-.qa-cat-block.active { box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); border-color:#5a9e6f; }
-.qa-cat-icon { font-size:28px; margin-bottom:8px; display:block; }
-.qa-cat-name { font-size:13px; font-weight:600; color:#3a3a4a; }
-.qa-cat-count { font-size:11px; color:#aaa; margin-top:2px; }
-.qa-food-panel { display:none; margin-top:12px; }
-.qa-food-panel.open { display:block; }
-.qa-search-wrap { display:flex; align-items:center; gap:8px; background:#f0f0f3; border-radius:14px; padding:11px 14px; box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); margin-bottom:12px; }
-.qa-search-wrap input { border:none; background:none; outline:none; font-family:'Inter',sans-serif; font-size:14px; color:#3a3a4a; flex:1; }
-.qa-food-grid { display:flex; flex-wrap:wrap; gap:8px; max-height:240px; overflow-y:auto; padding-bottom:4px; }
-.qa-food-chip { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 12px; border-radius:14px; background:#f0f0f3; box-shadow:4px 4px 10px rgba(174,174,192,0.38),-4px -4px 10px rgba(255,255,255,0.85); cursor:pointer; border:2px solid transparent; transition:all 0.15s; min-width:70px; }
-.qa-food-chip.liked { border-color:#5a9e6f; background:#eaf4ee; }
-.qa-food-chip.disliked { border-color:#c77b7b; background:#fde8e8; }
-.qa-food-chip .qfi { font-size:24px; line-height:1; }
-.qa-food-chip .qfn { font-size:10px; font-weight:500; color:#3a3a4a; text-align:center; max-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.qa-mode-toggle { display:flex; background:#f0f0f3; border-radius:12px; box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); padding:3px; margin-bottom:14px; }
-.qa-mode-btn { flex:1; padding:9px 14px; border-radius:10px; border:none; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer; color:#aaa; background:transparent; transition:all 0.15s; }
-.qa-mode-btn.active-like { background:#eaf4ee; color:#5a9e6f; }
-.qa-mode-btn.active-dislike { background:#fde8e8; color:#c77b7b; }
-.qa-disco-tabs { display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
-.qa-disco-tabs::-webkit-scrollbar { display:none; }
-.qa-disco-tab { padding:8px 16px; border-radius:99px; background:#f0f0f3; box-shadow:4px 4px 10px rgba(174,174,192,0.38),-4px -4px 10px rgba(255,255,255,0.85); font-size:12px; font-weight:500; color:#aaa; cursor:pointer; white-space:nowrap; border:2px solid transparent; transition:all 0.15s; }
-.qa-disco-tab.active { box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); border-color:#1a1a2e; color:#1a1a2e; }
-.qa-disco-content { display:none; }
-.qa-disco-content.active { display:block; }
-.qa-disco-chips { display:flex; flex-wrap:wrap; gap:8px; }
-.qa-disco-chip { padding:9px 14px; border-radius:12px; background:#f0f0f3; box-shadow:4px 4px 10px rgba(174,174,192,0.38),-4px -4px 10px rgba(255,255,255,0.85); font-size:13px; cursor:pointer; border:2px solid transparent; transition:all 0.15s; }
-.qa-disco-chip.on { box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); border-color:#1a1a2e; background:#e8e8f0; }
-.qa-stars-row { display:flex; gap:8px; justify-content:center; margin:10px 0; }
-.qa-star { font-size:32px; cursor:pointer; transition:transform 0.15s; filter:grayscale(1) opacity(0.4); }
-.qa-star.on { filter:none; transform:scale(1.1); }
-.qa-textarea { width:100%; background:#f0f0f3; border:none; border-radius:16px; padding:16px; font-family:'Inter',sans-serif; font-size:14px; color:#3a3a4a; resize:none; outline:none; box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); min-height:100px; line-height:1.6; }
-.qa-feeling-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.qa-feeling-card { background:#f0f0f3; border-radius:16px; padding:16px; box-shadow:4px 4px 10px rgba(174,174,192,0.38),-4px -4px 10px rgba(255,255,255,0.85); cursor:pointer; border:2px solid transparent; text-align:center; transition:all 0.15s; }
-.qa-feeling-card.on { box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); border-color:#5a9e6f; }
-.qa-sec-div { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#aaa; margin:20px 0 12px; font-weight:500; }
-.qa-recap-bloc { background:#f0f0f3; border-radius:16px; padding:16px 18px; box-shadow:inset 3px 3px 8px rgba(174,174,192,0.35),inset -3px -3px 8px rgba(255,255,255,0.85); margin-bottom:10px; }
-.qa-recap-label { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:#aaa; margin-bottom:8px; font-weight:500; }
-.qa-recap-tags { display:flex; flex-wrap:wrap; gap:6px; }
-.qa-recap-tag { font-size:12px; padding:4px 10px; border-radius:99px; background:#e8e8f0; color:#3a3a4a; }
-.qa-step-screen { display:none; }
-.qa-step-screen.active { display:block; }
-.qa-btn-c { width:100%; padding:17px; border-radius:16px; background:#1a1a2e; border:none; color:#fff; font-family:'Inter',sans-serif; font-size:16px; font-weight:600; cursor:pointer; box-shadow:4px 4px 14px rgba(26,26,46,0.35); transition:all 0.15s; margin-top:8px; }
-.qa-btn-c:disabled { opacity:0.4; cursor:not-allowed; }
-.qa-saving { display:none; position:fixed; inset:0; background:rgba(240,240,243,0.9); backdrop-filter:blur(6px); z-index:10000; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
-.qa-saving.active { display:flex; }
 .qa-spinner { width:44px; height:44px; border-radius:50%; border:3px solid rgba(26,26,46,0.1); border-top-color:#1a1a2e; animation:spin 0.8s linear infinite; }
 
 </style>
 </head>
 <body>
+
 
 <div class="header">
   <div class="header-top">
@@ -1014,7 +949,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
-  if (USER_ID) { init().then(function(){ qaStartTimer(); }); } else afficherOnboardingCTA();
+  if (USER_ID) { init().then(function(){ qaVerifier(); }); } else afficherOnboardingCTA();
 
   // Écouter le postMessage de Wix quand l'utilisateur se connecte
   window.addEventListener('message', function(event) {
@@ -2249,211 +2184,6 @@ async function chalRejoindrEntreprise() {
 
 
 
-// ══ QUESTIONNAIRE ALIMENTAIRE ══
-var QA = {
-  allergies:[], regime:[],
-  liked:{}, disliked:{},
-  disco_monde:[], disco_styles:[], disco_ingredients:[], disco_variantes:[],
-  curiosite_libre:'',
-  frequence_cuisine:null, nb_repas:null, repas_sautes:null,
-  ressenti:[], satisfaction_stars:0,
-  commentaire_libre:'', defi:[]
-};
-var qaStep=1, qaFoodCat=null, qaMode='like', qaChecked=false;
-
-var QA_FOODS = {
-  fruits:[{e:'🍎',n:'Pomme'},{e:'🍌',n:'Banane'},{e:'🍓',n:'Fraise'},{e:'🍇',n:'Raisin'},{e:'🍊',n:'Orange'},{e:'🥭',n:'Mangue'},{e:'🍑',n:'Pêche'},{e:'🥝',n:'Kiwi'},{e:'🍍',n:'Ananas'},{e:'🫐',n:'Myrtille'},{e:'🍋',n:'Citron'},{e:'🍐',n:'Poire'}],
-  legumes:[{e:'🥦',n:'Brocoli'},{e:'🥕',n:'Carotte'},{e:'🍅',n:'Tomate'},{e:'🥒',n:'Concombre'},{e:'🫑',n:'Poivron'},{e:'🧅',n:'Oignon'},{e:'🥬',n:'Salade'},{e:'🌽',n:'Maïs'},{e:'🥑',n:'Avocat'},{e:'🍆',n:'Aubergine'},{e:'🥔',n:'Pomme de terre'},{e:'🍠',n:'Patate douce'}],
-  proteines:[{e:'🥩',n:'Bœuf'},{e:'🍗',n:'Poulet'},{e:'🐟',n:'Saumon'},{e:'🐠',n:'Thon'},{e:'🥚',n:'Oeufs'},{e:'🫘',n:'Lentilles'},{e:'🫘',n:'Pois chiches'},{e:'🌱',n:'Tofu'},{e:'🦐',n:'Crevettes'},{e:'🐟',n:'Cabillaud'},{e:'🍗',n:'Dinde'},{e:'🫙',n:'Sardines'}],
-  feculents:[{e:'🍚',n:'Riz'},{e:'🍝',n:'Pâtes'},{e:'🍞',n:'Pain'},{e:'🥔',n:'Pomme de terre'},{e:'🌾',n:'Quinoa'},{e:'🌾',n:'Boulgour'},{e:'🥖',n:'Baguette'},{e:'🫓',n:'Pain complet'},{e:'🍠',n:'Patate douce'},{e:'🌾',n:'Avoine'}],
-  laitiers:[{e:'🥛',n:'Lait'},{e:'🧀',n:'Fromage'},{e:'🥛',n:'Yaourt'},{e:'🧈',n:'Beurre'},{e:'🧀',n:'Feta'},{e:'🧀',n:'Mozzarella'},{e:'🧀',n:'Gruyère'},{e:'🍮',n:'Fromage blanc'}],
-  herbes:[{e:'🌿',n:'Basilic'},{e:'🌿',n:'Persil'},{e:'🌿',n:'Coriandre'},{e:'🌿',n:'Thym'},{e:'🌿',n:'Romarin'},{e:'🌿',n:'Menthe'},{e:'🌶️',n:'Piment'},{e:'🟡',n:'Curcuma'},{e:'🟠',n:'Paprika'},{e:'🟤',n:'Cannelle'}]
-};
-
-async function qaVerifierEtAfficher() {
-  if (!USER_ID || qaChecked) return;
-  qaChecked = true;
-  console.log('[QA] Vérification questionnaire pour', USER_ID);
-  try {
-    var res = await fetch(SB_URL+'/rest/v1/questionnaire_alim?user_id=eq.'+USER_ID+'&select=id&limit=1',
-      {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
-    var data = await res.json();
-    console.log('[QA] Résultat:', data);
-    if (!data || data.length === 0) {
-      console.log('[QA] Questionnaire absent → affichage');
-      document.getElementById('qalimOverlay').classList.add('active');
-      document.body.style.overflow = 'hidden';
-    } else {
-      console.log('[QA] Questionnaire déjà rempli → rien');
-    }
-  } catch(e) { console.log('[QA] Erreur:', e.message); }
-}
-
-function qaGoTo(step) {
-  document.getElementById('qs'+qaStep).classList.remove('active');
-  qaStep = step;
-  document.getElementById('qs'+step).classList.add('active');
-  var pct = Math.round(((step-1)/7)*100);
-  document.getElementById('qaPFill').style.width = pct+'%';
-  document.getElementById('qasCtr').textContent = step+' / 7';
-  if (step===7) qaBuilRecap();
-  document.getElementById('qalimOverlay').scrollTop = 0;
-}
-
-var qaIntercepted = false;
-var qaTimer = null;
-
-function qaTrigger() {
-  if (qaIntercepted) return;
-  qaIntercepted = true;
-  if (qaTimer) clearTimeout(qaTimer);
-  qaVerifierEtAfficher();
-}
-
-// Premier clic n'importe où (hors questionnaire)
-document.addEventListener('click', function(e) {
-  if (qaIntercepted) return;
-  if (!USER_ID) return;
-  if (e.target.closest('#qalimOverlay') || e.target.closest('#qaSaving')) return;
-  qaTrigger();
-}, true);
-
-function qaInitListeners() {
-  // Use event delegation on the overlay — safe even if elements load late
-  var overlay = document.getElementById('qalimOverlay');
-  if (!overlay) return;
-
-  overlay.addEventListener('click', function(e) {
-    // Back button
-    if (e.target.closest('#qaBtnBack')) {
-      if (qaStep > 1) qaGoTo(qaStep-1);
-      return;
-    }
-    // Allergy chips
-    var allergyChip = e.target.closest('#qaAllergyChips .qa-chip');
-    if (allergyChip) {
-      var v = allergyChip.dataset.v;
-      if (v==='aucun') {
-        overlay.querySelectorAll('#qaAllergyChips .qa-chip').forEach(function(c){c.classList.remove('on');});
-        allergyChip.classList.toggle('on');
-        QA.allergies = allergyChip.classList.contains('on') ? ['aucun'] : [];
-      } else {
-        var aucunEl = overlay.querySelector('#qaChipAucun');
-        if (aucunEl) aucunEl.classList.remove('on');
-        allergyChip.classList.toggle('on');
-        QA.allergies = [...overlay.querySelectorAll('#qaAllergyChips .qa-chip.on')].map(function(c){return c.dataset.v;}).filter(function(x){return x!=='aucun';});
-      }
-      return;
-    }
-    // Regime chips
-    var regimeChip = e.target.closest('#qaRegimeChips .qa-chip');
-    if (regimeChip) {
-      regimeChip.classList.toggle('on');
-      QA.regime = [...overlay.querySelectorAll('#qaRegimeChips .qa-chip.on')].map(function(c){return c.dataset.v;});
-      return;
-    }
-    // Btn1
-    if (e.target.id==='qaBtn1') { qaGoTo(2); return; }
-    // Btn2
-    if (e.target.id==='qaBtn2') { qaCloseFoodCat(); qaGoTo(3); return; }
-    // Btn3
-    if (e.target.id==='qaBtn3') { QA.curiosite_libre=document.getElementById('qaCuriosite').value; qaGoTo(4); return; }
-    // Btn4
-    if (e.target.id==='qaBtn4' && !e.target.disabled) { qaGoTo(5); return; }
-    // Btn5
-    if (e.target.id==='qaBtn5' && !e.target.disabled) { qaGoTo(6); return; }
-    // Btn6
-    if (e.target.id==='qaBtn6') { QA.commentaire_libre=document.getElementById('qaCommentaire').value; qaGoTo(7); return; }
-    // Btn7
-    if (e.target.id==='qaBtn7') { qaSave(); return; }
-    // Step 4 chips
-    var s4chip = e.target.closest('#qaCuisineChips .qa-chip, #qaRepasChips .qa-chip, #qaSautesChips .qa-chip');
-    if (s4chip) {
-      var pid = s4chip.parentElement.id;
-      var key = pid==='qaCuisineChips'?'frequence_cuisine':pid==='qaRepasChips'?'nb_repas':'repas_sautes';
-      overlay.querySelectorAll('#'+pid+' .qa-chip').forEach(function(c){c.classList.remove('on');});
-      s4chip.classList.add('on');
-      QA[key] = s4chip.dataset.v;
-      var btn4 = overlay.querySelector('#qaBtn4');
-      if (btn4) btn4.disabled = !(QA.frequence_cuisine && QA.nb_repas && QA.repas_sautes);
-      return;
-    }
-    // Step 5 feeling
-    var feelCard = e.target.closest('#qaFeelingGrid .qa-feeling-card');
-    if (feelCard) {
-      feelCard.classList.toggle('on');
-      QA.ressenti = [...overlay.querySelectorAll('#qaFeelingGrid .qa-feeling-card.on')].map(function(c){return c.dataset.v;});
-      var btn5 = overlay.querySelector('#qaBtn5');
-      if (btn5) btn5.disabled = !(QA.ressenti.length>0 && QA.satisfaction_stars>0);
-      return;
-    }
-    // Stars
-    var star = e.target.closest('#qaStarsRow .qa-star');
-    if (star) {
-      var stars = [...overlay.querySelectorAll('#qaStarsRow .qa-star')];
-      var idx = stars.indexOf(star);
-      QA.satisfaction_stars = idx+1;
-      stars.forEach(function(s,j){s.classList.toggle('on',j<=idx);});
-      var btn5 = overlay.querySelector('#qaBtn5');
-      if (btn5) btn5.disabled = !(QA.ressenti.length>0 && QA.satisfaction_stars>0);
-      return;
-    }
-    // Defi chips
-    var defiChip = e.target.closest('#qaDefiChips .qa-chip');
-    if (defiChip) {
-      defiChip.classList.toggle('on');
-      QA.defi = [...overlay.querySelectorAll('#qaDefiChips .qa-chip.on')].map(function(c){return c.dataset.v;});
-      return;
-    }
-    // Disco chips
-    var discoChip = e.target.closest('.qa-disco-chip');
-    if (discoChip) {
-      discoChip.classList.toggle('on');
-      var key = 'disco_'+discoChip.dataset.disco;
-      var v = discoChip.dataset.v;
-      if (!QA[key]) QA[key]=[];
-      var idx = QA[key].indexOf(v);
-      if (idx>-1) QA[key].splice(idx,1); else QA[key].push(v);
-      return;
-    }
-    // Disco tabs
-    var discoTab = e.target.closest('.qa-disco-tab');
-    if (discoTab) {
-      overlay.querySelectorAll('.qa-disco-tab').forEach(function(t){t.classList.remove('active');});
-      overlay.querySelectorAll('.qa-disco-content').forEach(function(c){c.classList.remove('active');});
-      discoTab.classList.add('active');
-      var tabId = discoTab.getAttribute('onclick');
-      // Use data attribute instead
-      var tabMatch = tabId && tabId.match(/qaSwitchDisco\('([^']+)'/);
-      if (tabMatch) { var el = overlay.querySelector('#qaDisco-'+tabMatch[1]); if(el) el.classList.add('active'); }
-      return;
-    }
-    // Food cat blocks
-    var catBlock = e.target.closest('.qa-cat-block');
-    if (catBlock && !e.target.closest('#qaFoodPanel')) {
-      qaOpenFoodCat(catBlock.dataset.cat);
-      return;
-    }
-    // Food chips
-    var foodChip = e.target.closest('#qaFoodGrid .qa-food-chip');
-    if (foodChip) {
-      qaToggleFood(foodChip.dataset.cat, foodChip.dataset.name, foodChip);
-      return;
-    }
-    // Mode toggle
-    if (e.target.id==='qaModeGood') { qaSetMode('like'); return; }
-    if (e.target.id==='qaModeBad') { qaSetMode('dislike'); return; }
-    // Food search back button
-    if (e.target.closest('#qaFoodPanel button:not(.qa-food-chip)') && !e.target.closest('.qa-food-chip')) {
-      var isBackBtn = e.target.tagName==='BUTTON' && e.target.textContent.includes('Retour');
-      if (isBackBtn) { qaCloseFoodCat(); return; }
-    }
-  });
-
-  // Food search input
-  var foodSearch = document.getElementById('qaFoodSearch');
-  if (foodSearch) foodSearch.addEventListener('input', function(){ qaFilterFoods(); });
-} // end qaInitListeners
 
 function qaStartTimer() {
   if (!USER_ID || qaIntercepted) return;
@@ -2468,6 +2198,36 @@ if (document.readyState === 'loading') {
 } else {
   qaInitListeners();
 }
+
+
+// ══ QUESTIONNAIRE ALIMENTAIRE ══
+var qaChecked = false;
+
+async function qaVerifier() {
+  if (!USER_ID || qaChecked) return;
+  qaChecked = true;
+  try {
+    var res = await fetch(SB_URL+'/rest/v1/questionnaire_alim?user_id=eq.'+USER_ID+'&select=id&limit=1',
+      {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    var data = await res.json();
+    if (!data || data.length === 0) {
+      window.location.href = '/questionnaire.html?token=' + token;
+    }
+  } catch(e) { console.log('[QA] Erreur:', e.message); }
+}
+
+// Déclencher au premier clic ou après 3 secondes
+var qaTriggered = false;
+function qaTrigger() {
+  if (qaTriggered || !USER_ID) return;
+  qaTriggered = true;
+  qaVerifier();
+}
+document.addEventListener('click', function(e) {
+  if (qaTriggered || !USER_ID) return;
+  qaTrigger();
+}, true);
+setTimeout(function(){ qaTrigger(); }, 3000);
 
 </script>
 
