@@ -42,7 +42,8 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 /* ══════════════════════════════════
    SCORE + MACROS — structure image 1
 ══════════════════════════════════ */
-.score-macro { padding:22px 18px; display:flex; align-items:stretch; gap:14px; background:var(--bg); border-radius:22px; box-shadow:var(--so); }
+.score-macro { padding:22px 18px 18px; display:flex; flex-direction:column; align-items:stretch; gap:14px; background:var(--bg); border-radius:22px; box-shadow:var(--so); }
+.score-bottom-row { display:flex; align-items:stretch; gap:12px; }
 
 /* Colonne gauche : calories */
 .cal-col { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:var(--bg); border-radius:18px; padding:14px 10px; box-shadow:var(--si); min-width:76px; flex-shrink:0; }
@@ -55,7 +56,16 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 
 /* Colonne centre : score ring */
 .score-col { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-.ring-zone { position:relative; width:150px; height:150px; cursor:pointer; flex-shrink:0; }
+.ring-zone {
+  position:relative; width:164px; height:164px; cursor:pointer; flex-shrink:0;
+  border-radius:50%;
+  background:var(--bg);
+  box-shadow:
+    10px 10px 24px rgba(174,174,192,0.55),
+    -10px -10px 24px rgba(255,255,255,1),
+    inset 6px 6px 14px rgba(174,174,192,0.38),
+    inset -6px -6px 14px rgba(255,255,255,1);
+}
 .ring-zone svg { position:absolute; inset:0; transform:rotate(-90deg); }
 .ring-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
 .ring-pct { font-size:40px; font-weight:800; color:var(--black); letter-spacing:-2px; line-height:1; }
@@ -524,21 +534,13 @@ input[type="file"] { display:none; }
 
   <!-- SCORE + MACROS -->
   <div class="card score-macro">
-    <!-- Calories (gauche) -->
-    <div class="cal-col">
-      <div class="cal-lbl">Calories</div>
-      <div class="cal-val" id="vCal">–</div>
-      <div class="cal-unit">kcal</div>
-      <div class="cal-bar"><div class="cal-fill" id="bCal" style="width:0%;"></div></div>
-      <div class="cal-obj" id="oCal">/ – kcal</div>
-    </div>
-    <!-- Score ring (centre) -->
-    <div class="score-col">
+    <!-- Score ring (haut, pleine largeur) -->
+    <div class="score-col" style="align-self:center;">
       <div class="ring-zone" id="ringZone" onclick="switchTab('prog')">
-        <svg viewBox="0 0 160 160" width="160" height="160">
-          <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(174,174,192,0.3)" stroke-width="10"/>
-          <circle cx="80" cy="80" r="68" fill="none" stroke="#34c759" stroke-width="10" stroke-linecap="round"
-                  id="ringArc" stroke-dasharray="0 427" style="transition:stroke-dasharray 1.4s ease;"/>
+        <svg viewBox="0 0 164 164" width="164" height="164">
+          <circle cx="82" cy="82" r="72" fill="none" stroke="rgba(174,174,192,0.18)" stroke-width="5"/>
+          <circle cx="82" cy="82" r="72" fill="none" stroke="#34c759" stroke-width="5" stroke-linecap="round"
+                  id="ringArc" stroke-dasharray="0 452" style="transition:stroke-dasharray 1.4s ease;"/>
         </svg>
         <div class="ring-center">
           <div class="ring-pct"><span id="scorePct">–</span><span class="ring-pct-s">%</span></div>
@@ -546,9 +548,19 @@ input[type="file"] { display:none; }
           <div class="ring-badge" id="ringBadge" style="background:#e8f9ee;color:#34c759;">–</div>
         </div>
       </div>
-    </div>
-    <!-- Macros (droite) -->
-    <div class="macros-col">
+    </div><!-- /.score-col -->
+    <!-- Ligne basse : calories + macros -->
+    <div class="score-bottom-row">
+      <!-- Calories -->
+      <div class="cal-col">
+        <div class="cal-lbl">Calories</div>
+        <div class="cal-val" id="vCal">–</div>
+        <div class="cal-unit">kcal</div>
+        <div class="cal-bar"><div class="cal-fill" id="bCal" style="width:0%;"></div></div>
+        <div class="cal-obj" id="oCal">/ – kcal</div>
+      </div>
+      <!-- Macros -->
+      <div class="macros-col">
       <div class="macro-row" onclick="openMacroPopup('prot')">
         <div class="macro-top"><div class="macro-icon-name"><span class="m-emoji">🥩</span><span class="m-name">Protéines</span></div><span class="m-val"><span id="vProt">–</span><span class="m-unit">g</span></span></div>
         <div class="m-obj" id="oProt">Objectif – g</div>
@@ -564,8 +576,9 @@ input[type="file"] { display:none; }
         <div class="m-obj" id="oLip">Objectif – g</div>
         <div class="m-track"><div class="m-fill" id="bLip" style="width:0%;background:#7b5ea7;"></div></div>
       </div>
-    </div>
-  </div>
+      </div><!-- /.macros-col -->
+    </div><!-- /.score-bottom-row -->
+  </div><!-- /.score-macro card -->
 
   <!-- OFFRES / NUTRI -->
   <div class="offres-banner" id="offresBanner" onclick="goToOffre()">
@@ -1112,7 +1125,7 @@ function afficherMacros() {
 
 // ═══ SCORE ═══
 function setScore(pct) {
-  var circ=2*Math.PI*68, dash=(pct/100)*circ;
+  var circ=2*Math.PI*72, dash=(pct/100)*circ;
   var col=pct>=70?'#34c759':pct>=40?'#ff9500':'#ff3b30';
   var arc=document.getElementById('ringArc');
   arc.style.strokeDasharray=dash+' '+circ; arc.style.stroke=col;
