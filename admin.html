@@ -620,6 +620,17 @@ function logout() {
   document.getElementById('emailInput').value='';
 }
 
+
+async function chargerRdvAdmin() {
+  try { 
+    allRdv = await sb('rdv?order=date_rdv.desc&select=*'); 
+    afficherRdvAdmin(currentRdvFilter); 
+    const demandes = allRdv.filter(function(r){ return r.statut==='demande_client'; });
+    var badge = document.getElementById('navRdvBadge');
+    if (badge) { badge.textContent = demandes.length; badge.classList.toggle('visible', demandes.length>0); }
+  } catch(e) { console.log('chargerRdvAdmin error:', e.message); }
+}
+
 function demarrerApp() {
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('mainApp').classList.add('visible');
@@ -780,7 +791,7 @@ function appliquerFiltres() {
     var motiv  = (cl.motivation||'').toLowerCase();
     return prenom.includes(search) || nom.includes(search) || email.includes(search) || uid.includes(search) || motiv.includes(search) || (prenom+' '+nom).includes(search);
   });
-  var abonnFilter = currentAbonnFilter;
+  var abonnFilter = null;
   if (abonnFilter && abonnFilter !== 'tous') {
     filtered = filtered.filter(function(cl) {
       if (abonnFilter === 'abonne') return cl._abonne;
@@ -1166,7 +1177,7 @@ async function saveEditField() {
 async function chargerFicheAlim(userId) {
   document.getElementById('ficheAlimContent').innerHTML = '<div class="loading">Chargement...</div>';
   try {
-    var data = await sbFetch('questionnaire_alim?user_id=eq.'+userId+'&limit=1');
+    var data = await sb('questionnaire_alim?user_id=eq.'+userId+'&limit=1');
     if (!data||!data.length) {
       document.getElementById('ficheAlimContent').innerHTML = '<div class="alim-empty" style="padding:20px;">Questionnaire alimentaire non complété.</div>';
       return;
@@ -1248,7 +1259,7 @@ async function chargerFicheRdvPanel(userId) {
   var el = document.getElementById('ficheRdvContent');
   el.innerHTML = '<div class="loading">Chargement...</div>';
   try {
-    var rdvs = await sbFetch('rdv?user_id=eq.'+userId+'&order=date_rdv.desc&select=*');
+    var rdvs = await sb('rdv?user_id=eq.'+userId+'&order=date_rdv.desc&select=*');
     var MOIS = ['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'];
     el.innerHTML = '<div class="sec-card" id="rdvListeAdmin"><div class="sec-label" style="margin-bottom:12px;">Rendez-vous</div><div id="rdvItems"></div></div>'
       + '<div class="sec-card"><div class="sec-label">+ Programmer un RDV</div>'
@@ -1336,9 +1347,9 @@ async function chargerFicheProg(userId) {
   document.getElementById('ficheProgContent').innerHTML = '<div class="loading">Chargement...</div>';
   try {
     var [daily, meals, onb] = await Promise.all([
-      sbFetch('daily_macros?user_id=eq.'+userId+'&order=date.desc&limit=30'),
-      sbFetch('meals?user_id=eq.'+userId+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=20'),
-      sbFetch('onboarding?user_id=eq.'+userId+'&select=poids,tdee,bmr,proteines,lipides,glucides&limit=1')
+      sb('daily_macros?user_id=eq.'+userId+'&order=date.desc&limit=30'),
+      sb('meals?user_id=eq.'+userId+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=20'),
+      sb('onboarding?user_id=eq.'+userId+'&select=poids,tdee,bmr,proteines,lipides,glucides&limit=1')
     ]);
     var obj = onb[0]||{};
     var avgProt=0, avgLip=0, avgGluc=0, avgCal=0;
