@@ -2193,11 +2193,7 @@ function qaStartTimer() {
 }
 
 // Init listeners when DOM ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', qaInitListeners);
-} else {
-  qaInitListeners();
-}
+
 
 
 // ══ QUESTIONNAIRE ALIMENTAIRE ══
@@ -2211,7 +2207,7 @@ async function qaVerifier() {
       {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
     var data = await res.json();
     if (!data || data.length === 0) {
-      window.location.href = '/questionnaire-alim.html?token=' + token;
+      window.location.href = '/questionnaire-alim.html?token=' + TOKEN;
     }
   } catch(e) { console.log('[QA] Erreur:', e.message); }
 }
