@@ -2307,219 +2307,148 @@ function qaGoTo(step) {
 }
 
 function qaInitListeners() {
-document.getElementById('qaBtnBack').addEventListener('click', function() {
-  if (qaStep > 1) qaGoTo(qaStep-1);
-});
+  // Use event delegation on the overlay — safe even if elements load late
+  var overlay = document.getElementById('qalimOverlay');
+  if (!overlay) return;
 
-// Step 1
-document.getElementById('qaAllergyChips').addEventListener('click', function(e) {
-  var chip = e.target.closest('.qa-chip'); if(!chip) return;
-  var v = chip.dataset.v;
-  if (v==='aucun') {
-    document.querySelectorAll('#qaAllergyChips .qa-chip').forEach(function(c){c.classList.remove('on');});
-    chip.classList.toggle('on');
-    QA.allergies = chip.classList.contains('on') ? ['aucun'] : [];
-  } else {
-    document.getElementById('qaChipAucun').classList.remove('on');
-    chip.classList.toggle('on');
-    QA.allergies = [...document.querySelectorAll('#qaAllergyChips .qa-chip.on')].map(function(c){return c.dataset.v;}).filter(function(x){return x!=='aucun';});
-  }
-});
-document.getElementById('qaRegimeChips').addEventListener('click', function(e) {
-  var chip = e.target.closest('.qa-chip'); if(!chip) return;
-  chip.classList.toggle('on');
-  QA.regime = [...document.querySelectorAll('#qaRegimeChips .qa-chip.on')].map(function(c){return c.dataset.v;});
-});
-document.getElementById('qaBtn1').addEventListener('click', function(){ qaGoTo(2); });
-
-// Step 2
-function qaSetMode(mode) {
-  qaMode = mode;
-  document.getElementById('qaModeGood').className = 'qa-mode-btn'+(mode==='like'?' active-like':'');
-  document.getElementById('qaModeBad').className = 'qa-mode-btn'+(mode==='dislike'?' active-dislike':'');
-}
-function qaOpenFoodCat(cat) {
-  qaFoodCat = cat;
-  document.getElementById('qaFoodCatGrid').style.display='none';
-  document.getElementById('qaFoodPanel').classList.add('open');
-  document.getElementById('qaFoodSearch').value='';
-  qaRenderFoodGrid(cat,'');
-}
-function qaCloseFoodCat() {
-  qaFoodCat=null;
-  document.getElementById('qaFoodCatGrid').style.display='grid';
-  document.getElementById('qaFoodPanel').classList.remove('open');
-  qaUpdateCatCounts();
-}
-function qaRenderFoodGrid(cat, search) {
-  var items = QA_FOODS[cat]||[];
-  var filtered = search ? items.filter(function(f){return f.n.toLowerCase().includes(search.toLowerCase());}) : items;
-  document.getElementById('qaFoodGrid').innerHTML = filtered.map(function(f){
-    var isLiked = QA.liked[cat]&&QA.liked[cat].includes(f.n);
-    var isDisliked = QA.disliked[cat]&&QA.disliked[cat].includes(f.n);
-    var cls = isLiked?'qa-food-chip liked':isDisliked?'qa-food-chip disliked':'qa-food-chip';
-    return '<div class="'+cls+'" data-name="'+f.n+'" data-cat="'+cat+'"><span class="qfi">'+f.e+'</span><span class="qfn">'+f.n+'</span></div>';
-  }).join('');
-  document.getElementById('qaFoodGrid').querySelectorAll('.qa-food-chip').forEach(function(chip){
-    chip.addEventListener('click', function(){ qaToggleFood(chip.dataset.cat, chip.dataset.name, chip); });
+  overlay.addEventListener('click', function(e) {
+    // Back button
+    if (e.target.closest('#qaBtnBack')) {
+      if (qaStep > 1) qaGoTo(qaStep-1);
+      return;
+    }
+    // Allergy chips
+    var allergyChip = e.target.closest('#qaAllergyChips .qa-chip');
+    if (allergyChip) {
+      var v = allergyChip.dataset.v;
+      if (v==='aucun') {
+        overlay.querySelectorAll('#qaAllergyChips .qa-chip').forEach(function(c){c.classList.remove('on');});
+        allergyChip.classList.toggle('on');
+        QA.allergies = allergyChip.classList.contains('on') ? ['aucun'] : [];
+      } else {
+        var aucunEl = overlay.querySelector('#qaChipAucun');
+        if (aucunEl) aucunEl.classList.remove('on');
+        allergyChip.classList.toggle('on');
+        QA.allergies = [...overlay.querySelectorAll('#qaAllergyChips .qa-chip.on')].map(function(c){return c.dataset.v;}).filter(function(x){return x!=='aucun';});
+      }
+      return;
+    }
+    // Regime chips
+    var regimeChip = e.target.closest('#qaRegimeChips .qa-chip');
+    if (regimeChip) {
+      regimeChip.classList.toggle('on');
+      QA.regime = [...overlay.querySelectorAll('#qaRegimeChips .qa-chip.on')].map(function(c){return c.dataset.v;});
+      return;
+    }
+    // Btn1
+    if (e.target.id==='qaBtn1') { qaGoTo(2); return; }
+    // Btn2
+    if (e.target.id==='qaBtn2') { qaCloseFoodCat(); qaGoTo(3); return; }
+    // Btn3
+    if (e.target.id==='qaBtn3') { QA.curiosite_libre=document.getElementById('qaCuriosite').value; qaGoTo(4); return; }
+    // Btn4
+    if (e.target.id==='qaBtn4' && !e.target.disabled) { qaGoTo(5); return; }
+    // Btn5
+    if (e.target.id==='qaBtn5' && !e.target.disabled) { qaGoTo(6); return; }
+    // Btn6
+    if (e.target.id==='qaBtn6') { QA.commentaire_libre=document.getElementById('qaCommentaire').value; qaGoTo(7); return; }
+    // Btn7
+    if (e.target.id==='qaBtn7') { qaSave(); return; }
+    // Step 4 chips
+    var s4chip = e.target.closest('#qaCuisineChips .qa-chip, #qaRepasChips .qa-chip, #qaSautesChips .qa-chip');
+    if (s4chip) {
+      var pid = s4chip.parentElement.id;
+      var key = pid==='qaCuisineChips'?'frequence_cuisine':pid==='qaRepasChips'?'nb_repas':'repas_sautes';
+      overlay.querySelectorAll('#'+pid+' .qa-chip').forEach(function(c){c.classList.remove('on');});
+      s4chip.classList.add('on');
+      QA[key] = s4chip.dataset.v;
+      var btn4 = overlay.querySelector('#qaBtn4');
+      if (btn4) btn4.disabled = !(QA.frequence_cuisine && QA.nb_repas && QA.repas_sautes);
+      return;
+    }
+    // Step 5 feeling
+    var feelCard = e.target.closest('#qaFeelingGrid .qa-feeling-card');
+    if (feelCard) {
+      feelCard.classList.toggle('on');
+      QA.ressenti = [...overlay.querySelectorAll('#qaFeelingGrid .qa-feeling-card.on')].map(function(c){return c.dataset.v;});
+      var btn5 = overlay.querySelector('#qaBtn5');
+      if (btn5) btn5.disabled = !(QA.ressenti.length>0 && QA.satisfaction_stars>0);
+      return;
+    }
+    // Stars
+    var star = e.target.closest('#qaStarsRow .qa-star');
+    if (star) {
+      var stars = [...overlay.querySelectorAll('#qaStarsRow .qa-star')];
+      var idx = stars.indexOf(star);
+      QA.satisfaction_stars = idx+1;
+      stars.forEach(function(s,j){s.classList.toggle('on',j<=idx);});
+      var btn5 = overlay.querySelector('#qaBtn5');
+      if (btn5) btn5.disabled = !(QA.ressenti.length>0 && QA.satisfaction_stars>0);
+      return;
+    }
+    // Defi chips
+    var defiChip = e.target.closest('#qaDefiChips .qa-chip');
+    if (defiChip) {
+      defiChip.classList.toggle('on');
+      QA.defi = [...overlay.querySelectorAll('#qaDefiChips .qa-chip.on')].map(function(c){return c.dataset.v;});
+      return;
+    }
+    // Disco chips
+    var discoChip = e.target.closest('.qa-disco-chip');
+    if (discoChip) {
+      discoChip.classList.toggle('on');
+      var key = 'disco_'+discoChip.dataset.disco;
+      var v = discoChip.dataset.v;
+      if (!QA[key]) QA[key]=[];
+      var idx = QA[key].indexOf(v);
+      if (idx>-1) QA[key].splice(idx,1); else QA[key].push(v);
+      return;
+    }
+    // Disco tabs
+    var discoTab = e.target.closest('.qa-disco-tab');
+    if (discoTab) {
+      overlay.querySelectorAll('.qa-disco-tab').forEach(function(t){t.classList.remove('active');});
+      overlay.querySelectorAll('.qa-disco-content').forEach(function(c){c.classList.remove('active');});
+      discoTab.classList.add('active');
+      var tabId = discoTab.getAttribute('onclick');
+      // Use data attribute instead
+      var tabMatch = tabId && tabId.match(/qaSwitchDisco\('([^']+)'/);
+      if (tabMatch) { var el = overlay.querySelector('#qaDisco-'+tabMatch[1]); if(el) el.classList.add('active'); }
+      return;
+    }
+    // Food cat blocks
+    var catBlock = e.target.closest('.qa-cat-block');
+    if (catBlock && !e.target.closest('#qaFoodPanel')) {
+      qaOpenFoodCat(catBlock.dataset.cat);
+      return;
+    }
+    // Food chips
+    var foodChip = e.target.closest('#qaFoodGrid .qa-food-chip');
+    if (foodChip) {
+      qaToggleFood(foodChip.dataset.cat, foodChip.dataset.name, foodChip);
+      return;
+    }
+    // Mode toggle
+    if (e.target.id==='qaModeGood') { qaSetMode('like'); return; }
+    if (e.target.id==='qaModeBad') { qaSetMode('dislike'); return; }
+    // Food search back button
+    if (e.target.closest('#qaFoodPanel button:not(.qa-food-chip)') && !e.target.closest('.qa-food-chip')) {
+      var isBackBtn = e.target.tagName==='BUTTON' && e.target.textContent.includes('Retour');
+      if (isBackBtn) { qaCloseFoodCat(); return; }
+    }
   });
-}
-function qaToggleFood(cat, name, el) {
-  if(!QA.liked[cat]) QA.liked[cat]=[];
-  if(!QA.disliked[cat]) QA.disliked[cat]=[];
-  if (qaMode==='like') {
-    var idx=QA.liked[cat].indexOf(name), didx=QA.disliked[cat].indexOf(name);
-    if(didx>-1) QA.disliked[cat].splice(didx,1);
-    if(idx>-1){QA.liked[cat].splice(idx,1);el.className='qa-food-chip';}
-    else{QA.liked[cat].push(name);el.className='qa-food-chip liked';}
-  } else {
-    var idx=QA.disliked[cat].indexOf(name), lidx=QA.liked[cat].indexOf(name);
-    if(lidx>-1) QA.liked[cat].splice(lidx,1);
-    if(idx>-1){QA.disliked[cat].splice(idx,1);el.className='qa-food-chip';}
-    else{QA.disliked[cat].push(name);el.className='qa-food-chip disliked';}
-  }
-}
-function qaFilterFoods(){ if(qaFoodCat) qaRenderFoodGrid(qaFoodCat, document.getElementById('qaFoodSearch').value); }
-function qaUpdateCatCounts() {
-  Object.keys(QA_FOODS).forEach(function(cat){
-    var total=(QA.liked[cat]||[]).length+(QA.disliked[cat]||[]).length;
-    var el=document.getElementById('qaCnt-'+cat);
-    if(el) el.textContent=total>0?total+' sélectionné'+(total>1?'s':''):'0 sélectionné';
-    var block=document.querySelector('[data-cat="'+cat+'"]');
-    if(block) block.classList.toggle('active',total>0);
-  });
-}
-document.getElementById('qaBtn2').addEventListener('click', function(){ qaCloseFoodCat(); qaGoTo(3); });
 
-// Step 3
-function qaSwitchDisco(tab, el) {
-  document.querySelectorAll('.qa-disco-tab').forEach(function(t){t.classList.remove('active');});
-  document.querySelectorAll('.qa-disco-content').forEach(function(c){c.classList.remove('active');});
-  el.classList.add('active');
-  document.getElementById('qaDisco-'+tab).classList.add('active');
-}
-document.querySelectorAll('.qa-disco-chip').forEach(function(chip){
-  chip.addEventListener('click', function(){
-    chip.classList.toggle('on');
-    var key='disco_'+chip.dataset.disco, v=chip.dataset.v;
-    if(!QA[key]) QA[key]=[];
-    var idx=QA[key].indexOf(v);
-    if(idx>-1) QA[key].splice(idx,1); else QA[key].push(v);
-  });
-});
-document.getElementById('qaBtn3').addEventListener('click', function(){ QA.curiosite_libre=document.getElementById('qaCuriosite').value; qaGoTo(4); });
+  // Food search input
+  var foodSearch = document.getElementById('qaFoodSearch');
+  if (foodSearch) foodSearch.addEventListener('input', function(){ qaFilterFoods(); });
+} // end qaInitListeners
 
-// Step 4
-function qaMakeChips(id, key, multi) {
-  document.getElementById(id).addEventListener('click', function(e){
-    var chip=e.target.closest('.qa-chip'); if(!chip) return;
-    if(multi){ chip.classList.toggle('on'); QA[key]=[...document.querySelectorAll('#'+id+' .qa-chip.on')].map(function(c){return c.dataset.v;}); }
-    else { document.querySelectorAll('#'+id+' .qa-chip').forEach(function(c){c.classList.remove('on');}); chip.classList.add('on'); QA[key]=chip.dataset.v; }
-    qaCheckStep4();
-  });
-}
-qaMakeChips('qaCuisineChips','frequence_cuisine',false);
-qaMakeChips('qaRepasChips','nb_repas',false);
-qaMakeChips('qaSautesChips','repas_sautes',false);
-function qaCheckStep4(){ document.getElementById('qaBtn4').disabled=!(QA.frequence_cuisine&&QA.nb_repas&&QA.repas_sautes); }
-document.getElementById('qaBtn4').addEventListener('click', function(){ qaGoTo(5); });
-
-// Step 5
-document.getElementById('qaFeelingGrid').addEventListener('click', function(e){
-  var card=e.target.closest('.qa-feeling-card'); if(!card) return;
-  card.classList.toggle('on');
-  QA.ressenti=[...document.querySelectorAll('#qaFeelingGrid .qa-feeling-card.on')].map(function(c){return c.dataset.v;});
-  qaCheckStep5();
-});
-document.querySelectorAll('.qa-star').forEach(function(star,i){
-  star.addEventListener('click', function(){
-    QA.satisfaction_stars=i+1;
-    document.querySelectorAll('.qa-star').forEach(function(s,j){s.classList.toggle('on',j<=i);});
-    qaCheckStep5();
-  });
-});
-function qaCheckStep5(){ document.getElementById('qaBtn5').disabled=!(QA.ressenti.length>0&&QA.satisfaction_stars>0); }
-document.getElementById('qaBtn5').addEventListener('click', function(){ qaGoTo(6); });
-
-// Step 6
-document.getElementById('qaDefiChips').addEventListener('click', function(e){
-  var chip=e.target.closest('.qa-chip'); if(!chip) return;
-  chip.classList.toggle('on');
-  QA.defi=[...document.querySelectorAll('#qaDefiChips .qa-chip.on')].map(function(c){return c.dataset.v;});
-});
-document.getElementById('qaBtn6').addEventListener('click', function(){ QA.commentaire_libre=document.getElementById('qaCommentaire').value; qaGoTo(7); });
-
-// Step 7 recap
-function qaBuilRecap() {
-  var at=[...QA.allergies,...QA.regime].filter(function(v){return v!=='aucun'&&v!=='aucun_regime';});
-  document.getElementById('qaRecapAllergies').innerHTML=at.length?at.map(function(t){return '<span class="qa-recap-tag">'+t.replace(/_/g,' ')+'</span>';}).join(''):'<span class="qa-recap-tag" style="color:#aaa">Aucune restriction</span>';
-  var allL=Object.values(QA.liked).flat().slice(0,8);
-  var allD=Object.values(QA.disliked).flat().slice(0,8);
-  document.getElementById('qaRecapLiked').innerHTML=allL.length?allL.map(function(n){return '<span class="qa-recap-tag">✓ '+n+'</span>';}).join(''):'<span class="qa-recap-tag" style="color:#aaa">Non renseigné</span>';
-  document.getElementById('qaRecapDisliked').innerHTML=allD.length?allD.map(function(n){return '<span class="qa-recap-tag">✗ '+n+'</span>';}).join(''):'<span class="qa-recap-tag" style="color:#aaa">Non renseigné</span>';
-  var hab=[QA.frequence_cuisine,QA.nb_repas,QA.repas_sautes,...(QA.ressenti||[]),...(QA.defi||[])].filter(Boolean);
-  document.getElementById('qaRecapHabitudes').innerHTML=hab.length?hab.map(function(v){return '<span class="qa-recap-tag">'+v.replace(/_/g,' ')+'</span>';}).join(''):'<span class="qa-recap-tag" style="color:#aaa">Non renseigné</span>';
-}
-
-// Save
-document.getElementById('qaBtn7').addEventListener('click', async function(){
-  document.getElementById('qaSaving').classList.add('active');
-  var payload={
-    user_id:USER_ID||'anonymous',
-    allergies:QA.allergies, regime:QA.regime,
-    aliments_aimes:QA.liked, aliments_evites:QA.disliked,
-    decouverte_cuisines:QA.disco_monde, decouverte_styles:QA.disco_styles,
-    decouverte_ingredients:QA.disco_ingredients, decouverte_variantes:QA.disco_variantes,
-    curiosite_libre:QA.curiosite_libre,
-    frequence_cuisine:QA.frequence_cuisine, nb_repas:QA.nb_repas,
-    repas_sautes:QA.repas_sautes, ressenti:QA.ressenti,
-    satisfaction_stars:QA.satisfaction_stars,
-    commentaire_libre:QA.commentaire_libre, defi_principal:QA.defi,
-    completed_at:new Date().toISOString()
-  };
-  try {
-    var res=await fetch(SB_URL+'/rest/v1/questionnaire_alim',{
-      method:'POST',
-      headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify(payload)
-    });
-    if(!res.ok) throw new Error('Erreur');
-    document.getElementById('qalimOverlay').classList.remove('active');
-    document.getElementById('qaSaving').classList.remove('active');
-    document.body.style.overflow='';
-  } catch(e) {
-    document.getElementById('qaSaving').classList.remove('active');
-    alert('Erreur lors de la sauvegarde. Veuillez réessayer.');
-  }
-});
-
-// Déclencher le questionnaire : au premier clic n'importe où OU 3s après connexion
-var qaIntercepted = false;
-var qaTimer = null;
-
-function qaTrigger() {
-  if (qaIntercepted) return;
-  qaIntercepted = true;
-  if (qaTimer) clearTimeout(qaTimer);
-  qaVerifierEtAfficher();
-}
-
-// Premier clic n'importe où sur la page (hors questionnaire)
-document.addEventListener('click', function(e) {
-  if (qaIntercepted) return;
-  if (!USER_ID) return;
-  if (e.target.closest('#qalimOverlay') || e.target.closest('#qaSaving')) return;
-  qaTrigger();
-}, true);
-
-// 3 secondes après init si USER_ID disponible
 function qaStartTimer() {
   if (!USER_ID || qaIntercepted) return;
   qaTimer = setTimeout(function() {
     qaTrigger();
   }, 3000);
 }
-} // end qaInitListeners
 
 // Init listeners when DOM ready
 if (document.readyState === 'loading') {
