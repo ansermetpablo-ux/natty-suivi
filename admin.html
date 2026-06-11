@@ -1349,9 +1349,15 @@ async function chargerFicheProg(userId) {
     var [daily, meals, onb] = await Promise.all([
       sb('daily_macros?user_id=eq.'+userId+'&order=date.desc&limit=30'),
       sb('meals?user_id=eq.'+userId+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=20'),
-      sb('onboarding?user_id=eq.'+userId+'&select=poids,tdee,bmr,proteines,lipides,glucides&limit=1')
+      sb('onboarding?user_id=eq.'+userId+'&select=poids,taille,age,sexe,activite,bmr,tdee,score_motivation,score_rigueur,score_nutrition&limit=1')
     ]);
     var obj = onb[0]||{};
+    // Calcul des objectifs depuis tdee
+    var tdee = parseFloat(obj.tdee)||0;
+    var poids = parseFloat(obj.poids)||0;
+    obj.proteines = poids ? Math.round(poids*2) : 0;
+    obj.lipides   = tdee ? Math.round(tdee*0.25/9) : 0;
+    obj.glucides  = tdee ? Math.round(tdee*0.5/4) : 0;
     var avgProt=0, avgLip=0, avgGluc=0, avgCal=0;
     if (daily.length) {
       daily.forEach(function(d){avgProt+=d.prot_g||0;avgLip+=d.lip_g||0;avgGluc+=d.gluc_g||0;avgCal+=d.cal_kcal||0;});
@@ -1663,7 +1669,7 @@ async function supprimerPlat(id) {
 async function chargerEquipe() {
   try{
     allNutris=await sb('nutritionnistes?select=*&order=created_at.asc');
-    const clients=await sb('onboarding?completed=eq.true&select=nutritionniste_id');
+    const clients=[];
     const counts={};clients.forEach(c=>{if(c.nutritionniste_id)counts[c.nutritionniste_id]=(counts[c.nutritionniste_id]||0)+1;});
     const el=document.getElementById('nutriAdminList');
     if(!allNutris||!allNutris.length){el.innerHTML='<div class="empty">Aucun nutritionniste</div>';return;}
