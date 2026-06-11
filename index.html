@@ -476,6 +476,55 @@ input[type="file"] { display:none; }
 
 .qa-spinner { width:44px; height:44px; border-radius:50%; border:3px solid rgba(26,26,46,0.1); border-top-color:#1a1a2e; animation:spin 0.8s linear infinite; }
 
+
+/* ══ PROFIL OVERLAY ══ */
+#profilOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); z-index:300; align-items:flex-end; justify-content:center; }
+#profilOverlay.active { display:flex; }
+#profilSheet { background:#f5f5f7; border-radius:26px 26px 0 0; width:100%; max-width:480px; max-height:92vh; overflow-y:auto; animation:slideUp .3s cubic-bezier(.32,.72,0,1); padding:0 20px 52px; }
+.profil-handle { width:36px; height:5px; background:#e5e5ea; border-radius:3px; margin:14px auto 20px; }
+.profil-score-ring { display:flex; flex-direction:column; align-items:center; background:#fff; border-radius:22px; padding:24px 20px; margin-bottom:14px; }
+.psr-wrap { position:relative; width:160px; height:160px; margin-bottom:12px; }
+.psr-wrap svg { position:absolute; inset:0; transform:rotate(-90deg); }
+.psr-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.psr-pct { font-size:42px; font-weight:800; color:#1c1c1e; letter-spacing:-2px; line-height:1; }
+.psr-lbl { font-size:12px; color:#8e8e93; margin-top:4px; }
+.psr-badge { font-size:13px; font-weight:600; padding:5px 16px; border-radius:99px; margin-top:8px; }
+.profil-macros-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.profil-macro-card { background:#fff; border-radius:18px; padding:16px; text-align:center; }
+.pmc-emoji { font-size:24px; display:block; margin-bottom:6px; }
+.pmc-val { font-size:24px; font-weight:800; color:#1c1c1e; letter-spacing:-1px; }
+.pmc-unit { font-size:12px; color:#8e8e93; }
+.pmc-lbl { font-size:11px; color:#8e8e93; margin-top:4px; }
+.pmc-bar { height:4px; background:#f0f0f0; border-radius:2px; margin-top:8px; overflow:hidden; }
+.pmc-fill { height:100%; border-radius:2px; transition:width 1s ease; }
+.profil-section-title { font-size:16px; font-weight:700; margin-bottom:10px; color:#1c1c1e; }
+.profil-conseil-card { background:#fff; border-radius:16px; padding:14px 16px; margin-bottom:10px; }
+.pcc-theme { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:#8e8e93; margin-bottom:6px; font-weight:600; }
+.pcc-title { font-size:14px; font-weight:700; margin-bottom:6px; }
+.pcc-desc { font-size:13px; color:#3a3a4a; line-height:1.6; margin-bottom:8px; }
+.pcc-recipes { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.pcc-recipe-chip { font-size:11px; padding:4px 10px; border-radius:99px; background:#f5f5f7; color:#1c1c1e; font-weight:500; }
+.pcc-ings { display:flex; flex-wrap:wrap; gap:6px; }
+.pcc-ing-chip { font-size:11px; padding:4px 10px; border-radius:99px; background:#e8f9ee; color:#34c759; font-weight:500; }
+.profil-loading { text-align:center; padding:32px; color:#8e8e93; font-size:13px; }
+.profil-spinner { width:32px; height:32px; border-radius:50%; border:3px solid #f0f0f0; border-top-color:#1c1c1e; animation:spin .8s linear infinite; margin:0 auto 12px; }
+
+/* ══ ONBOARDING POPUP ══ */
+#onbPopup { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); z-index:400; align-items:center; justify-content:center; padding:20px; }
+#onbPopup.active { display:flex; }
+.onb-popup-card { background:#f5f5f7; border-radius:26px; width:100%; max-width:400px; overflow:hidden; animation:popIn .35s cubic-bezier(.34,1.56,.64,1); }
+.onb-popup-hero { background:#1c1c1e; padding:28px 24px 24px; text-align:center; }
+.onb-popup-emoji { font-size:48px; display:block; margin-bottom:14px; }
+.onb-popup-title { font-size:22px; font-weight:800; color:#fff; margin-bottom:6px; letter-spacing:-.5px; }
+.onb-popup-sub { font-size:13px; color:rgba(255,255,255,0.55); line-height:1.6; }
+.onb-popup-steps { padding:20px 20px 8px; display:flex; flex-direction:column; gap:10px; }
+.onb-step { display:flex; align-items:center; gap:14px; background:#fff; border-radius:16px; padding:14px 16px; }
+.onb-step-icon { width:40px; height:40px; border-radius:50%; background:#1c1c1e; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.onb-step-title { font-size:13px; font-weight:700; color:#1c1c1e; margin-bottom:2px; }
+.onb-step-desc { font-size:11px; color:#8e8e93; line-height:1.4; }
+.onb-popup-btn-wrap { padding:16px 20px 24px; }
+.onb-popup-btn { width:100%; padding:16px; background:#1c1c1e; color:#fff; border:none; border-radius:16px; font-family:'Inter',sans-serif; font-size:16px; font-weight:700; cursor:pointer; letter-spacing:-.2px; }
+
 </style>
 </head>
 <body>
@@ -484,7 +533,7 @@ input[type="file"] { display:none; }
 <div class="header">
   <div class="header-top">
     <div><div class="header-name" id="headerName">Mon suivi</div><div class="header-sub" id="headerDate">–</div></div>
-    <div class="header-av"><span style="font-size:18px;">👤</span></div>
+    <div class="header-av" id="btnProfil" style="cursor:pointer;" onclick="openProfilOverlay()"><span style="font-size:18px;">👤</span></div>
   </div>
   <div class="tabs-bar">
     <button class="tab-btn active" id="tabSuivi"  onclick="switchTab('suivi')">Suivi</button>
@@ -949,7 +998,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
-  if (USER_ID) { init().then(function(){ qaVerifier(); }); } else afficherOnboardingCTA();
+  if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); }); } else afficherOnboardingCTA();
 
   // Écouter le postMessage de Wix quand l'utilisateur se connecte
   window.addEventListener('message', function(event) {
@@ -1734,7 +1783,7 @@ async function saveIA(){
     var meal=saved[0];
     var ings=(aiMealData.ingredients||[]).map(function(i){return{meal_id:meal.id,name:i.nom,quantity_g:i.quantite_g};});
     if(ings.length)await sbPost('meal_ingredients',ings);
-    closeOverlay('ovRepas');await loadMeals();afficherMacros();chargerDiagnostics();
+    closeOverlay('ovRepas');await loadMeals();afficherMacros();chargerDiagnostics();profilConseillsLoaded=false;
     showToast('Plat analysé et enregistré !','ok');
   }catch(e){showToast('Erreur','err');}
   btn.disabled=false;btn.textContent='Enregistrer ce plat';
@@ -2224,6 +2273,213 @@ document.addEventListener('click', function(e) {
   qaTrigger();
 }, true);
 setTimeout(function(){ qaTrigger(); }, 3000);
+
+
+<!-- ══ PROFIL OVERLAY ══ -->
+<div id="profilOverlay" onclick="if(event.target===this)closeProfilOverlay()">
+  <div id="profilSheet">
+    <div class="profil-handle"></div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:16px;">Mon profil</div>
+
+    <!-- Score ring -->
+    <div class="profil-score-ring">
+      <div class="psr-wrap">
+        <svg viewBox="0 0 160 160" width="160" height="160">
+          <circle cx="80" cy="80" r="65" fill="none" stroke="#f0f0f0" stroke-width="10"/>
+          <circle cx="80" cy="80" r="65" fill="none" stroke="#34c759" stroke-width="10" stroke-linecap="round"
+                  id="psrArc" stroke-dasharray="0 408" style="transition:stroke-dasharray 1.2s ease;"/>
+        </svg>
+        <div class="psr-center">
+          <div class="psr-pct" id="psrPct">–</div>
+          <div class="psr-lbl">Score nutritionnel</div>
+        </div>
+      </div>
+      <div class="psr-badge" id="psrBadge" style="background:#e8f9ee;color:#34c759;">–</div>
+    </div>
+
+    <!-- Macros besoins -->
+    <div class="profil-section-title">Mes besoins journaliers</div>
+    <div class="profil-macros-grid">
+      <div class="profil-macro-card">
+        <span class="pmc-emoji">🥩</span>
+        <div class="pmc-val" id="pmProt">–</div><span class="pmc-unit">g</span>
+        <div class="pmc-lbl">Protéines</div>
+        <div class="pmc-bar"><div class="pmc-fill" id="pbProt" style="width:0%;background:#ff6b35;"></div></div>
+      </div>
+      <div class="profil-macro-card">
+        <span class="pmc-emoji">🌾</span>
+        <div class="pmc-val" id="pmGluc">–</div><span class="pmc-unit">g</span>
+        <div class="pmc-lbl">Glucides</div>
+        <div class="pmc-bar"><div class="pmc-fill" id="pbGluc" style="width:0%;background:#ff9500;"></div></div>
+      </div>
+      <div class="profil-macro-card">
+        <span class="pmc-emoji">🥑</span>
+        <div class="pmc-val" id="pmLip">–</div><span class="pmc-unit">g</span>
+        <div class="pmc-lbl">Lipides</div>
+        <div class="pmc-bar"><div class="pmc-fill" id="pbLip" style="width:0%;background:#7b5ea7;"></div></div>
+      </div>
+      <div class="profil-macro-card">
+        <span class="pmc-emoji">⚡</span>
+        <div class="pmc-val" id="pmCal">–</div><span class="pmc-unit">kcal</span>
+        <div class="pmc-lbl">Calories</div>
+        <div class="pmc-bar"><div class="pmc-fill" id="pbCal" style="width:0%;background:#34c759;"></div></div>
+      </div>
+    </div>
+
+    <!-- Analyse IA -->
+    <div class="profil-section-title" style="margin-top:4px;">Analyse & conseils personnalisés</div>
+    <div id="profilConseilsCont">
+      <div class="profil-loading"><div class="profil-spinner"></div>Analyse de vos repas en cours...</div>
+    </div>
+
+    <button onclick="closeProfilOverlay()" style="width:100%;padding:14px;background:#e5e5ea;border:none;border-radius:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;">Fermer</button>
+  </div>
+</div>
+
+<!-- ══ ONBOARDING POPUP ══ -->
+<div id="onbPopup">
+  <div class="onb-popup-card">
+    <div class="onb-popup-hero">
+      <span class="onb-popup-emoji">🥗</span>
+      <div class="onb-popup-title">Bienvenue sur Natty !</div>
+      <div class="onb-popup-sub">Votre suivi nutritionnel personnalisé est prêt. Voici comment tirer le meilleur de l'application.</div>
+    </div>
+    <div class="onb-popup-steps">
+      <div class="onb-step">
+        <div class="onb-step-icon">📸</div>
+        <div><div class="onb-step-title">Photographiez vos repas</div><div class="onb-step-desc">L'IA analyse automatiquement vos aliments et calcule vos macros en temps réel.</div></div>
+      </div>
+      <div class="onb-step">
+        <div class="onb-step-icon">📊</div>
+        <div><div class="onb-step-title">Suivez vos macros</div><div class="onb-step-desc">Protéines, glucides, lipides — visualisez votre progression vers vos objectifs du jour.</div></div>
+      </div>
+      <div class="onb-step">
+        <div class="onb-step-icon">🏆</div>
+        <div><div class="onb-step-title">Relevez des challenges</div><div class="onb-step-desc">Défis personnels, duos avec des amis ou classement en entreprise.</div></div>
+      </div>
+      <div class="onb-step">
+        <div class="onb-step-icon">🧑‍⚕️</div>
+        <div><div class="onb-step-title">Votre nutritionniste</div><div class="onb-step-desc">Échangez directement avec votre expert nutrition pour un suivi personnalisé.</div></div>
+      </div>
+    </div>
+    <div class="onb-popup-btn-wrap">
+      <button class="onb-popup-btn" onclick="closeOnbPopup()">C'est parti ! →</button>
+    </div>
+  </div>
+</div>
+
+
+// ══ PROFIL OVERLAY ══
+function openProfilOverlay() {
+  document.getElementById('profilOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  renderProfilMacros();
+  renderProfilScore();
+  fetchProfilConseils();
+}
+
+function closeProfilOverlay() {
+  document.getElementById('profilOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function renderProfilScore() {
+  var score = parseInt(document.getElementById('scorePct').textContent) || 0;
+  var circ = 2 * Math.PI * 65;
+  var dash = (score / 100) * circ;
+  var col = score >= 70 ? '#34c759' : score >= 40 ? '#ff9500' : '#ff3b30';
+  var arc = document.getElementById('psrArc');
+  arc.style.stroke = col;
+  setTimeout(function(){ arc.style.strokeDasharray = dash + ' ' + circ; }, 50);
+  document.getElementById('psrPct').textContent = score;
+  var badge = document.getElementById('psrBadge');
+  badge.textContent = score >= 80 ? 'Excellent' : score >= 60 ? 'Bon' : score >= 40 ? 'Moyen' : 'À améliorer';
+  badge.style.background = score >= 60 ? '#e8f9ee' : score >= 40 ? '#fff3e0' : '#ffecec';
+  badge.style.color = score >= 60 ? '#34c759' : score >= 40 ? '#ff9500' : '#ff3b30';
+}
+
+function renderProfilMacros() {
+  var fields = [
+    ['pmProt', 'pbProt', macObj.p, macAuj.p],
+    ['pmGluc', 'pbGluc', macObj.g, macAuj.g],
+    ['pmLip',  'pbLip',  macObj.l, macAuj.l],
+    ['pmCal',  'pbCal',  macObj.c, macAuj.c],
+  ];
+  fields.forEach(function(f) {
+    var el = document.getElementById(f[0]);
+    var bar = document.getElementById(f[1]);
+    if (el) el.textContent = f[2] || '–';
+    var pct = f[2] > 0 ? Math.min(100, Math.round((f[3] / f[2]) * 100)) : 0;
+    setTimeout(function(){ if(bar) bar.style.width = pct + '%'; }, 100);
+  });
+}
+
+var profilConseillsLoaded = false;
+async function fetchProfilConseils() {
+  if (profilConseillsLoaded) return;
+  var cont = document.getElementById('profilConseilsCont');
+  cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Analyse personnalisée...</div>';
+
+  var mealsDesc = allMeals.slice(0, 15).map(function(m) {
+    var mac = calcMac(m.meal_ingredients);
+    var ings = (m.meal_ingredients||[]).map(function(i){ return i.name + ' ' + i.quantity_g + 'g'; }).join(', ');
+    return m.name + ' (' + ings + ') — prot:' + mac.p + 'g gluc:' + mac.g + 'g lip:' + mac.l + 'g cal:' + mac.c + 'kcal';
+  }).join(' | ');
+
+  var prompt = 'Tu es nutritionniste expert. Analyse les repas de ce client et donne des conseils personnalisés structurés.'
+    + ' Objectifs: prot=' + macObj.p + 'g, gluc=' + macObj.g + 'g, lip=' + macObj.l + 'g, cal=' + macObj.c + 'kcal.'
+    + ' Repas enregistrés: ' + (mealsDesc || 'aucun repas encore')
+    + '. Génère 4 conseils thématiques (Protéines, Légumes & Fibres, Équilibre des repas, Habitudes).'
+    + ' Pour chaque conseil: un titre, une description courte (2 phrases max), 3 recettes concrètes suggérées, 3 ingrédients clés à privilégier.'
+    + ' Réponds UNIQUEMENT en JSON sans backticks: [{"theme":"...","emoji":"...","titre":"...","desc":"...","recettes":["...","...","..."],"ingredients":["...","...","..."]}]';
+
+  try {
+    var res = await fetch(CLAUDE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt, max_tokens: 1200 })
+    });
+    var d = await res.json();
+    var data = JSON.parse((d.text || '[]').replace(/```[a-z]*/g, '').replace(/```/g, '').trim());
+
+    var html = data.map(function(c) {
+      var recipes = (c.recettes || []).map(function(r) {
+        return '<span class="pcc-recipe-chip">🍽️ ' + r + '</span>';
+      }).join('');
+      var ings = (c.ingredients || []).map(function(i) {
+        return '<span class="pcc-ing-chip">✓ ' + i + '</span>';
+      }).join('');
+      return '<div class="profil-conseil-card">'
+        + '<div class="pcc-theme">' + (c.emoji||'') + ' ' + (c.theme||'') + '</div>'
+        + '<div class="pcc-title">' + (c.titre||'') + '</div>'
+        + '<div class="pcc-desc">' + (c.desc||'') + '</div>'
+        + (recipes ? '<div style="font-size:10px;color:#8e8e93;margin-bottom:4px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">Recettes suggérées</div><div class="pcc-recipes">' + recipes + '</div>' : '')
+        + (ings ? '<div style="font-size:10px;color:#34c759;margin:8px 0 4px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">Ingrédients à privilégier</div><div class="pcc-ings">' + ings + '</div>' : '')
+        + '</div>';
+    }).join('');
+
+    cont.innerHTML = html || '<div style="color:#8e8e93;font-size:13px;padding:16px;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
+    profilConseillsLoaded = true;
+  } catch(e) {
+    cont.innerHTML = '<div style="color:#8e8e93;font-size:13px;padding:16px;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
+  }
+}
+
+// ══ ONBOARDING POPUP ══
+function checkShowOnbPopup() {
+  if (!USER_ID) return;
+  var key = 'natty_onb_popup_' + USER_ID;
+  if (!localStorage.getItem(key)) {
+    setTimeout(function() {
+      document.getElementById('onbPopup').classList.add('active');
+    }, 1500);
+  }
+}
+
+function closeOnbPopup() {
+  document.getElementById('onbPopup').classList.remove('active');
+  if (USER_ID) localStorage.setItem('natty_onb_popup_' + USER_ID, '1');
+}
 
 </script>
 
