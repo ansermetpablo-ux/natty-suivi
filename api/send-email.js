@@ -221,6 +221,47 @@ export default async function handler(req, res) {
       </body></html>`;
     }
 
+
+    // ════════════════════════════════════════════════
+    // TYPE 4 : recap_client ou fallback générique (ancien format admin)
+    // ════════════════════════════════════════════════
+    else if (type === 'recap_client' || (!type && body.message)) {
+      const msg = body.message || body.message_preview || '';
+      subject = body.subject || '📋 Récapitulatif Natty';
+      html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${STYLE}</style></head><body>
+        <div class="wrap">
+          <div class="hero">
+            <span class="hero-em">📋</span>
+            <div class="hero-title">Votre récapitulatif${prenom ? ', ' + prenom : ''}</div>
+          </div>
+          <div class="body">
+            <div class="card" style="white-space:pre-line;">${msg}</div>
+            <a href="https://natty-suivi.vercel.app" class="cta">Accéder à mon suivi →</a>
+          </div>
+          ${footer}
+        </div>
+      </body></html>`;
+    }
+
+    // TYPE 5 : message_preview (ancien format chat nutritionniste)
+    else if (body.message_preview) {
+      subject = '💬 Nouveau message de votre nutritionniste';
+      html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${STYLE}</style></head><body>
+        <div class="wrap">
+          <div class="hero">
+            <span class="hero-em">🧑‍⚕️</span>
+            <div class="hero-title">Votre nutritionniste vous a répondu</div>
+          </div>
+          <div class="body">
+            <div class="card"><div class="card-expl">${body.message_preview}</div></div>
+            <a href="https://natty-suivi.vercel.app" class="cta">Répondre →</a>
+          </div>
+          ${footer}
+        </div>
+      </body></html>`;
+    }
+
+
     else {
       return res.status(400).json({ error: 'Unknown email type: ' + type });
     }
