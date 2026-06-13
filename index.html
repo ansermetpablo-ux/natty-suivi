@@ -651,6 +651,31 @@ input[type="file"] { display:none; }
 .recette-ings { padding:0 16px 14px; display:flex; flex-wrap:wrap; gap:6px; }
 .recette-ing-chip { background:#e8f9ee; color:#1e5c30; border-radius:99px; padding:5px 12px; font-size:11px; font-weight:500; }
 
+
+/* ── HERO SCORE BLOCK ── */
+.hero-score { background:var(--bg); border-radius:24px; box-shadow:var(--so); padding:24px 20px 20px; display:flex; flex-direction:column; align-items:center; gap:0; }
+.hero-ring-wrap { position:relative; width:200px; height:200px; margin-bottom:16px; cursor:pointer; }
+.hero-ring-wrap svg { position:absolute; inset:0; transform:rotate(-90deg); }
+.hero-ring-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+.hero-score-pct { font-size:56px; font-weight:800; color:var(--black); letter-spacing:-3px; line-height:1; }
+.hero-score-pct-s { font-size:22px; font-weight:700; }
+.hero-score-lbl { font-size:13px; color:var(--muted); }
+.hero-score-badge { font-size:12px; font-weight:600; padding:5px 18px; border-radius:99px; margin-top:8px; }
+/* Macros row under hero */
+.hero-macros-row { display:flex; gap:10px; width:100%; margin-top:4px; }
+.hero-macro-col { flex:1; background:var(--bg); border-radius:18px; padding:12px 10px; box-shadow:var(--si); display:flex; flex-direction:column; align-items:center; gap:3px; }
+.hero-macro-em { font-size:22px; }
+.hero-macro-val { font-size:20px; font-weight:800; color:var(--black); letter-spacing:-1px; line-height:1; }
+.hero-macro-unit { font-size:9px; color:var(--muted); font-weight:500; }
+.hero-macro-lbl  { font-size:9px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+.hero-macro-bar  { width:100%; height:3px; background:var(--bg); border-radius:2px; box-shadow:inset 1px 1px 3px rgba(174,174,192,0.35),inset -1px -1px 3px rgba(255,255,255,0.8); overflow:hidden; margin-top:4px; }
+.hero-macro-fill { height:100%; border-radius:2px; transition:width 1.2s cubic-bezier(.34,1.56,.64,1); }
+/* Calories row */
+.hero-cal-row { width:100%; background:var(--bg); border-radius:14px; padding:10px 16px; box-shadow:var(--si); display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+.hero-cal-left { font-size:12px; font-weight:600; color:var(--muted); display:flex; align-items:center; gap:6px; }
+.hero-cal-val  { font-size:18px; font-weight:800; color:var(--black); display:flex; align-items:baseline; gap:3px; }
+.hero-cal-unit { font-size:11px; font-weight:400; color:var(--muted); }
+
 </style>
 </head>
 <body>
@@ -686,48 +711,61 @@ input[type="file"] { display:none; }
   </div>
 
   <!-- SCORE + MACROS -->
-  <div class="card score-macro">
-    <!-- Calories (gauche) -->
-    <div class="cal-col">
-      <div class="cal-lbl">Calories</div>
-      <div class="cal-val" id="vCal">–</div>
-      <div class="cal-unit">kcal</div>
-      <div class="cal-bar"><div class="cal-fill" id="bCal" style="width:0%;"></div></div>
-      <div class="cal-obj" id="oCal">/ – kcal</div>
-    </div>
-    <!-- Score ring (centre) -->
-    <div class="score-col">
-      <div class="ring-zone" id="ringZone" onclick="switchTab('prog')">
-        <svg viewBox="0 0 160 160" width="160" height="160">
-          <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(174,174,192,0.3)" stroke-width="10"/>
-          <circle cx="80" cy="80" r="68" fill="none" stroke="#34c759" stroke-width="10" stroke-linecap="round"
-                  id="ringArc" stroke-dasharray="0 427" style="transition:stroke-dasharray 1.4s ease;"/>
-        </svg>
-        <div class="ring-center">
-          <div class="ring-pct"><span id="scorePct">–</span><span class="ring-pct-s">%</span></div>
-          <div class="ring-lbl">Score nutri.</div>
-          <div class="ring-badge" id="ringBadge" style="background:#e8f9ee;color:#34c759;">–</div>
-        </div>
+  <div class="hero-score card">
+
+    <!-- Grand anneau centré -->
+    <div class="hero-ring-wrap" id="ringZone" onclick="switchTab('prog')">
+      <svg viewBox="0 0 200 200" width="200" height="200">
+        <!-- Track neumorphique -->
+        <circle cx="100" cy="100" r="84" fill="none" stroke="rgba(174,174,192,0.22)" stroke-width="10"/>
+        <!-- Glow arc -->
+        <circle cx="100" cy="100" r="84" fill="none" stroke="#34c759" stroke-width="10"
+                stroke-linecap="round" id="ringArc" stroke-dasharray="0 528"
+                style="transition:stroke-dasharray 1.4s ease;filter:drop-shadow(0 0 6px rgba(52,199,89,0.35));"/>
+      </svg>
+      <div class="ring-center hero-ring-center">
+        <div class="hero-score-pct"><span id="scorePct">–</span><span class="hero-score-pct-s">%</span></div>
+        <div class="ring-lbl hero-score-lbl">Score nutritionnel</div>
+        <div class="hero-score-badge ring-badge" id="ringBadge" style="background:#e8f9ee;color:#34c759;">–</div>
       </div>
     </div>
-    <!-- Macros (droite) -->
-    <div class="macros-col">
-      <div class="macro-row" onclick="openMacroPopup('prot')">
-        <div class="macro-top"><div class="macro-icon-name"><span class="m-emoji">🥩</span><span class="m-name">Protéines</span></div><span class="m-val"><span id="vProt">–</span><span class="m-unit">g</span></span></div>
-        <div class="m-obj" id="oProt">Objectif – g</div>
-        <div class="m-track"><div class="m-fill" id="bProt" style="width:0%;background:#ff6b35;"></div></div>
+
+    <!-- 3 macros en colonnes inset -->
+    <div class="hero-macros-row">
+      <div class="hero-macro-col" onclick="openMacroPopup('prot')" style="cursor:pointer;">
+        <div class="hero-macro-em">🥩</div>
+        <div class="hero-macro-val"><span id="vProt">–</span></div>
+        <div class="hero-macro-unit">g</div>
+        <div class="hero-macro-lbl">Protéines</div>
+        <div class="hero-macro-bar"><div class="hero-macro-fill" id="bProt" style="width:0%;background:#ff6b35;"></div></div>
+        <div style="font-size:9px;color:#c0c0cc;margin-top:2px;" id="oProt">Obj. –g</div>
       </div>
-      <div class="macro-row" onclick="openMacroPopup('gluc')">
-        <div class="macro-top"><div class="macro-icon-name"><span class="m-emoji">🌾</span><span class="m-name">Glucides</span></div><span class="m-val"><span id="vGluc">–</span><span class="m-unit">g</span></span></div>
-        <div class="m-obj" id="oGluc">Objectif – g</div>
-        <div class="m-track"><div class="m-fill" id="bGluc" style="width:0%;background:#ff9500;"></div></div>
+      <div class="hero-macro-col" onclick="openMacroPopup('gluc')" style="cursor:pointer;">
+        <div class="hero-macro-em">🌾</div>
+        <div class="hero-macro-val"><span id="vGluc">–</span></div>
+        <div class="hero-macro-unit">g</div>
+        <div class="hero-macro-lbl">Glucides</div>
+        <div class="hero-macro-bar"><div class="hero-macro-fill" id="bGluc" style="width:0%;background:#ff9500;"></div></div>
+        <div style="font-size:9px;color:#c0c0cc;margin-top:2px;" id="oGluc">Obj. –g</div>
       </div>
-      <div class="macro-row" onclick="openMacroPopup('lip')">
-        <div class="macro-top"><div class="macro-icon-name"><span class="m-emoji">🥑</span><span class="m-name">Lipides</span></div><span class="m-val"><span id="vLip">–</span><span class="m-unit">g</span></span></div>
-        <div class="m-obj" id="oLip">Objectif – g</div>
-        <div class="m-track"><div class="m-fill" id="bLip" style="width:0%;background:#7b5ea7;"></div></div>
+      <div class="hero-macro-col" onclick="openMacroPopup('lip')" style="cursor:pointer;">
+        <div class="hero-macro-em">🥑</div>
+        <div class="hero-macro-val"><span id="vLip">–</span></div>
+        <div class="hero-macro-unit">g</div>
+        <div class="hero-macro-lbl">Lipides</div>
+        <div class="hero-macro-bar"><div class="hero-macro-fill" id="bLip" style="width:0%;background:#7b5ea7;"></div></div>
+        <div style="font-size:9px;color:#c0c0cc;margin-top:2px;" id="oLip">Obj. –g</div>
       </div>
     </div>
+
+    <!-- Calories row -->
+    <div class="hero-cal-row">
+      <div class="hero-cal-left">⚡ Calories aujourd'hui</div>
+      <div class="hero-cal-val">
+        <span id="vCal">–</span><span class="hero-cal-unit">/ <span id="oCal">–</span> kcal</span>
+      </div>
+    </div>
+
   </div>
 
   <!-- OFFRES / NUTRI -->
@@ -1308,21 +1346,25 @@ function afficherMacros() {
   var lp=macObj.l>0?Math.min(100,Math.round((macAuj.l/macObj.l)*100)):0;
   var gp=macObj.g>0?Math.min(100,Math.round((macAuj.g/macObj.g)*100)):0;
   var cp=macObj.c>0?Math.min(100,Math.round((macAuj.c/macObj.c)*100)):0;
-  setText('vProt', macAuj.p||macObj.p||'–'); setText('oProt','Objectif '+(macObj.p||'–')+' g');
-  setText('vGluc', macAuj.g||macObj.g||'–'); setText('oGluc','Objectif '+(macObj.g||'–')+' g');
-  setText('vLip',  macAuj.l||macObj.l||'–'); setText('oLip', 'Objectif '+(macObj.l||'–')+' g');
-  setText('vCal',  macAuj.c||macObj.c||'–'); setText('oCal', '/ '+(macObj.c||'–')+' kcal');
+  setText('vProt', macAuj.p||macObj.p||'–');
+  setText('vGluc', macAuj.g||macObj.g||'–');
+  setText('vLip',  macAuj.l||macObj.l||'–');
+  setText('vCal',  macAuj.c||macObj.c||'–');
+  setText('oCal',  macObj.c||'–');
+  // Objectif labels
+  var op = document.getElementById('oProt'); if(op) op.textContent='Obj. '+(macObj.p||'–')+'g';
+  var og = document.getElementById('oGluc'); if(og) og.textContent='Obj. '+(macObj.g||'–')+'g';
+  var ol = document.getElementById('oLip');  if(ol) ol.textContent='Obj. '+(macObj.l||'–')+'g';
   setTimeout(function(){
-    document.getElementById('bProt').style.width=pp+'%';
-    document.getElementById('bGluc').style.width=gp+'%';
-    document.getElementById('bLip').style.width=lp+'%';
-    var bc=document.getElementById('bCal'); if(bc) bc.style.width=cp+'%';
+    var bp=document.getElementById('bProt'); if(bp)bp.style.width=pp+'%';
+    var bg=document.getElementById('bGluc'); if(bg)bg.style.width=gp+'%';
+    var bl=document.getElementById('bLip');  if(bl)bl.style.width=lp+'%';
   },100);
 }
 
 // ═══ SCORE ═══
 function setScore(pct) {
-  var circ=2*Math.PI*68, dash=(pct/100)*circ;
+  var circ=2*Math.PI*84, dash=(pct/100)*circ;
   var col=pct>=70?'#34c759':pct>=40?'#ff9500':'#ff3b30';
   var arc=document.getElementById('ringArc');
   arc.style.strokeDasharray=dash+' '+circ; arc.style.stroke=col;
@@ -3504,6 +3546,7 @@ async function ouvrirListeCourses() {
         return '<div class="lc-item" style="border-left:3px solid #34c759;"><span class="lc-item-em">'+item.emoji+'</span><div style="flex:1;"><div class="lc-item-name">'+item.nom+'</div><div style="font-size:11px;color:var(--muted);">'+item.benefice+'</div></div><span class="lc-item-qty">'+item.quantite+'</span></div>';
       }).join('');
     }
+    window._listeCourseRawData = data;
     _listeCourseCache = html;
     document.getElementById('listeCoursesCont').innerHTML = html || '<div style="color:var(--muted);font-size:13px;padding:16px;">Aucune donnee disponible.</div>';
   } catch(e) {
@@ -3544,6 +3587,7 @@ async function ouvrirRecettes() {
         +'<div class="recette-etapes">'+etapesHtml+'</div>'
         +'</div>';
     }).join('');
+    window._recettesRawData = (data.recettes || []);
     _recettesCache = html;
     document.getElementById('recettesCont').innerHTML = html || '<div style="color:var(--muted);font-size:13px;">Aucune recette generee.</div>';
   } catch(e) {
@@ -3551,6 +3595,156 @@ async function ouvrirRecettes() {
   }
 }
 
+
+// ══ ENVOYER PROFIL PAR MAIL ══
+async function envoyerProfilParMail() {
+  var email = profilInfoCache && profilInfoCache.email;
+  if (!email) {
+    showToast('Email non configuré — complétez l\'onboarding', 'err');
+    return;
+  }
+  showToast('Envoi en cours...', 'ok');
+  var cache = window._conseilsCache || {};
+  var ob = profilInfoCache || {};
+
+  // Build email payload
+  var macrosExpl = [
+    {emoji:'🥩', nom:'Protéines', val:macObj.p, unit:'g/jour', explication:'Essentielles pour la construction et la réparation musculaire. Chaque gramme apporte 4 kcal.'},
+    {emoji:'🌾', nom:'Glucides',  val:macObj.g, unit:'g/jour', explication:'Source d\'énergie principale. Privilégiez les glucides complexes (riz complet, avoine, patate douce).'},
+    {emoji:'🥑', nom:'Lipides',   val:macObj.l, unit:'g/jour', explication:'Indispensables aux hormones et à l\'absorption des vitamines. Favorisez les bonnes graisses (avocat, noix, huile d\'olive).'},
+    {emoji:'⚡', nom:'Calories',  val:macObj.c, unit:'kcal/jour', explication:'Votre dépense énergétique totale estimée (TDEE). Basée sur votre métabolisme et votre niveau d\'activité.'},
+  ];
+
+  var conseils = [
+    {titre:'Protéines', texte:cache.conseil_prot || 'Non disponible'},
+    {titre:'Glucides',  texte:cache.conseil_gluc || 'Non disponible'},
+    {titre:'Lipides',   texte:cache.conseil_lip  || 'Non disponible'},
+    {titre:'À améliorer', texte:cache.conseil_amelioration || 'Non disponible'},
+    {titre:'Points forts', texte:cache.conseil_points_forts || 'Non disponible'},
+  ];
+
+  try {
+    var res = await fetch('https://natty-suivi.vercel.app/api/send-email', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        to_email: email,
+        type: 'profil_complet',
+        prenom: ob.prenom || '',
+        macros: {proteines:macObj.p, glucides:macObj.g, lipides:macObj.l, calories:macObj.c},
+        macros_explication: macrosExpl,
+        conseils: conseils,
+        profil_syntese: {
+          age: ob.age, sexe: ob.sexe, poids: ob.poids, taille: ob.taille,
+          activite: ob.activite, objectif: ob.objectif_type, tdee: ob.tdee
+        }
+      })
+    });
+    if (res.ok) showToast('Email envoyé ! Vérifiez votre boîte.', 'ok');
+    else showToast('Erreur d\'envoi', 'err');
+  } catch(e) { showToast('Erreur d\'envoi', 'err'); }
+}
+
+// ══ ENVOYER LISTE DE COURSES + RECETTES PAR MAIL ══
+async function envoyerListeCoursesParMail() {
+  var email = profilInfoCache && profilInfoCache.email;
+  if (!email) { showToast('Email non configuré', 'err'); return; }
+
+  // S'assurer que les données sont générées
+  if (!_listeCourseCache || !_recettesCache) {
+    showToast('Génération en cours, patientez...', 'ok');
+    if (!_listeCourseCache) await ouvrirListeCourses();
+    if (!_recettesCache)    await ouvrirRecettes();
+    // Close overlays silently
+    document.getElementById('ovListeCourses').classList.remove('active');
+    document.getElementById('ovRecettes').classList.remove('active');
+  }
+
+  showToast('Envoi en cours...', 'ok');
+  try {
+    var res = await fetch('https://natty-suivi.vercel.app/api/send-email', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        to_email: email,
+        type: 'courses_et_recettes',
+        prenom: (profilInfoCache && profilInfoCache.prenom) || '',
+        liste_courses_html: _listeCourseCache || '',
+        recettes_html: _recettesCache || '',
+      })
+    });
+    if (res.ok) showToast('Email envoyé ! Vérifiez votre boîte.', 'ok');
+    else showToast('Erreur d\'envoi', 'err');
+  } catch(e) { showToast('Erreur d\'envoi', 'err'); }
+}
+
+
+async function envoyerListeCoursesParMail() {
+  var email = profilInfoCache && profilInfoCache.email;
+  if (!email) { showToast('Email non configuré — complétez l'onboarding', 'err'); return; }
+
+  // Generate data if not yet done
+  if (!window._listeCourseRawData || !window._recettesRawData) {
+    showToast('Génération des données...', 'ok');
+    await genererDonneesEmail();
+    document.getElementById('ovListeCourses').classList.remove('active');
+    document.getElementById('ovRecettes').classList.remove('active');
+  }
+
+  showToast('Envoi en cours...', 'ok');
+  try {
+    var res = await fetch('https://natty-suivi.vercel.app/api/send-email', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        to_email: email,
+        type: 'courses_et_recettes',
+        prenom: (profilInfoCache && profilInfoCache.prenom) || '',
+        liste_courses: window._listeCourseRawData || {},
+        recettes: window._recettesRawData || [],
+      })
+    });
+    if (res.ok) showToast('Email envoyé ! Vérifiez votre boîte 📬', 'ok');
+    else showToast('Erreur d'envoi', 'err');
+  } catch(e) { showToast('Erreur d'envoi', 'err'); }
+}
+
+// Generate raw data for email (separate from HTML rendering)
+async function genererDonneesEmail() {
+  var cache = window._conseilsCache;
+  if (!cache || !cache.conseil_prot) return;
+
+  if (!window._listeCourseRawData) {
+    var prompt = 'Genere une liste de courses pour ce profil nutritionnel.'
+      + '
+Conseils: prot=' + (cache.conseil_prot||'') + ' amelioration=' + (cache.conseil_amelioration||'')
+      + '
+Objectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
+      + '
+Reponds UNIQUEMENT en JSON sans backticks: {"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]}';
+    try {
+      var r = await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:700})});
+      var d = await r.json();
+      window._listeCourseRawData = JSON.parse((d.text||'{}').replace(/```[a-z]*|```/g,'').trim());
+    } catch(e) {}
+  }
+
+  if (!window._recettesRawData) {
+    var prompt2 = 'Genere 3 recettes adaptees a ce profil.'
+      + '
+Objectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
+      + '
+Conseils: ' + (cache.conseil_prot||'') + ' ' + (cache.conseil_amelioration||'')
+      + '
+Reponds UNIQUEMENT en JSON sans backticks: {"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","...","..."]}]}';
+    try {
+      var r2 = await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt2,max_tokens:1400})});
+      var d2 = await r2.json();
+      var parsed = JSON.parse((d2.text||'{}').replace(/```[a-z]*|```/g,'').trim());
+      window._recettesRawData = parsed.recettes || [];
+    } catch(e) {}
+  }
+}
 </script>
 
 <!-- ══ PROFIL OVERLAY ══ -->
@@ -3663,7 +3857,30 @@ async function ouvrirRecettes() {
 
     <!-- Conseils IA — affichés permanentement, rechargés 1x/semaine -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div class="profil-action-btns" style="margin-bottom:14px;"><button class="profil-action-btn" onclick="ouvrirListeCourses()"><span class="profil-action-btn-em">🛒</span><span>Liste de courses</span></button><button class="profil-action-btn" onclick="ouvrirRecettes()"><span class="profil-action-btn-em">🍳</span><span>Mes recettes</span></button></div>
+      <div class="profil-action-btns" style="margin-bottom:6px;">
+      <button class="profil-action-btn" onclick="ouvrirListeCourses()">
+        <span class="profil-action-btn-em">🛒</span>
+        <span>Liste de courses</span>
+        <span style="font-size:10px;color:var(--muted);">Cette semaine</span>
+      </button>
+      <button class="profil-action-btn" onclick="ouvrirRecettes()">
+        <span class="profil-action-btn-em">🍳</span>
+        <span>Mes recettes</span>
+        <span style="font-size:10px;color:var(--muted);">Avec procédés</span>
+      </button>
+    </div>
+    <div class="profil-action-btns" style="margin-bottom:14px;">
+      <button class="profil-action-btn" onclick="envoyerProfilParMail()">
+        <span class="profil-action-btn-em">📧</span>
+        <span>Mon profil</span>
+        <span style="font-size:10px;color:var(--muted);">Par email</span>
+      </button>
+      <button class="profil-action-btn" onclick="envoyerListeCoursesParMail()">
+        <span class="profil-action-btn-em">📬</span>
+        <span>Courses + recettes</span>
+        <span style="font-size:10px;color:var(--muted);">Par email</span>
+      </button>
+    </div>
     <div class="profil-section-title" style="margin:0;">Conseils personnalisés</div>
       <button onclick="conseilsForceRefresh()" id="conseilsRefreshBtn" style="font-size:12px;font-weight:600;color:var(--muted);background:var(--bg);border:none;border-radius:10px;padding:6px 10px;cursor:pointer;box-shadow:var(--sm);">↻</button>
     </div>
