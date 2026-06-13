@@ -2105,8 +2105,9 @@ function afficherOnboardingCTA(){
   document.body.style.background = '#f0f0f3';
   document.body.style.backgroundImage = 'radial-gradient(circle at 1px 1px, rgba(180,180,200,0.18) 1px, transparent 0)';
   document.body.style.backgroundSize = '26px 26px';
-  document.querySelector('.score-macro').style.display='none';
-  document.querySelector('.pts-grid').style.display='none';
+  var _sm = document.querySelector('.score-macro') || document.querySelector('.hero-score') || document.querySelector('.score-zone');
+  if (_sm) _sm.style.display='none';
+  (document.querySelector('.pts-grid')||{style:{}}).style.display='none';
   document.getElementById('rdvPlusBtn').closest('.rdv-mod').style.display='none';
   var page=document.getElementById('pageSuivi');
   var cta=document.createElement('div');cta.className='ob-card';
