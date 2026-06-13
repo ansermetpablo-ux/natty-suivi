@@ -71,11 +71,27 @@ JSON sans backticks: {"conseil_prot":"...","conseil_gluc":"...","conseil_lip":".
     const claudeRes = await fetch(CLAUDE_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, max_tokens: 500 })
+      body: JSON.stringify({ prompt, max_tokens: 800 })
     });
     const claudeData = await claudeRes.json();
-    const raw = (claudeData.text || '{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim();
-    const conseils = JSON.parse(raw);
+    let raw = (claudeData.text || '{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim();
+    // Si JSON tronqué, fermer les strings/objets ouverts
+    if (!raw.endsWith('}')) {
+      const lastComma = raw.lastIndexOf(',"');
+      if (lastComma > 0) raw = raw.substring(0, lastComma);
+      raw = raw + '}';
+    }
+    let conseils;
+    try { conseils = JSON.parse(raw); }
+    catch(e) {
+      // Fallback: extraire les valeurs avec regex
+      conseils = {};
+      const keys = ['conseil_prot','conseil_gluc','conseil_lip','conseil_cal','conseil_amelioration','conseil_points_forts'];
+      for (const k of keys) {
+        const m = raw.match(new RegExp('"' + k + '":\s*"([^"]*)"'));
+        if (m) conseils[k] = m[1];
+      }
+    }
 
     // Sauvegarder — tester d'abord avec UPDATE, puis INSERT si pas de ligne
     const updateRes = await fetch(
