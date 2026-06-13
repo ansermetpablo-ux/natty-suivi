@@ -1369,43 +1369,31 @@ async function fetchMacroSuggestions(type, restant, cfg) {
 
 // ═══ POPUP ANALYSE ═══
 function openAnalyseOverlay(type) {
-  var isForts=type==='forts';
-  setText('analyseTitle',isForts?'Points forts':'Points à améliorer');
-  setText('analyseSub',isForts?'Ce que vous faites bien.':'Axes d\'amélioration identifiés.');
-  document.getElementById('analyseCont').innerHTML='<div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Analyse...</div>';
+  var isForts = type === 'forts';
+  setText('analyseTitle', isForts ? 'Points forts' : 'Points à améliorer');
+  setText('analyseSub', isForts ? 'Ce que vous faites bien cette semaine.' : 'Ce que vous pouvez améliorer cette semaine.');
   document.getElementById('ovAnalyse').classList.add('active');
-  fetchAnalyseIA(type);
+
+  var cont = document.getElementById('analyseCont');
+  // Afficher le conseil stocké (généré le lundi) — aucun appel Claude ici
+  if (window._conseilsCache) {
+    var texte = isForts ? window._conseilsCache.conseil_points_forts : window._conseilsCache.conseil_amelioration;
+    if (texte) {
+      cont.innerHTML = '<div class="profil-conseil-card" style="border-left:3px solid ' + (isForts ? '#007aff' : '#ff3b30') + ';padding-left:13px;">'
+        + '<div class="pcc-desc">' + texte + '</div>'
+        + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px;">Conseil de la semaine · mis à jour chaque lundi</div>';
+      return;
+    }
+  }
+  // Pas encore de conseils cette semaine
+  cont.innerHTML = '<div style="text-align:center;padding:24px 16px;">'
+    + '<div style="font-size:32px;margin-bottom:12px;">' + (isForts ? '⭐' : '📈') + '</div>'
+    + '<div style="font-size:14px;font-weight:700;color:var(--black);margin-bottom:8px;">Conseils disponibles chaque lundi</div>'
+    + '<div style="font-size:13px;color:var(--muted);line-height:1.5;">Vos conseils personnalisés sont générés chaque lundi matin en fonction de vos repas de la semaine précédente.</div>'
+    + '</div>';
 }
 
-async function fetchAnalyseIA(type) {
-  var mealsDesc=allMeals.slice(0,10).map(function(m){
-    var mac=calcMac(m.meal_ingredients);
-    return m.name+': prot='+mac.p+'g lip='+mac.l+'g gluc='+mac.g+'g cal='+mac.c+'kcal';
-  }).join(' | ');
-  var isForts=type==='forts';
-  var prompt='Analyse nutritionnelle. Objectifs: prot='+macObj.p+'g, lip='+macObj.l+'g, gluc='+macObj.g+'g, cal='+macObj.c+'kcal.'
-    +' Repas enregistres: '+(mealsDesc||'aucun')+'.'
-    +(isForts?' Identifie 3 POINTS FORTS concrets avec valeurs chiffrees.'
-             :' Identifie 3 POINTS A AMELIORER avec impact et conseil pratique precis.')
-    +' Reponds UNIQUEMENT en JSON sans backticks: [{"titre":"...","valeur":"...","explication":"...","conseil":"..."}]';
-  try {
-    var res=await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:700})});
-    var d=await res.json();
-    if(!res.ok){console.error('Claude analyse error:',d);throw new Error(d.error||'Claude error '+res.status);}
-    var text=d.text||'[]';
-    var pts=JSON.parse(text.replace(/```[a-z]*|```/g,'').trim());
-    var isForts2=type==='forts';
-    var html=pts.map(function(p){
-      return '<div class="ap-card"><div class="ap-hdr"><span class="ap-em">'+(isForts2?'✅':'⚠️')+'</span><span class="ap-name">'+p.titre+'</span><span class="ap-val '+(isForts2?'av-g':'av-o')+'">'+p.valeur+'</span></div><div class="ap-desc">'+p.explication+'</div><div class="ap-tip '+(isForts2?'at-g':'at-o')+'">→ '+p.conseil+'</div></div>';
-    }).join('');
-    if (!isForts2&&allMeals.length>0) {
-      html+='<div style="font-size:13px;font-weight:700;margin:14px 0 8px;">Ingrédients à remplacer / incorporer</div><div class="ing-chips"><span class="ic-rem">↗ Riz blanc → Quinoa</span><span class="ic-rem">↗ Pain blanc → Complet</span><span class="ic-add">+ Légumineuses</span><span class="ic-add">+ Poissons gras</span><span class="ic-add">+ Légumes verts</span></div>';
-    }
-    document.getElementById('analyseCont').innerHTML=html||'<div style="color:#c7c7cc;font-size:13px;">Ajoutez des repas pour une analyse.</div>';
-  } catch(e) {
-    document.getElementById('analyseCont').innerHTML='<div class="ap-card"><div class="ap-name">Analyse indisponible</div><div class="ap-desc">Ajoutez des repas pour obtenir une analyse IA personnalisée.</div></div>';
-  }
-}
 
 // ═══ PROGRESSION ═══
 function switchTab(t) {
@@ -2769,6 +2757,7 @@ document.addEventListener('click', function(e) {
   qaTrigger();
 }, true);
 setTimeout(function(){ qaTrigger(); }, 3000);
+setTimeout(function(){ conseilsPopupCheck(); }, 4000);
 
 
 
@@ -2914,6 +2903,7 @@ function getLundiSemaine() {
 
 // Render les conseils depuis les colonnes structurées
 function conseilsRenderColonnes(row) {
+  window._conseilsCache = row; // Cache global pour openAnalyseOverlay
   var cont = document.getElementById('profilConseilsCont');
   var footer = document.getElementById('conseilsDateFooter');
   if (!cont) return;
@@ -3179,6 +3169,59 @@ document.addEventListener('DOMContentLoaded', function() {
     else closeOnbPopup();
   });
 });
+
+
+// ═══════════════════════════════════════════════════════════════
+// POPUP CONSEILS SEMAINE — apparaît chaque lundi
+// ═══════════════════════════════════════════════════════════════
+function conseilsPopupCheck() {
+  if (!USER_ID) return;
+  var lundi = getLundiSemaine();
+  var clePop = 'natty_conseils_popup_' + USER_ID + '_' + lundi;
+  // Déjà vu ce lundi → ne pas afficher
+  if (localStorage.getItem(clePop)) return;
+  // Vérifier si des conseils existent pour ce lundi
+  sbFetch('profil_conseils?user_id=eq.' + USER_ID
+    + '&select=conseil_amelioration,conseil_points_forts,conseil_prot,semaine&limit=1')
+    .then(function(data) {
+      if (!data || !data.length) return;
+      var row = data[0];
+      if (row.semaine !== lundi) return; // Pas encore générés ce lundi
+      // Afficher le popup
+      conseilsPopupAfficher(row);
+      localStorage.setItem(clePop, '1');
+    }).catch(function(){});
+}
+
+function conseilsPopupAfficher(row) {
+  window._conseilsCache = row;
+  var preview = document.getElementById('conseilsPopupPreview');
+  if (preview) {
+    var items = [
+      { emoji:'📈', texte: row.conseil_amelioration },
+      { emoji:'⭐', texte: row.conseil_points_forts },
+      { emoji:'🥩', texte: row.conseil_prot },
+    ].filter(function(x){ return x.texte; }).slice(0, 2);
+    preview.innerHTML = items.map(function(x) {
+      return '<div style="background:rgba(174,174,192,0.1);border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;">'
+        + '<span style="font-size:16px;flex-shrink:0;">' + x.emoji + '</span>'
+        + '<span style="font-size:12px;color:var(--text);line-height:1.5;">' + x.texte.substring(0, 100) + (x.texte.length > 100 ? '…' : '') + '</span>'
+        + '</div>';
+    }).join('');
+  }
+  var popup = document.getElementById('conseilsPopup');
+  if (popup) { popup.style.display = 'flex'; }
+}
+
+function conseilsPopupFermer() {
+  var popup = document.getElementById('conseilsPopup');
+  if (popup) popup.style.display = 'none';
+}
+
+function conseilsPopupVoir() {
+  conseilsPopupFermer();
+  openProfilOverlay();
+}
 
 </script>
   <script>
@@ -3557,6 +3600,19 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
       <button onclick="closeOverlay('ovProchainRepas')" style="width:100%;padding:14px;background:var(--bg);border:none;border-radius:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;box-shadow:var(--so);">Fermer</button>
     </div>
+  </div>
+</div>
+
+<!-- ══ POPUP CONSEILS SEMAINE ══ -->
+<div id="conseilsPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;align-items:flex-end;justify-content:center;">
+  <div style="background:var(--bg);border-radius:28px 28px 0 0;padding:28px 22px 40px;max-width:480px;width:100%;box-shadow:0 -8px 40px rgba(0,0,0,0.18);">
+    <div style="width:36px;height:4px;background:rgba(174,174,192,0.4);border-radius:2px;margin:0 auto 20px;"></div>
+    <div style="font-size:32px;text-align:center;margin-bottom:12px;">✨</div>
+    <div style="font-size:20px;font-weight:800;color:var(--black);text-align:center;margin-bottom:8px;">Vos conseils de la semaine</div>
+    <div style="font-size:14px;color:var(--muted);text-align:center;line-height:1.6;margin-bottom:24px;">Votre nutritionniste IA a analysé vos repas et préparé vos conseils personnalisés pour cette semaine.</div>
+    <div id="conseilsPopupPreview" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;"></div>
+    <button onclick="conseilsPopupVoir()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">Voir mes conseils →</button>
+    <button onclick="conseilsPopupFermer()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;">Plus tard</button>
   </div>
 </div>
 </body>
