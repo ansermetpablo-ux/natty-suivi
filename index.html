@@ -488,6 +488,32 @@ input[type="file"] { display:none; }
 .onb-next-btn { background:var(--black); color:#fff; border:none; border-radius:20px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; box-shadow:4px 4px 12px rgba(26,26,46,0.35); }
 .onb-bar { height:3px; background:var(--bg); border-radius:2px; box-shadow:var(--si); overflow:hidden; margin-bottom:2px; }
 .onb-bar-fill { height:100%; border-radius:2px; transition:width 1.2s ease; }
+
+/* ── PROCHAINS REPAS ── */
+.pr-slot { flex:1; background:var(--bg); border-radius:14px; padding:12px 8px; text-align:center; cursor:pointer; box-shadow:var(--so); border:2px solid transparent; transition:all .15s; }
+.pr-slot.on { box-shadow:var(--si); border-color:var(--green); }
+.pr-formule { background:var(--bg); border-radius:16px; padding:16px 12px; text-align:center; cursor:pointer; box-shadow:var(--so); border:2px solid transparent; transition:all .15s; }
+.pr-formule.on { box-shadow:var(--si); border-color:var(--black); }
+.pr-filter { padding:7px 14px; border-radius:99px; background:var(--bg); box-shadow:var(--so); font-family:'Inter',sans-serif; font-size:12px; font-weight:600; cursor:pointer; color:var(--muted); border:none; white-space:nowrap; transition:all .15s; }
+.pr-filter.active { background:var(--black); color:#fff; box-shadow:2px 2px 6px rgba(26,26,46,0.3); }
+.pr-jour { display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px; background:var(--bg); border-radius:12px; cursor:pointer; box-shadow:var(--so); border:2px solid transparent; transition:all .15s; }
+.pr-jour.on { box-shadow:var(--si); border-color:var(--green); }
+.pr-jour-name { font-size:9px; font-weight:600; color:var(--muted); text-transform:uppercase; }
+.pr-jour-num { font-size:15px; font-weight:800; color:var(--black); line-height:1; }
+.pr-jour-mois { font-size:8px; color:var(--muted); }
+.plat-menu-card { background:var(--bg); border-radius:18px; padding:14px; box-shadow:var(--so); display:flex; gap:12px; align-items:center; transition:all .15s; }
+.plat-menu-card.selected { box-shadow:var(--si); border:2px solid var(--green); }
+.plat-menu-photo { width:70px; height:70px; border-radius:14px; object-fit:cover; flex-shrink:0; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:28px; box-shadow:var(--sm); overflow:hidden; }
+.plat-menu-photo img { width:100%; height:100%; object-fit:cover; border-radius:14px; }
+.plat-menu-info { flex:1; min-width:0; }
+.plat-menu-name { font-size:14px; font-weight:700; color:var(--black); margin-bottom:4px; }
+.plat-menu-desc { font-size:11px; color:var(--muted); margin-bottom:6px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.plat-menu-macros { display:flex; gap:6px; flex-wrap:wrap; }
+.plat-mac-chip { font-size:10px; font-weight:600; padding:3px 8px; border-radius:99px; background:var(--bg); box-shadow:var(--sm); color:var(--black); }
+.plat-menu-check { width:28px; height:28px; border-radius:50%; background:var(--bg); box-shadow:var(--so); border:none; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
+.plat-menu-card.selected .plat-menu-check { background:var(--green); box-shadow:none; }
+.pr-sel-item { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text); }
+.pr-sel-em { font-size:16px; }
 </style>
 </head>
 <body>
@@ -593,12 +619,12 @@ input[type="file"] { display:none; }
 
   <button onclick="openRepasOverlay()" style="width:100%;padding:16px;background:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.06);">+ Ajouter un repas</button>
 
-  <!-- CHALLENGES BANNER -->
-  <div onclick="goToChallenges()" style="background:linear-gradient(135deg,#1c1c1e,#2d2d4e);border-radius:20px;padding:18px 20px;display:flex;align-items:center;gap:14px;cursor:pointer;">
-    <div style="font-size:36px;">🏆</div>
+  <!-- PROCHAINS REPAS BANNER -->
+  <div onclick="openProchainRepas()" style="background:linear-gradient(135deg,#1a2e1a,#1e3d2f);border-radius:20px;padding:16px 20px;display:flex;align-items:center;gap:14px;cursor:pointer;box-shadow:4px 4px 14px rgba(26,46,26,0.35);">
+    <div style="font-size:32px;">🍱</div>
     <div style="flex:1;">
-      <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:3px;">Challenges</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.55);">Défis personnels · Duo · Entreprise</div>
+      <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:3px;">Mes prochains repas</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.55);" id="prBannerSub">Choisissez votre date de livraison</div>
     </div>
     <div style="font-size:20px;color:rgba(255,255,255,0.35);">›</div>
   </div>
@@ -972,7 +998,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputGalManu').addEventListener('change', function(){ previewPhoto(this,'prevManu'); photoManuFile=this.files[0]; });
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
-  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
+  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovProchainRepas'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
   if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); }); } else afficherOnboardingCTA();
 
   // Écouter le postMessage de Wix quand l'utilisateur se connecte
@@ -1867,6 +1893,254 @@ function afficherOnboardingCTA(){
 
 // ═══ HELPERS ═══
 
+
+// ═══════════════════════════════════════════════════════════
+// PROCHAINS REPAS — sélection plats + date livraison
+// ═══════════════════════════════════════════════════════════
+var prState = {
+  jourDate: null,      // Date JS sélectionnée
+  jourLabel: '',
+  slot: null,          // 'matin' | 'midi' | 'soir'
+  formule: null,       // 3 | 4
+  selection: [],       // [{id, nom, emoji, macros}]
+  filterCat: 'tous',
+  allPlats: []         // plats du menu depuis Supabase ou fallback
+};
+
+// Plats de démonstration si table vide
+var PLATS_DEMO = [
+  {id:'d1', nom:'Poulet rôti quinoa légumes', emoji:'🍗', categorie:'proteines', description:'Filet de poulet, quinoa, brocoli cuit vapeur', macros:{prot:42,gluc:38,lip:12,cal:430}},
+  {id:'d2', nom:'Saumon teriyaki riz basmati', emoji:'🐟', categorie:'proteines', description:'Pavé de saumon, riz basmati, edamame, sauce teriyaki', macros:{prot:38,gluc:45,lip:16,cal:480}},
+  {id:'d3', nom:'Bowl betterave feta noix', emoji:'🥗', categorie:'legumes', description:'Betterave, feta, noix, roquette, vinaigrette au miel', macros:{prot:18,gluc:28,lip:22,cal:380}},
+  {id:'d4', nom:'Boeuf haricots verts pommes de terre', emoji:'🥩', categorie:'equilibre', description:'Emincé de bœuf, haricots verts, pommes de terre rôties', macros:{prot:36,gluc:42,lip:14,cal:440}},
+  {id:'d5', nom:'Curry lentilles chou-fleur', emoji:'🍛', categorie:'legumes', description:'Lentilles corail, chou-fleur rôti, crème de coco, épices douces', macros:{prot:22,gluc:48,lip:10,cal:370}},
+  {id:'d6', nom:'Omelette épinards chèvre', emoji:'🍳', categorie:'low_carb', description:'Omelette aux épinards, fromage de chèvre, tomates cerises', macros:{prot:28,gluc:6,lip:24,cal:350}},
+  {id:'d7', nom:'Thon avocat riz complet', emoji:'🥑', categorie:'equilibre', description:'Thon, avocat, riz complet, concombre, sauce soja légère', macros:{prot:34,gluc:40,lip:18,cal:460}},
+  {id:'d8', nom:'Poulet tikka masala légumes', emoji:'🍗', categorie:'equilibre', description:'Poulet mariné aux épices, sauce tomate crémeuse, riz', macros:{prot:40,gluc:52,lip:14,cal:500}},
+];
+
+function openProchainRepas() {
+  prState = { jourDate:null, jourLabel:'', slot:null, formule:null, selection:[], filterCat:'tous', allPlats:[] };
+  document.getElementById('prStep1').style.display = 'block';
+  document.getElementById('prStep2').style.display = 'none';
+  document.getElementById('prStep3').style.display = 'none';
+  prBuildJoursGrid();
+  document.getElementById('ovProchainRepas').classList.add('active');
+  prLoadPlats();
+}
+
+function prBuildJoursGrid() {
+  var grid = document.getElementById('prJoursGrid');
+  var JOURS = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
+  var MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+  var html = '';
+  // Afficher les 7 prochains jours à partir de demain
+  for (var i = 1; i <= 7; i++) {
+    var d = new Date();
+    d.setDate(d.getDate() + i);
+    var dayOfWeek = d.getDay(); // 0=dim
+    var jIdx = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    var ds = d.toISOString().split('T')[0];
+    html += '<div class="pr-jour" data-date="' + ds + '" data-label="' + JOURS[jIdx] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + '" onclick="prSelectJour(this)">'
+      + '<div class="pr-jour-name">' + JOURS[jIdx] + '</div>'
+      + '<div class="pr-jour-num">' + d.getDate() + '</div>'
+      + '<div class="pr-jour-mois">' + MOIS[d.getMonth()] + '</div>'
+      + '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function prSelectJour(el) {
+  document.querySelectorAll('.pr-jour').forEach(function(j){ j.classList.remove('on'); });
+  el.classList.add('on');
+  prState.jourDate = el.dataset.date;
+  prState.jourLabel = el.dataset.label;
+  prCheckStep1Ready();
+}
+
+function prSelectSlot(el) {
+  document.querySelectorAll('.pr-slot').forEach(function(s){ s.classList.remove('on'); });
+  el.classList.add('on');
+  prState.slot = el.dataset.slot;
+  prCheckStep1Ready();
+}
+
+function prCheckStep1Ready() {
+  var btn = document.getElementById('btnPrNext');
+  if (prState.jourDate && prState.slot) {
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+  } else {
+    btn.style.opacity = '.4';
+    btn.style.pointerEvents = 'none';
+  }
+}
+
+function prGoToMenus() {
+  document.getElementById('prStep1').style.display = 'none';
+  document.getElementById('prStep2').style.display = 'block';
+  var slotLabels = {matin:'8h – 12h', midi:'12h – 14h', soir:'18h – 20h'};
+  var slotEmojis = {matin:'🌅', midi:'☀️', soir:'🌆'};
+  document.getElementById('prResumeTxt').textContent = slotEmojis[prState.slot] + '  ' + prState.jourLabel + '  ·  ' + slotLabels[prState.slot];
+  prRenderMenuList();
+}
+
+function prBack() {
+  document.getElementById('prStep2').style.display = 'none';
+  document.getElementById('prStep1').style.display = 'block';
+}
+
+function prSelectFormule(el) {
+  document.querySelectorAll('.pr-formule').forEach(function(f){ f.classList.remove('on'); });
+  el.classList.add('on');
+  prState.formule = parseInt(el.dataset.nb);
+  prState.selection = [];
+  prCheckValider();
+  prRenderMenuList();
+}
+
+function prFilter(el) {
+  document.querySelectorAll('.pr-filter').forEach(function(f){ f.classList.remove('active'); });
+  el.classList.add('active');
+  prState.filterCat = el.dataset.cat;
+  prRenderMenuList();
+}
+
+async function prLoadPlats() {
+  try {
+    var plats = await sbFetch('plats_menu?actif=eq.true&select=*&order=nom.asc');
+    prState.allPlats = plats && plats.length ? plats : PLATS_DEMO;
+  } catch(e) {
+    prState.allPlats = PLATS_DEMO;
+  }
+}
+
+function prRenderMenuList() {
+  var list = document.getElementById('prMenuList');
+  var plats = prState.allPlats;
+  if (prState.filterCat !== 'tous') {
+    plats = plats.filter(function(p){ return p.categorie === prState.filterCat; });
+  }
+  if (!plats.length) {
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Aucun plat dans cette catégorie</div>';
+    return;
+  }
+  var maxSel = prState.formule || 99;
+  list.innerHTML = plats.map(function(p) {
+    var mac = p.macros || {};
+    var isSel = prState.selection.some(function(s){ return s.id === p.id; });
+    var canAdd = !isSel && prState.selection.length < maxSel;
+    return '<div class="plat-menu-card' + (isSel ? ' selected' : '') + '" id="pmc_' + p.id + '">'
+      + '<div class="plat-menu-photo">' + (p.photo_url ? '<img src="' + p.photo_url + '" alt="">' : (p.emoji || '🍽️')) + '</div>'
+      + '<div class="plat-menu-info">'
+      + '<div class="plat-menu-name">' + p.nom + '</div>'
+      + '<div class="plat-menu-desc">' + (p.description || '') + '</div>'
+      + '<div class="plat-menu-macros">'
+      + '<span class="plat-mac-chip">🥩 ' + (mac.prot || p.proteines || 0) + 'g</span>'
+      + '<span class="plat-mac-chip">🌾 ' + (mac.gluc || p.glucides || 0) + 'g</span>'
+      + '<span class="plat-mac-chip">⚡ ' + (mac.cal || p.calories || 0) + 'kcal</span>'
+      + '</div></div>'
+      + '<button class="plat-menu-check" onclick="prTogglePlat('' + p.id + '')">'
+      + (isSel ? '✓' : '+')
+      + '</button>'
+      + '</div>';
+  }).join('');
+}
+
+function prTogglePlat(id) {
+  var plat = prState.allPlats.find(function(p){ return p.id === id; });
+  if (!plat) return;
+  var idx = prState.selection.findIndex(function(s){ return s.id === id; });
+  if (idx >= 0) {
+    prState.selection.splice(idx, 1);
+  } else {
+    if (prState.formule && prState.selection.length >= prState.formule) {
+      showToast('Maximum ' + prState.formule + ' plats pour cette formule', 'err');
+      return;
+    }
+    prState.selection.push(plat);
+  }
+  prRenderMenuList();
+  prUpdateRecap();
+  prCheckValider();
+}
+
+function prUpdateRecap() {
+  var recap = document.getElementById('prSelectionRecap');
+  var selList = document.getElementById('prSelList');
+  if (!prState.selection.length) { recap.style.display = 'none'; return; }
+  recap.style.display = 'block';
+  document.getElementById('prSelCount').textContent = prState.selection.length;
+  selList.innerHTML = prState.selection.map(function(p){
+    return '<div class="pr-sel-item">'
+      + '<span class="pr-sel-em">' + (p.emoji || '🍽️') + '</span>'
+      + '<span style="flex:1;">' + p.nom + '</span>'
+      + '<button onclick="prTogglePlat('' + p.id + '')" style="font-size:12px;color:#ff3b30;background:none;border:none;cursor:pointer;">✕</button>'
+      + '</div>';
+  }).join('');
+  // Moyenne macros
+  var tot = {p:0, g:0, c:0};
+  prState.selection.forEach(function(p){
+    var m = p.macros || {};
+    tot.p += m.prot || p.proteines || 0;
+    tot.g += m.gluc || p.glucides || 0;
+    tot.c += m.cal  || p.calories || 0;
+  });
+  var n = prState.selection.length;
+  document.getElementById('prSelProt').textContent = Math.round(tot.p/n) + ' g';
+  document.getElementById('prSelGluc').textContent = Math.round(tot.g/n) + ' g';
+  document.getElementById('prSelCal').textContent  = Math.round(tot.c/n) + ' kcal';
+}
+
+function prCheckValider() {
+  var btn = document.getElementById('btnPrValider');
+  var ready = prState.selection.length > 0 && prState.formule;
+  btn.style.opacity = ready ? '1' : '.4';
+  btn.style.pointerEvents = ready ? 'auto' : 'none';
+}
+
+async function prValiderCommande() {
+  var btn = document.getElementById('btnPrValider');
+  btn.textContent = 'Confirmation...';
+  btn.style.opacity = '.6';
+  try {
+    // Sauvegarder en base
+    var commande = {
+      user_id: USER_ID,
+      semaine: prState.jourDate,
+      plats_choisis: prState.selection.map(function(p){ return p.id; }),
+      statut: 'confirmee',
+      skip: false,
+      created_at: new Date().toISOString()
+    };
+    try { await sbPost('commandes', commande); } catch(e) {}
+
+    // Afficher confirmation
+    document.getElementById('prStep2').style.display = 'none';
+    document.getElementById('prStep3').style.display = 'block';
+    var slotLabels = {matin:'entre 8h et 12h', midi:'entre 12h et 14h', soir:'entre 18h et 20h'};
+    document.getElementById('prConfirmTxt').textContent = 'Vos ' + prState.selection.length + ' plats seront livrés le ' + prState.jourLabel + ' ' + slotLabels[prState.slot] + '.';
+    document.getElementById('prConfirmPlats').innerHTML = prState.selection.map(function(p){
+      return '<div style="display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:12px;padding:10px 12px;box-shadow:var(--sm);">'
+        + '<span style="font-size:20px;">' + (p.emoji || '🍽️') + '</span>'
+        + '<span style="font-size:13px;font-weight:500;">' + p.nom + '</span>'
+        + '</div>';
+    }).join('');
+
+    // Mettre à jour le subtitle du banner
+    var MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+    var dl = new Date(prState.jourDate + 'T12:00:00');
+    var sub = document.getElementById('prBannerSub');
+    if (sub) sub.textContent = '📦 Livraison ' + prState.jourLabel + ' · ' + prState.formule + ' plats';
+    showToast('Commande confirmée ! 🎉', 'ok');
+  } catch(e) {
+    btn.textContent = 'Confirmer ma commande';
+    btn.style.opacity = '1';
+    showToast('Erreur lors de la confirmation', 'err');
+  }
+}
+
+
 // ═══ AI RESULT EDITABLE ═══
 
 function recalcAndRender() {
@@ -2307,13 +2581,7 @@ var profilConseillsLoaded = false;
 // ═══════════════════════════════════════════════════════════════
 // CONSEILS IA — cache Supabase 7 jours
 // Table: profil_conseils (user_id, conseils_json, generated_at)
-// Logique :
-//   1. Charger depuis Supabase → afficher immédiatement si < 7j
-//   2. Si absent ou expiré → générer avec Claude → sauvegarder
-//   3. profilConseillsLoaded évite les doubles appels dans la session
 // ═══════════════════════════════════════════════════════════════
-var profilConseillsLoaded = false;
-
 function conseilsRenderHTML(data) {
   return data.map(function(c) {
     var recipes = (c.recettes || []).map(function(r) {
@@ -2346,104 +2614,69 @@ function conseilsRenderFooter(dateStr) {
 async function fetchProfilConseils() {
   if (profilConseillsLoaded) return;
   if (!USER_ID) return;
-
   var cont = document.getElementById('profilConseilsCont');
-
-  // ── Étape 1 : charger depuis Supabase et afficher immédiatement si valides
+  // Étape 1 : charger depuis Supabase et afficher immédiatement si valides
   try {
     var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID + '&select=conseils_json,generated_at&limit=1');
     if (cached && cached.length && cached[0].conseils_json) {
       var generatedAt = new Date(cached[0].generated_at);
       var ageMs = Date.now() - generatedAt.getTime();
       var data = JSON.parse(cached[0].conseils_json);
-
-      // Afficher immédiatement les conseils en cache
+      // Afficher immédiatement
       cont.innerHTML = conseilsRenderHTML(data) + conseilsRenderFooter(cached[0].generated_at);
       profilConseillsLoaded = true;
-
-      // Si < 7 jours : on s'arrête là
+      // Si < 7 jours : stop
       if (ageMs < 7 * 24 * 3600 * 1000) return;
-
-      // Si >= 7 jours : régénérer en arrière-plan (le user voit déjà les anciens)
+      // Si >= 7 jours : régénérer en arrière-plan
       conseilsGenererEtSauvegarder(true);
       return;
     }
-  } catch(e) {
-    // Table absente ou erreur réseau → on génère directement
-  }
-
-  // ── Étape 2 : aucun cache → afficher loader et générer
+  } catch(e) {}
+  // Étape 2 : aucun cache → loader puis génération
   cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Analyse personnalisée en cours...</div>';
   await conseilsGenererEtSauvegarder(false);
 }
 
 async function conseilsGenererEtSauvegarder(silentRefresh) {
   var cont = document.getElementById('profilConseilsCont');
-  if (!silentRefresh) {
-    cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Analyse personnalisée en cours...</div>';
-  }
-
   var mealsDesc = allMeals.slice(0, 15).map(function(m) {
     var mac = calcMac(m.meal_ingredients);
     var ings = (m.meal_ingredients||[]).map(function(i){ return i.name + ' ' + i.quantity_g + 'g'; }).join(', ');
     return m.name + ' (' + ings + ') — prot:' + mac.p + 'g gluc:' + mac.g + 'g lip:' + mac.l + 'g cal:' + mac.c + 'kcal';
   }).join(' | ');
-
   var prompt = 'Tu es nutritionniste expert. Analyse les repas de ce client et donne des conseils personnalisés structurés.'
     + ' Objectifs: prot=' + macObj.p + 'g, gluc=' + macObj.g + 'g, lip=' + macObj.l + 'g, cal=' + macObj.c + 'kcal.'
     + ' Repas enregistrés: ' + (mealsDesc || 'aucun repas encore')
     + '. Génère 4 conseils thématiques (Protéines, Légumes & Fibres, Équilibre des repas, Habitudes).'
     + ' Pour chaque conseil: un titre, une description courte (2 phrases max), 3 recettes concrètes suggérées, 3 ingrédients clés à privilégier.'
     + ' Réponds UNIQUEMENT en JSON sans backticks: [{"theme":"...","emoji":"...","titre":"...","desc":"...","recettes":["...","...","..."],"ingredients":["...","...","..."]}]';
-
   try {
-    var res = await fetch(CLAUDE_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt, max_tokens: 1200 })
-    });
+    var res = await fetch(CLAUDE_API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:prompt, max_tokens:1200})});
     var d = await res.json();
-    var data = JSON.parse((d.text || '[]').replace(/```[a-z]*/g, '').replace(/```/g, '').trim());
-    if (!data || !data.length) throw new Error('Réponse vide');
-
+    var data = JSON.parse((d.text || '[]').replace(/```[a-z]*/g,'').replace(/```/g,'').trim());
+    if (!data || !data.length) throw new Error('vide');
     var now = new Date().toISOString();
-
-    // Sauvegarder en Supabase (upsert)
+    // Upsert Supabase
     await fetch(SB_URL + '/rest/v1/profil_conseils', {
       method: 'POST',
-      headers: {
-        apikey: SB_KEY,
-        'Authorization': 'Bearer ' + SB_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates,return=minimal'
-      },
-      body: JSON.stringify({
-        user_id: USER_ID,
-        conseils_json: JSON.stringify(data),
-        generated_at: now
-      })
+      headers: {apikey:SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal'},
+      body: JSON.stringify({user_id:USER_ID, conseils_json:JSON.stringify(data), generated_at:now})
     });
-
-    // Mettre à jour l'affichage (même en silentRefresh)
     cont.innerHTML = conseilsRenderHTML(data) + conseilsRenderFooter(now);
     profilConseillsLoaded = true;
-
   } catch(e) {
     if (!silentRefresh) {
       cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
     }
-    // En silentRefresh, on laisse les anciens conseils affichés
   }
 }
 
-// Bouton "Actualiser" : force une nouvelle génération
 async function conseilsForceRefresh() {
   profilConseillsLoaded = false;
-  // Supprimer le cache en base
   try {
     await fetch(SB_URL + '/rest/v1/profil_conseils?user_id=eq.' + USER_ID, {
       method: 'DELETE',
-      headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+      headers: {apikey:SB_KEY, 'Authorization':'Bearer '+SB_KEY}
     });
   } catch(e) {}
   await conseilsGenererEtSauvegarder(false);
@@ -2749,5 +2982,127 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
+
+<!-- ══ OVERLAY PROCHAINS REPAS ══ -->
+<div class="overlay" id="ovProchainRepas">
+  <div class="sheet" style="max-height:95vh;">
+    <div class="sheet-handle"></div>
+
+    <!-- EN-TÊTE -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:20px;font-weight:800;color:var(--black);">🍱 Mes prochains repas</div>
+      <button onclick="closeOverlay('ovProchainRepas')" style="width:30px;height:30px;border-radius:50%;background:var(--bg);border:none;cursor:pointer;font-size:13px;color:var(--muted);box-shadow:var(--sm);">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Votre sélection hebdomadaire de plats cuisinés</div>
+
+    <!-- STEP 1 : CHOIX DATE -->
+    <div id="prStep1">
+      <div style="font-size:14px;font-weight:700;color:var(--black);margin-bottom:12px;">📅 Choisissez votre jour de livraison</div>
+
+      <!-- Sélecteur jours de la semaine -->
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:18px;" id="prJoursGrid"></div>
+
+      <!-- Créneau horaire -->
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Créneau de livraison</div>
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <div class="pr-slot" data-slot="matin" onclick="prSelectSlot(this)">
+          <div style="font-size:18px;margin-bottom:4px;">🌅</div>
+          <div style="font-size:12px;font-weight:700;color:var(--black);">Matin</div>
+          <div style="font-size:10px;color:var(--muted);">8h – 12h</div>
+        </div>
+        <div class="pr-slot" data-slot="midi" onclick="prSelectSlot(this)">
+          <div style="font-size:18px;margin-bottom:4px;">☀️</div>
+          <div style="font-size:12px;font-weight:700;color:var(--black);">Midi</div>
+          <div style="font-size:10px;color:var(--muted);">12h – 14h</div>
+        </div>
+        <div class="pr-slot" data-slot="soir" onclick="prSelectSlot(this)">
+          <div style="font-size:18px;margin-bottom:4px;">🌆</div>
+          <div style="font-size:12px;font-weight:700;color:var(--black);">Soir</div>
+          <div style="font-size:10px;color:var(--muted);">18h – 20h</div>
+        </div>
+      </div>
+
+      <!-- Info livraison -->
+      <div style="background:rgba(52,199,89,0.08);border-radius:14px;padding:12px 14px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;">
+        <span style="font-size:18px;flex-shrink:0;">ℹ️</span>
+        <div style="font-size:12px;color:var(--text);line-height:1.6;">
+          Vos repas sont préparés le jour même par nos chefs nutritionnistes et livrés frais directement chez vous. Conservation : 3 jours au réfrigérateur.
+        </div>
+      </div>
+
+      <button onclick="prGoToMenus()" id="btnPrNext" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none;">Voir les plats disponibles →</button>
+    </div>
+
+    <!-- STEP 2 : MENU DES PLATS -->
+    <div id="prStep2" style="display:none;">
+      <!-- Résumé livraison -->
+      <div id="prLivraisonResume" style="background:var(--black);border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:13px;color:#fff;" id="prResumeTxt">–</div>
+        <button onclick="prBack()" style="font-size:11px;color:rgba(255,255,255,0.55);background:none;border:none;cursor:pointer;">Modifier</button>
+      </div>
+
+      <!-- Formule -->
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">Votre formule</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+        <div class="pr-formule" data-nb="3" onclick="prSelectFormule(this)">
+          <div style="font-size:22px;margin-bottom:6px;">🍽️🍽️🍽️</div>
+          <div style="font-size:15px;font-weight:800;color:var(--black);">3 plats</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Semaine équilibrée</div>
+        </div>
+        <div class="pr-formule" data-nb="4" onclick="prSelectFormule(this)">
+          <div style="font-size:22px;margin-bottom:6px;">🍽️🍽️🍽️🍽️</div>
+          <div style="font-size:15px;font-weight:800;color:var(--black);">4 plats</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Semaine complète</div>
+        </div>
+      </div>
+
+      <!-- Filtre objectif -->
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Filtrer par objectif</div>
+      <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:14px;">
+        <button class="pr-filter active" data-cat="tous" onclick="prFilter(this)">Tous</button>
+        <button class="pr-filter" data-cat="proteines" onclick="prFilter(this)">💪 Protéines</button>
+        <button class="pr-filter" data-cat="legumes" onclick="prFilter(this)">🥦 Légumes</button>
+        <button class="pr-filter" data-cat="equilibre" onclick="prFilter(this)">⚖️ Équilibre</button>
+        <button class="pr-filter" data-cat="low_carb" onclick="prFilter(this)">🥑 Low carb</button>
+      </div>
+
+      <!-- Liste des plats -->
+      <div id="prMenuList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+        <div class="profil-loading"><div class="profil-spinner"></div>Chargement des plats...</div>
+      </div>
+
+      <!-- Récap sélection -->
+      <div id="prSelectionRecap" style="display:none;background:var(--bg);border-radius:16px;padding:14px;box-shadow:var(--si);margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--black);margin-bottom:10px;">Votre sélection (<span id="prSelCount">0</span> plats)</div>
+        <div id="prSelList" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <div style="margin-top:10px;padding-top:10px;border-top:.5px solid rgba(174,174,192,0.2);">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px;">
+            <span>Protéines moy.</span><span id="prSelProt">– g</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px;">
+            <span>Glucides moy.</span><span id="prSelGluc">– g</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);">
+            <span>Calories moy.</span><span id="prSelCal">– kcal</span>
+          </div>
+        </div>
+      </div>
+
+      <button id="btnPrValider" onclick="prValiderCommande()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none;">Confirmer ma commande</button>
+    </div>
+
+    <!-- STEP 3 : CONFIRMATION -->
+    <div id="prStep3" style="display:none;text-align:center;padding:20px 0;">
+      <div style="font-size:56px;margin-bottom:16px;">✅</div>
+      <div style="font-size:22px;font-weight:800;color:var(--black);margin-bottom:8px;">Commande confirmée !</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px;" id="prConfirmTxt">Vos repas seront livrés le –.</div>
+      <div id="prConfirmPlats" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;text-align:left;"></div>
+      <div style="background:rgba(52,199,89,0.08);border-radius:14px;padding:14px;margin-bottom:20px;font-size:12px;color:var(--text);line-height:1.6;text-align:left;">
+        📬 Vous recevrez un email de confirmation avec les détails de votre livraison. Votre nutritionniste sera informé(e) de vos choix pour adapter vos conseils.
+      </div>
+      <button onclick="closeOverlay('ovProchainRepas')" style="width:100%;padding:14px;background:var(--bg);border:none;border-radius:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;box-shadow:var(--so);">Fermer</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
