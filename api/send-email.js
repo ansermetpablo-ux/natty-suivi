@@ -274,7 +274,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'Natty <hello@natty-nutrition.com>',
+        from: 'Natty <onboarding@resend.dev>',
         to: [to_email],
         subject,
         html
