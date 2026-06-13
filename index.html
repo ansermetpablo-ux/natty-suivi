@@ -2018,6 +2018,7 @@ function openProchainRepas() {
   prBuildJoursGrid();
   document.getElementById('ovProchainRepas').classList.add('active');
   prLoadPlats();
+  prChargerPlatsNutri();
 }
 
 function prBuildJoursGrid() {
@@ -2194,6 +2195,71 @@ function prCheckValider() {
 // ═══════════════════════════════════════════════════
 // BLOC PROCHAINS REPAS — carrousel + date
 // ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// PLATS PROCHAINS — proposés par le nutritionniste
+// Charger depuis table commandes (statut = 'propose') pour cette semaine
+// ═══════════════════════════════════════════════════════════════
+async function prChargerPlatsNutri() {
+  if (!USER_ID) return;
+  try {
+    // Chercher la commande de la semaine en cours ou à venir proposée par le nutri
+    var today = new Date().toISOString().split('T')[0];
+    var commandes = await sbFetch('commandes?user_id=eq.' + USER_ID + '&semaine=gte.' + today + '&order=semaine.asc&limit=1');
+    if (!commandes || !commandes.length) {
+      // Aucune commande → état vide avec message nutri
+      prBlocAfficherEtatNutri(null);
+      return;
+    }
+    var cmd = commandes[0];
+    prBlocAfficherEtatNutri(cmd);
+    // Si des plats sont proposés, les charger
+    if (cmd.plats_choisis && cmd.plats_choisis.length) {
+      var platsIds = cmd.plats_choisis.map(function(id){ return 'id=eq.' + id; }).join('&');
+      var plats = await sbFetch('plats_menu?or=(' + cmd.plats_choisis.map(function(id){ return 'id.eq.' + id; }).join(',') + ')&actif=eq.true');
+      if (plats && plats.length) {
+        prBlocRenderCarrousel(plats);
+        // Afficher la date
+        var jourLabel = cmd.semaine ? new Date(cmd.semaine + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'}) : '–';
+        prBlocMettreAJourDate(jourLabel, cmd.statut === 'propose' ? 'nutri' : null);
+      }
+    }
+  } catch(e) { console.warn('prChargerPlatsNutri:', e); }
+}
+
+function prBlocAfficherEtatNutri(cmd) {
+  var vide = document.getElementById('prDateVide');
+  var choisie = document.getElementById('prDateChoisie');
+  var lblDate = document.getElementById('prDateLabel');
+  var lblCreneau = document.getElementById('prCreneauLabel');
+  if (!cmd) {
+    // Pas de proposition du nutri
+    if (vide) {
+      vide.innerHTML = '<div style="flex:1;"><div style="font-size:13px;color:var(--muted);">Votre nutritionniste prépare votre sélection</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Vous pourrez modifier les plats une fois proposés</div></div>';
+      vide.style.display = 'flex';
+    }
+    if (choisie) choisie.style.display = 'none';
+    return;
+  }
+  if (cmd.statut === 'propose') {
+    // Nutri a proposé — client peut modifier
+    var sem = cmd.semaine ? new Date(cmd.semaine + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'}) : '–';
+    if (vide) vide.style.display = 'none';
+    if (choisie) choisie.style.display = 'flex';
+    if (lblDate) lblDate.textContent = '📦 Livraison ' + sem;
+    if (lblCreneau) lblCreneau.textContent = '✏️ Votre nutritionniste a proposé ces plats — vous pouvez les modifier';
+    // Changer le bouton "Modifier" pour qu'il soit plus visible
+    var modBtn = choisie ? choisie.querySelector('button') : null;
+    if (modBtn) { modBtn.textContent = 'Modifier ma sélection'; modBtn.style.background = 'var(--black)'; modBtn.style.color = '#fff'; }
+  } else if (cmd.statut === 'confirmee') {
+    var sem = cmd.semaine ? new Date(cmd.semaine + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'}) : '–';
+    if (vide) vide.style.display = 'none';
+    if (choisie) choisie.style.display = 'flex';
+    if (lblDate) lblDate.textContent = '✅ Livraison ' + sem;
+    if (lblCreneau) lblCreneau.textContent = 'Commande confirmée';
+  }
+}
+
 function prBlocRenderCarrousel(plats) {
   var wrap = document.getElementById('prCarrousel');
   var dots = document.getElementById('prCarrouselDots');
@@ -2714,6 +2780,7 @@ function openProfilOverlay() {
   renderProfilMacros();
   renderProfilScore();
   fetchProfilConseils();
+  loadProfilOverlayData();
 }
 
 function closeProfilOverlay() {
@@ -2757,8 +2824,88 @@ var profilConseillsLoaded = false;
 // CONSEILS IA — cache Supabase 7 jours
 // Table: profil_conseils (user_id, conseils_json, generated_at)
 // ═══════════════════════════════════════════════════════════════
-function conseilsRenderHTML(data) {
-  return data.map(function(c) {
+
+// ═══════════════════════════════════════════════════════════════
+// PROFIL — Infos éditables (poids, taille, objectif, activité)
+// ═══════════════════════════════════════════════════════════════
+var profilInfoCache = null;
+
+function profilToggleEdit() {
+  var display = document.getElementById('profilInfoDisplay');
+  var edit = document.getElementById('profilInfoEdit');
+  var btn = document.getElementById('profilEditBtn');
+  var isEdit = edit.style.display !== 'none';
+  if (isEdit) {
+    // Annuler → retour affichage
+    edit.style.display = 'none';
+    display.style.display = 'flex';
+    btn.textContent = '✏️ Modifier';
+  } else {
+    // Ouvrir édition → pré-remplir
+    display.style.display = 'none';
+    edit.style.display = 'flex';
+    btn.textContent = '✕';
+    if (profilInfoCache) {
+      var el = function(id){ return document.getElementById(id); };
+      if (el('editPoids')) el('editPoids').value = profilInfoCache.poids || '';
+      if (el('editTaille')) el('editTaille').value = profilInfoCache.taille || '';
+      if (el('editObjectif') && profilInfoCache.objectif) el('editObjectif').value = profilInfoCache.objectif;
+      if (el('editActivite') && profilInfoCache.activite) el('editActivite').value = profilInfoCache.activite;
+    }
+  }
+}
+
+async function profilSaveInfo() {
+  var btn = document.querySelector('#profilInfoEdit button');
+  var poids = parseInt(document.getElementById('editPoids').value) || 0;
+  var taille = parseInt(document.getElementById('editTaille').value) || 0;
+  var objectif = document.getElementById('editObjectif').value;
+  var activite = document.getElementById('editActivite').value;
+  if (!poids || !taille) { showToast('Poids et taille requis', 'err'); return; }
+  try {
+    await fetch(SB_URL + '/rest/v1/onboarding?user_id=eq.' + USER_ID, {
+      method: 'PATCH',
+      headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ poids: poids, taille: taille, objectif: objectif, activite: activite })
+    });
+    profilInfoCache = Object.assign({}, profilInfoCache, { poids, taille, objectif, activite });
+    profilAfficherInfos(profilInfoCache);
+    profilToggleEdit();
+    // Recalculer les macros
+    macObj = calcMacros(poids, profilInfoCache.tdee || poids * 30);
+    updateMacroCards();
+    showToast('Informations mises à jour ✓');
+    // Forcer rafraîchissement conseils (données changées)
+    profilConseillsLoaded = false;
+    setTimeout(function(){ fetchProfilConseils(); }, 300);
+  } catch(e) {
+    showToast('Erreur lors de la sauvegarde', 'err');
+  }
+}
+
+function profilAfficherInfos(data) {
+  var OBJ_FR = { perte_poids:'Perte de poids', prise_masse:'Prise de masse', maintien:'Maintien', performance:'Performance', bien_etre:'Bien-être' };
+  var ACT_FR = { sedentaire:'Sédentaire', leger:'Légèrement actif', modere:'Modérément actif', actif:'Très actif', extreme:'Extrêmement actif' };
+  var el = function(id, val){ var e=document.getElementById(id); if(e) e.textContent=val; };
+  el('piPoids', data.poids ? data.poids + ' kg' : '–');
+  el('piTaille', data.taille ? data.taille + ' cm' : '–');
+  el('piObjectif', OBJ_FR[data.objectif] || data.objectif || '–');
+  el('piActivite', ACT_FR[data.activite] || data.activite || '–');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONSEILS — rechargement global 1x/semaine, tout affiché d'un coup
+// Cache Supabase table profil_conseils
+// ═══════════════════════════════════════════════════════════════
+function conseilsRenderAll(data, generatedAt) {
+  var cont = document.getElementById('profilConseilsCont');
+  var footer = document.getElementById('conseilsDateFooter');
+  if (!cont) return;
+  if (!data || !data.length) {
+    cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
+    return;
+  }
+  cont.innerHTML = data.map(function(c) {
     var recipes = (c.recettes || []).map(function(r) {
       return '<span class="pcc-recipe-chip">🍽️ ' + r + '</span>';
     }).join('');
@@ -2766,67 +2913,64 @@ function conseilsRenderHTML(data) {
       return '<span class="pcc-ing-chip">✓ ' + i + '</span>';
     }).join('');
     return '<div class="profil-conseil-card">'
-      + '<div class="pcc-theme">' + (c.emoji||'') + ' ' + (c.theme||'') + '</div>'
-      + '<div class="pcc-title">' + (c.titre||'') + '</div>'
-      + '<div class="pcc-desc">' + (c.desc||'') + '</div>'
-      + (recipes ? '<div style="font-size:10px;color:#8e8e93;margin-bottom:4px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">Recettes suggérées</div><div class="pcc-recipes">' + recipes + '</div>' : '')
-      + (ings ? '<div style="font-size:10px;color:#34c759;margin:8px 0 4px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">Ingrédients à privilégier</div><div class="pcc-ings">' + ings + '</div>' : '')
+      + '<div class="pcc-theme">' + (c.emoji || '') + ' ' + (c.theme || '') + '</div>'
+      + '<div class="pcc-title">' + (c.titre || '') + '</div>'
+      + '<div class="pcc-desc">' + (c.desc || '') + '</div>'
+      + (recipes ? '<div class="pcc-recipes">' + recipes + '</div>' : '')
+      + (ings ? '<div class="pcc-ings">' + ings + '</div>' : '')
       + '</div>';
   }).join('');
-}
-
-function conseilsRenderFooter(dateStr) {
-  var d = new Date(dateStr);
-  var label = d.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
-  var next = new Date(d.getTime() + 7*24*3600*1000);
-  var nextLabel = next.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
-  return '<div style="margin-top:14px;padding:12px 14px;background:rgba(174,174,192,0.1);border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-    + '<div style="font-size:11px;color:var(--muted);">📅 Générés le ' + label + '<br>Prochaine mise à jour : ' + nextLabel + '</div>'
-    + '<button onclick="conseilsForceRefresh()" style="font-size:11px;font-weight:600;color:var(--black);background:var(--bg);border:none;border-radius:10px;padding:7px 12px;cursor:pointer;box-shadow:var(--sm);">↻ Actualiser</button>'
-    + '</div>';
+  // Footer date
+  if (footer && generatedAt) {
+    var d = new Date(generatedAt);
+    var next = new Date(d.getTime() + 7*24*3600*1000);
+    var fmt = function(dt){ return dt.toLocaleDateString('fr-FR', {day:'numeric', month:'long'}); };
+    footer.style.display = 'block';
+    footer.textContent = 'Générés le ' + fmt(d) + ' · prochaine mise à jour le ' + fmt(next);
+  }
+  profilConseillsLoaded = true;
 }
 
 async function fetchProfilConseils() {
   if (profilConseillsLoaded) return;
   if (!USER_ID) return;
   var cont = document.getElementById('profilConseilsCont');
-  // Étape 1 : charger depuis Supabase et afficher immédiatement si valides
+
+  // 1. Lire le cache Supabase
   try {
     var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID + '&select=conseils_json,generated_at&limit=1');
     if (cached && cached.length && cached[0].conseils_json) {
-      var generatedAt = new Date(cached[0].generated_at);
-      var ageMs = Date.now() - generatedAt.getTime();
+      var ageMs = Date.now() - new Date(cached[0].generated_at).getTime();
       var data = JSON.parse(cached[0].conseils_json);
       // Afficher immédiatement
-      cont.innerHTML = conseilsRenderHTML(data) + conseilsRenderFooter(cached[0].generated_at);
-      profilConseillsLoaded = true;
-      // Si < 7 jours : stop
+      conseilsRenderAll(data, cached[0].generated_at);
+      // < 7 jours → stop
       if (ageMs < 7 * 24 * 3600 * 1000) return;
-      // Si >= 7 jours : régénérer en arrière-plan
+      // >= 7 jours → régénérer en arrière-plan
       conseilsGenererEtSauvegarder(true);
       return;
     }
   } catch(e) {}
-  // Étape 2 : aucun cache → loader puis génération
-  cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Analyse personnalisée en cours...</div>';
+
+  // 2. Pas de cache → loader + génération
+  if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de vos conseils...</div>';
   await conseilsGenererEtSauvegarder(false);
 }
 
 async function conseilsGenererEtSauvegarder(silentRefresh) {
-  var cont = document.getElementById('profilConseilsCont');
   var mealsDesc = allMeals.slice(0, 15).map(function(m) {
     var mac = calcMac(m.meal_ingredients);
-    var ings = (m.meal_ingredients||[]).map(function(i){ return i.name + ' ' + i.quantity_g + 'g'; }).join(', ');
+    var ings = (m.meal_ingredients || []).map(function(i){ return i.name + ' ' + i.quantity_g + 'g'; }).join(', ');
     return m.name + ' (' + ings + ') — prot:' + mac.p + 'g gluc:' + mac.g + 'g lip:' + mac.l + 'g cal:' + mac.c + 'kcal';
   }).join(' | ');
-  var prompt = 'Tu es nutritionniste expert. Analyse les repas de ce client et donne des conseils personnalisés structurés.'
+  var prompt = 'Tu es nutritionniste expert. Analyse les repas de ce client et génère 4 conseils thématiques.'
     + ' Objectifs: prot=' + macObj.p + 'g, gluc=' + macObj.g + 'g, lip=' + macObj.l + 'g, cal=' + macObj.c + 'kcal.'
-    + ' Repas enregistrés: ' + (mealsDesc || 'aucun repas encore')
-    + '. Génère 4 conseils thématiques (Protéines, Légumes & Fibres, Équilibre des repas, Habitudes).'
-    + ' Pour chaque conseil: un titre, une description courte (2 phrases max), 3 recettes concrètes suggérées, 3 ingrédients clés à privilégier.'
+    + ' Repas: ' + (mealsDesc || 'aucun repas encore')
+    + '. Thèmes: Protéines, Légumes & Fibres, Équilibre, Habitudes.'
+    + ' Pour chaque conseil: titre, desc (2 phrases max), 3 recettes, 3 ingrédients clés.'
     + ' Réponds UNIQUEMENT en JSON sans backticks: [{"theme":"...","emoji":"...","titre":"...","desc":"...","recettes":["...","...","..."],"ingredients":["...","...","..."]}]';
   try {
-    var res = await fetch(CLAUDE_API, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:prompt, max_tokens:1200})});
+    var res = await fetch(CLAUDE_API, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:prompt, max_tokens:1200}) });
     var d = await res.json();
     var data = JSON.parse((d.text || '[]').replace(/```[a-z]*/g,'').replace(/```/g,'').trim());
     if (!data || !data.length) throw new Error('vide');
@@ -2834,27 +2978,39 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
     // Upsert Supabase
     await fetch(SB_URL + '/rest/v1/profil_conseils', {
       method: 'POST',
-      headers: {apikey:SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal'},
-      body: JSON.stringify({user_id:USER_ID, conseils_json:JSON.stringify(data), generated_at:now})
+      headers: { apikey:SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ user_id:USER_ID, conseils_json:JSON.stringify(data), generated_at:now })
     });
-    cont.innerHTML = conseilsRenderHTML(data) + conseilsRenderFooter(now);
-    profilConseillsLoaded = true;
+    conseilsRenderAll(data, now);
   } catch(e) {
-    if (!silentRefresh) {
-      cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
+    if (!silentRefresh && document.getElementById('profilConseilsCont')) {
+      document.getElementById('profilConseilsCont').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
     }
   }
 }
 
 async function conseilsForceRefresh() {
   profilConseillsLoaded = false;
+  var btn = document.getElementById('conseilsRefreshBtn');
+  if (btn) btn.textContent = '...';
   try {
     await fetch(SB_URL + '/rest/v1/profil_conseils?user_id=eq.' + USER_ID, {
-      method: 'DELETE',
-      headers: {apikey:SB_KEY, 'Authorization':'Bearer '+SB_KEY}
+      method:'DELETE', headers:{ apikey:SB_KEY, 'Authorization':'Bearer '+SB_KEY }
     });
   } catch(e) {}
   await conseilsGenererEtSauvegarder(false);
+  if (btn) btn.textContent = '↻';
+}
+
+// Charger les infos profil dans l'overlay
+async function loadProfilOverlayData() {
+  try {
+    var data = await sbFetch('onboarding?user_id=eq.' + USER_ID + '&select=poids,taille,objectif,activite,tdee&limit=1');
+    if (data && data.length) {
+      profilInfoCache = data[0];
+      profilAfficherInfos(data[0]);
+    }
+  } catch(e) {}
 }
 
 // ══ ONBOARDING CAROUSEL ══
@@ -3023,13 +3179,74 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>
 
-    <!-- Analyse IA -->
-    <div class="profil-section-title" style="margin-top:4px;">Analyse & conseils personnalisés</div>
-    <div id="profilConseilsCont">
-      <div class="profil-loading"><div class="profil-spinner"></div>Analyse de vos repas en cours...</div>
+    <!-- Mes informations éditables -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;margin-bottom:10px;">
+      <div class="profil-section-title" style="margin:0;">Mes informations</div>
+      <button id="profilEditBtn" onclick="profilToggleEdit()" style="font-size:12px;font-weight:600;color:var(--black);background:var(--bg);border:none;border-radius:10px;padding:6px 12px;cursor:pointer;box-shadow:var(--sm);">✏️ Modifier</button>
+    </div>
+    <div id="profilInfoDisplay" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 12px;background:var(--bg);border-radius:10px;box-shadow:var(--si);">
+        <span style="color:var(--muted);">Poids</span><span style="font-weight:700;color:var(--black);" id="piPoids">–</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 12px;background:var(--bg);border-radius:10px;box-shadow:var(--si);">
+        <span style="color:var(--muted);">Taille</span><span style="font-weight:700;color:var(--black);" id="piTaille">–</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 12px;background:var(--bg);border-radius:10px;box-shadow:var(--si);">
+        <span style="color:var(--muted);">Objectif</span><span style="font-weight:700;color:var(--black);" id="piObjectif">–</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 12px;background:var(--bg);border-radius:10px;box-shadow:var(--si);">
+        <span style="color:var(--muted);">Activité</span><span style="font-weight:700;color:var(--black);" id="piActivite">–</span>
+      </div>
+    </div>
+    <!-- Formulaire d'édition (masqué par défaut) -->
+    <div id="profilInfoEdit" style="display:none;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Poids (kg)</div>
+          <input id="editPoids" type="number" min="30" max="250" style="width:100%;padding:10px 12px;background:var(--bg);border:2px solid rgba(174,174,192,0.3);border-radius:12px;font-size:14px;font-weight:700;color:var(--black);font-family:'Inter',sans-serif;outline:none;box-shadow:var(--si);box-sizing:border-box;">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Taille (cm)</div>
+          <input id="editTaille" type="number" min="120" max="220" style="width:100%;padding:10px 12px;background:var(--bg);border:2px solid rgba(174,174,192,0.3);border-radius:12px;font-size:14px;font-weight:700;color:var(--black);font-family:'Inter',sans-serif;outline:none;box-shadow:var(--si);box-sizing:border-box;">
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Objectif</div>
+        <select id="editObjectif" style="width:100%;padding:10px 12px;background:var(--bg);border:2px solid rgba(174,174,192,0.3);border-radius:12px;font-size:13px;color:var(--black);font-family:'Inter',sans-serif;outline:none;box-shadow:var(--si);-webkit-appearance:none;">
+          <option value="perte_poids">Perte de poids</option>
+          <option value="prise_masse">Prise de masse</option>
+          <option value="maintien">Maintien</option>
+          <option value="performance">Performance</option>
+          <option value="bien_etre">Bien-être</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Activité physique</div>
+        <select id="editActivite" style="width:100%;padding:10px 12px;background:var(--bg);border:2px solid rgba(174,174,192,0.3);border-radius:12px;font-size:13px;color:var(--black);font-family:'Inter',sans-serif;outline:none;box-shadow:var(--si);-webkit-appearance:none;">
+          <option value="sedentaire">Sédentaire</option>
+          <option value="leger">Légèrement actif</option>
+          <option value="modere">Modérément actif</option>
+          <option value="actif">Très actif</option>
+          <option value="extreme">Extrêmement actif</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button onclick="profilSaveInfo()" style="flex:1;padding:12px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Enregistrer</button>
+        <button onclick="profilToggleEdit()" style="padding:12px 16px;background:var(--bg);border:none;border-radius:12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--so);color:var(--muted);">Annuler</button>
+      </div>
     </div>
 
-    <button onclick="closeProfilOverlay()" style="width:100%;padding:14px;background:#e5e5ea;border:none;border-radius:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;">Fermer</button>
+    <!-- Conseils IA — affichés permanentement, rechargés 1x/semaine -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="profil-section-title" style="margin:0;">Conseils personnalisés</div>
+      <button onclick="conseilsForceRefresh()" id="conseilsRefreshBtn" style="font-size:12px;font-weight:600;color:var(--muted);background:var(--bg);border:none;border-radius:10px;padding:6px 10px;cursor:pointer;box-shadow:var(--sm);">↻</button>
+    </div>
+    <div id="profilConseilsCont">
+      <div class="profil-loading"><div class="profil-spinner"></div>Chargement des conseils...</div>
+    </div>
+    <div id="conseilsDateFooter" style="display:none;font-size:10px;color:var(--muted);text-align:center;margin-top:8px;padding-top:8px;border-top:.5px solid rgba(174,174,192,0.2);"></div>
+
+    <button onclick="closeProfilOverlay()" style="width:100%;padding:14px;background:#e5e5ea;border:none;border-radius:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:16px;">Fermer</button>
   </div>
 </div>
 
