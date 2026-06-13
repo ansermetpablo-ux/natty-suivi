@@ -354,21 +354,197 @@ input[type="file"] { display: none; }
 .rdv-notif-new.visible { display: flex; align-items: center; gap: 10px; }
 .rdv-notif-new-text { flex: 1; font-size: 13px; color: var(--red); font-weight: 500; }
 
+
+/* ── ROLE SELECTOR ── */
+.role-selector { display:none; position:fixed; inset:0; background:var(--bg); z-index:600; align-items:center; justify-content:center; flex-direction:column; gap:20px; padding:24px; }
+.role-selector.active { display:flex; }
+.role-title { font-size:22px; font-weight:800; color:var(--black); text-align:center; margin-bottom:4px; }
+.role-sub   { font-size:13px; color:var(--muted); text-align:center; margin-bottom:8px; }
+.role-grid  { display:grid; grid-template-columns:1fr 1fr; gap:14px; width:100%; max-width:480px; }
+.role-card  { background:var(--bg); border-radius:22px; padding:24px 16px; text-align:center; cursor:pointer; box-shadow:var(--so); border:2px solid transparent; transition:all .18s; }
+.role-card:hover { box-shadow:var(--si); border-color:var(--black); }
+.role-card-em  { font-size:40px; display:block; margin-bottom:10px; }
+.role-card-nom { font-size:15px; font-weight:700; color:var(--black); margin-bottom:4px; }
+.role-card-sub { font-size:11px; color:var(--muted); line-height:1.5; }
+
+/* ── NUTRITIONNISTE — REPAS A PROGRAMMER ── */
+.repas-layout { display:grid; grid-template-columns:280px 1fr 300px; gap:16px; height:calc(100vh - 160px); overflow:hidden; }
+.repas-left, .repas-center, .repas-right { height:100%; overflow-y:auto; scrollbar-width:thin; }
+.repas-left   { background:var(--bg); border-radius:20px; box-shadow:var(--so); padding:16px; }
+.repas-center { display:flex; flex-direction:column; gap:12px; }
+.repas-right  { background:var(--bg); border-radius:20px; box-shadow:var(--so); padding:16px; }
+
+/* Client list left panel */
+.client-repas-item { background:var(--bg); border-radius:14px; padding:12px 14px; margin-bottom:8px; cursor:pointer; box-shadow:var(--sm); border:2px solid transparent; transition:all .15s; }
+.client-repas-item.active { border-color:var(--black); box-shadow:var(--si); }
+.cri-name  { font-size:14px; font-weight:700; color:var(--black); }
+.cri-formule { font-size:11px; color:var(--muted); margin-top:2px; }
+.cri-badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:99px; }
+.badge-ok  { background:#e8f9ee; color:#2a9e4f; }
+.badge-todo { background:#fff3e0; color:#c97a00; }
+.badge-alert { background:#ffecec; color:#c0392b; }
+
+/* Macro ratio bar */
+.macro-ratio-section { background:var(--bg); border-radius:16px; box-shadow:var(--so); padding:16px; margin-bottom:12px; }
+.mrs-title { font-size:13px; font-weight:700; color:var(--black); margin-bottom:12px; }
+.mrs-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.mrs-lbl  { font-size:11px; color:var(--muted); width:70px; flex-shrink:0; }
+.mrs-bar  { flex:1; height:8px; background:var(--bg); border-radius:4px; box-shadow:var(--si); overflow:hidden; }
+.mrs-fill { height:100%; border-radius:4px; transition:width .8s ease; }
+.mrs-val  { font-size:12px; font-weight:600; color:var(--black); width:60px; text-align:right; }
+.target-val { font-size:11px; color:var(--muted); }
+
+/* Plats chooser center */
+.plat-chooser-card { background:var(--bg); border-radius:20px; box-shadow:var(--so); overflow:hidden; }
+.plc-header { background:var(--black); padding:14px 16px; display:flex; align-items:center; justify-content:space-between; }
+.plc-client { font-size:15px; font-weight:700; color:#fff; }
+.plc-formule { font-size:12px; color:rgba(255,255,255,0.55); }
+.plc-grid  { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:14px; }
+.plc-plat  { background:var(--bg); border-radius:16px; box-shadow:var(--so); overflow:hidden; cursor:pointer; border:2px solid transparent; transition:all .15s; position:relative; }
+.plc-plat.selected { border-color:#34c759; box-shadow:var(--si); }
+.plc-plat.selected::after { content:'✓'; position:absolute; top:8px; right:8px; width:22px; height:22px; border-radius:50%; background:#34c759; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.plc-photo { width:100%; height:80px; object-fit:cover; background:#f0f0f3; display:flex; align-items:center; justify-content:center; font-size:28px; }
+.plc-photo img { width:100%; height:100%; object-fit:cover; }
+.plc-body   { padding:8px 10px; }
+.plc-nom    { font-size:12px; font-weight:700; color:var(--black); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.plc-macros { display:flex; gap:4px; flex-wrap:wrap; }
+.plc-mac    { font-size:9px; font-weight:600; padding:2px 6px; border-radius:99px; background:var(--black); color:#fff; }
+.plc-qty-row { padding:8px 14px 12px; display:flex; align-items:center; gap:8px; border-top:.5px solid rgba(174,174,192,0.2); }
+.plc-qty-lbl { font-size:11px; color:var(--muted); flex:1; }
+.plc-qty-inp { width:64px; border:none; background:var(--bg); border-radius:10px; padding:6px 10px; font-size:13px; font-weight:600; color:var(--black); text-align:center; box-shadow:var(--si); }
+.plc-actions { padding:12px 14px; display:flex; gap:8px; border-top:.5px solid rgba(174,174,192,0.18); }
+.plc-save-btn { flex:1; padding:12px; background:var(--black); color:#fff; border:none; border-radius:12px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700; cursor:pointer; }
+.plc-save-btn:disabled { opacity:.4; }
+
+/* Fiche client right panel */
+.fiche-right-tabs { display:flex; gap:6px; margin-bottom:12px; }
+.frt-btn { flex:1; padding:8px 4px; background:var(--bg); border:none; border-radius:12px; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; color:var(--muted); cursor:pointer; box-shadow:var(--sm); transition:all .15s; }
+.frt-btn.active { box-shadow:var(--si); color:var(--black); }
+.fiche-right-content { font-size:13px; color:var(--text); }
+.frc-row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:.5px solid rgba(174,174,192,0.18); font-size:12px; }
+.frc-lbl { color:var(--muted); }
+.frc-val { font-weight:600; color:var(--black); }
+
+/* ── COMMANDES CALENDRIER ── */
+.cal-header-row { display:grid; grid-template-columns:60px repeat(7,1fr); gap:1px; background:rgba(174,174,192,0.2); border-radius:12px 12px 0 0; overflow:hidden; margin-bottom:1px; }
+.cal-header-cell { background:var(--bg); padding:10px 6px; text-align:center; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+.cal-body { display:grid; grid-template-columns:60px repeat(7,1fr); gap:1px; background:rgba(174,174,192,0.15); border-radius:0 0 12px 12px; overflow:hidden; }
+.cal-time-cell { background:var(--bg); padding:6px 4px; text-align:right; font-size:10px; color:var(--muted); font-weight:500; }
+.cal-day-cell  { background:var(--bg); padding:3px; min-height:32px; position:relative; }
+.cal-day-cell:hover { background:#f7f7fa; }
+.cal-event { background:var(--black); color:#fff; border-radius:6px; padding:3px 6px; font-size:9px; font-weight:600; margin-bottom:2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cal-event.ev-confirmee { background:#1e4d2b; }
+.cal-event.ev-livree    { background:#555; }
+.cal-event.ev-annulee   { background:#c0392b; opacity:.6; }
+
+/* ── COMMANDES SUB TABS ── */
+.cmd-subtabs { display:flex; gap:8px; margin-bottom:16px; }
+.cmd-subtab  { padding:9px 18px; border-radius:99px; background:var(--bg); box-shadow:var(--so); font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; color:var(--muted); border:none; cursor:pointer; }
+.cmd-subtab.active { background:var(--black); color:#fff; box-shadow:3px 3px 8px rgba(26,26,46,0.3); }
+
+/* ── LISTE DE COURSES ── */
+.ldc-section { margin-bottom:20px; }
+.ldc-section-title { font-size:13px; font-weight:700; color:var(--black); margin-bottom:10px; padding-bottom:6px; border-bottom:2px solid var(--black); display:flex; align-items:center; gap:8px; }
+.ldc-item { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--bg); border-radius:14px; box-shadow:var(--sm); margin-bottom:6px; }
+.ldc-em   { font-size:20px; flex-shrink:0; }
+.ldc-name { font-size:13px; font-weight:600; color:var(--black); flex:1; }
+.ldc-stock { font-size:11px; color:#2a9e4f; }
+.ldc-qty-need { font-size:13px; font-weight:700; color:var(--black); }
+.ldc-qty-cmd  { font-size:11px; color:#c97a00; font-weight:600; }
+.ldc-alert { background:#ffecec; }
+.ldc-alert .ldc-name { color:#c0392b; }
+
+/* ── STOCKS MP ── */
+.stock-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+.stock-card { background:var(--bg); border-radius:20px; box-shadow:var(--so); overflow:hidden; }
+.stock-card-header { padding:14px 16px 10px; display:flex; align-items:center; gap:10px; border-bottom:.5px solid rgba(174,174,192,0.2); }
+.stock-card-em { font-size:28px; }
+.stock-card-nom { font-size:14px; font-weight:700; color:var(--black); }
+.stock-card-fournisseur { font-size:11px; color:var(--muted); }
+.stock-card-body { padding:12px 16px; }
+.stock-qty-big { font-size:28px; font-weight:800; color:var(--black); letter-spacing:-1px; }
+.stock-qty-unit { font-size:13px; color:var(--muted); }
+.stock-bar { height:6px; background:var(--bg); border-radius:3px; box-shadow:var(--si); overflow:hidden; margin:8px 0; }
+.stock-bar-fill { height:100%; border-radius:3px; transition:width .8s ease; }
+.stock-info-row { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-bottom:3px; }
+.stock-info-val { font-weight:600; color:var(--black); }
+.stock-perem-badge { font-size:10px; font-weight:600; padding:3px 9px; border-radius:99px; }
+.perem-ok   { background:#e8f9ee; color:#2a9e4f; }
+.perem-warn { background:#fff3e0; color:#c97a00; }
+.perem-alert { background:#ffecec; color:#c0392b; }
+
+/* ── RECETTE CHEF ── */
+.recette-chef-layout { display:grid; grid-template-columns:260px 1fr; gap:16px; height:calc(100vh - 160px); }
+.recette-list-panel { background:var(--bg); border-radius:20px; box-shadow:var(--so); padding:14px; overflow-y:auto; }
+.recette-item  { background:var(--bg); border-radius:14px; padding:12px 14px; margin-bottom:8px; cursor:pointer; box-shadow:var(--sm); border:2px solid transparent; }
+.recette-item.active { border-color:var(--black); box-shadow:var(--si); }
+.recette-item-nom { font-size:13px; font-weight:700; color:var(--black); }
+.recette-item-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+.recette-detail-panel { background:var(--bg); border-radius:20px; box-shadow:var(--so); padding:20px; overflow-y:auto; }
+.rdp-title  { font-size:20px; font-weight:800; color:var(--black); margin-bottom:4px; }
+.rdp-sub    { font-size:13px; color:var(--muted); margin-bottom:18px; }
+.rdp-section { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin:16px 0 8px; }
+.ing-chef-row { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg); border-radius:12px; box-shadow:var(--si); margin-bottom:6px; }
+.ing-chef-nom { flex:1; border:none; background:transparent; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--black); font-weight:500; }
+.ing-chef-qty { width:70px; border:none; background:transparent; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700; color:var(--black); text-align:right; }
+.ing-chef-unit { font-size:11px; color:var(--muted); width:30px; }
+.etape-chef-row { display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+.etape-chef-num { width:30px; height:30px; border-radius:50%; background:var(--black); color:#fff; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:var(--sm); }
+.etape-chef-txt { flex:1; border:none; background:var(--bg); border-radius:12px; padding:10px 14px; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--black); box-shadow:var(--si); resize:none; min-height:60px; }
+.btn-add-row { width:100%; padding:10px; background:var(--bg); border:none; border-radius:12px; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--muted); cursor:pointer; box-shadow:var(--so); margin-bottom:8px; }
+.btn-save-recette { width:100%; padding:14px; background:var(--black); color:#fff; border:none; border-radius:14px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+
+/* ── ROLE-BASED NAV ── */
+.role-badge-bar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg); border-radius:12px; box-shadow:var(--sm); margin-right:12px; }
+.role-badge-em  { font-size:18px; }
+.role-badge-nom { font-size:12px; font-weight:600; color:var(--black); }
+.role-badge-change { font-size:11px; color:var(--muted); cursor:pointer; text-decoration:underline; }
+
 </style>
 </head>
 <body>
 <div class="bg-pattern"></div>
 <div class="app">
-  <div class="login-screen" id="loginScreen">
+  <!-- ROLE SELECTOR -->
+  <div class="role-selector active" id="roleSelector">
+    <div class="role-title">Espace Back-office Natty</div>
+    <div class="role-sub">Choisissez votre profil d'accès</div>
+    <div class="role-grid">
+      <div class="role-card" onclick="selectionnerRole('admin')">
+        <span class="role-card-em">🛡️</span>
+        <div class="role-card-nom">Administrateur</div>
+        <div class="role-card-sub">Accès complet à toutes les fonctionnalités</div>
+      </div>
+      <div class="role-card" onclick="selectionnerRole('nutritionniste')">
+        <span class="role-card-em">🧑‍⚕️</span>
+        <div class="role-card-nom">Nutritionniste</div>
+        <div class="role-card-sub">Clients, repas, RDV, messagerie</div>
+      </div>
+      <div class="role-card" onclick="selectionnerRole('chef')">
+        <span class="role-card-em">👨‍🍳</span>
+        <div class="role-card-nom">Chef</div>
+        <div class="role-card-sub">Recettes, fiches, production</div>
+      </div>
+      <div class="role-card" onclick="selectionnerRole('commandes')">
+        <span class="role-card-em">📦</span>
+        <div class="role-card-nom">Logistique</div>
+        <div class="role-card-sub">Commandes, stocks, livraisons</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGIN SCREEN -->
+  <div class="login-screen" id="loginScreen" style="display:none;">
     <div class="login-card">
-      <span class="login-logo">🥗</span>
-      <div class="login-title">Espace nutritionniste</div>
+      <span class="login-logo" id="loginLogo">🥗</span>
+      <div class="login-title" id="loginTitle">Espace nutritionniste</div>
       <div class="login-sub" id="loginSubtitle">Connectez-vous à votre espace</div>
       <input class="login-input" type="email" id="emailInput" placeholder="Email" autocomplete="email">
       <input class="login-input" type="password" id="pwdInput" placeholder="Mot de passe">
       <button class="login-btn" id="loginBtn">Accéder →</button>
       <div class="login-err" id="loginErr"></div>
-      <div class="login-master-link" id="masterLink">Accès administrateur</div>
+      <div class="login-master-link" id="masterLink" style="display:none;">Accès administrateur</div>
+      <div style="margin-top:12px;"><button onclick="retourRoleSelector()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">← Changer de profil</button></div>
     </div>
   </div>
   <div class="main-app" id="mainApp">
@@ -383,10 +559,13 @@ input[type="file"] { display: none; }
       </div>
       <div class="nav-tabs">
         <button class="nav-tab active" id="navClients">👥 Clients</button>
+        <button class="nav-tab" id="navRepasAProg">🍱 Repas à programmer<span class="nav-badge" id="navRepasbadge">0</span></button>
         <button class="nav-tab" id="navMessages">💬 Messages<span class="nav-badge" id="navMsgBadge">0</span></button>
         <button class="nav-tab" id="navRdv">📅 RDV<span class="nav-badge" id="navRdvBadge">0</span></button>
         <button class="nav-tab" id="navMenu">🍽️ Menu</button>
         <button class="nav-tab" id="navCommandes">📦 Commandes</button>
+        <button class="nav-tab" id="navChef" style="display:none;">👨‍🍳 Chef</button>
+        <button class="nav-tab" id="navStocks" style="display:none;">📊 Stocks</button>
         <button class="nav-tab" id="navEquipe" style="display:none;">👤 Équipe</button>
       </div>
       <div class="content">
@@ -479,10 +658,148 @@ input[type="file"] { display: none; }
           <div class="plats-admin-grid" id="platsAdminGrid"><div class="loading" style="grid-column:1/-1;">Chargement...</div></div>
         </div>
         <div class="tab-content" id="tabCommandes">
-          <div class="semaine-nav"><div><div class="semaine-label" id="semaineLabel">–</div><div class="semaine-sub" id="semaineSub">–</div></div><div class="semaine-btns"><button class="btn-semaine" id="btnSemPrev">‹</button><button class="btn-semaine" id="btnSemNext">›</button></div></div>
-          <div class="commandes-stats"><div class="cmd-stat"><div class="cmd-stat-val" id="cmdTotal">–</div><div class="cmd-stat-lbl">Commandes</div></div><div class="cmd-stat"><div class="cmd-stat-val" id="cmdConfirmees">–</div><div class="cmd-stat-lbl">Confirmées</div></div><div class="cmd-stat"><div class="cmd-stat-val" id="cmdLivrees">–</div><div class="cmd-stat-lbl">Livrées</div></div></div>
-          <div class="commandes-list" id="commandesList"><div class="loading">Chargement...</div></div>
+          <div class="cmd-subtabs">
+            <button class="cmd-subtab active" id="cmdSubCal"    onclick="switchCmdSub('calendrier',this)">📅 Calendrier</button>
+            <button class="cmd-subtab" id="cmdSubList"   onclick="switchCmdSub('liste',this)">📋 Liste commandes</button>
+            <button class="cmd-subtab" id="cmdSubCourses" onclick="switchCmdSub('courses',this)">🛒 Liste de courses</button>
+          </div>
+
+          <!-- Sous-onglet Calendrier -->
+          <div id="cmdCalendrierView">
+            <div class="semaine-nav"><div><div class="semaine-label" id="semaineLabel">–</div><div class="semaine-sub" id="semaineSub">–</div></div><div class="semaine-btns"><button class="btn-semaine" id="btnSemPrev">‹</button><button class="btn-semaine" id="btnSemNext">›</button></div></div>
+            <div class="commandes-stats"><div class="cmd-stat"><div class="cmd-stat-val" id="cmdTotal">–</div><div class="cmd-stat-lbl">Commandes</div></div><div class="cmd-stat"><div class="cmd-stat-val" id="cmdConfirmees">–</div><div class="cmd-stat-lbl">Confirmées</div></div><div class="cmd-stat"><div class="cmd-stat-val" id="cmdLivrees">–</div><div class="cmd-stat-lbl">Livrées</div></div></div>
+            <!-- Calendrier hebdo -->
+            <div style="background:var(--bg);border-radius:16px;box-shadow:var(--so);overflow:hidden;margin-bottom:14px;">
+              <div class="cal-header-row">
+                <div class="cal-header-cell">Heure</div>
+                <div class="cal-header-cell">Lun</div><div class="cal-header-cell">Mar</div>
+                <div class="cal-header-cell">Mer</div><div class="cal-header-cell">Jeu</div>
+                <div class="cal-header-cell">Ven</div><div class="cal-header-cell">Sam</div>
+                <div class="cal-header-cell">Dim</div>
+              </div>
+              <div class="cal-body" id="calBody"></div>
+            </div>
+            <div class="commandes-list" id="commandesList"><div class="loading">Chargement...</div></div>
+          </div>
+
+          <!-- Sous-onglet Liste -->
+          <div id="cmdListeView" style="display:none;">
+            <div class="commandes-list" id="commandesListView"><div class="loading">Chargement...</div></div>
+          </div>
+
+          <!-- Sous-onglet Liste de courses -->
+          <div id="cmdCoursesView" style="display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <div>
+                <div style="font-size:16px;font-weight:700;color:var(--black);">Liste de courses</div>
+                <div style="font-size:12px;color:var(--muted);" id="coursesSubtitle">Calculée dynamiquement selon les commandes et les stocks</div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <input type="date" id="coursesDateFiltreDebut" style="border:none;background:var(--bg);border-radius:10px;padding:8px 12px;font-size:12px;box-shadow:var(--si);">
+                <button onclick="genererListeCourses()" style="padding:10px 16px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Calculer →</button>
+              </div>
+            </div>
+            <div id="listeCoursesAdmin"><div style="text-align:center;padding:32px;color:var(--muted);">Choisissez une date et cliquez sur Calculer</div></div>
+          </div>
         </div>
+        <!-- ONGLET REPAS A PROGRAMMER -->
+        <div class="tab-content" id="tabRepasAProg">
+          <div class="repas-layout">
+            <!-- LEFT: Liste clients avec offres -->
+            <div class="repas-left">
+              <div style="font-size:13px;font-weight:700;color:var(--black);margin-bottom:10px;">Clients à programmer</div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:10px;" id="repasSubtitle">Semaine en cours</div>
+              <div id="clientsRepasListe"><div class="loading">Chargement...</div></div>
+            </div>
+
+            <!-- CENTER: Choix des plats -->
+            <div class="repas-center">
+              <!-- Ratio macros -->
+              <div class="macro-ratio-section" id="macroRatioSection">
+                <div class="mrs-title">Besoins journaliers du client</div>
+                <div class="mrs-bar-row">
+                  <span class="mrs-lbl">🥩 Protéines</span>
+                  <div class="mrs-bar"><div class="mrs-fill" id="ratioProt" style="width:0%;background:#ff6b35;"></div></div>
+                  <div style="text-align:right;"><div class="mrs-val" id="ratioProtVal">–</div><div class="target-val" id="ratioProtTarget">Obj: –g</div></div>
+                </div>
+                <div class="mrs-bar-row">
+                  <span class="mrs-lbl">🌾 Glucides</span>
+                  <div class="mrs-bar"><div class="mrs-fill" id="ratioGluc" style="width:0%;background:#ff9500;"></div></div>
+                  <div style="text-align:right;"><div class="mrs-val" id="ratioGlucVal">–</div><div class="target-val" id="ratioGlucTarget">Obj: –g</div></div>
+                </div>
+                <div class="mrs-bar-row">
+                  <span class="mrs-lbl">🥑 Lipides</span>
+                  <div class="mrs-bar"><div class="mrs-fill" id="ratioLip" style="width:0%;background:#7b5ea7;"></div></div>
+                  <div style="text-align:right;"><div class="mrs-val" id="ratioLipVal">–</div><div class="target-val" id="ratioLipTarget">Obj: –g</div></div>
+                </div>
+                <div class="mrs-bar-row">
+                  <span class="mrs-lbl">⚡ Calories</span>
+                  <div class="mrs-bar"><div class="mrs-fill" id="ratioCal" style="width:0%;background:#34c759;"></div></div>
+                  <div style="text-align:right;"><div class="mrs-val" id="ratioCalVal">–</div><div class="target-val" id="ratioCalTarget">Obj: –kcal</div></div>
+                </div>
+              </div>
+
+              <!-- Chooser plats -->
+              <div class="plat-chooser-card">
+                <div class="plc-header">
+                  <div>
+                    <div class="plc-client" id="plcClientNom">Sélectionnez un client</div>
+                    <div class="plc-formule" id="plcFormule">–</div>
+                  </div>
+                  <div id="plcSelCount" style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.7);">0/0 plats</div>
+                </div>
+                <div style="padding:10px 14px 6px;display:flex;gap:6px;overflow-x:auto;">
+                  <button class="cmd-subtab active" id="filtPlatAll" onclick="filtrerPlatsChef('all',this)">Tous</button>
+                  <button class="cmd-subtab" id="filtPlatPerf" onclick="filtrerPlatsChef('performance',this)">⚡ Performance</button>
+                  <button class="cmd-subtab" id="filtPlatObj"  onclick="filtrerPlatsChef('objectif',this)">🎯 Objectif</button>
+                  <button class="cmd-subtab" id="filtPlatBien" onclick="filtrerPlatsChef('bien_etre',this)">🌿 Bien-être</button>
+                </div>
+                <div class="plc-grid" id="plcPlatGrid"><div class="loading" style="grid-column:1/-1;">Sélectionnez un client</div></div>
+                <div class="plc-actions">
+                  <button class="plc-save-btn" id="btnSauvegarderRepas" onclick="sauvegarderRepasClient()" disabled>Enregistrer les repas →</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT: Fiche client + questionnaire alim -->
+            <div class="repas-right">
+              <div class="fiche-right-tabs">
+                <button class="frt-btn active" onclick="switchFicheRight('profil',this)">👤 Profil</button>
+                <button class="frt-btn" onclick="switchFicheRight('alim',this)">🥗 Alim</button>
+                <button class="frt-btn" onclick="switchFicheRight('historique',this)">📋 Repas</button>
+              </div>
+              <div id="ficheRightContent"><div class="loading">Sélectionnez un client</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ONGLET CHEF -->
+        <div class="tab-content" id="tabChef">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div><div style="font-size:18px;font-weight:800;color:var(--black);">Recettes & Production</div><div style="font-size:13px;color:var(--muted);">Fiches recettes modifiables</div></div>
+            <button onclick="ajouterRecette()" style="padding:10px 18px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">+ Nouvelle recette</button>
+          </div>
+          <div class="recette-chef-layout">
+            <div class="recette-list-panel" id="recetteListPanel"><div class="loading">Chargement...</div></div>
+            <div class="recette-detail-panel" id="recetteDetailPanel">
+              <div style="text-align:center;padding:40px;color:var(--muted);">
+                <div style="font-size:48px;margin-bottom:12px;">🍳</div>
+                <div style="font-size:15px;font-weight:600;">Sélectionnez une recette</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ONGLET STOCKS -->
+        <div class="tab-content" id="tabStocks">
+          <div class="cmd-subtabs">
+            <button class="cmd-subtab active" id="stockSubEtat" onclick="switchStockSub('etat',this)">📊 État des stocks</button>
+            <button class="cmd-subtab" id="stockSubEntree" onclick="switchStockSub('entree',this)">+ Entrée stock</button>
+            <button class="cmd-subtab" id="stockSubAlertes" onclick="switchStockSub('alertes',this)">🚨 Alertes</button>
+          </div>
+          <div id="stocksContent"><div class="loading">Chargement...</div></div>
+        </div>
+
         <div class="tab-content" id="tabEquipe">
           <div class="equipe-header"><div class="equipe-title">Équipe de nutritionnistes</div><button class="btn-add-nutri" id="btnToggleNutri">+ Ajouter</button></div>
           <div class="form-nutri-card" id="formNutri">
@@ -618,17 +935,6 @@ function logout() {
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('pwdInput').value='';
   document.getElementById('emailInput').value='';
-}
-
-
-async function chargerRdvAdmin() {
-  try { 
-    allRdv = await sb('rdv?order=date_rdv.desc&select=*'); 
-    afficherRdvAdmin(currentRdvFilter); 
-    const demandes = allRdv.filter(function(r){ return r.statut==='demande_client'; });
-    var badge = document.getElementById('navRdvBadge');
-    if (badge) { badge.textContent = demandes.length; badge.classList.toggle('visible', demandes.length>0); }
-  } catch(e) { console.log('chargerRdvAdmin error:', e.message); }
 }
 
 function demarrerApp() {
@@ -791,7 +1097,7 @@ function appliquerFiltres() {
     var motiv  = (cl.motivation||'').toLowerCase();
     return prenom.includes(search) || nom.includes(search) || email.includes(search) || uid.includes(search) || motiv.includes(search) || (prenom+' '+nom).includes(search);
   });
-  var abonnFilter = null;
+  var abonnFilter = currentAbonnFilter;
   if (abonnFilter && abonnFilter !== 'tous') {
     filtered = filtered.filter(function(cl) {
       if (abonnFilter === 'abonne') return cl._abonne;
@@ -1177,7 +1483,7 @@ async function saveEditField() {
 async function chargerFicheAlim(userId) {
   document.getElementById('ficheAlimContent').innerHTML = '<div class="loading">Chargement...</div>';
   try {
-    var data = await sb('questionnaire_alim?user_id=eq.'+userId+'&limit=1');
+    var data = await sbFetch('questionnaire_alim?user_id=eq.'+userId+'&limit=1');
     if (!data||!data.length) {
       document.getElementById('ficheAlimContent').innerHTML = '<div class="alim-empty" style="padding:20px;">Questionnaire alimentaire non complété.</div>';
       return;
@@ -1259,7 +1565,7 @@ async function chargerFicheRdvPanel(userId) {
   var el = document.getElementById('ficheRdvContent');
   el.innerHTML = '<div class="loading">Chargement...</div>';
   try {
-    var rdvs = await sb('rdv?user_id=eq.'+userId+'&order=date_rdv.desc&select=*');
+    var rdvs = await sbFetch('rdv?user_id=eq.'+userId+'&order=date_rdv.desc&select=*');
     var MOIS = ['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'];
     el.innerHTML = '<div class="sec-card" id="rdvListeAdmin"><div class="sec-label" style="margin-bottom:12px;">Rendez-vous</div><div id="rdvItems"></div></div>'
       + '<div class="sec-card"><div class="sec-label">+ Programmer un RDV</div>'
@@ -1347,17 +1653,11 @@ async function chargerFicheProg(userId) {
   document.getElementById('ficheProgContent').innerHTML = '<div class="loading">Chargement...</div>';
   try {
     var [daily, meals, onb] = await Promise.all([
-      sb('daily_macros?user_id=eq.'+userId+'&order=date.desc&limit=30'),
-      sb('meals?user_id=eq.'+userId+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=20'),
-      sb('onboarding?user_id=eq.'+userId+'&select=poids,taille,age,sexe,activite,bmr,tdee,score_motivation,score_rigueur,score_nutrition&limit=1')
+      sbFetch('daily_macros?user_id=eq.'+userId+'&order=date.desc&limit=30'),
+      sbFetch('meals?user_id=eq.'+userId+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=20'),
+      sbFetch('onboarding?user_id=eq.'+userId+'&select=poids,tdee,bmr,proteines,lipides,glucides&limit=1')
     ]);
     var obj = onb[0]||{};
-    // Calcul des objectifs depuis tdee
-    var tdee = parseFloat(obj.tdee)||0;
-    var poids = parseFloat(obj.poids)||0;
-    obj.proteines = poids ? Math.round(poids*2) : 0;
-    obj.lipides   = tdee ? Math.round(tdee*0.25/9) : 0;
-    obj.glucides  = tdee ? Math.round(tdee*0.5/4) : 0;
     var avgProt=0, avgLip=0, avgGluc=0, avgCal=0;
     if (daily.length) {
       daily.forEach(function(d){avgProt+=d.prot_g||0;avgLip+=d.lip_g||0;avgGluc+=d.gluc_g||0;avgCal+=d.cal_kcal||0;});
@@ -1669,7 +1969,7 @@ async function supprimerPlat(id) {
 async function chargerEquipe() {
   try{
     allNutris=await sb('nutritionnistes?select=*&order=created_at.asc');
-    const clients=[];
+    const clients=await sb('onboarding?completed=eq.true&select=nutritionniste_id');
     const counts={};clients.forEach(c=>{if(c.nutritionniste_id)counts[c.nutritionniste_id]=(counts[c.nutritionniste_id]||0)+1;});
     const el=document.getElementById('nutriAdminList');
     if(!allNutris||!allNutris.length){el.innerHTML='<div class="empty">Aucun nutritionniste</div>';return;}
@@ -1774,6 +2074,920 @@ async function changerStatut(id,select) {
   try{await sb('commandes?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:newStatut})});toast('Statut mis à jour','ok');chargerCommandes();}
   catch(e){toast('Erreur','err');}
 }
+
+// ══════════════════════════════════════════════════════════
+// ROLE SELECTOR
+// ══════════════════════════════════════════════════════════
+let currentRole = null;
+
+const ROLE_CONFIG = {
+  admin: {
+    logo:'🛡️', title:'Accès Administrateur',
+    tabs: ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navChef','navStocks','navEquipe'],
+    pwdOnly: true
+  },
+  nutritionniste: {
+    logo:'🧑‍⚕️', title:'Espace Nutritionniste',
+    tabs: ['navClients','navRepasAProg','navMessages','navRdv','navMenu'],
+    pwdOnly: false
+  },
+  chef: {
+    logo:'👨‍🍳', title:'Interface Chef',
+    tabs: ['navChef','navStocks'],
+    pwdOnly: true
+  },
+  commandes: {
+    logo:'📦', title:'Logistique & Commandes',
+    tabs: ['navCommandes','navStocks'],
+    pwdOnly: true
+  }
+};
+
+function selectionnerRole(role) {
+  currentRole = role;
+  const cfg = ROLE_CONFIG[role];
+  document.getElementById('roleSelector').classList.remove('active');
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginLogo').textContent = cfg.logo;
+  document.getElementById('loginTitle').textContent = cfg.title;
+  document.getElementById('loginSubtitle').textContent = cfg.pwdOnly ? 'Entrez le mot de passe' : 'Connectez-vous';
+  document.getElementById('emailInput').style.display = cfg.pwdOnly ? 'none' : 'block';
+}
+
+function retourRoleSelector() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('roleSelector').classList.add('active');
+  currentRole = null;
+}
+
+// Override login to handle roles
+const origLogin = window.login;
+window.login = function() {
+  if (!currentRole) { selectionnerRole('admin'); return; }
+  const cfg = ROLE_CONFIG[currentRole];
+  const pwd = document.getElementById('pwdInput').value;
+  const email = document.getElementById('emailInput').value.trim();
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+
+  if (currentRole === 'admin') {
+    if (pwd === MASTER_PWD) {
+      isMasterAdmin = true; currentNutri = {nom:'Admin',id:null};
+      demarrerAppAvecRole();
+    } else { errEl.textContent = 'Mot de passe incorrect'; }
+    return;
+  }
+  if (currentRole === 'chef' || currentRole === 'commandes') {
+    if (pwd === MASTER_PWD || pwd === 'Chef2026!' || pwd === 'Logistique2026!') {
+      isMasterAdmin = false;
+      currentNutri = {nom: currentRole === 'chef' ? 'Chef' : 'Logistique', id:null};
+      demarrerAppAvecRole();
+    } else { errEl.textContent = 'Mot de passe incorrect'; }
+    return;
+  }
+  // nutritionniste: email + pwd
+  if (!email || !pwd) { errEl.textContent = 'Email et mot de passe requis'; return; }
+  sb('nutritionnistes?email=eq.'+encodeURIComponent(email)+'&actif=eq.true&select=*')
+    .then(nutris => {
+      if (!nutris||!nutris.length) { errEl.textContent='Email introuvable'; return; }
+      const nutri = nutris[0];
+      if (btoa(pwd) !== nutri.mdp_hash) { errEl.textContent='Mot de passe incorrect'; return; }
+      currentNutri = nutri; isMasterAdmin = false;
+      localStorage.setItem('nutri_session', JSON.stringify({id:nutri.id, email:nutri.email}));
+      demarrerAppAvecRole();
+    }).catch(e => { errEl.textContent = 'Erreur : '+e.message; });
+};
+
+function demarrerAppAvecRole() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').classList.add('visible');
+  document.getElementById('nutriBadgeName').textContent = isMasterAdmin ? 'Admin' : (currentNutri.nom||'').split(' ')[0];
+
+  // Show/hide tabs based on role
+  const cfg = currentRole ? ROLE_CONFIG[currentRole] : ROLE_CONFIG.admin;
+  const allTabs = ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navChef','navStocks','navEquipe'];
+  allTabs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = cfg.tabs.includes(id) ? 'block' : 'none';
+  });
+
+  // Activate first tab of role
+  const firstTab = cfg.tabs[0];
+  const tabMap = {
+    navClients:'clients', navRepasAProg:'repasAProg', navMessages:'messages',
+    navRdv:'rdv', navMenu:'menu', navCommandes:'commandes', navChef:'chef',
+    navStocks:'stocks', navEquipe:'equipe'
+  };
+  switchNav(tabMap[firstTab] || 'clients');
+
+  // Load data
+  chargerClients();
+  chargerPlats();
+  chargerThreadsMessages();
+  chargerRdvAdmin();
+  if (cfg.tabs.includes('navRepasAProg')) chargerClientsRepas();
+  if (cfg.tabs.includes('navChef')) chargerRecettes();
+  if (cfg.tabs.includes('navStocks')) chargerStocks();
+  if (cfg.tabs.includes('navCommandes')) chargerCommandesCalendrier();
+  if (isMasterAdmin || cfg.tabs.includes('navEquipe')) chargerEquipe();
+  subscribeGlobalRealtime();
+}
+
+// Override switchNav to handle new tabs
+const origSwitchNav = window.switchNav;
+window.switchNav = function(tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const tabMap = {
+    clients:'navClients', repasAProg:'navRepasAProg', messages:'navMessages',
+    rdv:'navRdv', menu:'navMenu', commandes:'navCommandes',
+    chef:'navChef', stocks:'navStocks', equipe:'navEquipe'
+  };
+  const contentMap = {
+    clients:'tabClients', repasAProg:'tabRepasAProg', messages:'tabMessages',
+    rdv:'tabRdv', menu:'tabMenu', commandes:'tabCommandes',
+    chef:'tabChef', stocks:'tabStocks', equipe:'tabEquipe'
+  };
+  const navEl = document.getElementById(tabMap[tab]);
+  const contEl = document.getElementById(contentMap[tab]);
+  if (navEl) navEl.classList.add('active');
+  if (contEl) contEl.classList.add('active');
+  if (tab === 'repasAProg') chargerClientsRepas();
+  if (tab === 'chef') chargerRecettes();
+  if (tab === 'stocks') chargerStocks();
+  if (tab === 'commandes') chargerCommandesCalendrier();
+};
+
+// ══════════════════════════════════════════════════════════
+// REPAS À PROGRAMMER — NUTRITIONNISTE
+// ══════════════════════════════════════════════════════════
+let clientRepasSelected = null;
+let platsChefSelection = {}; // { platId: {plat, qty_g} }
+let platsFiltreChef = 'all';
+
+async function chargerClientsRepas() {
+  const el = document.getElementById('clientsRepasListe');
+  if (!el) return;
+  el.innerHTML = '<div class="loading">Chargement...</div>';
+  try {
+    // Clients with offres 3x or 4x
+    const offres = await sb('offres_clients?statut=eq.active&select=*,user_id');
+    const userIds = offres.map(o => o.user_id).filter(Boolean);
+    if (!userIds.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Aucun client avec offre active</div>';
+      return;
+    }
+
+    // Get onboarding for names + macros
+    const onbs = await sb('onboarding?completed=eq.true&select=user_id,prenom,nom,poids,tdee,objectif_type,activite');
+    const onbMap = {};
+    onbs.forEach(o => { onbMap[o.user_id] = o; });
+
+    // Check which have repas programmed this week
+    const lundi = getLundiSemaineAdmin();
+    const plans = await sb('plans_repas?semaine_livraison=eq.'+lundi+'&select=user_id,statut');
+    const planUserIds = new Set(plans.map(p => p.user_id));
+
+    el.innerHTML = offres.map(offre => {
+      const ob = onbMap[offre.user_id] || {};
+      const nom = (ob.prenom || '') + ' ' + (ob.nom || '');
+      const hasPlan = planUserIds.has(offre.user_id);
+      const badgeCls = hasPlan ? 'badge-ok' : 'badge-todo';
+      const badgeTxt = hasPlan ? 'Programmé' : 'À faire';
+      return '<div class="client-repas-item" onclick="selectionnerClientRepas(\''+offre.user_id+'\',this)" data-userid="'+offre.user_id+'">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;">'
+        + '<div class="cri-name">'+(nom.trim()||'Client anonyme')+'</div>'
+        + '<span class="cri-badge '+badgeCls+'">'+badgeTxt+'</span>'
+        + '</div>'
+        + '<div class="cri-formule">🍽️ '+offre.nb_plats_semaine+'x repas / semaine</div>'
+        + '</div>';
+    }).join('');
+
+    // Badge count
+    const todoCount = offres.length - planUserIds.size;
+    const badge = document.getElementById('navRepasbadge');
+    if (badge && todoCount > 0) { badge.textContent = todoCount; badge.style.display = 'inline-flex'; }
+
+  } catch(e) { el.innerHTML = '<div class="loading">Erreur: '+e.message+'</div>'; }
+}
+
+async function selectionnerClientRepas(userId, el) {
+  document.querySelectorAll('.client-repas-item').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  clientRepasSelected = userId;
+  platsChefSelection = {};
+  await Promise.all([
+    chargerMacrosClient(userId),
+    chargerFicheRight(userId, 'profil'),
+    chargerPlatsPourClient(userId)
+  ]);
+}
+
+async function chargerMacrosClient(userId) {
+  try {
+    const obs = await sb('onboarding?user_id=eq.'+userId+'&select=poids,tdee,objectif_type,activite,prenom,nb_plats_semaine&limit=1');
+    const ob = obs[0] || {};
+    const poids = parseFloat(ob.poids) || 70;
+    const tdee  = parseFloat(ob.tdee)  || 2000;
+    const prot = Math.round(poids * 2);
+    const gluc = Math.round(tdee * 0.5 / 4);
+    const lip  = Math.round(tdee * 0.25 / 9);
+    const cal  = Math.round(tdee);
+
+    // Get offre for nb_plats
+    const offres = await sb('offres_clients?user_id=eq.'+userId+'&statut=eq.active&select=nb_plats_semaine&limit=1');
+    const nbPlats = offres[0] ? offres[0].nb_plats_semaine : 3;
+
+    // Per meal
+    const protM = Math.round(prot / nbPlats);
+    const glucM = Math.round(gluc / nbPlats);
+    const lipM  = Math.round(lip  / nbPlats);
+    const calM  = Math.round(cal  / nbPlats);
+
+    // Update display
+    setText('plcClientNom', (ob.prenom||'Client') + ' — ' + nbPlats + ' repas');
+    setText('plcFormule', 'Objectif: '+prot+'g prot / '+cal+' kcal · '+protM+'g prot/repas');
+    setText('plcSelCount', '0/' + nbPlats + ' plats');
+
+    // Ratio bars (per meal target)
+    document.getElementById('ratioProt').style.width = '0%';
+    document.getElementById('ratioGluc').style.width = '0%';
+    document.getElementById('ratioLip').style.width  = '0%';
+    document.getElementById('ratioCal').style.width  = '0%';
+    setText('ratioProtVal', '0/'+protM+'g');
+    setText('ratioGlucVal', '0/'+glucM+'g');
+    setText('ratioLipVal',  '0/'+lipM+'g');
+    setText('ratioCalVal',  '0/'+calM+' kcal');
+    setText('ratioProtTarget', 'Obj/repas: '+protM+'g');
+    setText('ratioGlucTarget', 'Obj/repas: '+glucM+'g');
+    setText('ratioLipTarget',  'Obj/repas: '+lipM+'g');
+    setText('ratioCalTarget',  'Obj/repas: '+calM+' kcal');
+
+    // Store for later
+    clientRepasSelected._macros = {prot:protM, gluc:glucM, lip:lipM, cal:calM, nbPlats};
+  } catch(e) {}
+}
+
+async function chargerPlatsPourClient(userId) {
+  const grid = document.getElementById('plcPlatGrid');
+  if (!grid) return;
+  grid.innerHTML = '<div class="loading" style="grid-column:1/-1;">Chargement des plats...</div>';
+  try {
+    let path = 'plats_menu?actif=eq.true&select=*';
+    if (platsFiltreChef !== 'all') path += '&categorie=eq.'+platsFiltreChef;
+    const plats = await sb(path);
+    rendreGrillePlats(plats);
+  } catch(e) { grid.innerHTML = '<div class="loading" style="grid-column:1/-1;">Erreur</div>'; }
+}
+
+function rendreGrillePlats(plats) {
+  const grid = document.getElementById('plcPlatGrid');
+  if (!plats.length) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted);">Aucun plat dans cette catégorie</div>'; return; }
+  grid.innerHTML = plats.map(p => {
+    const sel = platsChefSelection[p.id];
+    const photoHtml = p.photo_url ? '<img src="'+p.photo_url+'" style="width:100%;height:80px;object-fit:cover;">' : '<div class="plc-photo">🍽️</div>';
+    return '<div class="plc-plat'+(sel?' selected':'')+'" id="plcplat_'+p.id+'" onclick="togglePlatChef(\''+p.id+'\')">'
+      + photoHtml
+      + '<div class="plc-body">'
+      + '<div class="plc-nom">'+(p.nom||'Plat')+'</div>'
+      + '<div class="plc-macros">'
+      + '<span class="plc-mac">🥩'+(p.proteines||0)+'g</span>'
+      + '<span class="plc-mac">🌾'+(p.glucides||0)+'g</span>'
+      + '<span class="plc-mac">⚡'+(p.calories||0)+'</span>'
+      + '</div></div>'
+      + (sel ? '<div class="plc-qty-row"><span class="plc-qty-lbl">Quantité (g)</span><input class="plc-qty-inp" type="number" value="'+(sel.qty_g||300)+'" min="50" max="600" oninput="updateQtyChef(\''+p.id+'\',this.value)" onclick="event.stopPropagation()"></div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function togglePlatChef(platId) {
+  const plats = allPlats || [];
+  const p = plats.find(x => x.id === platId);
+  if (!p) return;
+  if (platsChefSelection[platId]) {
+    delete platsChefSelection[platId];
+  } else {
+    platsChefSelection[platId] = {plat: p, qty_g: 300};
+  }
+  updateRatioBars();
+  rendreGrillePlats(plats.filter(x => platsFiltreChef === 'all' || x.categorie === platsFiltreChef));
+}
+
+function updateQtyChef(platId, val) {
+  if (platsChefSelection[platId]) {
+    platsChefSelection[platId].qty_g = parseFloat(val) || 300;
+    updateRatioBars();
+  }
+}
+
+function updateRatioBars() {
+  const mac = clientRepasSelected && clientRepasSelected._macros ? clientRepasSelected._macros : {prot:40,gluc:60,lip:20,cal:500,nbPlats:3};
+  const sels = Object.values(platsChefSelection);
+  const count = sels.length;
+
+  // Average macros of selection (weighted by qty)
+  let totP=0, totG=0, totL=0, totC=0;
+  sels.forEach(s => {
+    const r = s.qty_g / 100;
+    totP += (s.plat.proteines || 0) * r;
+    totG += (s.plat.glucides  || 0) * r;
+    totL += (s.plat.lipides   || 0) * r;
+    totC += (s.plat.calories  || 0) * r;
+  });
+  const avgP = count ? Math.round(totP/count) : 0;
+  const avgG = count ? Math.round(totG/count) : 0;
+  const avgL = count ? Math.round(totL/count) : 0;
+  const avgC = count ? Math.round(totC/count) : 0;
+
+  const pPct = mac.prot > 0 ? Math.min(100,Math.round(avgP/mac.prot*100)) : 0;
+  const gPct = mac.gluc > 0 ? Math.min(100,Math.round(avgG/mac.gluc*100)) : 0;
+  const lPct = mac.lip  > 0 ? Math.min(100,Math.round(avgL/mac.lip*100))  : 0;
+  const cPct = mac.cal  > 0 ? Math.min(100,Math.round(avgC/mac.cal*100))  : 0;
+
+  const fill = (id, pct, color) => { const el=document.getElementById(id); if(el){el.style.width=pct+'%';el.style.background=pct>100?'#c0392b':color;} };
+  fill('ratioProt', pPct, '#ff6b35');
+  fill('ratioGluc', gPct, '#ff9500');
+  fill('ratioLip',  lPct, '#7b5ea7');
+  fill('ratioCal',  cPct, '#34c759');
+
+  setText('ratioProtVal', avgP+'/'+mac.prot+'g');
+  setText('ratioGlucVal', avgG+'/'+mac.gluc+'g');
+  setText('ratioLipVal',  avgL+'/'+mac.lip+'g');
+  setText('ratioCalVal',  avgC+'/'+mac.cal+' kcal');
+  setText('plcSelCount', count+'/'+mac.nbPlats+' plats');
+
+  const btn = document.getElementById('btnSauvegarderRepas');
+  if (btn) btn.disabled = count === 0;
+}
+
+function filtrerPlatsChef(cat, el) {
+  platsFiltreChef = cat;
+  document.querySelectorAll('#tabRepasAProg .cmd-subtab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (clientRepasSelected) chargerPlatsPourClient(clientRepasSelected);
+  else rendreGrillePlats((allPlats||[]).filter(p => cat==='all'||p.categorie===cat));
+}
+
+async function sauvegarderRepasClient() {
+  if (!clientRepasSelected) return;
+  const btn = document.getElementById('btnSauvegarderRepas');
+  btn.disabled = true; btn.textContent = 'Enregistrement...';
+  const lundi = getLundiSemaineAdmin();
+  const sels = Object.values(platsChefSelection);
+  try {
+    // Delete existing plans for this client this week
+    await fetch(SB_URL+'/rest/v1/plans_repas?user_id=eq.'+clientRepasSelected+'&semaine_livraison=eq.'+lundi, {
+      method:'DELETE', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    });
+    // Insert new plans
+    const rows = sels.map(s => ({
+      user_id: clientRepasSelected,
+      plat_nom: s.plat.nom,
+      semaine_livraison: lundi,
+      quantite_g: s.qty_g,
+      prot_g: Math.round((s.plat.proteines||0)*s.qty_g/100*10)/10,
+      gluc_g: Math.round((s.plat.glucides ||0)*s.qty_g/100*10)/10,
+      lip_g:  Math.round((s.plat.lipides  ||0)*s.qty_g/100*10)/10,
+      cal_kcal: Math.round((s.plat.calories||0)*s.qty_g/100),
+      statut: 'propose',
+      valide_par: currentNutri ? currentNutri.nom : 'Nutritionniste',
+      valide_at: new Date().toISOString()
+    }));
+    await sb('plans_repas', {method:'POST', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(rows)});
+    toast('Repas programmés pour ce client !', 'ok');
+    chargerClientsRepas();
+  } catch(e) { toast('Erreur: '+e.message, 'err'); }
+  btn.disabled = false; btn.textContent = 'Enregistrer les repas →';
+}
+
+async function chargerFicheRight(userId, panel) {
+  const cont = document.getElementById('ficheRightContent');
+  if (!cont) return;
+  cont.innerHTML = '<div class="loading">Chargement...</div>';
+  try {
+    if (panel === 'profil') {
+      const obs = await sb('onboarding?user_id=eq.'+userId+'&select=*&limit=1');
+      const ob = obs[0] || {};
+      const rows = [
+        ['Prénom', ob.prenom||'–'],['Nom', ob.nom||'–'],['Email', ob.email||'–'],
+        ['Âge', ob.age ? ob.age+' ans' : '–'],['Poids', ob.poids ? ob.poids+' kg' : '–'],
+        ['Taille', ob.taille ? ob.taille+' cm' : '–'],
+        ['Activité', ob.activite||'–'],['Objectif', ob.objectif_type||'–'],
+        ['BMR', ob.bmr ? ob.bmr+' kcal' : '–'],['TDEE', ob.tdee ? ob.tdee+' kcal/j' : '–'],
+      ];
+      cont.innerHTML = rows.map(r => '<div class="frc-row"><span class="frc-lbl">'+r[0]+'</span><span class="frc-val">'+r[1]+'</span></div>').join('');
+    } else if (panel === 'alim') {
+      const qas = await sb('questionnaire_alim?user_id=eq.'+userId+'&select=*&limit=1');
+      const qa = qas[0];
+      if (!qa) { cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Questionnaire non rempli</div>'; return; }
+      const sections = [
+        ['Allergies', (qa.allergies||[]).join(', ')],
+        ['Aliments refusés', (qa.aliments_refuses||[]).join(', ')],
+        ['Cuisines préférées', (qa.cuisines||[]).join(', ')],
+        ['Régime', qa.regime||'–'],
+        ['Commentaire', qa.commentaire||'–'],
+      ];
+      cont.innerHTML = sections.map(r => '<div class="frc-row"><span class="frc-lbl">'+r[0]+'</span><span class="frc-val">'+r[1]+'</span></div>').join('');
+    } else if (panel === 'historique') {
+      const meals = await sb('meals?user_id=eq.'+userId+'&select=name,created_at&order=created_at.desc&limit=10');
+      if (!meals.length) { cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Aucun repas enregistré</div>'; return; }
+      cont.innerHTML = meals.map(m => '<div class="frc-row"><span class="frc-lbl">'+new Date(m.created_at).toLocaleDateString('fr-FR')+'</span><span class="frc-val">'+m.name+'</span></div>').join('');
+    }
+  } catch(e) { cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Erreur: '+e.message+'</div>'; }
+}
+
+function switchFicheRight(panel, el) {
+  document.querySelectorAll('.frt-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (clientRepasSelected) chargerFicheRight(clientRepasSelected, panel);
+}
+
+// ══════════════════════════════════════════════════════════
+// COMMANDES — CALENDRIER & LISTE DE COURSES
+// ══════════════════════════════════════════════════════════
+function switchCmdSub(sub, el) {
+  document.querySelectorAll('.cmd-subtab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('cmdCalendrierView').style.display = sub === 'calendrier' ? 'block' : 'none';
+  document.getElementById('cmdListeView').style.display      = sub === 'liste'      ? 'block' : 'none';
+  document.getElementById('cmdCoursesView').style.display    = sub === 'courses'    ? 'block' : 'none';
+  if (sub === 'calendrier') chargerCommandesCalendrier();
+  if (sub === 'liste') chargerCommandesListe();
+}
+
+async function chargerCommandesCalendrier() {
+  try {
+    const lundi = getLundiSemaineAdmin();
+    const fin = new Date(lundi); fin.setDate(fin.getDate()+7);
+    const finStr = fin.toISOString().split('T')[0];
+    const cmds = await sb('commandes?date_livraison=gte.'+lundi+'&date_livraison=lt.'+finStr+'&select=*&order=date_livraison.asc');
+    rendreCalendrierCommandes(cmds, lundi);
+    setText('cmdTotal',       cmds.length);
+    setText('cmdConfirmees',  cmds.filter(c=>c.statut==='confirmee').length);
+    setText('cmdLivrees',     cmds.filter(c=>c.statut==='livree').length);
+    rendreListeCommandes(cmds, 'commandesList');
+  } catch(e) {}
+}
+
+function rendreCalendrierCommandes(cmds, lundi) {
+  const cal = document.getElementById('calBody');
+  if (!cal) return;
+  const CRENEAUX = ['Matin 8h','Midi 12h','Soir 18h'];
+  const SLOTS = ['matin','midi','soir'];
+  const lundiDate = new Date(lundi+'T00:00:00');
+  let html = '';
+  SLOTS.forEach((slot, si) => {
+    html += '<div class="cal-time-cell">'+CRENEAUX[si]+'</div>';
+    for (let j=0; j<7; j++) {
+      const d = new Date(lundiDate); d.setDate(d.getDate()+j);
+      const ds = d.toISOString().split('T')[0];
+      const dayCmds = cmds.filter(c => c.date_livraison === ds && c.creneau === slot);
+      html += '<div class="cal-day-cell">'
+        + dayCmds.map(c => '<div class="cal-event ev-'+(c.statut||'')+'">'+
+            (c.user_nom||'Client')+' · '+(c.formule_nb_plats||'?')+'p'+'</div>'
+          ).join('')
+        + '</div>';
+    }
+  });
+  cal.innerHTML = html;
+}
+
+async function chargerCommandesListe() {
+  const el = document.getElementById('commandesListView');
+  if (!el) return;
+  el.innerHTML = '<div class="loading">Chargement...</div>';
+  try {
+    const cmds = await sb('commandes?select=*&order=date_livraison.desc&limit=50');
+    rendreListeCommandes(cmds, 'commandesListView');
+  } catch(e) {}
+}
+
+function rendreListeCommandes(cmds, elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!cmds.length) { el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);">Aucune commande</div>'; return; }
+  const STATUT_LABELS = {confirmee:'Confirmée',livree:'Livrée',annulee:'Annulée',en_attente:'En attente'};
+  const STATUT_COLORS = {confirmee:'#2a9e4f',livree:'#555',annulee:'#c0392b',en_attente:'#c97a00'};
+  el.innerHTML = cmds.map(c => {
+    const col = STATUT_COLORS[c.statut] || '#aaa';
+    const lbl = STATUT_LABELS[c.statut] || c.statut || '–';
+    return '<div style="background:var(--bg);border-radius:16px;box-shadow:var(--sm);padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px;">'
+      + '<div style="width:8px;height:8px;border-radius:50%;background:'+col+';flex-shrink:0;"></div>'
+      + '<div style="flex:1;">'
+      + '<div style="font-size:14px;font-weight:700;color:var(--black);">'+(c.user_nom||'Client')+'</div>'
+      + '<div style="font-size:11px;color:var(--muted);">'+(c.date_livraison||'–')+' · '+(c.creneau||'–')+' · '+(c.formule_nb_plats||'?')+' plats</div>'
+      + '</div>'
+      + '<span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;background:'+col+'22;color:'+col+';">'+lbl+'</span>'
+      + '<button onclick="changerStatutCommande(\''+c.id+'\',\'livree\')" style="padding:6px 12px;background:var(--black);color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:600;cursor:pointer;">Livrer</button>'
+      + '</div>';
+  }).join('');
+}
+
+async function changerStatutCommande(id, statut) {
+  try {
+    await fetch(SB_URL+'/rest/v1/commandes?id=eq.'+id, {
+      method:'PATCH', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({statut})
+    });
+    toast('Statut mis à jour','ok');
+    chargerCommandesCalendrier();
+  } catch(e){ toast('Erreur','err'); }
+}
+
+async function genererListeCourses() {
+  const dateDebut = document.getElementById('coursesDateFiltreDebut').value || getLundiSemaineAdmin();
+  const dateFin = new Date(dateDebut+'T00:00:00'); dateFin.setDate(dateFin.getDate()+7);
+  const dateFinStr = dateFin.toISOString().split('T')[0];
+  const el = document.getElementById('listeCoursesAdmin');
+  el.innerHTML = '<div class="loading">Calcul en cours...</div>';
+  try {
+    // 1. Get all plans_repas for this week
+    const plans = await sb('plans_repas?semaine_livraison=gte.'+dateDebut+'&semaine_livraison=lt.'+dateFinStr+'&select=*');
+    // 2. Get stocks actuals
+    const stocks = await sb('stocks_mp?statut=eq.disponible&select=ingredient_nom,quantite_kg');
+    const stockMap = {};
+    stocks.forEach(s => { stockMap[(s.ingredient_nom||'').toLowerCase()] = parseFloat(s.quantite_kg)||0; });
+    // 3. Aggregate ingredients needed
+    const needed = {}; // {nom: {qty_kg, plats: []}}
+    plans.forEach(plan => {
+      const nom = (plan.plat_nom||'').toLowerCase();
+      if (!needed[nom]) needed[nom] = {nom:plan.plat_nom, qty_kg:0, count:0};
+      needed[nom].qty_kg += (plan.quantite_g||300) / 1000;
+      needed[nom].count++;
+    });
+    // 4. Calculate what needs to be ordered
+    const items = Object.values(needed).map(item => {
+      const stock = stockMap[item.nom.toLowerCase()] || 0;
+      const toOrder = Math.max(0, item.qty_kg - stock);
+      return {...item, stock_kg:stock, to_order_kg:toOrder};
+    });
+    // 5. Render
+    if (!items.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);">Aucune commande cette semaine</div>'; return; }
+    const alertItems = items.filter(i => i.to_order_kg > 0);
+    const okItems    = items.filter(i => i.to_order_kg === 0);
+    let html = '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Semaine du '+dateDebut+' — '+plans.length+' repas programmés</div>';
+    if (alertItems.length) {
+      html += '<div class="ldc-section"><div class="ldc-section-title">🛒 À commander ('+alertItems.length+' articles)</div>';
+      html += alertItems.map(i => '<div class="ldc-item ldc-alert">'
+        + '<span class="ldc-em">🍽️</span>'
+        + '<div style="flex:1;"><div class="ldc-name">'+i.nom+'</div><div class="ldc-stock">Stock actuel: '+i.stock_kg.toFixed(2)+' kg</div></div>'
+        + '<div style="text-align:right;"><div class="ldc-qty-need">'+i.qty_kg.toFixed(2)+' kg</div><div class="ldc-qty-cmd">Commander: '+i.to_order_kg.toFixed(2)+' kg</div></div>'
+        + '</div>').join('') + '</div>';
+    }
+    if (okItems.length) {
+      html += '<div class="ldc-section"><div class="ldc-section-title" style="color:#2a9e4f;">✅ En stock ('+okItems.length+' articles)</div>';
+      html += okItems.map(i => '<div class="ldc-item">'
+        + '<span class="ldc-em">✅</span>'
+        + '<div style="flex:1;"><div class="ldc-name">'+i.nom+'</div><div class="ldc-stock">Stock: '+i.stock_kg.toFixed(2)+' kg disponible</div></div>'
+        + '<div class="ldc-qty-need">'+i.qty_kg.toFixed(2)+' kg</div>'
+        + '</div>').join('') + '</div>';
+    }
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Erreur: '+e.message+'</div>'; }
+}
+
+// ══════════════════════════════════════════════════════════
+// CHEF — RECETTES
+// ══════════════════════════════════════════════════════════
+let recetteSelectee = null;
+
+async function chargerRecettes() {
+  const el = document.getElementById('recetteListPanel');
+  if (!el) return;
+  el.innerHTML = '<div class="loading">Chargement...</div>';
+  try {
+    const recs = await sb('recettes?actif=eq.true&select=id,nom,categorie,nb_portions&order=nom.asc');
+    el.innerHTML = recs.map(r => '<div class="recette-item" id="recitem_'+r.id+'" onclick="ouvrirRecetteChef(\''+r.id+'\')">'
+      + '<div class="recette-item-nom">'+r.nom+'</div>'
+      + '<div class="recette-item-sub">'+(r.categorie||'')+(r.nb_portions?' · '+r.nb_portions+' portions':'')+'</div>'
+      + '</div>').join('')
+      + '<div class="recette-item" style="border-style:dashed;opacity:.6;" onclick="ajouterRecette()">+ Nouvelle recette</div>';
+    if (!recs.length) el.innerHTML += '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Aucune recette — ajoutez-en une</div>';
+  } catch(e) {}
+}
+
+async function ouvrirRecetteChef(id) {
+  document.querySelectorAll('.recette-item').forEach(e => e.classList.remove('active'));
+  const el = document.getElementById('recitem_'+id);
+  if (el) el.classList.add('active');
+  recetteSelectee = id;
+  const panel = document.getElementById('recetteDetailPanel');
+  panel.innerHTML = '<div class="loading">Chargement de la recette...</div>';
+  try {
+    const [recs, ings, etapes] = await Promise.all([
+      sb('recettes?id=eq.'+id+'&select=*&limit=1'),
+      sb('recettes_ingredients?recette_id=eq.'+id+'&select=*&order=ordre.asc'),
+      sb('recettes_etapes?recette_id=eq.'+id+'&select=*&order=numero.asc')
+    ]);
+    const r = recs[0] || {};
+    let html = '<div class="rdp-title" contenteditable="true" id="recNom" onblur="sauvegarderChampsRecette()">'+r.nom+'</div>'
+      + '<div class="rdp-sub" contenteditable="true" id="recDesc" onblur="sauvegarderChampsRecette()">'+( r.description||'Cliquez pour ajouter une description')+'</div>'
+      + '<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">'
+      + '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:12px;color:var(--muted);">Portions:</span><input type="number" id="recPortions" value="'+(r.nb_portions||1)+'" min="1" style="width:50px;border:none;background:var(--bg);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:700;box-shadow:var(--si);" onchange="sauvegarderChampsRecette()"></div>'
+      + '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:12px;color:var(--muted);">Prep:</span><input type="number" id="recPrep" value="'+(r.temps_prep_min||0)+'" min="0" style="width:50px;border:none;background:var(--bg);border-radius:8px;padding:4px 8px;font-size:13px;box-shadow:var(--si);" onchange="sauvegarderChampsRecette()"><span style="font-size:11px;color:var(--muted);">min</span></div>'
+      + '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:12px;color:var(--muted);">Cuisson:</span><input type="number" id="recCuisson" value="'+(r.temps_cuisson_min||0)+'" min="0" style="width:50px;border:none;background:var(--bg);border-radius:8px;padding:4px 8px;font-size:13px;box-shadow:var(--si);" onchange="sauvegarderChampsRecette()"><span style="font-size:11px;color:var(--muted);">min</span></div>'
+      + '</div>'
+      // Macros par portion
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">'
+      + ['🥩 Prot','🌾 Gluc','🥑 Lip','⚡ Cal'].map((lbl,i) => {
+          const keys = ['prot_portion','gluc_portion','lip_portion','calories_portion'];
+          const ids  = ['recProt','recGluc','recLip','recCal'];
+          const units = ['g','g','g','kcal'];
+          return '<div style="background:var(--bg);border-radius:12px;padding:10px;box-shadow:var(--si);display:flex;align-items:center;gap:6px;">'
+            +'<span style="font-size:11px;color:var(--muted);">'+lbl+'</span>'
+            +'<input type="number" id="'+ids[i]+'" value="'+(r[keys[i]]||0)+'" style="flex:1;border:none;background:transparent;font-size:14px;font-weight:700;color:var(--black);" onchange="sauvegarderChampsRecette()">'
+            +'<span style="font-size:10px;color:var(--muted);">'+units[i]+'</span>'
+            +'</div>';
+        }).join('')
+      + '</div>'
+      // Ingrédients
+      + '<div class="rdp-section">Ingrédients (pour 1 portion)</div>'
+      + '<div id="ingsChefList">'
+      + ings.map(ing => '<div class="ing-chef-row">'
+          + '<input class="ing-chef-nom" type="text" value="'+(ing.ingredient_nom||'')+'" placeholder="Ingrédient" data-id="'+ing.id+'">'
+          + '<input class="ing-chef-qty" type="number" value="'+(ing.quantite_g||0)+'" min="0" data-id="'+ing.id+'">'
+          + '<span class="ing-chef-unit">'+(ing.unite||'g')+'</span>'
+          + '<button onclick="supprimerIngChef(\''+ing.id+'\')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;">✕</button>'
+          + '</div>').join('')
+      + '</div>'
+      + '<button class="btn-add-row" onclick="ajouterIngChef()">+ Ajouter un ingrédient</button>'
+      // Étapes
+      + '<div class="rdp-section">Procédés de fabrication</div>'
+      + '<div id="etapesChefList">'
+      + etapes.map((e,i) => '<div class="etape-chef-row">'
+          + '<div class="etape-chef-num">'+(i+1)+'</div>'
+          + '<textarea class="etape-chef-txt" placeholder="Décrivez cette étape..." data-id="'+e.id+'" rows="2">'+( e.description||'')+'</textarea>'
+          + '<button onclick="supprimerEtapeChef(\''+e.id+'\')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;flex-shrink:0;">✕</button>'
+          + '</div>').join('')
+      + '</div>'
+      + '<button class="btn-add-row" onclick="ajouterEtapeChef()">+ Ajouter une étape</button>'
+      + '<button class="btn-save-recette" onclick="sauvegarderRecetteComplete()">💾 Sauvegarder la recette</button>';
+
+    panel.innerHTML = html;
+  } catch(e) { panel.innerHTML = '<div style="color:var(--muted);padding:16px;">Erreur: '+e.message+'</div>'; }
+}
+
+async function sauvegarderChampsRecette() {
+  if (!recetteSelectee) return;
+  const nom = document.getElementById('recNom')?.textContent?.trim();
+  const desc = document.getElementById('recDesc')?.textContent?.trim();
+  const portions = parseInt(document.getElementById('recPortions')?.value) || 1;
+  const prep = parseInt(document.getElementById('recPrep')?.value) || 0;
+  const cuisson = parseInt(document.getElementById('recCuisson')?.value) || 0;
+  const prot = parseFloat(document.getElementById('recProt')?.value) || 0;
+  const gluc = parseFloat(document.getElementById('recGluc')?.value) || 0;
+  const lip  = parseFloat(document.getElementById('recLip')?.value)  || 0;
+  const cal  = parseFloat(document.getElementById('recCal')?.value)  || 0;
+  try {
+    await fetch(SB_URL+'/rest/v1/recettes?id=eq.'+recetteSelectee, {
+      method:'PATCH', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({nom,description:desc,nb_portions:portions,temps_prep_min:prep,temps_cuisson_min:cuisson,prot_portion:prot,gluc_portion:gluc,lip_portion:lip,calories_portion:cal,updated_at:new Date().toISOString()})
+    });
+  } catch(e) {}
+}
+
+async function sauvegarderRecetteComplete() {
+  await sauvegarderChampsRecette();
+  // Save ingredients
+  const ingRows = document.querySelectorAll('#ingsChefList .ing-chef-row');
+  for (const row of ingRows) {
+    const id = row.querySelector('.ing-chef-nom').dataset.id;
+    const nom = row.querySelector('.ing-chef-nom').value;
+    const qty = parseFloat(row.querySelector('.ing-chef-qty').value)||0;
+    if (!id || id==='new') continue;
+    try {
+      await fetch(SB_URL+'/rest/v1/recettes_ingredients?id=eq.'+id, {
+        method:'PATCH', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({ingredient_nom:nom, quantite_g:qty})
+      });
+    } catch(e) {}
+  }
+  // Save étapes
+  const etapeRows = document.querySelectorAll('#etapesChefList .etape-chef-row');
+  for (const [i, row] of etapeRows.entries()) {
+    const ta = row.querySelector('.etape-chef-txt');
+    const id = ta.dataset.id;
+    if (!id || id==='new') continue;
+    try {
+      await fetch(SB_URL+'/rest/v1/recettes_etapes?id=eq.'+id, {
+        method:'PATCH', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({numero:i+1, description:ta.value})
+      });
+    } catch(e) {}
+  }
+  toast('Recette sauvegardée !','ok');
+}
+
+async function ajouterIngChef() {
+  if (!recetteSelectee) return;
+  try {
+    const res = await sb('recettes_ingredients', {method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify({recette_id:recetteSelectee, ingredient_nom:'', quantite_g:100, unite:'g', ordre:99})});
+    const newId = res[0]?.id || 'new';
+    const cont = document.getElementById('ingsChefList');
+    const row = document.createElement('div');
+    row.className = 'ing-chef-row';
+    row.innerHTML = '<input class="ing-chef-nom" type="text" value="" placeholder="Ingrédient" data-id="'+newId+'">'
+      + '<input class="ing-chef-qty" type="number" value="100" min="0" data-id="'+newId+'">'
+      + '<span class="ing-chef-unit">g</span>'
+      + '<button onclick="supprimerIngChef(\''+newId+'\')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;">✕</button>';
+    cont.appendChild(row);
+    row.querySelector('.ing-chef-nom').focus();
+  } catch(e) {}
+}
+
+async function supprimerIngChef(id) {
+  if (!confirm('Supprimer cet ingrédient ?')) return;
+  try {
+    await fetch(SB_URL+'/rest/v1/recettes_ingredients?id=eq.'+id, {method:'DELETE', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    ouvrirRecetteChef(recetteSelectee);
+  } catch(e) {}
+}
+
+async function ajouterEtapeChef() {
+  if (!recetteSelectee) return;
+  try {
+    const res = await sb('recettes_etapes', {method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify({recette_id:recetteSelectee, numero:99, description:''})});
+    const newId = res[0]?.id || 'new';
+    const cont = document.getElementById('etapesChefList');
+    const num = cont.querySelectorAll('.etape-chef-row').length + 1;
+    const row = document.createElement('div');
+    row.className = 'etape-chef-row';
+    row.innerHTML = '<div class="etape-chef-num">'+num+'</div>'
+      + '<textarea class="etape-chef-txt" placeholder="Décrivez cette étape..." data-id="'+newId+'" rows="2"></textarea>'
+      + '<button onclick="supprimerEtapeChef(\''+newId+'\')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;flex-shrink:0;">✕</button>';
+    cont.appendChild(row);
+    row.querySelector('.etape-chef-txt').focus();
+  } catch(e) {}
+}
+
+async function supprimerEtapeChef(id) {
+  if (!confirm('Supprimer cette étape ?')) return;
+  try {
+    await fetch(SB_URL+'/rest/v1/recettes_etapes?id=eq.'+id, {method:'DELETE', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    ouvrirRecetteChef(recetteSelectee);
+  } catch(e) {}
+}
+
+async function ajouterRecette() {
+  try {
+    const res = await sb('recettes', {method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify({nom:'Nouvelle recette', actif:true, nb_portions:1})});
+    const id = res[0]?.id;
+    await chargerRecettes();
+    if (id) ouvrirRecetteChef(id);
+  } catch(e) { toast('Erreur: '+e.message,'err'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// STOCKS
+// ══════════════════════════════════════════════════════════
+function switchStockSub(sub, el) {
+  document.querySelectorAll('#tabStocks .cmd-subtab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  chargerStocks(sub);
+}
+
+async function chargerStocks(view) {
+  view = view || 'etat';
+  const el = document.getElementById('stocksContent');
+  if (!el) return;
+  el.innerHTML = '<div class="loading">Chargement...</div>';
+  try {
+    if (view === 'etat') {
+      const stocks = await sb('stocks_mp?select=*&order=ingredient_nom.asc');
+      if (!stocks.length) {
+        el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);">'
+          + '<div style="font-size:48px;margin-bottom:12px;">📦</div>'
+          + '<div style="font-size:15px;font-weight:600;">Aucun stock enregistré</div>'
+          + '<button onclick="ajouterEntreeStock()" style="margin-top:12px;padding:10px 20px;background:var(--black);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;">+ Ajouter un stock</button>'
+          + '</div>';
+        return;
+      }
+      const today = new Date();
+      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'
+        + '<div style="font-size:16px;font-weight:800;color:var(--black);">'+stocks.length+' ingrédients en stock</div>'
+        + '<button onclick="ajouterEntreeStock()" style="padding:10px 16px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:\'DM Sans\',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">+ Entrée stock</button>'
+        + '</div>'
+        + '<div class="stock-grid">'
+        + stocks.map(s => {
+            const peremDate = s.date_peremption ? new Date(s.date_peremption) : null;
+            const daysLeft = peremDate ? Math.round((peremDate-today)/(1000*86400)) : null;
+            const peremBadge = daysLeft === null ? '' : daysLeft < 0 ? '<span class="stock-perem-badge perem-alert">Périmé</span>' : daysLeft < 3 ? '<span class="stock-perem-badge perem-alert">'+daysLeft+'j</span>' : daysLeft < 7 ? '<span class="stock-perem-badge perem-warn">'+daysLeft+'j</span>' : '<span class="stock-perem-badge perem-ok">'+daysLeft+'j</span>';
+            const pct = s.quantite_initiale_kg > 0 ? Math.min(100,Math.round(s.quantite_kg/s.quantite_initiale_kg*100)) : 50;
+            const barColor = pct < 20 ? '#c0392b' : pct < 50 ? '#c97a00' : '#2a9e4f';
+            return '<div class="stock-card">'
+              + '<div class="stock-card-header">'
+              + '<div class="stock-card-em">🥩</div>'
+              + '<div><div class="stock-card-nom">'+s.ingredient_nom+'</div><div class="stock-card-fournisseur">'+( s.fournisseur||'')+(s.lot?' · Lot '+s.lot:'')+'</div></div>'
+              + '<div style="margin-left:auto;">'+peremBadge+'</div>'
+              + '</div>'
+              + '<div class="stock-card-body">'
+              + '<div><span class="stock-qty-big">'+parseFloat(s.quantite_kg||0).toFixed(1)+'</span><span class="stock-qty-unit"> kg</span></div>'
+              + '<div class="stock-bar"><div class="stock-bar-fill" style="width:'+pct+'%;background:'+barColor+';"></div></div>'
+              + '<div class="stock-info-row"><span class="frc-lbl">Acheté le</span><span class="stock-info-val">'+(s.date_achat||'–')+'</span></div>'
+              + (s.date_peremption ? '<div class="stock-info-row"><span class="frc-lbl">Péremption</span><span class="stock-info-val">'+s.date_peremption+'</span></div>' : '')
+              + '<div class="stock-info-row"><span class="frc-lbl">Stockage</span><span class="stock-info-val">'+(s.temperature_stockage||'ambiant')+'</span></div>'
+              + (s.emplacement ? '<div class="stock-info-row"><span class="frc-lbl">Emplacement</span><span class="stock-info-val">'+s.emplacement+'</span></div>' : '')
+              + (s.prix_kg ? '<div class="stock-info-row"><span class="frc-lbl">Prix/kg</span><span class="stock-info-val">'+s.prix_kg+'€</span></div>' : '')
+              + '</div></div>';
+          }).join('')
+        + '</div>';
+
+    } else if (view === 'entree') {
+      el.innerHTML = '<div style="background:var(--bg);border-radius:20px;box-shadow:var(--so);padding:20px;max-width:500px;">'
+        + '<div style="font-size:16px;font-weight:800;color:var(--black);margin-bottom:16px;">Nouvelle entrée en stock</div>'
+        + '<div style="display:flex;flex-direction:column;gap:12px;">'
+        + formRow('Ingrédient', '<input id="stockIngNom" class="form-inp" type="text" placeholder="Ex: Poulet">')
+        + formRow('Quantité (kg)', '<input id="stockQty" class="form-inp" type="number" step="0.1" placeholder="5.0">')
+        + formRow('Fournisseur', '<input id="stockFourn" class="form-inp" type="text" value="Metro">')
+        + formRow('Lot', '<input id="stockLot" class="form-inp" type="text" placeholder="Numéro de lot">')
+        + formRow('Date achat', '<input id="stockDateAchat" class="form-inp" type="date">')
+        + formRow('Date péremption', '<input id="stockDatePerem" class="form-inp" type="date">')
+        + formRow('Stockage', '<select id="stockTemp" class="form-select"><option value="frigo">Frigo</option><option value="congelo">Congélateur</option><option value="ambiant">Ambiant</option></select>')
+        + formRow('Emplacement', '<input id="stockEmplacement" class="form-inp" type="text" placeholder="Ex: Frigo A, Étagère 2">')
+        + formRow('Prix/kg (€)', '<input id="stockPrix" class="form-inp" type="number" step="0.01" placeholder="4.50">')
+        + '</div>'
+        + '<button onclick="enregistrerEntreeStock()" style="width:100%;margin-top:16px;padding:14px;background:var(--black);color:#fff;border:none;border-radius:14px;font-family:\'DM Sans\',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Enregistrer →</button>'
+        + '</div>';
+      document.getElementById('stockDateAchat').value = new Date().toISOString().split('T')[0];
+
+    } else if (view === 'alertes') {
+      const stocks = await sb('stocks_mp?select=*&order=date_peremption.asc');
+      const today2 = new Date();
+      const alerts = stocks.filter(s => {
+        if (!s.date_peremption) return false;
+        const d = new Date(s.date_peremption);
+        return (d - today2) < 7*86400*1000;
+      });
+      el.innerHTML = alerts.length === 0
+        ? '<div style="text-align:center;padding:32px;color:#2a9e4f;font-size:15px;font-weight:600;">✅ Aucune alerte — tout est en ordre</div>'
+        : '<div style="font-size:16px;font-weight:800;color:#c0392b;margin-bottom:14px;">🚨 '+alerts.length+' alerte(s)</div>'
+          + alerts.map(s => {
+              const d = new Date(s.date_peremption);
+              const days = Math.round((d-today2)/86400000);
+              return '<div class="ldc-item ldc-alert"><span class="ldc-em">⚠️</span><div style="flex:1;"><div class="ldc-name">'+s.ingredient_nom+'</div><div style="font-size:11px;color:#c0392b;">'+(days<0?'Périmé depuis '+Math.abs(days)+'j':'Périme dans '+days+' jour(s)')+'</div></div><div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:var(--black);">'+s.quantite_kg+' kg</div><div style="font-size:11px;color:var(--muted);">'+s.date_peremption+'</div></div></div>';
+            }).join('');
+    }
+  } catch(e) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Erreur: '+e.message+'</div>'; }
+}
+
+function formRow(lbl, inp) {
+  return '<div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;">'+lbl+'</div>'+inp+'</div>';
+}
+
+async function enregistrerEntreeStock() {
+  const nom  = document.getElementById('stockIngNom')?.value?.trim();
+  const qty  = parseFloat(document.getElementById('stockQty')?.value)||0;
+  if (!nom || qty <= 0) { toast('Nom et quantité requis','err'); return; }
+  try {
+    await sb('stocks_mp', {
+      method:'POST', headers:{'Prefer':'return=minimal'},
+      body:JSON.stringify({
+        ingredient_nom: nom,
+        quantite_kg: qty,
+        quantite_initiale_kg: qty,
+        fournisseur: document.getElementById('stockFourn')?.value||'Metro',
+        lot: document.getElementById('stockLot')?.value||null,
+        date_achat: document.getElementById('stockDateAchat')?.value || new Date().toISOString().split('T')[0],
+        date_peremption: document.getElementById('stockDatePerem')?.value||null,
+        temperature_stockage: document.getElementById('stockTemp')?.value||'ambiant',
+        emplacement: document.getElementById('stockEmplacement')?.value||null,
+        prix_kg: parseFloat(document.getElementById('stockPrix')?.value)||null,
+        statut:'disponible'
+      })
+    });
+    toast('Stock enregistré !','ok');
+    switchStockSub('etat', document.getElementById('stockSubEtat'));
+  } catch(e){ toast('Erreur: '+e.message,'err'); }
+}
+
+function ajouterEntreeStock() {
+  switchStockSub('entree', document.getElementById('stockSubEntree'));
+}
+
+// ══ HELPERS ══
+function getLundiSemaineAdmin() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split('T')[0];
+}
+
+function setText(id, v) { const el=document.getElementById(id); if(el) el.textContent=v; }
+
+// Add nav event listeners for new tabs
+document.addEventListener('DOMContentLoaded', function() {
+  const navRP = document.getElementById('navRepasAProg');
+  if (navRP) navRP.addEventListener('click', () => switchNav('repasAProg'));
+  const navCh = document.getElementById('navChef');
+  if (navCh) navCh.addEventListener('click', () => switchNav('chef'));
+  const navSt = document.getElementById('navStocks');
+  if (navSt) navSt.addEventListener('click', () => switchNav('stocks'));
+  // Commandes subtabs
+  const cmdSubCal = document.getElementById('cmdSubCal');
+  if (cmdSubCal) cmdSubCal.addEventListener('click', function(){ switchCmdSub('calendrier',this); });
+});
+
 </script>
 </body>
 </html>
