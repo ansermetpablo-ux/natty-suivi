@@ -1114,7 +1114,20 @@ function setRdvFilter(f, el) {
   el.classList.add('active'); afficherRdvAdmin(f);
 }
 
-async function afficherRdvAdmin(filter) {
+async 
+async function chargerRdvAdmin() {
+  try {
+    var rdvs = await sb('rdv?order=date_rdv.desc&select=*&limit=100');
+    allRdv = Array.isArray(rdvs) ? rdvs : [];
+    afficherRdvAdmin(currentRdvFilter || 'tous');
+    // Badge notification
+    var demandes = allRdv.filter(function(r){ return r.statut === 'demande_client' || r.statut === 'recap_demande'; }).length;
+    var badge = document.getElementById('rdvBadge');
+    if (badge) { badge.textContent = demandes || ''; badge.style.display = demandes ? 'flex' : 'none'; }
+  } catch(e) { console.warn('chargerRdvAdmin:', e); }
+}
+
+function afficherRdvAdmin(filter) {
   const el = document.getElementById('rdvAdminList');
   const now = new Date();
   if (filter === 'creneaux') {
@@ -1178,7 +1191,7 @@ async function envoyerRecapRDV(rdvId, userId, btn) {
   const motivL = {mieux_manger:'Mieux manger', changer_corps:'Changer mon corps', performance:'Performance sportive', sante:'Santé'};
   const recap = 'Bonjour,\n\nVoici votre récapitulatif nutritionnel Natty :\n\n• Objectif : '+(motivL[client?.motivation]||client?.motivation||'–')+'\n• Poids : '+(client?.poids||'–')+' kg\n• BMR : '+(client?.bmr||'–')+' kcal/jour\n• TDEE : '+(client?.tdee||'–')+' kcal/jour\n\nVotre nutritionniste reviendra vers vous prochainement.\n\nL\'équipe Natty';
   try {
-    await fetch('/api/send-email', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({to_email:email, subject:'Votre récapitulatif Natty', message:recap})});
+    await fetch('/api/send-email', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({to_email:email, type:'recap_client', subject:'Votre récapitulatif Natty', message:recap})});
     await sb('rdv?id=eq.'+rdvId, {method:'PATCH', body:JSON.stringify({statut:'recap_envoye'})});
     toast('Récap envoyé à '+email,'ok');
     chargerRdvAdmin();
@@ -1713,7 +1726,7 @@ async function envoyerRecapFiche(userId, email, btn) {
   const motivL = {mieux_manger:'Mieux manger', changer_corps:'Changer mon corps', performance:'Performance sportive', sante:'Santé'};
   const recap = 'Bonjour,\n\nVoici votre récapitulatif nutritionnel Natty :\n\n• Objectif : '+(motivL[client?.motivation]||'–')+'\n• Poids : '+(client?.poids||'–')+' kg\n• BMR : '+(client?.bmr||'–')+' kcal/jour\n• TDEE : '+(client?.tdee||'–')+' kcal/jour\n\nVotre nutritionniste reviendra vers vous prochainement.\n\nL\'équipe Natty';
   try {
-    await fetch('/api/send-email', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({to_email:email, subject:'Votre récapitulatif Natty', message:recap})});
+    await fetch('/api/send-email', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({to_email:email, type:'recap_client', subject:'Votre récapitulatif Natty', message:recap})});
     toast('Récap envoyé à '+email,'ok');
   } catch(e) { toast('Erreur envoi','err'); }
   btn.disabled=false; btn.textContent='📧 Envoyer le récap';
@@ -2520,7 +2533,7 @@ async function chargerCommandesCalendrier() {
     const lundi = getLundiSemaineAdmin();
     const fin = new Date(lundi); fin.setDate(fin.getDate()+7);
     const finStr = fin.toISOString().split('T')[0];
-    const cmds = await sb('commandes?date_livraison=gte.'+lundi+'&date_livraison=lt.'+finStr+'&select=*&order=date_livraison.asc');
+    const cmds = await sb('commandes?semaine=gte.'+lundi+'&semaine=lt.'+finStr+'&select=*&order=semaine.asc');
     rendreCalendrierCommandes(cmds, lundi);
     setText('cmdTotal',       cmds.length);
     setText('cmdConfirmees',  cmds.filter(c=>c.statut==='confirmee').length);
@@ -2541,7 +2554,7 @@ function rendreCalendrierCommandes(cmds, lundi) {
     for (let j=0; j<7; j++) {
       const d = new Date(lundiDate); d.setDate(d.getDate()+j);
       const ds = d.toISOString().split('T')[0];
-      const dayCmds = cmds.filter(c => c.date_livraison === ds && c.creneau === slot);
+      const dayCmds = cmds.filter(c => c.semaine === ds);
       html += '<div class="cal-day-cell">'
         + dayCmds.map(c => '<div class="cal-event ev-'+(c.statut||'')+'">'+
             (c.user_nom||'Client')+' · '+(c.formule_nb_plats||'?')+'p'+'</div>'
@@ -2557,7 +2570,7 @@ async function chargerCommandesListe() {
   if (!el) return;
   el.innerHTML = '<div class="loading">Chargement...</div>';
   try {
-    const cmds = await sb('commandes?select=*&order=date_livraison.desc&limit=50');
+    const cmds = await sb('commandes?select=*&order=semaine.desc&limit=50');
     rendreListeCommandes(cmds, 'commandesListView');
   } catch(e) {}
 }
@@ -2575,7 +2588,7 @@ function rendreListeCommandes(cmds, elId) {
       + '<div style="width:8px;height:8px;border-radius:50%;background:'+col+';flex-shrink:0;"></div>'
       + '<div style="flex:1;">'
       + '<div style="font-size:14px;font-weight:700;color:var(--black);">'+(c.user_nom||'Client')+'</div>'
-      + '<div style="font-size:11px;color:var(--muted);">'+(c.date_livraison||'–')+' · '+(c.creneau||'–')+' · '+(c.formule_nb_plats||'?')+' plats</div>'
+      + '<div style="font-size:11px;color:var(--muted);">'+(c.semaine||'–')+' · '+(c.statut||'–')+' · '+(c.plats_choisis?.length||'?')+' plats</div>'
       + '</div>'
       + '<span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;background:'+col+'22;color:'+col+';">'+lbl+'</span>'
       + '<button onclick="changerStatutCommande(\''+c.id+'\',\'livree\')" style="padding:6px 12px;background:var(--black);color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:600;cursor:pointer;">Livrer</button>'
