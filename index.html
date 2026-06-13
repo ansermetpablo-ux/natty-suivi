@@ -567,6 +567,30 @@ input[type="file"] { display:none; }
 .pr-carte-macro-lbl { font-size: 10px; color: rgba(255,255,255,0.65); margin-top: 2px; display:flex; align-items:center; justify-content:center; gap:3px; }
 .pr-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(174,174,192,0.4); transition: all .2s; flex-shrink:0; }
 .pr-dot.active { background: var(--black); width: 16px; border-radius: 3px; }
+
+/* ── MACRO CONSEIL CARD (style photo) ── */
+.mc-card-visual { background:var(--bg); border-radius:24px; box-shadow:var(--so); overflow:hidden; margin-bottom:12px; }
+.mc-card-photo  { width:100%; height:200px; background:#f5f5f5; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+.mc-card-photo img { width:100%; height:100%; object-fit:cover; }
+.mc-card-photo-placeholder { font-size:80px; }
+.mc-card-kcal-pill { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:var(--bg); border-radius:99px; padding:6px 20px; font-size:14px; font-weight:700; color:var(--black); box-shadow:var(--si); white-space:nowrap; }
+.mc-card-body { padding:16px 18px 18px; }
+.mc-card-nom { font-size:18px; font-weight:800; color:var(--black); margin-bottom:10px; letter-spacing:-.3px; }
+.mc-chips-row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.mc-chip-big { background:var(--black); color:#fff; border-radius:99px; padding:8px 16px; font-size:13px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:1px; }
+.mc-chip-big span { font-size:10px; font-weight:500; opacity:.7; }
+
+/* ── CONSEIL SECTION ── */
+.mc-conseil-section { margin-bottom:14px; }
+.mc-conseil-label { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px; display:flex; align-items:center; gap:5px; }
+.mc-conseil-box { background:var(--bg); border-radius:16px; padding:14px; box-shadow:var(--si); font-size:13px; color:var(--text); line-height:1.65; }
+.mc-recette-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.mc-recette-chip { background:var(--bg); border-radius:99px; padding:6px 14px; font-size:12px; font-weight:500; color:var(--black); box-shadow:var(--sm); }
+.mc-ing-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.mc-ing-chip { background:#e8f9ee; color:#1e5c30; border-radius:99px; padding:5px 12px; font-size:12px; font-weight:500; }
+.mc-no-conseil { text-align:center; padding:24px; color:var(--muted); font-size:13px; }
+.mc-no-conseil-em { font-size:36px; display:block; margin-bottom:8px; }
+
 </style>
 </head>
 <body>
@@ -890,25 +914,34 @@ input[type="file"] { display:none; }
 <div class="overlay" id="ovMacro">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="mbig-ring">
-      <div class="mbig-wrap">
-        <svg viewBox="0 0 180 180" width="180" height="180">
-          <circle cx="90" cy="90" r="76" fill="none" stroke="#f0f0f0" stroke-width="12"/>
-          <circle cx="90" cy="90" r="76" fill="none" stroke="#ff6b35" stroke-width="12" stroke-linecap="round"
-                  id="mbArc" stroke-dasharray="0 478" style="transition:stroke-dasharray 1s ease;"/>
-        </svg>
-        <div class="mbig-center">
-          <div class="mbig-name"  id="mbName">PROTÉINES</div>
-          <div class="mbig-emoji" id="mbEmoji">🥩</div>
-          <div class="mbig-val"><span id="mbVal">–</span><span class="mbig-unit" id="mbUnit">G</span></div>
-          <div class="mbig-lbl">restants</div>
+
+    <!-- Header macro -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <div style="width:52px;height:52px;border-radius:50%;background:var(--bg);box-shadow:var(--so);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;" id="mbEmojiCircle">🥩</div>
+      <div style="flex:1;">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;" id="mbName">PROTÉINES</div>
+        <div style="display:flex;align-items:baseline;gap:4px;margin-top:2px;">
+          <span style="font-size:32px;font-weight:800;color:var(--black);letter-spacing:-1px;" id="mbVal">–</span>
+          <span style="font-size:16px;color:var(--muted);font-weight:500;" id="mbUnit">g</span>
+          <span style="font-size:13px;color:var(--muted);margin-left:4px;">restants aujourd'hui</span>
         </div>
       </div>
+      <!-- Mini ring -->
+      <div style="position:relative;width:56px;height:56px;flex-shrink:0;">
+        <svg viewBox="0 0 56 56" width="56" height="56" style="transform:rotate(-90deg);">
+          <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(174,174,192,0.25)" stroke-width="5"/>
+          <circle cx="28" cy="28" r="22" fill="none" stroke="#ff6b35" stroke-width="5" stroke-linecap="round"
+                  id="mbArc" stroke-dasharray="0 138" style="transition:stroke-dasharray 1s ease;"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--black);" id="mbPct">–%</div>
+      </div>
     </div>
-    <div class="msec-title">Plats suggérés</div>
-    <div id="platsSugCont"><div class="sug-load"><div class="spinner"></div>Analyse en cours...</div></div>
-    <div class="msec-title" style="margin-top:16px;">Ingrédients suggérés</div>
-    <div class="ing-grid-pop" id="ingsSugCont"></div>
+
+    <!-- Conseil de la semaine -->
+    <div id="mcConseilCont">
+      <div class="mc-no-conseil"><span class="mc-no-conseil-em">⏳</span>Chargement des conseils...</div>
+    </div>
+
     <button class="close-btn" onclick="closeOverlay('ovMacro')">Fermer</button>
   </div>
 </div>
@@ -1321,77 +1354,149 @@ var MACRO_CFG = {
 };
 
 function openMacroPopup(type) {
-  var cfg=MACRO_CFG[type];
+  var cfg = MACRO_CFG[type];
+  var conseilKey = {prot:'conseil_prot', gluc:'conseil_gluc', lip:'conseil_lip'};
+  var PLATS_DEMO_MACRO = {
+    prot: [{nom:'Bowl poulet grillé & quinoa', kcal:420, prot:48, gluc:32, lip:12, photo:'🍗', recettes:['Poulet vapeur riz', 'Omelette épinards', 'Skyr fruits rouges'], ings:['Poulet','Oeufs','Thon en conserve']}],
+    gluc: [{nom:'Pasta complètes pesto basilic', kcal:510, prot:18, gluc:72, lip:14, photo:'🍝', recettes:['Riz sauté légumes', 'Pain complet avocat', 'Porridge avoine'], ings:['Avoine','Patate douce','Pain complet']}],
+    lip:  [{nom:'Bowl avocat saumon & graines', kcal:480, prot:28, gluc:22, lip:34, photo:'🥑', recettes:['Saumon avocat', 'Noix fruits secs', 'Houmous légumes'], ings:['Avocat','Noix','Huile olive']}]
+  };
+
   var obj=macObj[cfg.key]||0, auj=macAuj[cfg.key]||0;
   var restant=Math.max(0,obj-auj);
   var pct=obj>0?Math.min(100,Math.round((auj/obj)*100)):0;
-  var circ=2*Math.PI*76;
-  var arc=document.getElementById('mbArc');
-  arc.style.stroke=cfg.color;
-  setTimeout(function(){arc.style.strokeDasharray=((pct/100)*circ)+' '+circ;},50);
-  setText('mbName',cfg.name); setText('mbEmoji',cfg.emoji);
-  setText('mbVal',restant||(obj>0?obj:'–')); setText('mbUnit',cfg.unit);
-  document.getElementById('platsSugCont').innerHTML='<div class="sug-load"><div class="spinner"></div>Analyse en cours...</div>';
-  document.getElementById('ingsSugCont').innerHTML='';
-  document.getElementById('ovMacro').classList.add('active');
-  fetchMacroSuggestions(type, restant, cfg);
-}
+  var circ=2*Math.PI*22;
 
-async function fetchMacroSuggestions(type, restant, cfg) {
-  var last3=allMeals.slice(0,3).map(function(m){
-    var mac=calcMac(m.meal_ingredients);
-    return m.name+' ('+(m.meal_ingredients||[]).map(function(i){return i.name+' '+i.quantity_g+'g';}).join(', ')+') — prot:'+mac.p+'g gluc:'+mac.g+'g lip:'+mac.l+'g cal:'+mac.c+'kcal';
-  }).join(' | ');
-  var prompt='Le client a ces objectifs: prot='+macObj.p+'g, gluc='+macObj.g+'g, lip='+macObj.l+'g, cal='+macObj.c+'kcal.'
-    +' Ses 3 derniers repas: '+(last3||'aucun repas encore')+'.'
-    +' Il lui manque '+restant+'g de '+cfg.prompt+' aujourd\'hui.'
-    +' Propose 2 plats concrets adaptes pour combler ce deficit en '+cfg.prompt+' (pas les memes que ses derniers repas).'
-    +' Propose aussi 3 ingredients simples riches en '+cfg.prompt+'.'
-    +' Reponds UNIQUEMENT en JSON sans backticks ni markdown: {"plats":[{"nom":"...","macros":"...","ingredients":[{"emoji":"...","nom":"...","qtite":"..."}]}],"ingredients":[{"emoji":"...","nom":"...","apport":"..."}]}';
-  try {
-    var res=await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:900})});
-    var d=await res.json();
-    var text=d.text||'{}';
-    var data=JSON.parse(text.replace(/```[a-z]*|```/g,'').trim());
-    var platsHtml=(data.plats||[]).map(function(p){
-      var ings=(p.ingredients||[]).map(function(i){return '<div class="ing-line">'+i.emoji+' '+i.qtite+' '+i.nom+'</div>';}).join('');
-      return '<div class="plat-card"><div class="plat-photo">🍽️</div><div class="plat-info"><div class="plat-name">'+p.nom+'</div><span class="macro-pill">'+p.macros+'</span>'+ings+'</div></div>';
-    }).join('');
-    document.getElementById('platsSugCont').innerHTML=platsHtml||'<div style="color:#c7c7cc;font-size:13px;">Ajoutez des repas pour des suggestions.</div>';
-    var ingsHtml=(data.ingredients||[]).map(function(i){
-      return '<div class="ing-card-pop"><div class="ic-em">'+i.emoji+'</div><div><div class="ic-name">'+i.nom+'</div><div class="ic-val">'+i.apport+'</div></div></div>';
-    }).join('');
-    document.getElementById('ingsSugCont').innerHTML=ingsHtml;
-  } catch(e) {
-    document.getElementById('platsSugCont').innerHTML='<div class="plat-card"><div class="plat-photo">🥚</div><div class="plat-info"><div class="plat-name">Suggestion basique</div><span class="macro-pill">~20g '+cfg.prompt+'</span><div class="ing-line">🍽️ Voir votre nutritionniste</div></div></div>';
+  // Update header
+  setText('mbName', cfg.name);
+  setText('mbUnit', cfg.unit.toLowerCase());
+  setText('mbVal', restant||(obj>0?obj:'–'));
+  setText('mbPct', pct+'%');
+  var emojiEl = document.getElementById('mbEmojiCircle');
+  if (emojiEl) emojiEl.textContent = cfg.emoji;
+  var arc = document.getElementById('mbArc');
+  if (arc) {
+    arc.style.stroke = cfg.color;
+    setTimeout(function(){ arc.style.strokeDasharray = ((pct/100)*circ)+' '+circ; }, 50);
+  }
+
+  document.getElementById('ovMacro').classList.add('active');
+
+  // Afficher depuis le cache — JAMAIS de génération Claude ici
+  var cache = window._conseilsCache;
+  var cont = document.getElementById('mcConseilCont');
+  var key = conseilKey[type];
+
+  if (cache && cache[key]) {
+    cont.innerHTML = renderMacroConseilCard(cache[key], cfg, PLATS_DEMO_MACRO[type]||[]);
+  } else {
+    // Essayer de charger depuis Supabase
+    cont.innerHTML = '<div class="sug-load"><div class="spinner"></div>Chargement des conseils...</div>';
+    sbFetch('profil_conseils?user_id=eq.'+USER_ID
+      +'&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal&limit=1')
+      .then(function(r) {
+        if (r && r.length && r[0][key]) {
+          window._conseilsCache = Object.assign(window._conseilsCache||{}, r[0]);
+          cont.innerHTML = renderMacroConseilCard(r[0][key], cfg, PLATS_DEMO_MACRO[type]||[]);
+        } else {
+          cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>'
+            + '<div style="font-size:14px;font-weight:600;color:var(--black);margin-bottom:6px;">Conseils disponibles chaque lundi</div>'
+            + '<div style="font-size:13px;color:var(--muted);">Votre analyse hebdomadaire sera générée automatiquement et vous sera envoyée par email.</div></div>';
+        }
+      })
+      .catch(function() {
+        cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>Revenez lundi pour vos conseils personnalisés.</div>';
+      });
   }
 }
+
+function renderMacroConseilCard(conseilTexte, cfg, plats) {
+  // Parse conseil texte en 3 sections : explication, recettes, ingrédients
+  var lines = (conseilTexte || '').split(/[.
+]/).map(function(l){ return l.trim(); }).filter(Boolean);
+  var explication = lines.slice(0,2).join('. ');
+  var plat = plats[0] || {nom:'Plat équilibré', kcal:400, prot:35, gluc:40, lip:14, photo:'🍽️', recettes:['Recette 1','Recette 2','Recette 3'], ings:['Ingredient 1','Ingredient 2','Ingredient 3']};
+
+  var recettesHtml = (plat.recettes||[]).map(function(r){
+    return '<div class="mc-recette-chip">🍽️ '+r+'</div>';
+  }).join('');
+
+  var ingsHtml = (plat.ings||[]).map(function(i){
+    return '<div class="mc-ing-chip">✓ '+i+'</div>';
+  }).join('');
+
+  return '<div class="mc-card-visual">'
+    + '<div class="mc-card-photo">'
+    + '<div class="mc-card-photo-placeholder">'+plat.photo+'</div>'
+    + '<div class="mc-card-kcal-pill">'+plat.kcal+' Kcal</div>'
+    + '</div>'
+    + '<div class="mc-card-body">'
+    + '<div class="mc-card-nom">'+plat.nom+'</div>'
+    + '<div class="mc-chips-row">'
+    + '<div class="mc-chip-big">'+plat.prot+'g<span>Protéines 🥩</span></div>'
+    + '<div class="mc-chip-big">'+plat.gluc+'g<span>Glucides 🌾</span></div>'
+    + '<div class="mc-chip-big">'+plat.lip+'g<span>lipides 🥑</span></div>'
+    + '</div>'
+    + '</div></div>'
+    // Explication conseil
+    + '<div class="mc-conseil-section">'
+    + '<div class="mc-conseil-label">💡 Conseil de la semaine</div>'
+    + '<div class="mc-conseil-box">'+explication+'</div>'
+    + '</div>'
+    // Recettes
+    + '<div class="mc-conseil-section">'
+    + '<div class="mc-conseil-label">🍳 Recettes suggérées</div>'
+    + '<div class="mc-recette-row">'+recettesHtml+'</div>'
+    + '</div>'
+    // Ingrédients
+    + '<div class="mc-conseil-section">'
+    + '<div class="mc-conseil-label">🛒 Ingrédients clés</div>'
+    + '<div class="mc-ing-row">'+ingsHtml+'</div>'
+    + '</div>';
+}
+
+// fetchMacroSuggestions removed — conseils depuis DB
+
 
 // ═══ POPUP ANALYSE ═══
 function openAnalyseOverlay(type) {
   var isForts = type === 'forts';
   setText('analyseTitle', isForts ? 'Points forts' : 'Points à améliorer');
-  setText('analyseSub', isForts ? 'Ce que vous faites bien cette semaine.' : 'Ce que vous pouvez améliorer cette semaine.');
+  setText('analyseSub', isForts ? 'Ce que vous faites bien.' : 'Axes d\'amélioration identifiés.');
   document.getElementById('ovAnalyse').classList.add('active');
-
   var cont = document.getElementById('analyseCont');
-  // Afficher le conseil stocké (généré le lundi) — aucun appel Claude ici
-  if (window._conseilsCache) {
-    var texte = isForts ? window._conseilsCache.conseil_points_forts : window._conseilsCache.conseil_amelioration;
-    if (texte) {
-      cont.innerHTML = '<div class="profil-conseil-card" style="border-left:3px solid ' + (isForts ? '#007aff' : '#ff3b30') + ';padding-left:13px;">'
-        + '<div class="pcc-desc">' + texte + '</div>'
-        + '</div>'
-        + '<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px;">Conseil de la semaine · mis à jour chaque lundi</div>';
-      return;
-    }
+  var cache = window._conseilsCache;
+  var key = isForts ? 'conseil_points_forts' : 'conseil_amelioration';
+  if (cache && cache[key]) {
+    cont.innerHTML = renderConseilAnalyse(cache[key], isForts);
+  } else {
+    cont.innerHTML = '<div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Chargement...</div>';
+    sbFetch('profil_conseils?user_id=eq.'+USER_ID
+      +'&select=conseil_points_forts,conseil_amelioration&limit=1')
+      .then(function(r) {
+        if (r && r.length && r[0][key]) {
+          window._conseilsCache = Object.assign(window._conseilsCache||{}, r[0]);
+          cont.innerHTML = renderConseilAnalyse(r[0][key], isForts);
+        } else {
+          cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>'
+            + '<div style="font-size:14px;font-weight:600;color:var(--black);margin-bottom:6px;">Disponible chaque lundi</div>'
+            + '<div style="font-size:13px;color:var(--muted);">Votre analyse hebdomadaire est générée automatiquement.</div></div>';
+        }
+      })
+      .catch(function() {
+        cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>Revenez lundi.</div>';
+      });
   }
-  // Pas encore de conseils cette semaine
-  cont.innerHTML = '<div style="text-align:center;padding:24px 16px;">'
-    + '<div style="font-size:32px;margin-bottom:12px;">' + (isForts ? '⭐' : '📈') + '</div>'
-    + '<div style="font-size:14px;font-weight:700;color:var(--black);margin-bottom:8px;">Conseils disponibles chaque lundi</div>'
-    + '<div style="font-size:13px;color:var(--muted);line-height:1.5;">Vos conseils personnalisés sont générés chaque lundi matin en fonction de vos repas de la semaine précédente.</div>'
-    + '</div>';
+}
+
+function renderConseilAnalyse(texte, isForts) {
+  var col = isForts ? '#2a9e4f' : '#c97a00';
+  var em  = isForts ? '✅' : '⚠️';
+  var sentences = (texte||'').split(/(?<=[.!?])\s+/).filter(Boolean);
+  var html = sentences.map(function(s){
+    return '<div class="ap-card"><div class="ap-hdr"><span class="ap-em">'+em+'</span><span class="ap-name" style="font-size:13px;color:var(--text);">'+s+'</span></div></div>';
+  }).join('');
+  return html || '<div style="color:var(--muted);font-size:13px;">Aucun conseil disponible.</div>';
 }
 
 
