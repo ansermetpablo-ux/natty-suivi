@@ -252,6 +252,49 @@ input[type=range]::-webkit-slider-thumb:active { transform: scale(1.15); }
       <div class="num-row"><span class="num-lbl">Âge</span><input class="num-inp" type="number" id="iAge" placeholder="28" min="15" max="100" oninput="chk()"><span class="num-unit">ans</span></div>
       <div class="num-row"><span class="num-lbl">Poids</span><input class="num-inp" type="number" id="iPoids" placeholder="70" min="30" max="300" oninput="chk()"><span class="num-unit">kg</span></div>
       <div class="num-row"><span class="num-lbl">Taille</span><input class="num-inp" type="number" id="iTaille" placeholder="175" min="100" max="250" oninput="chk()"><span class="num-unit">cm</span></div>
+      <div class="sec-div">Contact & confidentialité</div>
+      <div class="name-lbl">Email</div>
+      <div class="name-row">
+        <input class="name-inp" type="email" id="iEmail" placeholder="marie@exemple.fr"
+               oninput="chk()" autocomplete="email"
+               style="width:100%;">
+      </div>
+      <div style="background:var(--bg);border-radius:16px;padding:14px 16px;margin-top:10px;box-shadow:var(--shadow-sm);">
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
+          <div style="position:relative;flex-shrink:0;margin-top:2px;">
+            <input type="checkbox" id="iRgpd" onchange="chk()"
+                   style="width:20px;height:20px;border-radius:6px;cursor:pointer;accent-color:#111;">
+          </div>
+          <div style="font-size:13px;color:var(--text);line-height:1.55;">
+            J'accepte que Natty utilise mon adresse email pour m'envoyer mes conseils nutritionnels hebdomadaires et mon récapitulatif de suivi.
+            <span onclick="ouvrirRGPD(event)" style="color:#111;font-weight:600;text-decoration:underline;cursor:pointer;">
+              Voir notre politique de confidentialité →
+            </span>
+          </div>
+        </label>
+      </div>
+
+      <!-- Mini modal RGPD -->
+      <div id="rgpdModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);z-index:999;align-items:flex-end;justify-content:center;">
+        <div style="background:var(--bg);border-radius:24px 24px 0 0;padding:0 20px 48px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;">
+          <div style="width:36px;height:5px;background:rgba(174,174,192,0.4);border-radius:3px;margin:14px auto 20px;"></div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:16px;">🔒 Politique de confidentialité</div>
+          <div style="font-size:13px;color:#666;line-height:1.75;">
+            <p style="margin-bottom:12px;"><strong>Utilisation de vos données</strong><br>
+            Natty collecte votre adresse email uniquement pour vous envoyer vos conseils nutritionnels personnalisés, votre récapitulatif hebdomadaire et les informations relatives à votre suivi.</p>
+            <p style="margin-bottom:12px;"><strong>Pas de revente</strong><br>
+            Nous nous engageons à ne jamais vendre, louer ou partager vos données personnelles à des tiers à des fins commerciales.</p>
+            <p style="margin-bottom:12px;"><strong>Vos droits</strong><br>
+            Vous pouvez à tout moment demander la suppression, la modification ou la portabilité de vos données en nous contactant à <strong>contact@natty-nutrition.com</strong>.</p>
+            <p style="margin-bottom:12px;"><strong>Conservation</strong><br>
+            Vos données sont conservées pendant la durée de votre abonnement et supprimées 30 jours après résiliation, sauf obligation légale.</p>
+            <p><strong>Sécurité</strong><br>
+            Toutes les données sont stockées de manière sécurisée sur des serveurs certifiés (Supabase — SOC 2 Type II) et ne sont jamais accessibles à des tiers non autorisés.</p>
+          </div>
+          <button onclick="fermerRGPD()" style="width:100%;padding:16px;background:#111;color:#fff;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:20px;">J'ai compris</button>
+        </div>
+      </div>
+
       <div class="sec-div">Niveau d'activité physique</div>
       <div class="lcards">
         <div class="lc" onclick="sl(this,'activite','sedentaire')"><span class="lc-i">🛋️</span><div class="lc-t"><div class="lc-n">Sédentaire</div><div class="lc-d">Bureau, peu ou pas de sport</div></div><div class="lc-c">✓</div></div>
@@ -310,7 +353,7 @@ const A = {
   maturite: null, motivation: null,
   sm: 5, sr: 5, sn: 5,
   axe: null,
-  prenom: null, nom: null,
+  prenom: null, nom: null, email: null, rgpd: false,
   sexe: null, activite: null, age: null, poids: null, taille: null
 };
 
@@ -354,7 +397,9 @@ function chk() {
               !!A.sexe && !!A.activite &&
               !!document.getElementById('iAge').value &&
               !!document.getElementById('iPoids').value &&
-              !!document.getElementById('iTaille').value,
+              !!document.getElementById('iTaille').value &&
+              !!document.getElementById('iEmail').value.trim() &&
+              document.getElementById('iRgpd').checked,
   };
   document.getElementById('btnC').disabled = !(ok[cur] ? ok[cur]() : true);
 }
@@ -403,6 +448,8 @@ async function save() {
 
   A.prenom = document.getElementById('iPrenom').value.trim() || null;
   A.nom    = document.getElementById('iNom').value.trim() || null;
+  A.email  = document.getElementById('iEmail').value.trim() || null;
+  A.rgpd   = document.getElementById('iRgpd').checked;
   A.age    = parseInt(document.getElementById('iAge').value) || null;
   A.poids  = parseFloat(document.getElementById('iPoids').value) || null;
   A.taille = parseFloat(document.getElementById('iTaille').value) || null;
@@ -417,7 +464,9 @@ async function save() {
     prenom: A.prenom, nom: A.nom,
     sexe: A.sexe, age: A.age, poids: A.poids, taille: A.taille, activite: A.activite,
     bmr: b, tdee: t, deficit: t ? Math.round(t * 0.15) : null,
-    completed: true
+    completed: true,
+    email: A.email || null,
+    rgpd_accepte: A.rgpd || false
   };
 
   try {
@@ -482,6 +531,14 @@ async function save() {
     toast('Erreur : ' + e.message, 'err');
     btn.disabled = false; btn.textContent = 'Terminer →';
   }
+}
+
+function ouvrirRGPD(e) {
+  e.preventDefault();
+  document.getElementById('rgpdModal').style.display = 'flex';
+}
+function fermerRGPD() {
+  document.getElementById('rgpdModal').style.display = 'none';
 }
 
 function toast(msg, type) {
