@@ -591,6 +591,66 @@ input[type="file"] { display:none; }
 .mc-no-conseil { text-align:center; padding:24px; color:var(--muted); font-size:13px; }
 .mc-no-conseil-em { font-size:36px; display:block; margin-bottom:8px; }
 
+
+/* ── POPUP CONSEILS FIRST TIME ── */
+#popupConseils { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(12px); z-index:500; align-items:center; justify-content:center; padding:20px; }
+#popupConseils.active { display:flex; }
+.pc-popup-card { background:var(--bg); border-radius:28px; width:100%; max-width:380px; box-shadow:var(--so); overflow:hidden; animation:popIn .35s cubic-bezier(.34,1.56,.64,1); }
+.pc-popup-hero { background:var(--black); padding:28px 24px 22px; text-align:center; }
+.pc-popup-hero-em { font-size:52px; display:block; margin-bottom:12px; }
+.pc-popup-hero-title { font-size:20px; font-weight:800; color:#fff; margin-bottom:6px; }
+.pc-popup-hero-sub { font-size:13px; color:rgba(255,255,255,0.55); line-height:1.55; }
+.pc-popup-steps { padding:20px 20px 6px; display:flex; flex-direction:column; gap:10px; }
+.pc-popup-step { display:flex; align-items:center; gap:14px; background:var(--bg); border-radius:16px; padding:14px; box-shadow:var(--so); }
+.pc-popup-step.done { box-shadow:var(--si); opacity:.7; }
+.pc-step-num { width:36px; height:36px; border-radius:50%; background:var(--black); color:#fff; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:var(--sm); }
+.pc-step-num.done { background:#34c759; }
+.pc-step-title { font-size:13px; font-weight:700; color:var(--black); margin-bottom:2px; }
+.pc-step-sub { font-size:11px; color:var(--muted); }
+.pc-step-badge { font-size:11px; font-weight:600; padding:3px 10px; border-radius:99px; background:#e8f9ee; color:#2a9e4f; margin-left:auto; flex-shrink:0; }
+.pc-popup-actions { padding:14px 20px 24px; display:flex; flex-direction:column; gap:8px; }
+.pc-popup-btn-main { width:100%; padding:16px; background:var(--black); color:#fff; border:none; border-radius:16px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; }
+.pc-popup-btn-later { width:100%; padding:12px; background:transparent; color:var(--muted); border:none; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer; }
+/* ── PROFIL CONSEILS RICH ── */
+.profil-conseil-card-rich { background:var(--bg); border-radius:20px; box-shadow:var(--so); overflow:hidden; margin-bottom:12px; }
+.pccr-header { padding:14px 16px 10px; display:flex; align-items:center; gap:10px; border-bottom:.5px solid rgba(174,174,192,0.18); }
+.pccr-color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.pccr-theme { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; }
+.pccr-title { font-size:15px; font-weight:700; color:var(--black); padding:12px 16px 6px; }
+.pccr-desc { font-size:13px; color:#6a6a7a; line-height:1.65; padding:0 16px 12px; }
+.pccr-aliments { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:0 16px 14px; }
+.pccr-aliments::-webkit-scrollbar { display:none; }
+.pccr-aliment { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.pccr-aliment-em { width:52px; height:52px; border-radius:16px; background:var(--bg); box-shadow:var(--sm); display:flex; align-items:center; justify-content:center; font-size:28px; }
+.pccr-aliment-nom { font-size:10px; font-weight:500; color:var(--muted); text-align:center; max-width:54px; }
+.pccr-recettes { padding:0 16px 14px; display:flex; flex-wrap:wrap; gap:6px; }
+.pccr-recette-chip { background:var(--bg); border-radius:99px; padding:6px 14px; font-size:12px; font-weight:500; color:var(--black); box-shadow:var(--sm); }
+/* ── ACTION BUTTONS ── */
+.profil-action-btns { display:flex; gap:10px; margin-bottom:14px; }
+.profil-action-btn { flex:1; padding:14px 10px; background:var(--bg); border:none; border-radius:18px; box-shadow:var(--so); font-family:'Inter',sans-serif; font-size:12px; font-weight:600; color:var(--black); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.profil-action-btn:active { box-shadow:var(--si); }
+.profil-action-btn-em { font-size:26px; }
+/* ── OVERLAYS LC / RECETTES ── */
+#ovListeCourses, #ovRecettes { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); backdrop-filter:blur(8px); z-index:300; align-items:flex-end; justify-content:center; }
+#ovListeCourses.active, #ovRecettes.active { display:flex; }
+.lc-section-title { font-size:13px; font-weight:700; color:var(--black); margin:16px 0 8px; display:flex; align-items:center; gap:8px; }
+.lc-item { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--bg); border-radius:14px; box-shadow:var(--sm); margin-bottom:6px; }
+.lc-item-em { font-size:22px; flex-shrink:0; }
+.lc-item-name { font-size:13px; font-weight:500; color:var(--black); flex:1; }
+.lc-item-qty { font-size:12px; color:var(--muted); font-weight:600; }
+.recette-card { background:var(--bg); border-radius:20px; box-shadow:var(--so); overflow:hidden; margin-bottom:14px; }
+.recette-card-header { background:var(--black); padding:14px 16px; display:flex; align-items:center; gap:10px; }
+.recette-card-em { font-size:28px; }
+.recette-card-nom { font-size:16px; font-weight:700; color:#fff; }
+.recette-card-macros { display:flex; gap:6px; margin-top:4px; flex-wrap:wrap; }
+.recette-mac-chip { font-size:10px; font-weight:600; padding:2px 8px; border-radius:99px; background:rgba(255,255,255,0.15); color:#fff; }
+.recette-etapes { padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
+.etape-row { display:flex; gap:12px; align-items:flex-start; }
+.etape-num { width:24px; height:24px; border-radius:50%; background:var(--bg); box-shadow:var(--sm); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--black); flex-shrink:0; margin-top:1px; }
+.etape-text { font-size:13px; color:var(--text); line-height:1.6; flex:1; }
+.recette-ings { padding:0 16px 14px; display:flex; flex-wrap:wrap; gap:6px; }
+.recette-ing-chip { background:#e8f9ee; color:#1e5c30; border-radius:99px; padding:5px 12px; font-size:11px; font-weight:500; }
+
 </style>
 </head>
 <body>
@@ -1122,8 +1182,8 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputGalManu').addEventListener('change', function(){ previewPhoto(this,'prevManu'); photoManuFile=this.files[0]; });
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
-  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovProchainRepas'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
-  if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); }); } else afficherOnboardingCTA();
+  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovProchainRepas','ovListeCourses','ovRecettes'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
+  if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(verifierEtMontrerPopupConseils, 4000); }); } else afficherOnboardingCTA();
 
   // Écouter le postMessage de Wix quand l'utilisateur se connecte
   window.addEventListener('message', function(event) {
@@ -3008,39 +3068,61 @@ function getLundiSemaine() {
 
 // Render les conseils depuis les colonnes structurées
 function conseilsRenderColonnes(row) {
-  window._conseilsCache = row; // Cache global pour openAnalyseOverlay
+  window._conseilsCache = row;
   var cont = document.getElementById('profilConseilsCont');
   var footer = document.getElementById('conseilsDateFooter');
   if (!cont) return;
-
+  var ALIMENTS = {
+    prot: [['🍗','Poulet'],['🥚','Oeufs'],['🐟','Saumon'],['🥩','Boeuf'],['🫘','Légumineuses']],
+    gluc: [['🍚','Riz'],['🍠','Pat. douce'],['🌾','Avoine'],['🍝','Pâtes'],['🫓','Pain complet']],
+    lip:  [['🥑','Avocat'],['🫙','Huile olive'],['🥜','Noix'],['🐟','Sardine'],['🧈','Beurre bio']],
+    cal:  [['🍌','Banane'],['🥜','Oléagineux'],['🍫','Choc. noir'],['🫙','Tahini'],['🥣','Granola']],
+    amelioration: [['🥦','Brocoli'],['🫐','Myrtilles'],['🥗','Épinards'],['🧄','Ail'],['🌿','Herbes']],
+    points_forts: [['✅','Équilibre'],['💧','Hydratation'],['💪','Protéines'],['🌈','Variété'],['🥬','Légumes']]
+  };
+  var RECETTES = {
+    prot: ['Bowl poulet quinoa','Omelette épinards feta','Saumon citron vapeur'],
+    gluc: ['Riz sauté légumes wok','Porridge avoine banane','Pasta pesto basilic'],
+    lip:  ['Toast avocat saumon','Salade noix chèvre','Sardines herbes'],
+    cal:  ['Bowl granola énergie','Banana bread','Mix noix fruits'],
+    amelioration: ['Salade arc-en-ciel','Smoothie vert','Soupe miso légumes'],
+    points_forts: ['Assiette équilibrée','Plat macro complet','Repas anti-inflam.']
+  };
   var sections = [
-    { key:'conseil_prot',         emoji:'🥩', titre:'Protéines',       couleur:'#ff6b35' },
-    { key:'conseil_gluc',         emoji:'🌾', titre:'Glucides',        couleur:'#ff9500' },
-    { key:'conseil_lip',          emoji:'🥑', titre:'Lipides',         couleur:'#7b5ea7' },
-    { key:'conseil_cal',          emoji:'⚡', titre:'Calories',        couleur:'#34c759' },
-    { key:'conseil_amelioration', emoji:'📈', titre:'À améliorer',     couleur:'#ff3b30' },
-    { key:'conseil_points_forts', emoji:'⭐', titre:'Points forts',    couleur:'#007aff' },
+    {key:'conseil_prot',         ak:'prot',         emoji:'🥩', titre:'Protéines',    couleur:'#ff6b35'},
+    {key:'conseil_gluc',         ak:'gluc',         emoji:'🌾', titre:'Glucides',     couleur:'#ff9500'},
+    {key:'conseil_lip',          ak:'lip',          emoji:'🥑', titre:'Lipides',      couleur:'#7b5ea7'},
+    {key:'conseil_cal',          ak:'cal',          emoji:'⚡', titre:'Calories',     couleur:'#34c759'},
+    {key:'conseil_amelioration', ak:'amelioration', emoji:'📈', titre:'A ameliorer', couleur:'#ff3b30'},
+    {key:'conseil_points_forts', ak:'points_forts', emoji:'⭐', titre:'Points forts', couleur:'#007aff'}
   ];
-
   var hasAny = sections.some(function(s){ return row[s.key]; });
   if (!hasAny) {
-    cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
+    cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:24px;text-align:center;"><div style="font-size:36px;margin-bottom:10px;">📅</div>Ajoutez 3 repas pour recevoir vos conseils personnalisés.</div>';
     return;
   }
-
   cont.innerHTML = sections.map(function(s) {
     if (!row[s.key]) return '';
-    return '<div class="profil-conseil-card" style="border-left:3px solid ' + s.couleur + ';padding-left:13px;">'
-      + '<div class="pcc-theme" style="color:' + s.couleur + ';">' + s.emoji + ' ' + s.titre + '</div>'
-      + '<div class="pcc-desc" style="margin-top:4px;">' + row[s.key] + '</div>'
+    var alims = ALIMENTS[s.ak] || [];
+    var recs  = RECETTES[s.ak] || [];
+    var alimsHtml = alims.map(function(a){
+      return '<div class="pccr-aliment"><div class="pccr-aliment-em">'+a[0]+'</div><div class="pccr-aliment-nom">'+a[1]+'</div></div>';
+    }).join('');
+    var recsHtml = recs.map(function(r){
+      return '<div class="pccr-recette-chip">🍽️ '+r+'</div>';
+    }).join('');
+    return '<div class="profil-conseil-card-rich">'
+      + '<div class="pccr-header"><div class="pccr-color-dot" style="background:'+s.couleur+';"></div><div class="pccr-theme" style="color:'+s.couleur+';">'+s.emoji+' '+s.titre+'</div></div>'
+      + '<div class="pccr-title">Conseil de la semaine</div>'
+      + '<div class="pccr-desc">'+row[s.key]+'</div>'
+      + '<div class="pccr-aliments">'+alimsHtml+'</div>'
+      + '<div class="pccr-recettes">'+recsHtml+'</div>'
       + '</div>';
   }).join('');
-
-  // Footer
   if (footer && row.generated_at) {
     var d = new Date(row.generated_at);
     footer.style.display = 'block';
-    footer.textContent = 'Mis à jour le ' + d.toLocaleDateString('fr-FR', {day:'numeric', month:'long'}) + ' · chaque semaine';
+    footer.textContent = 'Mis a jour le ' + d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'}) + ' - chaque semaine';
   }
   profilConseillsLoaded = true;
 }
@@ -3337,7 +3419,139 @@ function conseilsPopupVoir() {
           .catch(e => console.log('SW error:', e));
       });
     }
-  </script>
+  
+// ══ POPUP PREMIERS CONSEILS ══
+var _pcState = null;
+async function verifierEtMontrerPopupConseils() {
+  if (!USER_ID) return;
+  try {
+    var r = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=conseil_prot&limit=1');
+    if (r && r.length && r[0].conseil_prot) return;
+  } catch(e) {}
+  var nbPlats = allMeals.length;
+  var onbOk = !!(macObj.p && macObj.c);
+  var qaOk = false;
+  try {
+    var qa = await sbFetch('questionnaire_alim?user_id=eq.'+USER_ID+'&select=id&limit=1');
+    qaOk = qa && qa.length > 0;
+  } catch(e) {}
+  _pcState = {nbPlats:nbPlats, onbOk:onbOk, qaOk:qaOk};
+  renderPopupConseils();
+  document.getElementById('popupConseils').classList.add('active');
+}
+function renderPopupConseils() {
+  if (!_pcState) return;
+  var nbPlats = _pcState.nbPlats, onbOk = _pcState.onbOk, qaOk = _pcState.qaOk;
+  var platsRestants = Math.max(0, 3 - nbPlats);
+  var steps = [
+    {done:onbOk,  titre:"Completer l'onboarding",     sub:onbOk?'Profil cree':'Repondez aux questions de depart', action:'onboarding'},
+    {done:qaOk,   titre:'Questionnaire alimentaire',   sub:qaOk?'Preferences enregistrees':'Vos gouts et preferences', action:'questionnaire'},
+    {done:nbPlats>=3, titre:'Ajouter '+(platsRestants>0?platsRestants+' repas':'3 repas'), sub:nbPlats+'/3 repas — encore '+platsRestants+' a ajouter', action:'repas'}
+  ];
+  var stepsHtml = steps.map(function(s,i){
+    return '<div class="pc-popup-step'+(s.done?' done':'')+'">'
+      +'<div class="pc-step-num'+(s.done?' done':'')+'">'+(s.done?'✓':(i+1))+'</div>'
+      +'<div style="flex:1;"><div class="pc-step-title">'+s.titre+'</div><div class="pc-step-sub">'+s.sub+'</div></div>'
+      +(s.done?'<div class="pc-step-badge">Fait</div>':'')
+      +'</div>';
+  }).join('');
+  document.getElementById('pcStepsList').innerHTML = stepsHtml;
+  var btn = document.getElementById('pcActionBtn');
+  var next = steps.find(function(s){ return !s.done; });
+  if (!next) { btn.textContent = 'Generer mes conseils'; btn.dataset.action = 'generate'; }
+  else if (next.action==='onboarding') { btn.textContent = 'Completer mon profil'; btn.dataset.action = 'onboarding'; }
+  else if (next.action==='questionnaire') { btn.textContent = 'Remplir le questionnaire'; btn.dataset.action = 'questionnaire'; }
+  else { btn.textContent = 'Ajouter un repas ('+_pcState.nbPlats+'/3)'; btn.dataset.action = 'repas'; }
+}
+function pcActionClick() {
+  var action = document.getElementById('pcActionBtn').dataset.action;
+  if (action==='generate') { closePopupConseils(); openProfilOverlay(); }
+  else if (action==='questionnaire') { closePopupConseils(); window.location.href='/questionnaire-alim.html?token='+TOKEN; }
+  else if (action==='repas') { closePopupConseils(); openRepasOverlay(); }
+  else { if(window.self!==window.top) window.parent.postMessage({type:'demandeConnexion'},'*'); else window.location.href='/onboarding.html?token='+TOKEN; }
+}
+function closePopupConseils() { document.getElementById('popupConseils').classList.remove('active'); }
+
+// ══ LISTE DE COURSES ══
+var _listeCourseCache = null;
+async function ouvrirListeCourses() {
+  document.getElementById('ovListeCourses').classList.add('active');
+  if (_listeCourseCache) { document.getElementById('listeCoursesCont').innerHTML = _listeCourseCache; return; }
+  var cache = window._conseilsCache;
+  if (!cache || !cache.conseil_prot) {
+    document.getElementById('listeCoursesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>Disponible apres generation de vos conseils.</div>';
+    return;
+  }
+  document.getElementById('listeCoursesCont').innerHTML = '<div class="sug-load"><div class="spinner"></div>Generation de votre liste...</div>';
+  var prompt = 'Tu es nutritionniste. A partir de ces conseils nutritionnels, genere une liste de courses complete.'
+    + '\nConseils: prot=' + (cache.conseil_prot||'') + ' gluc=' + (cache.conseil_gluc||'') + ' lip=' + (cache.conseil_lip||'') + ' amelioration=' + (cache.conseil_amelioration||'')
+    + '\nObjectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
+    + '\nReponds UNIQUEMENT en JSON sans backticks: {"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]}';
+  try {
+    var res = await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:900})});
+    var d = await res.json();
+    var data = JSON.parse((d.text||'{}').replace(/```[a-z]*|```/g,'').trim());
+    var html = '';
+    if (data.recettes_ingredients && data.recettes_ingredients.length) {
+      html += '<div class="lc-section-title">Pour vos recettes</div>';
+      html += data.recettes_ingredients.map(function(item){
+        return '<div class="lc-item"><span class="lc-item-em">'+item.emoji+'</span><span class="lc-item-name">'+item.nom+'</span><span class="lc-item-qty">'+item.quantite+'</span></div>';
+      }).join('');
+    }
+    if (data.aliments_bonus && data.aliments_bonus.length) {
+      html += '<div class="lc-section-title" style="margin-top:20px;">Aliments conseilles en plus</div>';
+      html += data.aliments_bonus.map(function(item){
+        return '<div class="lc-item" style="border-left:3px solid #34c759;"><span class="lc-item-em">'+item.emoji+'</span><div style="flex:1;"><div class="lc-item-name">'+item.nom+'</div><div style="font-size:11px;color:var(--muted);">'+item.benefice+'</div></div><span class="lc-item-qty">'+item.quantite+'</span></div>';
+      }).join('');
+    }
+    _listeCourseCache = html;
+    document.getElementById('listeCoursesCont').innerHTML = html || '<div style="color:var(--muted);font-size:13px;padding:16px;">Aucune donnee disponible.</div>';
+  } catch(e) {
+    document.getElementById('listeCoursesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">Erreur</span>Reessayez.</div>';
+  }
+}
+
+// ══ RECETTES AVEC PROCEDES ══
+var _recettesCache = null;
+async function ouvrirRecettes() {
+  document.getElementById('ovRecettes').classList.add('active');
+  if (_recettesCache) { document.getElementById('recettesCont').innerHTML = _recettesCache; return; }
+  var cache = window._conseilsCache;
+  if (!cache || !cache.conseil_prot) {
+    document.getElementById('recettesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>Disponible apres generation de vos conseils.</div>';
+    return;
+  }
+  document.getElementById('recettesCont').innerHTML = '<div class="sug-load"><div class="spinner"></div>Generation de vos recettes...</div>';
+  var prompt = 'Tu es chef cuisinier et nutritionniste. Genere 3 recettes adaptees a ce profil.'
+    + '\nObjectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
+    + '\nConseils: ' + (cache.conseil_prot||'') + ' ' + (cache.conseil_amelioration||'')
+    + '\nReponds UNIQUEMENT en JSON sans backticks: {"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","...","..."]}]}';
+  try {
+    var res = await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:1400})});
+    var d = await res.json();
+    var data = JSON.parse((d.text||'{}').replace(/```[a-z]*|```/g,'').trim());
+    var html = (data.recettes||[]).map(function(r){
+      var mac = r.macros || {};
+      var etapesHtml = (r.etapes||[]).map(function(e,i){
+        return '<div class="etape-row"><div class="etape-num">'+(i+1)+'</div><div class="etape-text">'+e+'</div></div>';
+      }).join('');
+      var ingsHtml = (r.ingredients||[]).map(function(ing){
+        return '<div class="recette-ing-chip">'+ing+'</div>';
+      }).join('');
+      return '<div class="recette-card">'
+        +'<div class="recette-card-header"><span class="recette-card-em">'+r.emoji+'</span><div><div class="recette-card-nom">'+r.nom+'</div><div class="recette-card-macros"><span class="recette-mac-chip">'+mac.prot+'g prot</span><span class="recette-mac-chip">'+mac.gluc+'g gluc</span><span class="recette-mac-chip">'+mac.cal+' kcal</span></div></div></div>'
+        +'<div class="recette-ings">'+ingsHtml+'</div>'
+        +'<div class="recette-etapes">'+etapesHtml+'</div>'
+        +'</div>';
+    }).join('');
+    _recettesCache = html;
+    document.getElementById('recettesCont').innerHTML = html || '<div style="color:var(--muted);font-size:13px;">Aucune recette generee.</div>';
+  } catch(e) {
+    document.getElementById('recettesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">Erreur</span>Reessayez.</div>';
+  }
+}
+
+</script>
 
 <!-- ══ PROFIL OVERLAY ══ -->
 <div id="profilOverlay" onclick="if(event.target===this)closeProfilOverlay()">
@@ -3449,7 +3663,8 @@ function conseilsPopupVoir() {
 
     <!-- Conseils IA — affichés permanentement, rechargés 1x/semaine -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div class="profil-section-title" style="margin:0;">Conseils personnalisés</div>
+      <div class="profil-action-btns" style="margin-bottom:14px;"><button class="profil-action-btn" onclick="ouvrirListeCourses()"><span class="profil-action-btn-em">🛒</span><span>Liste de courses</span></button><button class="profil-action-btn" onclick="ouvrirRecettes()"><span class="profil-action-btn-em">🍳</span><span>Mes recettes</span></button></div>
+    <div class="profil-section-title" style="margin:0;">Conseils personnalisés</div>
       <button onclick="conseilsForceRefresh()" id="conseilsRefreshBtn" style="font-size:12px;font-weight:600;color:var(--muted);background:var(--bg);border:none;border-radius:10px;padding:6px 10px;cursor:pointer;box-shadow:var(--sm);">↻</button>
     </div>
     <div id="profilConseilsCont">
@@ -3720,5 +3935,46 @@ function conseilsPopupVoir() {
     <button onclick="conseilsPopupFermer()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;">Plus tard</button>
   </div>
 </div>
+
+<!-- POPUP PREMIERS CONSEILS -->
+<div id="popupConseils">
+  <div class="pc-popup-card">
+    <div class="pc-popup-hero">
+      <span class="pc-popup-hero-em">🥗</span>
+      <div class="pc-popup-hero-title">Obtenir mes conseils</div>
+      <div class="pc-popup-hero-sub">3 étapes pour recevoir votre analyse nutritionnelle personnalisée.</div>
+    </div>
+    <div class="pc-popup-steps" id="pcStepsList"></div>
+    <div class="pc-popup-actions">
+      <button class="pc-popup-btn-main" id="pcActionBtn" onclick="pcActionClick()">Commencer</button>
+      <button class="pc-popup-btn-later" onclick="closePopupConseils()">Plus tard</button>
+    </div>
+  </div>
+</div>
+<!-- OVERLAY LISTE DE COURSES -->
+<div id="ovListeCourses">
+  <div class="sheet" style="max-height:90vh;">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:20px;font-weight:800;color:var(--black);">Liste de courses</div>
+      <button onclick="closeOverlay('ovListeCourses')" style="width:30px;height:30px;border-radius:50%;background:var(--bg);border:none;cursor:pointer;font-size:13px;color:var(--muted);box-shadow:var(--sm);">X</button>
+    </div>
+    <div id="listeCoursesCont"><div class="sug-load"><div class="spinner"></div>Generation...</div></div>
+    <button class="close-btn" onclick="closeOverlay('ovListeCourses')">Fermer</button>
+  </div>
+</div>
+<!-- OVERLAY RECETTES -->
+<div id="ovRecettes">
+  <div class="sheet" style="max-height:90vh;">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:20px;font-weight:800;color:var(--black);">Mes recettes</div>
+      <button onclick="closeOverlay('ovRecettes')" style="width:30px;height:30px;border-radius:50%;background:var(--bg);border:none;cursor:pointer;font-size:13px;color:var(--muted);box-shadow:var(--sm);">X</button>
+    </div>
+    <div id="recettesCont"><div class="sug-load"><div class="spinner"></div>Generation...</div></div>
+    <button class="close-btn" onclick="closeOverlay('ovRecettes')">Fermer</button>
+  </div>
+</div>
+
 </body>
 </html>
