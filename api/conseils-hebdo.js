@@ -93,71 +93,38 @@ JSON sans backticks: {"conseil_prot":"...","conseil_gluc":"...","conseil_lip":".
       }
     }
 
-    // Sauvegarder — tester d'abord avec UPDATE, puis INSERT si pas de ligne
-    const updateRes = await fetch(
-      `${SB_URL}/rest/v1/profil_conseils?user_id=eq.${user.user_id}`,
-      {
-        method: 'PATCH',
-        headers: {
-          apikey: SB_SERVICE, Authorization: `Bearer ${SB_SERVICE}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({
-          conseil_prot:         conseils.conseil_prot || null,
-          conseil_gluc:         conseils.conseil_gluc || null,
-          conseil_lip:          conseils.conseil_lip || null,
-          conseil_cal:          conseils.conseil_cal || null,
-          conseil_amelioration: conseils.conseil_amelioration || null,
-          conseil_points_forts: conseils.conseil_points_forts || null,
-          semaine,
-          generated_at: new Date().toISOString()
-        })
-      }
-    );
+    const payload = {
+      user_id:              user.user_id,
+      conseils_json:        JSON.stringify(conseils), // compat colonne NOT NULL
+      conseil_prot:         conseils.conseil_prot || null,
+      conseil_gluc:         conseils.conseil_gluc || null,
+      conseil_lip:          conseils.conseil_lip || null,
+      conseil_cal:          conseils.conseil_cal || null,
+      conseil_amelioration: conseils.conseil_amelioration || null,
+      conseil_points_forts: conseils.conseil_points_forts || null,
+      semaine,
+      generated_at:         new Date().toISOString()
+    };
 
-    // Vérifier si le PATCH a modifié quelque chose
-    const contentRange = updateRes.headers.get('content-range');
-    const updated = contentRange && contentRange !== '*/0';
+    // Upsert : INSERT + ON CONFLICT UPDATE via merge-duplicates
+    const saveRes = await fetch(`${SB_URL}/rest/v1/profil_conseils`, {
+      method: 'POST',
+      headers: {
+        apikey: SB_SERVICE, Authorization: `Bearer ${SB_SERVICE}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
 
-    if (!updated) {
-      // Pas de ligne existante → INSERT
-      const insertRes = await fetch(`${SB_URL}/rest/v1/profil_conseils`, {
-        method: 'POST',
-        headers: {
-          apikey: SB_SERVICE, Authorization: `Bearer ${SB_SERVICE}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({
-          user_id:              user.user_id,
-          conseil_prot:         conseils.conseil_prot || null,
-          conseil_gluc:         conseils.conseil_gluc || null,
-          conseil_lip:          conseils.conseil_lip || null,
-          conseil_cal:          conseils.conseil_cal || null,
-          conseil_amelioration: conseils.conseil_amelioration || null,
-          conseil_points_forts: conseils.conseil_points_forts || null,
-          semaine,
-          generated_at:         new Date().toISOString()
-        })
-      });
-      const insertStatus = insertRes.status;
-      const insertBody = await insertRes.text();
-      return res.status(200).json({
-        ok: insertStatus === 201,
-        action: 'INSERT',
-        status: insertStatus,
-        body: insertBody,
-        user_id: user.user_id,
-        prenom: user.prenom,
-        semaine,
-        conseils
-      });
-    }
+    const saveStatus = saveRes.status;
+    const saveBody = saveRes.ok ? null : await saveRes.text();
 
     return res.status(200).json({
-      ok: true,
-      action: 'PATCH',
+      ok: saveRes.ok,
+      action: 'UPSERT',
+      status: saveStatus,
+      error: saveBody || undefined,
       user_id: user.user_id,
       prenom: user.prenom,
       semaine,
