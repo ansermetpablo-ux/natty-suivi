@@ -2849,7 +2849,7 @@ function profilToggleEdit() {
       var el = function(id){ return document.getElementById(id); };
       if (el('editPoids')) el('editPoids').value = profilInfoCache.poids || '';
       if (el('editTaille')) el('editTaille').value = profilInfoCache.taille || '';
-      if (el('editObjectif') && profilInfoCache.objectif) el('editObjectif').value = profilInfoCache.objectif;
+      if (el('editObjectif') && profilInfoCache.objectif_type) el('editObjectif').value = profilInfoCache.objectif_type;
       if (el('editActivite') && profilInfoCache.activite) el('editActivite').value = profilInfoCache.activite;
     }
   }
@@ -2866,7 +2866,7 @@ async function profilSaveInfo() {
     await fetch(SB_URL + '/rest/v1/onboarding?user_id=eq.' + USER_ID, {
       method: 'PATCH',
       headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ poids: poids, taille: taille, objectif: objectif, activite: activite })
+      body: JSON.stringify({ poids: poids, taille: taille, objectif_type: objectif, activite: activite })
     });
     profilInfoCache = Object.assign({}, profilInfoCache, { poids, taille, objectif, activite });
     profilAfficherInfos(profilInfoCache);
@@ -2889,7 +2889,7 @@ function profilAfficherInfos(data) {
   var el = function(id, val){ var e=document.getElementById(id); if(e) e.textContent=val; };
   el('piPoids', data.poids ? data.poids + ' kg' : '–');
   el('piTaille', data.taille ? data.taille + ' cm' : '–');
-  el('piObjectif', OBJ_FR[data.objectif] || data.objectif || '–');
+  el('piObjectif', OBJ_FR[data.objectif_type] || data.objectif_type || '–');
   el('piActivite', ACT_FR[data.activite] || data.activite || '–');
 }
 
@@ -2897,36 +2897,51 @@ function profilAfficherInfos(data) {
 // CONSEILS — rechargement global 1x/semaine, tout affiché d'un coup
 // Cache Supabase table profil_conseils
 // ═══════════════════════════════════════════════════════════════
-function conseilsRenderAll(data, generatedAt) {
+
+
+// Retourne le lundi de la semaine en cours (YYYY-MM-DD)
+function getLundiSemaine() {
+  var d = new Date();
+  var day = d.getDay();
+  var diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split('T')[0];
+}
+
+// Render les conseils depuis les colonnes structurées
+function conseilsRenderColonnes(row) {
   var cont = document.getElementById('profilConseilsCont');
   var footer = document.getElementById('conseilsDateFooter');
   if (!cont) return;
-  if (!data || !data.length) {
+
+  var sections = [
+    { key:'conseil_prot',         emoji:'🥩', titre:'Protéines',       couleur:'#ff6b35' },
+    { key:'conseil_gluc',         emoji:'🌾', titre:'Glucides',        couleur:'#ff9500' },
+    { key:'conseil_lip',          emoji:'🥑', titre:'Lipides',         couleur:'#7b5ea7' },
+    { key:'conseil_cal',          emoji:'⚡', titre:'Calories',        couleur:'#34c759' },
+    { key:'conseil_amelioration', emoji:'📈', titre:'À améliorer',     couleur:'#ff3b30' },
+    { key:'conseil_points_forts', emoji:'⭐', titre:'Points forts',    couleur:'#007aff' },
+  ];
+
+  var hasAny = sections.some(function(s){ return row[s.key]; });
+  if (!hasAny) {
     cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
     return;
   }
-  cont.innerHTML = data.map(function(c) {
-    var recipes = (c.recettes || []).map(function(r) {
-      return '<span class="pcc-recipe-chip">🍽️ ' + r + '</span>';
-    }).join('');
-    var ings = (c.ingredients || []).map(function(i) {
-      return '<span class="pcc-ing-chip">✓ ' + i + '</span>';
-    }).join('');
-    return '<div class="profil-conseil-card">'
-      + '<div class="pcc-theme">' + (c.emoji || '') + ' ' + (c.theme || '') + '</div>'
-      + '<div class="pcc-title">' + (c.titre || '') + '</div>'
-      + '<div class="pcc-desc">' + (c.desc || '') + '</div>'
-      + (recipes ? '<div class="pcc-recipes">' + recipes + '</div>' : '')
-      + (ings ? '<div class="pcc-ings">' + ings + '</div>' : '')
+
+  cont.innerHTML = sections.map(function(s) {
+    if (!row[s.key]) return '';
+    return '<div class="profil-conseil-card" style="border-left:3px solid ' + s.couleur + ';padding-left:13px;">'
+      + '<div class="pcc-theme" style="color:' + s.couleur + ';">' + s.emoji + ' ' + s.titre + '</div>'
+      + '<div class="pcc-desc" style="margin-top:4px;">' + row[s.key] + '</div>'
       + '</div>';
   }).join('');
-  // Footer date
-  if (footer && generatedAt) {
-    var d = new Date(generatedAt);
-    var next = new Date(d.getTime() + 7*24*3600*1000);
-    var fmt = function(dt){ return dt.toLocaleDateString('fr-FR', {day:'numeric', month:'long'}); };
+
+  // Footer
+  if (footer && row.generated_at) {
+    var d = new Date(row.generated_at);
     footer.style.display = 'block';
-    footer.textContent = 'Générés le ' + fmt(d) + ' · prochaine mise à jour le ' + fmt(next);
+    footer.textContent = 'Mis à jour le ' + d.toLocaleDateString('fr-FR', {day:'numeric', month:'long'}) + ' · chaque semaine';
   }
   profilConseillsLoaded = true;
 }
@@ -2936,53 +2951,98 @@ async function fetchProfilConseils() {
   if (!USER_ID) return;
   var cont = document.getElementById('profilConseilsCont');
 
-  // 1. Lire le cache Supabase
   try {
-    var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID + '&select=conseils_json,generated_at&limit=1');
-    if (cached && cached.length && cached[0].conseils_json) {
-      var ageMs = Date.now() - new Date(cached[0].generated_at).getTime();
-      var data = JSON.parse(cached[0].conseils_json);
-      // Afficher immédiatement
-      conseilsRenderAll(data, cached[0].generated_at);
-      // < 7 jours → stop
-      if (ageMs < 7 * 24 * 3600 * 1000) return;
-      // >= 7 jours → régénérer en arrière-plan
+    // Lire toutes les colonnes de conseils en une seule requête
+    var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID
+      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,semaine,generated_at&limit=1');
+
+    if (cached && cached.length) {
+      var row = cached[0];
+      // Vérifier si la semaine est encore valide (même semaine calendaire)
+      var semaineStockee = row.semaine;
+      var semaineActuelle = getLundiSemaine();
+      var estValide = semaineStockee === semaineActuelle;
+
+      // Afficher immédiatement ce qu'on a
+      conseilsRenderColonnes(row);
+
+      if (estValide) return; // Tout est frais → stop
+
+      // Semaine périmée → régénérer en arrière-plan
       conseilsGenererEtSauvegarder(true);
       return;
     }
-  } catch(e) {}
+  } catch(e) { console.warn('fetchProfilConseils:', e); }
 
-  // 2. Pas de cache → loader + génération
+  // Pas de cache du tout
   if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de vos conseils...</div>';
   await conseilsGenererEtSauvegarder(false);
 }
 
 async function conseilsGenererEtSauvegarder(silentRefresh) {
+  // Construire contexte client depuis onboarding
+  var ob = profilInfoCache || {};
   var mealsDesc = allMeals.slice(0, 15).map(function(m) {
     var mac = calcMac(m.meal_ingredients);
     var ings = (m.meal_ingredients || []).map(function(i){ return i.name + ' ' + i.quantity_g + 'g'; }).join(', ');
-    return m.name + ' (' + ings + ') — prot:' + mac.p + 'g gluc:' + mac.g + 'g lip:' + mac.l + 'g cal:' + mac.c + 'kcal';
+    return m.name + ' — prot:' + mac.p + 'g gluc:' + mac.g + 'g lip:' + mac.l + 'g cal:' + mac.c + 'kcal';
   }).join(' | ');
-  var prompt = 'Tu es nutritionniste expert. Analyse les repas de ce client et génère 4 conseils thématiques.'
-    + ' Objectifs: prot=' + macObj.p + 'g, gluc=' + macObj.g + 'g, lip=' + macObj.l + 'g, cal=' + macObj.c + 'kcal.'
-    + ' Repas: ' + (mealsDesc || 'aucun repas encore')
-    + '. Thèmes: Protéines, Légumes & Fibres, Équilibre, Habitudes.'
-    + ' Pour chaque conseil: titre, desc (2 phrases max), 3 recettes, 3 ingrédients clés.'
-    + ' Réponds UNIQUEMENT en JSON sans backticks: [{"theme":"...","emoji":"...","titre":"...","desc":"...","recettes":["...","...","..."],"ingredients":["...","...","..."]}]';
+
+  var prompt = 'Tu es nutritionniste expert. Analyse les données de ce client et génère 6 conseils courts et actionnables.'
+    + '\nProfil: ' + (ob.prenom || 'Client') + ', ' + (ob.age || '?') + ' ans, ' + (ob.sexe || '?') + ', ' + (ob.poids || '?') + 'kg, ' + (ob.taille || '?') + 'cm'
+    + ', activité: ' + (ob.activite || '?') + ', objectif: ' + (ob.objectif_type || '?')
+    + '\nObjectifs macros: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
+    + '\nRepas récents: ' + (mealsDesc || 'aucun repas enregistré')
+    + '\n\nGénère exactement ce JSON (sans backticks, sans commentaires):'
+    + '\n{"conseil_prot":"1 phrase sur les protéines de ce client",'
+    + '"conseil_gluc":"1 phrase sur les glucides",'
+    + '"conseil_lip":"1 phrase sur les lipides",'
+    + '"conseil_cal":"1 phrase sur les calories",'
+    + '"conseil_amelioration":"1-2 phrases sur ce qu'il peut améliorer cette semaine",'
+    + '"conseil_points_forts":"1-2 phrases sur ses points forts nutritionnels"}';
+
   try {
-    var res = await fetch(CLAUDE_API, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:prompt, max_tokens:1200}) });
+    var res = await fetch(CLAUDE_API, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({prompt: prompt, max_tokens: 600})
+    });
     var d = await res.json();
-    var data = JSON.parse((d.text || '[]').replace(/```[a-z]*/g,'').replace(/```/g,'').trim());
-    if (!data || !data.length) throw new Error('vide');
+    var raw = (d.text || '{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim();
+    var data = JSON.parse(raw);
+    if (!data.conseil_prot && !data.conseil_amelioration) throw new Error('réponse vide');
+
+    var semaine = getLundiSemaine();
     var now = new Date().toISOString();
-    // Upsert Supabase
+
+    // Upsert avec les nouvelles colonnes
     await fetch(SB_URL + '/rest/v1/profil_conseils', {
       method: 'POST',
-      headers: { apikey:SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ user_id:USER_ID, conseils_json:JSON.stringify(data), generated_at:now })
+      headers: {
+        apikey: SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify({
+        user_id: USER_ID,
+        conseil_prot:          data.conseil_prot || null,
+        conseil_gluc:          data.conseil_gluc || null,
+        conseil_lip:           data.conseil_lip || null,
+        conseil_cal:           data.conseil_cal || null,
+        conseil_amelioration:  data.conseil_amelioration || null,
+        conseil_points_forts:  data.conseil_points_forts || null,
+        semaine:               semaine,
+        generated_at:          now
+      })
     });
-    conseilsRenderAll(data, now);
+
+    // Afficher
+    var row = Object.assign({}, data, {generated_at: now, semaine: semaine});
+    conseilsRenderColonnes(row);
+
   } catch(e) {
+    console.warn('conseilsGenererEtSauvegarder:', e);
     if (!silentRefresh && document.getElementById('profilConseilsCont')) {
       document.getElementById('profilConseilsCont').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
     }
@@ -2992,25 +3052,28 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
 async function conseilsForceRefresh() {
   profilConseillsLoaded = false;
   var btn = document.getElementById('conseilsRefreshBtn');
-  if (btn) btn.textContent = '...';
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
   try {
+    // Reset la semaine pour forcer régénération (sans supprimer la ligne)
     await fetch(SB_URL + '/rest/v1/profil_conseils?user_id=eq.' + USER_ID, {
-      method:'DELETE', headers:{ apikey:SB_KEY, 'Authorization':'Bearer '+SB_KEY }
+      method: 'PATCH',
+      headers: { apikey:SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({ semaine: '2000-01-01' })
     });
   } catch(e) {}
   await conseilsGenererEtSauvegarder(false);
-  if (btn) btn.textContent = '↻';
+  if (btn) { btn.textContent = '↻'; btn.disabled = false; }
 }
 
 // Charger les infos profil dans l'overlay
 async function loadProfilOverlayData() {
   try {
-    var data = await sbFetch('onboarding?user_id=eq.' + USER_ID + '&select=poids,taille,objectif,activite,tdee&limit=1');
+    var data = await sbFetch('onboarding?user_id=eq.' + USER_ID + '&select=poids,taille,activite,tdee,objectif_type,prenom,nom,age,sexe&limit=1');
     if (data && data.length) {
       profilInfoCache = data[0];
       profilAfficherInfos(data[0]);
     }
-  } catch(e) {}
+  } catch(e) { console.warn('loadProfilOverlayData:', e); }
 }
 
 // ══ ONBOARDING CAROUSEL ══
