@@ -2875,9 +2875,13 @@ async function profilSaveInfo() {
     macObj = calcMacros(poids, profilInfoCache.tdee || poids * 30);
     updateMacroCards();
     showToast('Informations mises à jour ✓');
-    // Forcer rafraîchissement conseils (données changées)
-    profilConseillsLoaded = false;
-    setTimeout(function(){ fetchProfilConseils(); }, 300);
+    // Ne régénérer les conseils que si le poids ou objectif a changé
+    var poidsChange = Math.abs((profilInfoCache.poids||0) - poids) > 2;
+    var objChange = (profilInfoCache.objectif_type || '') !== objectif;
+    if (poidsChange || objChange) {
+      profilConseillsLoaded = false;
+      setTimeout(function(){ conseilsGenererEtSauvegarder(false); }, 300);
+    }
   } catch(e) {
     showToast('Erreur lors de la sauvegarde', 'err');
   }
@@ -2947,34 +2951,54 @@ function conseilsRenderColonnes(row) {
 }
 
 async function fetchProfilConseils() {
-  if (profilConseillsLoaded) return;
+  if (profilConseillsLoaded) return; // Déjà chargé cette session → ne rien faire
   if (!USER_ID) return;
   var cont = document.getElementById('profilConseilsCont');
 
   try {
-    // Lire toutes les colonnes de conseils en une seule requête
+    // Lire le cache Supabase (ancienne colonne JSON ou nouvelles colonnes)
     var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID
-      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,semaine,generated_at&limit=1');
+      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,conseils_json,semaine,generated_at&limit=1');
 
     if (cached && cached.length) {
       var row = cached[0];
-      // Vérifier si la semaine est encore valide (même semaine calendaire)
-      var semaineStockee = row.semaine;
-      var semaineActuelle = getLundiSemaine();
-      var estValide = semaineStockee === semaineActuelle;
 
-      // Afficher immédiatement ce qu'on a
-      conseilsRenderColonnes(row);
+      // Compatibilité : si nouvelles colonnes vides mais ancien JSON présent → migrer
+      var hasNouvellesColonnes = row.conseil_prot || row.conseil_amelioration || row.conseil_points_forts;
+      if (!hasNouvellesColonnes && row.conseils_json) {
+        // Afficher ancien format le temps de régénérer
+        try {
+          var ancienData = JSON.parse(row.conseils_json);
+          if (cont) cont.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0 12px;text-align:center;">Mise à jour des conseils en cours...</div>';
+        } catch(e) {}
+        conseilsGenererEtSauvegarder(false);
+        return;
+      }
 
-      if (estValide) return; // Tout est frais → stop
+      if (hasNouvellesColonnes) {
+        // Afficher immédiatement
+        conseilsRenderColonnes(row);
 
-      // Semaine périmée → régénérer en arrière-plan
-      conseilsGenererEtSauvegarder(true);
-      return;
+        // Vérifier si régénération nécessaire (semaine périmée)
+        // Utiliser generated_at comme fallback si semaine null
+        var estValide = false;
+        if (row.semaine) {
+          estValide = (row.semaine === getLundiSemaine());
+        } else if (row.generated_at) {
+          var ageJours = (Date.now() - new Date(row.generated_at).getTime()) / (1000 * 3600 * 24);
+          estValide = ageJours < 7;
+        }
+
+        if (estValide) return; // Frais → stop, ne pas régénérer
+
+        // Périmé → régénérer en arrière-plan SANS bloquer l'affichage
+        setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 2000);
+        return;
+      }
     }
   } catch(e) { console.warn('fetchProfilConseils:', e); }
 
-  // Pas de cache du tout
+  // Vraiment rien en cache → générer
   if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de vos conseils...</div>';
   await conseilsGenererEtSauvegarder(false);
 }
@@ -3015,27 +3039,29 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
     var semaine = getLundiSemaine();
     var now = new Date().toISOString();
 
-    // Upsert avec les nouvelles colonnes
-    await fetch(SB_URL + '/rest/v1/profil_conseils', {
-      method: 'POST',
-      headers: {
-        apikey: SB_KEY,
-        'Authorization': 'Bearer ' + SB_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates,return=minimal'
-      },
-      body: JSON.stringify({
-        user_id: USER_ID,
-        conseil_prot:          data.conseil_prot || null,
-        conseil_gluc:          data.conseil_gluc || null,
-        conseil_lip:           data.conseil_lip || null,
-        conseil_cal:           data.conseil_cal || null,
-        conseil_amelioration:  data.conseil_amelioration || null,
-        conseil_points_forts:  data.conseil_points_forts || null,
-        semaine:               semaine,
-        generated_at:          now
-      })
-    });
+    // Tenter upsert Supabase (nécessite RLS policy INSERT/UPDATE pour anon)
+    try {
+      await fetch(SB_URL + '/rest/v1/profil_conseils', {
+        method: 'POST',
+        headers: {
+          apikey: SB_KEY,
+          'Authorization': 'Bearer ' + SB_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({
+          user_id: USER_ID,
+          conseil_prot:          data.conseil_prot || null,
+          conseil_gluc:          data.conseil_gluc || null,
+          conseil_lip:           data.conseil_lip || null,
+          conseil_cal:           data.conseil_cal || null,
+          conseil_amelioration:  data.conseil_amelioration || null,
+          conseil_points_forts:  data.conseil_points_forts || null,
+          semaine:               semaine,
+          generated_at:          now
+        })
+      });
+    } catch(saveErr) { console.warn('Sauvegarde conseils (RLS?):', saveErr); }
 
     // Afficher
     var row = Object.assign({}, data, {generated_at: now, semaine: semaine});
