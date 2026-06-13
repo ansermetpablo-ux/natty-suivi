@@ -1412,7 +1412,7 @@ function openMacroPopup(type) {
 
 function renderMacroConseilCard(conseilTexte, cfg, plats) {
   // Parse conseil texte en 3 sections : explication, recettes, ingrédients
-  var lines = (conseilTexte || '').replace(/\n/g,' ').split('.').map(function(l){ return l.trim(); }).filter(Boolean)).filter(Boolean);
+  var lines = (conseilTexte || '').replace(/\n/g,' ').split('.').map(function(l){ return l.trim(); }).filter(Boolean);
 
   var explication = lines.slice(0,2).join('. ');
   var plat = plats[0] || {nom:'Plat équilibré', kcal:400, prot:35, gluc:40, lip:14, photo:'🍽️', recettes:['Recette 1','Recette 2','Recette 3'], ings:['Ingredient 1','Ingredient 2','Ingredient 3']};
