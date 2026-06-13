@@ -2105,9 +2105,8 @@ function afficherOnboardingCTA(){
   document.body.style.background = '#f0f0f3';
   document.body.style.backgroundImage = 'radial-gradient(circle at 1px 1px, rgba(180,180,200,0.18) 1px, transparent 0)';
   document.body.style.backgroundSize = '26px 26px';
-  var _sm = document.querySelector('.score-macro') || document.querySelector('.hero-score') || document.querySelector('.score-zone');
-  if (_sm) _sm.style.display='none';
-  (document.querySelector('.pts-grid')||{style:{}}).style.display='none';
+  document.querySelector('.score-macro').style.display='none';
+  document.querySelector('.pts-grid').style.display='none';
   document.getElementById('rdvPlusBtn').closest('.rdv-mod').style.display='none';
   var page=document.getElementById('pageSuivi');
   var cta=document.createElement('div');cta.className='ob-card';
@@ -3176,54 +3175,30 @@ async function fetchProfilConseils() {
   var cont = document.getElementById('profilConseilsCont');
 
   try {
-    // Lire toutes les colonnes possibles (nouvelles + ancienne conseils_json)
     var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID
-      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,conseils_json,semaine,generated_at&limit=1');
+      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,semaine,generated_at&limit=1');
 
     if (cached && cached.length) {
       var row = cached[0];
+      var hasData = row.conseil_prot || row.conseil_amelioration || row.conseil_points_forts;
 
-      // Priorité 1 : nouvelles colonnes
-      var hasNew = row.conseil_prot || row.conseil_amelioration || row.conseil_points_forts;
-
-      // Priorité 2 : ancien JSON (migration)
-      if (!hasNew && row.conseils_json) {
-        try {
-          var old = JSON.parse(row.conseils_json);
-          // Convertir ancien format [{theme,emoji,titre,desc,...}] vers nouvelles colonnes
-          if (Array.isArray(old) && old.length) {
-            row.conseil_amelioration = old.find(function(c){ return c.theme && c.theme.toLowerCase().includes('amélio'); });
-            row.conseil_amelioration = row.conseil_amelioration ? (row.conseil_amelioration.titre + ' — ' + row.conseil_amelioration.desc) : old[0] ? (old[0].titre + ' — ' + old[0].desc) : null;
-            row.conseil_points_forts = old[1] ? (old[1].titre + ' — ' + old[1].desc) : null;
-            row.conseil_prot = old[2] ? (old[2].titre + ' — ' + old[2].desc) : null;
-            row.conseil_gluc = old[3] ? (old[3].titre + ' — ' + old[3].desc) : null;
-            hasNew = true;
-          }
-        } catch(e) {}
-      }
-
-      if (hasNew) {
-        window._conseilsCache = row;
+      if (hasData) {
+        // Afficher immédiatement — ne JAMAIS régénérer dans cette fonction
         conseilsRenderColonnes(row);
-        profilConseillsLoaded = true;
-
-        // Régénérer seulement si semaine périmée, en arrière-plan sans bloquer
+        // Régénérer seulement si semaine périmée ET en arrière-plan
         var semOK = row.semaine && row.semaine === getLundiSemaine();
-        var ageOK = !row.semaine && row.generated_at &&
-                    (Date.now() - new Date(row.generated_at).getTime()) < 7*24*3600*1000;
+        var ageOK = !row.semaine && row.generated_at && (Date.now() - new Date(row.generated_at).getTime()) < 7*24*3600*1000;
         if (!semOK && !ageOK) {
-          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 4000);
+          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 3000);
         }
         return;
       }
     }
   } catch(e) { console.warn('fetchProfilConseils:', e); }
 
-  // Vraiment rien en base → générer une première fois
-  if (!profilConseillsLoaded) {
-    if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de vos conseils...</div>';
-    await conseilsGenererEtSauvegarder(false);
-  }
+  // Aucun conseil en base → générer une première fois
+  if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de vos conseils...</div>';
+  await conseilsGenererEtSauvegarder(false);
 }
 
 async function conseilsGenererEtSauvegarder(silentRefresh) {
@@ -3551,8 +3526,8 @@ async function ouvrirListeCourses() {
   }
   document.getElementById('listeCoursesCont').innerHTML = '<div class="sug-load"><div class="spinner"></div>Generation de votre liste...</div>';
   var prompt = 'Tu es nutritionniste. A partir de ces conseils nutritionnels, genere une liste de courses complete.'
-    + '\nConseils: prot=' + (cache.conseil_prot||'') + ' gluc=' + (cache.conseil_gluc||'') + ' lip=' + (cache.conseil_lip||'') + ' amelioration=' + (cache.conseil_amelioration||'')
-    + '\nObjectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
+    + ' Conseils: prot=' + (cache.conseil_prot||'') + ' gluc=' + (cache.conseil_gluc||'') + ' lip=' + (cache.conseil_lip||'') + ' amelioration=' + (cache.conseil_amelioration||'')
+    + ' Objectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
     + '\nReponds UNIQUEMENT en JSON sans backticks: {"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]}';
   try {
     var res = await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:900})});
@@ -3591,7 +3566,7 @@ async function ouvrirRecettes() {
   }
   document.getElementById('recettesCont').innerHTML = '<div class="sug-load"><div class="spinner"></div>Generation de vos recettes...</div>';
   var prompt = 'Tu es chef cuisinier et nutritionniste. Genere 3 recettes adaptees a ce profil.'
-    + '\nObjectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
+    + ' Objectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
     + '\nConseils: ' + (cache.conseil_prot||'') + ' ' + (cache.conseil_amelioration||'')
     + '\nReponds UNIQUEMENT en JSON sans backticks: {"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","...","..."]}]}';
   try {
@@ -3671,37 +3646,7 @@ async function envoyerProfilParMail() {
 }
 
 // ══ ENVOYER LISTE DE COURSES + RECETTES PAR MAIL ══
-async function envoyerListeCoursesParMail() {
-  var email = profilInfoCache && profilInfoCache.email;
-  if (!email) { showToast('Email non configuré', 'err'); return; }
 
-  // S'assurer que les données sont générées
-  if (!_listeCourseCache || !_recettesCache) {
-    showToast('Génération en cours, patientez...', 'ok');
-    if (!_listeCourseCache) await ouvrirListeCourses();
-    if (!_recettesCache)    await ouvrirRecettes();
-    // Close overlays silently
-    document.getElementById('ovListeCourses').classList.remove('active');
-    document.getElementById('ovRecettes').classList.remove('active');
-  }
-
-  showToast('Envoi en cours...', 'ok');
-  try {
-    var res = await fetch('https://natty-suivi.vercel.app/api/send-email', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        to_email: email,
-        type: 'courses_et_recettes',
-        prenom: (profilInfoCache && profilInfoCache.prenom) || '',
-        liste_courses_html: _listeCourseCache || '',
-        recettes_html: _recettesCache || '',
-      })
-    });
-    if (res.ok) showToast('Email envoyé ! Vérifiez votre boîte.', 'ok');
-    else showToast('Erreur d\'envoi', 'err');
-  } catch(e) { showToast('Erreur d\'envoi', 'err'); }
-}
 
 
 async function envoyerListeCoursesParMail() {
@@ -3730,8 +3675,8 @@ async function envoyerListeCoursesParMail() {
       })
     });
     if (res.ok) showToast('Email envoyé ! Vérifiez votre boîte 📬', 'ok');
-    else showToast('Erreur d'envoi', 'err');
-  } catch(e) { showToast('Erreur d'envoi', 'err'); }
+    else showToast('Erreur envoi', 'err');
+  } catch(e) { showToast('Erreur envoi', 'err'); }
 }
 
 // Generate raw data for email (separate from HTML rendering)
@@ -3740,13 +3685,7 @@ async function genererDonneesEmail() {
   if (!cache || !cache.conseil_prot) return;
 
   if (!window._listeCourseRawData) {
-    var prompt = 'Genere une liste de courses pour ce profil nutritionnel.'
-      + '
-Conseils: prot=' + (cache.conseil_prot||'') + ' amelioration=' + (cache.conseil_amelioration||'')
-      + '
-Objectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
-      + '
-Reponds UNIQUEMENT en JSON sans backticks: {"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]}';
+    var prompt = 'Genere une liste de courses. Conseils prot: ' + (cache.conseil_prot||'') + ' amelioration: ' + (cache.conseil_amelioration||'') + ' Objectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal. Reponds en JSON sans backticks: {"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]}';
     try {
       var r = await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:700})});
       var d = await r.json();
@@ -3755,13 +3694,7 @@ Reponds UNIQUEMENT en JSON sans backticks: {"recettes_ingredients":[{"emoji":"..
   }
 
   if (!window._recettesRawData) {
-    var prompt2 = 'Genere 3 recettes adaptees a ce profil.'
-      + '
-Objectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
-      + '
-Conseils: ' + (cache.conseil_prot||'') + ' ' + (cache.conseil_amelioration||'')
-      + '
-Reponds UNIQUEMENT en JSON sans backticks: {"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","...","..."]}]}';
+    var prompt2 = 'Genere 3 recettes. Objectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal. Conseils: ' + (cache.conseil_prot||'') + ' ' + (cache.conseil_amelioration||'') + '. Reponds en JSON sans backticks: {"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","...","..."]}]}';
     try {
       var r2 = await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt2,max_tokens:1400})});
       var d2 = await r2.json();
