@@ -1412,8 +1412,8 @@ function openMacroPopup(type) {
 
 function renderMacroConseilCard(conseilTexte, cfg, plats) {
   // Parse conseil texte en 3 sections : explication, recettes, ingrédients
-  var lines = (conseilTexte || '').split(/[.
-]/).map(function(l){ return l.trim(); }).filter(Boolean);
+  var lines = (conseilTexte || '').replace(/\n/g,' ').split('.').map(function(l){ return l.trim(); }).filter(Boolean)).filter(Boolean);
+
   var explication = lines.slice(0,2).join('. ');
   var plat = plats[0] || {nom:'Plat équilibré', kcal:400, prot:35, gluc:40, lip:14, photo:'🍽️', recettes:['Recette 1','Recette 2','Recette 3'], ings:['Ingredient 1','Ingredient 2','Ingredient 3']};
 
@@ -1492,7 +1492,7 @@ function openAnalyseOverlay(type) {
 function renderConseilAnalyse(texte, isForts) {
   var col = isForts ? '#2a9e4f' : '#c97a00';
   var em  = isForts ? '✅' : '⚠️';
-  var sentences = (texte||'').split(/(?<=[.!?])\s+/).filter(Boolean);
+  var sentences = (texte||'').split(/[.!?]+/).map(function(s){return s.trim();}).filter(Boolean);
   var html = sentences.map(function(s){
     return '<div class="ap-card"><div class="ap-hdr"><span class="ap-em">'+em+'</span><span class="ap-name" style="font-size:13px;color:var(--text);">'+s+'</span></div></div>';
   }).join('');
