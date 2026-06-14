@@ -1114,7 +1114,6 @@ function setRdvFilter(f, el) {
   el.classList.add('active'); afficherRdvAdmin(f);
 }
 
-async 
 async function chargerRdvAdmin() {
   try {
     var rdvs = await sb('rdv?order=date_rdv.desc&select=*&limit=100');
