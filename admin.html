@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"> 
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -2872,15 +2872,15 @@ async function chargerCommandesCalendrier() {
     d.setDate(d.getDate() + (semaineOffset || 0) * 7);
     const lundi = d.toISOString().split('T')[0];
     // Update nav label
-    const fin = new Date(d); fin.setDate(fin.getDate() + 4);
+    const finAff = new Date(d); finAff.setDate(finAff.getDate() + 4);
     const fmtD = dt => dt.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
     const semLbl = document.getElementById('semaineLabel');
     const semSub = document.getElementById('semaineSub');
     if (semLbl) semLbl.textContent = 'Semaine du ' + fmtD(d);
-    if (semSub) semSub.textContent = fmtD(d) + ' au ' + fmtD(fin);
+    if (semSub) semSub.textContent = fmtD(d) + ' au ' + fmtD(finAff);
     const fin = new Date(lundi); fin.setDate(fin.getDate()+7);
     const finStr = fin.toISOString().split('T')[0];
-    const cmds = await sb('commandes?semaine=gte.'+lundi+'&semaine=lt.'+finStr+'&select=*&order=semaine.asc');
+    const cmds = await sb('commandes?semaine=eq.'+lundi+'&select=*&order=created_at.asc');
     rendreCalendrierCommandes(cmds, lundi);
     setText('cmdTotal',       cmds.length);
     setText('cmdConfirmees',  cmds.filter(c=>c.statut==='confirmee').length);
