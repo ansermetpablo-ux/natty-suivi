@@ -1127,7 +1127,7 @@ async function chargerRdvAdmin() {
   } catch(e) { console.warn('chargerRdvAdmin:', e); }
 }
 
-function afficherRdvAdmin(filter) {
+async function afficherRdvAdmin(filter) {
   const el = document.getElementById('rdvAdminList');
   const now = new Date();
   if (filter === 'creneaux') {
