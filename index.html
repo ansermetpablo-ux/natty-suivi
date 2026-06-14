@@ -1221,7 +1221,12 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovProchainRepas','ovListeCourses','ovRecettes'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
-  if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(verifierEtMontrerPopupConseils, 4000); }); } else afficherOnboardingCTA();
+  if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(verifierEtMontrerPopupConseils, 4000); }); } else {
+    // Attendre 800ms au cas où Wix envoie le token via postMessage après le load
+    setTimeout(function() {
+      if (!USER_ID) afficherOnboardingCTA();
+    }, 800);
+  }
 
   // Écouter le postMessage de Wix quand l'utilisateur se connecte
   window.addEventListener('message', function(event) {
@@ -1232,14 +1237,31 @@ document.addEventListener('DOMContentLoaded', function() {
     if (data.type === 'userConnected' && data.token && data.userId) {
       TOKEN = data.token;
       USER_ID = data.userId;
-      // Recharger la page avec le bon token
+      // Recharger la page avec le bon token → afficher le suivi
       var url = new URL(window.location.href);
       url.searchParams.set('token', data.token);
       if (data.proteines) url.searchParams.set('proteines', data.proteines);
       if (data.glucides)  url.searchParams.set('glucides',  data.glucides);
       if (data.lipides)   url.searchParams.set('lipides',   data.lipides);
       if (data.calories)  url.searchParams.set('calories',  data.calories);
-      window.location.href = url.toString();
+      window.location.replace(url.toString()); // replace au lieu de href pour éviter loop
+      return;
+    }
+    // Connexion depuis le header Wix (userId seul, sans token)
+    if (data.type === 'userLoggedIn' && data.userId) {
+      var hexToken = Array.from(data.userId).map(function(c){ return c.charCodeAt(0).toString(16).padStart(2,'0'); }).join('');
+      var url2 = new URL(window.location.href);
+      url2.searchParams.set('token', hexToken);
+      window.location.replace(url2.toString());
+      return;
+    }
+    // Déconnexion
+    if (data.type === 'userLoggedOut') {
+      var url3 = new URL(window.location.href);
+      url3.searchParams.delete('token');
+      url3.searchParams.delete('userId');
+      window.location.replace(url3.toString());
+      return;
     }
 
     // Onboarding terminé depuis onboarding.html
@@ -2105,9 +2127,13 @@ function afficherOnboardingCTA(){
   document.body.style.background = '#f0f0f3';
   document.body.style.backgroundImage = 'radial-gradient(circle at 1px 1px, rgba(180,180,200,0.18) 1px, transparent 0)';
   document.body.style.backgroundSize = '26px 26px';
-  document.querySelector('.score-macro').style.display='none';
-  document.querySelector('.pts-grid').style.display='none';
-  document.getElementById('rdvPlusBtn').closest('.rdv-mod').style.display='none';
+  // Null guards — éléments peuvent ne pas exister si DOM pas encore prêt
+  var _sm = document.querySelector('.score-macro') || document.querySelector('.hero-score');
+  if (_sm) _sm.style.display = 'none';
+  var _pg = document.querySelector('.pts-grid');
+  if (_pg) _pg.style.display = 'none';
+  var _rdv = document.getElementById('rdvPlusBtn');
+  if (_rdv && _rdv.closest('.rdv-mod')) _rdv.closest('.rdv-mod').style.display = 'none';
   var page=document.getElementById('pageSuivi');
   var cta=document.createElement('div');cta.className='ob-card';
   cta.innerHTML='<div class="ob-hero"><span class="ob-em">🥗</span><div class="ob-title">Commencez votre suivi</div><div class="ob-sub">Répondez à quelques questions pour personnaliser votre programme.</div></div>'
