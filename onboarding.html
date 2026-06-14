@@ -470,10 +470,7 @@ async function save() {
     bmr: b, tdee: t, deficit: t ? Math.round(t * 0.15) : null,
     completed: true,
     email: A.email || null,
-    rgpd_accepte: A.rgpd || false,
-    objectif_type: A.motivation || null,
-    objectif_valeur: null,
-    objectif_semaines: null
+    objectif_type: A.motivation || null
   };
 
   try {
