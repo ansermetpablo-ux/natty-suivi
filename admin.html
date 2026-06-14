@@ -3684,3 +3684,306 @@ function ajouterLigneManuelle() {
   row.appendChild(delBtn);
   cont.appendChild(row);
 }
+async function importerSaisieManuelle() {
+  const dateFacture = document.getElementById('factureManuelDate')?.value || new Date().toISOString().split('T')[0];
+  const rows = document.querySelectorAll('#factureManuelLignes > div[id^="ligneM_"]');
+  const produits = [];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const sel    = row.querySelector('select');
+    const ean   = inputs[0]?.value?.trim();
+    const nom   = inputs[1]?.value?.trim();
+    const prix  = parseFloat(inputs[2]?.value) || 0;
+    const qte   = parseFloat(inputs[3]?.value) || 1;
+    const zone  = sel?.value || 'ambiant';
+    if (nom) {
+      const info = identifierProduitMetro(nom);
+      produits.push({ ean, designation: nom, prixUnit: prix, qte, zone, emoji: info.emoji, conservation_j: info.conservation_j || 7 });
+    }
+  });
+  if (!produits.length) { toast('Ajoutez au moins un produit', 'err'); return; }
+  afficherResultatsFacture(produits, dateFacture, null);
+}
+
+function afficherResultatsFacture(produits, dateFacture, numFacture) {
+  const el = document.getElementById('factureResultats');
+  if (!el || !produits.length) return;
+  window._factureDateCache = dateFacture;
+  const zoneClass = z => z==='frais'?'fz-frais':z==='surgele'?'fz-surgele':'fz-ambiant';
+  el.innerHTML = '<div class="facture-result-card">'
+    + '<div style="font-size:14px;font-weight:700;color:var(--black);margin-bottom:12px;">📋 '
+    + produits.length+' produits détectés'+(dateFacture?' · '+dateFacture:'')+'</div>'
+    + '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    + '<button onclick="toutSelectionnerFacture(true)" style="padding:6px 12px;background:var(--bg);border:none;border-radius:8px;font-size:11px;cursor:pointer;box-shadow:var(--sm);">Tout sélect.</button>'
+    + '<button onclick="toutSelectionnerFacture(false)" style="padding:6px 12px;background:var(--bg);border:none;border-radius:8px;font-size:11px;cursor:pointer;box-shadow:var(--sm);">Tout désel.</button>'
+    + '</div>'
+    + produits.map((p, i) => {
+        const perem = dateFacture ? (() => { const d=new Date(dateFacture); d.setDate(d.getDate()+(p.conservation_j||7)); return d.toISOString().split('T')[0]; })() : '–';
+        return '<div class="facture-line" data-produit=''+JSON.stringify({...p, datePerem:perem, zone:p.zone||'ambiant'})+''>'
+          + '<input type="checkbox" class="facture-check" checked>'
+          + '<span style="font-size:18px;">'+(p.emoji||'📦')+'</span>'
+          + '<div style="flex:1;">'
+          + '<div class="facture-prod-nom">'+(p.designation||'Produit')+'</div>'
+          + '<div style="font-size:11px;color:var(--muted);">EAN: '+(p.ean||'–')+' · Pérem: '+perem+'</div>'
+          + '</div>'
+          + '<div style="text-align:right;">'
+          + '<div style="font-size:13px;font-weight:700;">'+(p.prixUnit||0).toFixed(2)+'€</div>'
+          + '<div class="facture-qty-input-wrap"><input class="facture-qty-input" type="number" value="'+(p.qte||1)+'" min="0.1" step="0.1" style="width:60px;border:none;background:var(--bg);border-radius:8px;padding:4px 8px;font-size:12px;box-shadow:var(--si);text-align:center;"></div>'
+          + '</div>'
+          + '<span class="facture-prod-zone '+zoneClass(p.zone||'ambiant')+'">'+(p.zone||'ambiant')+'</span>'
+          + '</div>';
+      }).join('')
+    + '<button onclick="importerSelectionStocks()" style="width:100%;margin-top:14px;padding:14px;background:var(--black);color:#fff;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Importer en stock →</button>'
+    + '</div>';
+}
+
+function toutSelectionnerFacture(val) {
+  document.querySelectorAll('#factureResultats .facture-check').forEach(cb => cb.checked = val);
+}
+
+async function importerSelectionStocks() {
+  const lines = document.querySelectorAll('#factureResultats .facture-line');
+  const rows = [];
+  const ingRows = [];
+  const dateAchat = window._factureDateCache || new Date().toISOString().split('T')[0];
+  lines.forEach(line => {
+    const checked = line.querySelector('.facture-check')?.checked;
+    if (!checked) return;
+    const data = JSON.parse(line.dataset.produit || '{}');
+    const qtyInput = line.querySelector('.facture-qty-input');
+    const qty = parseFloat(qtyInput?.value) || 1;
+    const info = identifierProduitMetro(data.designation || '');
+    rows.push({
+      ingredient_nom: data.designation,
+      quantite_kg: qty,
+      quantite_initiale_kg: qty,
+      fournisseur: 'Metro',
+      date_achat: dateAchat,
+      date_peremption: data.datePerem || null,
+      temperature_stockage: data.zone || info.zone || 'ambiant',
+      prix_kg: qty > 0 && data.prixUnit ? Math.round(data.prixUnit / qty * 100) / 100 : null,
+      statut: 'disponible'
+    });
+    if (data.ean || data.designation) {
+      ingRows.push({
+        ean: data.ean || null,
+        nom: data.designation,
+        nom_normalise: (data.designation || '').toLowerCase().trim(),
+        zone_stockage: data.zone || info.zone || 'ambiant',
+        duree_conservation_j: info.conservation_j || 7,
+        fournisseur: 'Metro',
+        poids_colis_kg: qty,
+        prix_achat_ht: data.prixUnit || null
+      });
+    }
+  });
+  if (!rows.length) { toast('Aucun produit sélectionné', 'err'); return; }
+  try {
+    await sb('stocks_mp', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify(rows) });
+    if (ingRows.length) {
+      await sb('ingredients_base', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(ingRows)
+      }).catch(e => console.warn('ingredients_base:', e.message));
+    }
+    toast(rows.length + ' produits importés en stock !', 'ok');
+    switchStockSub('dashboard', document.getElementById('stockSubDash'));
+  } catch(e) { toast('Erreur: ' + e.message, 'err'); }
+}
+
+async function analyserFacture(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const analysing = document.getElementById('factureAnalysing');
+  if (analysing) { analysing.style.display = 'block'; }
+  const pb = document.getElementById('factureProgressBar');
+  if (pb) { pb.style.width = '30%'; setTimeout(() => { if(pb) pb.style.width = '70%'; }, 1500); }
+  try {
+    const b64 = await fileToBase64(file);
+    const res = await fetch('https://natty-suivi.vercel.app/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: 'Tu es un expert en lecture de factures Metro France. Lis cette facture Metro et extrais TOUS les produits. Pour chaque produit retourne ce JSON (sans backticks): [{"ean":"numero_article","designation":"libelle","prix_unitaire":0.00,"quantite":1,"date_facture":"YYYY-MM-DD"}]. Le numero article est le code 7 chiffres. Ignore les lignes Total.',
+        image_base64: b64,
+        image_type: file.type,
+        max_tokens: 2000
+      })
+    });
+    const data = await res.json();
+    if (pb) pb.style.width = '100%';
+    const texte = (data.text || '').replace(/```[a-z]*/g, '').replace(/```/g, '').trim();
+    let produits = [];
+    let dateFacture = null;
+    try {
+      const parsed = JSON.parse(texte);
+      produits = parsed.map(p => {
+        if (p.date_facture && !dateFacture) dateFacture = p.date_facture;
+        const info = identifierProduitMetro(p.designation || '');
+        return { ean: p.ean || '', designation: p.designation || '', prixUnit: parseFloat(p.prix_unitaire) || 0, qte: parseFloat(p.quantite) || 1, ...info };
+      });
+    } catch(e) {
+      const result = parseFactureMetro(texte);
+      produits = result.produits;
+      dateFacture = result.dateFacture;
+    }
+    if (!produits.length) { toast('Aucun produit détecté — essayez la saisie manuelle', 'err'); }
+    else { afficherResultatsFacture(produits, dateFacture, null); }
+  } catch(e) {
+    toast('Erreur lecture: ' + e.message, 'err');
+  }
+  if (analysing) analysing.style.display = 'none';
+  if (pb) pb.style.width = '0%';
+}
+
+function handleFactureDrop(event) {
+  event.preventDefault();
+  document.getElementById('factureDropZone').classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  const input = document.getElementById('factureFileInput');
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  input.files = dt.files;
+  analyserFacture(input);
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Read failed'));
+    r.readAsDataURL(file);
+  });
+}
+
+function getLundiSemaineAdmin() {
+  const d = getLundi(semaineOffset);
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth()+1).padStart(2,'0');
+  const dd   = String(d.getDate()).padStart(2,'0');
+  return yyyy+'-'+mm+'-'+dd;
+}
+
+function setText(id, v) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = v;
+}
+
+function afficherAlertes(el, stocks, plans) {
+  const today = new Date();
+  const needs = {};
+  plans.forEach(p => {
+    const nom = (p.plat_nom || '').toLowerCase();
+    needs[nom] = (needs[nom] || 0) + (p.quantite_g || 300) / 1000;
+  });
+  const peremAlerts = stocks.filter(s => {
+    if (!s.date_peremption) return false;
+    const daysLeft = Math.round((new Date(s.date_peremption) - today) / 86400000);
+    return daysLeft < 7;
+  });
+  const stockAlerts = stocks.filter(s => {
+    const needed = needs[(s.ingredient_nom||'').toLowerCase()] || 0;
+    return needed > parseFloat(s.quantite_kg || 0) && needed > 0;
+  });
+  let html = '<div style="font-size:15px;font-weight:800;color:var(--black);margin-bottom:14px;">🚨 Alertes stocks</div>';
+  if (!peremAlerts.length && !stockAlerts.length) {
+    html += '<div style="text-align:center;padding:32px;color:#2a9e4f;font-size:15px;font-weight:600;">✅ Aucune alerte</div>';
+  } else {
+    if (peremAlerts.length) {
+      html += '<div style="font-size:12px;font-weight:700;color:#c0392b;text-transform:uppercase;margin-bottom:8px;">⏰ Péremptions < 7 jours</div>';
+      peremAlerts.forEach(s => {
+        const daysLeft = Math.round((new Date(s.date_peremption) - today) / 86400000);
+        html += '<div class="cmd-recap-item cmd-recap-urgent"><span style="font-size:20px;">⚠️</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;">'+s.ingredient_nom+'</div><div style="font-size:11px;color:var(--muted);">Péremption: '+s.date_peremption+'</div></div><div style="font-size:14px;font-weight:800;color:#c0392b;">'+daysLeft+'j</div></div>';
+      });
+    }
+    if (stockAlerts.length) {
+      html += '<div style="font-size:12px;font-weight:700;color:#c97a00;text-transform:uppercase;margin:14px 0 8px;">📉 Stocks insuffisants</div>';
+      stockAlerts.forEach(s => {
+        const needed = needs[(s.ingredient_nom||'').toLowerCase()] || 0;
+        const manque = needed - parseFloat(s.quantite_kg || 0);
+        html += '<div class="cmd-recap-item cmd-recap-urgent"><span style="font-size:20px;">📦</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;">'+s.ingredient_nom+'</div><div style="font-size:11px;color:var(--muted);">Stock: '+parseFloat(s.quantite_kg).toFixed(1)+'kg · Besoin: '+needed.toFixed(1)+'kg</div></div><div style="font-size:14px;font-weight:800;color:#c0392b;">−'+manque.toFixed(1)+'kg</div></div>';
+      });
+    }
+  }
+  el.innerHTML = html;
+}
+
+function ajouterEntreeStock(zone) {
+  switchStockSub('facture', document.getElementById('stockSubFacture'));
+}
+
+// ══════════════════════════════════════════════════════════
+// VUE PRÉPARATION
+// ══════════════════════════════════════════════════════════
+async function rendreVuePreparation(plans, onbMap, stockMap, lundi) {
+  const el = document.getElementById('commandesList');
+  if (!el) return;
+  if (!plans.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);"><div style="font-size:40px;margin-bottom:10px;">📋</div><div>Aucun repas programmé cette semaine</div></div>';
+    return;
+  }
+  const byClient = {};
+  plans.forEach(p => { if (!byClient[p.user_id]) byClient[p.user_id] = []; byClient[p.user_id].push(p); });
+  const totalNeeds = {};
+  plans.forEach(plan => {
+    const key = (plan.plat_nom || '').toLowerCase();
+    if (!totalNeeds[key]) totalNeeds[key] = { nom: plan.plat_nom, qty_g: 0, plats: [] };
+    totalNeeds[key].qty_g += plan.quantite_g || 300;
+    if (!totalNeeds[key].plats.includes(plan.plat_nom)) totalNeeds[key].plats.push(plan.plat_nom);
+  });
+  let html = '<div style="font-size:15px;font-weight:800;color:var(--black);margin-bottom:12px;">👥 Repas programmés — '+plans.length+' plats cette semaine</div>';
+  Object.entries(byClient).forEach(([uid, clientPlans]) => {
+    const ob = onbMap[uid] || {};
+    const nom = ob.prenom ? (ob.prenom+' '+(ob.nom||'')).trim() : 'Client '+uid.substring(0,8);
+    html += '<div style="background:var(--bg);border-radius:18px;box-shadow:var(--so);padding:14px 16px;margin-bottom:10px;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+      + '<div style="font-size:14px;font-weight:700;color:var(--black);">'+nom+'</div>'
+      + '<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;background:#e8f9ee;color:#2a9e4f;">'+clientPlans.length+' plat(s)</span>'
+      + '</div><div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    clientPlans.forEach(plan => {
+      html += '<div style="background:var(--bg);border-radius:12px;box-shadow:var(--si);padding:10px 12px;min-width:140px;">'
+        + '<div style="font-size:12px;font-weight:700;color:var(--black);margin-bottom:4px;">'+plan.plat_nom+'</div>'
+        + '<div style="font-size:11px;color:var(--muted);">'+(plan.quantite_g||300)+'g</div>'
+        + (plan.prot_g ? '<div style="font-size:10px;color:#666;margin-top:3px;">🥩'+plan.prot_g+'g · ⚡'+plan.cal_kcal+'kcal</div>' : '')
+        + '</div>';
+    });
+    html += '</div></div>';
+  });
+  const needItems = Object.values(totalNeeds);
+  if (needItems.length) {
+    html += '<div style="font-size:15px;font-weight:800;color:var(--black);margin:20px 0 12px;">🛒 Besoins en stock cette semaine</div>';
+    const inStock = [], toOrder = [];
+    needItems.forEach(item => {
+      const stockKg = stockMap[(item.nom||'').toLowerCase()] || 0;
+      const needKg  = item.qty_g / 1000;
+      const delta   = stockKg - needKg;
+      if (delta >= 0) inStock.push({...item, stockKg, needKg, delta});
+      else            toOrder.push({...item, stockKg, needKg, delta});
+    });
+    if (toOrder.length) {
+      html += '<div style="font-size:12px;font-weight:700;color:#c0392b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">🚨 À commander ('+toOrder.length+')</div>';
+      toOrder.forEach(item => {
+        html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#ffecec;border-radius:14px;margin-bottom:6px;border-left:3px solid #c0392b;">'
+          + '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#c0392b;">'+item.nom+'</div><div style="font-size:11px;color:#888;">Besoin: '+item.needKg.toFixed(2)+'kg · Stock: '+item.stockKg.toFixed(2)+'kg</div></div>'
+          + '<div style="font-size:16px;font-weight:800;color:#c0392b;">−'+Math.abs(item.delta).toFixed(2)+' kg</div></div>';
+      });
+    }
+    if (inStock.length) {
+      html += '<div style="font-size:12px;font-weight:700;color:#2a9e4f;text-transform:uppercase;letter-spacing:.7px;margin:14px 0 8px;">✅ En stock ('+inStock.length+')</div>';
+      inStock.forEach(item => {
+        const pct = Math.min(100, Math.round(item.needKg / item.stockKg * 100));
+        html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-radius:14px;box-shadow:var(--sm);margin-bottom:6px;">'
+          + '<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--black);">'+item.nom+'</div>'
+          + '<div style="height:4px;background:var(--bg);border-radius:2px;box-shadow:var(--si);overflow:hidden;margin-top:5px;"><div style="height:100%;width:'+pct+'%;background:#34c759;border-radius:2px;"></div></div></div>'
+          + '<div style="font-size:13px;font-weight:700;color:#2a9e4f;">+'+item.delta.toFixed(2)+'kg</div></div>';
+      });
+    }
+  }
+  el.innerHTML = html;
+}
+
+</script>
+</body>
+</html>
