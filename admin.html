@@ -1138,7 +1138,7 @@ function switchNav(tab) {
 async function chargerClients() {
   try {
     let query = 'onboarding?completed=eq.true&order=created_at.desc&select=*';
-    if (!isMasterAdmin && currentNutri?.id) query += '&nutritionniste_id=eq.'+currentNutri.id;
+    // nutritionniste_id not in schema — load all for now
     allClients = await sb(query);
     updateStats(allClients); afficherClients(allClients);
   } catch(e) { document.getElementById('clientsList').innerHTML = '<div class="empty">Erreur : '+e.message+'</div>'; }
@@ -2078,8 +2078,8 @@ async function supprimerPlat(id) {
 async function chargerEquipe() {
   try{
     allNutris=await sb('nutritionnistes?select=*&order=created_at.asc');
-    const clients=await sb('onboarding?completed=eq.true&select=nutritionniste_id');
-    const counts={};clients.forEach(c=>{if(c.nutritionniste_id)counts[c.nutritionniste_id]=(counts[c.nutritionniste_id]||0)+1;});
+    const clients=await sb('onboarding?completed=eq.true&select=user_id&limit=200');
+    const counts={}; // nutritionniste_id not in schema
     const el=document.getElementById('nutriAdminList');
     if(!allNutris||!allNutris.length){el.innerHTML='<div class="empty">Aucun nutritionniste</div>';return;}
     el.innerHTML=allNutris.map(n=>{
