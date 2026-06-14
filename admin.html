@@ -2571,7 +2571,7 @@ async function selectionnerClientRepas(userId, el) {
 
 async function chargerMacrosClient(userId) {
   try {
-    const obs = await sb('onboarding?user_id=eq.'+userId+'&select=poids,tdee,objectif_type,activite,prenom,nb_plats_semaine&limit=1');
+    const obs = await sb('onboarding?user_id=eq.'+userId+'&select=poids,tdee,objectif_type,activite,prenom&limit=1');
     const ob = obs[0] || {};
     const poids = parseFloat(ob.poids) || 70;
     const tdee  = parseFloat(ob.tdee)  || 2000;
@@ -2580,9 +2580,9 @@ async function chargerMacrosClient(userId) {
     const lip  = Math.round(tdee * 0.25 / 9);
     const cal  = Math.round(tdee);
 
-    // Get offre for nb_plats
-    const offres = await sb('offres_clients?user_id=eq.'+userId+'&statut=eq.active&select=nb_plats_semaine,formule&limit=1');
-    const nbPlats = offres[0] ? offres[0].nb_plats_semaine : 3;
+    // Get nb_plats from cached offres data
+    const cachedOffre = (window._repasOffres || []).find(r => r.offre.user_id === userId);
+    const nbPlats = cachedOffre ? cachedOffre.nbPlats : 3;
 
     // Per meal
     const protM = Math.round(prot / nbPlats);
@@ -2740,7 +2740,7 @@ async function sauvegarderRepasClient() {
       gluc_g: Math.round((parseFloat(s.plat.glucides)||0)  * (parseFloat(s.qty_g)||300) / 100 * 10) / 10,
       lip_g:  Math.round((parseFloat(s.plat.lipides)||0)   * (parseFloat(s.qty_g)||300) / 100 * 10) / 10,
       cal_kcal: Math.round((parseFloat(s.plat.calories)||0) * (parseFloat(s.qty_g)||300) / 100),
-      statut: 'propose',
+      statut: 'en_attente',
       valide_par: currentNutri ? (currentNutri.nom || 'Admin') : 'Admin',
       valide_at: new Date().toISOString()
     }));
