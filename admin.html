@@ -1121,17 +1121,58 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ── NAV ──
 function switchNav(tab) {
-  ['clients','messages','rdv','menu','commandes','equipe'].forEach(t => {
-    document.getElementById('nav'+t.charAt(0).toUpperCase()+t.slice(1))?.classList.toggle('active', t===tab);
-    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1))?.classList.toggle('active', t===tab);
+  // All known tabs
+  const ALL_TABS = ['clients','repasAProg','messages','rdv','menu','commandes','chef','stocks','equipe'];
+  const NAV_IDS  = {
+    clients:'navClients', repasAProg:'navRepasAProg', messages:'navMessages',
+    rdv:'navRdv', menu:'navMenu', commandes:'navCommandes',
+    chef:'navChef', stocks:'navStocks', equipe:'navEquipe'
+  };
+  const TAB_IDS  = {
+    clients:'tabClients', repasAProg:'tabRepasAProg', messages:'tabMessages',
+    rdv:'tabRdv', menu:'tabMenu', commandes:'tabCommandes',
+    chef:'tabChef', stocks:'tabStocks', equipe:'tabEquipe'
+  };
+  const TITLES = {
+    clients:'Mes clients', repasAProg:'Repas à programmer', messages:'Messages',
+    rdv:'Rendez-vous', menu:'Menu', commandes:'Commandes',
+    chef:'Recettes & Production', stocks:'Stocks', equipe:'Équipe'
+  };
+
+  // Deactivate all
+  ALL_TABS.forEach(t => {
+    const n = document.getElementById(NAV_IDS[t]);
+    const c = document.getElementById(TAB_IDS[t]);
+    if (n) n.classList.remove('active');
+    if (c) c.classList.remove('active');
   });
-  const titles = {clients:'Mes clients', messages:'Messages', rdv:'Rendez-vous', menu:'Menu', commandes:'Commandes', equipe:'Équipe'};
-  document.getElementById('topHeading').textContent = titles[tab]||tab;
-  document.getElementById('searchWrap').style.display = (tab==='clients'||tab==='messages') ? 'flex' : 'none';
-  if (tab==='commandes') chargerCommandes();
-  if (tab==='messages') chargerThreadsMessages();
-  if (tab==='equipe') chargerEquipe();
-  if (tab==='rdv') chargerRdvAdmin();
+
+  // Activate current
+  const navEl = document.getElementById(NAV_IDS[tab]);
+  const tabEl = document.getElementById(TAB_IDS[tab]);
+  if (navEl) navEl.classList.add('active');
+  if (tabEl) tabEl.classList.add('active');
+
+  const heading = document.getElementById('topHeading');
+  if (heading) heading.textContent = TITLES[tab] || tab;
+
+  const sw = document.getElementById('searchWrap');
+  if (sw) sw.style.display = (tab==='clients'||tab==='messages') ? 'flex' : 'none';
+
+  // Load data per tab
+  if (tab === 'commandes') chargerCommandes();
+  if (tab === 'messages')  chargerThreadsMessages();
+  if (tab === 'equipe')    chargerEquipe();
+  if (tab === 'rdv')       chargerRdvAdmin();
+  if (tab === 'repasAProg') {
+    var lv = document.getElementById('repasListeView');
+    var pv = document.getElementById('repasProgrammationView');
+    if (lv) lv.style.display = 'block';
+    if (pv) pv.style.display = 'none';
+    chargerClientsRepas();
+  }
+  if (tab === 'chef')   chargerRecettes();
+  if (tab === 'stocks') chargerStocks('dashboard');
 }
 
 // ── CLIENTS ──
@@ -2302,30 +2343,6 @@ function demarrerAppAvecRole() {
   subscribeGlobalRealtime();
 }
 
-// Override switchNav to handle new tabs
-const origSwitchNav = window.switchNav;
-window.switchNav = function(tab) {
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  const tabMap = {
-    clients:'navClients', repasAProg:'navRepasAProg', messages:'navMessages',
-    rdv:'navRdv', menu:'navMenu', commandes:'navCommandes',
-    chef:'navChef', stocks:'navStocks', equipe:'navEquipe'
-  };
-  const contentMap = {
-    clients:'tabClients', repasAProg:'tabRepasAProg', messages:'tabMessages',
-    rdv:'tabRdv', menu:'tabMenu', commandes:'tabCommandes',
-    chef:'tabChef', stocks:'tabStocks', equipe:'tabEquipe'
-  };
-  const navEl = document.getElementById(tabMap[tab]);
-  const contEl = document.getElementById(contentMap[tab]);
-  if (navEl) navEl.classList.add('active');
-  if (contEl) contEl.classList.add('active');
-  if (tab === 'repasAProg') chargerClientsRepas();
-  if (tab === 'chef') chargerRecettes();
-  if (tab === 'stocks') chargerStocks('dashboard');
-  if (tab === 'commandes') chargerCommandesCalendrier();
-};
 
 // ══════════════════════════════════════════════════════════
 // REPAS À PROGRAMMER — NUTRITIONNISTE
@@ -2705,27 +2722,53 @@ async function sauvegarderRepasClient() {
   const sels = Object.values(platsChefSelection);
   try {
     // Delete existing plans for this client this week
-    await fetch(SB_URL+'/rest/v1/plans_repas?user_id=eq.'+clientRepasSelected+'&semaine_livraison=eq.'+lundi, {
-      method:'DELETE', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    const delRes = await fetch(SB_URL+'/rest/v1/plans_repas?user_id=eq.'+clientRepasSelected+'&semaine_livraison=eq.'+lundi, {
+      method:'DELETE',
+      headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'}
     });
-    // Insert new plans
+    console.log('DELETE plans_repas status:', delRes.status);
+
+    if (!sels.length) { toast('Sélectionnez au moins un plat', 'err'); btn.disabled=false; btn.textContent='Enregistrer les repas →'; return; }
+
+    // Insert new plans one by one to isolate errors
     const rows = sels.map(s => ({
       user_id: clientRepasSelected,
-      plat_nom: s.plat.nom,
+      plat_nom: s.plat.nom || 'Plat',
       semaine_livraison: lundi,
-      quantite_g: s.qty_g,
-      prot_g: Math.round((s.plat.proteines||0)*s.qty_g/100*10)/10,
-      gluc_g: Math.round((s.plat.glucides ||0)*s.qty_g/100*10)/10,
-      lip_g:  Math.round((s.plat.lipides  ||0)*s.qty_g/100*10)/10,
-      cal_kcal: Math.round((s.plat.calories||0)*s.qty_g/100),
+      quantite_g: parseFloat(s.qty_g) || 300,
+      prot_g: Math.round((parseFloat(s.plat.proteines)||0) * (parseFloat(s.qty_g)||300) / 100 * 10) / 10,
+      gluc_g: Math.round((parseFloat(s.plat.glucides)||0)  * (parseFloat(s.qty_g)||300) / 100 * 10) / 10,
+      lip_g:  Math.round((parseFloat(s.plat.lipides)||0)   * (parseFloat(s.qty_g)||300) / 100 * 10) / 10,
+      cal_kcal: Math.round((parseFloat(s.plat.calories)||0) * (parseFloat(s.qty_g)||300) / 100),
       statut: 'propose',
-      valide_par: currentNutri ? currentNutri.nom : 'Nutritionniste',
+      valide_par: currentNutri ? (currentNutri.nom || 'Admin') : 'Admin',
       valide_at: new Date().toISOString()
     }));
-    await sb('plans_repas', {method:'POST', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(rows)});
-    toast('Repas programmés pour ce client !', 'ok');
+
+    console.log('Inserting rows:', JSON.stringify(rows));
+
+    const insRes = await fetch(SB_URL+'/rest/v1/plans_repas', {
+      method:'POST',
+      headers:{
+        apikey:SB_KEY,
+        'Authorization':'Bearer '+SB_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'
+      },
+      body: JSON.stringify(rows)
+    });
+    const insText = await insRes.text();
+    console.log('INSERT status:', insRes.status, 'body:', insText);
+
+    if (!insRes.ok) throw new Error('Insert failed: ' + insText);
+
+    toast(sels.length + ' repas programmés !', 'ok');
     chargerClientsRepas();
-  } catch(e) { toast('Erreur: '+e.message, 'err'); }
+    retourListeRepas();
+  } catch(e) {
+    console.error('sauvegarderRepasClient error:', e);
+    toast('Erreur: ' + e.message, 'err');
+  }
   btn.disabled = false; btn.textContent = 'Enregistrer les repas →';
 }
 
