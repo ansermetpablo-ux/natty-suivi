@@ -1160,7 +1160,7 @@ function switchNav(tab) {
   if (sw) sw.style.display = (tab==='clients'||tab==='messages') ? 'flex' : 'none';
 
   // Load data per tab
-  if (tab === 'commandes') chargerCommandes();
+  if (tab === 'commandes') chargerCommandesCalendrier();
   if (tab === 'messages')  chargerThreadsMessages();
   if (tab === 'equipe')    chargerEquipe();
   if (tab === 'rdv')       chargerRdvAdmin();
@@ -2190,7 +2190,7 @@ async function toggleNutriActif(id,actif) {
 function getLundi(offset=0){const d=new Date();const day=d.getDay();const diff=d.getDate()-day+(day===0?-6:1);d.setDate(diff+offset*7);d.setHours(0,0,0,0);return d;}
 function formatDate(d){return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});}
 function updateSemaineLabel(){const lundi=getLundi(semaineOffset);const vendredi=new Date(lundi);vendredi.setDate(lundi.getDate()+4);document.getElementById('semaineLabel').textContent='Semaine du '+formatDate(lundi);document.getElementById('semaineSub').textContent=formatDate(lundi)+' au '+formatDate(vendredi);}
-function changerSemaine(dir){semaineOffset+=dir;updateSemaineLabel();chargerCommandes();}
+function changerSemaine(dir){semaineOffset+=dir;chargerCommandesCalendrier();}
 
 async function chargerCommandes() {
   updateSemaineLabel();
@@ -2718,7 +2718,7 @@ async function sauvegarderRepasClient() {
   if (!clientRepasSelected) return;
   const btn = document.getElementById('btnSauvegarderRepas');
   btn.disabled = true; btn.textContent = 'Enregistrement...';
-  const lundi = getLundiSemaineAdmin();
+  const lundi = getLundi(0).toISOString().split('T')[0]; // Always save to current week
   const sels = Object.values(platsChefSelection);
   try {
     // Delete existing plans for this client this week
@@ -2866,7 +2866,18 @@ function switchCmdSub(sub, el) {
 
 async function chargerCommandesCalendrier() {
   try {
-    const lundi = getLundiSemaineAdmin();
+    // Support semaine navigation
+    const baseLundi = getLundiSemaineAdmin();
+    const d = new Date(baseLundi + 'T00:00:00');
+    d.setDate(d.getDate() + (semaineOffset || 0) * 7);
+    const lundi = d.toISOString().split('T')[0];
+    // Update nav label
+    const fin = new Date(d); fin.setDate(fin.getDate() + 4);
+    const fmtD = dt => dt.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
+    const semLbl = document.getElementById('semaineLabel');
+    const semSub = document.getElementById('semaineSub');
+    if (semLbl) semLbl.textContent = 'Semaine du ' + fmtD(d);
+    if (semSub) semSub.textContent = fmtD(d) + ' au ' + fmtD(fin);
     const fin = new Date(lundi); fin.setDate(fin.getDate()+7);
     const finStr = fin.toISOString().split('T')[0];
     const cmds = await sb('commandes?semaine=gte.'+lundi+'&semaine=lt.'+finStr+'&select=*&order=semaine.asc');
@@ -3915,11 +3926,8 @@ async function rendreVuePreparation(plans, onbMap, stockMap, lundi) {
 }
 
 function getLundiSemaineAdmin() {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1 - day);
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  // Always use same logic as getLundi(semaineOffset) for consistency
+  return getLundi(semaineOffset).toISOString().split('T')[0];
 }
 
 function setText(id, v) { const el=document.getElementById(id); if(el) el.textContent=v; }
