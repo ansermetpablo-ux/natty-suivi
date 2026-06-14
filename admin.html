@@ -700,6 +700,13 @@ input[type="file"] { display: none; }
               <div class="form-group"><div class="form-lbl">Glucides (g)</div><input class="form-inp" type="number" id="platGluc" placeholder="40"></div>
               <div class="form-group"><div class="form-lbl">Lipides (g)</div><input class="form-inp" type="number" id="platLip" placeholder="15"></div>
             </div>
+            <div class="form-row">
+              <div class="form-group full">
+                <div class="form-lbl">Ingrédients <span style="font-weight:400;color:var(--muted)">(macros calculées automatiquement)</span></div>
+                <div id="platIngredientsList" style="margin-bottom:8px;"></div>
+                <button type="button" id="btnAjouterIng" style="padding:8px 14px;background:var(--bg);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted);cursor:pointer;box-shadow:var(--so);">+ Ajouter un ingrédient</button>
+              </div>
+            </div>
             <div class="form-actions"><button class="btn-cancel-form" id="btnCancelPlat">Annuler</button><button class="btn-submit" id="btnSavePlat">Enregistrer le plat</button></div>
           </div>
           <div class="cat-tabs">
@@ -1086,6 +1093,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Menu form
   document.getElementById('btnTogglePlat').addEventListener('click', () => toggleFormPlat());
   document.getElementById('btnCancelPlat').addEventListener('click', () => { document.getElementById('formPlat').classList.remove('open'); });
+  document.getElementById('btnAjouterIng').addEventListener('click', () => {
+    _platIngredients.push({nom:'', quantite_g:100, calories_100g:0, prot_100g:0, gluc_100g:0, lip_100g:0});
+    renderIngredientsList();
+  });
   document.getElementById('btnSavePlat').addEventListener('click', sauvegarderPlat);
   document.getElementById('uploadZone').addEventListener('click', () => document.getElementById('photoFile').click());
   document.getElementById('photoFile').addEventListener('change', function() { previewAndUpload(this); });
@@ -2036,6 +2047,141 @@ function afficherPlatsAdmin(plats) {
   });
 }
 
+// ══════════════════════════════════════════════════════════
+// INGRÉDIENTS PLATS — gestion + calcul macros auto
+// ══════════════════════════════════════════════════════════
+let _platIngredients = []; // [{nom, quantite_g, calories_100g, prot_100g, gluc_100g, lip_100g}]
+
+function initIngredientsList() {
+  _platIngredients = [];
+  renderIngredientsList();
+}
+
+function renderIngredientsList() {
+  const cont = document.getElementById('platIngredientsList');
+  if (!cont) return;
+  if (!_platIngredients.length) {
+    cont.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Aucun ingrédient — les macros seront saisies manuellement.</div>';
+    return;
+  }
+  cont.innerHTML = _platIngredients.map((ing, i) => {
+    return '<div style="display:grid;grid-template-columns:1fr 70px 50px 50px 50px 50px 28px;gap:6px;margin-bottom:6px;align-items:center;">'
+      + '<input class="form-inp" type="text" value="'+ing.nom+'" placeholder="Ingrédient" data-ing="'+i+'" data-field="nom" style="font-size:12px;padding:8px;">'
+      + '<input class="form-inp" type="number" value="'+ing.quantite_g+'" placeholder="g" min="0" data-ing="'+i+'" data-field="quantite_g" style="font-size:12px;padding:8px;text-align:center;">'
+      + '<input class="form-inp" type="number" value="'+(ing.calories_100g||'')+'" placeholder="kcal" min="0" data-ing="'+i+'" data-field="calories_100g" style="font-size:11px;padding:6px;text-align:center;">'
+      + '<input class="form-inp" type="number" value="'+(ing.prot_100g||'')+'" placeholder="P" min="0" data-ing="'+i+'" data-field="prot_100g" style="font-size:11px;padding:6px;text-align:center;">'
+      + '<input class="form-inp" type="number" value="'+(ing.gluc_100g||'')+'" placeholder="G" min="0" data-ing="'+i+'" data-field="gluc_100g" style="font-size:11px;padding:6px;text-align:center;">'
+      + '<input class="form-inp" type="number" value="'+(ing.lip_100g||'')+'" placeholder="L" min="0" data-ing="'+i+'" data-field="lip_100g" style="font-size:11px;padding:6px;text-align:center;">'
+      + '<button data-delidx="'+i+'" class="btn-del-ing-plat" style="background:#ffecec;border:none;border-radius:8px;cursor:pointer;color:#c0392b;font-size:12px;padding:6px;">✕</button>'
+      + '</div>';
+  }).join('');
+  // Labels
+  const labels = '<div style="display:grid;grid-template-columns:1fr 70px 50px 50px 50px 50px 28px;gap:6px;margin-bottom:4px;"><span style="font-size:10px;color:var(--muted);">Nom</span><span style="font-size:10px;color:var(--muted);text-align:center;">Qté (g)</span><span style="font-size:10px;color:var(--muted);text-align:center;">Kcal</span><span style="font-size:10px;color:var(--muted);text-align:center;">Prot</span><span style="font-size:10px;color:var(--muted);text-align:center;">Gluc</span><span style="font-size:10px;color:var(--muted);text-align:center;">Lip</span><span></span></div>';
+  cont.innerHTML = labels + cont.innerHTML;
+
+  // Bind inputs
+  cont.querySelectorAll('input[data-ing]').forEach(inp => {
+    inp.addEventListener('input', function() {
+      const idx = parseInt(this.dataset.ing);
+      const field = this.dataset.field;
+      _platIngredients[idx][field] = field === 'nom' ? this.value : parseFloat(this.value) || 0;
+      if (field !== 'nom') recalculerMacrosPlat();
+    });
+    // Autocomplete from ingredients_base
+    if (inp.dataset.field === 'nom') {
+      inp.addEventListener('blur', function() { chargerMacrosIngredient(this.value, parseInt(this.dataset.ing)); });
+    }
+  });
+  cont.querySelectorAll('.btn-del-ing-plat').forEach(btn => {
+    btn.addEventListener('click', function() {
+      _platIngredients.splice(parseInt(this.dataset.delidx), 1);
+      renderIngredientsList();
+      recalculerMacrosPlat();
+    });
+  });
+}
+
+async function chargerMacrosIngredient(nom, idx) {
+  if (!nom || nom.length < 2) return;
+  try {
+    const results = await sb('ingredients_base?nom_normalise=ilike.*'+encodeURIComponent(nom.toLowerCase())+'*&select=nom,cal_per_100g,prot_per_100g,gluc_per_100g,lip_per_100g&limit=1');
+    if (results && results.length) {
+      const r = results[0];
+      _platIngredients[idx].calories_100g = r.cal_per_100g || 0;
+      _platIngredients[idx].prot_100g = r.prot_per_100g || 0;
+      _platIngredients[idx].gluc_100g = r.gluc_per_100g || 0;
+      _platIngredients[idx].lip_100g = r.lip_per_100g || 0;
+      renderIngredientsList();
+      recalculerMacrosPlat();
+    }
+  } catch(e) {}
+}
+
+function recalculerMacrosPlat() {
+  let cal = 0, prot = 0, gluc = 0, lip = 0;
+  _platIngredients.forEach(ing => {
+    const factor = (ing.quantite_g || 0) / 100;
+    cal  += (ing.calories_100g || 0) * factor;
+    prot += (ing.prot_100g || 0) * factor;
+    gluc += (ing.gluc_100g || 0) * factor;
+    lip  += (ing.lip_100g || 0) * factor;
+  });
+  const setCal = document.getElementById('platCal');
+  const setProt = document.getElementById('platProt');
+  const setGluc = document.getElementById('platGluc');
+  const setLip = document.getElementById('platLip');
+  if (setCal) setCal.value = Math.round(cal);
+  if (setProt) setProt.value = Math.round(prot * 10) / 10;
+  if (setGluc) setGluc.value = Math.round(gluc * 10) / 10;
+  if (setLip) setLip.value = Math.round(lip * 10) / 10;
+}
+
+async function chargerIngredientsPlat(platId) {
+  try {
+    // Check if recipe exists for this plat
+    const recs = await sb('recettes?nom=eq.'+encodeURIComponent((allPlats.find(p=>p.id===platId)||{}).nom||'')+'&select=id&limit=1');
+    if (recs && recs.length) {
+      const ings = await sb('recettes_ingredients?recette_id=eq.'+recs[0].id+'&select=*&order=ordre.asc');
+      _platIngredients = ings.map(ing => ({
+        nom: ing.ingredient_nom || '',
+        quantite_g: ing.quantite_g || 0,
+        calories_100g: 0, prot_100g: 0, gluc_100g: 0, lip_100g: 0
+      }));
+    } else {
+      _platIngredients = [];
+    }
+    renderIngredientsList();
+  } catch(e) {
+    _platIngredients = [];
+    renderIngredientsList();
+  }
+}
+
+async function sauvegarderIngredientsPlat(platId, platNom) {
+  if (!_platIngredients.length) return;
+  try {
+    // Find or create recipe for this plat
+    let recId;
+    const recs = await sb('recettes?nom=eq.'+encodeURIComponent(platNom)+'&select=id&limit=1');
+    if (recs && recs.length) {
+      recId = recs[0].id;
+    } else {
+      const newRec = await sb('recettes', {method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify({nom:platNom, actif:true, nb_portions:1})});
+      recId = newRec[0]?.id;
+    }
+    if (!recId) return;
+    // Delete old ingredients
+    await fetch(SB_URL+'/rest/v1/recettes_ingredients?recette_id=eq.'+recId, {method:'DELETE', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    // Insert new ones
+    if (_platIngredients.length) {
+      await sb('recettes_ingredients', {method:'POST', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(
+        _platIngredients.map((ing, i) => ({recette_id:recId, ingredient_nom:ing.nom, quantite_g:ing.quantite_g, ordre:i}))
+      )});
+    }
+  } catch(e) { console.warn('sauvegarderIngredientsPlat:', e.message); }
+}
+
+
 function toggleFormPlat() {
   const form = document.getElementById('formPlat');
   const open = form.classList.toggle('open');
@@ -2047,6 +2193,7 @@ function toggleFormPlat() {
     document.getElementById('formPlatTitle').textContent='Nouveau plat';
     document.getElementById('btnSavePlat').textContent='Enregistrer le plat';
     uploadedPhotoUrl=null; form.scrollIntoView({behavior:'smooth'});
+    initIngredientsList();
   }
 }
 
@@ -2065,6 +2212,7 @@ function editerPlat(id) {
   document.getElementById('formPlatTitle').textContent='Modifier le plat';
   document.getElementById('btnSavePlat').textContent='Mettre à jour';
   const form=document.getElementById('formPlat');form.classList.add('open');form.scrollIntoView({behavior:'smooth'});
+  chargerIngredientsPlat(id);
 }
 
 async function previewAndUpload(input) {
@@ -2094,6 +2242,8 @@ async function sauvegarderPlat() {
   try {
     if(editId) await sb('plats_menu?id=eq.'+editId,{method:'PATCH',body:JSON.stringify(payload)});
     else await sb('plats_menu',{method:'POST',body:JSON.stringify(payload)});
+    const savedPlat = editId ? {id:editId, nom:nom} : (await sb('plats_menu?nom=eq.'+encodeURIComponent(nom)+'&select=id,nom&limit=1'))[0];
+    if (savedPlat) await sauvegarderIngredientsPlat(savedPlat.id, savedPlat.nom);
     toast(editId?'Mis à jour !':'Plat ajouté !','ok');
     document.getElementById('formPlat').classList.remove('open');
     await chargerPlats();
@@ -3384,30 +3534,63 @@ async function chargerStocks(view) {
   const el = document.getElementById('stocksContent');
   if (!el) return;
   el.innerHTML = '<div class="loading">Chargement...</div>';
-
   try {
-    const [stocks, plans, cmds_fourn] = await Promise.all([
+    const lundi = getLundiSemaineAdmin();
+    const [stocks, plans, recettes, recIngredients] = await Promise.all([
       sb('stocks_mp?select=*&order=ingredient_nom.asc'),
-      sb('plans_repas?select=plat_nom,quantite_g,semaine_livraison&order=semaine_livraison.asc&limit=100'),
-      sb('commandes_fournisseurs?statut=in.(planifiee,commandee)&select=*').catch(() => [])
+      sb('plans_repas?semaine_livraison=eq.'+lundi+'&select=plat_nom,plat_id,quantite_g,user_id'),
+      sb('recettes?select=id,nom,nb_portions'),
+      sb('recettes_ingredients?select=recette_id,ingredient_nom,quantite_g,ingredient_id')
     ]);
 
+    // Build ingredient needs from plans → recettes → ingredients
+    // Match plan.plat_nom to recette.nom
+    const recByNom = {};
+    recettes.forEach(r => { recByNom[r.nom.toLowerCase().trim()] = r; });
+    const recIngMap = {}; // recette_id -> [ingredients]
+    recIngredients.forEach(ri => {
+      if (!recIngMap[ri.recette_id]) recIngMap[ri.recette_id] = [];
+      recIngMap[ri.recette_id].push(ri);
+    });
+
+    // Calculate real ingredient needs
+    const needs = {}; // ingredient_nom_lower -> { nom, qty_kg, plats }
+    plans.forEach(plan => {
+      const rec = recByNom[(plan.plat_nom||'').toLowerCase().trim()];
+      if (rec && recIngMap[rec.id]) {
+        const portions = rec.nb_portions || 1;
+        const scale = (plan.quantite_g || 300) / (portions * 300);
+        recIngMap[rec.id].forEach(ing => {
+          const key = (ing.ingredient_nom||'').toLowerCase().trim();
+          if (!needs[key]) needs[key] = { nom: ing.ingredient_nom, qty_kg: 0, plats: [] };
+          needs[key].qty_kg += ((ing.quantite_g || 0) * scale) / 1000;
+          if (!needs[key].plats.includes(plan.plat_nom)) needs[key].plats.push(plan.plat_nom);
+        });
+      } else {
+        // No recipe found — use plat_nom as proxy
+        const key = (plan.plat_nom||'').toLowerCase().trim();
+        if (!needs[key]) needs[key] = { nom: plan.plat_nom, qty_kg: 0, plats: [plan.plat_nom] };
+        needs[key].qty_kg += (plan.quantite_g || 300) / 1000;
+      }
+    });
+
     if (view === 'dashboard') {
-      afficherStockDashboard(el, stocks, plans);
+      afficherStockDashboard(el, stocks, needs, plans.length);
     } else if (view === 'frais' || view === 'ambiant' || view === 'surgele') {
       const zoneStocks = stocks.filter(s => (s.temperature_stockage || 'ambiant') === view);
-      afficherStockZone(el, zoneStocks, view, plans);
+      afficherStockZone(el, zoneStocks, view, needs);
     } else if (view === 'facture') {
       afficherImportFacture(el);
     } else if (view === 'alertes') {
-      afficherAlertes(el, stocks, plans);
+      afficherAlertes(el, stocks, needs);
     }
   } catch(e) {
+    console.error('chargerStocks:', e);
     el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;">Erreur: ' + e.message + '</div>';
   }
 }
 
-function afficherStockDashboard(el, stocks, plans) {
+function afficherStockDashboard(el, stocks, needs, nbPlans) {
   const today = new Date();
   const zones = {frais: [], ambiant: [], surgele: []};
   stocks.forEach(s => {
@@ -3415,19 +3598,11 @@ function afficherStockDashboard(el, stocks, plans) {
     if (zones[z]) zones[z].push(s);
   });
 
-  // Calculate needs from plans next 14 days
-  const needs = {}; // ingredient_nom -> kg needed
-  const lundi = getLundiSemaineAdmin();
-  plans.forEach(p => {
-    const nom = (p.plat_nom || '').toLowerCase();
-    if (!needs[nom]) needs[nom] = 0;
-    needs[nom] += (p.quantite_g || 300) / 1000;
-  });
-
-  // Build alerts
+  // Build alerts using real ingredient needs
   const alerts = [];
   stocks.forEach(s => {
-    const needed = needs[(s.ingredient_nom || '').toLowerCase()] || 0;
+    const key = (s.ingredient_nom || '').toLowerCase().trim();
+    const needed = (needs[key] || {}).qty_kg || 0;
     const dispo = parseFloat(s.quantite_kg) || 0;
     if (needed > dispo && needed > 0) {
       alerts.push({ nom: s.ingredient_nom, dispo, needed, manque: needed - dispo, zone: s.temperature_stockage || 'ambiant' });
@@ -3438,60 +3613,103 @@ function afficherStockDashboard(el, stocks, plans) {
     }
   });
 
-  // Summary stats
+  // Ingredients needed with no stock at all
+  Object.values(needs).forEach(item => {
+    const inStock = stocks.find(s => (s.ingredient_nom||'').toLowerCase().trim() === item.nom.toLowerCase().trim());
+    if (!inStock && item.qty_kg > 0) {
+      alerts.push({ nom: item.nom, dispo: 0, needed: item.qty_kg, manque: item.qty_kg, zone: 'ambiant', noStock: true });
+    }
+  });
+
   const zoneNames = {frais:'❄️ Frais', ambiant:'📦 Ambiant', surgele:'🧊 Surgelé'};
   const zoneColors = {frais:'#0066cc', ambiant:'#c97a00', surgele:'#4040cc'};
 
-  let html = '<div class="stock-dashboard-grid">';
+  let html = '';
+
+  // Stats bar
+  const needKeys = Object.keys(needs);
+  const stockAlerts = alerts.filter(a => !a.peremption);
+  html += '<div style="display:flex;gap:10px;margin-bottom:16px;">';
+  html += '<div class="cmd-stat"><div class="cmd-stat-val">'+nbPlans+'</div><div class="cmd-stat-lbl">Plats semaine</div></div>';
+  html += '<div class="cmd-stat"><div class="cmd-stat-val">'+needKeys.length+'</div><div class="cmd-stat-lbl">Ingrédients nécessaires</div></div>';
+  html += '<div class="cmd-stat"><div class="cmd-stat-val" style="color:'+(stockAlerts.length?'#c0392b':'#2a9e4f')+';">'+stockAlerts.length+'</div><div class="cmd-stat-lbl">Alertes stock</div></div>';
+  html += '<div class="cmd-stat"><div class="cmd-stat-val">'+stocks.length+'</div><div class="cmd-stat-lbl">Produits en stock</div></div>';
+  html += '</div>';
+
+  // Zone summary
+  html += '<div class="stock-dashboard-grid">';
   Object.entries(zones).forEach(([zone, items]) => {
-    const alertsZone = alerts.filter(a => a.zone === zone);
-    html += `<div class="stock-dash-zone">
-      <div class="stock-dash-zone-title" style="color:${zoneColors[zone]}">${zoneNames[zone]} <span class="stock-zone-badge">${items.length} produits</span></div>
-      ${items.slice(0,5).map(s => {
-        const pct = s.quantite_initiale_kg > 0 ? Math.round(s.quantite_kg / s.quantite_initiale_kg * 100) : 50;
-        const alert = alerts.find(a => a.nom === s.ingredient_nom && !a.peremption);
-        return `<div class="stock-dash-mini ${alert ? 'stock-dash-alert' : ''}">
-          <span>${s.ingredient_nom}</span>
-          <span>${parseFloat(s.quantite_kg || 0).toFixed(1)} kg ${alert ? '⚠️' : ''}</span>
-        </div>`;
-      }).join('')}
-      ${items.length > 5 ? `<div style="font-size:11px;color:var(--muted);padding-top:6px;">+${items.length-5} autres...</div>` : ''}
-      ${alertsZone.length ? `<div style="font-size:11px;font-weight:600;color:#c0392b;margin-top:8px;">🚨 ${alertsZone.length} alerte(s)</div>` : '<div style="font-size:11px;color:#2a9e4f;margin-top:8px;">✅ RAS</div>'}
-    </div>`;
+    const alertsZone = alerts.filter(a => a.zone === zone && !a.peremption);
+    html += '<div class="stock-dash-zone">';
+    html += '<div class="stock-dash-zone-title" style="color:'+zoneColors[zone]+'">'+zoneNames[zone]+' <span class="stock-zone-badge">'+items.length+' produits</span></div>';
+    items.slice(0,5).forEach(s => {
+      const key = (s.ingredient_nom||'').toLowerCase().trim();
+      const needed = (needs[key]||{}).qty_kg || 0;
+      const dispo = parseFloat(s.quantite_kg||0);
+      const alert = needed > dispo && needed > 0;
+      html += '<div class="stock-dash-mini '+(alert?'stock-dash-alert':'')+'">';
+      html += '<span>'+s.ingredient_nom+'</span>';
+      html += '<span>'+dispo.toFixed(1)+'kg'+(alert?' ⚠️':'')+'</span>';
+      html += '</div>';
+    });
+    if (items.length > 5) html += '<div style="font-size:11px;color:var(--muted);padding-top:6px;">+' +(items.length-5)+' autres...</div>';
+    html += alertsZone.length
+      ? '<div style="font-size:11px;font-weight:600;color:#c0392b;margin-top:8px;">🚨 '+alertsZone.length+' alerte(s)</div>'
+      : '<div style="font-size:11px;color:#2a9e4f;margin-top:8px;">✅ RAS</div>';
+    html += '</div>';
   });
   html += '</div>';
 
-  // Graphs with canvas
-  html += `<div class="stock-chart-wrap">
-    <div class="stock-chart-title">Évolution des stocks (7 prochains jours)</div>
-    <canvas id="stockChartCanvas" height="180"></canvas>
-  </div>`;
+  // Canvas chart
+  html += '<div class="stock-chart-wrap"><div class="stock-chart-title">Répartition des stocks par zone</div><canvas id="stockChartCanvas" height="160"></canvas></div>';
 
-  // Commandes à passer
-  html += `<div style="font-size:14px;font-weight:800;color:var(--black);margin-bottom:10px;">🛒 Commandes à passer</div>`;
-  if (!alerts.filter(a => !a.peremption).length) {
-    html += '<div style="text-align:center;padding:16px;color:#2a9e4f;font-weight:600;">✅ Aucune commande urgente</div>';
+  // Besoins cette semaine
+  html += '<div style="font-size:14px;font-weight:800;color:var(--black);margin-bottom:12px;">📋 Besoins ingrédients cette semaine</div>';
+  if (!needKeys.length) {
+    html += '<div style="text-align:center;padding:20px;color:var(--muted);">Aucun repas programmé cette semaine</div>';
   } else {
-    html += alerts.filter(a => !a.peremption).map(a =>
-      `<div class="cmd-recap-item cmd-recap-urgent">
-        <span style="font-size:20px;">${(PRODUITS_BASE[a.nom.toLowerCase()] || {}).emoji || '📦'}</span>
-        <div style="flex:1;">
-          <div style="font-size:13px;font-weight:700;color:var(--black);">${a.nom}</div>
-          <div style="font-size:11px;color:var(--muted);">Stock: ${a.dispo.toFixed(1)} kg · Besoin: ${a.needed.toFixed(1)} kg</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:15px;font-weight:800;color:#c0392b;">−${a.manque.toFixed(1)} kg</div>
-          <div style="font-size:10px;color:var(--muted);">à commander</div>
-        </div>
-      </div>`
-    ).join('');
+    const toOrder = [], inStock = [];
+    Object.values(needs).forEach(item => {
+      const s = stocks.find(st => (st.ingredient_nom||'').toLowerCase().trim() === item.nom.toLowerCase().trim());
+      const dispo = s ? parseFloat(s.quantite_kg||0) : 0;
+      const manque = item.qty_kg - dispo;
+      if (manque > 0) toOrder.push({...item, dispo, manque});
+      else inStock.push({...item, dispo, excedent: Math.abs(manque)});
+    });
+
+    if (toOrder.length) {
+      html += '<div style="font-size:11px;font-weight:700;color:#c0392b;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">🚨 À commander ('+toOrder.length+')</div>';
+      toOrder.forEach(item => {
+        html += '<div class="cmd-recap-item cmd-recap-urgent">';
+        html += '<span style="font-size:18px;">'+(identifierProduitMetro(item.nom).emoji||'📦')+'</span>';
+        html += '<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--black);">'+item.nom+'</div>';
+        html += '<div style="font-size:11px;color:var(--muted);">Besoin: '+item.qty_kg.toFixed(2)+'kg · Stock: '+item.dispo.toFixed(2)+'kg</div>';
+        if (item.plats && item.plats.length) html += '<div style="font-size:10px;color:#aaa;">Pour: '+item.plats.join(', ')+'</div>';
+        html += '</div>';
+        html += '<div style="font-size:15px;font-weight:800;color:#c0392b;">−'+item.manque.toFixed(2)+'kg</div>';
+        html += '</div>';
+      });
+    }
+    if (inStock.length) {
+      html += '<div style="font-size:11px;font-weight:700;color:#2a9e4f;text-transform:uppercase;letter-spacing:.6px;margin:14px 0 8px;">✅ En stock ('+inStock.length+')</div>';
+      inStock.forEach(item => {
+        const pct = item.dispo > 0 ? Math.min(100, Math.round(item.qty_kg / item.dispo * 100)) : 0;
+        html += '<div class="cmd-recap-item cmd-recap-ok">';
+        html += '<span style="font-size:18px;">'+(identifierProduitMetro(item.nom).emoji||'📦')+'</span>';
+        html += '<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--black);">'+item.nom+'</div>';
+        html += '<div style="font-size:11px;color:var(--muted);">Besoin: '+item.qty_kg.toFixed(2)+'kg · Stock: '+item.dispo.toFixed(2)+'kg</div>';
+        html += '<div style="height:4px;background:var(--bg);border-radius:2px;overflow:hidden;margin-top:4px;box-shadow:var(--si);"><div style="height:100%;width:'+pct+'%;background:#34c759;border-radius:2px;"></div></div>';
+        html += '</div>';
+        html += '<div style="font-size:13px;font-weight:700;color:#2a9e4f;">+'+item.excedent.toFixed(2)+'kg</div>';
+        html += '</div>';
+      });
+    }
   }
 
   el.innerHTML = html;
-
-  // Draw chart
-  setTimeout(() => dessinerGraphiqueStocks(stocks, needs), 100);
+  setTimeout(() => dessinerGraphiqueStocks(stocks, Object.values(needs)), 100);
 }
+
 
 function dessinerGraphiqueStocks(stocks, needs) {
   const canvas = document.getElementById('stockChartCanvas');
@@ -3563,14 +3781,10 @@ function dessinerGraphiqueStocks(stocks, needs) {
   });
 }
 
-function afficherStockZone(el, stocks, zone, plans) {
+function afficherStockZone(el, stocks, zone, needs) {
   const zoneNames = {frais:'❄️ Frais', ambiant:'📦 Ambiant', surgele:'🧊 Surgelé'};
   const today = new Date();
-  const needs = {};
-  plans.forEach(p => {
-    const nom = (p.plat_nom || '').toLowerCase();
-    needs[nom] = (needs[nom] || 0) + (p.quantite_g || 300) / 1000;
-  });
+  // needs is already a map: ingredient_nom_lower -> {nom, qty_kg}
 
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
     <div class="stock-zone-title">${zoneNames[zone]} <span class="stock-zone-badge">${stocks.length} produits</span></div>
@@ -3591,7 +3805,8 @@ function afficherStockZone(el, stocks, zone, plans) {
       const peremBadge = daysLeft === null ? '' : daysLeft < 0 ? '<span class="stock-perem-badge perem-alert">Périmé</span>' : daysLeft < 3 ? `<span class="stock-perem-badge perem-alert">${daysLeft}j</span>` : daysLeft < 7 ? `<span class="stock-perem-badge perem-warn">${daysLeft}j</span>` : `<span class="stock-perem-badge perem-ok">${daysLeft}j</span>`;
       const pct = s.quantite_initiale_kg > 0 ? Math.min(100, Math.round(s.quantite_kg / s.quantite_initiale_kg * 100)) : 50;
       const barColor = pct < 20 ? '#c0392b' : pct < 50 ? '#c97a00' : '#2a9e4f';
-      const needed = needs[(s.ingredient_nom || '').toLowerCase()] || 0;
+      const _key = (s.ingredient_nom || '').toLowerCase().trim();
+      const needed = (needs[_key] || {}).qty_kg || 0;
       const manque = Math.max(0, needed - parseFloat(s.quantite_kg || 0));
       const alertBanner = manque > 0 ? `<div style="background:#ffecec;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;color:#c0392b;margin-top:6px;">⚠️ Besoin: ${needed.toFixed(1)}kg · Manque: ${manque.toFixed(1)}kg</div>` : '';
       const info = identifierProduitMetro(s.ingredient_nom || '');
@@ -3943,20 +4158,17 @@ function setText(id, v) {
   if (el) el.textContent = v;
 }
 
-function afficherAlertes(el, stocks, plans) {
+function afficherAlertes(el, stocks, needs) {
   const today = new Date();
-  const needs = {};
-  plans.forEach(p => {
-    const nom = (p.plat_nom || '').toLowerCase();
-    needs[nom] = (needs[nom] || 0) + (p.quantite_g || 300) / 1000;
-  });
+  // needs is already a map: ingredient_nom_lower -> {nom, qty_kg}
   const peremAlerts = stocks.filter(s => {
     if (!s.date_peremption) return false;
     const daysLeft = Math.round((new Date(s.date_peremption) - today) / 86400000);
     return daysLeft < 7;
   });
   const stockAlerts = stocks.filter(s => {
-    const needed = needs[(s.ingredient_nom||'').toLowerCase()] || 0;
+    const key = (s.ingredient_nom||'').toLowerCase().trim();
+    const needed = (needs[key]||{}).qty_kg || 0;
     return needed > parseFloat(s.quantite_kg || 0) && needed > 0;
   });
   let html = '<div style="font-size:15px;font-weight:800;color:var(--black);margin-bottom:14px;">🚨 Alertes stocks</div>';
@@ -3998,9 +4210,11 @@ async function rendreVuePreparation(plans, onbMap, stockMap, lundi) {
   }
   const byClient = {};
   plans.forEach(p => { if (!byClient[p.user_id]) byClient[p.user_id] = []; byClient[p.user_id].push(p); });
+  // Use stockMap which is already keyed by ingredient_nom
+  // Build needs from plans using recettes if available
   const totalNeeds = {};
   plans.forEach(plan => {
-    const key = (plan.plat_nom || '').toLowerCase();
+    const key = (plan.plat_nom || '').toLowerCase().trim();
     if (!totalNeeds[key]) totalNeeds[key] = { nom: plan.plat_nom, qty_g: 0, plats: [] };
     totalNeeds[key].qty_g += plan.quantite_g || 300;
     if (!totalNeeds[key].plats.includes(plan.plat_nom)) totalNeeds[key].plats.push(plan.plat_nom);
