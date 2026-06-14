@@ -102,7 +102,32 @@ Génère exactement ce JSON (sans backticks):
 
   if (!data.conseil_prot && !data.conseil_amelioration) throw new Error('Empty Claude response');
 
-  // Upsert in Supabase
+  // 2ème appel Claude : liste de courses + recettes
+  let liste_courses_json = null;
+  let recettes_json = null;
+  try {
+    const promptCourses = `Tu es nutritionniste et chef cuisinier. Génère une liste de courses et 3 recettes pour ${user.prenom || 'ce client'}.
+Objectifs: prot=${macros.prot}g gluc=${macros.gluc}g lip=${macros.lip}g cal=${macros.cal}kcal.
+Conseils de la semaine: ${data.conseil_amelioration || ''} ${data.conseil_prot || ''}
+Réponds UNIQUEMENT en JSON sans backticks:
+{"liste_courses":{"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]},"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","...","..."]}]}`;
+
+    const coursesRes = await fetch(CLAUDE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: promptCourses }] })
+    });
+    const coursesData = await coursesRes.json();
+    const coursesRaw = (coursesData.content?.[0]?.text || '{}').replace(/```[a-z]*/g, '').replace(/```/g, '').trim();
+    const coursesJson = JSON.parse(coursesRaw);
+    if (coursesJson.liste_courses) liste_courses_json = JSON.stringify(coursesJson.liste_courses);
+    if (coursesJson.recettes && coursesJson.recettes.length) recettes_json = JSON.stringify(coursesJson.recettes);
+    console.log(`Courses+recettes générées pour ${user.user_id}`);
+  } catch(e) {
+    console.warn(`Courses/recettes failed for ${user.user_id}:`, e.message);
+  }
+
+  // Upsert in Supabase (conseils + courses + recettes en une seule requête)
   const row = {
     user_id: user.user_id,
     conseil_prot: data.conseil_prot || null,
@@ -111,6 +136,8 @@ Génère exactement ce JSON (sans backticks):
     conseil_cal:  data.conseil_cal  || null,
     conseil_amelioration: data.conseil_amelioration || null,
     conseil_points_forts: data.conseil_points_forts || null,
+    liste_courses_json,
+    recettes_json,
     semaine,
     generated_at: new Date().toISOString(),
     conseils_json: JSON.stringify(data)
