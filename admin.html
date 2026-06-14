@@ -3570,26 +3570,109 @@ async function supprimerStock(id) {
 
 function afficherImportFacture(el) {
   el.innerHTML = `
-    <div style="max-width:640px;">
+    <div style="max-width:680px;">
       <div style="font-size:16px;font-weight:800;color:var(--black);margin-bottom:6px;">🧾 Import facture Metro</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Photographiez ou copiez le texte de votre facture Metro — les produits sont détectés automatiquement.</div>
 
-      <div class="facture-drop-zone" id="factureDropZone" onclick="document.getElementById('factureFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleFactureDrop(event)">
-        <div style="font-size:48px;margin-bottom:12px;">📄</div>
-        <div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:6px;">Déposez la photo ou le PDF ici</div>
-        <div style="font-size:12px;color:var(--muted);">ou cliquez pour choisir un fichier</div>
-        <div id="factureAnalysing" style="display:none;margin-top:12px;color:var(--muted);font-size:13px;">🤖 Analyse en cours...</div>
+      <!-- Mode selector -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        <button onclick="switchFactureMode('auto',this)" id="modeAutoBtn" style="flex:1;padding:12px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📷 Saisie automatique</button>
+        <button onclick="switchFactureMode('manuel',this)" id="modeManuelBtn" style="flex:1;padding:12px;background:var(--bg);color:var(--muted);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--so);">✏️ Saisie manuelle</button>
       </div>
-      <input type="file" id="factureFileInput" accept="image/*,.pdf" style="display:none;" onchange="analyserFacture(this)">
 
-      <div style="margin:14px 0;text-align:center;font-size:12px;color:var(--muted);">— ou —</div>
+      <!-- Mode auto -->
+      <div id="factureAutoMode">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Photo ou scan de votre facture Metro — l'IA lit le N° article, le libellé, le prix et la quantité.</div>
+        <div class="facture-drop-zone" id="factureDropZone" onclick="document.getElementById('factureFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleFactureDrop(event)">
+          <div style="font-size:40px;margin-bottom:10px;">📄</div>
+          <div style="font-size:14px;font-weight:700;color:var(--black);margin-bottom:4px;">Déposez la photo de la facture</div>
+          <div style="font-size:12px;color:var(--muted);">JPEG, PNG, PDF — Metro seulement</div>
+          <div id="factureAnalysing" style="display:none;margin-top:12px;">
+            <div style="font-size:13px;color:var(--muted);">🤖 Lecture en cours...</div>
+            <div style="height:3px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:8px;overflow:hidden;">
+              <div id="factureProgressBar" style="height:100%;width:0%;background:var(--black);border-radius:2px;transition:width 2s linear;"></div>
+            </div>
+          </div>
+        </div>
+        <input type="file" id="factureFileInput" accept="image/*,.pdf" style="display:none;" onchange="analyserFacture(this)">
+      </div>
 
-      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">Coller le texte de la facture</div>
-      <textarea id="factureTexteInput" rows="8" style="width:100%;background:var(--bg);border:none;border-radius:14px;padding:14px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);box-shadow:var(--si);resize:vertical;outline:none;" placeholder="Collez ici le texte extrait de votre facture Metro..."></textarea>
-      <button onclick="analyserFactureTexte()" style="width:100%;margin-top:10px;padding:14px;background:var(--black);color:#fff;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Analyser la facture →</button>
+      <!-- Mode manuel -->
+      <div id="factureManuelMode" style="display:none;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Saisissez les informations de la facture.</div>
+        <div style="display:flex;gap:10px;margin-bottom:10px;">
+          <div style="flex:1;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Date facture</div><input type="date" id="factureManuelDate" class="form-inp" style="width:100%;"></div>
+          <div style="flex:1;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">N° facture</div><input type="text" id="factureManuelNum" class="form-inp" placeholder="0/0(135)0052/..." style="width:100%;"></div>
+        </div>
+        <div id="factureManuelLignes">
+          <div style="display:grid;grid-template-columns:120px 1fr 80px 70px 80px 30px;gap:6px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px;padding:0 4px;">
+            <span>N° Article</span><span>Libellé</span><span>Prix/u</span><span>Qté</span><span>Zone</span><span></span>
+          </div>
+          <!-- Dynamic rows added by JS -->
+        </div>
+        <button onclick="ajouterLigneManuelle()" style="width:100%;padding:10px;background:var(--bg);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;box-shadow:var(--so);margin-bottom:10px;">+ Ajouter une ligne</button>
+        <button onclick="importerSaisieManuelle()" style="width:100%;padding:14px;background:var(--black);color:#fff;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Importer →</button>
+      </div>
 
       <div id="factureResultats" style="margin-top:16px;"></div>
     </div>`;
+
+  // Set today's date in manual mode
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2,'0');
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const yyyy = today.getFullYear();
+  const inp = document.getElementById('factureManuelDate');
+  if (inp) inp.value = yyyy+'-'+mm+'-'+dd;
+
+  // Add initial manual rows
+  for (let i=0; i<3; i++) ajouterLigneManuelle();
+}
+
+function switchFactureMode(mode, btn) {
+  document.getElementById('factureAutoMode').style.display   = mode==='auto'   ? 'block' : 'none';
+  document.getElementById('factureManuelMode').style.display = mode==='manuel' ? 'block' : 'none';
+  document.getElementById('modeAutoBtn').style.background    = mode==='auto'   ? 'var(--black)' : 'var(--bg)';
+  document.getElementById('modeAutoBtn').style.color         = mode==='auto'   ? '#fff' : 'var(--muted)';
+  document.getElementById('modeManuelBtn').style.background  = mode==='manuel' ? 'var(--black)' : 'var(--bg)';
+  document.getElementById('modeManuelBtn').style.color       = mode==='manuel' ? '#fff' : 'var(--muted)';
+}
+
+let _ligneCount = 0;
+function ajouterLigneManuelle() {
+  const cont = document.getElementById('factureManuelLignes');
+  if (!cont) return;
+  const id = ++_ligneCount;
+  const row = document.createElement('div');
+  row.id = 'ligneM_'+id;
+  row.style.cssText = 'display:grid;grid-template-columns:120px 1fr 80px 70px 80px 30px;gap:6px;margin-bottom:6px;';
+  row.innerHTML = '<input class="form-inp" type="text" placeholder="EAN/N°" style="font-size:12px;padding:8px;">'
+    + '<input class="form-inp" type="text" placeholder="Libellé produit" style="font-size:12px;padding:8px;">'
+    + '<input class="form-inp" type="number" placeholder="4.50" step="0.01" style="font-size:12px;padding:8px;">'
+    + '<input class="form-inp" type="number" placeholder="1" min="0.1" step="0.1" style="font-size:12px;padding:8px;">'
+    + '<select class="form-select" style="font-size:12px;padding:8px;"><option value="frais">Frais</option><option value="ambiant" selected>Ambiant</option><option value="surgele">Surgelé</option></select>'
+    + '<button onclick="document.getElementById('ligneM_'+id+'').remove()" style="background:#ffecec;border:none;border-radius:8px;cursor:pointer;color:#c0392b;font-size:12px;">✕</button>';
+  cont.appendChild(row);
+}
+
+async function importerSaisieManuelle() {
+  const dateFacture = document.getElementById('factureManuelDate')?.value || new Date().toISOString().split('T')[0];
+  const rows = document.querySelectorAll('#factureManuelLignes > div[id^="ligneM_"]');
+  const produits = [];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const sel    = row.querySelector('select');
+    const ean   = inputs[0]?.value?.trim();
+    const nom   = inputs[1]?.value?.trim();
+    const prix  = parseFloat(inputs[2]?.value) || 0;
+    const qte   = parseFloat(inputs[3]?.value) || 1;
+    const zone  = sel?.value || 'ambiant';
+    if (nom) {
+      const info = identifierProduitMetro(nom);
+      produits.push({ ean, designation: nom, prixUnit: prix, qte, zone, emoji: info.emoji, conservation_j: info.conservation_j || 7 });
+    }
+  });
+  if (!produits.length) { toast('Ajoutez au moins un produit', 'err'); return; }
+  afficherResultatsFacture(produits, dateFacture, null);
 }
 
 async function analyserFacture(input) {
@@ -3695,6 +3778,7 @@ function afficherResultatsFacture(produits, dateFacture, numFacture) {
 async function importerSelectionStocks() {
   const lines = document.querySelectorAll('#factureResultats .facture-line');
   const rows = [];
+  const ingRows = [];
   const dateAchat = window._factureDateCache || new Date().toISOString().split('T')[0];
 
   lines.forEach(line => {
@@ -3703,6 +3787,9 @@ async function importerSelectionStocks() {
     const data = JSON.parse(line.dataset.produit || '{}');
     const qtyInput = line.querySelector('.facture-qty-input');
     const qty = parseFloat(qtyInput?.value) || 1;
+    const info = identifierProduitMetro(data.designation || '');
+
+    // Stock entry
     rows.push({
       ingredient_nom: data.designation,
       quantite_kg: qty,
@@ -3710,16 +3797,42 @@ async function importerSelectionStocks() {
       fournisseur: 'Metro',
       date_achat: dateAchat,
       date_peremption: data.datePerem || null,
-      temperature_stockage: data.zone || 'ambiant',
-      prix_kg: data.prixUnit || null,
+      temperature_stockage: data.zone || info.zone || 'ambiant',
+      prix_kg: qty > 0 && data.prixUnit ? Math.round(data.prixUnit / qty * 100) / 100 : null,
       statut: 'disponible'
     });
+
+    // Ingredient base entry (upsert by nom)
+    if (data.ean || data.designation) {
+      ingRows.push({
+        ean: data.ean || null,
+        nom: data.designation,
+        nom_normalise: (data.designation || '').toLowerCase().trim(),
+        zone_stockage: data.zone || info.zone || 'ambiant',
+        conservation_j: info.conservation_j || 7,
+        fournisseur: 'Metro',
+        poids_colis_kg: qty,
+        prix_achat_ht: data.prixUnit || null,
+        categorie: info.categorie || null
+      });
+    }
   });
 
   if (!rows.length) { toast('Aucun produit sélectionné', 'err'); return; }
   try {
+    // Import stocks
     await sb('stocks_mp', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify(rows) });
-    toast(rows.length + ' produits importés !', 'ok');
+
+    // Upsert ingredients_base (best effort)
+    if (ingRows.length) {
+      await sb('ingredients_base', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(ingRows)
+      }).catch(e => console.warn('ingredients_base upsert:', e.message));
+    }
+
+    toast(rows.length + ' produits importés en stock !', 'ok');
     switchStockSub('dashboard', document.getElementById('stockSubDash'));
   } catch(e) { toast('Erreur: ' + e.message, 'err'); }
 }
