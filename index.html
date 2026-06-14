@@ -2964,6 +2964,7 @@ document.addEventListener('click', function(e) {
   qaTrigger();
 }, true);
 setTimeout(function(){ qaTrigger(); }, 3000);
+setTimeout(function(){ conseilsPreload(); }, 1500);
 setTimeout(function(){ conseilsPopupCheck(); }, 4000);
 
 
@@ -3071,13 +3072,7 @@ async function profilSaveInfo() {
     macObj = calcMacros(poids, profilInfoCache.tdee || poids * 30);
     updateMacroCards();
     showToast('Informations mises à jour ✓');
-    // Ne régénérer les conseils que si le poids ou objectif a changé
-    var poidsChange = Math.abs((profilInfoCache.poids||0) - poids) > 2;
-    var objChange = (profilInfoCache.objectif_type || '') !== objectif;
-    if (poidsChange || objChange) {
-      profilConseillsLoaded = false;
-      setTimeout(function(){ conseilsGenererEtSauvegarder(false); }, 300);
-    }
+    // Conseil : ne pas régénérer ici, le cycle hebdomadaire s'en charge
   } catch(e) {
     showToast('Erreur lors de la sauvegarde', 'err');
   }
@@ -3169,36 +3164,61 @@ function conseilsRenderColonnes(row) {
   profilConseillsLoaded = true;
 }
 
+
+async function conseilsPreload() {
+  if (!USER_ID || window._conseilsCache) return;
+  try {
+    var data = await sbFetch('profil_conseils?user_id=eq.' + USER_ID
+      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,liste_courses_json,recettes_json,semaine,generated_at&limit=1');
+    if (data && data.length) window._conseilsCache = data[0];
+  } catch(e) {}
+}
+
 async function fetchProfilConseils() {
-  if (profilConseillsLoaded) return;
+  if (profilConseillsLoaded) return; // Déjà affiché cette session → stop absolu
   if (!USER_ID) return;
   var cont = document.getElementById('profilConseilsCont');
-
   try {
     var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID
-      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,semaine,generated_at&limit=1');
-
+      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,liste_courses_json,recettes_json,conseils_json,semaine,generated_at&limit=1');
     if (cached && cached.length) {
       var row = cached[0];
-      var hasData = row.conseil_prot || row.conseil_amelioration || row.conseil_points_forts;
-
-      if (hasData) {
-        // Afficher immédiatement — ne JAMAIS régénérer dans cette fonction
+      var hasNew = row.conseil_prot || row.conseil_amelioration || row.conseil_points_forts;
+      // Migration ancien format JSON si nécessaire
+      if (!hasNew && row.conseils_json) {
+        try {
+          var old = JSON.parse(row.conseils_json);
+          if (Array.isArray(old) && old.length) {
+            row.conseil_amelioration = old[0] ? (old[0].titre + ' — ' + old[0].desc) : null;
+            row.conseil_points_forts = old[1] ? (old[1].titre + ' — ' + old[1].desc) : null;
+            row.conseil_prot  = old[2] ? (old[2].titre + ' — ' + old[2].desc) : null;
+            row.conseil_gluc  = old[3] ? (old[3].titre + ' — ' + old[3].desc) : null;
+            hasNew = true;
+          }
+        } catch(e) {}
+      }
+      if (hasNew) {
+        window._conseilsCache = row;
         conseilsRenderColonnes(row);
-        // Régénérer seulement si semaine périmée ET en arrière-plan
-        var semOK = row.semaine && row.semaine === getLundiSemaine();
+        profilConseillsLoaded = true;
+        // Régénérer SEULEMENT si semaine périmée, silencieux, sans bloquer
+        var lundi = getLundiSemaine();
+        var semOK = row.semaine && row.semaine === lundi;
         var ageOK = !row.semaine && row.generated_at && (Date.now() - new Date(row.generated_at).getTime()) < 7*24*3600*1000;
         if (!semOK && !ageOK) {
-          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 3000);
+          // Semaine périmée → régénérer en arrière-plan après 5s
+          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 5000);
         }
         return;
       }
     }
   } catch(e) { console.warn('fetchProfilConseils:', e); }
-
-  // Aucun conseil en base → générer une première fois
-  if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de vos conseils...</div>';
-  await conseilsGenererEtSauvegarder(false);
+  // Rien en base → NE PAS générer ici. Le popup verifierEtMontrerPopupConseils s'en charge.
+  if (cont) cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">'
+    + '<div style="font-size:36px;margin-bottom:10px;">📅</div>'
+    + '<div style="font-weight:600;color:var(--black);margin-bottom:6px;">Vos conseils hebdomadaires</div>'
+    + '<div>Cliquez sur <strong>Obtenir mes conseils</strong> pour générer votre analyse personnalisée.</div>'
+    + '</div>';
 }
 
 async function conseilsGenererEtSauvegarder(silentRefresh) {
@@ -3519,81 +3539,91 @@ var _listeCourseCache = null;
 async function ouvrirListeCourses() {
   document.getElementById('ovListeCourses').classList.add('active');
   if (_listeCourseCache) { document.getElementById('listeCoursesCont').innerHTML = _listeCourseCache; return; }
-  var cache = window._conseilsCache;
-  if (!cache || !cache.conseil_prot) {
-    document.getElementById('listeCoursesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>Disponible apres generation de vos conseils.</div>';
-    return;
+  // Charger depuis Supabase — stocké par le cron du lundi, ZÉRO appel Claude
+  var stored = window._conseilsCache && window._conseilsCache.liste_courses_json;
+  if (!stored) {
+    try {
+      var r = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=liste_courses_json&limit=1');
+      if (r && r.length) stored = r[0].liste_courses_json;
+      if (stored && window._conseilsCache) window._conseilsCache.liste_courses_json = stored;
+    } catch(e) {}
   }
-  document.getElementById('listeCoursesCont').innerHTML = '<div class="sug-load"><div class="spinner"></div>Generation de votre liste...</div>';
-  var prompt = 'Tu es nutritionniste. A partir de ces conseils nutritionnels, genere une liste de courses complete.'
-    + ' Conseils: prot=' + (cache.conseil_prot||'') + ' gluc=' + (cache.conseil_gluc||'') + ' lip=' + (cache.conseil_lip||'') + ' amelioration=' + (cache.conseil_amelioration||'')
-    + ' Objectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
-    + '\nReponds UNIQUEMENT en JSON sans backticks: {"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]}';
-  try {
-    var res = await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:900})});
-    var d = await res.json();
-    var data = JSON.parse((d.text||'{}').replace(/```[a-z]*|```/g,'').trim());
-    var html = '';
-    if (data.recettes_ingredients && data.recettes_ingredients.length) {
-      html += '<div class="lc-section-title">Pour vos recettes</div>';
-      html += data.recettes_ingredients.map(function(item){
-        return '<div class="lc-item"><span class="lc-item-em">'+item.emoji+'</span><span class="lc-item-name">'+item.nom+'</span><span class="lc-item-qty">'+item.quantite+'</span></div>';
-      }).join('');
+  if (stored) {
+    try {
+      var data = JSON.parse(stored);
+      var h = '';
+      if (data.recettes_ingredients && data.recettes_ingredients.length) {
+        h += '<div class="lc-section-title">🍳 Pour vos recettes</div>';
+        h += data.recettes_ingredients.map(function(item){
+          return '<div class="lc-item"><span class="lc-item-em">'+(item.emoji||'🛒')+'</span><span class="lc-item-name">'+item.nom+'</span><span class="lc-item-qty">'+item.quantite+'</span></div>';
+        }).join('');
+      }
+      if (data.aliments_bonus && data.aliments_bonus.length) {
+        h += '<div class="lc-section-title" style="margin-top:20px;">⭐ Aliments conseillés en plus</div>';
+        h += data.aliments_bonus.map(function(item){
+          return '<div class="lc-item" style="border-left:3px solid #34c759;"><span class="lc-item-em">'+(item.emoji||'🌿')+'</span><div style="flex:1;"><div class="lc-item-name">'+item.nom+'</div><div style="font-size:11px;color:var(--muted);">'+(item.benefice||'')+'</div></div><span class="lc-item-qty">'+item.quantite+'</span></div>';
+        }).join('');
+      }
+      window._listeCourseRawData = data;
+      _listeCourseCache = h;
+      document.getElementById('listeCoursesCont').innerHTML = h || '<div style="color:var(--muted);font-size:13px;padding:16px;">Liste vide.</div>';
+    } catch(e) {
+      document.getElementById('listeCoursesCont').innerHTML = '<div class="mc-no-conseil">Erreur de lecture.</div>';
     }
-    if (data.aliments_bonus && data.aliments_bonus.length) {
-      html += '<div class="lc-section-title" style="margin-top:20px;">Aliments conseilles en plus</div>';
-      html += data.aliments_bonus.map(function(item){
-        return '<div class="lc-item" style="border-left:3px solid #34c759;"><span class="lc-item-em">'+item.emoji+'</span><div style="flex:1;"><div class="lc-item-name">'+item.nom+'</div><div style="font-size:11px;color:var(--muted);">'+item.benefice+'</div></div><span class="lc-item-qty">'+item.quantite+'</span></div>';
-      }).join('');
-    }
-    window._listeCourseRawData = data;
-    _listeCourseCache = html;
-    document.getElementById('listeCoursesCont').innerHTML = html || '<div style="color:var(--muted);font-size:13px;padding:16px;">Aucune donnee disponible.</div>';
-  } catch(e) {
-    document.getElementById('listeCoursesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">Erreur</span>Reessayez.</div>';
+  } else {
+    document.getElementById('listeCoursesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Disponible chaque lundi</div><div style="font-size:13px;color:var(--muted);">Votre liste de courses est générée automatiquement avec vos conseils hebdomadaires.</div></div>';
   }
 }
+
 
 // ══ RECETTES AVEC PROCEDES ══
 var _recettesCache = null;
 async function ouvrirRecettes() {
   document.getElementById('ovRecettes').classList.add('active');
   if (_recettesCache) { document.getElementById('recettesCont').innerHTML = _recettesCache; return; }
-  var cache = window._conseilsCache;
-  if (!cache || !cache.conseil_prot) {
-    document.getElementById('recettesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>Disponible apres generation de vos conseils.</div>';
-    return;
+  // Charger depuis Supabase — stocké par le cron du lundi, ZÉRO appel Claude
+  var stored = window._conseilsCache && window._conseilsCache.recettes_json;
+  if (!stored) {
+    try {
+      var r = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=recettes_json&limit=1');
+      if (r && r.length) stored = r[0].recettes_json;
+      if (stored && window._conseilsCache) window._conseilsCache.recettes_json = stored;
+    } catch(e) {}
   }
-  document.getElementById('recettesCont').innerHTML = '<div class="sug-load"><div class="spinner"></div>Generation de vos recettes...</div>';
-  var prompt = 'Tu es chef cuisinier et nutritionniste. Genere 3 recettes adaptees a ce profil.'
-    + ' Objectifs: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
-    + '\nConseils: ' + (cache.conseil_prot||'') + ' ' + (cache.conseil_amelioration||'')
-    + '\nReponds UNIQUEMENT en JSON sans backticks: {"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","...","..."]}]}';
-  try {
-    var res = await fetch(CLAUDE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:1400})});
-    var d = await res.json();
-    var data = JSON.parse((d.text||'{}').replace(/```[a-z]*|```/g,'').trim());
-    var html = (data.recettes||[]).map(function(r){
-      var mac = r.macros || {};
-      var etapesHtml = (r.etapes||[]).map(function(e,i){
-        return '<div class="etape-row"><div class="etape-num">'+(i+1)+'</div><div class="etape-text">'+e+'</div></div>';
+  if (stored) {
+    try {
+      var recettes = JSON.parse(stored);
+      var h = (recettes||[]).map(function(r){
+        var mac = r.macros || {};
+        var etapesHtml = (r.etapes||[]).map(function(e,i){
+          return '<div class="etape-row"><div class="etape-num">'+(i+1)+'</div><div class="etape-text">'+e+'</div></div>';
+        }).join('');
+        var ingsHtml = (r.ingredients||[]).map(function(ing){
+          return '<div class="recette-ing-chip">'+ing+'</div>';
+        }).join('');
+        return '<div class="recette-card">'
+          +'<div class="recette-card-header"><span class="recette-card-em">'+(r.emoji||'🍽️')+'</span>'
+          +'<div><div class="recette-card-nom">'+r.nom+'</div>'
+          +'<div class="recette-card-macros">'
+          +'<span class="recette-mac-chip">'+(mac.prot||0)+'g prot</span>'
+          +'<span class="recette-mac-chip">'+(mac.gluc||0)+'g gluc</span>'
+          +'<span class="recette-mac-chip">'+(mac.cal||0)+' kcal</span>'
+          +'</div></div></div>'
+          +'<div class="recette-ings">'+ingsHtml+'</div>'
+          +'<div class="recette-etapes">'+etapesHtml+'</div>'
+          +'</div>';
       }).join('');
-      var ingsHtml = (r.ingredients||[]).map(function(ing){
-        return '<div class="recette-ing-chip">'+ing+'</div>';
-      }).join('');
-      return '<div class="recette-card">'
-        +'<div class="recette-card-header"><span class="recette-card-em">'+r.emoji+'</span><div><div class="recette-card-nom">'+r.nom+'</div><div class="recette-card-macros"><span class="recette-mac-chip">'+mac.prot+'g prot</span><span class="recette-mac-chip">'+mac.gluc+'g gluc</span><span class="recette-mac-chip">'+mac.cal+' kcal</span></div></div></div>'
-        +'<div class="recette-ings">'+ingsHtml+'</div>'
-        +'<div class="recette-etapes">'+etapesHtml+'</div>'
-        +'</div>';
-    }).join('');
-    window._recettesRawData = (data.recettes || []);
-    _recettesCache = html;
-    document.getElementById('recettesCont').innerHTML = html || '<div style="color:var(--muted);font-size:13px;">Aucune recette generee.</div>';
-  } catch(e) {
-    document.getElementById('recettesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">Erreur</span>Reessayez.</div>';
+      window._recettesRawData = recettes;
+      _recettesCache = h;
+      document.getElementById('recettesCont').innerHTML = h || '<div style="color:var(--muted);font-size:13px;">Aucune recette disponible.</div>';
+    } catch(e) {
+      document.getElementById('recettesCont').innerHTML = '<div class="mc-no-conseil">Erreur de lecture.</div>';
+    }
+  } else {
+    document.getElementById('recettesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Disponible chaque lundi</div><div style="font-size:13px;color:var(--muted);">Vos recettes sont générées automatiquement avec vos conseils hebdomadaires.</div></div>';
   }
 }
+
 
 
 // ══ ENVOYER PROFIL PAR MAIL ══
