@@ -500,6 +500,59 @@ input[type="file"] { display: none; }
 .role-badge-nom { font-size:12px; font-weight:600; color:var(--black); }
 .role-badge-change { font-size:11px; color:var(--muted); cursor:pointer; text-decoration:underline; }
 
+
+/* ── REPAS LISTE CLIENTS ── */
+.repas-client-card { background:var(--bg); border-radius:18px; box-shadow:var(--so); padding:14px 16px; margin-bottom:10px; cursor:pointer; border:2px solid transparent; transition:all .15s; display:flex; align-items:center; gap:14px; }
+.repas-client-card:hover { box-shadow:var(--si); border-color:rgba(26,26,46,0.15); }
+.rcc-avatar { width:44px; height:44px; border-radius:50%; background:#e8f0e8; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--green); flex-shrink:0; box-shadow:var(--sm); }
+.rcc-info { flex:1; min-width:0; }
+.rcc-name { font-size:14px; font-weight:700; color:var(--black); margin-bottom:3px; }
+.rcc-sub  { font-size:11px; color:var(--muted); margin-bottom:6px; }
+.rcc-tags { display:flex; gap:5px; flex-wrap:wrap; }
+.rcc-tag  { font-size:10px; font-weight:600; padding:2px 8px; border-radius:99px; }
+.rcc-tag-todo   { background:#fff3e0; color:#c97a00; }
+.rcc-tag-ok     { background:#e8f9ee; color:#2a9e4f; }
+.rcc-tag-offre  { background:#e8eaf4; color:#1a1a2e; }
+.rcc-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+.rcc-plats-left { font-size:20px; font-weight:800; color:var(--black); letter-spacing:-1px; }
+.rcc-plats-lbl  { font-size:10px; color:var(--muted); }
+
+/* ── STOCK ZONES ── */
+.stock-zone-title { font-size:14px; font-weight:800; color:var(--black); display:flex; align-items:center; gap:8px; padding:10px 0 14px; border-bottom:2px solid rgba(174,174,192,0.2); margin-bottom:14px; }
+.stock-zone-badge { font-size:11px; font-weight:600; padding:3px 10px; border-radius:99px; background:var(--bg); box-shadow:var(--sm); color:var(--muted); }
+.stock-dashboard-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:20px; }
+.stock-dash-zone { background:var(--bg); border-radius:20px; box-shadow:var(--so); padding:16px; }
+.stock-dash-zone-title { font-size:12px; font-weight:700; color:var(--black); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.stock-dash-mini { font-size:11px; color:var(--muted); padding:5px 0; border-bottom:.5px solid rgba(174,174,192,0.15); display:flex; justify-content:space-between; align-items:center; }
+.stock-dash-mini:last-child { border-bottom:none; }
+.stock-dash-alert { color:#c0392b; font-weight:600; }
+
+/* Stock canvas charts */
+.stock-chart-wrap { background:var(--bg); border-radius:16px; box-shadow:var(--so); padding:14px; margin-bottom:14px; }
+.stock-chart-title { font-size:13px; font-weight:700; color:var(--black); margin-bottom:10px; }
+
+/* Commandes recap */
+.cmd-recap-item { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--bg); border-radius:14px; box-shadow:var(--sm); margin-bottom:6px; }
+.cmd-recap-urgent { border-left:3px solid #c0392b; }
+.cmd-recap-ok     { border-left:3px solid #2a9e4f; }
+
+/* Import facture */
+.facture-drop-zone { border:2px dashed rgba(174,174,192,0.4); border-radius:20px; padding:40px; text-align:center; cursor:pointer; background:var(--bg); box-shadow:var(--si); transition:all .2s; }
+.facture-drop-zone:hover, .facture-drop-zone.drag-over { border-color:var(--black); background:#f7f7fa; }
+.facture-result-card { background:var(--bg); border-radius:16px; box-shadow:var(--so); padding:16px; margin-top:14px; }
+.facture-line { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:.5px solid rgba(174,174,192,0.18); }
+.facture-line:last-child { border-bottom:none; }
+.facture-check { width:20px; height:20px; border-radius:6px; accent-color:var(--black); cursor:pointer; }
+.facture-prod-nom { flex:1; font-size:13px; color:var(--black); font-weight:500; }
+.facture-prod-qty { font-size:12px; color:var(--muted); }
+.facture-prod-zone { font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; }
+.fz-frais   { background:#e8f4ff; color:#0066cc; }
+.fz-ambiant { background:#fff8e1; color:#c97a00; }
+.fz-surgele { background:#e8f0ff; color:#4040cc; }
+
+/* Sliding panels */
+.panel-glissant-open { width:280px !important; }
+
 </style>
 </head>
 <body>
@@ -704,71 +757,112 @@ input[type="file"] { display: none; }
         </div>
         <!-- ONGLET REPAS A PROGRAMMER -->
         <div class="tab-content" id="tabRepasAProg">
-          <div class="repas-layout">
-            <!-- LEFT: Liste clients avec offres -->
-            <div class="repas-left">
-              <div style="font-size:13px;font-weight:700;color:var(--black);margin-bottom:10px;">Clients à programmer</div>
-              <div style="font-size:11px;color:var(--muted);margin-bottom:10px;" id="repasSubtitle">Semaine en cours</div>
-              <div id="clientsRepasListe"><div class="loading">Chargement...</div></div>
+          <!-- VUE LISTE CLIENTS -->
+          <div id="repasListeView">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <div>
+                <div style="font-size:18px;font-weight:800;color:var(--black);">Repas à programmer</div>
+                <div style="font-size:12px;color:var(--muted);" id="repasSubtitle">Semaine en cours</div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="cmd-subtab active" id="repasFiltTous" onclick="filtreRepasClients('tous',this)">Tous</button>
+                <button class="cmd-subtab" id="repasFiltATFaire" onclick="filtreRepasClients('afaire',this)">⏳ À faire</button>
+                <button class="cmd-subtab" id="repasFiltFaits"  onclick="filtreRepasClients('faits',this)">✅ Faits</button>
+              </div>
+            </div>
+            <!-- Stats strip -->
+            <div style="display:flex;gap:10px;margin-bottom:16px;">
+              <div class="cmd-stat"><div class="cmd-stat-val" id="repasStatTotal">–</div><div class="cmd-stat-lbl">Abonnés</div></div>
+              <div class="cmd-stat"><div class="cmd-stat-val" id="repasStatAfaire" style="color:#c97a00;">–</div><div class="cmd-stat-lbl">À programmer</div></div>
+              <div class="cmd-stat"><div class="cmd-stat-val" id="repasStatFaits" style="color:#2a9e4f;">–</div><div class="cmd-stat-lbl">Programmés</div></div>
+              <div class="cmd-stat"><div class="cmd-stat-val" id="repasStatPlats">–</div><div class="cmd-stat-lbl">Plats total semaine</div></div>
+            </div>
+            <!-- Liste clients -->
+            <div id="clientsRepasListe"><div class="loading">Chargement...</div></div>
+          </div>
+
+          <!-- VUE PROGRAMMATION PLATS (s'affiche après clic client) -->
+          <div id="repasProgrammationView" style="display:none;">
+            <!-- Header avec retour -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+              <button onclick="retourListeRepas()" style="width:36px;height:36px;border-radius:50%;background:var(--bg);border:none;cursor:pointer;box-shadow:var(--sm);font-size:18px;">‹</button>
+              <div>
+                <div style="font-size:16px;font-weight:800;color:var(--black);" id="progClientNom">Client</div>
+                <div style="font-size:12px;color:var(--muted);" id="progClientSub">–</div>
+              </div>
+              <button class="plc-save-btn" id="btnSauvegarderRepas" onclick="sauvegarderRepasClient()" disabled style="margin-left:auto;padding:10px 18px;max-width:200px;">Enregistrer →</button>
             </div>
 
-            <!-- CENTER: Choix des plats -->
-            <div class="repas-center">
-              <!-- Ratio macros -->
-              <div class="macro-ratio-section" id="macroRatioSection">
-                <div class="mrs-title">Besoins journaliers du client</div>
-                <div class="mrs-bar-row">
-                  <span class="mrs-lbl">🥩 Protéines</span>
-                  <div class="mrs-bar"><div class="mrs-fill" id="ratioProt" style="width:0%;background:#ff6b35;"></div></div>
-                  <div style="text-align:right;"><div class="mrs-val" id="ratioProtVal">–</div><div class="target-val" id="ratioProtTarget">Obj: –g</div></div>
-                </div>
-                <div class="mrs-bar-row">
-                  <span class="mrs-lbl">🌾 Glucides</span>
-                  <div class="mrs-bar"><div class="mrs-fill" id="ratioGluc" style="width:0%;background:#ff9500;"></div></div>
-                  <div style="text-align:right;"><div class="mrs-val" id="ratioGlucVal">–</div><div class="target-val" id="ratioGlucTarget">Obj: –g</div></div>
-                </div>
-                <div class="mrs-bar-row">
-                  <span class="mrs-lbl">🥑 Lipides</span>
-                  <div class="mrs-bar"><div class="mrs-fill" id="ratioLip" style="width:0%;background:#7b5ea7;"></div></div>
-                  <div style="text-align:right;"><div class="mrs-val" id="ratioLipVal">–</div><div class="target-val" id="ratioLipTarget">Obj: –g</div></div>
-                </div>
-                <div class="mrs-bar-row">
-                  <span class="mrs-lbl">⚡ Calories</span>
-                  <div class="mrs-bar"><div class="mrs-fill" id="ratioCal" style="width:0%;background:#34c759;"></div></div>
-                  <div style="text-align:right;"><div class="mrs-val" id="ratioCalVal">–</div><div class="target-val" id="ratioCalTarget">Obj: –kcal</div></div>
+            <!-- Layout 3 zones avec panneaux glissants -->
+            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:0;position:relative;height:calc(100vh - 220px);">
+
+              <!-- PANNEAU GAUCHE GLISSANT — Questionnaire Alim -->
+              <div id="panelAlimGlissant" style="width:0;overflow:hidden;transition:width .3s ease;background:var(--bg);border-radius:16px 0 0 16px;box-shadow:var(--so);">
+                <div style="width:280px;padding:14px;height:100%;overflow-y:auto;">
+                  <div style="font-size:13px;font-weight:700;color:var(--black);margin-bottom:12px;">🥗 Questionnaire alimentaire</div>
+                  <div id="alimGlissantContent"><div class="loading">Chargement...</div></div>
                 </div>
               </div>
+              <!-- Toggle gauche -->
+              <div style="position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:10;">
+                <button id="btnToggleAlim" onclick="togglePanelAlim()" style="width:24px;height:48px;background:var(--black);color:#fff;border:none;border-radius:0 8px 8px 0;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">›</button>
+              </div>
 
-              <!-- Chooser plats -->
-              <div class="plat-chooser-card">
-                <div class="plc-header">
-                  <div>
-                    <div class="plc-client" id="plcClientNom">Sélectionnez un client</div>
-                    <div class="plc-formule" id="plcFormule">–</div>
+              <!-- CENTRE — Macro ratio + Grille plats -->
+              <div style="display:flex;flex-direction:column;gap:12px;padding:0 8px;overflow-y:auto;">
+                <div class="macro-ratio-section" id="macroRatioSection">
+                  <div class="mrs-title">Besoins du client par repas</div>
+                  <div class="mrs-bar-row">
+                    <span class="mrs-lbl">🥩 Prot.</span>
+                    <div class="mrs-bar"><div class="mrs-fill" id="ratioProt" style="width:0%;background:#ff6b35;"></div></div>
+                    <div style="text-align:right;"><div class="mrs-val" id="ratioProtVal">–</div><div class="target-val" id="ratioProtTarget">Obj: –g</div></div>
                   </div>
-                  <div id="plcSelCount" style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.7);">0/0 plats</div>
+                  <div class="mrs-bar-row">
+                    <span class="mrs-lbl">🌾 Gluc.</span>
+                    <div class="mrs-bar"><div class="mrs-fill" id="ratioGluc" style="width:0%;background:#ff9500;"></div></div>
+                    <div style="text-align:right;"><div class="mrs-val" id="ratioGlucVal">–</div><div class="target-val" id="ratioGlucTarget">Obj: –g</div></div>
+                  </div>
+                  <div class="mrs-bar-row">
+                    <span class="mrs-lbl">🥑 Lip.</span>
+                    <div class="mrs-bar"><div class="mrs-fill" id="ratioLip" style="width:0%;background:#7b5ea7;"></div></div>
+                    <div style="text-align:right;"><div class="mrs-val" id="ratioLipVal">–</div><div class="target-val" id="ratioLipTarget">Obj: –g</div></div>
+                  </div>
+                  <div class="mrs-bar-row">
+                    <span class="mrs-lbl">⚡ Cal.</span>
+                    <div class="mrs-bar"><div class="mrs-fill" id="ratioCal" style="width:0%;background:#34c759;"></div></div>
+                    <div style="text-align:right;"><div class="mrs-val" id="ratioCalVal">–</div><div class="target-val" id="ratioCalTarget">Obj: –kcal</div></div>
+                  </div>
                 </div>
-                <div style="padding:10px 14px 6px;display:flex;gap:6px;overflow-x:auto;">
-                  <button class="cmd-subtab active" id="filtPlatAll" onclick="filtrerPlatsChef('all',this)">Tous</button>
-                  <button class="cmd-subtab" id="filtPlatPerf" onclick="filtrerPlatsChef('performance',this)">⚡ Performance</button>
-                  <button class="cmd-subtab" id="filtPlatObj"  onclick="filtrerPlatsChef('objectif',this)">🎯 Objectif</button>
-                  <button class="cmd-subtab" id="filtPlatBien" onclick="filtrerPlatsChef('bien_etre',this)">🌿 Bien-être</button>
-                </div>
-                <div class="plc-grid" id="plcPlatGrid"><div class="loading" style="grid-column:1/-1;">Sélectionnez un client</div></div>
-                <div class="plc-actions">
-                  <button class="plc-save-btn" id="btnSauvegarderRepas" onclick="sauvegarderRepasClient()" disabled>Enregistrer les repas →</button>
+                <div class="plat-chooser-card">
+                  <div class="plc-header">
+                    <div>
+                      <div class="plc-client" id="plcClientNom">–</div>
+                      <div class="plc-formule" id="plcFormule">–</div>
+                    </div>
+                    <div id="plcSelCount" style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.7);">0/0 plats</div>
+                  </div>
+                  <div style="padding:10px 14px 6px;display:flex;gap:6px;overflow-x:auto;">
+                    <button class="cmd-subtab active" id="filtPlatAll" onclick="filtrerPlatsChef('all',this)">Tous</button>
+                    <button class="cmd-subtab" onclick="filtrerPlatsChef('performance',this)">⚡ Perf.</button>
+                    <button class="cmd-subtab" onclick="filtrerPlatsChef('objectif',this)">🎯 Obj.</button>
+                    <button class="cmd-subtab" onclick="filtrerPlatsChef('bien_etre',this)">🌿 Bien-être</button>
+                  </div>
+                  <div class="plc-grid" id="plcPlatGrid"><div class="loading" style="grid-column:1/-1;">Sélectionnez un client</div></div>
                 </div>
               </div>
-            </div>
 
-            <!-- RIGHT: Fiche client + questionnaire alim -->
-            <div class="repas-right">
-              <div class="fiche-right-tabs">
-                <button class="frt-btn active" onclick="switchFicheRight('profil',this)">👤 Profil</button>
-                <button class="frt-btn" onclick="switchFicheRight('alim',this)">🥗 Alim</button>
-                <button class="frt-btn" onclick="switchFicheRight('historique',this)">📋 Repas</button>
+              <!-- Toggle droite -->
+              <div style="position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:10;">
+                <button id="btnToggleFiche" onclick="togglePanelFiche()" style="width:24px;height:48px;background:var(--black);color:#fff;border:none;border-radius:8px 0 0 8px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">‹</button>
               </div>
-              <div id="ficheRightContent"><div class="loading">Sélectionnez un client</div></div>
+              <!-- PANNEAU DROIT GLISSANT — Fiche client -->
+              <div id="panelFicheGlissant" style="width:0;overflow:hidden;transition:width .3s ease;background:var(--bg);border-radius:0 16px 16px 0;box-shadow:var(--so);">
+                <div style="width:280px;padding:14px;height:100%;overflow-y:auto;">
+                  <div style="font-size:13px;font-weight:700;color:var(--black);margin-bottom:12px;">👤 Fiche client</div>
+                  <div id="ficheGlissantContent"><div class="loading">Chargement...</div></div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -792,9 +886,12 @@ input[type="file"] { display: none; }
 
         <!-- ONGLET STOCKS -->
         <div class="tab-content" id="tabStocks">
-          <div class="cmd-subtabs">
-            <button class="cmd-subtab active" id="stockSubEtat" onclick="switchStockSub('etat',this)">📊 État des stocks</button>
-            <button class="cmd-subtab" id="stockSubEntree" onclick="switchStockSub('entree',this)">+ Entrée stock</button>
+          <div class="cmd-subtabs" style="flex-wrap:wrap;gap:6px;">
+            <button class="cmd-subtab active" id="stockSubDash"    onclick="switchStockSub('dashboard',this)">📊 Dashboard</button>
+            <button class="cmd-subtab" id="stockSubFrais"   onclick="switchStockSub('frais',this)">❄️ Frais</button>
+            <button class="cmd-subtab" id="stockSubAmbiant" onclick="switchStockSub('ambiant',this)">📦 Ambiant</button>
+            <button class="cmd-subtab" id="stockSubSurgele" onclick="switchStockSub('surgele',this)">🧊 Surgelé</button>
+            <button class="cmd-subtab" id="stockSubFacture" onclick="switchStockSub('facture',this)">🧾 Import facture</button>
             <button class="cmd-subtab" id="stockSubAlertes" onclick="switchStockSub('alertes',this)">🚨 Alertes</button>
           </div>
           <div id="stocksContent"><div class="loading">Chargement...</div></div>
@@ -2199,7 +2296,7 @@ function demarrerAppAvecRole() {
   chargerRdvAdmin();
   if (cfg.tabs.includes('navRepasAProg')) chargerClientsRepas();
   if (cfg.tabs.includes('navChef')) chargerRecettes();
-  if (cfg.tabs.includes('navStocks')) chargerStocks();
+  if (cfg.tabs.includes('navStocks')) chargerStocks('dashboard');
   if (cfg.tabs.includes('navCommandes')) chargerCommandesCalendrier();
   if (isMasterAdmin || cfg.tabs.includes('navEquipe')) chargerEquipe();
   subscribeGlobalRealtime();
@@ -2226,7 +2323,7 @@ window.switchNav = function(tab) {
   if (contEl) contEl.classList.add('active');
   if (tab === 'repasAProg') chargerClientsRepas();
   if (tab === 'chef') chargerRecettes();
-  if (tab === 'stocks') chargerStocks();
+  if (tab === 'stocks') chargerStocks('dashboard');
   if (tab === 'commandes') chargerCommandesCalendrier();
 };
 
@@ -2242,46 +2339,202 @@ async function chargerClientsRepas() {
   if (!el) return;
   el.innerHTML = '<div class="loading">Chargement...</div>';
   try {
-    // Clients with offres 3x or 4x
-    const offres = await sb('offres_clients?statut=eq.active&select=*,user_id');
-    const userIds = offres.map(o => o.user_id).filter(Boolean);
-    if (!userIds.length) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Aucun client avec offre active</div>';
+    // Fetch all active offers
+    const offres = await sb('offres_clients?statut=eq.active&select=*');
+    if (!offres.length) {
+      el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);"><div style="font-size:40px;margin-bottom:12px;">🍽️</div><div style="font-size:14px;font-weight:600;">Aucun client avec offre active</div></div>';
       return;
     }
 
-    // Get onboarding for names + macros
-    const onbs = await sb('onboarding?completed=eq.true&select=user_id,prenom,nom,poids,tdee,objectif_type,activite');
+    // Fetch onboarding for each client
+    const userIds = offres.map(o => o.user_id).filter(Boolean);
+    const onbs = await sb('onboarding?completed=eq.true&select=user_id,prenom,nom,email,poids,tdee,objectif_type,activite');
     const onbMap = {};
     onbs.forEach(o => { onbMap[o.user_id] = o; });
 
-    // Check which have repas programmed this week
+    // Plans this week
     const lundi = getLundiSemaineAdmin();
-    const plans = await sb('plans_repas?semaine_livraison=eq.'+lundi+'&select=user_id,statut');
-    const planUserIds = new Set(plans.map(p => p.user_id));
+    const plans = await sb('plans_repas?semaine_livraison=eq.' + lundi + '&select=user_id,statut');
+    const plansMap = {}; // user_id -> count
+    plans.forEach(p => { plansMap[p.user_id] = (plansMap[p.user_id] || 0) + 1; });
 
-    el.innerHTML = offres.map(offre => {
+    const OBJ_LABELS = {
+      mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Corps',
+      performance:'🏆 Performance', sante:'❤️ Santé'
+    };
+
+    // Store for filter
+    window._repasOffres = offres.map(offre => {
       const ob = onbMap[offre.user_id] || {};
-      const nom = (ob.prenom || '') + ' ' + (ob.nom || '');
-      const hasPlan = planUserIds.has(offre.user_id);
-      const badgeCls = hasPlan ? 'badge-ok' : 'badge-todo';
-      const badgeTxt = hasPlan ? 'Programmé' : 'À faire';
-      return '<div class="client-repas-item" onclick="selectionnerClientRepas(\''+offre.user_id+'\',this)" data-userid="'+offre.user_id+'">'
-        + '<div style="display:flex;align-items:center;justify-content:space-between;">'
-        + '<div class="cri-name">'+(nom.trim()||'Client anonyme')+'</div>'
-        + '<span class="cri-badge '+badgeCls+'">'+badgeTxt+'</span>'
-        + '</div>'
-        + '<div class="cri-formule">🍽️ '+offre.nb_plats_semaine+'x repas / semaine</div>'
-        + '</div>';
-    }).join('');
+      const nbPlats = offre.nb_plats_semaine || 3;
+      const progCount = plansMap[offre.user_id] || 0;
+      const restant = Math.max(0, nbPlats - progCount);
+      return { offre, ob, nbPlats, progCount, restant };
+    });
 
-    // Badge count
-    const todoCount = offres.length - planUserIds.size;
+    // Stats
+    const total = offres.length;
+    const afaire = window._repasOffres.filter(r => r.restant > 0).length;
+    const faits  = window._repasOffres.filter(r => r.restant === 0).length;
+    const totalPlats = window._repasOffres.reduce((s, r) => s + r.nbPlats, 0);
+    setText('repasStatTotal',  total);
+    setText('repasStatAfaire', afaire);
+    setText('repasStatFaits',  faits);
+    setText('repasStatPlats',  totalPlats);
+
+    // Badge nav
     const badge = document.getElementById('navRepasbadge');
-    if (badge && todoCount > 0) { badge.textContent = todoCount; badge.style.display = 'inline-flex'; }
+    if (badge && afaire > 0) { badge.textContent = afaire; badge.style.display = 'inline-flex'; }
 
-  } catch(e) { el.innerHTML = '<div class="loading">Erreur: '+e.message+'</div>'; }
+    afficherRepasClients(window._repasOffres, 'tous');
+
+  } catch(e) { el.innerHTML = '<div class="loading">Erreur: ' + e.message + '</div>'; }
 }
+
+let _repasFiltreCourant = 'tous';
+function filtreRepasClients(filtre, el) {
+  _repasFiltreCourant = filtre;
+  document.querySelectorAll('#repasListeView .cmd-subtab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  afficherRepasClients(window._repasOffres || [], filtre);
+}
+
+function afficherRepasClients(list, filtre) {
+  const el = document.getElementById('clientsRepasListe');
+  if (!el) return;
+  let filtered = list;
+  if (filtre === 'afaire') filtered = list.filter(r => r.restant > 0);
+  if (filtre === 'faits')  filtered = list.filter(r => r.restant === 0);
+
+  const OBJ_LABELS = { mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Corps', performance:'🏆 Performance', sante:'❤️ Santé' };
+
+  if (!filtered.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);">Aucun client dans cette catégorie</div>';
+    return;
+  }
+
+  el.innerHTML = filtered.map(({offre, ob, nbPlats, progCount, restant}) => {
+    const nom = (ob.prenom || '') + ' ' + (ob.nom || '');
+    const obj = OBJ_LABELS[ob.objectif_type] || ob.objectif_type || '–';
+    const dateOffre = offre.created_at ? new Date(offre.created_at).toLocaleDateString('fr-FR', {day:'numeric', month:'short'}) : '–';
+    const statusBadge = restant > 0
+      ? `<span class="rcc-tag rcc-tag-todo">⏳ ${restant} repas à faire</span>`
+      : '<span class="rcc-tag rcc-tag-ok">✅ Complet</span>';
+    const pct = Math.round(progCount / nbPlats * 100);
+    return `<div class="repas-client-card" onclick="ouvrirProgrammationRepas('${offre.user_id}')">
+      <div class="rcc-avatar">${(nom.trim() || 'C').substring(0,2).toUpperCase()}</div>
+      <div class="rcc-info">
+        <div class="rcc-name">${nom.trim() || ob.email || 'Client ' + (offre.user_id||'').substring(0,8)}</div>
+        <div class="rcc-sub">${obj} · Offre depuis ${dateOffre}</div>
+        <div class="rcc-tags">
+          <span class="rcc-tag rcc-tag-offre">🍽️ ${nbPlats}x/semaine</span>
+          ${statusBadge}
+        </div>
+        <div style="margin-top:8px;height:4px;background:var(--bg);border-radius:2px;box-shadow:var(--si);overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${pct===100?'#2a9e4f':'#c97a00'};border-radius:2px;transition:width .6s;"></div>
+        </div>
+      </div>
+      <div class="rcc-right">
+        <div class="rcc-plats-left">${progCount}/${nbPlats}</div>
+        <div class="rcc-plats-lbl">repas prog.</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function retourListeRepas() {
+  document.getElementById('repasProgrammationView').style.display = 'none';
+  document.getElementById('repasListeView').style.display = 'block';
+}
+
+let _alimPanelOpen = false, _fichePanelOpen = false;
+
+function togglePanelAlim() {
+  _alimPanelOpen = !_alimPanelOpen;
+  const panel = document.getElementById('panelAlimGlissant');
+  const btn   = document.getElementById('btnToggleAlim');
+  if (panel) panel.classList.toggle('panel-glissant-open', _alimPanelOpen);
+  if (btn) btn.textContent = _alimPanelOpen ? '‹' : '›';
+}
+
+function togglePanelFiche() {
+  _fichePanelOpen = !_fichePanelOpen;
+  const panel = document.getElementById('panelFicheGlissant');
+  const btn   = document.getElementById('btnToggleFiche');
+  if (panel) panel.classList.toggle('panel-glissant-open', _fichePanelOpen);
+  if (btn) btn.textContent = _fichePanelOpen ? '›' : '‹';
+}
+
+async function ouvrirProgrammationRepas(userId) {
+  clientRepasSelected = userId;
+  platsChefSelection = {};
+  _alimPanelOpen = false; _fichePanelOpen = false;
+  const panel = document.getElementById('panelAlimGlissant');
+  const panel2 = document.getElementById('panelFicheGlissant');
+  if (panel) panel.classList.remove('panel-glissant-open');
+  if (panel2) panel2.classList.remove('panel-glissant-open');
+
+  // Switch view
+  document.getElementById('repasListeView').style.display = 'none';
+  document.getElementById('repasProgrammationView').style.display = 'block';
+
+  // Fill header
+  const entry = (window._repasOffres || []).find(r => r.offre.user_id === userId);
+  const ob = entry ? entry.ob : {};
+  const OBJ_LABELS = { mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Corps', performance:'🏆 Performance', sante:'❤️ Santé' };
+  const nom = (ob.prenom || '') + ' ' + (ob.nom || '');
+  setText('progClientNom', nom.trim() || 'Client');
+  setText('progClientSub', (OBJ_LABELS[ob.objectif_type] || '–') + ' · ' + (entry ? entry.nbPlats : '?') + ' repas/semaine · ' + (entry ? entry.progCount : '0') + ' programmés');
+
+  // Load all in parallel
+  await Promise.all([
+    chargerMacrosClient(userId),
+    chargerPlatsPourClient(userId),
+    chargerAlimGlissant(userId),
+    chargerFicheGlissant(userId)
+  ]);
+}
+
+async function chargerAlimGlissant(userId) {
+  const el = document.getElementById('alimGlissantContent');
+  if (!el) return;
+  try {
+    const qas = await sb('questionnaire_alim?user_id=eq.' + userId + '&select=*&limit=1');
+    const qa = qas[0];
+    if (!qa) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;">Questionnaire non rempli</div>'; return; }
+    const section = (titre, chips, chipCls) => chips && chips.length
+      ? `<div style="margin-bottom:10px;"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px;">${titre}</div><div style="display:flex;flex-wrap:wrap;gap:4px;">${chips.map(c => `<span class="alim-chip ${chipCls||''}">${c}</span>`).join('')}</div></div>`
+      : '';
+    el.innerHTML = ''
+      + section('🚫 Allergies', qa.allergies, 'alim-chip-red')
+      + section('✅ Aime', Object.values(qa.aliments_aimes || {}).flat(), 'alim-chip-green')
+      + section('❌ Évite', Object.values(qa.aliments_evites || {}).flat(), 'alim-chip-red')
+      + section('🥗 Régime', qa.regime, 'alim-chip-dark')
+      + (qa.commentaire_libre ? `<div style="background:var(--bg);border-radius:10px;padding:8px 10px;box-shadow:var(--si);font-size:11px;color:var(--text);margin-top:6px;">${qa.commentaire_libre}</div>` : '');
+  } catch(e) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;">Erreur</div>'; }
+}
+
+async function chargerFicheGlissant(userId) {
+  const el = document.getElementById('ficheGlissantContent');
+  if (!el) return;
+  try {
+    const obs = await sb('onboarding?user_id=eq.' + userId + '&select=*&limit=1');
+    const ob = obs[0] || {};
+    const OBJ_LABELS = { mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Corps', performance:'🏆 Performance', sante:'❤️ Santé' };
+    const ACT_LABELS = { sedentaire:'Sédentaire', leger:'Légèrement actif', modere:'Modérément actif', actif:'Très actif' };
+    const rows = [
+      ['Email', ob.email || '–'],
+      ['Objectif', OBJ_LABELS[ob.objectif_type] || ob.objectif_type || '–'],
+      ['Âge', ob.age ? ob.age + ' ans' : '–'],
+      ['Poids', ob.poids ? ob.poids + ' kg' : '–'],
+      ['Taille', ob.taille ? ob.taille + ' cm' : '–'],
+      ['Activité', ACT_LABELS[ob.activite] || ob.activite || '–'],
+      ['TDEE', ob.tdee ? ob.tdee + ' kcal/j' : '–'],
+    ];
+    el.innerHTML = rows.map(([l, v]) => `<div class="frc-row"><span class="frc-lbl">${l}</span><span class="frc-val">${v}</span></div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;">Erreur</div>'; }
+}
+
 
 async function selectionnerClientRepas(userId, el) {
   document.querySelectorAll('.client-repas-item').forEach(e => e.classList.remove('active'));
@@ -2858,125 +3111,575 @@ function switchStockSub(sub, el) {
   chargerStocks(sub);
 }
 
+
+// ═══════════════════════════════════════════════════
+// BASE PRODUITS METRO — durée conservation par défaut
+// ═══════════════════════════════════════════════════
+const PRODUITS_BASE = {
+  // Légumes frais
+  'courgette':    {zone:'frais', conservation_j:7,  emoji:'🥒', categorie:'Légumes'},
+  'courge':       {zone:'frais', conservation_j:14, emoji:'🎃', categorie:'Légumes'},
+  'concombre':    {zone:'frais', conservation_j:7,  emoji:'🥒', categorie:'Légumes'},
+  'carotte':      {zone:'frais', conservation_j:14, emoji:'🥕', categorie:'Légumes'},
+  'oignon':       {zone:'ambiant', conservation_j:30, emoji:'🧅', categorie:'Légumes'},
+  'ail':          {zone:'ambiant', conservation_j:30, emoji:'🧄', categorie:'Légumes'},
+  'tomate':       {zone:'frais', conservation_j:5,  emoji:'🍅', categorie:'Légumes'},
+  'haricot vert': {zone:'frais', conservation_j:5,  emoji:'🫘', categorie:'Légumes'},
+  'menthe':       {zone:'frais', conservation_j:5,  emoji:'🌿', categorie:'Herbes'},
+  'citron':       {zone:'frais', conservation_j:14, emoji:'🍋', categorie:'Agrumes'},
+  // Protéines fraiches
+  'filet':        {zone:'frais', conservation_j:3,  emoji:'🥩', categorie:'Viande'},
+  'poulet':       {zone:'frais', conservation_j:3,  emoji:'🍗', categorie:'Viande'},
+  'saumon':       {zone:'frais', conservation_j:2,  emoji:'🐟', categorie:'Poisson'},
+  'yaourt':       {zone:'frais', conservation_j:21, emoji:'🥛', categorie:'Laitier'},
+  // Épicerie sèche
+  'riz':          {zone:'ambiant', conservation_j:365, emoji:'🍚', categorie:'Céréales'},
+  'quinoa':       {zone:'ambiant', conservation_j:365, emoji:'🌾', categorie:'Céréales'},
+  'tortilla':     {zone:'ambiant', conservation_j:30,  emoji:'🫓', categorie:'Boulangerie'},
+  'tahina':       {zone:'ambiant', conservation_j:180, emoji:'🫙', categorie:'Condiments'},
+  'lait de coco': {zone:'ambiant', conservation_j:365, emoji:'🥥', categorie:'Conserves'},
+  'curry':        {zone:'ambiant', conservation_j:365, emoji:'🌶️', categorie:'Épices'},
+  'puget':        {zone:'ambiant', conservation_j:365, emoji:'🫙', categorie:'Huile'},
+  // Surgelés
+  'surgel':       {zone:'surgele', conservation_j:180, emoji:'🧊', categorie:'Surgelés'},
+};
+
+function identifierProduitMetro(designation) {
+  const d = designation.toLowerCase();
+  for (const [key, info] of Object.entries(PRODUITS_BASE)) {
+    if (d.includes(key)) return info;
+  }
+  // Heuristic fallback
+  if (d.includes('surgel') || d.includes('cong')) return {zone:'surgele', conservation_j:180, emoji:'🧊', categorie:'Surgelés'};
+  if (d.includes('frais') || d.includes('flt') || d.includes('filet') || d.includes('oig') || d.includes('courg')) return {zone:'frais', conservation_j:5, emoji:'🥬', categorie:'Légumes'};
+  return {zone:'ambiant', conservation_j:90, emoji:'📦', categorie:'Épicerie'};
+}
+
+// Parse facture Metro from text (OCR result or manual input)
+function parseFactureMetro(texte) {
+  const lines = texte.split('\n').map(l => l.trim()).filter(Boolean);
+  const produits = [];
+  let dateFacture = null;
+  let numFacture = null;
+
+  // Extract date and number
+  const dateMatch = texte.match(/(\d{2}-\d{2}-\d{4})/);
+  if (dateMatch) dateFacture = dateMatch[1].split('-').reverse().join('-');
+  const numMatch = texte.match(/N[°º]?\s*(?:FACTURE|facture)[:\s]+([^\s]+)/i);
+  if (numMatch) numFacture = numMatch[1];
+
+  // Parse product lines — Metro format: EAN ... DESIGNATION ... Prix Qte Montant
+  const prodRegex = /(\d{13}|\d{10})\s+\d+\s+(.+?)\s+([\d,]+)\s+(\d+)\s+\d+\s+[\d,]+/;
+  lines.forEach(line => {
+    const m = line.match(prodRegex);
+    if (m) {
+      const designation = m[2].trim();
+      const prixUnit = parseFloat(m[3].replace(',', '.'));
+      const qte = parseInt(m[4]);
+      const info = identifierProduitMetro(designation);
+      produits.push({ designation, prixUnit, qte, ...info, ean: m[1] });
+    }
+  });
+
+  // Fallback: parse lines with "Total" categories
+  if (!produits.length) {
+    // Try simpler format
+    lines.forEach(line => {
+      const m2 = line.match(/(.+?)\s+([\d,]+)\s+(\d)\s+[\d,]+\s+[BPZ]/);
+      if (m2 && m2[1].length > 5) {
+        const designation = m2[1].trim();
+        const prixUnit = parseFloat(m2[2].replace(',', '.'));
+        const qte = parseInt(m2[3]);
+        const info = identifierProduitMetro(designation);
+        produits.push({ designation, prixUnit, qte, ...info });
+      }
+    });
+  }
+
+  return { produits, dateFacture, numFacture };
+}
+
+// ═══════════════════════════════════════════════════
+// STOCKS — MAIN FUNCTION
+// ═══════════════════════════════════════════════════
+function switchStockSub(sub, el) {
+  document.querySelectorAll('#tabStocks .cmd-subtab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  chargerStocks(sub);
+}
+
 async function chargerStocks(view) {
-  view = view || 'etat';
+  view = view || 'dashboard';
   const el = document.getElementById('stocksContent');
   if (!el) return;
   el.innerHTML = '<div class="loading">Chargement...</div>';
+
   try {
-    if (view === 'etat') {
-      const stocks = await sb('stocks_mp?select=*&order=ingredient_nom.asc');
-      if (!stocks.length) {
-        el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);">'
-          + '<div style="font-size:48px;margin-bottom:12px;">📦</div>'
-          + '<div style="font-size:15px;font-weight:600;">Aucun stock enregistré</div>'
-          + '<button onclick="ajouterEntreeStock()" style="margin-top:12px;padding:10px 20px;background:var(--black);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;">+ Ajouter un stock</button>'
-          + '</div>';
-        return;
-      }
-      const today = new Date();
-      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'
-        + '<div style="font-size:16px;font-weight:800;color:var(--black);">'+stocks.length+' ingrédients en stock</div>'
-        + '<button onclick="ajouterEntreeStock()" style="padding:10px 16px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:\'DM Sans\',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">+ Entrée stock</button>'
-        + '</div>'
-        + '<div class="stock-grid">'
-        + stocks.map(s => {
-            const peremDate = s.date_peremption ? new Date(s.date_peremption) : null;
-            const daysLeft = peremDate ? Math.round((peremDate-today)/(1000*86400)) : null;
-            const peremBadge = daysLeft === null ? '' : daysLeft < 0 ? '<span class="stock-perem-badge perem-alert">Périmé</span>' : daysLeft < 3 ? '<span class="stock-perem-badge perem-alert">'+daysLeft+'j</span>' : daysLeft < 7 ? '<span class="stock-perem-badge perem-warn">'+daysLeft+'j</span>' : '<span class="stock-perem-badge perem-ok">'+daysLeft+'j</span>';
-            const pct = s.quantite_initiale_kg > 0 ? Math.min(100,Math.round(s.quantite_kg/s.quantite_initiale_kg*100)) : 50;
-            const barColor = pct < 20 ? '#c0392b' : pct < 50 ? '#c97a00' : '#2a9e4f';
-            return '<div class="stock-card">'
-              + '<div class="stock-card-header">'
-              + '<div class="stock-card-em">🥩</div>'
-              + '<div><div class="stock-card-nom">'+s.ingredient_nom+'</div><div class="stock-card-fournisseur">'+( s.fournisseur||'')+(s.lot?' · Lot '+s.lot:'')+'</div></div>'
-              + '<div style="margin-left:auto;">'+peremBadge+'</div>'
-              + '</div>'
-              + '<div class="stock-card-body">'
-              + '<div><span class="stock-qty-big">'+parseFloat(s.quantite_kg||0).toFixed(1)+'</span><span class="stock-qty-unit"> kg</span></div>'
-              + '<div class="stock-bar"><div class="stock-bar-fill" style="width:'+pct+'%;background:'+barColor+';"></div></div>'
-              + '<div class="stock-info-row"><span class="frc-lbl">Acheté le</span><span class="stock-info-val">'+(s.date_achat||'–')+'</span></div>'
-              + (s.date_peremption ? '<div class="stock-info-row"><span class="frc-lbl">Péremption</span><span class="stock-info-val">'+s.date_peremption+'</span></div>' : '')
-              + '<div class="stock-info-row"><span class="frc-lbl">Stockage</span><span class="stock-info-val">'+(s.temperature_stockage||'ambiant')+'</span></div>'
-              + (s.emplacement ? '<div class="stock-info-row"><span class="frc-lbl">Emplacement</span><span class="stock-info-val">'+s.emplacement+'</span></div>' : '')
-              + (s.prix_kg ? '<div class="stock-info-row"><span class="frc-lbl">Prix/kg</span><span class="stock-info-val">'+s.prix_kg+'€</span></div>' : '')
-              + '</div></div>';
-          }).join('')
-        + '</div>';
+    const [stocks, plans, cmds_fourn] = await Promise.all([
+      sb('stocks_mp?select=*&order=ingredient_nom.asc'),
+      sb('plans_repas?select=plat_nom,quantite_g,semaine_livraison&order=semaine_livraison.asc&limit=100'),
+      sb('commandes_fournisseurs?statut=in.(planifiee,commandee)&select=*').catch(() => [])
+    ]);
 
-    } else if (view === 'entree') {
-      el.innerHTML = '<div style="background:var(--bg);border-radius:20px;box-shadow:var(--so);padding:20px;max-width:500px;">'
-        + '<div style="font-size:16px;font-weight:800;color:var(--black);margin-bottom:16px;">Nouvelle entrée en stock</div>'
-        + '<div style="display:flex;flex-direction:column;gap:12px;">'
-        + formRow('Ingrédient', '<input id="stockIngNom" class="form-inp" type="text" placeholder="Ex: Poulet">')
-        + formRow('Quantité (kg)', '<input id="stockQty" class="form-inp" type="number" step="0.1" placeholder="5.0">')
-        + formRow('Fournisseur', '<input id="stockFourn" class="form-inp" type="text" value="Metro">')
-        + formRow('Lot', '<input id="stockLot" class="form-inp" type="text" placeholder="Numéro de lot">')
-        + formRow('Date achat', '<input id="stockDateAchat" class="form-inp" type="date">')
-        + formRow('Date péremption', '<input id="stockDatePerem" class="form-inp" type="date">')
-        + formRow('Stockage', '<select id="stockTemp" class="form-select"><option value="frigo">Frigo</option><option value="congelo">Congélateur</option><option value="ambiant">Ambiant</option></select>')
-        + formRow('Emplacement', '<input id="stockEmplacement" class="form-inp" type="text" placeholder="Ex: Frigo A, Étagère 2">')
-        + formRow('Prix/kg (€)', '<input id="stockPrix" class="form-inp" type="number" step="0.01" placeholder="4.50">')
-        + '</div>'
-        + '<button onclick="enregistrerEntreeStock()" style="width:100%;margin-top:16px;padding:14px;background:var(--black);color:#fff;border:none;border-radius:14px;font-family:\'DM Sans\',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Enregistrer →</button>'
-        + '</div>';
-      document.getElementById('stockDateAchat').value = new Date().toISOString().split('T')[0];
-
+    if (view === 'dashboard') {
+      afficherStockDashboard(el, stocks, plans);
+    } else if (view === 'frais' || view === 'ambiant' || view === 'surgele') {
+      const zoneStocks = stocks.filter(s => (s.temperature_stockage || 'ambiant') === view);
+      afficherStockZone(el, zoneStocks, view, plans);
+    } else if (view === 'facture') {
+      afficherImportFacture(el);
     } else if (view === 'alertes') {
-      const stocks = await sb('stocks_mp?select=*&order=date_peremption.asc');
-      const today2 = new Date();
-      const alerts = stocks.filter(s => {
-        if (!s.date_peremption) return false;
-        const d = new Date(s.date_peremption);
-        return (d - today2) < 7*86400*1000;
-      });
-      el.innerHTML = alerts.length === 0
-        ? '<div style="text-align:center;padding:32px;color:#2a9e4f;font-size:15px;font-weight:600;">✅ Aucune alerte — tout est en ordre</div>'
-        : '<div style="font-size:16px;font-weight:800;color:#c0392b;margin-bottom:14px;">🚨 '+alerts.length+' alerte(s)</div>'
-          + alerts.map(s => {
-              const d = new Date(s.date_peremption);
-              const days = Math.round((d-today2)/86400000);
-              return '<div class="ldc-item ldc-alert"><span class="ldc-em">⚠️</span><div style="flex:1;"><div class="ldc-name">'+s.ingredient_nom+'</div><div style="font-size:11px;color:#c0392b;">'+(days<0?'Périmé depuis '+Math.abs(days)+'j':'Périme dans '+days+' jour(s)')+'</div></div><div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:var(--black);">'+s.quantite_kg+' kg</div><div style="font-size:11px;color:var(--muted);">'+s.date_peremption+'</div></div></div>';
-            }).join('');
+      afficherAlertes(el, stocks, plans);
     }
-  } catch(e) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;">Erreur: '+e.message+'</div>'; }
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px;">Erreur: ' + e.message + '</div>';
+  }
 }
 
-function formRow(lbl, inp) {
-  return '<div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;">'+lbl+'</div>'+inp+'</div>';
+function afficherStockDashboard(el, stocks, plans) {
+  const today = new Date();
+  const zones = {frais: [], ambiant: [], surgele: []};
+  stocks.forEach(s => {
+    const z = s.temperature_stockage || 'ambiant';
+    if (zones[z]) zones[z].push(s);
+  });
+
+  // Calculate needs from plans next 14 days
+  const needs = {}; // ingredient_nom -> kg needed
+  const lundi = getLundiSemaineAdmin();
+  plans.forEach(p => {
+    const nom = (p.plat_nom || '').toLowerCase();
+    if (!needs[nom]) needs[nom] = 0;
+    needs[nom] += (p.quantite_g || 300) / 1000;
+  });
+
+  // Build alerts
+  const alerts = [];
+  stocks.forEach(s => {
+    const needed = needs[(s.ingredient_nom || '').toLowerCase()] || 0;
+    const dispo = parseFloat(s.quantite_kg) || 0;
+    if (needed > dispo && needed > 0) {
+      alerts.push({ nom: s.ingredient_nom, dispo, needed, manque: needed - dispo, zone: s.temperature_stockage || 'ambiant' });
+    }
+    if (s.date_peremption) {
+      const daysLeft = Math.round((new Date(s.date_peremption) - today) / 86400000);
+      if (daysLeft < 3) alerts.push({ nom: s.ingredient_nom, peremption: true, daysLeft, zone: s.temperature_stockage || 'ambiant' });
+    }
+  });
+
+  // Summary stats
+  const zoneNames = {frais:'❄️ Frais', ambiant:'📦 Ambiant', surgele:'🧊 Surgelé'};
+  const zoneColors = {frais:'#0066cc', ambiant:'#c97a00', surgele:'#4040cc'};
+
+  let html = '<div class="stock-dashboard-grid">';
+  Object.entries(zones).forEach(([zone, items]) => {
+    const alertsZone = alerts.filter(a => a.zone === zone);
+    html += `<div class="stock-dash-zone">
+      <div class="stock-dash-zone-title" style="color:${zoneColors[zone]}">${zoneNames[zone]} <span class="stock-zone-badge">${items.length} produits</span></div>
+      ${items.slice(0,5).map(s => {
+        const pct = s.quantite_initiale_kg > 0 ? Math.round(s.quantite_kg / s.quantite_initiale_kg * 100) : 50;
+        const alert = alerts.find(a => a.nom === s.ingredient_nom && !a.peremption);
+        return `<div class="stock-dash-mini ${alert ? 'stock-dash-alert' : ''}">
+          <span>${s.ingredient_nom}</span>
+          <span>${parseFloat(s.quantite_kg || 0).toFixed(1)} kg ${alert ? '⚠️' : ''}</span>
+        </div>`;
+      }).join('')}
+      ${items.length > 5 ? `<div style="font-size:11px;color:var(--muted);padding-top:6px;">+${items.length-5} autres...</div>` : ''}
+      ${alertsZone.length ? `<div style="font-size:11px;font-weight:600;color:#c0392b;margin-top:8px;">🚨 ${alertsZone.length} alerte(s)</div>` : '<div style="font-size:11px;color:#2a9e4f;margin-top:8px;">✅ RAS</div>'}
+    </div>`;
+  });
+  html += '</div>';
+
+  // Graphs with canvas
+  html += `<div class="stock-chart-wrap">
+    <div class="stock-chart-title">Évolution des stocks (7 prochains jours)</div>
+    <canvas id="stockChartCanvas" height="180"></canvas>
+  </div>`;
+
+  // Commandes à passer
+  html += `<div style="font-size:14px;font-weight:800;color:var(--black);margin-bottom:10px;">🛒 Commandes à passer</div>`;
+  if (!alerts.filter(a => !a.peremption).length) {
+    html += '<div style="text-align:center;padding:16px;color:#2a9e4f;font-weight:600;">✅ Aucune commande urgente</div>';
+  } else {
+    html += alerts.filter(a => !a.peremption).map(a =>
+      `<div class="cmd-recap-item cmd-recap-urgent">
+        <span style="font-size:20px;">${(PRODUITS_BASE[a.nom.toLowerCase()] || {}).emoji || '📦'}</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:var(--black);">${a.nom}</div>
+          <div style="font-size:11px;color:var(--muted);">Stock: ${a.dispo.toFixed(1)} kg · Besoin: ${a.needed.toFixed(1)} kg</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:15px;font-weight:800;color:#c0392b;">−${a.manque.toFixed(1)} kg</div>
+          <div style="font-size:10px;color:var(--muted);">à commander</div>
+        </div>
+      </div>`
+    ).join('');
+  }
+
+  el.innerHTML = html;
+
+  // Draw chart
+  setTimeout(() => dessinerGraphiqueStocks(stocks, needs), 100);
 }
 
-async function enregistrerEntreeStock() {
-  const nom  = document.getElementById('stockIngNom')?.value?.trim();
-  const qty  = parseFloat(document.getElementById('stockQty')?.value)||0;
-  if (!nom || qty <= 0) { toast('Nom et quantité requis','err'); return; }
+function dessinerGraphiqueStocks(stocks, needs) {
+  const canvas = document.getElementById('stockChartCanvas');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.offsetWidth - 28;
+  canvas.height = 180;
+  const W = canvas.width, H = 180;
+  ctx.clearRect(0, 0, W, H);
+
+  const zones = ['frais', 'ambiant', 'surgele'];
+  const colors = ['#0066cc', '#c97a00', '#4040cc'];
+  const labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  const days = 7;
+
+  // Simulate stock evolution per zone over 7 days
+  const data = zones.map((zone, zi) => {
+    const zoneStocks = stocks.filter(s => (s.temperature_stockage || 'ambiant') === zone);
+    const totalKg = zoneStocks.reduce((s, st) => s + parseFloat(st.quantite_kg || 0), 0);
+    // Decrease ~5% per day as orders go out
+    return labels.map((_, i) => Math.max(0, totalKg * (1 - i * 0.07)));
+  });
+
+  const maxVal = Math.max(...data.flat(), 1);
+  const pad = {t:10, r:10, b:30, l:40};
+  const chartW = W - pad.l - pad.r;
+  const chartH = H - pad.t - pad.b;
+  const stepX = chartW / (days - 1);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(174,174,192,0.2)'; ctx.lineWidth = 1;
+  [0, 0.25, 0.5, 0.75, 1].forEach(p => {
+    const y = pad.t + chartH * (1 - p);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + chartW, y); ctx.stroke();
+    ctx.fillStyle = '#aaa'; ctx.font = '9px DM Sans'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxVal * p) + 'kg', pad.l - 4, y + 3);
+  });
+
+  // Lines
+  data.forEach((pts, zi) => {
+    ctx.beginPath(); ctx.strokeStyle = colors[zi]; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+    pts.forEach((v, i) => {
+      const x = pad.l + i * stepX;
+      const y = pad.t + chartH * (1 - v / maxVal);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Dots
+    pts.forEach((v, i) => {
+      const x = pad.l + i * stepX;
+      const y = pad.t + chartH * (1 - v / maxVal);
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = colors[zi]; ctx.fill();
+    });
+  });
+
+  // X labels
+  ctx.fillStyle = '#aaa'; ctx.font = '10px DM Sans'; ctx.textAlign = 'center';
+  labels.forEach((lbl, i) => {
+    ctx.fillText(lbl, pad.l + i * stepX, H - 8);
+  });
+
+  // Legend
+  zones.forEach((z, i) => {
+    ctx.fillStyle = colors[i]; ctx.fillRect(pad.l + i * 80, 2, 12, 8);
+    ctx.fillStyle = '#555'; ctx.textAlign = 'left'; ctx.font = '10px DM Sans';
+    ctx.fillText(['Frais', 'Ambiant', 'Surgelé'][i], pad.l + i * 80 + 16, 10);
+  });
+}
+
+function afficherStockZone(el, stocks, zone, plans) {
+  const zoneNames = {frais:'❄️ Frais', ambiant:'📦 Ambiant', surgele:'🧊 Surgelé'};
+  const today = new Date();
+  const needs = {};
+  plans.forEach(p => {
+    const nom = (p.plat_nom || '').toLowerCase();
+    needs[nom] = (needs[nom] || 0) + (p.quantite_g || 300) / 1000;
+  });
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div class="stock-zone-title">${zoneNames[zone]} <span class="stock-zone-badge">${stocks.length} produits</span></div>
+    <button onclick="ajouterEntreeStock('${zone}')" style="padding:10px 16px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">+ Entrée stock</button>
+  </div>`;
+
+  if (!stocks.length) {
+    html += `<div style="text-align:center;padding:32px;color:var(--muted);">
+      <div style="font-size:40px;margin-bottom:10px;">${{frais:'❄️',ambiant:'📦',surgele:'🧊'}[zone]}</div>
+      <div>Aucun produit en stock ${zoneNames[zone].split(' ')[1].toLowerCase()}</div>
+      <button onclick="ajouterEntreeStock('${zone}')" style="margin-top:12px;padding:10px 20px;background:var(--black);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;">+ Ajouter</button>
+    </div>`;
+  } else {
+    html += '<div class="stock-grid">';
+    stocks.forEach(s => {
+      const peremDate = s.date_peremption ? new Date(s.date_peremption) : null;
+      const daysLeft = peremDate ? Math.round((peremDate - today) / 86400000) : null;
+      const peremBadge = daysLeft === null ? '' : daysLeft < 0 ? '<span class="stock-perem-badge perem-alert">Périmé</span>' : daysLeft < 3 ? `<span class="stock-perem-badge perem-alert">${daysLeft}j</span>` : daysLeft < 7 ? `<span class="stock-perem-badge perem-warn">${daysLeft}j</span>` : `<span class="stock-perem-badge perem-ok">${daysLeft}j</span>`;
+      const pct = s.quantite_initiale_kg > 0 ? Math.min(100, Math.round(s.quantite_kg / s.quantite_initiale_kg * 100)) : 50;
+      const barColor = pct < 20 ? '#c0392b' : pct < 50 ? '#c97a00' : '#2a9e4f';
+      const needed = needs[(s.ingredient_nom || '').toLowerCase()] || 0;
+      const manque = Math.max(0, needed - parseFloat(s.quantite_kg || 0));
+      const alertBanner = manque > 0 ? `<div style="background:#ffecec;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;color:#c0392b;margin-top:6px;">⚠️ Besoin: ${needed.toFixed(1)}kg · Manque: ${manque.toFixed(1)}kg</div>` : '';
+      const info = identifierProduitMetro(s.ingredient_nom || '');
+      html += `<div class="stock-card">
+        <div class="stock-card-header">
+          <div class="stock-card-em">${info.emoji}</div>
+          <div><div class="stock-card-nom">${s.ingredient_nom}</div><div class="stock-card-fournisseur">${s.fournisseur || ''}${s.lot ? ' · Lot ' + s.lot : ''}</div></div>
+          <div style="margin-left:auto;">${peremBadge}</div>
+        </div>
+        <div class="stock-card-body">
+          <div><span class="stock-qty-big">${parseFloat(s.quantite_kg || 0).toFixed(1)}</span><span class="stock-qty-unit"> kg</span></div>
+          <div class="stock-bar"><div class="stock-bar-fill" style="width:${pct}%;background:${barColor};"></div></div>
+          <div class="stock-info-row"><span class="frc-lbl">Acheté le</span><span class="stock-info-val">${s.date_achat || '–'}</span></div>
+          ${s.date_peremption ? `<div class="stock-info-row"><span class="frc-lbl">Péremption</span><span class="stock-info-val">${s.date_peremption}</span></div>` : ''}
+          <div class="stock-info-row"><span class="frc-lbl">Emplacement</span><span class="stock-info-val">${s.emplacement || '–'}</span></div>
+          ${s.prix_kg ? `<div class="stock-info-row"><span class="frc-lbl">Prix/kg</span><span class="stock-info-val">${s.prix_kg}€</span></div>` : ''}
+          ${alertBanner}
+          <button onclick="supprimerStock('${s.id}')" style="margin-top:8px;width:100%;padding:6px;background:#ffecec;color:#c0392b;border:none;border-radius:8px;font-size:11px;cursor:pointer;">Supprimer</button>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+async function supprimerStock(id) {
+  if (!confirm('Supprimer ce stock ?')) return;
   try {
-    await sb('stocks_mp', {
-      method:'POST', headers:{'Prefer':'return=minimal'},
-      body:JSON.stringify({
-        ingredient_nom: nom,
-        quantite_kg: qty,
-        quantite_initiale_kg: qty,
-        fournisseur: document.getElementById('stockFourn')?.value||'Metro',
-        lot: document.getElementById('stockLot')?.value||null,
-        date_achat: document.getElementById('stockDateAchat')?.value || new Date().toISOString().split('T')[0],
-        date_peremption: document.getElementById('stockDatePerem')?.value||null,
-        temperature_stockage: document.getElementById('stockTemp')?.value||'ambiant',
-        emplacement: document.getElementById('stockEmplacement')?.value||null,
-        prix_kg: parseFloat(document.getElementById('stockPrix')?.value)||null,
-        statut:'disponible'
+    await fetch(SB_URL + '/rest/v1/stocks_mp?id=eq.' + id, { method: 'DELETE', headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } });
+    toast('Stock supprimé', 'ok');
+    chargerStocks(document.querySelector('#tabStocks .cmd-subtab.active')?.id?.replace('stockSub','').toLowerCase() || 'dashboard');
+  } catch(e) { toast('Erreur', 'err'); }
+}
+
+function afficherImportFacture(el) {
+  el.innerHTML = `
+    <div style="max-width:640px;">
+      <div style="font-size:16px;font-weight:800;color:var(--black);margin-bottom:6px;">🧾 Import facture Metro</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Photographiez ou copiez le texte de votre facture Metro — les produits sont détectés automatiquement.</div>
+
+      <div class="facture-drop-zone" id="factureDropZone" onclick="document.getElementById('factureFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleFactureDrop(event)">
+        <div style="font-size:48px;margin-bottom:12px;">📄</div>
+        <div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:6px;">Déposez la photo ou le PDF ici</div>
+        <div style="font-size:12px;color:var(--muted);">ou cliquez pour choisir un fichier</div>
+        <div id="factureAnalysing" style="display:none;margin-top:12px;color:var(--muted);font-size:13px;">🤖 Analyse en cours...</div>
+      </div>
+      <input type="file" id="factureFileInput" accept="image/*,.pdf" style="display:none;" onchange="analyserFacture(this)">
+
+      <div style="margin:14px 0;text-align:center;font-size:12px;color:var(--muted);">— ou —</div>
+
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;">Coller le texte de la facture</div>
+      <textarea id="factureTexteInput" rows="8" style="width:100%;background:var(--bg);border:none;border-radius:14px;padding:14px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);box-shadow:var(--si);resize:vertical;outline:none;" placeholder="Collez ici le texte extrait de votre facture Metro..."></textarea>
+      <button onclick="analyserFactureTexte()" style="width:100%;margin-top:10px;padding:14px;background:var(--black);color:#fff;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Analyser la facture →</button>
+
+      <div id="factureResultats" style="margin-top:16px;"></div>
+    </div>`;
+}
+
+async function analyserFacture(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const analysing = document.getElementById('factureAnalysing');
+  if (analysing) analysing.style.display = 'block';
+
+  // Use Claude API to extract text from image
+  try {
+    const b64 = await fileToBase64(file);
+    const res = await fetch('https://natty-suivi.vercel.app/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: 'Voici une facture Metro. Extrais UNIQUEMENT les lignes produits au format CSV: designation,prix_unitaire,quantite. Une ligne par produit. Pas de header, pas d\'explication.',
+        image_base64: b64,
+        image_type: file.type,
+        max_tokens: 1000
       })
     });
-    toast('Stock enregistré !','ok');
-    switchStockSub('etat', document.getElementById('stockSubEtat'));
-  } catch(e){ toast('Erreur: '+e.message,'err'); }
+    const data = await res.json();
+    const texte = data.text || '';
+    traiterResultatsFacture(texte, true);
+  } catch(e) {
+    toast('Erreur analyse: ' + e.message, 'err');
+  }
+  if (analysing) analysing.style.display = 'none';
 }
 
-function ajouterEntreeStock() {
-  switchStockSub('entree', document.getElementById('stockSubEntree'));
+function analyserFactureTexte() {
+  const texte = document.getElementById('factureTexteInput')?.value || '';
+  if (!texte.trim()) { toast('Collez le texte de la facture', 'err'); return; }
+  const { produits, dateFacture, numFacture } = parseFactureMetro(texte);
+  afficherResultatsFacture(produits, dateFacture, numFacture);
 }
 
-// ══ HELPERS ══
+function traiterResultatsFacture(csvTexte, fromImage) {
+  // Parse CSV from Claude
+  const lines = csvTexte.trim().split('\n');
+  const produits = lines.map(l => {
+    const parts = l.split(',');
+    if (parts.length < 2) return null;
+    const designation = parts[0].trim();
+    const prixUnit = parseFloat(parts[1]) || 0;
+    const qte = parseInt(parts[2]) || 1;
+    const info = identifierProduitMetro(designation);
+    return { designation, prixUnit, qte, ...info };
+  }).filter(Boolean);
+  afficherResultatsFacture(produits, null, null);
+}
+
+function afficherResultatsFacture(produits, dateFacture, numFacture) {
+  const el = document.getElementById('factureResultats');
+  if (!el) return;
+  if (!produits.length) {
+    el.innerHTML = '<div style="color:var(--muted);padding:16px;text-align:center;">Aucun produit détecté — essayez de coller le texte manuellement.</div>';
+    return;
+  }
+
+  const zoneColors = {frais:'fz-frais', ambiant:'fz-ambiant', surgele:'fz-surgele'};
+  const zoneLabels = {frais:'Frais', ambiant:'Ambiant', surgele:'Surgelé'};
+
+  let html = `<div class="facture-result-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--black);">📋 ${produits.length} produits détectés</div>
+        ${dateFacture ? `<div style="font-size:11px;color:var(--muted);">Facture du ${dateFacture}${numFacture ? ' · N° ' + numFacture : ''}</div>` : ''}
+      </div>
+      <button onclick="importerTousStocks()" style="padding:10px 16px;background:#2a9e4f;color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✅ Importer tout</button>
+    </div>`;
+
+  // Group by zone
+  ['frais', 'ambiant', 'surgele'].forEach(zone => {
+    const zProd = produits.filter(p => p.zone === zone);
+    if (!zProd.length) return;
+    html += `<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:12px 0 6px;">${{frais:'❄️ Frais',ambiant:'📦 Ambiant',surgele:'🧊 Surgelé'}[zone]}</div>`;
+    zProd.forEach((p, i) => {
+      const dateAchat = dateFacture || new Date().toISOString().split('T')[0];
+      const conservJ = p.conservation_j || 7;
+      const datePerem = new Date(new Date(dateAchat).getTime() + conservJ * 86400000).toISOString().split('T')[0];
+      html += `<div class="facture-line" data-produit='${JSON.stringify({...p, dateAchat, datePerem})}'>
+        <input type="checkbox" class="facture-check" checked>
+        <span style="font-size:18px;">${p.emoji}</span>
+        <span class="facture-prod-nom">${p.designation}</span>
+        <input type="number" value="${p.qte}" min="0.1" step="0.1" style="width:60px;border:none;background:var(--bg);border-radius:8px;padding:4px 8px;font-size:12px;box-shadow:var(--si);" class="facture-qty-input">
+        <span style="font-size:11px;color:var(--muted);">kg</span>
+        <span class="facture-prod-zone ${zoneColors[zone]}">${zoneLabels[zone]}</span>
+        <span class="facture-prod-qty">${p.prixUnit ? p.prixUnit.toFixed(2) + '€/u' : ''}</span>
+      </div>`;
+    });
+  });
+
+  html += `<button onclick="importerSelectionStocks()" style="width:100%;margin-top:14px;padding:12px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Importer la sélection →</button>`;
+  html += '</div>';
+  el.innerHTML = html;
+
+  // Store data globally for import
+  window._factureProduitsCache = produits;
+  window._factureDateCache = dateFacture;
+}
+
+async function importerSelectionStocks() {
+  const lines = document.querySelectorAll('#factureResultats .facture-line');
+  const rows = [];
+  const dateAchat = window._factureDateCache || new Date().toISOString().split('T')[0];
+
+  lines.forEach(line => {
+    const checked = line.querySelector('.facture-check')?.checked;
+    if (!checked) return;
+    const data = JSON.parse(line.dataset.produit || '{}');
+    const qtyInput = line.querySelector('.facture-qty-input');
+    const qty = parseFloat(qtyInput?.value) || 1;
+    rows.push({
+      ingredient_nom: data.designation,
+      quantite_kg: qty,
+      quantite_initiale_kg: qty,
+      fournisseur: 'Metro',
+      date_achat: dateAchat,
+      date_peremption: data.datePerem || null,
+      temperature_stockage: data.zone || 'ambiant',
+      prix_kg: data.prixUnit || null,
+      statut: 'disponible'
+    });
+  });
+
+  if (!rows.length) { toast('Aucun produit sélectionné', 'err'); return; }
+  try {
+    await sb('stocks_mp', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify(rows) });
+    toast(rows.length + ' produits importés !', 'ok');
+    switchStockSub('dashboard', document.getElementById('stockSubDash'));
+  } catch(e) { toast('Erreur: ' + e.message, 'err'); }
+}
+
+function importerTousStocks() {
+  document.querySelectorAll('#factureResultats .facture-check').forEach(cb => cb.checked = true);
+  importerSelectionStocks();
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function handleFactureDrop(event) {
+  event.preventDefault();
+  document.getElementById('factureDropZone').classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (file) { document.getElementById('factureFileInput').files = event.dataTransfer.files; analyserFacture(document.getElementById('factureFileInput')); }
+}
+
+function afficherAlertes(el, stocks, plans) {
+  const today = new Date();
+  const needs = {};
+  plans.forEach(p => { const nom = (p.plat_nom || '').toLowerCase(); needs[nom] = (needs[nom] || 0) + (p.quantite_g || 300) / 1000; });
+
+  const alertsPerem = stocks.filter(s => {
+    if (!s.date_peremption) return false;
+    return Math.round((new Date(s.date_peremption) - today) / 86400000) < 7;
+  });
+  const alertsManque = stocks.filter(s => {
+    const needed = needs[(s.ingredient_nom || '').toLowerCase()] || 0;
+    return needed > 0 && needed > parseFloat(s.quantite_kg || 0);
+  });
+
+  if (!alertsPerem.length && !alertsManque.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:#2a9e4f;font-size:15px;font-weight:600;">✅ Aucune alerte — tout est en ordre</div>';
+    return;
+  }
+
+  let html = '';
+  if (alertsManque.length) {
+    html += `<div style="font-size:14px;font-weight:800;color:#c0392b;margin-bottom:10px;">🛒 Stock insuffisant (${alertsManque.length})</div>`;
+    html += alertsManque.map(s => {
+      const needed = needs[(s.ingredient_nom || '').toLowerCase()] || 0;
+      const manque = Math.max(0, needed - parseFloat(s.quantite_kg || 0));
+      const info = identifierProduitMetro(s.ingredient_nom || '');
+      return `<div class="cmd-recap-item cmd-recap-urgent"><span style="font-size:20px;">${info.emoji}</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;">${s.ingredient_nom}</div><div style="font-size:11px;color:var(--muted);">Stock: ${parseFloat(s.quantite_kg||0).toFixed(1)}kg · Besoin: ${needed.toFixed(1)}kg</div></div><div style="font-size:14px;font-weight:800;color:#c0392b;">−${manque.toFixed(1)} kg</div></div>`;
+    }).join('');
+  }
+  if (alertsPerem.length) {
+    html += `<div style="font-size:14px;font-weight:800;color:#c97a00;margin:16px 0 10px;">⏰ Péremption proche (${alertsPerem.length})</div>`;
+    html += alertsPerem.map(s => {
+      const d = new Date(s.date_peremption);
+      const days = Math.round((d - today) / 86400000);
+      return `<div class="cmd-recap-item"><span style="font-size:20px;">⚠️</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;">${s.ingredient_nom}</div><div style="font-size:11px;color:var(--muted);">${days < 0 ? 'Périmé depuis ' + Math.abs(days) + 'j' : 'Périme dans ' + days + 'j'} · ${s.quantite_kg}kg</div></div><span style="font-size:11px;color:#c97a00;font-weight:600;">${s.date_peremption}</span></div>`;
+    }).join('');
+  }
+  el.innerHTML = html;
+}
+
+function ajouterEntreeStock(zone) {
+  zone = zone || 'ambiant';
+  chargerStocks('facture');
+}
+
+
+
 function getLundiSemaineAdmin() {
   const d = new Date();
   const day = d.getDay();
