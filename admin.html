@@ -2061,37 +2061,65 @@ function renderIngredientsList() {
   const cont = document.getElementById('platIngredientsList');
   if (!cont) return;
   if (!_platIngredients.length) {
-    cont.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Aucun ingrédient — les macros seront saisies manuellement.</div>';
+    cont.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Aucun ingrédient — cliquez sur + pour ajouter.</div>';
     return;
   }
-  cont.innerHTML = _platIngredients.map((ing, i) => {
-    return '<div style="display:grid;grid-template-columns:1fr 70px 50px 50px 50px 50px 28px;gap:6px;margin-bottom:6px;align-items:center;">'
-      + '<input class="form-inp" type="text" value="'+ing.nom+'" placeholder="Ingrédient" data-ing="'+i+'" data-field="nom" style="font-size:12px;padding:8px;">'
-      + '<input class="form-inp" type="number" value="'+ing.quantite_g+'" placeholder="g" min="0" data-ing="'+i+'" data-field="quantite_g" style="font-size:12px;padding:8px;text-align:center;">'
-      + '<input class="form-inp" type="number" value="'+(ing.calories_100g||'')+'" placeholder="kcal" min="0" data-ing="'+i+'" data-field="calories_100g" style="font-size:11px;padding:6px;text-align:center;">'
-      + '<input class="form-inp" type="number" value="'+(ing.prot_100g||'')+'" placeholder="P" min="0" data-ing="'+i+'" data-field="prot_100g" style="font-size:11px;padding:6px;text-align:center;">'
-      + '<input class="form-inp" type="number" value="'+(ing.gluc_100g||'')+'" placeholder="G" min="0" data-ing="'+i+'" data-field="gluc_100g" style="font-size:11px;padding:6px;text-align:center;">'
-      + '<input class="form-inp" type="number" value="'+(ing.lip_100g||'')+'" placeholder="L" min="0" data-ing="'+i+'" data-field="lip_100g" style="font-size:11px;padding:6px;text-align:center;">'
-      + '<button data-delidx="'+i+'" class="btn-del-ing-plat" style="background:#ffecec;border:none;border-radius:8px;cursor:pointer;color:#c0392b;font-size:12px;padding:6px;">✕</button>'
-      + '</div>';
-  }).join('');
-  // Labels
-  const labels = '<div style="display:grid;grid-template-columns:1fr 70px 50px 50px 50px 50px 28px;gap:6px;margin-bottom:4px;"><span style="font-size:10px;color:var(--muted);">Nom</span><span style="font-size:10px;color:var(--muted);text-align:center;">Qté (g)</span><span style="font-size:10px;color:var(--muted);text-align:center;">Kcal</span><span style="font-size:10px;color:var(--muted);text-align:center;">Prot</span><span style="font-size:10px;color:var(--muted);text-align:center;">Gluc</span><span style="font-size:10px;color:var(--muted);text-align:center;">Lip</span><span></span></div>';
-  cont.innerHTML = labels + cont.innerHTML;
+  // Header
+  let html = '<div style="display:grid;grid-template-columns:1fr 80px 55px 45px 45px 45px 28px;gap:5px;margin-bottom:4px;padding:0 2px;">';
+  html += '<span style="font-size:10px;color:var(--muted);">Ingrédient</span>';
+  html += '<span style="font-size:10px;color:var(--muted);text-align:center;">Qté (g)</span>';
+  html += '<span style="font-size:10px;color:var(--muted);text-align:center;">kcal</span>';
+  html += '<span style="font-size:10px;color:var(--muted);text-align:center;">Prot</span>';
+  html += '<span style="font-size:10px;color:var(--muted);text-align:center;">Gluc</span>';
+  html += '<span style="font-size:10px;color:var(--muted);text-align:center;">Lip</span>';
+  html += '<span></span></div>';
 
-  // Bind inputs
-  cont.querySelectorAll('input[data-ing]').forEach(inp => {
-    inp.addEventListener('input', function() {
-      const idx = parseInt(this.dataset.ing);
-      const field = this.dataset.field;
-      _platIngredients[idx][field] = field === 'nom' ? this.value : parseFloat(this.value) || 0;
-      if (field !== 'nom') recalculerMacrosPlat();
-    });
-    // Autocomplete from ingredients_base
-    if (inp.dataset.field === 'nom') {
-      inp.addEventListener('blur', function() { chargerMacrosIngredient(this.value, parseInt(this.dataset.ing)); });
+  _platIngredients.forEach((ing, i) => {
+    const hasDb = ing.calories_100g || ing.prot_100g;
+    html += '<div style="display:grid;grid-template-columns:1fr 80px 55px 45px 45px 45px 28px;gap:5px;margin-bottom:5px;align-items:center;">';
+    // Nom — autocomplete on blur
+    html += '<input class="form-inp ing-nom-input" type="text" value="'+ing.nom+'" placeholder="Nom ingrédient" data-idx="'+i+'" style="font-size:12px;padding:8px;">';
+    // Quantite — editable, triggers recalc
+    html += '<input class="form-inp ing-qty-input" type="number" value="'+ing.quantite_g+'" min="0" step="5" data-idx="'+i+'" style="font-size:12px;padding:8px;text-align:center;">';
+    // Macros — readonly, from DB
+    const macroStyle = 'font-size:11px;padding:6px;text-align:center;background:#f7f7fa;color:'+(hasDb?'var(--black)':'var(--muted)')+';border-radius:8px;box-shadow:var(--si);border:none;';
+    const cal = ing.calories_100g ? Math.round(ing.calories_100g * ing.quantite_g / 100) : '–';
+    const prot = ing.prot_100g    ? Math.round(ing.prot_100g    * ing.quantite_g / 100 * 10)/10 : '–';
+    const gluc = ing.gluc_100g    ? Math.round(ing.gluc_100g    * ing.quantite_g / 100 * 10)/10 : '–';
+    const lip  = ing.lip_100g     ? Math.round(ing.lip_100g     * ing.quantite_g / 100 * 10)/10 : '–';
+    html += '<div style="'+macroStyle+'" title="'+ing.calories_100g+' kcal/100g">'+cal+'</div>';
+    html += '<div style="'+macroStyle+'" title="'+ing.prot_100g+'g/100g">'+prot+'</div>';
+    html += '<div style="'+macroStyle+'" title="'+ing.gluc_100g+'g/100g">'+gluc+'</div>';
+    html += '<div style="'+macroStyle+'" title="'+ing.lip_100g+'g/100g">'+lip+'</div>';
+    html += '<button class="btn-del-ing-plat" data-delidx="'+i+'" style="background:#ffecec;border:none;border-radius:8px;cursor:pointer;color:#c0392b;font-size:12px;padding:6px;">✕</button>';
+    html += '</div>';
+    // DB status
+    if (!hasDb) {
+      html += '<div style="font-size:10px;color:#c97a00;margin:-3px 0 4px;padding:0 2px;">⚠️ Macros non trouvées en base — saisie exacte du nom requise</div>';
     }
   });
+  cont.innerHTML = html;
+
+  // Bind nom inputs — on blur fetch macros from DB
+  cont.querySelectorAll('.ing-nom-input').forEach(inp => {
+    inp.addEventListener('input', function() {
+      _platIngredients[parseInt(this.dataset.idx)].nom = this.value;
+    });
+    inp.addEventListener('blur', function() {
+      chargerMacrosIngredient(this.value, parseInt(this.dataset.idx));
+    });
+  });
+
+  // Bind qty inputs — on input recalc totals
+  cont.querySelectorAll('.ing-qty-input').forEach(inp => {
+    inp.addEventListener('input', function() {
+      _platIngredients[parseInt(this.dataset.idx)].quantite_g = parseFloat(this.value) || 0;
+      recalculerMacrosPlat();
+      renderIngredientsList();
+    });
+  });
+
+  // Bind delete buttons
   cont.querySelectorAll('.btn-del-ing-plat').forEach(btn => {
     btn.addEventListener('click', function() {
       _platIngredients.splice(parseInt(this.dataset.delidx), 1);
@@ -2104,36 +2132,50 @@ function renderIngredientsList() {
 async function chargerMacrosIngredient(nom, idx) {
   if (!nom || nom.length < 2) return;
   try {
-    const results = await sb('ingredients_base?nom_normalise=ilike.*'+encodeURIComponent(nom.toLowerCase())+'*&select=nom,cal_per_100g,prot_per_100g,gluc_per_100g,lip_per_100g&limit=1');
+    // Try exact match first, then fuzzy
+    const nomNorm = nom.toLowerCase().trim();
+    let results = await sb('ingredients_base?nom_normalise=eq.'+encodeURIComponent(nomNorm)+'&select=nom,cal_per_100g,prot_per_100g,gluc_per_100g,lip_per_100g&limit=1');
+    if (!results || !results.length) {
+      // Fuzzy match on nom_normalise
+      results = await sb('ingredients_base?nom_normalise=ilike.*'+encodeURIComponent(nomNorm)+'*&select=nom,cal_per_100g,prot_per_100g,gluc_per_100g,lip_per_100g&limit=1');
+    }
+    if (!results || !results.length) {
+      // Try on nom field
+      results = await sb('ingredients_base?nom=ilike.*'+encodeURIComponent(nom)+'*&select=nom,cal_per_100g,prot_per_100g,gluc_per_100g,lip_per_100g&limit=1');
+    }
     if (results && results.length) {
       const r = results[0];
-      _platIngredients[idx].calories_100g = r.cal_per_100g || 0;
-      _platIngredients[idx].prot_100g = r.prot_per_100g || 0;
-      _platIngredients[idx].gluc_100g = r.gluc_per_100g || 0;
-      _platIngredients[idx].lip_100g = r.lip_per_100g || 0;
+      _platIngredients[idx].calories_100g = parseFloat(r.cal_per_100g)  || 0;
+      _platIngredients[idx].prot_100g     = parseFloat(r.prot_per_100g) || 0;
+      _platIngredients[idx].gluc_100g     = parseFloat(r.gluc_per_100g) || 0;
+      _platIngredients[idx].lip_100g      = parseFloat(r.lip_per_100g)  || 0;
       renderIngredientsList();
       recalculerMacrosPlat();
+      toast('Macros chargées: '+r.nom, 'ok');
     }
-  } catch(e) {}
+  } catch(e) { console.warn('chargerMacrosIngredient:', e.message); }
 }
 
 function recalculerMacrosPlat() {
   let cal = 0, prot = 0, gluc = 0, lip = 0;
+  let hasData = false;
   _platIngredients.forEach(ing => {
+    if (ing.calories_100g || ing.prot_100g) hasData = true;
     const factor = (ing.quantite_g || 0) / 100;
     cal  += (ing.calories_100g || 0) * factor;
-    prot += (ing.prot_100g || 0) * factor;
-    gluc += (ing.gluc_100g || 0) * factor;
-    lip  += (ing.lip_100g || 0) * factor;
+    prot += (ing.prot_100g     || 0) * factor;
+    gluc += (ing.gluc_100g     || 0) * factor;
+    lip  += (ing.lip_100g      || 0) * factor;
   });
-  const setCal = document.getElementById('platCal');
+  if (!hasData) return; // Don't overwrite manual values if no DB data
+  const setCal  = document.getElementById('platCal');
   const setProt = document.getElementById('platProt');
   const setGluc = document.getElementById('platGluc');
-  const setLip = document.getElementById('platLip');
-  if (setCal) setCal.value = Math.round(cal);
-  if (setProt) setProt.value = Math.round(prot * 10) / 10;
-  if (setGluc) setGluc.value = Math.round(gluc * 10) / 10;
-  if (setLip) setLip.value = Math.round(lip * 10) / 10;
+  const setLip  = document.getElementById('platLip');
+  if (setCal)  { setCal.value  = Math.round(cal);           setCal.style.background  = '#eaf4ee'; }
+  if (setProt) { setProt.value = Math.round(prot * 10)/10;  setProt.style.background = '#eaf4ee'; }
+  if (setGluc) { setGluc.value = Math.round(gluc * 10)/10;  setGluc.style.background = '#eaf4ee'; }
+  if (setLip)  { setLip.value  = Math.round(lip  * 10)/10;  setLip.style.background  = '#eaf4ee'; }
 }
 
 async function chargerIngredientsPlat(platId) {
