@@ -2340,7 +2340,7 @@ async function chargerClientsRepas() {
   el.innerHTML = '<div class="loading">Chargement...</div>';
   try {
     // Fetch all active offers
-    const offres = await sb('offres_clients?statut=eq.active&select=*');
+    const offres = await sb('offres_clients?statut=eq.active&select=id,user_id,formule,nb_plats_semaine,date_debut,objectif');
     if (!offres.length) {
       el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);"><div style="font-size:40px;margin-bottom:12px;">🍽️</div><div style="font-size:14px;font-weight:600;">Aucun client avec offre active</div></div>';
       return;
@@ -2427,7 +2427,7 @@ function afficherRepasClients(list, filtre) {
         <div class="rcc-name">${nom.trim() || ob.email || 'Client ' + (offre.user_id||'').substring(0,8)}</div>
         <div class="rcc-sub">${obj} · Offre depuis ${dateOffre}</div>
         <div class="rcc-tags">
-          <span class="rcc-tag rcc-tag-offre">🍽️ ${nbPlats}x/semaine</span>
+          <span class="rcc-tag rcc-tag-offre">🍽️ ${offre.formule || nbPlats+'x/semaine'}</span>
           ${statusBadge}
         </div>
         <div style="margin-top:8px;height:4px;background:var(--bg);border-radius:2px;box-shadow:var(--si);overflow:hidden;">
@@ -2560,7 +2560,7 @@ async function chargerMacrosClient(userId) {
     const cal  = Math.round(tdee);
 
     // Get offre for nb_plats
-    const offres = await sb('offres_clients?user_id=eq.'+userId+'&statut=eq.active&select=nb_plats_semaine&limit=1');
+    const offres = await sb('offres_clients?user_id=eq.'+userId+'&statut=eq.active&select=nb_plats_semaine,formule&limit=1');
     const nbPlats = offres[0] ? offres[0].nb_plats_semaine : 3;
 
     // Per meal
