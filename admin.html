@@ -2880,12 +2880,25 @@ async function chargerCommandesCalendrier() {
     if (semSub) semSub.textContent = fmtD(d) + ' au ' + fmtD(finAff);
     const fin = new Date(lundi); fin.setDate(fin.getDate()+7);
     const finStr = fin.toISOString().split('T')[0];
-    const cmds = await sb('commandes?semaine=eq.'+lundi+'&select=*&order=created_at.asc');
-    rendreCalendrierCommandes(cmds, lundi);
-    setText('cmdTotal',       cmds.length);
-    setText('cmdConfirmees',  cmds.filter(c=>c.statut==='confirmee').length);
-    setText('cmdLivrees',     cmds.filter(c=>c.statut==='livree').length);
-    rendreListeCommandes(cmds, 'commandesList');
+    // Fetch plans_repas as source of truth
+    const plans = await sb('plans_repas?semaine_livraison=eq.'+lundi+'&select=*&order=user_id.asc');
+    // Also fetch commandes for status
+    const cmds = await sb('commandes?semaine=eq.'+lundi+'&select=*').catch(()=>[]);
+    // Fetch onboarding for names
+    const onbs = await sb('onboarding?completed=eq.true&select=user_id,prenom,nom');
+    const onbMap = {}; onbs.forEach(o => { onbMap[o.user_id] = o; });
+    // Fetch stocks
+    const stocks = await sb('stocks_mp?statut=eq.disponible&select=ingredient_nom,quantite_kg').catch(()=>[]);
+    const stockMap = {}; stocks.forEach(s => { stockMap[(s.ingredient_nom||'').toLowerCase()] = parseFloat(s.quantite_kg)||0; });
+
+    // Stats from plans
+    const uniqueClients = [...new Set(plans.map(p => p.user_id))];
+    setText('cmdTotal',      uniqueClients.length);
+    setText('cmdConfirmees', cmds.filter(c=>c.statut==='valide').length);
+    setText('cmdLivrees',    cmds.filter(c=>c.statut==='livre').length);
+
+    rendreCalendrierCommandes(plans, lundi, onbMap);
+    await rendreVuePreparation(plans, onbMap, stockMap, lundi);
   } catch(e) {}
 }
 
