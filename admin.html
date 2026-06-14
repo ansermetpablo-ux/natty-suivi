@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- Natty Admin v2026-06-14 12:34 -->
+<!DOCTYPE html><!-- Natty Admin FIXED v2026-06-14 12:34 -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -560,7 +560,7 @@ input[type="file"] { display: none; }
 <div class="app">
   <!-- ROLE SELECTOR -->
   <div class="role-selector active" id="roleSelector">
-    <div class="role-title">Espace Back-office Natty</div>
+    <div class="role-title">Espace Back-office Natty</div><!-- v20260614-1307 -->
     <div class="role-sub">Choisissez votre profil d'accès</div>
     <div class="role-grid">
       <div class="role-card" onclick="selectionnerRole('admin')">
@@ -2632,7 +2632,7 @@ function rendreGrillePlats(plats) {
   grid.innerHTML = plats.map(p => {
     const sel = platsChefSelection[p.id];
     const photoHtml = p.photo_url ? '<img src="'+p.photo_url+'" style="width:100%;height:80px;object-fit:cover;">' : '<div class="plc-photo">🍽️</div>';
-    return '<div class="plc-plat'+(sel?' selected':'')+'" id="plcplat_'+p.id+'" onclick="togglePlatChef(\''+p.id+'\')">'
+    return '<div class="plc-plat'+(sel?' selected':'')+'" id="plcplat_'+p.id+'" onclick="togglePlatChef(''+p.id+'')">'
       + photoHtml
       + '<div class="plc-body">'
       + '<div class="plc-nom">'+(p.nom||'Plat')+'</div>'
@@ -2953,7 +2953,7 @@ function rendreListeCommandes(cmds, elId) {
       + '<div style="font-size:11px;color:var(--muted);">'+(c.semaine||'–')+' · '+(c.statut||'–')+' · '+(c.plats_choisis?.length||'?')+' plats</div>'
       + '</div>'
       + '<span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;background:'+col+'22;color:'+col+';">'+lbl+'</span>'
-      + '<button onclick="changerStatutCommande(\''+c.id+'\',\'livree\')" style="padding:6px 12px;background:var(--black);color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:600;cursor:pointer;">Livrer</button>'
+      + '<button onclick="changerStatutCommande(''+c.id+'','livree')" style="padding:6px 12px;background:var(--black);color:#fff;border:none;border-radius:10px;font-size:11px;font-weight:600;cursor:pointer;">Livrer</button>'
       + '</div>';
   }).join('');
 }
@@ -3034,7 +3034,7 @@ async function chargerRecettes() {
   el.innerHTML = '<div class="loading">Chargement...</div>';
   try {
     const recs = await sb('recettes?actif=eq.true&select=id,nom,categorie,nb_portions&order=nom.asc');
-    el.innerHTML = recs.map(r => '<div class="recette-item" id="recitem_'+r.id+'" onclick="ouvrirRecetteChef(\''+r.id+'\')">'
+    el.innerHTML = recs.map(r => '<div class="recette-item" id="recitem_'+r.id+'" onclick="ouvrirRecetteChef(''+r.id+'')">'
       + '<div class="recette-item-nom">'+r.nom+'</div>'
       + '<div class="recette-item-sub">'+(r.categorie||'')+(r.nb_portions?' · '+r.nb_portions+' portions':'')+'</div>'
       + '</div>').join('')
@@ -3084,7 +3084,7 @@ async function ouvrirRecetteChef(id) {
           + '<input class="ing-chef-nom" type="text" value="'+(ing.ingredient_nom||'')+'" placeholder="Ingrédient" data-id="'+ing.id+'">'
           + '<input class="ing-chef-qty" type="number" value="'+(ing.quantite_g||0)+'" min="0" data-id="'+ing.id+'">'
           + '<span class="ing-chef-unit">'+(ing.unite||'g')+'</span>'
-          + '<button onclick="supprimerIngChef(\''+ing.id+'\')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;">✕</button>'
+          + '<button onclick="supprimerIngChef(''+ing.id+'')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;">✕</button>'
           + '</div>').join('')
       + '</div>'
       + '<button class="btn-add-row" onclick="ajouterIngChef()">+ Ajouter un ingrédient</button>'
@@ -3094,7 +3094,7 @@ async function ouvrirRecetteChef(id) {
       + etapes.map((e,i) => '<div class="etape-chef-row">'
           + '<div class="etape-chef-num">'+(i+1)+'</div>'
           + '<textarea class="etape-chef-txt" placeholder="Décrivez cette étape..." data-id="'+e.id+'" rows="2">'+( e.description||'')+'</textarea>'
-          + '<button onclick="supprimerEtapeChef(\''+e.id+'\')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;flex-shrink:0;">✕</button>'
+          + '<button onclick="supprimerEtapeChef(''+e.id+'')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;flex-shrink:0;">✕</button>'
           + '</div>').join('')
       + '</div>'
       + '<button class="btn-add-row" onclick="ajouterEtapeChef()">+ Ajouter une étape</button>'
@@ -3166,7 +3166,7 @@ async function ajouterIngChef() {
     row.innerHTML = '<input class="ing-chef-nom" type="text" value="" placeholder="Ingrédient" data-id="'+newId+'">'
       + '<input class="ing-chef-qty" type="number" value="100" min="0" data-id="'+newId+'">'
       + '<span class="ing-chef-unit">g</span>'
-      + '<button onclick="supprimerIngChef(\''+newId+'\')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;">✕</button>';
+      + '<button onclick="supprimerIngChef(''+newId+'')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;">✕</button>';
     cont.appendChild(row);
     row.querySelector('.ing-chef-nom').focus();
   } catch(e) {}
@@ -3191,7 +3191,7 @@ async function ajouterEtapeChef() {
     row.className = 'etape-chef-row';
     row.innerHTML = '<div class="etape-chef-num">'+num+'</div>'
       + '<textarea class="etape-chef-txt" placeholder="Décrivez cette étape..." data-id="'+newId+'" rows="2"></textarea>'
-      + '<button onclick="supprimerEtapeChef(\''+newId+'\')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;flex-shrink:0;">✕</button>';
+      + '<button onclick="supprimerEtapeChef(''+newId+'')" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;flex-shrink:0;">✕</button>';
     cont.appendChild(row);
     row.querySelector('.etape-chef-txt').focus();
   } catch(e) {}
