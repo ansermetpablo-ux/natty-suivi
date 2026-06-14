@@ -2341,7 +2341,8 @@ async function chargerClientsRepas() {
   try {
     // Fetch all active offers
     const offres = await sb('offres_clients?statut=eq.active&select=id,user_id,formule,nb_plats_semaine,date_debut,objectif');
-    if (!offres.length) {
+    console.log('offres_clients result:', offres, 'length:', offres ? offres.length : 'null');
+    if (!offres || !offres.length) {
       el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);"><div style="font-size:40px;margin-bottom:12px;">🍽️</div><div style="font-size:14px;font-weight:600;">Aucun client avec offre active</div></div>';
       return;
     }
@@ -2388,7 +2389,10 @@ async function chargerClientsRepas() {
 
     afficherRepasClients(window._repasOffres, 'tous');
 
-  } catch(e) { el.innerHTML = '<div class="loading">Erreur: ' + e.message + '</div>'; }
+  } catch(e) {
+    console.error('chargerClientsRepas error:', e);
+    el.innerHTML = '<div class="loading">Erreur: ' + e.message + '</div>';
+  }
 }
 
 let _repasFiltreCourant = 'tous';
