@@ -2718,7 +2718,9 @@ async function sauvegarderRepasClient() {
   if (!clientRepasSelected) return;
   const btn = document.getElementById('btnSauvegarderRepas');
   btn.disabled = true; btn.textContent = 'Enregistrement...';
-  const lundi = getLundi(0).toISOString().split('T')[0]; // Always save to current week
+  // Use local date to avoid UTC timezone shift
+  const _ld = getLundi(0);
+  const lundi = _ld.getFullYear()+'-'+String(_ld.getMonth()+1).padStart(2,'0')+'-'+String(_ld.getDate()).padStart(2,'0');
   const sels = Object.values(platsChefSelection);
   try {
     // Delete existing plans for this client this week
@@ -2870,7 +2872,7 @@ async function chargerCommandesCalendrier() {
     const baseLundi = getLundiSemaineAdmin();
     const d = new Date(baseLundi + 'T00:00:00');
     d.setDate(d.getDate() + (semaineOffset || 0) * 7);
-    const lundi = d.toISOString().split('T')[0];
+    const lundi = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     // Update nav label
     const finAff = new Date(d); finAff.setDate(finAff.getDate() + 4);
     const fmtD = dt => dt.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
@@ -3939,8 +3941,12 @@ async function rendreVuePreparation(plans, onbMap, stockMap, lundi) {
 }
 
 function getLundiSemaineAdmin() {
-  // Always use same logic as getLundi(semaineOffset) for consistency
-  return getLundi(semaineOffset).toISOString().split('T')[0];
+  const d = getLundi(semaineOffset);
+  // Use local date to avoid UTC timezone shift (Paris = UTC+2)
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth()+1).padStart(2,'0');
+  const dd   = String(d.getDate()).padStart(2,'0');
+  return yyyy+'-'+mm+'-'+dd;
 }
 
 function setText(id, v) { const el=document.getElementById(id); if(el) el.textContent=v; }
