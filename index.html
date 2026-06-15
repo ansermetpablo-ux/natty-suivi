@@ -693,21 +693,26 @@ input[type="file"] { display:none; }
 
 /* ── SCROLL LOCK ── */
 body.no-scroll {
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  /* Garde la position pour éviter le saut au top */
+  overflow: hidden !important;
+  height: 100% !important;
+}
+html.no-scroll {
+  overflow: hidden !important;
+  height: 100% !important;
 }
 /* Tous les sheets/overlays scrollent en interne */
-.sheet, #profilSheet, .overlay > .sheet {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+.sheet, #profilSheet {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  max-height: 92vh;
 }
-#profilSheet {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+/* Les overlays bloquent le touch du fond */
+.overlay.active, #profilOverlay.active {
+  touch-action: none;
+}
+.overlay.active > .sheet, #profilOverlay.active > #profilSheet {
+  touch-action: pan-y;
 }
 
 </style>
@@ -2761,13 +2766,23 @@ function drawDonutMeal(id, data, colors) {
 // ── SCROLL LOCK ──
 var _scrollY = 0;
 function lockScroll() {
-  _scrollY = window.scrollY;
-  document.body.style.top = '-' + _scrollY + 'px';
+  if (document.body.classList.contains('no-scroll')) return;
+  _scrollY = window.scrollY || window.pageYOffset;
   document.body.classList.add('no-scroll');
+  document.documentElement.classList.add('no-scroll');
+  document.body.style.top = '-' + _scrollY + 'px';
+  document.body.style.position = 'fixed';
+  document.body.style.left = '0';
+  document.body.style.right = '0';
 }
 function unlockScroll() {
+  if (!document.body.classList.contains('no-scroll')) return;
   document.body.classList.remove('no-scroll');
+  document.documentElement.classList.remove('no-scroll');
+  document.body.style.position = '';
   document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
   window.scrollTo(0, _scrollY);
 }
 
@@ -3269,6 +3284,14 @@ async function fetchProfilConseils() {
   if (profilConseillsLoaded) return;
   if (!USER_ID) return;
   var cont = document.getElementById('profilConseilsCont');
+
+  // Si cache déjà rempli (ex: après génération popup) → afficher directement sans fetch
+  if (window._conseilsCache && window._conseilsCache.conseil_prot) {
+    conseilsRenderColonnes(window._conseilsCache);
+    profilConseillsLoaded = true;
+    return;
+  }
+
   if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Chargement...</div>';
 
   try {
@@ -3919,6 +3942,39 @@ async function genererDonneesEmail() {
     } catch(e) {}
   }
 }
+
+// Fermer overlay en cliquant sur le fond
+document.addEventListener('DOMContentLoaded', function() {
+  // Tous les overlays .overlay
+  document.querySelectorAll('.overlay').forEach(function(ov) {
+    ov.addEventListener('click', function(e) {
+      if (e.target === ov) {
+        var id = ov.id;
+        if (id) closeOverlay(id);
+      }
+    });
+  });
+  // profilOverlay
+  var pov = document.getElementById('profilOverlay');
+  if (pov) pov.addEventListener('click', function(e) {
+    if (e.target === pov) closeProfilOverlay();
+  });
+  // popupConseils
+  var pc = document.getElementById('popupConseils');
+  if (pc) pc.addEventListener('click', function(e) {
+    if (e.target === pc) closePopupConseils();
+  });
+  // onbPopup
+  var onb = document.getElementById('onbPopup');
+  if (onb) onb.addEventListener('click', function(e) {
+    if (e.target === onb) closeOnbPopup();
+  });
+  // conseilsPopup
+  var cp = document.getElementById('conseilsPopup');
+  if (cp) cp.addEventListener('click', function(e) {
+    if (e.target === cp) conseilsPopupFermer();
+  });
+});
 </script>
 
 <!-- ══ PROFIL OVERLAY ══ -->
