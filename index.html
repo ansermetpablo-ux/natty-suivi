@@ -1787,20 +1787,15 @@ async function loadMeals() {
 async function loadScore() {
   try {
     var s = await sbFetch('nutrition_scores?user_id=eq.'+USER_ID+'&order=calculated_at.desc&limit=1');
-    if (s&&s.length) setScore(Math.round(((s[0].variety_score||0)+(s[0].quality_score||0)+(s[0].relevance_score||0))/3));
-    else setScore(calcScoreLive());
-  } catch(e) { setScore(calcScoreLive()); }
-}
-
-function calcScoreLive() {
-  var sept=new Date(); sept.setDate(sept.getDate()-7);
-  var rec=allMeals.filter(function(m){return new Date(m.created_at)>sept;});
-  var u=new Set(); rec.forEach(function(m){(m.meal_ingredients||[]).forEach(function(i){u.add(i.name.toLowerCase());});});
-  var v=Math.min(100,Math.round((u.size/15)*100));
-  var ai=rec.filter(function(m){return m.meal_ingredients&&m.meal_ingredients.length>0;});
-  var q=rec.length?Math.min(100,Math.round((ai.length/rec.length)*100)):0;
-  var pr=Math.min(100,Math.round((rec.length/21)*100));
-  return Math.round((v+q+pr)/3);
+    if (s&&s.length) {
+      var dbScore = Math.round(((s[0].variety_score||0)+(s[0].quality_score||0)+(s[0].relevance_score||0))/3);
+      setScore(dbScore);
+    }
+    // Toujours recalculer en live après chargement des repas pour avoir la valeur fraîche
+    // (appelé depuis afficherMacros après loadMeals)
+  } catch(e) {
+    // Score calculé dans afficherMacros via calcScoreFromAvg
+  }
 }
 
 async function loadDailyHistory() {
@@ -1832,26 +1827,102 @@ function resetIfNewDay() {
   localStorage.setItem('natty_mac_'+USER_ID+'_'+today, JSON.stringify(cur));
 }
 
-// ═══ MACROS DISPLAY ═══
+// ═══ MACROS DISPLAY — moyenne 7 jours ═══
+function calcMoyenneMacros() {
+  // Prioriser dailyHistory si dispo
+  var sept = new Date(); sept.setDate(sept.getDate()-7);
+  var hist = dailyHistory.filter(function(d){ return new Date(d.date) >= sept; });
+  if (hist.length > 0) {
+    var tot = {p:0, l:0, g:0, c:0};
+    hist.forEach(function(d){ tot.p+=d.prot_g||0; tot.l+=d.lip_g||0; tot.g+=d.gluc_g||0; tot.c+=d.cal_kcal||0; });
+    var n = hist.length;
+    return { p:Math.round(tot.p/n), l:Math.round(tot.l/n), g:Math.round(tot.g/n), c:Math.round(tot.c/n), jours:n };
+  }
+  // Fallback: calculer depuis allMeals
+  var rec = allMeals.filter(function(m){ return new Date(m.created_at) >= sept; });
+  if (!rec.length) {
+    // Pas de repas du tout → afficher objectif
+    return { p:macObj.p, l:macObj.l, g:macObj.g, c:macObj.c, jours:0 };
+  }
+  var tot2 = {p:0, l:0, g:0, c:0};
+  rec.forEach(function(m){ var mac=calcMac(m.meal_ingredients); tot2.p+=mac.p; tot2.l+=mac.l; tot2.g+=mac.g; tot2.c+=mac.c; });
+  // Grouper par jour pour avoir une vraie moyenne journalière
+  var parJour = {};
+  rec.forEach(function(m){
+    var d = (m.meal_date || (m.created_at||'').split('T')[0]);
+    if (!parJour[d]) parJour[d] = {p:0,l:0,g:0,c:0};
+    var mac = calcMac(m.meal_ingredients);
+    parJour[d].p+=mac.p; parJour[d].l+=mac.l; parJour[d].g+=mac.g; parJour[d].c+=mac.c;
+  });
+  var jours = Object.keys(parJour);
+  var nj = jours.length || 1;
+  var totJ = {p:0,l:0,g:0,c:0};
+  jours.forEach(function(j){ totJ.p+=parJour[j].p; totJ.l+=parJour[j].l; totJ.g+=parJour[j].g; totJ.c+=parJour[j].c; });
+  return { p:Math.round(totJ.p/nj), l:Math.round(totJ.l/nj), g:Math.round(totJ.g/nj), c:Math.round(totJ.c/nj), jours:nj };
+}
+
 function afficherMacros() {
-  var pp=macObj.p>0?Math.min(100,Math.round((macAuj.p/macObj.p)*100)):0;
-  var lp=macObj.l>0?Math.min(100,Math.round((macAuj.l/macObj.l)*100)):0;
-  var gp=macObj.g>0?Math.min(100,Math.round((macAuj.g/macObj.g)*100)):0;
-  var cp=macObj.c>0?Math.min(100,Math.round((macAuj.c/macObj.c)*100)):0;
-  setText('vProt', macAuj.p||macObj.p||'–');
-  setText('vGluc', macAuj.g||macObj.g||'–');
-  setText('vLip',  macAuj.l||macObj.l||'–');
-  setText('vCal',  macAuj.c||macObj.c||'–');
+  var moy = calcMoyenneMacros();
+  var hasData = moy.jours > 0;
+
+  // Pourcentages sur objectif
+  var pp = macObj.p>0 ? Math.min(100, Math.round((moy.p/macObj.p)*100)) : 0;
+  var lp = macObj.l>0 ? Math.min(100, Math.round((moy.l/macObj.l)*100)) : 0;
+  var gp = macObj.g>0 ? Math.min(100, Math.round((moy.g/macObj.g)*100)) : 0;
+  var cp = macObj.c>0 ? Math.min(100, Math.round((moy.c/macObj.c)*100)) : 0;
+
+  // Valeurs affichées
+  setText('vProt', hasData ? moy.p : (macObj.p||'–'));
+  setText('vGluc', hasData ? moy.g : (macObj.g||'–'));
+  setText('vLip',  hasData ? moy.l : (macObj.l||'–'));
+  setText('vCal',  hasData ? moy.c : (macObj.c||'–'));
   setText('oCal',  macObj.c||'–');
-  // Objectif labels
-  var op = document.getElementById('oProt'); if(op) op.textContent='Obj. '+(macObj.p||'–')+'g';
-  var og = document.getElementById('oGluc'); if(og) og.textContent='Obj. '+(macObj.g||'–')+'g';
-  var ol = document.getElementById('oLip');  if(ol) ol.textContent='Obj. '+(macObj.l||'–')+'g';
+
+  // Labels objectif avec % progression
+  var op = document.getElementById('oProt');
+  if (op) op.textContent = hasData ? (pp+'% de l\'obj. '+macObj.p+'g') : ('Obj. '+(macObj.p||'–')+'g');
+  var og = document.getElementById('oGluc');
+  if (og) og.textContent = hasData ? (gp+'% de l\'obj. '+macObj.g+'g') : ('Obj. '+(macObj.g||'–')+'g');
+  var ol = document.getElementById('oLip');
+  if (ol) ol.textContent = hasData ? (lp+'% de l\'obj. '+macObj.l+'g') : ('Obj. '+(macObj.l||'–')+'g');
+
+  // Label calories avec indicateur
+  var calRow = document.querySelector('.hero-cal-left');
+  if (calRow) calRow.textContent = hasData
+    ? '⚡ Moy. ' + (moy.jours > 1 ? moy.jours+'j' : 'aujourd\'hui')
+    : '⚡ Calories aujourd\'hui';
+
+  // Barres de progression animées
   setTimeout(function(){
-    var bp=document.getElementById('bProt'); if(bp)bp.style.width=pp+'%';
-    var bg=document.getElementById('bGluc'); if(bg)bg.style.width=gp+'%';
-    var bl=document.getElementById('bLip');  if(bl)bl.style.width=lp+'%';
-  },100);
+    var bp=document.getElementById('bProt'); if(bp) bp.style.width=pp+'%';
+    var bg=document.getElementById('bGluc'); if(bg) bg.style.width=gp+'%';
+    var bl=document.getElementById('bLip');  if(bl) bl.style.width=lp+'%';
+  }, 100);
+
+  // Recalculer et afficher le score basé sur la moyenne
+  setScore(calcScoreFromAvg(moy, pp, gp, lp));
+}
+
+function calcScoreFromAvg(moy, pp, gp, lp) {
+  // Score basé sur : atteinte objectifs macros (50%), variété ingrédients (25%), régularité (25%)
+  var sept = new Date(); sept.setDate(sept.getDate()-7);
+  var rec = allMeals.filter(function(m){ return new Date(m.created_at) >= sept; });
+
+  // Composante 1 : atteinte objectifs (moyenne des 3 macros)
+  var macroScore = Math.round((pp + gp + lp) / 3);
+
+  // Composante 2 : variété des ingrédients
+  var u = new Set();
+  rec.forEach(function(m){ (m.meal_ingredients||[]).forEach(function(i){ u.add(i.name.toLowerCase()); }); });
+  var varietyScore = Math.min(100, Math.round((u.size/12)*100));
+
+  // Composante 3 : régularité (repas sur 7 jours)
+  var parJour2 = {};
+  rec.forEach(function(m){ var d=(m.meal_date||(m.created_at||'').split('T')[0]); parJour2[d]=1; });
+  var regulariteScore = Math.min(100, Math.round((Object.keys(parJour2).length/7)*100));
+
+  // Pondération : 50% macro atteinte, 25% variété, 25% régularité
+  return Math.round(macroScore*0.5 + varietyScore*0.25 + regulariteScore*0.25);
 }
 
 // ═══ SCORE ═══
@@ -3216,36 +3287,50 @@ function openMealDetail(mealId) {
   if (meal) ouvrirAnalysePlat(meal);
 }
 
-// ── SCROLL LOCK ──
+// ── SCROLL LOCK avec compteur ──
 var _scrollY = 0;
+var _lockCount = 0;
 function lockScroll() {
-  _scrollY = window.scrollY || window.pageYOffset;
-  document.body.style.overflow = 'hidden';
-  document.documentElement.style.overflow = 'hidden';
+  _lockCount++;
+  if (_lockCount === 1) {
+    _scrollY = window.scrollY || window.pageYOffset;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+  }
 }
 function unlockScroll() {
+  _lockCount = Math.max(0, _lockCount - 1);
+  if (_lockCount === 0) {
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+    if (_scrollY) window.scrollTo(0, _scrollY);
+  }
+}
+function forceUnlockScroll() {
+  _lockCount = 0;
   document.body.style.overflow = '';
   document.documentElement.style.overflow = '';
-  // Restore scroll position
-  if (_scrollY) window.scrollTo(0, _scrollY);
 }
 
 function closeOverlay(id) {
   var el = document.getElementById(id);
   if (!el) return;
-  el.classList.remove('active');
-  el.style.display = 'none';
-  // Déverouiller seulement si plus aucun overlay actif
-  var anyOpen = document.querySelector('.overlay.active, [style*="display: flex"][id^="ov"], [style*="display:flex"][id^="ov"], #profilOverlay, #onbPopup, #popupConseils, #conseilsPopup');
-  var hasVisible = false;
-  if (anyOpen) {
-    var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
-    allIds.forEach(function(eid) {
-      var e = document.getElementById(eid);
-      if (e && (e.classList.contains('active') || e.style.display === 'flex')) hasVisible = true;
-    });
+  // Les .overlay utilisent classList ; les autres utilisent style.display
+  if (el.classList.contains('overlay')) {
+    el.classList.remove('active');
+    // NE PAS toucher style.display sur les .overlay — la CSS gère via .active
+  } else {
+    el.style.display = 'none';
   }
-  if (!hasVisible) unlockScroll();
+  // Vérifier si un overlay est encore ouvert
+  var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
+  var hasVisible = allIds.some(function(eid) {
+    var e = document.getElementById(eid);
+    if (!e) return false;
+    if (e.classList.contains('overlay')) return e.classList.contains('active');
+    return e.style.display === 'flex';
+  });
+  if (!hasVisible) forceUnlockScroll();
 }
 function goToChallenges(){
   switchTab('chal');
@@ -3557,7 +3642,14 @@ function openProfilOverlay() {
 function closeProfilOverlay() {
   var el = document.getElementById('profilOverlay');
   if (el) el.style.display = 'none';
-  unlockScroll();
+  var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
+  var hasVisible = allIds.some(function(eid) {
+    var e = document.getElementById(eid);
+    if (!e || eid === 'profilOverlay') return false;
+    if (e.classList.contains('overlay')) return e.classList.contains('active');
+    return e.style.display === 'flex';
+  });
+  if (!hasVisible) forceUnlockScroll();
 }
 
 function renderProfilScore() {
@@ -4053,7 +4145,7 @@ function checkShowOnbPopup() {
 function closeOnbPopup() {
   var el = document.getElementById('onbPopup');
   if (el) el.style.display = 'none';
-  unlockScroll();
+  forceUnlockScroll();
   if (USER_ID) localStorage.setItem('natty_onb_popup_' + USER_ID, '1');
 }
 
@@ -4110,7 +4202,7 @@ function conseilsPopupAfficher(row) {
 
 function conseilsPopupFermer() {
   var popup = document.getElementById('conseilsPopup');
-  if (popup) { popup.style.display = 'none'; unlockScroll(); }
+  if (popup) { popup.style.display = 'none'; forceUnlockScroll(); }
 }
 
 function conseilsPopupVoir() {
@@ -4272,7 +4364,7 @@ async function pcActionClick() {
 function closePopupConseils() {
   var el = document.getElementById('popupConseils');
   if (el) el.style.display = 'none';
-  unlockScroll();
+  forceUnlockScroll();
   if (USER_ID) sessionStorage.setItem('natty_popup_session_' + USER_ID, '1');
 }
 
