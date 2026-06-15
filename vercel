@@ -1,23 +1,32 @@
 {
+  "crons": [
+    { "path": "/api/conseils-hebdo", "schedule": "0 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "5 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "10 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "15 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "20 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "25 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "30 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "35 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "40 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "45 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "50 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "55 8 * * 1" }
+  ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/(.*)\\.html",
       "headers": [
-        {
-          "key": "X-Frame-Options",
-          "value": "ALLOWALL"
-        },
-        {
-          "key": "Content-Security-Policy",
-          "value": "frame-ancestors *"
-        }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Pragma", "value": "no-cache" },
+        { "key": "Expires", "value": "0" }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
       ]
     }
-  ],
-  "functions": {
-    "api/supabase.js": {
-      "memory": 128,
-      "maxDuration": 10
-    }
-  }
+  ]
 }
