@@ -1260,11 +1260,11 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovProchainRepas','ovListeCourses','ovRecettes'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
-  if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(verifierEtMontrerPopupConseils, 4000); }); } else {
+  if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); }); } else {
     // Attendre 800ms au cas où Wix envoie le token via postMessage après le load
     setTimeout(function() {
       if (!USER_ID) afficherOnboardingCTA();
-    }, 800);
+    }, 1500);
   }
 
   // Écouter le postMessage de Wix quand l'utilisateur se connecte
@@ -3292,6 +3292,12 @@ async function fetchProfilConseils() {
     return;
   }
 
+  // Guard: si déjà chargés cette session → ne pas régénérer
+  if (sessionStorage.getItem('natty_conseils_ok_' + USER_ID)) {
+    profilConseillsLoaded = true;
+    return;
+  }
+
   if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Chargement...</div>';
 
   try {
@@ -3324,6 +3330,7 @@ async function fetchProfilConseils() {
           window._conseilsCache = row;
           conseilsRenderColonnes(row);
           profilConseillsLoaded = true;
+          sessionStorage.setItem('natty_conseils_ok_' + USER_ID, '1');
           return;
         } else {
           // Conseils périmés → afficher les anciens + régénérer en arrière-plan
@@ -3340,6 +3347,7 @@ async function fetchProfilConseils() {
     if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de vos conseils personnalisés...</div>';
     await conseilsGenererEtSauvegarder(false);
     profilConseillsLoaded = true;
+    sessionStorage.setItem('natty_conseils_ok_' + USER_ID, '1');
 
   } catch(e) {
     console.warn('fetchProfilConseils:', e);
@@ -3755,7 +3763,7 @@ function renderPopupConseils() {
   else if (next.action==='questionnaire') { btn.textContent = 'Remplir le questionnaire'; btn.dataset.action = 'questionnaire'; }
   else { btn.textContent = 'Ajouter un repas ('+_pcState.nbPlats+'/3)'; btn.dataset.action = 'repas'; }
 }
-async async function pcActionClick() {
+async function pcActionClick() {
   var action = document.getElementById('pcActionBtn').dataset.action;
   if (action === 'generate') {
     // Générer les conseils maintenant
