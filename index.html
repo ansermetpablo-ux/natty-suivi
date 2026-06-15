@@ -214,6 +214,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .compo-sub   { font-size:12px; color:var(--muted); margin-bottom:16px; }
 .compo-inner { display:flex; gap:14px; align-items:center; }
 .compo-photo { width:110px; height:110px; border-radius:18px; background:var(--bg); flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:32px; box-shadow:var(--so); }
+.compo-photo img { width:100%; height:100%; object-fit:cover; border-radius:18px; display:block; }
 .compo-photo img { width:100%; height:100%; object-fit:cover; border-radius:18px; }
 .compo-items { flex:1; display:flex; flex-direction:column; gap:7px; }
 .compo-item  { display:flex; align-items:center; gap:8px; }
@@ -327,6 +328,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 /* ── MEAL DETAIL ── */
 .meal-ap-header { display:flex; gap:14px; align-items:center; background:var(--bg); border-radius:18px; padding:14px; margin-bottom:16px; box-shadow:var(--so); }
 .meal-ap-photo  { width:80px; height:80px; border-radius:14px; overflow:hidden; flex-shrink:0; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:28px; box-shadow:var(--sm); }
+.meal-ap-photo img { width:100%; height:100%; object-fit:cover; border-radius:14px; display:block; }
 .meal-ap-photo img { width:100%; height:100%; object-fit:cover; }
 .meal-ap-name  { font-size:17px; font-weight:700; margin-bottom:6px; color:var(--black); }
 .meal-ap-macros { display:flex; gap:6px; flex-wrap:wrap; }
@@ -675,6 +677,18 @@ input[type="file"] { display:none; }
 .hero-cal-left { font-size:12px; font-weight:600; color:var(--muted); display:flex; align-items:center; gap:6px; }
 .hero-cal-val  { font-size:18px; font-weight:800; color:var(--black); display:flex; align-items:baseline; gap:3px; }
 .hero-cal-unit { font-size:11px; font-weight:400; color:var(--muted); }
+
+
+/* ── STANDARDISATION PHOTOS REPAS ── */
+.meal-ap-photo img, .meal-detail-photo img, .compo-photo img,
+.mc-card-photo img, .plat-photo img, .meal-photo img,
+.nutri-av img, .rank-av img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  border-radius: inherit;
+}
 
 </style>
 </head>
@@ -3291,6 +3305,39 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
       if (!saveRes.ok) console.warn('save-conseils:', await saveRes.text());
     } catch(saveErr) { console.warn('Sauvegarde conseils:', saveErr); }
 
+    // 2ème appel Claude : liste de courses + recettes
+    try {
+      var promptCourses = 'Nutritionniste et chef. Profil: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal. Conseils: ' + (data.conseil_amelioration||'') + ' ' + (data.conseil_prot||'') + '. Genere en JSON sans backticks: {"liste_courses":{"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]},"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","..."]}]}';
+      var resC = await fetch(CLAUDE_API, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({prompt: promptCourses, max_tokens: 1400})
+      });
+      var dC = await resC.json();
+      var rawC = (dC.text || '{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim();
+      var parsedC = JSON.parse(rawC);
+      var listeCJ = parsedC.liste_courses ? JSON.stringify(parsedC.liste_courses) : null;
+      var recettesJ = parsedC.recettes && parsedC.recettes.length ? JSON.stringify(parsedC.recettes) : null;
+      // Mettre à jour en base
+      if (listeCJ || recettesJ) {
+        await fetch('/api/save-conseils', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: USER_ID,
+            liste_courses_json: listeCJ,
+            recettes_json: recettesJ,
+            semaine: semaine
+          })
+        });
+        // Mettre à jour le cache local
+        if (window._conseilsCache) {
+          window._conseilsCache.liste_courses_json = listeCJ;
+          window._conseilsCache.recettes_json = recettesJ;
+        }
+      }
+    } catch(eC) { console.warn('Courses/recettes generation:', eC); }
+
     // Afficher
     var row = Object.assign({}, data, {generated_at: now, semaine: semaine});
     conseilsRenderColonnes(row);
@@ -4214,3 +4261,4 @@ async function genererDonneesEmail() {
 
 </body>
 </html>
+  
