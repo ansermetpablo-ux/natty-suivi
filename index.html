@@ -3262,7 +3262,13 @@ async function fetchProfilConseils() {
 }
 
 async function conseilsGenererEtSauvegarder(silentRefresh) {
-  // Construire contexte client depuis onboarding
+  // Charger le profil si pas encore fait
+  if (!profilInfoCache) {
+    try {
+      var profData = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&select=poids,taille,activite,tdee,objectif_type,prenom,nom,age,sexe&limit=1');
+      if (profData && profData.length) profilInfoCache = profData[0];
+    } catch(e) {}
+  }
   var ob = profilInfoCache || {};
   var mealsDesc = allMeals.slice(0, 15).map(function(m) {
     var mac = calcMac(m.meal_ingredients);
@@ -3288,7 +3294,7 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
 
     // Sauvegarder via API Vercel (service_role key, contourne RLS)
     try {
-      var saveRes = await fetch('/api/save-conseils', {
+      var saveRes = await fetch('https://natty-suivi.vercel.app/api/save-conseils', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3320,7 +3326,7 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
       var recettesJ = parsedC.recettes && parsedC.recettes.length ? JSON.stringify(parsedC.recettes) : null;
       // Mettre à jour en base
       if (listeCJ || recettesJ) {
-        await fetch('/api/save-conseils', {
+        await fetch('https://natty-suivi.vercel.app/api/save-conseils', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -3338,9 +3344,12 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
       }
     } catch(eC) { console.warn('Courses/recettes generation:', eC); }
 
-    // Afficher
+    // Afficher et reset le flag pour que le profil overlay recharge
+    profilConseillsLoaded = false;
     var row = Object.assign({}, data, {generated_at: now, semaine: semaine});
+    window._conseilsCache = Object.assign(window._conseilsCache || {}, row);
     conseilsRenderColonnes(row);
+    profilConseillsLoaded = true;
 
   } catch(e) {
     console.warn('conseilsGenererEtSauvegarder:', e);
@@ -3548,9 +3557,17 @@ function conseilsPopupVoir() {
 var _pcState = null;
 async function verifierEtMontrerPopupConseils() {
   if (!USER_ID) return;
+  // Guard session : ne pas réafficher si déjà montré dans cette session
+  var sessionKey = 'natty_popup_session_' + USER_ID;
+  if (sessionStorage.getItem(sessionKey)) return;
   try {
-    var r = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=conseil_prot&limit=1');
-    if (r && r.length && r[0].conseil_prot) return;
+    var r = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=conseil_prot,liste_courses_json&limit=1');
+    if (r && r.length && r[0].conseil_prot) {
+      // Conseils existent → mettre en cache et ne pas montrer le popup
+      window._conseilsCache = Object.assign(window._conseilsCache || {}, r[0]);
+      sessionStorage.setItem(sessionKey, '1');
+      return;
+    }
   } catch(e) {}
   var nbPlats = allMeals.length;
   var onbOk = !!(macObj.p && macObj.c);
@@ -3597,9 +3614,10 @@ async function pcActionClick() {
     try {
       await conseilsGenererEtSauvegarder(false);
       closePopupConseils();
-      // Ouvrir le profil pour voir les conseils
-      openProfilOverlay();
       showToast('Vos conseils sont prêts ! ✨', 'ok');
+      // Ouvrir le profil avec les conseils déjà dans _conseilsCache
+      profilConseillsLoaded = false;
+      openProfilOverlay();
     } catch(e) {
       btn.disabled = false;
       btn.textContent = 'Générer mes conseils';
@@ -3610,7 +3628,10 @@ async function pcActionClick() {
   else if (action==='repas') { closePopupConseils(); openRepasOverlay(); }
   else { if(window.self!==window.top) window.parent.postMessage({type:'demandeConnexion'},'*'); else window.location.href='/onboarding.html?token='+TOKEN; }
 }
-function closePopupConseils() { document.getElementById('popupConseils').classList.remove('active'); }
+function closePopupConseils() {
+  document.getElementById('popupConseils').classList.remove('active');
+  if (USER_ID) sessionStorage.setItem('natty_popup_session_' + USER_ID, '1');
+}
 
 // ══ LISTE DE COURSES ══
 var _listeCourseCache = null;
