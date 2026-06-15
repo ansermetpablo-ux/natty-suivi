@@ -1544,7 +1544,7 @@ function openMacroPopup(type) {
     setTimeout(function(){ arc.style.strokeDasharray = ((pct/100)*circ)+' '+circ; }, 50);
   }
 
-  lockScroll(); document.getElementById('ovMacro').classList.add('active');
+  lockScroll(); var _om=document.getElementById('ovMacro'); if(_om) _om.classList.add('active');
 
   // Afficher depuis le cache — JAMAIS de génération Claude ici
   var cache = window._conseilsCache;
@@ -2085,7 +2085,7 @@ function ouvrirAnalysePlat(meal) {
     + '</div>'
     + '<div id="mealAnalyseIA"><div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Analyse critique en cours...</div></div>';
   document.getElementById('mealAnalyseContent').innerHTML = html;
-  lockScroll(); document.getElementById('ovMealAnalyse').classList.add('active');
+  lockScroll(); var _oma=document.getElementById('ovMealAnalyse'); if(_oma) _oma.classList.add('active');
   fetchAnalysePlat(meal, mac);
 }
 
@@ -2285,11 +2285,16 @@ var PLATS_DEMO = [
 
 function openProchainRepas() {
   prState = { jourDate:null, jourLabel:'', slot:null, formule:null, selection:[], filterCat:'tous', allPlats:[] };
-  document.getElementById('prStep1').style.display = 'block';
-  document.getElementById('prStep2').style.display = 'none';
-  document.getElementById('prStep3').style.display = 'none';
+  var _pr = document.getElementById('ovProchainRepas');
+  if (!_pr) return;
+  var _s1 = document.getElementById('prStep1');
+  var _s2 = document.getElementById('prStep2');
+  var _s3 = document.getElementById('prStep3');
+  if (_s1) _s1.style.display = 'block';
+  if (_s2) _s2.style.display = 'none';
+  if (_s3) _s3.style.display = 'none';
   prBuildJoursGrid();
-  lockScroll(); document.getElementById('ovProchainRepas').classList.add('active');
+  lockScroll(); _pr.classList.add('active');
   prLoadPlats();
   prChargerPlatsNutri();
 }
@@ -2669,7 +2674,7 @@ function openMealDetail(mealId) {
   var meal = allMeals.find(function(m){ return m.id === mealId; });
   if (!meal) return;
   document.getElementById('mealDetailContent').innerHTML = '<div class="loading">Analyse en cours...</div>';
-  lockScroll(); document.getElementById('ovMealDetail').classList.add('active');
+  lockScroll(); var _omd=document.getElementById('ovMealDetail'); if(_omd) _omd.classList.add('active');
   buildMealDetail(meal);
 }
 
@@ -2780,7 +2785,7 @@ function unlockScroll() {
 function closeOverlay(id) {
   document.getElementById(id).classList.remove('active');
   // Déverouiller seulement si plus aucun overlay actif
-  var anyOpen = document.querySelector('.overlay.active, #profilOverlay.active, #onbPopup.active, #popupConseils.active, #conseilsPopup[style*="flex"]');
+  var anyOpen = document.querySelector('.overlay.active, #profilOverlay[style*="flex"], #onbPopup[style*="flex"], #popupConseils[style*="flex"], #conseilsPopup[style*="flex"]');
   if (!anyOpen) unlockScroll();
 }
 function goToChallenges(){
@@ -3625,12 +3630,12 @@ function conseilsPopupAfficher(row) {
     }).join('');
   }
   var popup = document.getElementById('conseilsPopup');
-  if (popup) { lockScroll(); popup.style.display = 'flex'; }
+  if (popup) { popup.style.display = 'flex'; } // No lockScroll - doesn't block page
 }
 
 function conseilsPopupFermer() {
   var popup = document.getElementById('conseilsPopup');
-  if (popup) { popup.style.display = 'none'; unlockScroll(); }
+  if (popup) { popup.style.display = 'none'; }
 }
 
 function conseilsPopupVoir() {
@@ -3736,7 +3741,6 @@ async function verifierEtMontrerPopupConseils() {
 
   _pcState = {nbPlats:nbPlats, onbOk:onbOk, qaOk:qaOk};
   renderPopupConseils();
-  lockScroll();
   var _pc=document.getElementById('popupConseils'); if(_pc) _pc.style.display='flex';
   console.log('[Popup] → Popup affiché');
 }
@@ -3789,7 +3793,7 @@ async function pcActionClick() {
   else { if(window.self!==window.top) window.parent.postMessage({type:'demandeConnexion'},'*'); else window.location.href='/onboarding.html?token='+TOKEN; }
 }
 function closePopupConseils() {
-  var _pc=document.getElementById('popupConseils'); if(_pc) _pc.style.display='none'; unlockScroll();
+  var _pc=document.getElementById('popupConseils'); if(_pc) _pc.style.display='none';
   if (USER_ID) sessionStorage.setItem('natty_popup_session_' + USER_ID, '1');
 }
 
