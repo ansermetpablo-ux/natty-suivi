@@ -451,18 +451,9 @@ async function doReset() {
 }
 
 async function doGoogle() {
-  try {
-    var r = await fetch(SB_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(window.location.origin + '/login.html?oauth=1'), {
-      method: 'GET',
-      headers: { 'apikey': SB_KEY }
-    });
-    // Supabase returns a redirect URL for OAuth
-    var data = await r.json();
-    if (data.url) window.location.href = data.url;
-  } catch(e) {
-    // Fallback — direct redirect
-    window.location.href = SB_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(window.location.origin + '/login.html?oauth=1');
-  }
+  // Redirect doit pointer vers Vercel, pas localhost
+  var redirectTo = 'https://natty-suivi.vercel.app/login.html?oauth=1';
+  window.location.href = SB_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(redirectTo);
 }
 
 // Handle OAuth callback
@@ -470,18 +461,27 @@ async function doGoogle() {
   var params = new URLSearchParams(window.location.search);
   var hash = new URLSearchParams(window.location.hash.replace('#',''));
 
-  // OAuth callback — token in hash
+  // OAuth callback — token in URL hash after Supabase redirect
   var accessToken = hash.get('access_token');
   if (accessToken) {
-    // Fetch user from token
     fetch(SB_URL + '/auth/v1/user', {
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + accessToken }
     }).then(function(r){ return r.json(); }).then(function(u){
-      if (u && u.id) redirectToApp(u.id);
+      if (u && u.id) {
+        toast('Connexion Google réussie !', 'ok');
+        setTimeout(function(){ redirectToApp(u.id); }, 600);
+      } else {
+        toast('Erreur: utilisateur introuvable', 'err');
+      }
     }).catch(function(){
       toast('Erreur OAuth', 'err');
     });
     return;
+  }
+  // Also check for error in hash
+  var errDesc = hash.get('error_description');
+  if (errDesc) {
+    toast(errDesc, 'err');
   }
 
   // Enter key on inputs
