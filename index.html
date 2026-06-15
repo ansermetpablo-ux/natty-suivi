@@ -707,12 +707,10 @@ html.no-scroll {
   overscroll-behavior: contain !important;
   max-height: 92vh;
 }
-/* Les overlays bloquent le touch du fond */
-.overlay.active, #profilOverlay.active {
-  touch-action: none;
-}
+/* Les overlays — scroll uniquement dans le sheet */
 .overlay.active > .sheet, #profilOverlay.active > #profilSheet {
   touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 </style>
@@ -1233,6 +1231,19 @@ if (uP&&uP!=='null') USER_ID=uP;
 else if (TOKEN.length>10) {
   try{var d=TOKEN.match(/.{1,2}/g).map(function(b){return String.fromCharCode(parseInt(b,16));}).join('');if(d.includes('-'))USER_ID=d;}catch(e){}
 }
+// Persister le token entre rechargements
+if (TOKEN && USER_ID) {
+  localStorage.setItem('natty_token', TOKEN);
+  localStorage.setItem('natty_user_id', USER_ID);
+} else if (!TOKEN) {
+  // Essayer de récupérer depuis localStorage
+  var savedToken = localStorage.getItem('natty_token');
+  var savedUserId = localStorage.getItem('natty_user_id');
+  if (savedToken && savedUserId) {
+    TOKEN = savedToken;
+    USER_ID = savedUserId;
+  }
+}
 var urlP={p:parseInt(params.get('proteines'))||0, l:parseInt(params.get('lipides'))||0,
           g:parseInt(params.get('glucides'))||0,  c:parseInt(params.get('calories'))||0};
 
@@ -1304,6 +1315,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Déconnexion
     if (data.type === 'userLoggedOut') {
+      localStorage.removeItem('natty_token');
+      localStorage.removeItem('natty_user_id');
       var url3 = new URL(window.location.href);
       url3.searchParams.delete('token');
       url3.searchParams.delete('userId');
@@ -2774,24 +2787,14 @@ function drawDonutMeal(id, data, colors) {
 // ── SCROLL LOCK ──
 var _scrollY = 0;
 function lockScroll() {
-  if (document.body.classList.contains('no-scroll')) return;
+  // Simple overflow hidden — no position:fixed which breaks mobile scroll
   _scrollY = window.scrollY || window.pageYOffset;
-  document.body.classList.add('no-scroll');
-  document.documentElement.classList.add('no-scroll');
-  document.body.style.top = '-' + _scrollY + 'px';
-  document.body.style.position = 'fixed';
-  document.body.style.left = '0';
-  document.body.style.right = '0';
+  document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
 }
 function unlockScroll() {
-  if (!document.body.classList.contains('no-scroll')) return;
-  document.body.classList.remove('no-scroll');
-  document.documentElement.classList.remove('no-scroll');
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  window.scrollTo(0, _scrollY);
+  document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
 }
 
 function closeOverlay(id) {
