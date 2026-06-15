@@ -2201,7 +2201,7 @@ function afficherOnboardingCTA(){
     +'<div class="ob-feat"><div class="ob-fic">📊</div><div><div class="ob-ft">Suivi nutritionnel complet</div><div class="ob-fs">Score, macros, journal</div></div></div></div>'
     +'<div class="ob-btn-w">'
     +'<button class="ob-btn" id="btnStartOB">Commencer →</button>'
-    +'<div id="loginForm" style="display:none;margin-top:16px;">'
+    +'<div id="loginForm" style="margin-top:16px;">'
     +'<input id="loginEmail" type="email" placeholder="Email" style="width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;margin-bottom:10px;font-family:Inter,sans-serif;background:#f5f5f7;outline:none;">'
     +'<input id="loginPwd" type="password" placeholder="Mot de passe" style="width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;margin-bottom:10px;font-family:Inter,sans-serif;background:#f5f5f7;outline:none;">'
     +'<button id="btnLogin" style="width:100%;padding:14px;background:#34c759;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;">Se connecter</button>'
@@ -2214,11 +2214,10 @@ function afficherOnboardingCTA(){
     // Dans Wix (iframe) → postMessage
     if (window.self !== window.top) {
       window.parent.postMessage({ type: 'demandeConnexion' }, '*');
-    console.log('postMessage demandeConnexion sent');
+      console.log('postMessage demandeConnexion sent');
     } else {
-      // PWA standalone → afficher formulaire de connexion
-      var f = document.getElementById('loginForm');
-      f.style.display = f.style.display === 'none' ? 'block' : 'none';
+      // PWA standalone → rediriger vers page login dédiée
+      window.location.href = '/login.html';
     }
   });
 
