@@ -707,10 +707,12 @@ html.no-scroll {
   overscroll-behavior: contain !important;
   max-height: 92vh;
 }
-/* Les overlays — scroll uniquement dans le sheet */
+/* Les overlays bloquent le touch du fond */
+.overlay.active, #profilOverlay.active {
+  touch-action: none;
+}
 .overlay.active > .sheet, #profilOverlay.active > #profilSheet {
   touch-action: pan-y;
-  -webkit-overflow-scrolling: touch;
 }
 
 </style>
@@ -1231,18 +1233,14 @@ if (uP&&uP!=='null') USER_ID=uP;
 else if (TOKEN.length>10) {
   try{var d=TOKEN.match(/.{1,2}/g).map(function(b){return String.fromCharCode(parseInt(b,16));}).join('');if(d.includes('-'))USER_ID=d;}catch(e){}
 }
-// Persister le token entre rechargements
+// Persister entre rechargements
 if (TOKEN && USER_ID) {
   localStorage.setItem('natty_token', TOKEN);
   localStorage.setItem('natty_user_id', USER_ID);
 } else if (!TOKEN) {
-  // Essayer de récupérer depuis localStorage
-  var savedToken = localStorage.getItem('natty_token');
-  var savedUserId = localStorage.getItem('natty_user_id');
-  if (savedToken && savedUserId) {
-    TOKEN = savedToken;
-    USER_ID = savedUserId;
-  }
+  var _st = localStorage.getItem('natty_token');
+  var _su = localStorage.getItem('natty_user_id');
+  if (_st && _su) { TOKEN = _st; USER_ID = _su; }
 }
 var urlP={p:parseInt(params.get('proteines'))||0, l:parseInt(params.get('lipides'))||0,
           g:parseInt(params.get('glucides'))||0,  c:parseInt(params.get('calories'))||0};
@@ -1270,15 +1268,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputGalManu').addEventListener('change', function(){ previewPhoto(this,'prevManu'); photoManuFile=this.files[0]; });
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
-  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse'].forEach(function(id){
-    var el = document.getElementById(id);
-    if (el) el.addEventListener('click', function(e){ if(e.target===this) closeOverlay(id); });
-  });
-  // Overlays dynamiques (générés au clic) — bind via delegation
-  ['ovProchainRepas','ovListeCourses','ovRecettes'].forEach(function(id){
-    var el = document.getElementById(id);
-    if (el) el.addEventListener('click', function(e){ if(e.target===this) closeOverlay(id); });
-  });
+  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovProchainRepas','ovListeCourses','ovRecettes'].forEach(function(id){ var _e=document.getElementById(id); if(_e) _e.addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
   if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); }); } else {
     // Attendre 800ms au cas où Wix envoie le token via postMessage après le load
     setTimeout(function() {
@@ -1315,8 +1305,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Déconnexion
     if (data.type === 'userLoggedOut') {
-      localStorage.removeItem('natty_token');
-      localStorage.removeItem('natty_user_id');
+      localStorage.removeItem('natty_token'); localStorage.removeItem('natty_user_id');
       var url3 = new URL(window.location.href);
       url3.searchParams.delete('token');
       url3.searchParams.delete('userId');
@@ -2206,7 +2195,6 @@ function afficherOnboardingCTA(){
   var _rdv = document.getElementById('rdvPlusBtn');
   if (_rdv && _rdv.closest('.rdv-mod')) _rdv.closest('.rdv-mod').style.display = 'none';
   var page=document.getElementById('pageSuivi');
-  if (!page) { setTimeout(afficherOnboardingCTA, 300); return; }
   var cta=document.createElement('div');cta.className='ob-card';
   cta.innerHTML='<div class="ob-hero"><span class="ob-em">🥗</span><div class="ob-title">Commencez votre suivi</div><div class="ob-sub">Répondez à quelques questions pour personnaliser votre programme.</div></div>'
     +'<div class="ob-feats"><div class="ob-feat"><div class="ob-fic">🧑‍⚕️</div><div><div class="ob-ft">Nutritionniste personnel</div><div class="ob-fs">Dédié à vos objectifs</div></div></div>'
@@ -2214,7 +2202,7 @@ function afficherOnboardingCTA(){
     +'<div class="ob-feat"><div class="ob-fic">📊</div><div><div class="ob-ft">Suivi nutritionnel complet</div><div class="ob-fs">Score, macros, journal</div></div></div></div>'
     +'<div class="ob-btn-w">'
     +'<button class="ob-btn" id="btnStartOB">Commencer →</button>'
-    +'<div id="loginForm" style="margin-top:16px;">'
+    +'<div id="loginForm" style="display:none;margin-top:16px;">'
     +'<input id="loginEmail" type="email" placeholder="Email" style="width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;margin-bottom:10px;font-family:Inter,sans-serif;background:#f5f5f7;outline:none;">'
     +'<input id="loginPwd" type="password" placeholder="Mot de passe" style="width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;margin-bottom:10px;font-family:Inter,sans-serif;background:#f5f5f7;outline:none;">'
     +'<button id="btnLogin" style="width:100%;padding:14px;background:#34c759;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;">Se connecter</button>'
@@ -2227,10 +2215,11 @@ function afficherOnboardingCTA(){
     // Dans Wix (iframe) → postMessage
     if (window.self !== window.top) {
       window.parent.postMessage({ type: 'demandeConnexion' }, '*');
-      console.log('postMessage demandeConnexion sent');
+    console.log('postMessage demandeConnexion sent');
     } else {
-      // PWA standalone → rediriger vers page login dédiée
-      window.location.href = '/login.html';
+      // PWA standalone → afficher formulaire de connexion
+      var f = document.getElementById('loginForm');
+      f.style.display = f.style.display === 'none' ? 'block' : 'none';
     }
   });
 
@@ -2787,7 +2776,6 @@ function drawDonutMeal(id, data, colors) {
 // ── SCROLL LOCK ──
 var _scrollY = 0;
 function lockScroll() {
-  // Simple overflow hidden — no position:fixed which breaks mobile scroll
   _scrollY = window.scrollY || window.pageYOffset;
   document.body.style.overflow = 'hidden';
   document.documentElement.style.overflow = 'hidden';
@@ -3089,8 +3077,7 @@ setTimeout(function(){ conseilsPopupCheck(); }, 4000);
 // ══ PROFIL OVERLAY ══
 function openProfilOverlay() {
   lockScroll();
-  document.getElementById('profilOverlay').classList.add('active');
-  document.body.style.overflow = '';  // géré par lockScroll
+  var _ov=document.getElementById('profilOverlay'); if(_ov) _ov.style.display='flex';
   renderProfilMacros();
   renderProfilScore();
   fetchProfilConseils();
@@ -3098,7 +3085,7 @@ function openProfilOverlay() {
 }
 
 function closeProfilOverlay() {
-  document.getElementById('profilOverlay').classList.remove('active');
+  var _ov=document.getElementById('profilOverlay'); if(_ov) _ov.style.display='none';
   unlockScroll();
 }
 
@@ -3586,14 +3573,14 @@ function checkShowOnbPopup() {
         var d = document.getElementById('onbD' + i);
         if (d) d.classList.toggle('active', i === 0);
       }
-      lockScroll(); document.getElementById('onbPopup').classList.add('active');
+      lockScroll(); var _ob=document.getElementById('onbPopup'); if(_ob) _ob.style.display='flex';
       setTimeout(function(){ onbAnimateSlide(0); }, 600);
     }, 1500);
   }
 }
 
 function closeOnbPopup() {
-  document.getElementById('onbPopup').classList.remove('active'); unlockScroll();
+  var _ob=document.getElementById('onbPopup'); if(_ob) _ob.style.display='none'; unlockScroll();
   if (USER_ID) localStorage.setItem('natty_onb_popup_' + USER_ID, '1');
 }
 
@@ -3757,7 +3744,7 @@ async function verifierEtMontrerPopupConseils() {
   _pcState = {nbPlats:nbPlats, onbOk:onbOk, qaOk:qaOk};
   renderPopupConseils();
   lockScroll();
-  document.getElementById('popupConseils').classList.add('active');
+  var _pc=document.getElementById('popupConseils'); if(_pc) _pc.style.display='flex';
   console.log('[Popup] → Popup affiché');
 }
 function renderPopupConseils() {
@@ -3809,7 +3796,7 @@ async function pcActionClick() {
   else { if(window.self!==window.top) window.parent.postMessage({type:'demandeConnexion'},'*'); else window.location.href='/onboarding.html?token='+TOKEN; }
 }
 function closePopupConseils() {
-  document.getElementById('popupConseils').classList.remove('active'); unlockScroll();
+  var _pc=document.getElementById('popupConseils'); if(_pc) _pc.style.display='none'; unlockScroll();
   if (USER_ID) sessionStorage.setItem('natty_popup_session_' + USER_ID, '1');
 }
 
