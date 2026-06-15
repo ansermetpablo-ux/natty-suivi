@@ -3642,20 +3642,15 @@ function conseilsPopupVoir() {
 </script>
   <script>
     if ('serviceWorker' in navigator) {
-      // Désinscrire tous les SW existants pour forcer rechargement
+      // Désinscrire TOUS les SW — on n'utilise plus le cache SW en dev
       navigator.serviceWorker.getRegistrations().then(function(regs) {
-        regs.forEach(function(reg) {
-          reg.unregister();
-          console.log('SW unregistered');
-        });
+        regs.forEach(function(reg) { reg.unregister(); });
       });
+      // Ne pas réenregistrer le SW
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(r => {
-            console.log('SW registered');
-            // Forcer la mise à jour immédiate
-            r.update();
-          })
+        console.log('SW désactivé');
+        var dummy = { then: function(f){ f({update:function(){}}); return {catch:function(){}}; } };
+        dummy.then(function(r) { console.log('SW registered'); })
           .catch(e => console.log('SW error:', e));
       });
     }
