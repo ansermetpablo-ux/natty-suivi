@@ -1264,7 +1264,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Attendre 800ms au cas où Wix envoie le token via postMessage après le load
     setTimeout(function() {
       if (!USER_ID) afficherOnboardingCTA();
-    }, 1500);
+    }, 2000);
   }
 
   // Écouter le postMessage de Wix quand l'utilisateur se connecte
@@ -2185,6 +2185,7 @@ function afficherOnboardingCTA(){
   var _rdv = document.getElementById('rdvPlusBtn');
   if (_rdv && _rdv.closest('.rdv-mod')) _rdv.closest('.rdv-mod').style.display = 'none';
   var page=document.getElementById('pageSuivi');
+  if (!page) { setTimeout(afficherOnboardingCTA, 300); return; } // DOM pas encore prêt
   var cta=document.createElement('div');cta.className='ob-card';
   cta.innerHTML='<div class="ob-hero"><span class="ob-em">🥗</span><div class="ob-title">Commencez votre suivi</div><div class="ob-sub">Répondez à quelques questions pour personnaliser votre programme.</div></div>'
     +'<div class="ob-feats"><div class="ob-feat"><div class="ob-fic">🧑‍⚕️</div><div><div class="ob-ft">Nutritionniste personnel</div><div class="ob-fs">Dédié à vos objectifs</div></div></div>'
