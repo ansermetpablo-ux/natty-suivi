@@ -3296,7 +3296,7 @@ async function fetchProfilConseils() {
 
   try {
     var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID
-      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,liste_courses_json,recettes_json,conseils_json,semaine,generated_at&limit=1');
+      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,conseils_json,semaine,generated_at&limit=1');
 
     var lundi = getLundiSemaine();
 
@@ -3326,11 +3326,11 @@ async function fetchProfilConseils() {
           profilConseillsLoaded = true;
           return;
         } else {
-          // Conseils périmés → afficher les anciens puis régénérer en arrière-plan
+          // Conseils périmés → afficher les anciens + régénérer en arrière-plan
           window._conseilsCache = row;
           conseilsRenderColonnes(row);
           profilConseillsLoaded = true;
-          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 2000);
+          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 1500);
           return;
         }
       }
@@ -3663,11 +3663,11 @@ async function verifierEtMontrerPopupConseils() {
 
   if (!USER_ID) { console.log('[Popup] → STOP: pas de USER_ID'); return; }
 
-  // Guard session
+  // Guard session — skip only if conseils already fresh this session
   var sessionKey = 'natty_popup_session_' + USER_ID;
   var sessionDone = sessionStorage.getItem(sessionKey);
-  console.log('[Popup] Session guard:', sessionDone ? 'déjà montré cette session → stop' : 'pas encore montré');
-  if (sessionDone) return;
+  console.log('[Popup] Session guard:', sessionDone ? 'déjà vu' : 'pas encore');
+  // Don't return yet — check if conseils exist first
 
   // Vérifier conseils en base
   var conseilsEnBase = false;
@@ -3693,7 +3693,12 @@ async function verifierEtMontrerPopupConseils() {
           console.log('[Popup] → Conseils frais en base → pas de popup');
           return;
         } else {
-          console.log('[Popup] → Conseils périmés → afficher popup pour régénérer');
+          // Conseils périmés → régénérer silencieusement, pas de popup
+          window._conseilsCache = Object.assign(window._conseilsCache || {}, row);
+          sessionStorage.setItem(sessionKey, '1');
+          console.log('[Popup] → Conseils périmés → régénération silencieuse');
+          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 1000);
+          return;
         }
       } else {
         console.log('[Popup] → Ligne existe mais conseil_prot vide');
@@ -3750,7 +3755,7 @@ function renderPopupConseils() {
   else if (next.action==='questionnaire') { btn.textContent = 'Remplir le questionnaire'; btn.dataset.action = 'questionnaire'; }
   else { btn.textContent = 'Ajouter un repas ('+_pcState.nbPlats+'/3)'; btn.dataset.action = 'repas'; }
 }
-async function pcActionClick() {
+async async function pcActionClick() {
   var action = document.getElementById('pcActionBtn').dataset.action;
   if (action === 'generate') {
     // Générer les conseils maintenant
