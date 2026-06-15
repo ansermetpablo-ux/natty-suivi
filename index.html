@@ -1259,12 +1259,20 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputGalManu').addEventListener('change', function(){ previewPhoto(this,'prevManu'); photoManuFile=this.files[0]; });
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
-  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovProchainRepas','ovListeCourses','ovRecettes'].forEach(function(id){ document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
+  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', function(e){ if(e.target===this) closeOverlay(id); });
+  });
+  // Overlays dynamiques (générés au clic) — bind via delegation
+  ['ovProchainRepas','ovListeCourses','ovRecettes'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', function(e){ if(e.target===this) closeOverlay(id); });
+  });
   if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); }); } else {
     // Attendre 800ms au cas où Wix envoie le token via postMessage après le load
     setTimeout(function() {
       if (!USER_ID) afficherOnboardingCTA();
-    }, 2000);
+    }, 1500);
   }
 
   // Écouter le postMessage de Wix quand l'utilisateur se connecte
@@ -2185,7 +2193,7 @@ function afficherOnboardingCTA(){
   var _rdv = document.getElementById('rdvPlusBtn');
   if (_rdv && _rdv.closest('.rdv-mod')) _rdv.closest('.rdv-mod').style.display = 'none';
   var page=document.getElementById('pageSuivi');
-  if (!page) { setTimeout(afficherOnboardingCTA, 300); return; } // DOM pas encore prêt
+  if (!page) { setTimeout(afficherOnboardingCTA, 300); return; }
   var cta=document.createElement('div');cta.className='ob-card';
   cta.innerHTML='<div class="ob-hero"><span class="ob-em">🥗</span><div class="ob-title">Commencez votre suivi</div><div class="ob-sub">Répondez à quelques questions pour personnaliser votre programme.</div></div>'
     +'<div class="ob-feats"><div class="ob-feat"><div class="ob-fic">🧑‍⚕️</div><div><div class="ob-ft">Nutritionniste personnel</div><div class="ob-fs">Dédié à vos objectifs</div></div></div>'
@@ -3294,12 +3302,6 @@ async function fetchProfilConseils() {
   }
 
   // Guard: si déjà chargés cette session → ne pas régénérer
-  if (sessionStorage.getItem('natty_conseils_ok_' + USER_ID)) {
-    profilConseillsLoaded = true;
-    return;
-  }
-
-  // Guard: déjà chargés cette session → pas de regénération
   if (sessionStorage.getItem('natty_conseils_ok_' + USER_ID)) {
     profilConseillsLoaded = true;
     return;
