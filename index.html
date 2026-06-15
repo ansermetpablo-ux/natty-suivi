@@ -3256,18 +3256,7 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
     return m.name + ' — prot:' + mac.p + 'g gluc:' + mac.g + 'g lip:' + mac.l + 'g cal:' + mac.c + 'kcal';
   }).join(' | ');
 
-  var prompt = 'Tu es nutritionniste expert. Analyse les données de ce client et génère 6 conseils courts et actionnables.'
-    + '\nProfil: ' + (ob.prenom || 'Client') + ', ' + (ob.age || '?') + ' ans, ' + (ob.sexe || '?') + ', ' + (ob.poids || '?') + 'kg, ' + (ob.taille || '?') + 'cm'
-    + ', activité: ' + (ob.activite || '?') + ', objectif: ' + (ob.objectif_type || '?')
-    + '\nObjectifs macros: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal'
-    + '\nRepas récents: ' + (mealsDesc || 'aucun repas enregistré')
-    + '\n\nGénère exactement ce JSON (sans backticks, sans commentaires):'
-    + '\n{"conseil_prot":"1 phrase sur les protéines de ce client",'
-    + '"conseil_gluc":"1 phrase sur les glucides",'
-    + '"conseil_lip":"1 phrase sur les lipides",'
-    + '"conseil_cal":"1 phrase sur les calories",'
-    + '"conseil_amelioration":"1-2 phrases sur ce qu\'il peut améliorer cette semaine",'
-    + '"conseil_points_forts":"1-2 phrases sur ses points forts nutritionnels"}';
+  var prompt = 'Tu es nutritionniste expert. Profil: ' + (ob.prenom||'Client') + ', ' + (ob.age||'?') + ' ans, ' + (ob.sexe||'?') + ', ' + (ob.poids||'?') + 'kg, ' + (ob.taille||'?') + 'cm, activite: ' + (ob.activite||'?') + ', objectif: ' + (ob.objectif_type||'?') + '. Objectifs macros: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal. Repas recents: ' + (mealsDesc||'aucun repas enregistre') + '. Genere exactement ce JSON sans backticks: {"conseil_prot":"1 phrase proteines","conseil_gluc":"1 phrase glucides","conseil_lip":"1 phrase lipides","conseil_cal":"1 phrase calories","conseil_amelioration":"1-2 phrases amelioration","conseil_points_forts":"1-2 phrases points forts"}';
 
   try {
     var res = await fetch(CLAUDE_API, {
@@ -3551,9 +3540,25 @@ function renderPopupConseils() {
   else if (next.action==='questionnaire') { btn.textContent = 'Remplir le questionnaire'; btn.dataset.action = 'questionnaire'; }
   else { btn.textContent = 'Ajouter un repas ('+_pcState.nbPlats+'/3)'; btn.dataset.action = 'repas'; }
 }
-function pcActionClick() {
+async function pcActionClick() {
   var action = document.getElementById('pcActionBtn').dataset.action;
-  if (action==='generate') { closePopupConseils(); openProfilOverlay(); }
+  if (action === 'generate') {
+    // Générer les conseils maintenant
+    var btn = document.getElementById('pcActionBtn');
+    btn.disabled = true;
+    btn.textContent = 'Génération en cours...';
+    try {
+      await conseilsGenererEtSauvegarder(false);
+      closePopupConseils();
+      // Ouvrir le profil pour voir les conseils
+      openProfilOverlay();
+      showToast('Vos conseils sont prêts ! ✨', 'ok');
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = 'Générer mes conseils';
+      showToast('Erreur lors de la génération', 'err');
+    }
+  }
   else if (action==='questionnaire') { closePopupConseils(); window.location.href='/questionnaire-alim.html?token='+TOKEN; }
   else if (action==='repas') { closePopupConseils(); openRepasOverlay(); }
   else { if(window.self!==window.top) window.parent.postMessage({type:'demandeConnexion'},'*'); else window.location.href='/onboarding.html?token='+TOKEN; }
