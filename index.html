@@ -1558,12 +1558,19 @@ function openMacroPopup(type) {
           cont.innerHTML = renderMacroConseilCard(r[0][key], cfg, PLATS_DEMO_MACRO[type]||[]);
         } else {
           cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>'
-            + '<div style="font-size:14px;font-weight:600;color:var(--black);margin-bottom:6px;">Conseils disponibles chaque lundi</div>'
-            + '<div style="font-size:13px;color:var(--muted);">Votre analyse hebdomadaire sera générée automatiquement et vous sera envoyée par email.</div></div>';
+            + '<div style="font-size:14px;font-weight:600;color:var(--black);margin-bottom:6px;">Génération en cours...</div>'
+            + '<div style="font-size:13px;color:var(--muted);">Vos conseils personnalisés arrivent.</div></div>';
+          // Générer si pas encore fait
+          conseilsGenererEtSauvegarder(false).then(function(){
+            var cache2 = window._conseilsCache;
+            if (cache2 && cache2[key]) {
+              cont.innerHTML = renderMacroConseilCard(cache2[key], cfg, PLATS_DEMO_MACRO[type]||[]);
+            }
+          }).catch(function(){});
         }
       })
       .catch(function() {
-        cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>Revenez lundi pour vos conseils personnalisés.</div>';
+        cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">⏳</span>Génération impossible. Réessayez.</div>';
       });
   }
 }
@@ -1636,13 +1643,17 @@ function openAnalyseOverlay(type) {
           window._conseilsCache = Object.assign(window._conseilsCache||{}, r[0]);
           cont.innerHTML = renderConseilAnalyse(r[0][key], isForts);
         } else {
-          cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>'
-            + '<div style="font-size:14px;font-weight:600;color:var(--black);margin-bottom:6px;">Disponible chaque lundi</div>'
-            + '<div style="font-size:13px;color:var(--muted);">Votre analyse hebdomadaire est générée automatiquement.</div></div>';
+          // Générer si pas encore fait
+        cont.innerHTML = '<div class="mc-no-conseil"><div class="profil-spinner" style="margin:0 auto 10px;"></div><div style="font-size:13px;color:var(--muted);">Génération en cours...</div></div>';
+        conseilsGenererEtSauvegarder(false).then(function(){
+          var cache2 = window._conseilsCache;
+          if (cache2 && cache2[key]) cont.innerHTML = renderConseilAnalyse(cache2[key], isForts);
+          else cont.innerHTML = '<div class="mc-no-conseil">Analyse non disponible.</div>';
+        }).catch(function(){ cont.innerHTML = '<div class="mc-no-conseil">Erreur. Réessayez.</div>'; });
         }
       })
       .catch(function() {
-        cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>Revenez lundi.</div>';
+        cont.innerHTML = '<div class="mc-no-conseil">Erreur. Reessayez.</div>';
       });
   }
 }
@@ -3255,50 +3266,62 @@ async function conseilsPreload() {
 }
 
 async function fetchProfilConseils() {
-  if (profilConseillsLoaded) return; // Déjà affiché cette session → stop absolu
+  if (profilConseillsLoaded) return;
   if (!USER_ID) return;
   var cont = document.getElementById('profilConseilsCont');
+  if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Chargement...</div>';
+
   try {
     var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID
       + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,liste_courses_json,recettes_json,conseils_json,semaine,generated_at&limit=1');
+
+    var lundi = getLundiSemaine();
+
     if (cached && cached.length) {
       var row = cached[0];
-      var hasNew = row.conseil_prot || row.conseil_amelioration || row.conseil_points_forts;
-      // Migration ancien format JSON si nécessaire
-      if (!hasNew && row.conseils_json) {
+      // Migration ancien format
+      if (!row.conseil_prot && row.conseils_json) {
         try {
           var old = JSON.parse(row.conseils_json);
           if (Array.isArray(old) && old.length) {
-            row.conseil_amelioration = old[0] ? (old[0].titre + ' — ' + old[0].desc) : null;
-            row.conseil_points_forts = old[1] ? (old[1].titre + ' — ' + old[1].desc) : null;
-            row.conseil_prot  = old[2] ? (old[2].titre + ' — ' + old[2].desc) : null;
-            row.conseil_gluc  = old[3] ? (old[3].titre + ' — ' + old[3].desc) : null;
-            hasNew = true;
+            row.conseil_amelioration = old[0] ? old[0].titre + ' - ' + old[0].desc : null;
+            row.conseil_points_forts = old[1] ? old[1].titre + ' - ' + old[1].desc : null;
+            row.conseil_prot = old[2] ? old[2].titre + ' - ' + old[2].desc : null;
+            row.conseil_gluc = old[3] ? old[3].titre + ' - ' + old[3].desc : null;
           }
         } catch(e) {}
       }
-      if (hasNew) {
-        window._conseilsCache = row;
-        conseilsRenderColonnes(row);
-        profilConseillsLoaded = true;
-        // Régénérer SEULEMENT si semaine périmée, silencieux, sans bloquer
-        var lundi = getLundiSemaine();
-        var semOK = row.semaine && row.semaine === lundi;
-        var ageOK = !row.semaine && row.generated_at && (Date.now() - new Date(row.generated_at).getTime()) < 7*24*3600*1000;
-        if (!semOK && !ageOK) {
-          // Semaine périmée → régénérer en arrière-plan après 5s
-          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 5000);
+
+      if (row.conseil_prot) {
+        var semOK = row.semaine === lundi;
+        var ageOK = row.generated_at && (Date.now() - new Date(row.generated_at).getTime()) < 7*24*3600*1000;
+
+        if (semOK || ageOK) {
+          // Conseils frais → afficher directement
+          window._conseilsCache = row;
+          conseilsRenderColonnes(row);
+          profilConseillsLoaded = true;
+          return;
+        } else {
+          // Conseils périmés → afficher les anciens puis régénérer en arrière-plan
+          window._conseilsCache = row;
+          conseilsRenderColonnes(row);
+          profilConseillsLoaded = true;
+          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 2000);
+          return;
         }
-        return;
       }
     }
-  } catch(e) { console.warn('fetchProfilConseils:', e); }
-  // Rien en base → NE PAS générer ici. Le popup verifierEtMontrerPopupConseils s'en charge.
-  if (cont) cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">'
-    + '<div style="font-size:36px;margin-bottom:10px;">📅</div>'
-    + '<div style="font-weight:600;color:var(--black);margin-bottom:6px;">Vos conseils hebdomadaires</div>'
-    + '<div>Cliquez sur <strong>Obtenir mes conseils</strong> pour générer votre analyse personnalisée.</div>'
-    + '</div>';
+
+    // Aucun conseil en base → générer maintenant
+    if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de vos conseils personnalisés...</div>';
+    await conseilsGenererEtSauvegarder(false);
+    profilConseillsLoaded = true;
+
+  } catch(e) {
+    console.warn('fetchProfilConseils:', e);
+    if (cont) cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Erreur de chargement. Réessayez.</div>';
+  }
 }
 
 async function conseilsGenererEtSauvegarder(silentRefresh) {
@@ -3710,7 +3733,19 @@ async function ouvrirListeCourses() {
       document.getElementById('listeCoursesCont').innerHTML = '<div class="mc-no-conseil">Erreur de lecture.</div>';
     }
   } else {
-    document.getElementById('listeCoursesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Disponible chaque lundi</div><div style="font-size:13px;color:var(--muted);">Votre liste de courses est générée automatiquement avec vos conseils hebdomadaires.</div></div>';
+    // Pas de liste en base → générer maintenant
+    document.getElementById('listeCoursesCont').innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de votre liste...</div>';
+    conseilsGenererEtSauvegarder(false).then(async function(){
+      var r2 = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=liste_courses_json&limit=1').catch(function(){return null;});
+      var stored2 = r2 && r2.length ? r2[0].liste_courses_json : null;
+      if (stored2) {
+        if (window._conseilsCache) window._conseilsCache.liste_courses_json = stored2;
+        _listeCourseCache = null;
+        ouvrirListeCourses();
+      } else {
+        document.getElementById('listeCoursesCont').innerHTML = '<div class="mc-no-conseil">Erreur. Reessayez.</div>';
+      }
+    }).catch(function(){ document.getElementById('listeCoursesCont').innerHTML = '<div class="mc-no-conseil">Erreur. Reessayez.</div>'; });
   }
 }
 
@@ -3759,7 +3794,19 @@ async function ouvrirRecettes() {
       document.getElementById('recettesCont').innerHTML = '<div class="mc-no-conseil">Erreur de lecture.</div>';
     }
   } else {
-    document.getElementById('recettesCont').innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span><div style="font-size:14px;font-weight:600;margin-bottom:6px;">Disponible chaque lundi</div><div style="font-size:13px;color:var(--muted);">Vos recettes sont générées automatiquement avec vos conseils hebdomadaires.</div></div>';
+    // Pas de recettes en base → générer maintenant
+    document.getElementById('recettesCont').innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de vos recettes...</div>';
+    conseilsGenererEtSauvegarder(false).then(async function(){
+      var r3 = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=recettes_json&limit=1').catch(function(){return null;});
+      var stored3 = r3 && r3.length ? r3[0].recettes_json : null;
+      if (stored3) {
+        if (window._conseilsCache) window._conseilsCache.recettes_json = stored3;
+        _recettesCache = null;
+        ouvrirRecettes();
+      } else {
+        document.getElementById('recettesCont').innerHTML = '<div class="mc-no-conseil">Erreur. Reessayez.</div>';
+      }
+    }).catch(function(){ document.getElementById('recettesCont').innerHTML = '<div class="mc-no-conseil">Erreur. Reessayez.</div>'; });
   }
 }
 
