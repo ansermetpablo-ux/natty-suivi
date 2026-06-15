@@ -492,10 +492,26 @@ input[type="file"] { display:none; }
 .onb-bar-fill { height:100%; border-radius:2px; transition:width 1.2s ease; }
 
 /* ── PROCHAINS REPAS ── */
-.pr-slot { flex:1; background:var(--bg); border-radius:14px; padding:12px 8px; text-align:center; cursor:pointer; box-shadow:var(--so); border:2px solid transparent; transition:all .15s; }
-.pr-slot.on { box-shadow:var(--si); border-color:var(--green); }
-.pr-formule { background:var(--bg); border-radius:16px; padding:16px 12px; text-align:center; cursor:pointer; box-shadow:var(--so); border:2px solid transparent; transition:all .15s; }
-.pr-formule.on { box-shadow:var(--si); border-color:var(--black); }
+.pr-slot.on { box-shadow:var(--si) !important; border-color:var(--green) !important; background:var(--bg); }
+.pr-formule.on { box-shadow:var(--si) !important; border-color:var(--black) !important; }
+.pr-filter.active { background:var(--black) !important; color:#fff !important; }
+.pr-jour { min-width:52px; padding:10px 6px; border-radius:14px; text-align:center; cursor:pointer; background:var(--bg); box-shadow:var(--so); border:2px solid transparent; transition:all .15s; flex-shrink:0; }
+.pr-jour.on { border-color:var(--black); box-shadow:var(--si); }
+.pr-jour-name { font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; margin-bottom:4px; }
+.pr-jour-num { font-size:18px; font-weight:800; color:var(--black); line-height:1; }
+.pr-jour-mois { font-size:9px; color:var(--muted); margin-top:2px; }
+.pr-sel-item { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:.5px solid rgba(174,174,192,0.2); }
+.pr-sel-em { font-size:16px; }
+.plat-menu-card { display:flex; align-items:center; gap:12px; background:var(--bg); border-radius:16px; padding:12px; box-shadow:var(--sm); border:2px solid transparent; transition:all .15s; }
+.plat-menu-card.selected { border-color:var(--green); }
+.plat-menu-photo { width:48px; height:48px; border-radius:12px; background:var(--bg); box-shadow:var(--sm); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; overflow:hidden; }
+.plat-menu-info { flex:1; min-width:0; }
+.plat-menu-name { font-size:13px; font-weight:600; color:var(--black); margin-bottom:3px; }
+.plat-menu-desc { font-size:11px; color:var(--muted); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.plat-menu-macros { display:flex; gap:5px; flex-wrap:wrap; }
+.plat-mac-chip { font-size:10px; background:rgba(174,174,192,0.12); border-radius:99px; padding:2px 7px; color:var(--muted); }
+.plat-menu-check { width:32px; height:32px; border-radius:50%; background:var(--bg); border:none; box-shadow:var(--sm); font-size:14px; font-weight:700; cursor:pointer; color:var(--muted); flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.plat-menu-card.selected .plat-menu-check { background:var(--green); color:#fff; }
 .pr-filter { padding:7px 14px; border-radius:99px; background:var(--bg); box-shadow:var(--so); font-family:'Inter',sans-serif; font-size:12px; font-weight:600; cursor:pointer; color:var(--muted); border:none; white-space:nowrap; transition:all .15s; }
 .pr-filter.active { background:var(--black); color:#fff; box-shadow:2px 2px 6px rgba(26,26,46,0.3); }
 .pr-jour { display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px; background:var(--bg); border-radius:12px; cursor:pointer; box-shadow:var(--so); border:2px solid transparent; transition:all .15s; }
@@ -707,13 +723,37 @@ html.no-scroll {
   overscroll-behavior: contain !important;
   max-height: 92vh;
 }
-/* Les overlays bloquent le touch du fond */
-.overlay.active, #profilOverlay.active {
-  touch-action: none;
-}
-.overlay.active > .sheet, #profilOverlay.active > #profilSheet {
+/* Les overlays — scroll uniquement dans le sheet */
+.overlay.active > .sheet, #profilOverlay > #profilSheet {
   touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
+
+/* ── POPUP STEPS ── */
+.pc-popup-step { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--bg); border-radius:16px; box-shadow:var(--sm); }
+.pc-step-num { width:28px; height:28px; border-radius:50%; background:rgba(174,174,192,0.3); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--muted); flex-shrink:0; }
+.pc-step-num.done { background:var(--green); color:#fff; }
+.pc-step-title { font-size:13px; font-weight:600; color:var(--black); }
+.pc-step-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+.pc-step-badge { font-size:10px; font-weight:700; background:#e8f9ee; color:#2a9e4f; padding:3px 9px; border-radius:99px; }
+
+/* ── PROFIL CONSEIL CARD ── */
+.profil-conseil-card-rich { background:var(--bg); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:var(--sm); }
+.pccr-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.pccr-color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.pccr-theme { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; }
+.pccr-title { font-size:13px; font-weight:600; color:var(--black); margin-bottom:6px; }
+.pccr-desc { font-size:13px; color:var(--text); line-height:1.5; margin-bottom:10px; }
+.pccr-aliments { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.pccr-aliment { display:flex; align-items:center; gap:4px; background:rgba(174,174,192,0.12); border-radius:99px; padding:4px 10px; }
+.pccr-aliment-em { font-size:14px; }
+.pccr-aliment-nom { font-size:11px; font-weight:500; color:var(--black); }
+.pccr-recettes { display:flex; flex-wrap:wrap; gap:6px; }
+.pccr-recette-chip { font-size:11px; background:var(--black); color:#fff; border-radius:99px; padding:4px 10px; }
+.profil-loading { display:flex; align-items:center; gap:10px; padding:24px; color:var(--muted); font-size:13px; }
+.profil-spinner { width:20px; height:20px; border:2px solid rgba(174,174,192,0.3); border-top-color:#34c759; border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+#onbD0.active, #onbD1.active, #onbD2.active, #onbD3.active { background:var(--black) !important; }
 
 </style>
 </head>
@@ -979,6 +1019,7 @@ html.no-scroll {
   <div class="overlay" id="ovPersoSetup">
     <div class="sheet">
       <div class="sheet-handle"></div>
+      <button onclick="closeOverlay('ovPersoSetup')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-bottom:14px;">← Retour</button>
       <div style="font-size:20px;font-weight:800;margin-bottom:4px;">Nouveau challenge</div>
       <div style="font-size:13px;color:#8e8e93;margin-bottom:20px;">Définissez votre objectif et la durée</div>
       <label class="ps-label">Type d'objectif</label>
@@ -1008,6 +1049,7 @@ html.no-scroll {
   <div class="overlay" id="ovDuoSetup">
     <div class="sheet">
       <div class="sheet-handle"></div>
+      <button onclick="closeOverlay('ovDuoSetup')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-bottom:14px;">← Retour</button>
       <div style="font-size:20px;font-weight:800;margin-bottom:20px;">Challenge Duo</div>
       <label class="ps-label">Inviter par email</label>
       <div class="duo-search">
@@ -1032,6 +1074,7 @@ html.no-scroll {
   <div class="overlay" id="ovEntSetup">
     <div class="sheet">
       <div class="sheet-handle"></div>
+      <button onclick="closeOverlay('ovEntSetup')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-bottom:14px;">← Retour</button>
       <div style="font-size:20px;font-weight:800;margin-bottom:20px;">Rejoindre un challenge</div>
       <label class="ps-label">Entreprise</label>
       <input class="ps-inp" type="text" id="entNom" placeholder="Nom de votre entreprise">
@@ -1051,6 +1094,9 @@ html.no-scroll {
 <div class="overlay" id="ovMacro">
   <div class="sheet">
     <div class="sheet-handle"></div>
+
+    <!-- Bouton retour -->
+    <button onclick="closeOverlay('ovMacro')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-bottom:14px;">← Retour</button>
 
     <!-- Header macro -->
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
@@ -1087,6 +1133,7 @@ html.no-scroll {
 <div class="overlay" id="ovAnalyse">
   <div class="sheet">
     <div class="sheet-handle"></div>
+    <button onclick="closeOverlay('ovAnalyse')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-bottom:14px;">← Retour</button>
     <div style="font-size:22px;font-weight:800;margin-bottom:4px;" id="analyseTitle">Analyse</div>
     <div style="font-size:13px;color:#8e8e93;margin-bottom:18px;" id="analyseSub">Basée sur vos repas</div>
     <div id="analyseCont"><div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Analyse...</div></div>
@@ -1172,6 +1219,364 @@ html.no-scroll {
   </div>
 </div>
 
+<!-- ══ PROFIL OVERLAY ══ -->
+<div id="profilOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;overflow:hidden;">
+  <div id="profilSheet" style="background:var(--bg);border-radius:28px 28px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:slideUp .3s cubic-bezier(.32,.72,0,1);padding:0 20px 52px;">
+    <div class="sheet-handle"></div>
+    <!-- Bouton retour accueil -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <button onclick="closeProfilOverlay()" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:9px 14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;color:var(--black);cursor:pointer;box-shadow:var(--sm);">← Retour</button>
+      <div style="font-size:16px;font-weight:800;color:var(--black);">Mon profil</div>
+      <div style="width:80px;"></div>
+    </div>
+
+    <!-- Score ring -->
+    <div style="display:flex;flex-direction:column;align-items:center;background:var(--bg);border-radius:22px;padding:20px;margin-bottom:16px;box-shadow:var(--so);">
+      <div style="position:relative;width:160px;height:160px;margin-bottom:12px;">
+        <svg viewBox="0 0 160 160" width="160" height="160" style="transform:rotate(-90deg);position:absolute;inset:0;">
+          <circle cx="80" cy="80" r="65" fill="none" stroke="rgba(174,174,192,0.22)" stroke-width="10"/>
+          <circle cx="80" cy="80" r="65" fill="none" stroke="#34c759" stroke-width="10" stroke-linecap="round" id="psrArc" stroke-dasharray="0 408" style="transition:stroke-dasharray 1.2s ease;"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+          <div style="font-size:40px;font-weight:800;color:var(--black);letter-spacing:-2px;" id="psrPct">–</div>
+          <div style="font-size:10px;color:var(--muted);">Score nutritionnel</div>
+          <div style="font-size:10px;font-weight:600;padding:3px 12px;border-radius:99px;margin-top:3px;" id="psrBadge">–</div>
+        </div>
+      </div>
+      <!-- Macros objectifs -->
+      <div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="background:var(--bg);border-radius:14px;padding:12px;box-shadow:var(--si);">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🥩 Protéines obj.</div>
+          <div style="font-size:20px;font-weight:800;color:var(--black);" id="pmProt">–</div>
+          <div style="height:4px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:6px;overflow:hidden;"><div style="height:100%;border-radius:2px;background:#ff6b35;width:0%;transition:width 1s;" id="pbProt"></div></div>
+        </div>
+        <div style="background:var(--bg);border-radius:14px;padding:12px;box-shadow:var(--si);">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🌾 Glucides obj.</div>
+          <div style="font-size:20px;font-weight:800;color:var(--black);" id="pmGluc">–</div>
+          <div style="height:4px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:6px;overflow:hidden;"><div style="height:100%;border-radius:2px;background:#ff9500;width:0%;transition:width 1s;" id="pbGluc"></div></div>
+        </div>
+        <div style="background:var(--bg);border-radius:14px;padding:12px;box-shadow:var(--si);">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">🥑 Lipides obj.</div>
+          <div style="font-size:20px;font-weight:800;color:var(--black);" id="pmLip">–</div>
+          <div style="height:4px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:6px;overflow:hidden;"><div style="height:100%;border-radius:2px;background:#7b5ea7;width:0%;transition:width 1s;" id="pbLip"></div></div>
+        </div>
+        <div style="background:var(--bg);border-radius:14px;padding:12px;box-shadow:var(--si);">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">⚡ Calories obj.</div>
+          <div style="font-size:20px;font-weight:800;color:var(--black);" id="pmCal">–</div>
+          <div style="height:4px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:6px;overflow:hidden;"><div style="height:100%;border-radius:2px;background:#34c759;width:0%;transition:width 1s;" id="pbCal"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Infos profil -->
+    <div style="background:var(--bg);border-radius:22px;padding:18px;margin-bottom:16px;box-shadow:var(--so);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:15px;font-weight:700;color:var(--black);">Informations</div>
+        <button id="profilEditBtn" onclick="profilToggleEdit()" style="background:var(--bg);border:none;border-radius:10px;padding:7px 12px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);box-shadow:var(--sm);">✏️ Modifier</button>
+      </div>
+      <div id="profilInfoDisplay" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;"><span style="font-size:13px;color:var(--muted);">Poids</span><span style="font-size:13px;font-weight:600;color:var(--black);" id="piPoids">–</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="font-size:13px;color:var(--muted);">Taille</span><span style="font-size:13px;font-weight:600;color:var(--black);" id="piTaille">–</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="font-size:13px;color:var(--muted);">Objectif</span><span style="font-size:13px;font-weight:600;color:var(--black);" id="piObjectif">–</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="font-size:13px;color:var(--muted);">Activité</span><span style="font-size:13px;font-weight:600;color:var(--black);" id="piActivite">–</span></div>
+      </div>
+      <div id="profilInfoEdit" style="display:none;flex-direction:column;gap:10px;">
+        <label style="font-size:12px;color:var(--muted);">Poids (kg)</label>
+        <input id="editPoids" type="number" style="background:var(--bg);border:none;border-radius:12px;padding:12px;font-family:'Inter',sans-serif;font-size:14px;box-shadow:var(--si);outline:none;color:var(--black);" placeholder="70">
+        <label style="font-size:12px;color:var(--muted);">Taille (cm)</label>
+        <input id="editTaille" type="number" style="background:var(--bg);border:none;border-radius:12px;padding:12px;font-family:'Inter',sans-serif;font-size:14px;box-shadow:var(--si);outline:none;color:var(--black);" placeholder="175">
+        <label style="font-size:12px;color:var(--muted);">Objectif</label>
+        <select id="editObjectif" style="background:var(--bg);border:none;border-radius:12px;padding:12px;font-family:'Inter',sans-serif;font-size:14px;box-shadow:var(--si);outline:none;color:var(--black);">
+          <option value="perte_poids">Perte de poids</option>
+          <option value="prise_masse">Prise de masse</option>
+          <option value="maintien">Maintien</option>
+          <option value="performance">Performance</option>
+          <option value="bien_etre">Bien-être</option>
+        </select>
+        <label style="font-size:12px;color:var(--muted);">Niveau d'activité</label>
+        <select id="editActivite" style="background:var(--bg);border:none;border-radius:12px;padding:12px;font-family:'Inter',sans-serif;font-size:14px;box-shadow:var(--si);outline:none;color:var(--black);">
+          <option value="sedentaire">Sédentaire</option>
+          <option value="leger">Légèrement actif</option>
+          <option value="modere">Modérément actif</option>
+          <option value="actif">Très actif</option>
+          <option value="extreme">Extrêmement actif</option>
+        </select>
+        <button onclick="profilSaveInfo()" style="background:var(--black);color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">Enregistrer</button>
+      </div>
+    </div>
+
+    <!-- Conseils IA -->
+    <div style="background:var(--bg);border-radius:22px;padding:18px;margin-bottom:16px;box-shadow:var(--so);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:15px;font-weight:700;color:var(--black);">Conseils personnalisés</div>
+        <button id="conseilsRefreshBtn" onclick="conseilsForceRefresh()" style="background:var(--bg);border:none;border-radius:10px;padding:7px 12px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;color:var(--muted);box-shadow:var(--sm);">↻</button>
+      </div>
+      <div id="profilConseilsCont"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Chargement des conseils...</div></div>
+      <div id="conseilsDateFooter" style="display:none;font-size:11px;color:var(--muted);text-align:center;margin-top:10px;"></div>
+    </div>
+
+    <!-- Accès rapides -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <button onclick="closeProfilOverlay();ouvrirListeCourses();" style="background:var(--bg);border:none;border-radius:18px;padding:16px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--black);cursor:pointer;box-shadow:var(--so);display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <span style="font-size:24px;">🛒</span>Liste de courses
+      </button>
+      <button onclick="closeProfilOverlay();ouvrirRecettes();" style="background:var(--bg);border:none;border-radius:18px;padding:16px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--black);cursor:pointer;box-shadow:var(--so);display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <span style="font-size:24px;">👨‍🍳</span>Mes recettes
+      </button>
+    </div>
+
+    <button class="close-btn" onclick="closeProfilOverlay()">← Retour à l'accueil</button>
+  </div>
+</div>
+
+<!-- ══ POPUP ONBOARDING ══ -->
+<div id="onbPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(12px);z-index:400;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg);border-radius:28px;padding:24px 20px 28px;width:100%;max-width:400px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <!-- Slides track -->
+    <div style="overflow:hidden;margin-bottom:20px;">
+      <div id="onbTrack" style="display:flex;transition:transform .35s cubic-bezier(.32,.72,0,1);">
+        <!-- Slide 0 : Score -->
+        <div style="min-width:100%;padding:0 4px;">
+          <div style="text-align:center;margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Votre score nutritionnel</div>
+            <div style="position:relative;width:100px;height:100px;margin:0 auto 14px;">
+              <svg viewBox="0 0 100 100" width="100" height="100" style="transform:rotate(-90deg);">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(174,174,192,0.25)" stroke-width="8"/>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#34c759" stroke-width="8" stroke-linecap="round" id="onbR0" stroke-dasharray="0 251" style="transition:stroke-dasharray 1.2s ease;"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:var(--black);" id="onbScore">–</div>
+            </div>
+            <div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:8px;">Suivez vos macros en temps réel</div>
+            <div style="font-size:13px;color:var(--muted);">Protéines, glucides, lipides — tout en un coup d'oeil.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;"><div style="font-size:13px;color:var(--muted);width:24px;">🥩</div><div style="flex:1;height:6px;background:var(--bg);border-radius:3px;box-shadow:var(--si);overflow:hidden;"><div id="onbPb" style="height:100%;background:#ff6b35;width:0%;border-radius:3px;transition:width 1s .15s;"></div></div><div id="onbPv" style="font-size:11px;color:var(--muted);width:50px;text-align:right;">–</div></div>
+            <div style="display:flex;align-items:center;gap:10px;"><div style="font-size:13px;color:var(--muted);width:24px;">🌾</div><div style="flex:1;height:6px;background:var(--bg);border-radius:3px;box-shadow:var(--si);overflow:hidden;"><div id="onbGb" style="height:100%;background:#ff9500;width:0%;border-radius:3px;transition:width 1s .35s;"></div></div><div id="onbGv" style="font-size:11px;color:var(--muted);width:50px;text-align:right;">–</div></div>
+            <div style="display:flex;align-items:center;gap:10px;"><div style="font-size:13px;color:var(--muted);width:24px;">🥑</div><div style="flex:1;height:6px;background:var(--bg);border-radius:3px;box-shadow:var(--si);overflow:hidden;"><div id="onbLb" style="height:100%;background:#7b5ea7;width:0%;border-radius:3px;transition:width 1s .55s;"></div></div><div id="onbLv" style="font-size:11px;color:var(--muted);width:50px;text-align:right;">–</div></div>
+          </div>
+        </div>
+        <!-- Slide 1 : IA -->
+        <div style="min-width:100%;padding:0 4px;text-align:center;">
+          <div style="background:var(--black);border-radius:20px;padding:20px;margin-bottom:16px;">
+            <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px;">IA Nutrition</div>
+            <div id="onbAiChips" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:10px;"></div>
+            <div id="onbAiTxt" style="font-size:13px;color:rgba(255,255,255,.7);">Analyse en cours...</div>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:8px;">Analysez vos repas avec l'IA</div>
+          <div style="font-size:13px;color:var(--muted);">Photo ou saisie manuelle — les macros calculées instantanément.</div>
+        </div>
+        <!-- Slide 2 : Conseils -->
+        <div style="min-width:100%;padding:0 4px;text-align:center;">
+          <div style="background:var(--black);border-radius:20px;padding:20px;margin-bottom:16px;min-height:80px;display:flex;align-items:center;justify-content:center;">
+            <div id="onbConseil" style="font-size:13px;color:rgba(255,255,255,.85);transition:opacity .2s;">Chargement...</div>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:8px;">Conseils hebdomadaires IA</div>
+          <div style="font-size:13px;color:var(--muted);">Un nutritionniste IA analyse vos repas chaque semaine.</div>
+        </div>
+        <!-- Slide 3 : Progression -->
+        <div style="min-width:100%;padding:0 4px;text-align:center;">
+          <div style="display:flex;justify-content:space-around;margin-bottom:16px;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="position:relative;width:66px;height:66px;">
+                <svg viewBox="0 0 66 66" width="66" height="66" style="transform:rotate(-90deg);">
+                  <circle cx="33" cy="33" r="28" fill="none" stroke="rgba(174,174,192,0.2)" stroke-width="6"/>
+                  <circle cx="33" cy="33" r="28" fill="none" stroke="#ff6b35" stroke-width="6" stroke-linecap="round" id="onbDp1" stroke-dasharray="0 176" style="transition:stroke-dasharray 1s ease;"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--black);" id="onbDp1t">–</div>
+              </div>
+              <div style="font-size:10px;color:var(--muted);">Protéines</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="position:relative;width:66px;height:66px;">
+                <svg viewBox="0 0 66 66" width="66" height="66" style="transform:rotate(-90deg);">
+                  <circle cx="33" cy="33" r="28" fill="none" stroke="rgba(174,174,192,0.2)" stroke-width="6"/>
+                  <circle cx="33" cy="33" r="28" fill="none" stroke="#ff9500" stroke-width="6" stroke-linecap="round" id="onbDp2" stroke-dasharray="0 176" style="transition:stroke-dasharray 1s ease .2s;"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--black);" id="onbDp2t">–</div>
+              </div>
+              <div style="font-size:10px;color:var(--muted);">Glucides</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="position:relative;width:66px;height:66px;">
+                <svg viewBox="0 0 66 66" width="66" height="66" style="transform:rotate(-90deg);">
+                  <circle cx="33" cy="33" r="28" fill="none" stroke="rgba(174,174,192,0.2)" stroke-width="6"/>
+                  <circle cx="33" cy="33" r="28" fill="none" stroke="#7b5ea7" stroke-width="6" stroke-linecap="round" id="onbDp3" stroke-dasharray="0 176" style="transition:stroke-dasharray 1s ease .4s;"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--black);" id="onbDp3t">–</div>
+              </div>
+              <div style="font-size:10px;color:var(--muted);">Lipides</div>
+            </div>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:8px;">Suivez votre progression</div>
+          <div style="font-size:13px;color:var(--muted);">Graphiques et tendances sur 7j, 30j, 90 jours.</div>
+        </div>
+      </div>
+    </div>
+    <!-- Dots -->
+    <div style="display:flex;justify-content:center;gap:6px;margin-bottom:20px;">
+      <div id="onbD0" class="active" style="width:8px;height:8px;border-radius:50%;background:var(--black);transition:background .2s;"></div>
+      <div id="onbD1" style="width:8px;height:8px;border-radius:50%;background:rgba(174,174,192,.4);transition:background .2s;"></div>
+      <div id="onbD2" style="width:8px;height:8px;border-radius:50%;background:rgba(174,174,192,.4);transition:background .2s;"></div>
+      <div id="onbD3" style="width:8px;height:8px;border-radius:50%;background:rgba(174,174,192,.4);transition:background .2s;"></div>
+    </div>
+    <button id="onbNextBtn" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Suite ›</button>
+    <button onclick="closeOnbPopup()" style="width:100%;padding:12px;background:none;border:none;font-family:'Inter',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px;">Passer</button>
+  </div>
+</div>
+
+<!-- ══ POPUP PREMIERS CONSEILS ══ -->
+<div id="popupConseils" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(12px);z-index:500;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg);border-radius:28px;padding:24px 20px 28px;width:100%;max-width:400px;">
+    <!-- Bouton retour -->
+    <div style="display:flex;align-items:center;margin-bottom:16px;">
+      <button onclick="closePopupConseils()" style="background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);">← Fermer</button>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Conseils personnalisés</div>
+    <div style="font-size:20px;font-weight:800;color:var(--black);margin-bottom:6px;">Débloquez vos conseils IA</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Complétez ces étapes pour recevoir votre analyse nutritionnelle personnalisée.</div>
+    <div id="pcStepsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+    <button id="pcActionBtn" onclick="pcActionClick()" data-action="onboarding" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Commencer</button>
+    <button onclick="closePopupConseils()" style="width:100%;padding:12px;background:none;border:none;font-family:'Inter',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px;">Plus tard</button>
+  </div>
+</div>
+
+<!-- ══ POPUP CONSEILS SEMAINE (lundi) ══ -->
+<div id="conseilsPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(12px);z-index:450;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg);border-radius:28px;padding:24px 20px 28px;width:100%;max-width:400px;">
+    <!-- Bouton retour -->
+    <div style="display:flex;align-items:center;margin-bottom:16px;">
+      <button onclick="conseilsPopupFermer()" style="background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);">← Fermer</button>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Nouveaux conseils disponibles</div>
+    <div style="font-size:20px;font-weight:800;color:var(--black);margin-bottom:16px;">Vos conseils de la semaine ✨</div>
+    <div id="conseilsPopupPreview" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+    <button onclick="conseilsPopupVoir()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Voir mes conseils →</button>
+    <button onclick="conseilsPopupFermer()" style="width:100%;padding:12px;background:none;border:none;font-family:'Inter',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px;">← Retour</button>
+  </div>
+</div>
+
+<!-- ══ OVERLAY LISTE DE COURSES ══ -->
+<div id="ovListeCourses" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;margin-bottom:16px;">
+      <button onclick="closeOverlay('ovListeCourses')" style="background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-right:12px;">← Retour</button>
+      <div style="font-size:18px;font-weight:800;color:var(--black);">🛒 Liste de courses</div>
+    </div>
+    <div id="listeCoursesCont"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Chargement...</div></div>
+    <button class="close-btn" onclick="closeOverlay('ovListeCourses')">← Retour à l'accueil</button>
+  </div>
+</div>
+
+<!-- ══ OVERLAY RECETTES ══ -->
+<div id="ovRecettes" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;margin-bottom:16px;">
+      <button onclick="closeOverlay('ovRecettes')" style="background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-right:12px;">← Retour</button>
+      <div style="font-size:18px;font-weight:800;color:var(--black);">👨‍🍳 Recettes personnalisées</div>
+    </div>
+    <div id="recettesCont"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Chargement...</div></div>
+    <button class="close-btn" onclick="closeOverlay('ovRecettes')">← Retour à l'accueil</button>
+  </div>
+</div>
+
+<!-- ══ OVERLAY PROCHAINS REPAS ══ -->
+<div id="ovProchainRepas" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <!-- Bouton retour global -->
+    <button onclick="closeOverlay('ovProchainRepas')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-bottom:14px;">← Retour</button>
+
+    <!-- STEP 1 : date + créneau -->
+    <div id="prStep1">
+      <div style="font-size:18px;font-weight:800;color:var(--black);margin-bottom:4px;">🗓️ Choisir une date</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Sélectionnez le jour et le créneau de livraison</div>
+
+      <!-- Jours -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;">Jour de livraison</div>
+      <div id="prJoursGrid" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:20px;"></div>
+
+      <!-- Créneaux -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;">Créneau</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:24px;">
+        <div class="pr-slot" data-slot="matin" onclick="prSelectSlot(this)" style="padding:14px 8px;border-radius:14px;text-align:center;cursor:pointer;background:var(--bg);box-shadow:var(--so);border:2px solid transparent;transition:all .15s;">
+          <div style="font-size:20px;margin-bottom:4px;">🌅</div>
+          <div style="font-size:12px;font-weight:600;color:var(--black);">Matin</div>
+          <div style="font-size:10px;color:var(--muted);">8h–12h</div>
+        </div>
+        <div class="pr-slot" data-slot="midi" onclick="prSelectSlot(this)" style="padding:14px 8px;border-radius:14px;text-align:center;cursor:pointer;background:var(--bg);box-shadow:var(--so);border:2px solid transparent;transition:all .15s;">
+          <div style="font-size:20px;margin-bottom:4px;">☀️</div>
+          <div style="font-size:12px;font-weight:600;color:var(--black);">Midi</div>
+          <div style="font-size:10px;color:var(--muted);">12h–14h</div>
+        </div>
+        <div class="pr-slot" data-slot="soir" onclick="prSelectSlot(this)" style="padding:14px 8px;border-radius:14px;text-align:center;cursor:pointer;background:var(--bg);box-shadow:var(--so);border:2px solid transparent;transition:all .15s;">
+          <div style="font-size:20px;margin-bottom:4px;">🌆</div>
+          <div style="font-size:12px;font-weight:600;color:var(--black);">Soir</div>
+          <div style="font-size:10px;color:var(--muted);">18h–20h</div>
+        </div>
+      </div>
+
+      <button id="btnPrNext" onclick="prGoToMenus()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none;transition:opacity .2s;">Voir les menus →</button>
+    </div>
+
+    <!-- STEP 2 : sélection plats -->
+    <div id="prStep2" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <button onclick="prBack()" style="background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);">← Retour</button>
+        <div style="flex:1;font-size:13px;font-weight:600;color:var(--black);" id="prResumeTxt"></div>
+      </div>
+
+      <!-- Formule -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;">Formule</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+        <div class="pr-formule" data-nb="3" onclick="prSelectFormule(this)" style="padding:16px 12px;border-radius:16px;text-align:center;cursor:pointer;background:var(--bg);box-shadow:var(--so);border:2px solid transparent;transition:all .15s;">
+          <div style="font-size:22px;font-weight:800;color:var(--black);">3</div>
+          <div style="font-size:12px;font-weight:600;color:var(--black);">plats / semaine</div>
+        </div>
+        <div class="pr-formule" data-nb="4" onclick="prSelectFormule(this)" style="padding:16px 12px;border-radius:16px;text-align:center;cursor:pointer;background:var(--bg);box-shadow:var(--so);border:2px solid transparent;transition:all .15s;">
+          <div style="font-size:22px;font-weight:800;color:var(--black);">4</div>
+          <div style="font-size:12px;font-weight:600;color:var(--black);">plats / semaine</div>
+        </div>
+      </div>
+
+      <!-- Filtres -->
+      <div style="display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;scrollbar-width:none;">
+        <div class="pr-filter active" data-cat="tous" onclick="prFilter(this)" style="padding:6px 14px;border-radius:99px;background:var(--black);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">Tous</div>
+        <div class="pr-filter" data-cat="proteines" onclick="prFilter(this)" style="padding:6px 14px;border-radius:99px;background:var(--bg);box-shadow:var(--sm);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">🥩 Protéines</div>
+        <div class="pr-filter" data-cat="legumes" onclick="prFilter(this)" style="padding:6px 14px;border-radius:99px;background:var(--bg);box-shadow:var(--sm);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">🥦 Légumes</div>
+        <div class="pr-filter" data-cat="equilibre" onclick="prFilter(this)" style="padding:6px 14px;border-radius:99px;background:var(--bg);box-shadow:var(--sm);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">⚖️ Équilibre</div>
+        <div class="pr-filter" data-cat="low_carb" onclick="prFilter(this)" style="padding:6px 14px;border-radius:99px;background:var(--bg);box-shadow:var(--sm);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">💪 Low Carb</div>
+      </div>
+
+      <!-- Liste plats -->
+      <div id="prMenuList" style="display:flex;flex-direction:column;gap:10px;max-height:30vh;overflow-y:auto;margin-bottom:14px;-webkit-overflow-scrolling:touch;"></div>
+
+      <!-- Récap sélection -->
+      <div id="prSelectionRecap" style="display:none;background:var(--bg);border-radius:18px;padding:14px;box-shadow:var(--so);margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--black);margin-bottom:10px;">Votre sélection · <span id="prSelCount">0</span> plat(s)</div>
+        <div id="prSelList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;text-align:center;"><div style="font-size:13px;font-weight:800;color:var(--black);" id="prSelProt">–</div><div style="font-size:10px;color:var(--muted);">Prot moy.</div></div>
+          <div style="flex:1;text-align:center;"><div style="font-size:13px;font-weight:800;color:var(--black);" id="prSelGluc">–</div><div style="font-size:10px;color:var(--muted);">Gluc moy.</div></div>
+          <div style="flex:1;text-align:center;"><div style="font-size:13px;font-weight:800;color:var(--black);" id="prSelCal">–</div><div style="font-size:10px;color:var(--muted);">Cal moy.</div></div>
+        </div>
+      </div>
+
+      <button id="btnPrValider" onclick="prValiderCommande()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none;transition:opacity .2s;">Confirmer ma commande →</button>
+    </div>
+
+    <!-- STEP 3 : confirmation -->
+    <div id="prStep3" style="display:none;text-align:center;padding:20px 0;">
+      <div style="font-size:48px;margin-bottom:16px;">🎉</div>
+      <div style="font-size:20px;font-weight:800;color:var(--black);margin-bottom:8px;">Commande confirmée !</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="prConfirmTxt"></div>
+      <div id="prConfirmPlats" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;text-align:left;"></div>
+      <button onclick="closeOverlay('ovProchainRepas')" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">← Retour à l'accueil</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══ CONFIG ═══
 const SB_URL  = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
@@ -1233,7 +1638,19 @@ if (uP&&uP!=='null') USER_ID=uP;
 else if (TOKEN.length>10) {
   try{var d=TOKEN.match(/.{1,2}/g).map(function(b){return String.fromCharCode(parseInt(b,16));}).join('');if(d.includes('-'))USER_ID=d;}catch(e){}
 }
-if (TOKEN && USER_ID) { localStorage.setItem('natty_token',TOKEN); localStorage.setItem('natty_user_id',USER_ID); } else if (!TOKEN) { var _st=localStorage.getItem('natty_token'); var _su=localStorage.getItem('natty_user_id'); if(_st&&_su){TOKEN=_st;USER_ID=_su;} }
+// Persister le token entre rechargements
+if (TOKEN && USER_ID) {
+  localStorage.setItem('natty_token', TOKEN);
+  localStorage.setItem('natty_user_id', USER_ID);
+} else if (!TOKEN) {
+  // Essayer de récupérer depuis localStorage
+  var savedToken = localStorage.getItem('natty_token');
+  var savedUserId = localStorage.getItem('natty_user_id');
+  if (savedToken && savedUserId) {
+    TOKEN = savedToken;
+    USER_ID = savedUserId;
+  }
+}
 var urlP={p:parseInt(params.get('proteines'))||0, l:parseInt(params.get('lipides'))||0,
           g:parseInt(params.get('glucides'))||0,  c:parseInt(params.get('calories'))||0};
 
@@ -1260,7 +1677,18 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputGalManu').addEventListener('change', function(){ previewPhoto(this,'prevManu'); photoManuFile=this.files[0]; });
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
-  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovProchainRepas','ovListeCourses','ovRecettes'].forEach(function(id){ var _e=document.getElementById(id); if(_e) _e.addEventListener('click',function(e){if(e.target===this)closeOverlay(id);}); });
+  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', function(e){ if(e.target===this) closeOverlay(id); });
+  });
+  // Overlays dynamiques — fermeture au clic sur fond
+  ['ovProchainRepas','ovListeCourses','ovRecettes'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', function(e){ if(e.target===this) closeOverlay(id); });
+  });
+  // Fermeture au clic fond pour profilOverlay
+  var profilOvEl = document.getElementById('profilOverlay');
+  if (profilOvEl) profilOvEl.addEventListener('click', function(e){ if(e.target===this) closeProfilOverlay(); });
   if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); }); } else {
     // Attendre 800ms au cas où Wix envoie le token via postMessage après le load
     setTimeout(function() {
@@ -1297,6 +1725,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Déconnexion
     if (data.type === 'userLoggedOut') {
+      localStorage.removeItem('natty_token');
+      localStorage.removeItem('natty_user_id');
       var url3 = new URL(window.location.href);
       url3.searchParams.delete('token');
       url3.searchParams.delete('userId');
@@ -1544,7 +1974,7 @@ function openMacroPopup(type) {
     setTimeout(function(){ arc.style.strokeDasharray = ((pct/100)*circ)+' '+circ; }, 50);
   }
 
-  lockScroll(); var _om=document.getElementById('ovMacro'); if(_om) _om.classList.add('active');
+  lockScroll(); document.getElementById('ovMacro').classList.add('active');
 
   // Afficher depuis le cache — JAMAIS de génération Claude ici
   var cache = window._conseilsCache;
@@ -2085,7 +2515,7 @@ function ouvrirAnalysePlat(meal) {
     + '</div>'
     + '<div id="mealAnalyseIA"><div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Analyse critique en cours...</div></div>';
   document.getElementById('mealAnalyseContent').innerHTML = html;
-  lockScroll(); var _oma=document.getElementById('ovMealAnalyse'); if(_oma) _oma.classList.add('active');
+  lockScroll(); document.getElementById('ovMealAnalyse').classList.add('active');
   fetchAnalysePlat(meal, mac);
 }
 
@@ -2194,7 +2624,7 @@ function afficherOnboardingCTA(){
     +'<div class="ob-feat"><div class="ob-fic">📊</div><div><div class="ob-ft">Suivi nutritionnel complet</div><div class="ob-fs">Score, macros, journal</div></div></div></div>'
     +'<div class="ob-btn-w">'
     +'<button class="ob-btn" id="btnStartOB">Commencer →</button>'
-    +'<div id="loginForm" style="display:none;margin-top:16px;">'
+    +'<div id="loginForm" style="margin-top:16px;">'
     +'<input id="loginEmail" type="email" placeholder="Email" style="width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;margin-bottom:10px;font-family:Inter,sans-serif;background:#f5f5f7;outline:none;">'
     +'<input id="loginPwd" type="password" placeholder="Mot de passe" style="width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;margin-bottom:10px;font-family:Inter,sans-serif;background:#f5f5f7;outline:none;">'
     +'<button id="btnLogin" style="width:100%;padding:14px;background:#34c759;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;">Se connecter</button>'
@@ -2207,11 +2637,10 @@ function afficherOnboardingCTA(){
     // Dans Wix (iframe) → postMessage
     if (window.self !== window.top) {
       window.parent.postMessage({ type: 'demandeConnexion' }, '*');
-    console.log('postMessage demandeConnexion sent');
+      console.log('postMessage demandeConnexion sent');
     } else {
-      // PWA standalone → afficher formulaire de connexion
-      var f = document.getElementById('loginForm');
-      f.style.display = f.style.display === 'none' ? 'block' : 'none';
+      // PWA standalone → rediriger vers page login dédiée
+      window.location.href = '/login.html';
     }
   });
 
@@ -2285,16 +2714,11 @@ var PLATS_DEMO = [
 
 function openProchainRepas() {
   prState = { jourDate:null, jourLabel:'', slot:null, formule:null, selection:[], filterCat:'tous', allPlats:[] };
-  var _pr = document.getElementById('ovProchainRepas');
-  if (!_pr) return;
-  var _s1 = document.getElementById('prStep1');
-  var _s2 = document.getElementById('prStep2');
-  var _s3 = document.getElementById('prStep3');
-  if (_s1) _s1.style.display = 'block';
-  if (_s2) _s2.style.display = 'none';
-  if (_s3) _s3.style.display = 'none';
+  document.getElementById('prStep1').style.display = 'block';
+  document.getElementById('prStep2').style.display = 'none';
+  document.getElementById('prStep3').style.display = 'none';
   prBuildJoursGrid();
-  lockScroll(); _pr.classList.add('active');
+  lockScroll(); document.getElementById('ovProchainRepas').style.display = 'flex';
   prLoadPlats();
   prChargerPlatsNutri();
 }
@@ -2674,7 +3098,7 @@ function openMealDetail(mealId) {
   var meal = allMeals.find(function(m){ return m.id === mealId; });
   if (!meal) return;
   document.getElementById('mealDetailContent').innerHTML = '<div class="loading">Analyse en cours...</div>';
-  lockScroll(); var _omd=document.getElementById('ovMealDetail'); if(_omd) _omd.classList.add('active');
+  lockScroll(); document.getElementById('ovMealDetail').classList.add('active');
   buildMealDetail(meal);
 }
 
@@ -2770,6 +3194,28 @@ function drawDonutMeal(id, data, colors) {
 }
 
 
+// ─── HELPERS MANQUANTS ───
+var qaIntercepted = false;
+var _recettesCache = null;
+
+function calcMacros(poids, tdee) {
+  return {
+    p: poids ? Math.round(poids * 2) : 0,
+    l: tdee ? Math.round(tdee * 0.25 / 9) : 0,
+    g: tdee ? Math.round(tdee * 0.5 / 4) : 0,
+    c: tdee ? Math.round(tdee) : 0
+  };
+}
+
+function updateMacroCards() {
+  afficherMacros();
+}
+
+function openMealDetail(mealId) {
+  var meal = allMeals.find(function(m){ return m.id === mealId; });
+  if (meal) ouvrirAnalysePlat(meal);
+}
+
 // ── SCROLL LOCK ──
 var _scrollY = 0;
 function lockScroll() {
@@ -2780,13 +3226,26 @@ function lockScroll() {
 function unlockScroll() {
   document.body.style.overflow = '';
   document.documentElement.style.overflow = '';
+  // Restore scroll position
+  if (_scrollY) window.scrollTo(0, _scrollY);
 }
 
 function closeOverlay(id) {
-  document.getElementById(id).classList.remove('active');
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('active');
+  el.style.display = 'none';
   // Déverouiller seulement si plus aucun overlay actif
-  var anyOpen = document.querySelector('.overlay.active, #profilOverlay[style*="flex"], #onbPopup[style*="flex"], #popupConseils[style*="flex"], #conseilsPopup[style*="flex"]');
-  if (!anyOpen) unlockScroll();
+  var anyOpen = document.querySelector('.overlay.active, [style*="display: flex"][id^="ov"], [style*="display:flex"][id^="ov"], #profilOverlay, #onbPopup, #popupConseils, #conseilsPopup');
+  var hasVisible = false;
+  if (anyOpen) {
+    var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
+    allIds.forEach(function(eid) {
+      var e = document.getElementById(eid);
+      if (e && (e.classList.contains('active') || e.style.display === 'flex')) hasVisible = true;
+    });
+  }
+  if (!hasVisible) unlockScroll();
 }
 function goToChallenges(){
   switchTab('chal');
@@ -3071,10 +3530,24 @@ setTimeout(function(){ conseilsPopupCheck(); }, 4000);
 
 
 
+// ══ OVERLAY GÉNÉRIQUE ══
+function openOverlay(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  lockScroll();
+  // Les .overlay utilisent la classe active, les autres utilisent style
+  if (el.classList.contains('overlay')) {
+    el.classList.add('active');
+  } else {
+    el.style.display = 'flex';
+  }
+}
+
 // ══ PROFIL OVERLAY ══
 function openProfilOverlay() {
   lockScroll();
-  var _pov=document.getElementById('profilOverlay'); if(_pov) _pov.style.display='flex';
+  var el = document.getElementById('profilOverlay');
+  if (el) el.style.display = 'flex';
   renderProfilMacros();
   renderProfilScore();
   fetchProfilConseils();
@@ -3082,7 +3555,8 @@ function openProfilOverlay() {
 }
 
 function closeProfilOverlay() {
-  var _pov=document.getElementById('profilOverlay'); if(_pov) _pov.style.display='none';
+  var el = document.getElementById('profilOverlay');
+  if (el) el.style.display = 'none';
   unlockScroll();
 }
 
@@ -3092,7 +3566,6 @@ function renderProfilScore() {
   var dash = (score / 100) * circ;
   var col = score >= 70 ? '#34c759' : score >= 40 ? '#ff9500' : '#ff3b30';
   var arc = document.getElementById('psrArc');
-  if (!arc) return;
   arc.style.stroke = col;
   setTimeout(function(){ arc.style.strokeDasharray = dash + ' ' + circ; }, 50);
   document.getElementById('psrPct').textContent = score;
@@ -3422,7 +3895,7 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
       var resC = await fetch(CLAUDE_API, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({prompt: promptC, max_tokens: 2000})
+        body: JSON.stringify({prompt: promptC, max_tokens: 1400})
       });
       var dC = await resC.json();
       var parsedC = JSON.parse((dC.text||'{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim());
@@ -3571,14 +4044,16 @@ function checkShowOnbPopup() {
         var d = document.getElementById('onbD' + i);
         if (d) d.classList.toggle('active', i === 0);
       }
-      lockScroll(); var _ob=document.getElementById('onbPopup'); if(_ob) _ob.style.display='flex';
+      lockScroll(); var onbEl = document.getElementById('onbPopup'); if (onbEl) onbEl.style.display = 'flex';
       setTimeout(function(){ onbAnimateSlide(0); }, 600);
     }, 1500);
   }
 }
 
 function closeOnbPopup() {
-  var _ob=document.getElementById('onbPopup'); if(_ob) _ob.style.display='none'; unlockScroll();
+  var el = document.getElementById('onbPopup');
+  if (el) el.style.display = 'none';
+  unlockScroll();
   if (USER_ID) localStorage.setItem('natty_onb_popup_' + USER_ID, '1');
 }
 
@@ -3630,12 +4105,12 @@ function conseilsPopupAfficher(row) {
     }).join('');
   }
   var popup = document.getElementById('conseilsPopup');
-  if (popup) { popup.style.display = 'flex'; } // No lockScroll - doesn't block page
+  if (popup) { lockScroll(); popup.style.display = 'flex'; }
 }
 
 function conseilsPopupFermer() {
   var popup = document.getElementById('conseilsPopup');
-  if (popup) { popup.style.display = 'none'; }
+  if (popup) { popup.style.display = 'none'; unlockScroll(); }
 }
 
 function conseilsPopupVoir() {
@@ -3741,7 +4216,9 @@ async function verifierEtMontrerPopupConseils() {
 
   _pcState = {nbPlats:nbPlats, onbOk:onbOk, qaOk:qaOk};
   renderPopupConseils();
-  var _pc=document.getElementById('popupConseils'); if(_pc) _pc.style.display='flex';
+  lockScroll();
+  var pcEl = document.getElementById('popupConseils');
+  if (pcEl) pcEl.style.display = 'flex';
   console.log('[Popup] → Popup affiché');
 }
 function renderPopupConseils() {
@@ -3793,138 +4270,15 @@ async function pcActionClick() {
   else { if(window.self!==window.top) window.parent.postMessage({type:'demandeConnexion'},'*'); else window.location.href='/onboarding.html?token='+TOKEN; }
 }
 function closePopupConseils() {
-  var _pc=document.getElementById('popupConseils'); if(_pc) _pc.style.display='none';
+  var el = document.getElementById('popupConseils');
+  if (el) el.style.display = 'none';
+  unlockScroll();
   if (USER_ID) sessionStorage.setItem('natty_popup_session_' + USER_ID, '1');
 }
 
 // ══ LISTE DE COURSES ══
 var _listeCourseCache = null;
-async function ouvrirListeCourses() {
-  lockScroll();
-  document.getElementById('ovListeCourses').classList.add('active');
-  if (_listeCourseCache) {
-    document.getElementById('listeCoursesCont').innerHTML = _listeCourseCache;
-    return;
-  }
-  var cont = document.getElementById('listeCoursesCont');
-  // Utiliser le cache mémoire si dispo
-  var stored = window._conseilsCache && window._conseilsCache.liste_courses_json;
-  if (stored) {
-    try {
-      var data = JSON.parse(stored);
-      var h = '';
-      if (data.recettes_ingredients && data.recettes_ingredients.length) {
-        h += '<div class="lc-section-title">🍳 Pour vos recettes</div>';
-        h += data.recettes_ingredients.map(function(item){
-          return '<div class="lc-item"><span class="lc-item-em">'+(item.emoji||'🛒')+'</span><span class="lc-item-name">'+item.nom+'</span><span class="lc-item-qty">'+item.quantite+'</span></div>';
-        }).join('');
-      }
-      if (data.aliments_bonus && data.aliments_bonus.length) {
-        h += '<div class="lc-section-title" style="margin-top:20px;">⭐ Aliments conseillés</div>';
-        h += data.aliments_bonus.map(function(item){
-          return '<div class="lc-item" style="border-left:3px solid #34c759;"><span class="lc-item-em">'+(item.emoji||'🌿')+'</span><div style="flex:1;"><div class="lc-item-name">'+item.nom+'</div><div style="font-size:11px;color:var(--muted);">'+(item.benefice||'')+'</div></div><span class="lc-item-qty">'+item.quantite+'</span></div>';
-        }).join('');
-      }
-      _listeCourseCache = h;
-      cont.innerHTML = h || '<div style="color:var(--muted);font-size:13px;padding:16px;">Liste vide.</div>';
-      return;
-    } catch(e) {}
-  }
-  // Pas de liste disponible — afficher message sans appel Claude
-  cont.innerHTML = '<div style="text-align:center;padding:32px 16px;"><div style="font-size:40px;margin-bottom:12px;">🛒</div><div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:8px;">Liste de courses</div><div style="font-size:13px;color:var(--muted);">Votre liste sera générée automatiquement chaque lundi avec vos conseils nutritionnels.</div></div>';
-}
 
-async function ouvrirRecettes() {
-  lockScroll();
-  document.getElementById('ovRecettes').classList.add('active');
-  if (_recettesCache) {
-    document.getElementById('recettesCont').innerHTML = _recettesCache;
-    return;
-  }
-  var cont = document.getElementById('recettesCont');
-  var stored = window._conseilsCache && window._conseilsCache.recettes_json;
-  if (stored) {
-    try {
-      var recettes = JSON.parse(stored);
-      var h = recettes.map(function(r) {
-        return '<div class="mc-recette-card">'
-          + '<div class="mc-rec-title">'+(r.nom||r.name||'Recette')+'</div>'
-          + '<div class="mc-rec-macros"><span>🥩 '+(r.proteines||r.prot||0)+'g</span><span>🌾 '+(r.glucides||r.gluc||0)+'g</span><span>⚡ '+(r.calories||r.cal||0)+' kcal</span></div>'
-          + (r.ingredients ? '<div class="mc-rec-ings">'+r.ingredients.map(function(i){ return '<span class="mc-rec-ing">'+(i.emoji||'')+(i.nom||i)+'</span>'; }).join('')+'</div>' : '')
-          + '</div>';
-      }).join('');
-      _recettesCache = h;
-      cont.innerHTML = h || '<div style="color:var(--muted);font-size:13px;padding:16px;">Aucune recette.</div>';
-      return;
-    } catch(e) {}
-  }
-  // Pas de recettes disponibles
-  cont.innerHTML = '<div style="text-align:center;padding:32px 16px;"><div style="font-size:40px;margin-bottom:12px;">👨‍🍳</div><div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:8px;">Recettes personnalisées</div><div style="font-size:13px;color:var(--muted);">Vos recettes seront générées chaque lundi avec vos conseils hebdomadaires.</div></div>';
-}
-
-<div id="profilOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;">
-  <div id="profilSheet" style="background:var(--bg);border-radius:28px 28px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 52px;">
-    <div style="width:36px;height:5px;background:rgba(174,174,192,0.4);border-radius:3px;margin:14px auto 20px;"></div>
-    <div style="display:flex;flex-direction:column;align-items:center;background:var(--bg);border-radius:22px;padding:24px 20px;margin-bottom:14px;box-shadow:var(--so);">
-      <div style="position:relative;width:150px;height:150px;margin-bottom:12px;">
-        <svg viewBox="0 0 150 150" width="150" height="150" style="position:absolute;inset:0;transform:rotate(-90deg);"><circle cx="75" cy="75" r="65" fill="none" stroke="rgba(174,174,192,0.22)" stroke-width="10"/><circle cx="75" cy="75" r="65" fill="none" stroke="#34c759" stroke-width="10" stroke-linecap="round" id="psrArc" stroke-dasharray="0 408" style="transition:stroke-dasharray 1.2s ease;"/></svg>
-        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:40px;font-weight:800;color:var(--black);" id="psrPct">-</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">Score nutritionnel</div></div>
-      </div>
-      <div style="font-size:12px;font-weight:600;padding:5px 16px;border-radius:99px;background:#e8f9ee;color:#34c759;" id="psrBadge">-</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
-      <div style="background:var(--bg);border-radius:16px;padding:16px;text-align:center;box-shadow:var(--so);"><div style="font-size:22px;">🥩</div><div style="font-size:22px;font-weight:700;color:var(--black);" id="pmProt">-</div><div style="font-size:10px;color:var(--muted);">g Protéines</div><div style="height:3px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:8px;overflow:hidden;"><div id="pbProt" style="height:100%;width:0%;background:#ff6b35;border-radius:2px;transition:width 1s;"></div></div></div>
-      <div style="background:var(--bg);border-radius:16px;padding:16px;text-align:center;box-shadow:var(--so);"><div style="font-size:22px;">🌾</div><div style="font-size:22px;font-weight:700;color:var(--black);" id="pmGluc">-</div><div style="font-size:10px;color:var(--muted);">g Glucides</div><div style="height:3px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:8px;overflow:hidden;"><div id="pbGluc" style="height:100%;width:0%;background:#ff9500;border-radius:2px;transition:width 1s;"></div></div></div>
-      <div style="background:var(--bg);border-radius:16px;padding:16px;text-align:center;box-shadow:var(--so);"><div style="font-size:22px;">🥑</div><div style="font-size:22px;font-weight:700;color:var(--black);" id="pmLip">-</div><div style="font-size:10px;color:var(--muted);">g Lipides</div><div style="height:3px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:8px;overflow:hidden;"><div id="pbLip" style="height:100%;width:0%;background:#7b5ea7;border-radius:2px;transition:width 1s;"></div></div></div>
-      <div style="background:var(--bg);border-radius:16px;padding:16px;text-align:center;box-shadow:var(--so);"><div style="font-size:22px;">⚡</div><div style="font-size:22px;font-weight:700;color:var(--black);" id="pmCal">-</div><div style="font-size:10px;color:var(--muted);">kcal</div><div style="height:3px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:8px;overflow:hidden;"><div id="pbCal" style="height:100%;width:0%;background:#34c759;border-radius:2px;transition:width 1s;"></div></div></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="font-size:16px;font-weight:700;color:var(--black);">Mon profil</div><button id="profilEditBtn" onclick="profilToggleEdit()" style="padding:6px 14px;background:var(--bg);border:none;border-radius:10px;box-shadow:var(--so);font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">✏️ Modifier</button></div>
-    <div id="profilInfoDisplay" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;background:var(--bg);border-radius:16px;padding:14px;box-shadow:var(--so);">
-      <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Poids</span><span id="piPoids" style="font-weight:600;">-</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Taille</span><span id="piTaille" style="font-weight:600;">-</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Objectif</span><span id="piObjectif" style="font-weight:600;">-</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Activité</span><span id="piActivite" style="font-weight:600;">-</span></div>
-    </div>
-    <div id="profilInfoEdit" style="display:none;flex-direction:column;gap:10px;margin-bottom:16px;">
-      <input id="editPoids" type="number" placeholder="Poids (kg)" style="width:100%;background:var(--bg);border:none;border-radius:12px;padding:13px;font-family:Inter,sans-serif;font-size:14px;outline:none;box-shadow:var(--si);">
-      <input id="editTaille" type="number" placeholder="Taille (cm)" style="width:100%;background:var(--bg);border:none;border-radius:12px;padding:13px;font-family:Inter,sans-serif;font-size:14px;outline:none;box-shadow:var(--si);">
-      <select id="editObjectif" style="width:100%;background:var(--bg);border:none;border-radius:12px;padding:13px;font-family:Inter,sans-serif;font-size:14px;outline:none;box-shadow:var(--si);"><option value="perte_poids">Perte de poids</option><option value="prise_masse">Prise de masse</option><option value="maintien">Maintien</option><option value="performance">Performance</option></select>
-      <select id="editActivite" style="width:100%;background:var(--bg);border:none;border-radius:12px;padding:13px;font-family:Inter,sans-serif;font-size:14px;outline:none;box-shadow:var(--si);"><option value="sedentaire">Sédentaire</option><option value="leger">Légèrement actif</option><option value="modere">Modérément actif</option><option value="actif">Très actif</option></select>
-      <button onclick="profilSaveInfo()" style="padding:14px;background:var(--black);color:#fff;border:none;border-radius:14px;font-family:Inter,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Enregistrer</button>
-    </div>
-    <div style="display:flex;gap:10px;margin-bottom:14px;">
-      <button onclick="ouvrirListeCourses()" style="flex:1;padding:14px;background:var(--bg);border:none;border-radius:18px;box-shadow:var(--so);font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;"><span style="font-size:24px;">🛒</span>Liste de courses</button>
-      <button onclick="ouvrirRecettes()" style="flex:1;padding:14px;background:var(--bg);border:none;border-radius:18px;box-shadow:var(--so);font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;"><span style="font-size:24px;">👨‍🍳</span>Mes recettes</button>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div style="font-size:16px;font-weight:700;color:var(--black);">Conseils nutritionnels</div><button id="conseilsRefreshBtn" onclick="conseilsForceRefresh()" style="width:32px;height:32px;background:var(--bg);border:none;border-radius:50%;box-shadow:var(--so);cursor:pointer;font-size:16px;">↻</button></div>
-    <div id="profilConseilsCont" style="min-height:60px;"><div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Chargement...</div></div>
-    <div id="conseilsDateFooter" style="display:none;font-size:11px;color:var(--muted);text-align:center;margin-top:8px;"></div>
-    <button onclick="closeProfilOverlay()" style="width:100%;padding:14px;background:var(--bg);border:none;border-radius:14px;font-family:Inter,sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:16px;box-shadow:var(--so);">← Retour</button>
-  </div>
-</div>
-<div id="onbPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(12px);z-index:400;align-items:center;justify-content:center;padding:20px;">
-  <div class="onb-popup-card"><div class="onb-track" id="onbTrack">
-    <div class="onb-slide"><div class="onb-step-num">1/4</div><div class="onb-slide-title">Suivez vos macros</div><div style="display:none;"><div id="onbPb"></div><div id="onbGb"></div><div id="onbLb"></div><div id="onbPv"></div><div id="onbGv"></div><div id="onbLv"></div><div id="onbR0"></div><div id="onbScore"></div></div><div class="onb-slide-desc">Protéines, glucides et lipides en temps réel.</div></div>
-    <div class="onb-slide"><div class="onb-step-num">2/4</div><div class="onb-slide-title">IA analyse vos repas</div><div id="onbAiChips"></div><div id="onbAiTxt"></div><div class="onb-slide-desc">Photo → macros automatiques.</div></div>
-    <div class="onb-slide"><div class="onb-step-num">3/4</div><div class="onb-slide-title">Conseils personnalisés</div><div id="onbConseil"></div><div class="onb-slide-desc">Recommandations chaque lundi.</div></div>
-    <div class="onb-slide"><div class="onb-step-num">4/4</div><div class="onb-slide-title">Suivez vos progrès</div><div style="display:none;"><svg viewBox="0 0 40 40"><circle id="onbDp1" stroke-dasharray="0 100"/></svg><svg viewBox="0 0 40 40"><circle id="onbDp2" stroke-dasharray="0 100"/></svg><svg viewBox="0 0 40 40"><circle id="onbDp3" stroke-dasharray="0 100"/></svg><div id="onbDp1t"></div><div id="onbDp2t"></div><div id="onbDp3t"></div></div><div class="onb-slide-desc">Graphiques 7, 30, 90 jours.</div></div>
-  </div>
-  <div class="onb-footer"><div class="onb-dots"><div class="onb-dot active" id="onbD0"></div><div class="onb-dot" id="onbD1"></div><div class="onb-dot" id="onbD2"></div><div class="onb-dot" id="onbD3"></div></div><button class="onb-next-btn" id="onbNextBtn">Suite ›</button></div>
-  </div>
-</div>
-<div id="popupConseils" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(12px);z-index:500;align-items:center;justify-content:center;padding:20px;">
-  <div class="pc-popup-card"><div class="pc-popup-hero"><span class="pc-popup-hero-em">🧑‍⚕️</span><div class="pc-popup-hero-title">Vos conseils sont prêts</div><div class="pc-popup-hero-sub">Basés sur vos repas et votre profil</div></div><div class="pc-popup-steps" id="pcStepsList"></div><div class="pc-popup-actions"><button class="pc-popup-btn-main" id="pcActionBtn" onclick="pcActionClick()">Générer mes conseils</button><button class="pc-popup-btn-later" onclick="closePopupConseils()">← Plus tard</button></div></div>
-</div>
-<div id="conseilsPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);z-index:400;align-items:flex-end;justify-content:center;">
-  <div class="sheet" style="padding-bottom:40px;"><div class="sheet-handle"></div><div style="font-size:20px;font-weight:800;margin-bottom:12px;">🎉 Conseils du lundi</div><div id="conseilsPopupPreview" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div><button onclick="conseilsPopupVoir()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Voir mes conseils →</button><button onclick="conseilsPopupFermer()" style="width:100%;padding:12px;background:transparent;border:none;font-family:Inter,sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px;">← Fermer</button></div>
-</div>
-<div class="overlay" id="ovProchainRepas"><div class="sheet"><div class="sheet-handle"></div>
-  <div id="prStep1"><div style="font-size:20px;font-weight:800;margin-bottom:16px;">🍱 Commander mes repas</div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">📅 Jour</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:20px;" id="prJoursGrid"></div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">⏰ Créneau</div><div style="display:flex;gap:8px;margin-bottom:24px;"><div class="pr-slot" data-slot="matin" onclick="prSelectSlot(this)" style="flex:1;text-align:center;padding:12px 6px;"><div style="font-size:18px;">🌅</div><div style="font-size:11px;font-weight:700;">Matin</div></div><div class="pr-slot" data-slot="midi" onclick="prSelectSlot(this)" style="flex:1;text-align:center;padding:12px 6px;"><div style="font-size:18px;">☀️</div><div style="font-size:11px;font-weight:700;">Midi</div></div><div class="pr-slot" data-slot="soir" onclick="prSelectSlot(this)" style="flex:1;text-align:center;padding:12px 6px;"><div style="font-size:18px;">🌆</div><div style="font-size:11px;font-weight:700;">Soir</div></div></div><button id="btnPrNext" onclick="prGoToMenus()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none;">Voir les plats →</button></div>
-  <div id="prStep2" style="display:none;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><button onclick="prBack()" style="width:32px;height:32px;border-radius:50%;background:var(--bg);border:none;box-shadow:var(--so);cursor:pointer;">←</button><div style="flex:1;font-size:13px;font-weight:600;" id="prResumeTxt">-</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;"><div class="pr-formule" data-nb="3" onclick="prSelectFormule(this)"><div style="font-size:20px;">🥗</div><div style="font-size:15px;font-weight:800;">3 plats</div></div><div class="pr-formule" data-nb="4" onclick="prSelectFormule(this)"><div style="font-size:20px;">🍱</div><div style="font-size:15px;font-weight:800;">4 plats</div></div></div><div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;"><button class="pr-filter active" data-cat="tous" onclick="prFilter(this)">Tous</button><button class="pr-filter" data-cat="proteines" onclick="prFilter(this)">💪 Prot.</button><button class="pr-filter" data-cat="legumes" onclick="prFilter(this)">🥦 Légumes</button><button class="pr-filter" data-cat="equilibre" onclick="prFilter(this)">⚖️ Équilibre</button></div><div id="prMenuList" style="display:flex;flex-direction:column;gap:10px;max-height:35vh;overflow-y:auto;"></div><div id="prSelectionRecap" style="display:none;background:var(--bg);border-radius:16px;padding:14px;margin-top:12px;box-shadow:var(--so);"><div style="font-size:12px;font-weight:700;margin-bottom:8px;">✅ <span id="prSelCount">0</span> plats</div><div id="prSelList" style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px;"></div><div style="display:flex;gap:8px;font-size:11px;text-align:center;"><div style="flex:1;"><div style="font-weight:700;" id="prSelProt">-</div><div style="color:var(--muted);">Prot</div></div><div style="flex:1;"><div style="font-weight:700;" id="prSelGluc">-</div><div style="color:var(--muted);">Gluc</div></div><div style="flex:1;"><div style="font-weight:700;" id="prSelCal">-</div><div style="color:var(--muted);">Cal</div></div></div></div><button id="btnPrValider" onclick="prValiderCommande()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:14px;opacity:.4;pointer-events:none;">Confirmer →</button></div>
-  <div id="prStep3" style="display:none;text-align:center;padding:20px 0;"><div style="font-size:52px;margin-bottom:16px;">🎉</div><div style="font-size:22px;font-weight:800;margin-bottom:8px;">Commande confirmée !</div><div style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="prConfirmTxt">-</div><div id="prConfirmPlats" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;"></div><button onclick="closeOverlay('ovProchainRepas')" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">← Retour</button></div>
-</div></div>
-<div id="ovListeCourses" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;"><div class="sheet"><div class="sheet-handle"></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;"><button onclick="closeOverlay('ovListeCourses')" style="width:32px;height:32px;border-radius:50%;background:var(--bg);border:none;box-shadow:var(--so);cursor:pointer;font-size:16px;">←</button><div style="font-size:20px;font-weight:800;">🛒 Liste de courses</div></div><div id="listeCoursesCont"><div style="text-align:center;padding:24px;color:var(--muted);">Chargement...</div></div></div></div>
-<div id="ovRecettes" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;"><div class="sheet"><div class="sheet-handle"></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;"><button onclick="closeOverlay('ovRecettes')" style="width:32px;height:32px;border-radius:50%;background:var(--bg);border:none;box-shadow:var(--so);cursor:pointer;font-size:16px;">←</button><div style="font-size:20px;font-weight:800;">👨‍🍳 Mes recettes</div></div><div id="recettesCont"><div style="text-align:center;padding:24px;color:var(--muted);">Chargement...</div></div></div></div>
-
+</script>
 </body>
 </html>
