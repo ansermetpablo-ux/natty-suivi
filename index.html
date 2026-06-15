@@ -1233,15 +1233,7 @@ if (uP&&uP!=='null') USER_ID=uP;
 else if (TOKEN.length>10) {
   try{var d=TOKEN.match(/.{1,2}/g).map(function(b){return String.fromCharCode(parseInt(b,16));}).join('');if(d.includes('-'))USER_ID=d;}catch(e){}
 }
-// Persister entre rechargements
-if (TOKEN && USER_ID) {
-  localStorage.setItem('natty_token', TOKEN);
-  localStorage.setItem('natty_user_id', USER_ID);
-} else if (!TOKEN) {
-  var _st = localStorage.getItem('natty_token');
-  var _su = localStorage.getItem('natty_user_id');
-  if (_st && _su) { TOKEN = _st; USER_ID = _su; }
-}
+if (TOKEN && USER_ID) { localStorage.setItem('natty_token',TOKEN); localStorage.setItem('natty_user_id',USER_ID); } else if (!TOKEN) { var _st=localStorage.getItem('natty_token'); var _su=localStorage.getItem('natty_user_id'); if(_st&&_su){TOKEN=_st;USER_ID=_su;} }
 var urlP={p:parseInt(params.get('proteines'))||0, l:parseInt(params.get('lipides'))||0,
           g:parseInt(params.get('glucides'))||0,  c:parseInt(params.get('calories'))||0};
 
@@ -1305,7 +1297,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Déconnexion
     if (data.type === 'userLoggedOut') {
-      localStorage.removeItem('natty_token'); localStorage.removeItem('natty_user_id');
       var url3 = new URL(window.location.href);
       url3.searchParams.delete('token');
       url3.searchParams.delete('userId');
@@ -2195,6 +2186,7 @@ function afficherOnboardingCTA(){
   var _rdv = document.getElementById('rdvPlusBtn');
   if (_rdv && _rdv.closest('.rdv-mod')) _rdv.closest('.rdv-mod').style.display = 'none';
   var page=document.getElementById('pageSuivi');
+  if (!page) { setTimeout(afficherOnboardingCTA, 300); return; }
   var cta=document.createElement('div');cta.className='ob-card';
   cta.innerHTML='<div class="ob-hero"><span class="ob-em">🥗</span><div class="ob-title">Commencez votre suivi</div><div class="ob-sub">Répondez à quelques questions pour personnaliser votre programme.</div></div>'
     +'<div class="ob-feats"><div class="ob-feat"><div class="ob-fic">🧑‍⚕️</div><div><div class="ob-ft">Nutritionniste personnel</div><div class="ob-fs">Dédié à vos objectifs</div></div></div>'
@@ -3077,7 +3069,7 @@ setTimeout(function(){ conseilsPopupCheck(); }, 4000);
 // ══ PROFIL OVERLAY ══
 function openProfilOverlay() {
   lockScroll();
-  var _ov=document.getElementById('profilOverlay'); if(_ov) _ov.style.display='flex';
+  var _pov=document.getElementById('profilOverlay'); if(_pov) _pov.style.display='flex';
   renderProfilMacros();
   renderProfilScore();
   fetchProfilConseils();
@@ -3085,7 +3077,7 @@ function openProfilOverlay() {
 }
 
 function closeProfilOverlay() {
-  var _ov=document.getElementById('profilOverlay'); if(_ov) _ov.style.display='none';
+  var _pov=document.getElementById('profilOverlay'); if(_pov) _pov.style.display='none';
   unlockScroll();
 }
 
@@ -3095,6 +3087,7 @@ function renderProfilScore() {
   var dash = (score / 100) * circ;
   var col = score >= 70 ? '#34c759' : score >= 40 ? '#ff9500' : '#ff3b30';
   var arc = document.getElementById('psrArc');
+  if (!arc) return;
   arc.style.stroke = col;
   setTimeout(function(){ arc.style.strokeDasharray = dash + ' ' + circ; }, 50);
   document.getElementById('psrPct').textContent = score;
@@ -3424,7 +3417,7 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
       var resC = await fetch(CLAUDE_API, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({prompt: promptC, max_tokens: 1400})
+        body: JSON.stringify({prompt: promptC, max_tokens: 2000})
       });
       var dC = await resC.json();
       var parsedC = JSON.parse((dC.text||'{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim());
@@ -3864,3 +3857,70 @@ async function ouvrirRecettes() {
   // Pas de recettes disponibles
   cont.innerHTML = '<div style="text-align:center;padding:32px 16px;"><div style="font-size:40px;margin-bottom:12px;">👨‍🍳</div><div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:8px;">Recettes personnalisées</div><div style="font-size:13px;color:var(--muted);">Vos recettes seront générées chaque lundi avec vos conseils hebdomadaires.</div></div>';
 }
+
+<div id="profilOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;">
+  <div id="profilSheet" style="background:var(--bg);border-radius:28px 28px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 52px;">
+    <div style="width:36px;height:5px;background:rgba(174,174,192,0.4);border-radius:3px;margin:14px auto 20px;"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;background:var(--bg);border-radius:22px;padding:24px 20px;margin-bottom:14px;box-shadow:var(--so);">
+      <div style="position:relative;width:150px;height:150px;margin-bottom:12px;">
+        <svg viewBox="0 0 150 150" width="150" height="150" style="position:absolute;inset:0;transform:rotate(-90deg);"><circle cx="75" cy="75" r="65" fill="none" stroke="rgba(174,174,192,0.22)" stroke-width="10"/><circle cx="75" cy="75" r="65" fill="none" stroke="#34c759" stroke-width="10" stroke-linecap="round" id="psrArc" stroke-dasharray="0 408" style="transition:stroke-dasharray 1.2s ease;"/></svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:40px;font-weight:800;color:var(--black);" id="psrPct">-</div><div style="font-size:12px;color:var(--muted);margin-top:4px;">Score nutritionnel</div></div>
+      </div>
+      <div style="font-size:12px;font-weight:600;padding:5px 16px;border-radius:99px;background:#e8f9ee;color:#34c759;" id="psrBadge">-</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div style="background:var(--bg);border-radius:16px;padding:16px;text-align:center;box-shadow:var(--so);"><div style="font-size:22px;">🥩</div><div style="font-size:22px;font-weight:700;color:var(--black);" id="pmProt">-</div><div style="font-size:10px;color:var(--muted);">g Protéines</div><div style="height:3px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:8px;overflow:hidden;"><div id="pbProt" style="height:100%;width:0%;background:#ff6b35;border-radius:2px;transition:width 1s;"></div></div></div>
+      <div style="background:var(--bg);border-radius:16px;padding:16px;text-align:center;box-shadow:var(--so);"><div style="font-size:22px;">🌾</div><div style="font-size:22px;font-weight:700;color:var(--black);" id="pmGluc">-</div><div style="font-size:10px;color:var(--muted);">g Glucides</div><div style="height:3px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:8px;overflow:hidden;"><div id="pbGluc" style="height:100%;width:0%;background:#ff9500;border-radius:2px;transition:width 1s;"></div></div></div>
+      <div style="background:var(--bg);border-radius:16px;padding:16px;text-align:center;box-shadow:var(--so);"><div style="font-size:22px;">🥑</div><div style="font-size:22px;font-weight:700;color:var(--black);" id="pmLip">-</div><div style="font-size:10px;color:var(--muted);">g Lipides</div><div style="height:3px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:8px;overflow:hidden;"><div id="pbLip" style="height:100%;width:0%;background:#7b5ea7;border-radius:2px;transition:width 1s;"></div></div></div>
+      <div style="background:var(--bg);border-radius:16px;padding:16px;text-align:center;box-shadow:var(--so);"><div style="font-size:22px;">⚡</div><div style="font-size:22px;font-weight:700;color:var(--black);" id="pmCal">-</div><div style="font-size:10px;color:var(--muted);">kcal</div><div style="height:3px;background:var(--bg);border-radius:2px;box-shadow:var(--si);margin-top:8px;overflow:hidden;"><div id="pbCal" style="height:100%;width:0%;background:#34c759;border-radius:2px;transition:width 1s;"></div></div></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="font-size:16px;font-weight:700;color:var(--black);">Mon profil</div><button id="profilEditBtn" onclick="profilToggleEdit()" style="padding:6px 14px;background:var(--bg);border:none;border-radius:10px;box-shadow:var(--so);font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">✏️ Modifier</button></div>
+    <div id="profilInfoDisplay" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;background:var(--bg);border-radius:16px;padding:14px;box-shadow:var(--so);">
+      <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Poids</span><span id="piPoids" style="font-weight:600;">-</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Taille</span><span id="piTaille" style="font-weight:600;">-</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Objectif</span><span id="piObjectif" style="font-weight:600;">-</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Activité</span><span id="piActivite" style="font-weight:600;">-</span></div>
+    </div>
+    <div id="profilInfoEdit" style="display:none;flex-direction:column;gap:10px;margin-bottom:16px;">
+      <input id="editPoids" type="number" placeholder="Poids (kg)" style="width:100%;background:var(--bg);border:none;border-radius:12px;padding:13px;font-family:Inter,sans-serif;font-size:14px;outline:none;box-shadow:var(--si);">
+      <input id="editTaille" type="number" placeholder="Taille (cm)" style="width:100%;background:var(--bg);border:none;border-radius:12px;padding:13px;font-family:Inter,sans-serif;font-size:14px;outline:none;box-shadow:var(--si);">
+      <select id="editObjectif" style="width:100%;background:var(--bg);border:none;border-radius:12px;padding:13px;font-family:Inter,sans-serif;font-size:14px;outline:none;box-shadow:var(--si);"><option value="perte_poids">Perte de poids</option><option value="prise_masse">Prise de masse</option><option value="maintien">Maintien</option><option value="performance">Performance</option></select>
+      <select id="editActivite" style="width:100%;background:var(--bg);border:none;border-radius:12px;padding:13px;font-family:Inter,sans-serif;font-size:14px;outline:none;box-shadow:var(--si);"><option value="sedentaire">Sédentaire</option><option value="leger">Légèrement actif</option><option value="modere">Modérément actif</option><option value="actif">Très actif</option></select>
+      <button onclick="profilSaveInfo()" style="padding:14px;background:var(--black);color:#fff;border:none;border-radius:14px;font-family:Inter,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Enregistrer</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <button onclick="ouvrirListeCourses()" style="flex:1;padding:14px;background:var(--bg);border:none;border-radius:18px;box-shadow:var(--so);font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;"><span style="font-size:24px;">🛒</span>Liste de courses</button>
+      <button onclick="ouvrirRecettes()" style="flex:1;padding:14px;background:var(--bg);border:none;border-radius:18px;box-shadow:var(--so);font-family:Inter,sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;"><span style="font-size:24px;">👨‍🍳</span>Mes recettes</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div style="font-size:16px;font-weight:700;color:var(--black);">Conseils nutritionnels</div><button id="conseilsRefreshBtn" onclick="conseilsForceRefresh()" style="width:32px;height:32px;background:var(--bg);border:none;border-radius:50%;box-shadow:var(--so);cursor:pointer;font-size:16px;">↻</button></div>
+    <div id="profilConseilsCont" style="min-height:60px;"><div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Chargement...</div></div>
+    <div id="conseilsDateFooter" style="display:none;font-size:11px;color:var(--muted);text-align:center;margin-top:8px;"></div>
+    <button onclick="closeProfilOverlay()" style="width:100%;padding:14px;background:var(--bg);border:none;border-radius:14px;font-family:Inter,sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:16px;box-shadow:var(--so);">← Retour</button>
+  </div>
+</div>
+<div id="onbPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(12px);z-index:400;align-items:center;justify-content:center;padding:20px;">
+  <div class="onb-popup-card"><div class="onb-track" id="onbTrack">
+    <div class="onb-slide"><div class="onb-step-num">1/4</div><div class="onb-slide-title">Suivez vos macros</div><div style="display:none;"><div id="onbPb"></div><div id="onbGb"></div><div id="onbLb"></div><div id="onbPv"></div><div id="onbGv"></div><div id="onbLv"></div><div id="onbR0"></div><div id="onbScore"></div></div><div class="onb-slide-desc">Protéines, glucides et lipides en temps réel.</div></div>
+    <div class="onb-slide"><div class="onb-step-num">2/4</div><div class="onb-slide-title">IA analyse vos repas</div><div id="onbAiChips"></div><div id="onbAiTxt"></div><div class="onb-slide-desc">Photo → macros automatiques.</div></div>
+    <div class="onb-slide"><div class="onb-step-num">3/4</div><div class="onb-slide-title">Conseils personnalisés</div><div id="onbConseil"></div><div class="onb-slide-desc">Recommandations chaque lundi.</div></div>
+    <div class="onb-slide"><div class="onb-step-num">4/4</div><div class="onb-slide-title">Suivez vos progrès</div><div style="display:none;"><svg viewBox="0 0 40 40"><circle id="onbDp1" stroke-dasharray="0 100"/></svg><svg viewBox="0 0 40 40"><circle id="onbDp2" stroke-dasharray="0 100"/></svg><svg viewBox="0 0 40 40"><circle id="onbDp3" stroke-dasharray="0 100"/></svg><div id="onbDp1t"></div><div id="onbDp2t"></div><div id="onbDp3t"></div></div><div class="onb-slide-desc">Graphiques 7, 30, 90 jours.</div></div>
+  </div>
+  <div class="onb-footer"><div class="onb-dots"><div class="onb-dot active" id="onbD0"></div><div class="onb-dot" id="onbD1"></div><div class="onb-dot" id="onbD2"></div><div class="onb-dot" id="onbD3"></div></div><button class="onb-next-btn" id="onbNextBtn">Suite ›</button></div>
+  </div>
+</div>
+<div id="popupConseils" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(12px);z-index:500;align-items:center;justify-content:center;padding:20px;">
+  <div class="pc-popup-card"><div class="pc-popup-hero"><span class="pc-popup-hero-em">🧑‍⚕️</span><div class="pc-popup-hero-title">Vos conseils sont prêts</div><div class="pc-popup-hero-sub">Basés sur vos repas et votre profil</div></div><div class="pc-popup-steps" id="pcStepsList"></div><div class="pc-popup-actions"><button class="pc-popup-btn-main" id="pcActionBtn" onclick="pcActionClick()">Générer mes conseils</button><button class="pc-popup-btn-later" onclick="closePopupConseils()">← Plus tard</button></div></div>
+</div>
+<div id="conseilsPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);z-index:400;align-items:flex-end;justify-content:center;">
+  <div class="sheet" style="padding-bottom:40px;"><div class="sheet-handle"></div><div style="font-size:20px;font-weight:800;margin-bottom:12px;">🎉 Conseils du lundi</div><div id="conseilsPopupPreview" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div><button onclick="conseilsPopupVoir()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Voir mes conseils →</button><button onclick="conseilsPopupFermer()" style="width:100%;padding:12px;background:transparent;border:none;font-family:Inter,sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px;">← Fermer</button></div>
+</div>
+<div class="overlay" id="ovProchainRepas"><div class="sheet"><div class="sheet-handle"></div>
+  <div id="prStep1"><div style="font-size:20px;font-weight:800;margin-bottom:16px;">🍱 Commander mes repas</div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">📅 Jour</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:20px;" id="prJoursGrid"></div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;">⏰ Créneau</div><div style="display:flex;gap:8px;margin-bottom:24px;"><div class="pr-slot" data-slot="matin" onclick="prSelectSlot(this)" style="flex:1;text-align:center;padding:12px 6px;"><div style="font-size:18px;">🌅</div><div style="font-size:11px;font-weight:700;">Matin</div></div><div class="pr-slot" data-slot="midi" onclick="prSelectSlot(this)" style="flex:1;text-align:center;padding:12px 6px;"><div style="font-size:18px;">☀️</div><div style="font-size:11px;font-weight:700;">Midi</div></div><div class="pr-slot" data-slot="soir" onclick="prSelectSlot(this)" style="flex:1;text-align:center;padding:12px 6px;"><div style="font-size:18px;">🌆</div><div style="font-size:11px;font-weight:700;">Soir</div></div></div><button id="btnPrNext" onclick="prGoToMenus()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none;">Voir les plats →</button></div>
+  <div id="prStep2" style="display:none;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><button onclick="prBack()" style="width:32px;height:32px;border-radius:50%;background:var(--bg);border:none;box-shadow:var(--so);cursor:pointer;">←</button><div style="flex:1;font-size:13px;font-weight:600;" id="prResumeTxt">-</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;"><div class="pr-formule" data-nb="3" onclick="prSelectFormule(this)"><div style="font-size:20px;">🥗</div><div style="font-size:15px;font-weight:800;">3 plats</div></div><div class="pr-formule" data-nb="4" onclick="prSelectFormule(this)"><div style="font-size:20px;">🍱</div><div style="font-size:15px;font-weight:800;">4 plats</div></div></div><div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;"><button class="pr-filter active" data-cat="tous" onclick="prFilter(this)">Tous</button><button class="pr-filter" data-cat="proteines" onclick="prFilter(this)">💪 Prot.</button><button class="pr-filter" data-cat="legumes" onclick="prFilter(this)">🥦 Légumes</button><button class="pr-filter" data-cat="equilibre" onclick="prFilter(this)">⚖️ Équilibre</button></div><div id="prMenuList" style="display:flex;flex-direction:column;gap:10px;max-height:35vh;overflow-y:auto;"></div><div id="prSelectionRecap" style="display:none;background:var(--bg);border-radius:16px;padding:14px;margin-top:12px;box-shadow:var(--so);"><div style="font-size:12px;font-weight:700;margin-bottom:8px;">✅ <span id="prSelCount">0</span> plats</div><div id="prSelList" style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px;"></div><div style="display:flex;gap:8px;font-size:11px;text-align:center;"><div style="flex:1;"><div style="font-weight:700;" id="prSelProt">-</div><div style="color:var(--muted);">Prot</div></div><div style="flex:1;"><div style="font-weight:700;" id="prSelGluc">-</div><div style="color:var(--muted);">Gluc</div></div><div style="flex:1;"><div style="font-weight:700;" id="prSelCal">-</div><div style="color:var(--muted);">Cal</div></div></div></div><button id="btnPrValider" onclick="prValiderCommande()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:14px;opacity:.4;pointer-events:none;">Confirmer →</button></div>
+  <div id="prStep3" style="display:none;text-align:center;padding:20px 0;"><div style="font-size:52px;margin-bottom:16px;">🎉</div><div style="font-size:22px;font-weight:800;margin-bottom:8px;">Commande confirmée !</div><div style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="prConfirmTxt">-</div><div id="prConfirmPlats" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;"></div><button onclick="closeOverlay('ovProchainRepas')" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">← Retour</button></div>
+</div></div>
+<div id="ovListeCourses" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;"><div class="sheet"><div class="sheet-handle"></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;"><button onclick="closeOverlay('ovListeCourses')" style="width:32px;height:32px;border-radius:50%;background:var(--bg);border:none;box-shadow:var(--so);cursor:pointer;font-size:16px;">←</button><div style="font-size:20px;font-weight:800;">🛒 Liste de courses</div></div><div id="listeCoursesCont"><div style="text-align:center;padding:24px;color:var(--muted);">Chargement...</div></div></div></div>
+<div id="ovRecettes" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;"><div class="sheet"><div class="sheet-handle"></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;"><button onclick="closeOverlay('ovRecettes')" style="width:32px;height:32px;border-radius:50%;background:var(--bg);border:none;box-shadow:var(--so);cursor:pointer;font-size:16px;">←</button><div style="font-size:20px;font-weight:800;">👨‍🍳 Mes recettes</div></div><div id="recettesCont"><div style="text-align:center;padding:24px;color:var(--muted);">Chargement...</div></div></div></div>
+
+</body>
+</html>
