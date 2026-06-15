@@ -3298,6 +3298,12 @@ async function fetchProfilConseils() {
     return;
   }
 
+  // Guard: déjà chargés cette session → pas de regénération
+  if (sessionStorage.getItem('natty_conseils_ok_' + USER_ID)) {
+    profilConseillsLoaded = true;
+    return;
+  }
+
   if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Chargement...</div>';
 
   try {
