@@ -3348,100 +3348,110 @@ async function fetchProfilConseils() {
 }
 
 async function conseilsGenererEtSauvegarder(silentRefresh) {
+  console.log('[Natty] conseilsGenererEtSauvegarder start, silentRefresh=', silentRefresh);
+  
   // Charger le profil si pas encore fait
   if (!profilInfoCache) {
     try {
       var profData = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&select=poids,taille,activite,tdee,objectif_type,prenom,nom,age,sexe&limit=1');
       if (profData && profData.length) profilInfoCache = profData[0];
-    } catch(e) {}
+      console.log('[Natty] profilInfoCache chargé:', profilInfoCache ? 'ok' : 'vide');
+    } catch(e) { console.warn('[Natty] profil load error:', e); }
   }
   var ob = profilInfoCache || {};
-  var mealsDesc = allMeals.slice(0, 15).map(function(m) {
+  
+  var mealsDesc = allMeals.slice(0, 10).map(function(m) {
     var mac = calcMac(m.meal_ingredients);
-    var ings = (m.meal_ingredients || []).map(function(i){ return i.name + ' ' + i.quantity_g + 'g'; }).join(', ');
-    return m.name + ' — prot:' + mac.p + 'g gluc:' + mac.g + 'g lip:' + mac.l + 'g cal:' + mac.c + 'kcal';
-  }).join(' | ');
+    return m.name + ' prot:' + mac.p + 'g cal:' + mac.c + 'kcal';
+  }).join(' | ') || 'aucun repas';
 
-  var prompt = 'Tu es nutritionniste expert. Profil: ' + (ob.prenom||'Client') + ', ' + (ob.age||'?') + ' ans, ' + (ob.sexe||'?') + ', ' + (ob.poids||'?') + 'kg, ' + (ob.taille||'?') + 'cm, activite: ' + (ob.activite||'?') + ', objectif: ' + (ob.objectif_type||'?') + '. Objectifs macros: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal. Repas recents: ' + (mealsDesc||'aucun repas enregistre') + '. Genere exactement ce JSON sans backticks: {"conseil_prot":"1 phrase proteines","conseil_gluc":"1 phrase glucides","conseil_lip":"1 phrase lipides","conseil_cal":"1 phrase calories","conseil_amelioration":"1-2 phrases amelioration","conseil_points_forts":"1-2 phrases points forts"}';
+  var prompt = 'Tu es nutritionniste. Client: ' + (ob.prenom||'?') + ', ' + (ob.poids||'?') + 'kg, objectif: ' + (ob.objectif_type||'?') + '. Macros cibles: prot=' + (macObj.p||0) + 'g gluc=' + (macObj.g||0) + 'g lip=' + (macObj.l||0) + 'g cal=' + (macObj.c||0) + 'kcal. Repas: ' + mealsDesc + '. Reponds UNIQUEMENT en JSON valide sans backticks: {"conseil_prot":"phrase courte","conseil_gluc":"phrase courte","conseil_lip":"phrase courte","conseil_cal":"phrase courte","conseil_amelioration":"1-2 phrases","conseil_points_forts":"1-2 phrases"}';
 
+  console.log('[Natty] Appel Claude API:', CLAUDE_API);
+  
   try {
     var res = await fetch(CLAUDE_API, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({prompt: prompt, max_tokens: 600})
     });
+    
+    console.log('[Natty] Claude response status:', res.status);
     var d = await res.json();
+    console.log('[Natty] Claude response:', d);
+    
+    if (!res.ok) throw new Error('Claude API error: ' + res.status);
+    
     var raw = (d.text || '{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim();
+    console.log('[Natty] Raw JSON:', raw.substring(0, 200));
+    
     var data = JSON.parse(raw);
-    if (!data.conseil_prot && !data.conseil_amelioration) throw new Error('réponse vide');
+    if (!data.conseil_prot && !data.conseil_amelioration) throw new Error('JSON vide ou mal formé');
 
     var semaine = getLundiSemaine();
     var now = new Date().toISOString();
+    console.log('[Natty] Conseils générés OK, sauvegarde...');
 
-    // Sauvegarder via API Vercel (service_role key, contourne RLS)
+    // Sauvegarder via API Vercel
     try {
       var saveRes = await fetch('https://natty-suivi.vercel.app/api/save-conseils', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id:              USER_ID,
-          conseil_prot:         data.conseil_prot || null,
-          conseil_gluc:         data.conseil_gluc || null,
-          conseil_lip:          data.conseil_lip || null,
-          conseil_cal:          data.conseil_cal || null,
+          user_id: USER_ID,
+          conseil_prot: data.conseil_prot || null,
+          conseil_gluc: data.conseil_gluc || null,
+          conseil_lip:  data.conseil_lip  || null,
+          conseil_cal:  data.conseil_cal  || null,
           conseil_amelioration: data.conseil_amelioration || null,
           conseil_points_forts: data.conseil_points_forts || null,
-          semaine:              semaine
+          semaine: semaine
         })
       });
-      if (!saveRes.ok) console.warn('save-conseils:', await saveRes.text());
-    } catch(saveErr) { console.warn('Sauvegarde conseils:', saveErr); }
+      var saveText = await saveRes.text();
+      console.log('[Natty] save-conseils status:', saveRes.status, saveText.substring(0,100));
+    } catch(saveErr) { console.warn('[Natty] Sauvegarde error:', saveErr); }
 
-    // 2ème appel Claude : liste de courses + recettes
+    // 2ème appel : liste de courses + recettes
     try {
-      var promptCourses = 'Nutritionniste et chef. Profil: prot=' + macObj.p + 'g gluc=' + macObj.g + 'g lip=' + macObj.l + 'g cal=' + macObj.c + 'kcal. Conseils: ' + (data.conseil_amelioration||'') + ' ' + (data.conseil_prot||'') + '. Genere en JSON sans backticks: {"liste_courses":{"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]},"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","..."]}]}';
+      var promptC = 'Nutritionniste. Genere liste courses et 3 recettes. prot=' + (macObj.p||0) + 'g cal=' + (macObj.c||0) + 'kcal. Conseils: ' + (data.conseil_amelioration||'') + '. JSON sans backticks: {"liste_courses":{"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]},"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","..."]}]}';
       var resC = await fetch(CLAUDE_API, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({prompt: promptCourses, max_tokens: 1400})
+        body: JSON.stringify({prompt: promptC, max_tokens: 1400})
       });
       var dC = await resC.json();
-      var rawC = (dC.text || '{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim();
-      var parsedC = JSON.parse(rawC);
+      var parsedC = JSON.parse((dC.text||'{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim());
       var listeCJ = parsedC.liste_courses ? JSON.stringify(parsedC.liste_courses) : null;
       var recettesJ = parsedC.recettes && parsedC.recettes.length ? JSON.stringify(parsedC.recettes) : null;
-      // Mettre à jour en base
       if (listeCJ || recettesJ) {
         await fetch('https://natty-suivi.vercel.app/api/save-conseils', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: USER_ID,
-            liste_courses_json: listeCJ,
-            recettes_json: recettesJ,
-            semaine: semaine
-          })
+          body: JSON.stringify({ user_id: USER_ID, liste_courses_json: listeCJ, recettes_json: recettesJ, semaine: semaine })
         });
-        // Mettre à jour le cache local
         if (window._conseilsCache) {
           window._conseilsCache.liste_courses_json = listeCJ;
           window._conseilsCache.recettes_json = recettesJ;
         }
+        console.log('[Natty] Courses+recettes sauvegardées');
       }
-    } catch(eC) { console.warn('Courses/recettes generation:', eC); }
+    } catch(eC) { console.warn('[Natty] Courses error:', eC); }
 
-    // Afficher et reset le flag pour que le profil overlay recharge
+    // Afficher
     profilConseillsLoaded = false;
-    var row = Object.assign({}, data, {generated_at: now, semaine: semaine});
-    window._conseilsCache = Object.assign(window._conseilsCache || {}, row);
+    var row = Object.assign({}, data, {generated_at: now, semaine: semaine, liste_courses_json: window._conseilsCache && window._conseilsCache.liste_courses_json});
+    window._conseilsCache = row;
     conseilsRenderColonnes(row);
     profilConseillsLoaded = true;
+    console.log('[Natty] Conseils affichés avec succès');
 
   } catch(e) {
-    console.warn('conseilsGenererEtSauvegarder:', e);
+    console.error('[Natty] conseilsGenererEtSauvegarder ERROR:', e);
     if (!silentRefresh && document.getElementById('profilConseilsCont')) {
-      document.getElementById('profilConseilsCont').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px;text-align:center;">Ajoutez des repas pour recevoir vos conseils personnalisés.</div>';
+      document.getElementById('profilConseilsCont').innerHTML = '<div style="color:#c0392b;font-size:13px;padding:16px;text-align:center;">Erreur: ' + e.message + '</div>';
     }
+    throw e; // Re-throw pour que pcActionClick puisse catcher
   }
 }
 
@@ -3642,19 +3652,52 @@ function conseilsPopupVoir() {
 // ══ POPUP PREMIERS CONSEILS ══
 var _pcState = null;
 async function verifierEtMontrerPopupConseils() {
-  if (!USER_ID) return;
-  // Guard session : ne pas réafficher si déjà montré dans cette session
+  console.log('[Popup] === Vérification conseils ===');
+  console.log('[Popup] USER_ID:', USER_ID ? USER_ID.substring(0,8)+'...' : 'null');
+
+  if (!USER_ID) { console.log('[Popup] → STOP: pas de USER_ID'); return; }
+
+  // Guard session
   var sessionKey = 'natty_popup_session_' + USER_ID;
-  if (sessionStorage.getItem(sessionKey)) return;
+  var sessionDone = sessionStorage.getItem(sessionKey);
+  console.log('[Popup] Session guard:', sessionDone ? 'déjà montré cette session → stop' : 'pas encore montré');
+  if (sessionDone) return;
+
+  // Vérifier conseils en base
+  var conseilsEnBase = false;
+  var lundi = getLundiSemaine();
+  console.log('[Popup] Lundi semaine en cours:', lundi);
   try {
-    var r = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=conseil_prot,liste_courses_json&limit=1');
-    if (r && r.length && r[0].conseil_prot) {
-      // Conseils existent → mettre en cache et ne pas montrer le popup
-      window._conseilsCache = Object.assign(window._conseilsCache || {}, r[0]);
-      sessionStorage.setItem(sessionKey, '1');
-      return;
+    var r = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=conseil_prot,semaine,generated_at&limit=1');
+    console.log('[Popup] profil_conseils result:', r);
+    if (r && r.length) {
+      var row = r[0];
+      console.log('[Popup] conseil_prot:', row.conseil_prot ? 'existe' : 'vide');
+      console.log('[Popup] semaine en base:', row.semaine, '| semaine courante:', lundi);
+      console.log('[Popup] generated_at:', row.generated_at);
+      if (row.conseil_prot) {
+        var semOK = row.semaine === lundi;
+        var ageMS = row.generated_at ? Date.now() - new Date(row.generated_at).getTime() : Infinity;
+        var ageOK = ageMS < 7*24*3600*1000;
+        console.log('[Popup] semaine OK:', semOK, '| age OK (< 7j):', ageOK, '(age:', Math.round(ageMS/3600000)+'h)');
+        if (semOK || ageOK) {
+          conseilsEnBase = true;
+          window._conseilsCache = Object.assign(window._conseilsCache || {}, row);
+          sessionStorage.setItem(sessionKey, '1');
+          console.log('[Popup] → Conseils frais en base → pas de popup');
+          return;
+        } else {
+          console.log('[Popup] → Conseils périmés → afficher popup pour régénérer');
+        }
+      } else {
+        console.log('[Popup] → Ligne existe mais conseil_prot vide');
+      }
+    } else {
+      console.log('[Popup] → Aucune ligne dans profil_conseils pour cet user');
     }
-  } catch(e) {}
+  } catch(e) { console.warn('[Popup] Erreur fetch profil_conseils:', e); }
+
+  // Vérifier étapes préalables
   var nbPlats = allMeals.length;
   var onbOk = !!(macObj.p && macObj.c);
   var qaOk = false;
@@ -3662,9 +3705,20 @@ async function verifierEtMontrerPopupConseils() {
     var qa = await sbFetch('questionnaire_alim?user_id=eq.'+USER_ID+'&select=id&limit=1');
     qaOk = qa && qa.length > 0;
   } catch(e) {}
+
+  console.log('[Popup] État des étapes:');
+  console.log('[Popup]   onboarding OK:', onbOk, '(macObj.p='+macObj.p+', macObj.c='+macObj.c+')');
+  console.log('[Popup]   questionnaire OK:', qaOk);
+  console.log('[Popup]   nb repas:', nbPlats, '(besoin: 3+)');
+
+  var allDone = onbOk && nbPlats >= 3;
+  console.log('[Popup] Toutes étapes complètes:', allDone, '→', allDone ? 'bouton Générer' : 'bouton étape suivante');
+
   _pcState = {nbPlats:nbPlats, onbOk:onbOk, qaOk:qaOk};
   renderPopupConseils();
-  lockScroll(); document.getElementById('popupConseils').classList.add('active');
+  lockScroll();
+  document.getElementById('popupConseils').classList.add('active');
+  console.log('[Popup] → Popup affiché');
 }
 function renderPopupConseils() {
   if (!_pcState) return;
