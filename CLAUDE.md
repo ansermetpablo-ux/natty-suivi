@@ -2,10 +2,14 @@
 
 > Ce fichier couvre deux grands modules développés dans nos échanges :
 > 1. **Module "Mon Suivi / Mon alimentation"** — dashboard client, chat, admin nutritionnistes, onboarding, offre (sections rédigées par la session chat/admin).
-> 2. **Module "Parcours gamifié" (le « Duolingo de l'alimentaire »)** — `narration.html`, `map.html`, `motion_lab.html` et leurs mini-jeux (sections marquées `[narration]`, rédigées par la session parcours/jeux).
+> 2. **Module "Parcours gamifié" (le « Duolingo de l'alimentaire »)** — `narration.html` et ses mini-jeux (sections marquées `[narration]`, rédigées par la session parcours/jeux). `map.html` et `motion_lab.html` sont référencés dans ce document comme sources/labos mais **n'existent pas dans ce repo** (ni sur `main`, ni dans l'historique git) — voir §3.
 > Pour tout ce qui n'est pas documenté ici, écrire « À COMPLÉTER ».
 >
 > **Mise à jour narration (session parcours/animations — juillet 2026)** : la couche `[narration]` a été entièrement réécrite pour refléter le moteur cinématique « kinetic », la DA noir & blanc, et l'état réel des bugs. Les sections suivi/admin sont conservées telles quelles.
+>
+> **Mise à jour audit complet (session lecture/état des lieux — juillet 2026)** : renommage `CLAUDE FINAL.md` → `CLAUDE.md`. Documentation de tous les fichiers non couverts jusqu'ici (`accueil.html`, `chat.html`, `challenges.html`, `offre.html`, `questionnaire-alim.html`, `progression.html`, `api/checkout.js`, `api/scan-plat.js`, `api/supabase.js`, `api/webhook.js`). Correction de deux erreurs de statut ("à faire" alors que déjà fait). Ajout d'une section compatibilité Capacitor (§10). Aucun code fonctionnel modifié pendant cette session.
+>
+> **Objectif produit à moyen terme** : porter cette app web (HTML/CSS/JS vanilla, déployée sur Vercel, embarquée en iframe Wix) sur l'App Store et le Play Store via **Capacitor** (empaquetage du code web existant, PAS une réécriture native). Chantier séparé et ultérieur — voir §10 pour les points de vigilance à garder en tête dès maintenant.
 
 ---
 
@@ -128,6 +132,15 @@ Modifier fichier HTML sur GitHub → Commit → Vercel redéploie automatiquemen
 }
 ```
 
+### PWA : `manifest.json` / `sw.js` — état incohérent
+- `manifest.json` référence `/icon-192.png` et `/icon-512.png` comme icônes. **`/icon-192.png` n'existe pas à la racine** (seul `icon-512.png` existe ; les tailles réelles disponibles sont `natty-icon-{76,120,152,180,192,512,1024}.png`) → icône PWA cassée. `suivi.html` et `onboarding.html` utilisent aussi `/icon-192.png` en `apple-touch-icon` (cassé) alors qu'`index.html` utilise correctement `/natty-icon-180.png` etc.
+- `sw.js` est un service worker **auto-désactivant** : à l'install/activate, il vide tous les caches et **se désenregistre lui-même** (`self.registration.unregister()`), puis laisse passer toutes les requêtes réseau sans cache.
+- `index.html` désinscrit activement tout SW existant au chargement (`getRegistrations().then(reg => reg.unregister())`) et ne réenregistre jamais `sw.js`. `suivi.html`/`onboarding.html`, eux, appellent encore `navigator.serviceWorker.register('/sw.js')` — sans effet réel puisque `sw.js` s'auto-désinscrit, mais incohérence de code à nettoyer si ces pages sont retouchées.
+- ⚠️ **Pertinent pour Capacitor** : un service worker n'a pas le même comportement (ni la même utilité) dans une WebView Capacitor que dans un navigateur — cet état "désactivé partout" est en réalité une base saine pour la migration (pas de cache SW à gérer/désactiver spécifiquement pour la WebView).
+
+### Fichier `vercel` (sans extension, racine) — artefact à nettoyer
+Copie JSON partielle de `vercel.json` (mêmes crons, **sans** les headers no-cache), probablement un artefact d'un "Add files via upload" antérieur. Vercel ne lit que `vercel.json` — ce fichier n'a aucun effet, mais pollue la racine. À supprimer après confirmation de Pablo (pas fait pendant cette session, lecture seule).
+
 ### masterPage.js (Wix Studio) — état actuel
 - Toutes les URLs pointent vers `natty-suivi.vercel.app` (plus Netlify)
 - Cache-buster `?v=Date.now()` sur toutes les URLs → version fraîche à chaque chargement
@@ -146,7 +159,7 @@ Modifier fichier HTML sur GitHub → Commit → Vercel redéploie automatiquemen
 
 ## 3. Structure des fichiers
 
-### `index.html` (= `suivi.html` en output — dernier en date)
+### `index.html` — version courante du dashboard (voir bug navigation `suivi.html` ci-dessous)
 Tableau de bord client principal. Chargé dans un iFrame Wix via `$w('#html3').src = url`.
 
 **Rôle** : afficher score nutritionnel (ring SVG), macros du jour, historique repas, popup conseils hebdo, overlay profil, overlays commande/courses/recettes.
@@ -184,6 +197,65 @@ Tableau de bord client principal. Chargé dans un iFrame Wix via `$w('#html3').s
 - `#ovRecettes` : overlay recettes (#recettesCont)
 
 > ⚠️ Le fichier uploadé par Pablo est souvent **tronqué** (pas de `</body>` ni `</html>`). Toujours vérifier et appendre les overlays + balises fermantes si manquants.
+
+### `accueil.html`
+Hub de navigation principal (page d'entrée avant `index.html`/`suivi.html`). Statique, un seul appel Supabase en lecture (`nutrition_scores`, colonnes `variety_score`/`quality_score`/`relevance_score`/`calculated_at`, fallback `meals`) pour afficher un score.
+
+**Fonctions** : `naviguer(type,url)` (postMessage si en iframe Wix, sinon `location.href`), `chargerScore()`.
+
+**Liens sortants** : `onboarding.html`, `offre.html`, `challenges.html`, et **`suivi.html`** (x2 — bloc "Suivi" + carte "nutri").
+
+> 🔴 **Bug de navigation actif** : `accueil.html` est la **seule page du repo qui redirige encore vers `suivi.html`** (l'ancienne version du dashboard, 87 fonctions vs 142 dans `index.html`) au lieu d'`index.html`. Un utilisateur cliquant "Suivi" ou la carte "nutri" depuis l'accueil atterrit sur la version legacy, avec son propre flux de login Supabase Auth email/mot de passe embarqué (voir `suivi.html` ci-dessous) — potentiellement en décalage avec le système de token utilisé partout ailleurs. **À corriger en priorité** : remplacer les 2 occurrences de `suivi.html` par `index.html` dans `naviguer()`.
+
+> ⚠️ Ligne ~285 : image inline en base64 (~350 Ko sur une seule ligne) → poids initial du fichier gonflé. `postMessage(..., '*')` sans origine ciblée.
+
+### `suivi.html` — ancienne version du dashboard (legacy, encore accessible)
+Prédécesseur d'`index.html` : 87 fonctions vs 142, 11 overlays vs 12. `index.html` est un sur-ensemble quasi complet (+60 fonctions) ; 5 fonctions sans équivalent nommé identique (`calcScoreLive`, `chalSubscribeRT`, `fetchAnalyseIA`, `fetchMacroSuggestions`, `subscribeRT`) probablement renommées/fusionnées dans `index.html`, pas supprimées fonctionnellement.
+
+- **Contient son propre flux de login embarqué** : formulaire email/mot de passe → `POST /auth/v1/token?grant_type=password` (Supabase Auth), ~ligne 1799-1830. Après connexion, redirige lui-même vers `/index.html` (ligne ~1827) ou `/onboarding.html` (ligne ~1829) selon l'état — preuve que ce fichier se considère lui-même comme un point d'entrée obsolète qui bascule vers `index.html`.
+- Référencé uniquement depuis `accueil.html` (voir bug ci-dessus) — sinon aucune autre page n'y renvoie.
+- Tables touchées (superset de l'époque "tout-en-un") : `abonnements`, `challenge_entreprise`, `challenges`, `daily_macros`, `meal_ingredients`, `meals`, `messages`, `nutrition_scores`, `onboarding`, `rdv`.
+- `manifest`/icônes : utilise `/icon-192.png` en apple-touch-icon — **fichier inexistant** à la racine (seuls `natty-icon-*.png` existent) → icône cassée. `onboarding.html` a le même souci.
+- Enregistre activement le service worker (`navigator.serviceWorker.register('/sw.js')`) alors qu'`index.html` le désinscrit systématiquement (voir `sw.js` plus bas) — comportement PWA incohérent entre les deux fichiers.
+- **Décision à prendre avec Pablo** : ce fichier est-il à supprimer (et corriger le lien dans `accueil.html`), ou encore nécessaire quelque part ? Ne pas le supprimer sans confirmation explicite.
+
+### `chat.html`
+Chat client/nutritionniste, autonome, terminé.
+
+- Table Supabase unique : `messages` (`id`, `user_id`, `expediteur` = `client`/`nutritionniste`, `contenu`, `lu`, `created_at`).
+- Fonctions : `resolveUserId`, `sb(path,options)` (helper REST générique), `renderMessages`, `appendMessage`, `escapeHtml`, `subscribeRealtime`, `chargerMessages`, `envoyerMessage` (UI optimiste avec `tempId`), `retourSuivi()` → `/index.html?token=...` (cohérent, pas `suivi.html`).
+- `subscribeRealtime` ouvre un `WebSocket` manuel (`wss://.../realtime/v1/websocket?apikey=...&vsn=1.0.0`) avec un `phx_join` minimal (`{topic:'realtime:public:messages:user_id=eq.<id>', payload:{}}`) — **protocole Supabase Realtime pré-`postgres_changes`, probablement obsolète** sur l'instance actuelle (à vérifier en prod).
+- ⚠️ Reconnexion infinie sans back-off (`setTimeout(subscribeRealtime, 3000)` sur `onclose`) — à surveiller dans une WebView mobile qui bascule souvent en arrière-plan/réseau (spam de reconnexions).
+
+### `challenges.html`
+Défis perso/duo/entreprise. Autonome, aucune dépendance avec `narration.html`.
+
+- Tables : `challenges` (`user_id`, `type`=`personnel`/`duo`, `objectif_type`, `duree_semaines`, `date_debut`, `date_fin`, `statut`=`en_attente`/`actif`/`echoue`, `progression`, `adversaire_id`, `created_at`), `challenge_entreprise` (`user_id`, `entreprise_nom`, `prenom`, `code_groupe`, `progression`, `date_inscription`).
+- Fonctions : `chargerPerso`, `startChallenge`, `abandonnerChallenge`, `chargerDuo`, `inviterDuo`/`creerDuo`/`accepterDuo`, `chargerEntreprise`, `chargerClassement`/`afficherClassementDemo` (fallback avec données factices codées en dur si la requête échoue), `subscribeRealtime` (même pattern WebSocket manuel obsolète que `chat.html`, topic `realtime:public:challenges`).
+- ⚠️ Onclick inline avec quotes échappées manuellement (lignes ~391/423/514/555/556) — fragile, à migrer vers `data-*` + `addEventListener` (règle #8) si retouché. `navigator.clipboard` (ligne ~587) exige un contexte sécurisé — à tester dans la WebView Capacitor.
+
+### `offre.html`
+**Fonctionnel et complet** — contrairement au statut "à faire" indiqué historiquement dans ce document (corrigé en §8). Contient l'intégration Stripe Checkout complète.
+
+- Prix en dur : `PRICE_3 = "price_1TbhMB0TTrkVKRpiPvbGHLyI"`, `PRICE_4 = "price_1TbhWk0TTrkVKRpiFNYOOcEJ"`.
+- Flux `souscrire()` (ligne ~786) : 1) PATCH `onboarding?user_id=eq.<id>` (email, non bloquant) ; 2) `POST /api/checkout` avec `{priceId, userId, token, formule, objectif, objectifValeur, dureeSemaines, nutritionnisteId, jourLivraison, adresse, emailRecap}` ; 3) redirection vers `data.url` (`window.top.location.href` si iframe, sinon `location.href`).
+- Table lue : `nutritionnistes` (`?actif=eq.true`), fallback `NUTRI_DEMO` (3 profils factices) si vide/erreur.
+- Autres fonctions : `setStep`, `updateCTA`, `initSlider`/`drawSliderGraph`, `chargerNutris`, `choisirNutri`, `selectJour`, `buildRecap`, `toggleRGPD`.
+- ⚠️ Lignes ~205/213 : images inline base64 volumineuses (poids fichier).
+
+### `questionnaire-alim.html`
+Étape **distincte et complémentaire** à `onboarding.html` (pas un doublon) : `onboarding.html` gère objectif/profil (table `onboarding`) ; celui-ci gère les préférences alimentaires détaillées, table **`questionnaire_alim`** (colonnes : `user_id`, `allergies`, `regime`, `aliments_aimes`, `aliments_evites`, `decouverte_cuisines/styles/ingredients/variantes`, `curiosite_libre`, `frequence_cuisine`, `nb_repas`, `snacking`, `repas_sautes`, `ressenti`, `craquage`, `satisfaction_stars`, `commentaire_libre`, `defi_principal`, `completed_at`).
+
+- Déclenché depuis `index.html` (ligne ~3619 : vérifie `questionnaire_alim?user_id=eq...&limit=1`, redirige si absent ; aussi via popup conseils, action `'questionnaire'`).
+- Soumission (`#btn7`) : POST `questionnaire_alim` → `postMessage({type:'questionnaireAlimDone'})` → redirection `/index.html?token=...&qalim=1`.
+- Lu par `progression.html` pour personnaliser les suggestions/analyse — étape amont réellement utilisée en aval.
+- ⚠️ `alert()` natif en cas d'erreur de sauvegarde (~ligne 680) — à remplacer avant portage Capacitor (comportement variable selon plugin webview).
+
+### `progression.html`
+Dashboard "progression nutritionnelle". Lit `onboarding` (`completed=eq.true`), `questionnaire_alim`, `meals` (avec `meal_ingredients(*)` imbriqué, `order=created_at.desc&limit=30`).
+
+- Fonctions : `sbFetch`, `init`, `renderObjectif`, `renderCourbes`, `chargerSuggestions` → `POST /api/suggestions-macros`, `chargerAnalyse` → `POST /api/analyse-nutrition`.
+- 🔴 **Ces deux endpoints n'existent pas dans `api/`** → 404 systématique, masqué silencieusement par les fallbacks `renderSuggestionsFallback`/`renderFallbackAnalyse` (aucune erreur visible à l'utilisateur). Les features "suggestions IA" et "analyse nutritionnelle" de cette page sont **cassées en l'état**. À créer si on veut les activer, ou à retirer de l'UI si abandonnées.
 
 ### `admin.html`
 Back-office multi-rôles — accessible à `natty-suivi.vercel.app/admin.html`.
@@ -251,8 +323,38 @@ Notifications email via Resend.
 ### `onboarding.html`
 Questionnaire d'onboarding client — 7 étapes.
 
-### `api/webhook.js` (À CRÉER)
-Webhook Stripe pour activer les abonnements.
+### `api/checkout.js`
+Crée une session Stripe Checkout. Handler serverless classique (`export default async function handler`, pas edge).
+
+- Parse manuel du body (fallback si `req.body` vide/string via lecture stream), lit `{priceId, userId, token}`.
+- `POST https://api.stripe.com/v1/checkout/sessions` : `mode=subscription`, `line_items[0][price]=priceId`, `success_url=https://natty-suivi.vercel.app/?token=<token>&subscribed=1`, `cancel_url=.../offre.html?token=<token>&cancelled=1`, `metadata[user_id]` + `subscription_data[metadata][user_id]`.
+- Retourne `{url: session.url}`, consommé par `offre.html`.
+- ⚠️ **Pas de validation serveur de `priceId`** : le client peut envoyer n'importe quel `price_...` Stripe existant sur le compte (le front n'envoie que `PRICE_3`/`PRICE_4`, mais rien ne l'impose côté serveur). À corriger : allowlist des deux price IDs légitimes.
+- `console.log` verbeux (body reçu, réponse Stripe) — à nettoyer avant prod si les logs Vercel sont partagés.
+
+### `api/scan-plat.js`
+Pipeline photo de plat → macros, en 2 étapes : **LogMeal** (`api.logmeal.com/v2/image/segmentation/complete`, clé `LOGMEAL_API_KEY`) reconnaît les aliments, puis **Claude** (`api.anthropic.com/v1/messages`, modèle `claude-sonnet-4-5`, clé `ANTHROPIC_API_KEY`) estime quantités/macros à partir des aliments reconnus.
+
+- Entrée : `{image (base64), media_type}`. Sortie : `{nom, ingredients:[{emoji,nom,quantite_g}], macros:{prot,lip,gluc,cal}, description, logmeal_foods, logmeal_ok, claude_ok}`, avec fallback si LogMeal ne reconnaît rien ou si Claude échoue.
+- Utilise le module natif `https` (bas niveau) + `module.exports` (CommonJS) — incohérent avec le style ESM (`export default`) des autres fichiers `api/*.js`.
+- `config.api.bodyParser.sizeLimit = '10mb'` pour les images.
+- 🔴 **Endpoint mort/orphelin** : aucun fichier HTML ne l'appelle (aucune occurrence de `scan-plat`/`logmeal` côté front). Construit mais jamais branché à l'UI — c'est probablement le futur endpoint pour "Analyse de plat par IA (photo → macros)" listé en §8, mais il n'est pas encore relié.
+
+### `api/supabase.js`
+Handler générique de proxy REST vers Supabase (`export const config = { runtime: 'edge' }`), relaie `?path=` + méthode HTTP, ajoute headers `apikey`/`Authorization` (clé anon en dur), CORS ouverts (`*`).
+
+- 🔴 **Totalement orphelin** : aucun autre fichier `api/*.js` ne l'importe, aucune page HTML ne l'appelle. Chaque page/fonction réimplémente son propre `fetch(SB_URL+'/rest/v1/...')` en dur au lieu de passer par ce proxy. À supprimer si on ne compte pas le brancher, ou à utiliser pour mutualiser plus tard.
+
+### `api/webhook.js`
+Webhook Stripe — **déjà implémenté**, pas un stub (corrigé : ce document le listait à tort comme "À CRÉER" en §8, alors qu'il existe et fonctionne). `export const config = { runtime: 'edge' }`.
+
+Events gérés :
+- `checkout.session.completed` : `session.metadata.user_id` → refetch `GET /v1/subscriptions/<id>` pour connaître le `priceId` → compare à `STRIPE_PRICE_3_REPAS`/`STRIPE_PRICE_4_REPAS` (env) pour déduire `formule` → `POST abonnements` (`user_id, stripe_customer_id, stripe_subscription_id, formule, statut:'actif', date_debut`).
+- `invoice.paid` : `PATCH abonnements?stripe_subscription_id=eq.<id>` → `{statut:'actif'}`.
+- `customer.subscription.deleted` : `PATCH abonnements?stripe_subscription_id=eq.<id>` → `{statut:'annule'}`.
+
+> 🔴 **[PRIORITÉ SÉCURITÉ] Aucune vérification de signature Stripe** : le header `stripe-signature` n'est pas lu, pas de `stripe.webhooks.constructEvent`, pas de `STRIPE_WEBHOOK_SECRET` utilisé — `const event = await req.json()` fait confiance au body brut. **N'importe qui peut POSTer un faux event JSON et activer un abonnement gratuit sur un `user_id` arbitraire.** À corriger avant toute mise en prod réelle (voir aussi §8).
+> `SUPABASE_KEY` a un fallback en dur sur la clé anon si la variable d'env est absente — écrire dans `abonnements` suppose que la RLS autorise l'anon en INSERT/UPDATE (sinon échec silencieux, visible uniquement en HTTP 500 côté Stripe).
 
 ### [narration] Fichiers du module parcours
 
@@ -289,14 +391,9 @@ Le livrable. Contient le contenu du parcours (`STORY[]`), le moteur d'affichage 
 - Deux images superposées, **exactement même taille** : base en niveaux de gris (`.paint-base`, opacité réduite) + copie couleur (`.paint-fill`) révélée du bas vers le haut par un `clip-path:inset(X% 0 0 0)` → la jauge « épouse la forme » du sujet.
 - Glisser vers le haut = estimer le % ; bouton « Valider mon estimation » actif dès `frac>0`.
 
-#### `motion_lab.html` — laboratoire cinématique (référence)
-Moteur « vidéo interactive » d'origine (kinetic typography) : entrées (rise, unblur, through, drift…), sorties, effets de mots sémantiques (burn, flow, freeze…), sons, vibrations. **C'est la source** dont le moteur `k_` de `narration.html` est porté. Sert de banc d'essai ; ne pas déployer tel quel (son thème d'origine était sombre — la narration impose désormais la DA N&B, voir §5).
-
-#### `map.html` — carte de progression (mise de côté)
-Carte gamifiée du parcours. Non prioritaire actuellement.
-
-#### `deploy-demo/` — version déployable iframe (prévue)
-Dossier prévu : copie de `narration.html` en `index.html` + `vercel.json` avec `frame-ancestors *`.
+#### `motion_lab.html`, `map.html`, `deploy-demo/` — ⚠️ n'existent pas dans ce repo
+Ces trois éléments sont décrits dans les sections `[narration]` de ce document (moteur cinématique d'origine, carte de progression, dossier de déploiement iframe) mais **vérification faite (audit juillet 2026) : aucun des trois n'existe dans l'arborescence actuelle, ni sur `main`, ni dans tout l'historique git (`git log --all --diff-filter=A`), ni sur une autre branche.** Le moteur `k_` de `narration.html` est bien présent et fonctionnel (31 fonctions `k_*`, `K_SVG` avec 9 illustrations, confirmé par lecture directe) — donc le contenu qu'ils étaient censés fournir a déjà été porté dans `narration.html`. Mais les fichiers sources eux-mêmes sont absents : soit ils ont été produits dans une session locale jamais commit/push, soit cette doc était partiellement aspirationnelle.
+**Si Pablo fournit ces fichiers** : ils se déploient exactement comme n'importe quel autre fichier du repo (commit → push GitHub → Vercel redéploie automatiquement, ~1 min) — aucune configuration spéciale n'est nécessaire pour `motion_lab.html`/`map.html`. Pour `deploy-demo/` (dossier avec son propre `vercel.json` et `frame-ancestors *`), vérifier d'abord s'il doit être un projet Vercel séparé ou un sous-dossier de celui-ci (à clarifier avec Pablo avant de créer une config qui pourrait entrer en conflit avec le `vercel.json` racine).
 
 ---
 
@@ -686,6 +783,30 @@ Dossier prévu : copie de `narration.html` en `index.html` + `vercel.json` avec 
 **Problème** : sujet en niveaux de gris quasi invisible sur fond sombre, et copie couleur débordant du panneau (deux images mal alignées).
 **Solution** : panneau **blanc** dédié ; base et copie **strictement même taille** (`height` fixe, `width:auto`) ; révélation par `clip-path` sur la copie ; plus de conteneur de découpe séparé.
 
+### Navigation `accueil.html` → `suivi.html` au lieu d'`index.html`
+**Problème** : `accueil.html` redirige encore vers l'ancienne version du dashboard (`suivi.html`, avec son propre login Supabase Auth embarqué) au lieu d'`index.html`. Seule page du repo dans ce cas.
+**Solution** : remplacer les 2 occurrences dans `naviguer()` par `index.html`. Non fait pendant cette session (lecture seule) — à corriger dès la prochaine session code.
+
+### `api/progression.js` — doublon HTML déployé comme fonction serverless
+**Problème** : `api/progression.js` est un copier-coller intégral de `progression.html` (contenu identique, hash MD5 identique) avec l'extension `.js`. Si Vercel tente de le construire comme une fonction serverless, le fichier commence par `<!DOCTYPE html>` et non par `export default`/`module.exports` → échec probable du build ou de l'exécution de cette route.
+**Solution** : supprimer ce fichier (le vrai contenu utile est `progression.html`), ou le remplacer par un vrai handler si une route `/api/progression` est réellement nécessaire. Non fait pendant cette session — à valider avec Pablo avant suppression.
+
+### Endpoints manquants appelés par `progression.html`
+**Problème** : `chargerSuggestions()` et `chargerAnalyse()` appellent `POST /api/suggestions-macros` et `POST /api/analyse-nutrition`, qui n'existent nulle part dans `api/`. Échec 404 systématique, masqué silencieusement par des fallbacks statiques (`renderSuggestionsFallback`/`renderFallbackAnalyse`) — l'utilisateur ne voit jamais d'erreur, juste des données génériques.
+**Solution** : soit créer ces deux endpoints (probablement en réutilisant le pattern de `api/claude.js`), soit retirer les boutons/sections correspondants de `progression.html` si la feature est abandonnée.
+
+### Webhook Stripe sans vérification de signature
+**Problème** : `api/webhook.js` traite `await req.json()` sans jamais vérifier le header `stripe-signature` ni utiliser `STRIPE_WEBHOOK_SECRET`. N'importe qui connaissant l'URL peut POSTer un faux event `checkout.session.completed` avec un `user_id` arbitraire et activer un abonnement gratuit.
+**Solution** : implémenter `stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET)` et rejeter (400) toute requête dont la signature ne correspond pas. **Priorité sécurité avant toute mise en prod réelle** (voir aussi §8).
+
+### Realtime WebSocket manuel (protocole obsolète ?)
+**Problème** : `chat.html`, `challenges.html` et `suivi.html` ouvrent chacun un `WebSocket` manuel vers `wss://.../realtime/v1/websocket` avec un `phx_join` minimal (`{topic:'realtime:public:<table>', payload:{}}`), sans `config.postgres_changes` — c'est le protocole Supabase Realtime **pré-`postgres_changes`**, potentiellement incompatible avec une instance Supabase récente (qui exige ce champ de config pour router les événements).
+**Solution** : à tester en conditions réelles (envoyer un message/défi et vérifier la réception live) ; si cassé, migrer vers le client `supabase-js` (`.channel().on('postgres_changes', ...)`) plutôt que le protocole WebSocket brut.
+
+### Icône PWA cassée (`/icon-192.png` inexistant)
+**Problème** : `manifest.json`, `suivi.html` et `onboarding.html` référencent `/icon-192.png`, fichier absent de la racine (seuls `icon-512.png` et les `natty-icon-*.png` existent).
+**Solution** : soit ajouter un `icon-192.png` à la racine, soit faire pointer ces références vers `/natty-icon-192.png` (qui existe déjà).
+
 ---
 
 ## 8. État d'avancement
@@ -724,24 +845,39 @@ Dossier prévu : copie de `narration.html` en `index.html` + `vercel.json` avec 
 - Tables `recettes`, `recettes_ingredients`, `recettes_etapes` (RLS désactivé)
 - `profil_conseils` (RLS désactivé)
 
+### ✅ Corrections de statut (audit juillet 2026)
+Ce document listait par erreur les éléments suivants comme "à faire" alors qu'ils sont **déjà implémentés** dans le repo actuel :
+- `api/webhook.js` — **existe et fonctionne** (checkout.session.completed / invoice.paid / subscription.deleted → table `abonnements`), mais sans vérification de signature Stripe (voir §7, priorité sécurité).
+- `offre.html` — **complet et fonctionnel**, intégration Stripe Checkout déjà branchée sur `api/checkout.js`.
+- Stripe Checkout integration — **fait** (`api/checkout.js` + `offre.html`).
+
 ### 🔄 À faire
 
+**Bugs de navigation & code mort découverts (audit juillet 2026)**
+- `accueil.html` redirige vers `suivi.html` (legacy) au lieu d'`index.html` — voir §7.
+- `api/progression.js` est un doublon HTML cassé de `progression.html`, à supprimer ou corriger — voir §7.
+- `/api/suggestions-macros` et `/api/analyse-nutrition` sont appelés par `progression.html` mais n'existent pas — à créer ou retirer de l'UI — voir §7.
+- `api/scan-plat.js` (pipeline LogMeal + Claude vision) est codé mais jamais appelé par aucune page — à brancher si c'est la feature "Analyse de plat par IA" prévue, sinon à documenter comme volontairement en pause.
+- `api/supabase.js` (proxy générique Supabase) est orphelin, jamais utilisé — à supprimer ou à adopter pour mutualiser les appels.
+- `manifest.json`/`suivi.html`/`onboarding.html` référencent `/icon-192.png` inexistant — voir §7.
+- Fichier `vercel` (sans extension, racine) — artefact sans effet à nettoyer, confirmation Pablo requise.
+
 **Abonnements & paiements**
-- `api/webhook.js` — webhook Stripe
-- `offre.html` — page de présentation offre
-- Stripe Checkout integration
+- Sécuriser `api/webhook.js` avec vérification de signature Stripe (voir Sécurité ci-dessous).
 
 **Améliorations index.html**
 - Connecter l'action de la semaine du nutritionniste → affichage dans l'app
-- Analyse de plat par IA (photo → macros)
+- Analyse de plat par IA (photo → macros) — le backend existe déjà (`api/scan-plat.js`), reste à brancher l'UI (upload photo → appel endpoint → affichage résultat)
 
 **Admin**
 - Calendrier commandes (semaineOffset reset à 0 bug)
 - Vue client premium/standard (badge logic à corriger)
 
 **Sécurité**
+- **[PRIORITÉ SÉCURITÉ] Vérifier la signature Stripe dans `api/webhook.js`** (actuellement absente — n'importe qui peut activer un abonnement gratuit en falsifiant un event). Voir §7.
 - **[PRIORITÉ SÉCURITÉ] Réactiver les RLS Supabase** (actuellement désactivées sur `recettes*` et `profil_conseils`, et policies `USING(true)` ailleurs) : avec la clé anon publique, ces tables sont lisibles/modifiables par n'importe qui. À traiter avant toute distribution large. Écrire les policies une par une, tester après chaque.
 - Remplacer mots de passe hardcodés par auth Supabase
+- Valider côté serveur que `priceId` dans `api/checkout.js` fait bien partie de `PRICE_3`/`PRICE_4` (actuellement non vérifié).
 
 ### ✅ Fait (sessions précédentes)
 - Chat temps réel Supabase Realtime
@@ -781,6 +917,7 @@ Dossier prévu : copie de `narration.html` en `index.html` + `vercel.json` avec 
 18. **Activer Realtime manuellement** sur toute nouvelle table utilisant les WebSockets
 19. **Après chaque push GitHub**, attendre le redéploiement Vercel (statut Ready) avant de tester
 20. **`window._factureProduitsCache`** — données facture dans array global avec `data-idx`, pas en JSON dans `data-produit`
+31. **Compatibilité Capacitor** : signaler à Pablo toute décision qui dépendrait d'une API navigateur non supportée en WebView (voir §10), ou d'un chemin absolu qui casserait si l'app n'est plus servie depuis la racine du domaine
 
 ### [narration] Règles spécifiques au module parcours
 21. **Backup avant grosse édition** : copier avant toute passe de script
@@ -793,6 +930,28 @@ Dossier prévu : copie de `narration.html` en `index.html` + `vercel.json` avec 
 28. **Bouton d'action toujours dans `#k_cta`** (barre fixe), jamais dans le plan animé
 29. **Auto-avance uniquement sur les frames SANS bouton** ; une frame avec `btn` attend le clic et garde son contenu affiché
 30. **Jauge canette/steak** : base et copie couleur strictement même taille ; révélation par `clip-path` ; sujet détouré sur panneau blanc, sans support
+
+---
+
+## 10. Compatibilité Capacitor / migration mobile (à garder en tête)
+
+> Contexte : objectif produit à moyen terme = empaqueter le code web existant via **Capacitor** pour publier sur App Store / Play Store, **sans réécriture native**. Ce chantier n'a pas commencé (ne pas installer Capacitor sans demande explicite de Pablo) — cette section liste les points relevés dans le code actuel qui casseraient ou mériteraient une vérification dans une WebView native.
+
+### Ce qui casserait tel quel
+- **`window.self !== window.top` + `postMessage` vers un parent Wix** : présent dans quasi toutes les pages (`accueil.html`, `index.html`, `suivi.html`, `offre.html`, `questionnaire-alim.html`…) pour détecter si on est en iframe Wix. Dans une WebView Capacitor, il n'y a **jamais** de `window.top` différent de `window.self` (pas d'iframe) → toute la branche `postMessage` ne se déclenchera jamais. Ce n'est pas bloquant en soi (le fallback `window.location.href` prend le relais), mais il faudra vérifier que le fallback est bien complet partout et ne dépend pas silencieusement d'un message jamais reçu.
+- **Chemins absolus (`/manifest.json`, `/icon-192.png`, `/sw.js`, etc.)** : fonctionnent tant que l'app est servie depuis la racine du domaine (cas actuel sur Vercel). Dans le bundle Capacitor, si `index.html` n'est pas à la racine du dossier `www/`, ces chemins casseraient. À vérifier lors de la config Capacitor (`webDir`).
+
+### À tester en WebView avant de généraliser
+- `alert()`/`confirm()` natifs (`questionnaire-alim.html`) — rendu différent voire bloquant selon la WebView/plugin.
+- `navigator.clipboard` (`challenges.html`) — exige un contexte sécurisé, comportement à valider dans Capacitor.
+- Les `WebSocket` manuels vers Supabase Realtime (`chat.html`, `challenges.html`, `suivi.html`) — devraient fonctionner en WebView (pas une limitation Capacitor), mais leur protocole est peut-être déjà obsolète côté serveur (voir §7) : à corriger avant de s'appuyer dessus en mobile.
+
+### Ce qui est déjà une base saine pour la migration
+- `sw.js` s'auto-désactive et `index.html` désinscrit tout service worker — pas de cache SW à gérer/désactiver spécifiquement pour la WebView (voir §2).
+- `localStorage` (token, guards conseils) fonctionne nativement dans une WebView Capacitor, aucun changement attendu.
+- Le module narration (`narration.html`) est déjà **100 % autonome sans réseau** — c'est la feature la plus "Capacitor-ready" du repo en l'état.
+
+> **Règle de travail** : signaler à Pablo toute nouvelle décision technique qui introduirait une dépendance à une API navigateur non supportée en WebView, ou un chemin absolu fragile, avant de la committer.
 
 ---
 
@@ -818,3 +977,15 @@ Dossier prévu : copie de `narration.html` en `index.html` + `vercel.json` avec 
 - **Section 7** : bugs narration détaillés (settled/opacité-flou, sorties manquantes, bouton transparent, surlignage, jauge)
 - **Section 8** : état d'avancement narration + reste à faire
 - **Section 9** : règles Claude Code 26-30 spécifiques au moteur kinetic
+
+---
+
+*Contribution session audit complet (Claude Sonnet, lecture intégrale du repo — juillet 2026), en préparation d'un futur portage Capacitor/App Store — lecture seule, aucun code fonctionnel modifié :*
+- Renommage `CLAUDE FINAL.md` → `CLAUDE.md`
+- **Section 1/Header** : clarification statut `map.html`/`motion_lab.html`/`deploy-demo` (inexistants dans ce repo), objectif Capacitor explicité
+- **Section 2** : ajout PWA (`manifest.json`/`sw.js`, icône `/icon-192.png` cassée), fichier `vercel` orphelin identifié
+- **Section 3** : documentation complète de `accueil.html`, `chat.html`, `challenges.html`, `offre.html`, `questionnaire-alim.html`, `progression.html`, `suivi.html` (statut legacy clarifié), `api/checkout.js`, `api/scan-plat.js`, `api/supabase.js` ; correction du statut de `api/webhook.js` (déjà fait, pas "à créer")
+- **Section 7** : 6 nouveaux pièges documentés (navigation accueil→suivi.html, doublon `api/progression.js`, endpoints manquants dans `progression.html`, webhook Stripe sans signature, Realtime WebSocket protocole obsolète, icône PWA cassée)
+- **Section 8** : correction de 3 statuts erronés ("à faire" → déjà fait), ajout des bugs/code mort découverts
+- **Section 9** : règle 31 ajoutée (compatibilité Capacitor)
+- **Section 10 (nouvelle)** : compatibilité Capacitor — ce qui casserait tel quel, ce qui est à tester, ce qui est déjà une base saine
