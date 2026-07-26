@@ -580,21 +580,9 @@ body[data-u="jeu"] #klayer{background:#0f1014}
 /* highlights uniformes : noir (hl) / jaune réservé au sens fort. hlO suit --ink pour rester N&B */
 #klayer .hlO .bg{background:var(--ink)}
 /* ── SORTIES de frames (le plan précédent disparaît proprement) ── */
+/* Les animations de sortie réelles (k_o*) sont définies plus bas avec .plan.settled ;
+   ce bloc ne fait que garder les plans sortants non cliquables pendant leur transition. */
 #klayer .plan.out,#klayer .plan[class*="out-"]{pointer-events:none}
-#klayer .plan.out{animation:k_xFade .5s ease forwards}
-#klayer .plan.out-up{animation:k_xUp .55s cubic-bezier(.5,0,.75,0) forwards}
-#klayer .plan.out-shrink{animation:k_xShrink .5s cubic-bezier(.5,0,.75,0) forwards}
-#klayer .plan.out-through{animation:k_xThrough .6s cubic-bezier(.5,0,.75,0) forwards}
-#klayer .plan.out-slide{animation:k_xSlide .55s cubic-bezier(.5,0,.75,0) forwards}
-#klayer .plan.out-drop{animation:k_xDrop .55s cubic-bezier(.5,0,.75,0) forwards}
-#klayer .plan.out-spin{animation:k_xSpin .6s cubic-bezier(.5,0,.75,0) forwards}
-@keyframes k_xFade{to{opacity:0;filter:blur(8px)}}
-@keyframes k_xUp{to{opacity:0;transform:translateY(-70px);filter:blur(9px)}}
-@keyframes k_xShrink{to{opacity:0;transform:scale(.7);filter:blur(9px)}}
-@keyframes k_xThrough{to{opacity:0;transform:scale(2.4);filter:blur(16px)}}
-@keyframes k_xSlide{to{opacity:0;transform:translateX(-90px);filter:blur(9px)}}
-@keyframes k_xDrop{to{opacity:0;transform:translateY(80px);filter:blur(9px)}}
-@keyframes k_xSpin{to{opacity:0;transform:rotate(12deg) scale(.6);filter:blur(9px)}}
 /* barre bouton fixe en bas — ne bouge jamais avec l'animation du plan */
 #klayer .k-cta{position:absolute;left:0;right:0;bottom:0;z-index:50;display:flex;justify-content:center;padding:0 24px 42px;opacity:0;transform:translateY(16px);pointer-events:none;transition:opacity .4s ease,transform .4s ease}
 #klayer .k-cta.on{opacity:1;transform:none;pointer-events:auto}
@@ -639,7 +627,21 @@ body[data-u="jeu"] #klayer .hl{color:#0d0d0f}
 @keyframes k_eDrift{to{opacity:1;transform:none;filter:blur(0)}}#klayer [data-enter="swing"]{opacity:0;transform:rotate(12deg) translateY(-40px);transform-origin:top center;animation:k_eSwing 1.9s cubic-bezier(.2,.85,.3,1) forwards}
 @keyframes k_eSwing{30%{opacity:1;transform:rotate(-8deg)}55%{transform:rotate(5deg)}75%{transform:rotate(-2deg)}to{opacity:1;transform:none}}#klayer [data-enter="tunnel"]{opacity:0;transform:translateZ(-600px) rotateX(30deg);animation:k_eTunnel 1.8s cubic-bezier(.16,.62,.24,1) forwards}
 @keyframes k_eTunnel{to{opacity:1;transform:none}}#klayer [data-enter="glitch"]{opacity:0;animation:k_eGlitch .7s steps(3) forwards}
-@keyframes k_eGlitch{0%{opacity:0;transform:translate(-8px,4px) skewX(20deg);filter:blur(2px)}25%{opacity:1;transform:translate(6px,-3px) skewX(-14deg)}50%{transform:translate(-4px,2px) skewX(8deg)}75%{transform:translate(2px,-1px)}to{opacity:1;transform:none;filter:none}}#klayer .wave .ch, #klayer .stagger .ch{display:inline-block}#klayer .wave .ch{opacity:0;transform:translateY(46px) rotate(8deg);animation:k_chWave .5s cubic-bezier(.2,1.3,.4,1) forwards}
+@keyframes k_eGlitch{0%{opacity:0;transform:translate(-8px,4px) skewX(20deg);filter:blur(2px)}25%{opacity:1;transform:translate(6px,-3px) skewX(-14deg)}50%{transform:translate(-4px,2px) skewX(8deg)}75%{transform:translate(2px,-1px)}to{opacity:1;transform:none;filter:none}}
+/* ═══ Bibliothèque « motion Apple » (juillet 2026) — entrées sobres, spring easing, pas de rebond/glitch ═══ */
+#klayer [data-enter="glide"]{opacity:0;transform:translateY(14px);animation:k_eGlide 1s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes k_eGlide{to{opacity:1;transform:none}}
+#klayer [data-enter="focus"]{opacity:0;filter:blur(9px);transform:scale(1.06);animation:k_eFocus 1.1s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes k_eFocus{to{opacity:1;filter:blur(0);transform:scale(1)}}
+#klayer [data-enter="parallax"]{opacity:0;transform:translateY(10px) scale(.97);animation:k_eParallax .9s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes k_eParallax{to{opacity:1;transform:none}}
+#klayer [data-enter="reveal"]{clip-path:inset(0 100% 0 0);animation:k_eReveal 1s cubic-bezier(.65,0,.35,1) forwards}
+@keyframes k_eReveal{to{clip-path:inset(0 0 0 0)}}
+#klayer .plan.out-settle{animation:k_oSettle .5s cubic-bezier(.4,0,1,1) forwards}
+@keyframes k_oSettle{to{opacity:0;transform:scale(.98)}}
+#klayer .plan.out-lift{animation:k_oLift .55s cubic-bezier(.4,0,1,1) forwards}
+@keyframes k_oLift{to{opacity:0;transform:translateY(-14px)}}
+#klayer .wave .ch, #klayer .stagger .ch{display:inline-block}#klayer .wave .ch{opacity:0;transform:translateY(46px) rotate(8deg);animation:k_chWave .5s cubic-bezier(.2,1.3,.4,1) forwards}
 @keyframes k_chWave{to{opacity:1;transform:none}}#klayer .stagger .ch{opacity:0;transform:translateY(-30px) scale(1.4);filter:blur(6px);animation:k_chStag .46s cubic-bezier(.3,1.2,.4,1) forwards}
 @keyframes k_chStag{to{opacity:1;transform:none;filter:blur(0)}}#klayer .dropin .ch{display:inline-block;opacity:0;transform:translateY(-70px);animation:k_chDrop .5s cubic-bezier(.3,1.5,.4,1) forwards}
 @keyframes k_chDrop{to{opacity:1;transform:none}}#klayer .plan.out{animation:k_oFade .9s cubic-bezier(.35,0,.4,1) forwards}
@@ -2978,7 +2980,7 @@ k_step=function(){
     var layer=document.getElementById('klayer');
     k_riseStop();
     var cta=document.getElementById('k_cta');if(cta){cta.classList.remove('on');cta.innerHTML='';}
-    if(k_currentEl)k_clearPlan(k_currentEl,'out-up');   /* la frame d'action sort proprement */
+    if(k_currentEl)k_clearPlan(k_currentEl,'out-'+k_pick(K_OUTS));   /* la frame d'action sort proprement, sortie variée */
     setTimeout(function(){layer.classList.remove('on');k_stage.innerHTML='';k_currentEl=null;if(k_onDone){var f=k_onDone;k_onDone=null;f();}},620);
     return;
   }
@@ -3030,8 +3032,12 @@ function k_chapterSeq(no,label,mode){
   }];
 }
 /* convertit un beat 'say' (titre + hl + sub + em) en mini-vidéo kinetic uniforme */
-var K_ENTERS=['rise','drop','through','pop','drift','skew','blur','stretch','swing'];
-var K_OUTS=['up','shrink','slide','through','drop','spin'];
+/* Pool d'entrées pour les beats 'say' : sobre et "clean", façon Apple keynote —
+   pas de glitch/bounce/tunnel/squash ici (trop ludiques, réservés aux jeux/défis).
+   k_pick() fait tourner la liste en rond à chaque appel : chaque 'say' consécutif
+   varie, sans jamais rejouer deux fois la même entrée d'affilée. */
+var K_ENTERS=['unblur','glide','focus','parallax','drift','reveal'];
+var K_OUTS=['lift','settle','shrink','slide','up'];
 var k_entI=0;
 function k_pick(arr){var v=arr[k_entI%arr.length];k_entI++;return v;}
 function k_sayToSeq(b){
@@ -3040,7 +3046,7 @@ function k_sayToSeq(b){
   var titleTokens=[{t:b.title||''}];
   if(b.hl){ titleTokens=[{t:(b.title?b.title+' ':'')},{t:b.hl,fx:'hl'}]; }
   return [{
-    enter:'unblur', hold:0,
+    enter:b.enter||k_pick(K_ENTERS), hold:0,
     illo: b.em||undefined, illoAnim:'float',
     size: (b.title && b.title.length>26)?'med':'big',
     lines:[titleTokens], sub:b.sub||undefined, fxDelay:850,
