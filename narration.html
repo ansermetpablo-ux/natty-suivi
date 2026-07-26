@@ -834,16 +834,16 @@ var STORY=[
   {type:'say',anim:'zoom',title:'Bonjour Pablo',sub:'Prêt à apprendre à bien manger ?',cta:'Oui ! 🚀',
   cine:[
     {enter:'pop', hold:1400, illo:'👋', illoAnim:'float', size:'sm', outPrev:'up'},
-    {enter:'unblur', hold:1900, size:'xl', lines:[[{t:'Bonjour '},{t:'Pablo',fx:'hl'}]], fxDelay:1000, outPrev:'through'},
+    {enter:'glide', hold:1900, size:'xl', lines:[[{t:'Bonjour '},{t:'Pablo',fx:'hl'}]], fxDelay:1000, outPrev:'lift'},
     {enter:'rise', hold:0, size:'med', lines:[[{t:'Prêt à '},{t:'bien manger',fx:'hlY'},{t:' ?'}]], fxDelay:800, outPrev:'up', cta:'Oui ! 🚀'}
   ]},
   {type:'choice',anim:'slide',title:'Quel est ton niveau ?',options:[
     {t:'Je mange pour <b>survivre</b> 🥒'},{t:'Je sais faire les <b>basiques</b> 🍝'},{t:"J'ai un <b>bon niveau</b> 🧑‍🍳"}]},
   {type:'say',anim:'up',title:'La première notion à maîtriser sont les',hl:'macronutriments',em:'🥑',cta:'Découvrir',
   cine:[
-    {enter:'blur', hold:1700, size:'big', lines:[[{t:'Tout part'}],[{t:'d\'une '},{t:'seule',fx:'zoom'},{t:' notion'}]], fxDelay:900, outPrev:'through'},
-    {enter:'unblur', hold:2000, size:'xl', lines:[[{t:'Les '},{t:'macros',fx:'hl'}]], fxDelay:1000, outPrev:'shrink'},
-    {enter:'drift', hold:0, size:'med', lines:[[{t:'La brique de '},{t:'tout',fx:'hlY'},{t:' ce que tu manges'}]], fxDelay:900, outPrev:'up', cta:'Découvrir'}
+    {enter:'parallax', hold:1700, size:'big', lines:[[{t:'Tout part'}],[{t:'d\'une '},{t:'seule',fx:'zoom'},{t:' notion'}]], fxDelay:900, outPrev:'lift'},
+    {enter:'reveal', hold:2000, size:'xl', lines:[[{t:'Les '},{t:'macros',fx:'hl'}]], fxDelay:1000, outPrev:'settle'},
+    {enter:'glide', hold:0, size:'med', lines:[[{t:'La brique de '},{t:'tout',fx:'hlY'},{t:' ce que tu manges'}]], fxDelay:900, outPrev:'up', cta:'Découvrir'}
   ]},
   {type:'macros',anim:'zoom',title:'Il en existe trois',cta:'Les comprendre',
   cine:[
@@ -860,7 +860,21 @@ var STORY=[
     {em:'🐟',n:'Saumon',c:0},{em:'🍝',n:'Pâtes',c:1},{em:'🫒',n:'Huile d\'olive',c:2},{em:'🥛',n:'Skyr',c:0},{em:'🥔',n:'Patate douce',c:1},
     {em:'🥜',n:'Noix',c:2},{em:'🧀',n:'Fromage',c:2}],
     cols:['🥩 Protéine','🌾 Glucide','🥑 Lipide']},
-  {type:'say',anim:'zoom',title:'Mais toutes les sources',hl:'ne se valent pas',em:'⚖️',cta:'Comprendre'},
+  {type:'say',anim:'zoom',title:'Un',hl:'petit jeu',em:'🏆',cta:'Jouer'},
+  {type:'gameTier',anim:'up',title:'Tier list des protéines',subtitle:'Classe ces sources de protéines',items:[
+    {em:'🍗',n:'Blanc de poulet'},{em:'🥚',n:'Œufs'},{em:'🐟',n:'Saumon'},{em:'🌭',n:'Saucisse'},{em:'🥓',n:'Bacon'},{em:'🫘',n:'Lentilles'}
+  ],tiers:[{k:'S',t:'S · Top',c:'#34c759'},{k:'B',t:'B · Correct',c:'#ff9f0a'},{k:'C',t:'C · Occasionnel',c:'#ff3b30'}],
+   sol:{'Blanc de poulet':'S','Œufs':'S','Saumon':'S','Lentilles':'B','Saucisse':'C','Bacon':'C'}},
+  {type:'gameTier',anim:'up',title:'Tier list des glucides',subtitle:'Classe ces sources de glucides',items:[
+    {em:'🍠',n:'Patate douce'},{em:'🌾',n:'Avoine'},{em:'🍚',n:'Riz complet'},{em:'🍩',n:'Donut'},{em:'🥖',n:'Baguette blanche'},{em:'🍚',n:'Riz blanc'}
+  ],tiers:[{k:'S',t:'S · Top',c:'#34c759'},{k:'B',t:'B · Correct',c:'#ff9f0a'},{k:'C',t:'C · Occasionnel',c:'#ff3b30'}],
+   sol:{'Patate douce':'S','Avoine':'S','Riz complet':'S','Riz blanc':'B','Baguette blanche':'C','Donut':'C'}},
+  {type:'reward',anim:'zoom',em:'🏅',xp:70,label:'Tier lists complétées'},
+  {type:'say',anim:'zoom',title:'Mais toutes les sources',hl:'ne se valent pas',em:'⚖️',cta:'Comprendre',
+  cine:[
+    {enter:'glide', hold:1500, illo:'⚖️', illoAnim:'float', size:'big', lines:[[{t:'Mais toutes les sources'}]], fxDelay:850, outPrev:'lift'},
+    {enter:'reveal', hold:0, size:'big', lines:[[{t:'ne se '},{t:'valent pas',fx:'balance'}]], fxDelay:900, outPrev:'settle', cta:'Comprendre'}
+  ]},
   {type:'flash',anim:'slide',em:'✨',name:'La qualité',photo:PH.plate,btitle:'La qualité compte ✨',desc:'100 kcal de poulet ≠ 100 kcal de bonbons. Même énergie, effet sur le corps très différent.'},
   {type:'flash',anim:'slide',em:'🏭',name:'Le transformé',photo:PH.steakUpf,btitle:'Le degré de transformation 🏭',desc:'Plus un aliment est transformé, plus il est pauvre en nutriments et riche en additifs.'},
   {type:'gameCan',anim:'up',title:'Le sucre caché',items:[
@@ -1004,7 +1018,7 @@ var STORY=[
   /* ═══ CHAPITRE 3 — TECHNIQUES DE CUISINE ═══ */
   {type:'say',anim:'up',title:'Tu sais choisir.',sub:'Passons aux fourneaux : les gestes de base de la cuisine.',cta:'Continuer',
   cine:[
-    {enter:'unblur', hold:1600, size:'big', lines:[[{t:'Tu sais '},{t:'choisir',fx:'hl'}]], fxDelay:850, outPrev:'up'},
+    {enter:'glide', hold:1600, size:'big', lines:[[{t:'Tu sais '},{t:'choisir',fx:'hl'}]], fxDelay:850, outPrev:'up'},
     {enter:'through', hold:1900, svg:'cut', size:'sm', outPrev:'shrink'},
     {enter:'rise', hold:0, size:'med', lines:[[{t:'On passe à la '},{t:'découpe',fx:'cut'}]], fxDelay:950, outPrev:'through', cta:'Aux fourneaux'}
   ]},
@@ -1171,9 +1185,9 @@ var STORY=[
   {type:'flash',anim:'slide',em:'🏃',name:'La dépense totale',photo:PH.body,btitle:'Le TDEE 🏃',desc:'BMR + ton activité de la journée. C\'est ça, ton vrai besoin calorique.'},
   {type:'flash',anim:'slide',em:'🎯',name:'Ton objectif',photo:PH.body,btitle:'Manger selon ton but 🎯',desc:'Perdre : un peu en dessous. Prendre du muscle : un peu au dessus.'},
   {type:'say',title:'',cine:[
-    {enter:'blur', hold:1700, size:'big', lines:[[{t:'Ton corps '},{t:'brûle',fx:'burn'}]], fxDelay:900, outPrev:'through'},
+    {enter:'parallax', hold:1700, size:'big', lines:[[{t:'Ton corps '},{t:'brûle',fx:'burn'}]], fxDelay:900, outPrev:'lift'},
     {enter:'through', hold:1800, svg:'flame', size:'sm', outPrev:'shrink'},
-    {enter:'unblur', hold:1900, size:'med', lines:[[{t:'des '},{t:'calories',fx:'burn'}],[{t:'même '},{t:'au repos',fx:'hlY'}]], fxDelay:1000, outPrev:'up'},
+    {enter:'reveal', hold:1900, size:'med', lines:[[{t:'des '},{t:'calories',fx:'burn'}],[{t:'même '},{t:'au repos',fx:'hlY'}]], fxDelay:1000, outPrev:'up'},
     {enter:'rise', hold:0, size:'med', lines:[[{t:'Calculons '},{t:'les tiennes',fx:'hl'}]], fxDelay:800, outPrev:'through', cta:'Calculer'}
   ]},
   {type:'bmr',anim:'zoom',title:'Calculons TES besoins'},
@@ -1183,16 +1197,6 @@ var STORY=[
   {type:'flash',anim:'slide',em:'🥩',name:'Astuce protéines',photo:PH.steak,btitle:'Protéines à chaque repas 🥩',desc:'Une source à chaque assiette : œufs le matin, viande/poisson/légumineuses midi et soir.'},
   {type:'flash',anim:'slide',em:'🌾',name:'Astuce glucides',photo:PH.rice,btitle:'Glucides malins 🌾',desc:'Privilégie les complets et les lents : avoine, riz complet, patate douce. Rassasient plus longtemps.'},
   {type:'flash',anim:'slide',em:'🥑',name:'Astuce lipides',photo:PH.avocado,btitle:'Bons lipides 🥑',desc:'Un filet d\'huile d\'olive, une poignée de noix, un demi-avocat : petites quantités, gros impact.'},
-  {type:'say',anim:'zoom',title:'Un',hl:'petit jeu',em:'🏆',cta:'Jouer'},
-  {type:'gameTier',anim:'up',title:'Tier list des protéines',subtitle:'Classe ces sources de protéines',items:[
-    {em:'🍗',n:'Blanc de poulet'},{em:'🥚',n:'Œufs'},{em:'🐟',n:'Saumon'},{em:'🌭',n:'Saucisse'},{em:'🥓',n:'Bacon'},{em:'🫘',n:'Lentilles'}
-  ],tiers:[{k:'S',t:'S · Top',c:'#34c759'},{k:'B',t:'B · Correct',c:'#ff9f0a'},{k:'C',t:'C · Occasionnel',c:'#ff3b30'}],
-   sol:{'Blanc de poulet':'S','Œufs':'S','Saumon':'S','Lentilles':'B','Saucisse':'C','Bacon':'C'}},
-  {type:'gameTier',anim:'up',title:'Tier list des glucides',subtitle:'Classe ces sources de glucides',items:[
-    {em:'🍠',n:'Patate douce'},{em:'🌾',n:'Avoine'},{em:'🍚',n:'Riz complet'},{em:'🍩',n:'Donut'},{em:'🥖',n:'Baguette blanche'},{em:'🍚',n:'Riz blanc'}
-  ],tiers:[{k:'S',t:'S · Top',c:'#34c759'},{k:'B',t:'B · Correct',c:'#ff9f0a'},{k:'C',t:'C · Occasionnel',c:'#ff3b30'}],
-   sol:{'Patate douce':'S','Avoine':'S','Riz complet':'S','Riz blanc':'B','Baguette blanche':'C','Donut':'C'}},
-  {type:'reward',anim:'zoom',em:'🏅',xp:70,label:'Tier lists complétées'},
 
   {type:'chapter',anim:'slide',univers:'jeu',tr:'fall',label:'Variété et équilibre'},
   {type:'flash',anim:'slide',em:'🌈',name:'La variété',photo:PH.plate,btitle:'Mange l\'arc-en-ciel 🌈',desc:'Plus tu varies les couleurs, plus tu couvres les vitamines et minéraux. La monotonie appauvrit.'},
@@ -3020,14 +3024,14 @@ function k_modeSeq(mode,b){
   var svg = b && K_GAME_SVG[b.type];
   /* UNE seule scène de 3s : illustration animée + titre animé, puis redirection */
   return [{
-    enter:'unblur', hold:3000,
+    enter:'reveal', hold:3000,
     svg: svg||undefined, illo: svg?undefined:m.emoji, illoAnim:'float',
     size:'xl', content:[{t:m.word}], fxDelay:700
   }];
 }
 function k_chapterSeq(no,label,mode){
   return [{
-    enter:'unblur', hold:3200, size:'big',
+    enter:'glide', hold:3200, size:'big',
     lines:[[{t:'Chapitre '+no}]], sub:label, fxDelay:600
   }];
 }
@@ -3036,8 +3040,8 @@ function k_chapterSeq(no,label,mode){
    pas de glitch/bounce/tunnel/squash ici (trop ludiques, réservés aux jeux/défis).
    k_pick() fait tourner la liste en rond à chaque appel : chaque 'say' consécutif
    varie, sans jamais rejouer deux fois la même entrée d'affilée. */
-var K_ENTERS=['unblur','glide','focus','parallax','drift','reveal'];
-var K_OUTS=['lift','settle','shrink','slide','up'];
+var K_ENTERS=['glide','parallax','reveal','rise','pop'];
+var K_OUTS=['lift','settle','drop','slide','up'];
 var k_entI=0;
 function k_pick(arr){var v=arr[k_entI%arr.length];k_entI++;return v;}
 function k_sayToSeq(b){
