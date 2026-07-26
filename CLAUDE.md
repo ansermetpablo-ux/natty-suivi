@@ -149,7 +149,7 @@ Copie JSON partielle de `vercel.json` (mêmes crons, **sans** les headers no-cac
 - `chargerSuivi()` charge les macros depuis `onboarding` et les passe en URL params
 
 ### [narration] Stack du module parcours
-- **100 % statique** : `narration.html` est autonome — **aucun backend, aucune clé, aucun appel Supabase/API**. Seule dépendance externe : Google Fonts (Inter).
+- **Quasi 100 % statique** : `narration.html` reste autonome — **aucun backend, aucune clé, aucun appel Supabase**. Seule dépendance externe : Google Fonts (Inter). ⚠️ **Exception ajoutée juillet 2026** : les 3 défis photo (macros/étiquette/accord) appellent désormais `/api/claude` (vision) pour vérifier que la photo correspond à la consigne — voir `k_verifyDefiPhoto()` en §3. C'est un appel **best-effort, fail-open** : si l'API échoue (pas de réseau, backend down), la photo est acceptée sans bloquer — le fichier reste utilisable hors-ligne pour tout le reste, mais n'est plus *strictement* 100 % front sur ce point précis.
 - **Images embarquées en base64** dans le HTML (objet `IMGDATA` → alias `PH`, + `K_CUT` pour les sujets détourés). Conséquence : `narration.html` pèse **~2,4 Mo**. Variable `CLOUD_BASE=''` prévue pour basculer les images sur **Cloudinary** (cloud `dujji1s6g`) en prod → le fichier retomberait à ~60 Ko.
 - Déploiement identique au reste : push GitHub → Vercel. Intégration prévue au site via iframe (comme `index.html`).
 - ⚠️ **Contrainte agent** : pas d'accès réseau pour récupérer des images sur le web (Unsplash/Pexels → 403). Les vraies photos doivent être **fournies par Pablo**, puis détourées/compressées localement (voir `rembg` ci-dessous).
@@ -378,6 +378,12 @@ Le livrable. Contient le contenu du parcours (`STORY[]`), le moteur d'affichage 
 - Sujet **détouré** (PNG transparent `K_CUT`) posé sur un **panneau blanc** (`.paint-hero`), sans support ni ombre sous l'objet.
 - Deux images superposées, **exactement même taille** : base en niveaux de gris (`.paint-base`, opacité réduite) + copie couleur (`.paint-fill`) révélée du bas vers le haut par un `clip-path:inset(X% 0 0 0)` → la jauge « épouse la forme » du sujet.
 - Glisser vers le haut = estimer le % ; bouton « Valider mon estimation » actif dès `frac>0`.
+
+**Défis photo (macros/étiquette/accord)** — `renderDefi(el,b)` (les 3 beats `type:'defi'` avec `steps:[{key,em,label,hint}]`) :
+- `playAnnounce(b, then)` : écran d'annonce plein cadre (`#defiAnnounce`, z-index 45) avant chaque défi, bouton "Relever le défi".
+- `step()` : affiche la cible (`s.label`/`s.hint`), capture photo via `<input type="file" capture="environment">`.
+- **`k_verifyDefiPhoto(file, label, hint, cb)`** (ajouté juillet 2026) : convertit la photo en base64, POST `/api/claude` avec un prompt demandant si elle correspond à `label`/`hint`, réponse JSON attendue `{"correspond":bool,"raison":str}`. Overlay "Vérification…" pendant l'appel. Si `correspond:false` → ✕ rouge + raison + bouton "Reprendre la photo" (relance `cam.click()`). **Fail-open** : toute erreur (réseau, JSON invalide, pas de réponse) → `cb(true)`, la photo est acceptée — ne bloque jamais le défi. Non testé avec un vrai appel Claude (pas de backend en local) — à valider après déploiement.
+- `renderDefiCreation()` (défi "crée ta recette") a aussi une étape photo mais **volontairement non vérifiée** : la photo y est optionnelle ("validable sans photo, la description suffit"), pas de consigne fixe à matcher (recette inventée par l'utilisateur).
 
 #### `motion_lab.html`, `map.html`, `deploy-demo/` — ⚠️ n'existent pas dans ce repo
 Ces trois éléments sont décrits dans les sections `[narration]` de ce document (moteur cinématique d'origine, carte de progression, dossier de déploiement iframe) mais **vérification faite (audit juillet 2026) : aucun des trois n'existe dans l'arborescence actuelle, ni sur `main`, ni dans tout l'historique git (`git log --all --diff-filter=A`), ni sur une autre branche.** Le moteur `k_` de `narration.html` est bien présent et fonctionnel (31 fonctions `k_*`, `K_SVG` avec 9 illustrations, confirmé par lecture directe) — donc le contenu qu'ils étaient censés fournir a déjà été porté dans `narration.html`. Mais les fichiers sources eux-mêmes sont absents : soit ils ont été produits dans une session locale jamais commit/push, soit cette doc était partiellement aspirationnelle.
@@ -782,6 +788,18 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 **Solution** : `document.body.scrollTop=0` au tout début de `go()` (dispatch central de chaque transition de beat, classique et kinetic) — neutralise le scroll parasite avant chaque rendu.
 **Détection** : repéré en testant l'app directement dans un navigateur (pas visible à la simple lecture du code — nécessite d'observer `document.body.scrollTop` en conditions réelles après un clic).
 
+### [narration] Retour/carte inaccessibles pendant les scènes kinetic — ✅ corrigé
+**Problème** : `#klayer` (z-index 9999, plein écran) recouvrait `.top` (z-index 30, contient les boutons retour ← et carte 🗺️) sur **toute scène kinetic** — la majorité du parcours. Les clics sur cette zone étaient interceptés par `#klayer .k-dots` (points de progression, plein largeur) ou `.plan` (le contenu de la scène), jamais transmis aux vrais boutons. Confirmé en testant dans le navigateur (`document.elementFromPoint` sur les coordonnées du bouton retournait `k_dotsEl`/`.plan`, pas le bouton).
+**Solution** : `.top` passe à `z-index:10000` (au-dessus de `#klayer`). `#klayer .k-dots` reçoit aussi `pointer-events:none` (purement décoratif, aucun handler dessus).
+
+### [narration] Carte invisible quand ouverte pendant une scène kinetic — ✅ corrigé
+**Problème** : `openMap()` fonctionnait (classe `.on` ajoutée, `mapScreen.classList.contains('on')` devenait `true`) mais `.map-screen` (z-index 50) restait **visuellement cachée derrière `#klayer`** (z-index 9999) si une scène kinetic était active au moment du clic sur 🗺️.
+**Solution** : `.map-screen` passe à `z-index:10001` (au-dessus de `.top` et de `#klayer`).
+
+### [narration] Saut vers un mini-jeu/défi depuis la carte : ancienne scène kinetic bloquée à l'écran — ✅ corrigé (le plus grave des 3)
+**Problème** : le clic sur un nœud de la carte (`.mdot[data-goto]`) appelait `render(b,pair)` **directement**, sans jamais masquer `#klayer`. Si on avait ouvert la carte pendant une scène kinetic, celle-ci restait `.on` (affichée, z-index 9999) et cachait **entièrement** le beat cible fraîchement rendu en dessous — y compris les défis/mini-jeux, rendant la fonction "sauter à n'importe quelle épreuve" de la carte essentiellement inutilisable dans ce cas. Confirmé en sautant vers un beat `defi` : `idx` changeait bien, le contenu se rendait correctement dans le DOM, mais rien n'était visible à l'écran.
+**Solution** : le handler de clic sur les nœuds de la carte réinitialise `#klayer` (retire `.on`, vide `k_stage`/`k_cta`, annule `k_timer`) avant de fixer `idx=target` et d'appeler **`go()`** (au lieu de `render()` direct) — `go()` gère correctement le dispatch classique/kinetic et le changement de thème (`applyUnivers`) quelle que soit la provenance du saut.
+
 ### [narration] ⚠️ À vérifier : doublon visuel possible dans le jeu "Tier list"
 **Observation non confirmée** : lors d'un test, un item ("Blanc de poulet") est apparu en double dans le jeu de tri par tiers (`renderTier`/`bindDrag`) — une fois placé dans un tier, une fois encore affiché dans la réserve du bas (`.tl-item.tl-ghost` flottant, normalement un clone temporaire suivant le pointeur pendant un glisser-déposer réel, censé être retiré au `pointerup`/`pointercancel`). **Fort doute que ce soit un artefact du test automatisé** (clic simulé sur des coordonnées obsolètes pendant une transition d'écran) plutôt qu'un vrai bug de l'app — le code de `bindDrag` nettoie correctement le ghost sur `pointerup` et `pointercancel`. À reproduire manuellement sur téléphone/navigateur réel avant de corriger quoi que ce soit.
 
@@ -894,6 +912,8 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - Bug de décalage vertical 84px après un beat classique (`document.body.scrollTop`) découvert en testant l'app dans le navigateur et corrigé — voir §7
 - **`narration.html` intégré à `index.html`** : l'onglet "Progression" (bas de l'app) ouvre désormais `narration.html` en plein écran au lieu de l'ancien mini dashboard donuts/graphique (`#pageProg`, HTML/JS conservés mais devenus inaccessibles depuis la nav)
 - `progression.html` (page orpheline concurrente) supprimée avec ses 2 endpoints
+- **3 bugs de navigation trouvés et corrigés** (retour/carte inaccessibles pendant les scènes kinetic, carte invisible si ouverte pendant une scène kinetic, saut vers un mini-jeu depuis la carte qui laissait l'ancienne scène bloquée à l'écran) — voir §7 pour le détail
+- **Vérification IA des photos de défi** : les 3 défis photo (macros/étiquette/accord) passent désormais par Claude vision (`k_verifyDefiPhoto`) avant de valider la photo, avec fail-open si l'API est indisponible — voir §3
 
 ### 🔄 [narration] Reste à faire / à surveiller
 - Valider sur **téléphone réel** le rythme des cinématiques, le figé net des scènes, et le jeu de la jauge
