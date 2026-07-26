@@ -2221,9 +2221,8 @@ function switchTab(t) {
     document.getElementById('pageSuivi').style.display = 'flex';
     document.getElementById('tabSuivi').classList.add('active');
   } else if (t==='prog') {
-    document.getElementById('pageProg').style.display = 'flex';
-    document.getElementById('tabProg').classList.add('active');
-    setTimeout(dessinerProgression, 50);
+    // Parcours gamifié narration.html en plein écran (remplace l'ancien mini dashboard donuts/graphique)
+    window.location.href = 'narration.html';
   } else if (t==='chal') {
     document.getElementById('pageChal').style.display = 'flex';
     document.getElementById('tabChal').classList.add('active');
