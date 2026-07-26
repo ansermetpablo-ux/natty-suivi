@@ -394,12 +394,12 @@ document.addEventListener('DOMContentLoaded', function() {
     naviguer('challenges', 'https://natty-suivi.vercel.app/challenges.html?token=' + TOKEN);
   });
   document.getElementById('blocSuivi').addEventListener('click', function() {
-    var url = 'https://natty-suivi.vercel.app/suivi.html?token=' + TOKEN;
+    var url = 'https://natty-suivi.vercel.app/index.html?token=' + TOKEN;
     if (params.get('proteines')) url += '&proteines=' + params.get('proteines') + '&glucides=' + params.get('glucides') + '&lipides=' + params.get('lipides') + '&calories=' + params.get('calories');
     naviguer('suivi', url);
   });
   document.getElementById('nutriCard').addEventListener('click', function() {
-    naviguer('suivi', 'https://natty-suivi.vercel.app/suivi.html?token=' + TOKEN);
+    naviguer('suivi', 'https://natty-suivi.vercel.app/index.html?token=' + TOKEN);
   });
   if (USER_ID) chargerScore();
 });
