@@ -244,14 +244,10 @@ Défis perso/duo/entreprise. Autonome, aucune dépendance avec `narration.html`.
 
 - Déclenché depuis `index.html` (ligne ~3619 : vérifie `questionnaire_alim?user_id=eq...&limit=1`, redirige si absent ; aussi via popup conseils, action `'questionnaire'`).
 - Soumission (`#btn7`) : POST `questionnaire_alim` → `postMessage({type:'questionnaireAlimDone'})` → redirection `/index.html?token=...&qalim=1`.
-- Lu par `progression.html` pour personnaliser les suggestions/analyse — étape amont réellement utilisée en aval.
 - ⚠️ `alert()` natif en cas d'erreur de sauvegarde (~ligne 680) — à remplacer avant portage Capacitor (comportement variable selon plugin webview).
 
-### `progression.html`
-Dashboard "progression nutritionnelle". Lit `onboarding` (`completed=eq.true`), `questionnaire_alim`, `meals` (avec `meal_ingredients(*)` imbriqué, `order=created_at.desc&limit=30`).
-
-- Fonctions : `sbFetch`, `init`, `renderObjectif`, `renderCourbes`, `chargerSuggestions` → `POST /api/suggestions-macros`, `chargerAnalyse` → `POST /api/analyse-nutrition`.
-- ✅ **Ces deux endpoints existent désormais** (`api/suggestions-macros.js`, `api/analyse-nutrition.js` — créés juillet 2026, voir plus bas). Fallback `renderSuggestionsFallback`/`renderFallbackAnalyse` conservé côté front en cas d'échec réseau/parsing.
+### `progression.html` — ❌ supprimé (juillet 2026)
+Existait comme dashboard "progression nutritionnelle" (suggestions IA, analyse complète), mais **n'était relié depuis aucune autre page de l'app** (page orpheline). Remplacé dans son usage réel par `narration.html` (voir décision Pablo du 2026-07-26, §6 et §8) : l'onglet "Progression" de `index.html` ouvre désormais `narration.html` en plein écran. Fichier supprimé, ainsi que les deux endpoints qui n'existaient que pour lui (`api/suggestions-macros.js`, `api/analyse-nutrition.js`, créés puis supprimés dans la même session).
 
 ### `admin.html`
 Back-office multi-rôles — accessible à `natty-suivi.vercel.app/admin.html`.
@@ -345,20 +341,8 @@ Events gérés :
 > ✅ **Signature Stripe vérifiée** (corrigé juillet 2026) : `verifyStripeSignature()` recalcule le HMAC-SHA256 (`Web Crypto`, compatible edge runtime) sur `timestamp + '.' + rawBody` et le compare au header `stripe-signature`, avec tolérance 5 min contre le replay. **Fail-closed** : si `STRIPE_WEBHOOK_SECRET` n'est pas configuré en variable d'env Vercel, le handler rejette tout (500) — **variable requise avant déploiement**, sinon l'activation des abonnements Stripe s'arrête. Récupérer le "Signing secret" (`whsec_...`) dans Stripe Dashboard → Developers → Webhooks → l'endpoint concerné.
 > `SUPABASE_KEY` a un fallback en dur sur la clé anon si la variable d'env est absente — écrire dans `abonnements` suppose que la RLS autorise l'anon en INSERT/UPDATE (sinon échec silencieux, visible uniquement en HTTP 500 côté Stripe).
 
-### `api/suggestions-macros.js` (créé juillet 2026)
-Endpoint manquant appelé par `progression.html` — implémenté pour combler le 404 documenté en §7. Même pattern que `api/claude.js` (CommonJS, module natif `https`, modèle `claude-sonnet-4-5`).
-
-- Entrée : `{profil, repas_du_jour, questionnaire_alim}`. Prompt demandant 3 suggestions (aliment simple / combo express / plat complet) compte tenu des macros restantes du jour et des préférences alimentaires.
-- Sortie attendue par le front : `{suggestions:[{emoji,name,description,proteines,lipides,glucides,calories,preparation,pourquoi}]}` — extraction du JSON via regex sur un éventuel bloc ` ```json ` avant `JSON.parse`.
-- Si `ANTHROPIC_API_KEY` absent ou erreur Claude/parsing → 500, le front retombe sur `renderSuggestionsFallback()` (données statiques).
-
-### `api/analyse-nutrition.js` (créé juillet 2026)
-Endpoint manquant appelé par `progression.html` — implémenté pour combler le 404 documenté en §7. Même pattern que `api/claude.js`.
-
-- Entrée : `{profil, repas, questionnaire_alim}` (jusqu'à 30 repas avec ingrédients). Prompt demandant points forts/faibles, composition réelle vs idéale (% prot/lip/gluc), ingrédients à remplacer/incorporer, plats suggérés, score global (0-100), message coach.
-- Sortie attendue par le front : `{points_forts, points_faibles, composition_reelle, composition_ideale, ingredients_remplacer, ingredients_incorporer, plats_suggeres, score_global, message_coach}` — voir `progression.html` (`renderPointsForts`/`renderDonuts`/`renderRemplacer`/etc.) pour le détail des champs.
-- Le prompt demande explicitement des tableaux vides plutôt que d'inventer des données si l'historique de repas est trop court.
-- **Non testé en conditions réelles** (pas d'appel Claude exécuté pendant cette session — validation faite par `node --check` uniquement). À tester après déploiement : vérifier que Claude renvoie un JSON parsable à chaque appel, ajuster le prompt si le format dérive.
+### `api/suggestions-macros.js` et `api/analyse-nutrition.js` — ❌ créés puis supprimés (juillet 2026)
+Créés dans cette session pour combler des 404 dans `progression.html` (voir §7), puis supprimés avec `progression.html` une fois celle-ci remplacée par `narration.html` dans l'usage réel (décision Pablo du 2026-07-26). N'ont jamais été appelés en conditions réelles.
 
 ### [narration] Fichiers du module parcours
 
@@ -806,13 +790,13 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 **Solution appliquée** : les 2 occurrences dans `naviguer()` remplacées par `index.html`.
 **Nuance découverte après coup** : Pablo confirme que `accueil.html` **n'est pas la vraie page d'accueil de l'app** (celle-ci vit sur Wix, hors repo) — donc ce bug avait potentiellement un impact réel très faible ou nul en prod. Le fix reste appliqué (inoffensif, cohérent avec le reste de l'app), mais ne pas re-prioriser de travail sur `accueil.html` sans clarifier d'abord son usage réel avec Pablo.
 
-### `api/progression.js` — doublon HTML déployé comme fonction serverless — ✅ corrigé
+### `api/progression.js` — doublon HTML déployé comme fonction serverless — ✅ résolu (fichier supprimé)
 **Problème** : `api/progression.js` était un copier-coller intégral de `progression.html` (contenu identique, hash MD5 identique) avec l'extension `.js`. Si Vercel tentait de le construire comme fonction serverless, le fichier commençait par `<!DOCTYPE html>` et non par `export default`/`module.exports` → échec probable du build/exécution de cette route.
-**Solution appliquée** : fichier supprimé (le vrai contenu utile reste `progression.html`).
+**Solution appliquée** : fichier supprimé. `progression.html` lui-même a ensuite été supprimé aussi (voir ci-dessous), donc ce problème est définitivement clos.
 
-### Endpoints manquants appelés par `progression.html` — ✅ corrigé (à tester en prod)
-**Problème** : `chargerSuggestions()` et `chargerAnalyse()` appellent `POST /api/suggestions-macros` et `POST /api/analyse-nutrition`, qui n'existaient nulle part dans `api/`. Échec 404 systématique, masqué silencieusement par des fallbacks statiques.
-**Solution appliquée** : les deux endpoints ont été créés (`api/suggestions-macros.js`, `api/analyse-nutrition.js`), sur le pattern de `api/claude.js` — voir §3 pour le détail des entrées/sorties. **Non testés en conditions réelles** (pas d'appel Claude exécuté pendant cette session) : à valider après déploiement que le JSON renvoyé par Claude est bien parsable à chaque appel.
+### Endpoints manquants appelés par `progression.html` — ✅ résolu (page et endpoints supprimés)
+**Problème** : `chargerSuggestions()` et `chargerAnalyse()` appelaient `POST /api/suggestions-macros` et `POST /api/analyse-nutrition`, qui n'existaient nulle part dans `api/`. Échec 404 systématique, masqué silencieusement par des fallbacks statiques.
+**Solution initiale** (devenue obsolète) : les deux endpoints avaient été créés sur le pattern de `api/claude.js`. **Solution finale** : `progression.html` a été remplacée par `narration.html` dans l'usage réel (décision Pablo, 2026-07-26) — la page et les deux endpoints ont été supprimés plutôt que maintenus.
 
 ### Webhook Stripe sans vérification de signature
 **Problème** : `api/webhook.js` traite `await req.json()` sans jamais vérifier le header `stripe-signature` ni utiliser `STRIPE_WEBHOOK_SECRET`. N'importe qui connaissant l'URL peut POSTer un faux event `checkout.session.completed` avec un `user_id` arbitraire et activer un abonnement gratuit.
@@ -875,7 +859,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 **Bugs de navigation & code mort découverts (audit juillet 2026)**
 - ✅ `accueil.html` redirigeait vers `suivi.html` (legacy) au lieu d'`index.html` — corrigé, mais impact réel incertain : `accueil.html` n'est pas la vraie page d'accueil (celle-ci est sur Wix) — voir §3/§7.
 - ✅ `api/progression.js` (doublon HTML cassé) — supprimé.
-- ✅ `/api/suggestions-macros` et `/api/analyse-nutrition` — créés (appellent Claude, pattern `api/claude.js`). **Non testés en conditions réelles**, à valider après déploiement — voir §3/§7.
+- ✅ `progression.html` (page orpheline, jamais reliée) et ses endpoints `/api/suggestions-macros`/`/api/analyse-nutrition` — supprimés, remplacés par `narration.html` dans l'usage réel (voir ci-dessous et §3).
 - ✅ `api/scan-plat.js` — supprimé, doublon d'une feature déjà livrée (`analyserAvecIA()`/`saveIA()` dans `index.html`, voir §3).
 - ✅ `api/supabase.js` (proxy générique Supabase, orphelin) — supprimé.
 - `manifest.json`/`suivi.html`/`onboarding.html` référencent `/icon-192.png` inexistant — voir §7. **Pas encore corrigé.**
@@ -905,12 +889,20 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - Onboarding 7 étapes
 - Module parcours gamifié `narration.html` : moteur kinetic porté et intégré, DA N&B uniforme, cinématiques (Bonjour, macros, cuisine/découpe, métabolisme), bibliothèque `K_SVG` (9 illustrations), jeu de la jauge canette/steak (sujets détourés `rembg`)
 
+### ✅ [narration] Fait (session intégration — juillet 2026)
+- Bug `.cta`/`fc-hint` (chevauchement bouton "Suivant" et indice de la flashcard) corrigé — en adoptant une version plus aboutie de `narration.html` fournie par Pablo (qui n'avait jamais eu la régression de l'animation de respiration `k_planBreathe` non plus)
+- Bug de décalage vertical 84px après un beat classique (`document.body.scrollTop`) découvert en testant l'app dans le navigateur et corrigé — voir §7
+- **`narration.html` intégré à `index.html`** : l'onglet "Progression" (bas de l'app) ouvre désormais `narration.html` en plein écran au lieu de l'ancien mini dashboard donuts/graphique (`#pageProg`, HTML/JS conservés mais devenus inaccessibles depuis la nav)
+- `progression.html` (page orpheline concurrente) supprimée avec ses 2 endpoints
+
 ### 🔄 [narration] Reste à faire / à surveiller
 - Valider sur **téléphone réel** le rythme des cinématiques, le figé net des scènes, et le jeu de la jauge
-- Décliner le niveau de soin cinématique sur **toutes** les notions (seules les intros clés sont scénarisées à la main)
+- **Décliner le niveau de soin cinématique sur plus de notions** (seules les intros clés sont scénarisées à la main) — chantier de contenu ouvert, pas commencé
 - Basculer les images base64 → Cloudinary (`CLOUD_BASE`) pour repasser le fichier à ~60 Ko avant prod
-- Intégrer la feature au site (déploiement Vercel + iframe), comme les autres pages
+- ~~Intégrer la feature au site~~ — **fait** : onglet Progression de `index.html` → `narration.html`. Reste éventuellement à revoir l'intégration Wix (iframe) si l'app entière y est encore embarquée.
 - Fournir les vraies photos manquantes (étiquette, ustensiles, etc. — placeholders actuels)
+- ⚠️ Vérifier manuellement le doublon visuel possible dans le jeu "Tier list" (voir §7) — probable artefact de test, pas confirmé
+- Décider si `#pageProg` (ancien dashboard, code mort depuis le branchement vers `narration.html`) doit être nettoyé/supprimé de `index.html`, ou gardé en réserve
 
 ---
 
