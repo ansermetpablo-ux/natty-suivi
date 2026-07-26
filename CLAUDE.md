@@ -956,6 +956,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 19. **Après chaque push GitHub**, attendre le redéploiement Vercel (statut Ready) avant de tester
 20. **`window._factureProduitsCache`** — données facture dans array global avec `data-idx`, pas en JSON dans `data-produit`
 31. **Compatibilité Capacitor** : signaler à Pablo toute décision qui dépendrait d'une API navigateur non supportée en WebView (voir §10), ou d'un chemin absolu qui casserait si l'app n'est plus servie depuis la racine du domaine
+32. **Push automatique autorisé** (décidé le 2026-07-26) : une fois un commit créé sur ce repo, `git push origin main` peut être fait directement, **sans redemander confirmation à chaque fois**. Authentification via clé SSH dédiée (`~/.ssh/id_ed25519_github`, clé "Claude Accès" sur GitHub, remote `origin` en SSH). Cette autorisation est spécifique à ce repo — ne pas l'étendre à un autre dépôt ou à d'autres actions destructrices (force-push, reset, etc., qui restent soumises à confirmation).
 
 ### [narration] Règles spécifiques au module parcours
 21. **Backup avant grosse édition** : copier avant toute passe de script
