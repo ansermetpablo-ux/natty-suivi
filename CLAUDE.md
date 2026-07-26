@@ -328,18 +328,11 @@ Crée une session Stripe Checkout. Handler serverless classique (`export default
 - ⚠️ **Pas de validation serveur de `priceId`** : le client peut envoyer n'importe quel `price_...` Stripe existant sur le compte (le front n'envoie que `PRICE_3`/`PRICE_4`, mais rien ne l'impose côté serveur). À corriger : allowlist des deux price IDs légitimes.
 - `console.log` verbeux (body reçu, réponse Stripe) — à nettoyer avant prod si les logs Vercel sont partagés.
 
-### `api/scan-plat.js`
-Pipeline photo de plat → macros, en 2 étapes : **LogMeal** (`api.logmeal.com/v2/image/segmentation/complete`, clé `LOGMEAL_API_KEY`) reconnaît les aliments, puis **Claude** (`api.anthropic.com/v1/messages`, modèle `claude-sonnet-4-5`, clé `ANTHROPIC_API_KEY`) estime quantités/macros à partir des aliments reconnus.
+### `api/scan-plat.js` — ✅ supprimé (juillet 2026)
+Existait comme pipeline photo de plat → macros en 2 étapes (LogMeal + Claude), jamais appelé par aucune page. **Supprimé** après découverte que `index.html` a déjà une feature complète et fonctionnelle pour ça : `analyserAvecIA()` (ligne ~2455) + `saveIA()` (ligne ~2668), branchée aux boutons caméra/galerie IA (`btnCamIA`/`btnGalIA`). Elle envoie directement la photo à **`/api/claude`** (un seul appel Claude vision, pas de LogMeal) avec un prompt qui identifie aliments + quantités + macros, affiche une liste d'ingrédients éditable avec recalcul live des macros (`recalcAIMacros`), puis sauvegarde (upload Cloudinary + `meal_ingredients`) via `saveIA()`. **"Analyse de plat par IA (photo → macros)" n'est donc PAS une feature manquante — elle est déjà livrée**, corrigé en §8 (ce document la listait à tort comme "à faire").
 
-- Entrée : `{image (base64), media_type}`. Sortie : `{nom, ingredients:[{emoji,nom,quantite_g}], macros:{prot,lip,gluc,cal}, description, logmeal_foods, logmeal_ok, claude_ok}`, avec fallback si LogMeal ne reconnaît rien ou si Claude échoue.
-- Utilise le module natif `https` (bas niveau) + `module.exports` (CommonJS) — incohérent avec le style ESM (`export default`) des autres fichiers `api/*.js`.
-- `config.api.bodyParser.sizeLimit = '10mb'` pour les images.
-- 🔴 **Endpoint mort/orphelin** : aucun fichier HTML ne l'appelle (aucune occurrence de `scan-plat`/`logmeal` côté front). Construit mais jamais branché à l'UI — c'est probablement le futur endpoint pour "Analyse de plat par IA (photo → macros)" listé en §8, mais il n'est pas encore relié.
-
-### `api/supabase.js`
-Handler générique de proxy REST vers Supabase (`export const config = { runtime: 'edge' }`), relaie `?path=` + méthode HTTP, ajoute headers `apikey`/`Authorization` (clé anon en dur), CORS ouverts (`*`).
-
-- 🔴 **Totalement orphelin** : aucun autre fichier `api/*.js` ne l'importe, aucune page HTML ne l'appelle. Chaque page/fonction réimplémente son propre `fetch(SB_URL+'/rest/v1/...')` en dur au lieu de passer par ce proxy. À supprimer si on ne compte pas le brancher, ou à utiliser pour mutualiser plus tard.
+### `api/supabase.js` — ✅ supprimé (juillet 2026)
+Existait comme proxy REST générique vers Supabase, jamais importé par aucun autre fichier `api/*.js` ni appelé par aucune page HTML (chaque fichier réimplémente son propre `fetch(SB_URL+'/rest/v1/...')` en dur). Supprimé — code mort.
 
 ### `api/webhook.js`
 Webhook Stripe — **déjà implémenté**, pas un stub (corrigé : ce document le listait à tort comme "À CRÉER" en §8, alors qu'il existe et fonctionne). `export const config = { runtime: 'edge' }`.
@@ -875,24 +868,24 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ `accueil.html` redirigeait vers `suivi.html` (legacy) au lieu d'`index.html` — corrigé, mais impact réel incertain : `accueil.html` n'est pas la vraie page d'accueil (celle-ci est sur Wix) — voir §3/§7.
 - ✅ `api/progression.js` (doublon HTML cassé) — supprimé.
 - ✅ `/api/suggestions-macros` et `/api/analyse-nutrition` — créés (appellent Claude, pattern `api/claude.js`). **Non testés en conditions réelles**, à valider après déploiement — voir §3/§7.
-- `api/scan-plat.js` (pipeline LogMeal + Claude vision) est codé mais jamais appelé par aucune page — à brancher si c'est la feature "Analyse de plat par IA" prévue, sinon à documenter comme volontairement en pause.
-- `api/supabase.js` (proxy générique Supabase) est orphelin, jamais utilisé — à supprimer ou à adopter pour mutualiser les appels.
-- `manifest.json`/`suivi.html`/`onboarding.html` référencent `/icon-192.png` inexistant — voir §7.
-- Fichier `vercel` (sans extension, racine) — artefact sans effet à nettoyer, confirmation Pablo requise.
+- ✅ `api/scan-plat.js` — supprimé, doublon d'une feature déjà livrée (`analyserAvecIA()`/`saveIA()` dans `index.html`, voir §3).
+- ✅ `api/supabase.js` (proxy générique Supabase, orphelin) — supprimé.
+- `manifest.json`/`suivi.html`/`onboarding.html` référencent `/icon-192.png` inexistant — voir §7. **Pas encore corrigé.**
+- Fichier `vercel` (sans extension, racine) — artefact sans effet à nettoyer, confirmation Pablo requise. **Pas encore fait.**
 
 **Abonnements & paiements**
-- Sécuriser `api/webhook.js` avec vérification de signature Stripe (voir Sécurité ci-dessous).
+- ✅ `api/webhook.js` sécurisé (vérification de signature Stripe, voir §3/§7). **Nécessite d'ajouter `STRIPE_WEBHOOK_SECRET` dans Vercel avant push**, sinon le webhook rejette tout en fail-closed.
 
 **Améliorations index.html**
-- Connecter l'action de la semaine du nutritionniste → affichage dans l'app
-- Analyse de plat par IA (photo → macros) — le backend existe déjà (`api/scan-plat.js`), reste à brancher l'UI (upload photo → appel endpoint → affichage résultat)
+- Connecter l'action de la semaine du nutritionniste → affichage dans l'app — **toujours à faire**.
+- ~~Analyse de plat par IA (photo → macros)~~ — **déjà livré** (`analyserAvecIA()`/`saveIA()`), ce n'était pas un backend à créer mais une feature existante mal documentée. Corrigé en §3.
 
 **Admin**
 - Calendrier commandes (semaineOffset reset à 0 bug)
 - Vue client premium/standard (badge logic à corriger)
 
 **Sécurité**
-- **[PRIORITÉ SÉCURITÉ] Vérifier la signature Stripe dans `api/webhook.js`** (actuellement absente — n'importe qui peut activer un abonnement gratuit en falsifiant un event). Voir §7.
+- ✅ Signature Stripe vérifiée dans `api/webhook.js` (voir §3/§7) — reste à ajouter `STRIPE_WEBHOOK_SECRET` sur Vercel avant déploiement.
 - **[PRIORITÉ SÉCURITÉ] Réactiver les RLS Supabase** (actuellement désactivées sur `recettes*` et `profil_conseils`, et policies `USING(true)` ailleurs) : avec la clé anon publique, ces tables sont lisibles/modifiables par n'importe qui. À traiter avant toute distribution large. Écrire les policies une par une, tester après chaque.
 - Remplacer mots de passe hardcodés par auth Supabase
 - Valider côté serveur que `priceId` dans `api/checkout.js` fait bien partie de `PRICE_3`/`PRICE_4` (actuellement non vérifié).
@@ -1007,3 +1000,13 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - **Section 8** : correction de 3 statuts erronés ("à faire" → déjà fait), ajout des bugs/code mort découverts
 - **Section 9** : règle 31 ajoutée (compatibilité Capacitor)
 - **Section 10 (nouvelle)** : compatibilité Capacitor — ce qui casserait tel quel, ce qui est à tester, ce qui est déjà une base saine
+
+---
+
+*Contribution session corrections post-audit (Claude Sonnet, juillet 2026) — code fonctionnel modifié cette fois :*
+- `accueil.html` : navigation `suivi.html` → `index.html` corrigée (impact réel incertain, `accueil.html` n'étant pas la vraie page d'accueil — celle-ci est sur Wix)
+- `api/webhook.js` : vérification de signature Stripe ajoutée (HMAC-SHA256 via Web Crypto, tolérance replay 5 min, fail-closed si `STRIPE_WEBHOOK_SECRET` absent)
+- `api/progression.js` (doublon HTML cassé) supprimé
+- `api/suggestions-macros.js` et `api/analyse-nutrition.js` créés pour combler les 404 de `progression.html` (non testés en conditions réelles)
+- `api/scan-plat.js` et `api/supabase.js` supprimés (code mort confirmé — `api/scan-plat.js` faisait doublon avec la feature déjà livrée `analyserAvecIA()`/`saveIA()` dans `index.html`, découverte pendant cette session)
+- Toutes les modifications validées avec `node --check` avant commit
