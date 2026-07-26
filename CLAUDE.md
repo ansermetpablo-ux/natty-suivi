@@ -199,21 +199,17 @@ Tableau de bord client principal. Chargé dans un iFrame Wix via `$w('#html3').s
 > ⚠️ Le fichier uploadé par Pablo est souvent **tronqué** (pas de `</body>` ni `</html>`). Toujours vérifier et appendre les overlays + balises fermantes si manquants.
 
 ### `accueil.html`
-Hub de navigation principal (page d'entrée avant `index.html`/`suivi.html`). Statique, un seul appel Supabase en lecture (`nutrition_scores`, colonnes `variety_score`/`quality_score`/`relevance_score`/`calculated_at`, fallback `meals`) pour afficher un score.
+⚠️ **N'est PAS la vraie page d'accueil de l'app** — Pablo confirme que la page d'accueil réelle vit sur **Wix** (hors de ce repo, non inspectable/éditable depuis ici). `accueil.html` est un hub de navigation présent dans le repo mais son statut exact (ancien prototype ? page alternative encore accessible par URL directe ? complètement mort ?) reste **À COMPLÉTER** — à clarifier avec Pablo si besoin d'y retoucher un jour.
 
-**Fonctions** : `naviguer(type,url)` (postMessage si en iframe Wix, sinon `location.href`), `chargerScore()`.
+Contenu technique pour référence (au cas où) : statique, un seul appel Supabase en lecture (`nutrition_scores`, colonnes `variety_score`/`quality_score`/`relevance_score`/`calculated_at`, fallback `meals`). Fonctions : `naviguer(type,url)` (postMessage si en iframe Wix, sinon `location.href`), `chargerScore()`. Liens sortants : `onboarding.html`, `offre.html`, `challenges.html`, `index.html` (corrigé — pointait vers `suivi.html` avant juillet 2026, voir §7 pour l'historique du bug). Ligne ~285 : image inline en base64 (~350 Ko sur une seule ligne).
 
-**Liens sortants** : `onboarding.html`, `offre.html`, `challenges.html`, et **`suivi.html`** (x2 — bloc "Suivi" + carte "nutri").
-
-> 🔴 **Bug de navigation actif** : `accueil.html` est la **seule page du repo qui redirige encore vers `suivi.html`** (l'ancienne version du dashboard, 87 fonctions vs 142 dans `index.html`) au lieu d'`index.html`. Un utilisateur cliquant "Suivi" ou la carte "nutri" depuis l'accueil atterrit sur la version legacy, avec son propre flux de login Supabase Auth email/mot de passe embarqué (voir `suivi.html` ci-dessous) — potentiellement en décalage avec le système de token utilisé partout ailleurs. **À corriger en priorité** : remplacer les 2 occurrences de `suivi.html` par `index.html` dans `naviguer()`.
-
-> ⚠️ Ligne ~285 : image inline en base64 (~350 Ko sur une seule ligne) → poids initial du fichier gonflé. `postMessage(..., '*')` sans origine ciblée.
+**Ne pas prioriser de travail sur ce fichier sans confirmation explicite de Pablo.**
 
 ### `suivi.html` — ancienne version du dashboard (legacy, encore accessible)
 Prédécesseur d'`index.html` : 87 fonctions vs 142, 11 overlays vs 12. `index.html` est un sur-ensemble quasi complet (+60 fonctions) ; 5 fonctions sans équivalent nommé identique (`calcScoreLive`, `chalSubscribeRT`, `fetchAnalyseIA`, `fetchMacroSuggestions`, `subscribeRT`) probablement renommées/fusionnées dans `index.html`, pas supprimées fonctionnellement.
 
 - **Contient son propre flux de login embarqué** : formulaire email/mot de passe → `POST /auth/v1/token?grant_type=password` (Supabase Auth), ~ligne 1799-1830. Après connexion, redirige lui-même vers `/index.html` (ligne ~1827) ou `/onboarding.html` (ligne ~1829) selon l'état — preuve que ce fichier se considère lui-même comme un point d'entrée obsolète qui bascule vers `index.html`.
-- Référencé uniquement depuis `accueil.html` (voir bug ci-dessus) — sinon aucune autre page n'y renvoie.
+- Référencé uniquement depuis `accueil.html`, qui n'est lui-même pas la vraie page d'accueil de l'app (celle-ci vit sur Wix, hors repo — voir §3). Donc `suivi.html` est probablement un **doublon mort ou très peu accédé** en pratique, pas un point d'entrée réel des utilisateurs — à confirmer avec Pablo avant toute décision (suppression, etc.).
 - Tables touchées (superset de l'époque "tout-en-un") : `abonnements`, `challenge_entreprise`, `challenges`, `daily_macros`, `meal_ingredients`, `meals`, `messages`, `nutrition_scores`, `onboarding`, `rdv`.
 - `manifest`/icônes : utilise `/icon-192.png` en apple-touch-icon — **fichier inexistant** à la racine (seuls `natty-icon-*.png` existent) → icône cassée. `onboarding.html` a le même souci.
 - Enregistre activement le service worker (`navigator.serviceWorker.register('/sw.js')`) alors qu'`index.html` le désinscrit systématiquement (voir `sw.js` plus bas) — comportement PWA incohérent entre les deux fichiers.
@@ -789,9 +785,10 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 **Problème** : sujet en niveaux de gris quasi invisible sur fond sombre, et copie couleur débordant du panneau (deux images mal alignées).
 **Solution** : panneau **blanc** dédié ; base et copie **strictement même taille** (`height` fixe, `width:auto`) ; révélation par `clip-path` sur la copie ; plus de conteneur de découpe séparé.
 
-### Navigation `accueil.html` → `suivi.html` au lieu d'`index.html`
-**Problème** : `accueil.html` redirige encore vers l'ancienne version du dashboard (`suivi.html`, avec son propre login Supabase Auth embarqué) au lieu d'`index.html`. Seule page du repo dans ce cas.
-**Solution** : remplacer les 2 occurrences dans `naviguer()` par `index.html`. Non fait pendant cette session (lecture seule) — à corriger dès la prochaine session code.
+### Navigation `accueil.html` → `suivi.html` au lieu d'`index.html` — ✅ corrigé (impact réel incertain)
+**Problème** : `accueil.html` redirigeait vers l'ancienne version du dashboard (`suivi.html`, avec son propre login Supabase Auth embarqué) au lieu d'`index.html`.
+**Solution appliquée** : les 2 occurrences dans `naviguer()` remplacées par `index.html`.
+**Nuance découverte après coup** : Pablo confirme que `accueil.html` **n'est pas la vraie page d'accueil de l'app** (celle-ci vit sur Wix, hors repo) — donc ce bug avait potentiellement un impact réel très faible ou nul en prod. Le fix reste appliqué (inoffensif, cohérent avec le reste de l'app), mais ne pas re-prioriser de travail sur `accueil.html` sans clarifier d'abord son usage réel avec Pablo.
 
 ### `api/progression.js` — doublon HTML déployé comme fonction serverless
 **Problème** : `api/progression.js` est un copier-coller intégral de `progression.html` (contenu identique, hash MD5 identique) avec l'extension `.js`. Si Vercel tente de le construire comme une fonction serverless, le fichier commence par `<!DOCTYPE html>` et non par `export default`/`module.exports` → échec probable du build ou de l'exécution de cette route.
@@ -860,7 +857,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 ### 🔄 À faire
 
 **Bugs de navigation & code mort découverts (audit juillet 2026)**
-- `accueil.html` redirige vers `suivi.html` (legacy) au lieu d'`index.html` — voir §7.
+- ✅ `accueil.html` redirigeait vers `suivi.html` (legacy) au lieu d'`index.html` — corrigé, mais impact réel incertain : `accueil.html` n'est pas la vraie page d'accueil (celle-ci est sur Wix) — voir §3/§7.
 - `api/progression.js` est un doublon HTML cassé de `progression.html`, à supprimer ou corriger — voir §7.
 - `/api/suggestions-macros` et `/api/analyse-nutrition` sont appelés par `progression.html` mais n'existent pas — à créer ou retirer de l'UI — voir §7.
 - `api/scan-plat.js` (pipeline LogMeal + Claude vision) est codé mais jamais appelé par aucune page — à brancher si c'est la feature "Analyse de plat par IA" prévue, sinon à documenter comme volontairement en pause.
