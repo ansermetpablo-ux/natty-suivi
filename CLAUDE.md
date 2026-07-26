@@ -793,6 +793,14 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 **Problème** : sujet en niveaux de gris quasi invisible sur fond sombre, et copie couleur débordant du panneau (deux images mal alignées).
 **Solution** : panneau **blanc** dédié ; base et copie **strictement même taille** (`height` fixe, `width:auto`) ; révélation par `clip-path` sur la copie ; plus de conteneur de découpe séparé.
 
+### [narration] Décalage vertical 84px après un beat classique (flashcard) — ✅ corrigé
+**Problème** : au clic sur le bouton "Suivant" (`.cta`) d'un beat classique (flashcard, quiz...), le focus natif du bouton cliqué déclenchait un scroll interne (`document.body.scrollTop` passait à 84) — `overflow:hidden` sur `html,body` masque la scrollbar mais n'empêche pas ce scroll programmatique. Conséquence : le header (flèche retour, barre de progression) se retrouvait caché au-dessus de l'écran, et `.map-screen` (censé être entièrement hors-écran via `transform:translateY(100%)` quand fermé) laissait dépasser ~84px de son en-tête "Toutes les épreuves ✕" en bas de l'écran, sur tous les beats classiques suivants.
+**Solution** : `document.body.scrollTop=0` au tout début de `go()` (dispatch central de chaque transition de beat, classique et kinetic) — neutralise le scroll parasite avant chaque rendu.
+**Détection** : repéré en testant l'app directement dans un navigateur (pas visible à la simple lecture du code — nécessite d'observer `document.body.scrollTop` en conditions réelles après un clic).
+
+### [narration] ⚠️ À vérifier : doublon visuel possible dans le jeu "Tier list"
+**Observation non confirmée** : lors d'un test, un item ("Blanc de poulet") est apparu en double dans le jeu de tri par tiers (`renderTier`/`bindDrag`) — une fois placé dans un tier, une fois encore affiché dans la réserve du bas (`.tl-item.tl-ghost` flottant, normalement un clone temporaire suivant le pointeur pendant un glisser-déposer réel, censé être retiré au `pointerup`/`pointercancel`). **Fort doute que ce soit un artefact du test automatisé** (clic simulé sur des coordonnées obsolètes pendant une transition d'écran) plutôt qu'un vrai bug de l'app — le code de `bindDrag` nettoie correctement le ghost sur `pointerup` et `pointercancel`. À reproduire manuellement sur téléphone/navigateur réel avant de corriger quoi que ce soit.
+
 ### Navigation `accueil.html` → `suivi.html` au lieu d'`index.html` — ✅ corrigé (impact réel incertain)
 **Problème** : `accueil.html` redirigeait vers l'ancienne version du dashboard (`suivi.html`, avec son propre login Supabase Auth embarqué) au lieu d'`index.html`.
 **Solution appliquée** : les 2 occurrences dans `naviguer()` remplacées par `index.html`.
@@ -941,6 +949,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 28. **Bouton d'action toujours dans `#k_cta`** (barre fixe), jamais dans le plan animé
 29. **Auto-avance uniquement sur les frames SANS bouton** ; une frame avec `btn` attend le clic et garde son contenu affiché
 30. **Jauge canette/steak** : base et copie couleur strictement même taille ; révélation par `clip-path` ; sujet détouré sur panneau blanc, sans support
+31. **Tester dans un vrai navigateur, pas juste `node --check`** : plusieurs bugs (dont le décalage `scrollTop` après clic) ne sont détectables qu'en observant l'app rendue (focus natif, scroll interne malgré `overflow:hidden`) — `node --check` valide la syntaxe, pas le comportement visuel
 
 ---
 
