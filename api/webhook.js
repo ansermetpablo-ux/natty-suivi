@@ -1,12 +1,52 @@
 export const config = { runtime: 'edge' };
 
+async function verifyStripeSignature(rawBody, sigHeader, secret) {
+  if (!sigHeader) return false;
+  const parts = Object.fromEntries(sigHeader.split(',').map(p => p.split('=')));
+  const timestamp = parts.t;
+  const sig = parts.v1;
+  if (!timestamp || !sig) return false;
+
+  // Rejette les events trop anciens (protection contre le replay)
+  const age = Math.abs(Date.now() / 1000 - Number(timestamp));
+  if (age > 300) return false;
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sigBuffer = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(timestamp + '.' + rawBody));
+  const expectedSig = Array.from(new Uint8Array(sigBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  if (expectedSig.length !== sig.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < expectedSig.length; i++) {
+    mismatch |= expectedSig.charCodeAt(i) ^ sig.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
 export default async function handler(req) {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
 
   try {
-    const event = await req.json();
+    const rawBody = await req.text();
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      return new Response('Webhook non configuré (STRIPE_WEBHOOK_SECRET manquant)', { status: 500 });
+    }
+
+    const isValid = await verifyStripeSignature(rawBody, req.headers.get('stripe-signature'), webhookSecret);
+    if (!isValid) {
+      return new Response('Signature invalide', { status: 400 });
+    }
+
+    const event = JSON.parse(rawBody);
 
     const SUPABASE_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
     const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
