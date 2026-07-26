@@ -177,6 +177,11 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 @keyframes shotPop{from{transform:scale(.85)}to{transform:scale(1)}}
 .defi-shot img{width:100%;height:100%;object-fit:cover}
 .shot-check{position:absolute;bottom:8px;right:8px;width:34px;height:34px;border-radius:50%;background:#fff;color:#000;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900}
+.shot-check.err{background:#ff3b30;color:#fff}
+.defi-shot .verifying{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;font-size:12px;font-weight:700}
+.defi-spinner{width:26px;height:26px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:defiSpin .7s linear infinite}
+@keyframes defiSpin{to{transform:rotate(360deg)}}
+.defi-retry-msg{font-size:13px;color:#ff6b6b;margin-top:12px;max-width:280px;line-height:1.4;font-weight:600;min-height:0}
 .defi-btn{width:100%;padding:18px;background:#fff;color:#000;border:none;border-radius:20px;font-family:'Inter',sans-serif;font-size:17px;font-weight:800;cursor:pointer;transition:transform .1s}
 .defi-btn:active{transform:scale(.97)}
 .defi-recap{display:flex;gap:12px;justify-content:center}
@@ -2486,6 +2491,33 @@ function playAnnounce(b,then){
     setTimeout(function(){a.classList.remove('on','out');a.innerHTML='';then();},480);
   });
 }
+/* Vérifie via Claude (vision) qu'une photo de défi correspond bien à la consigne.
+   Échoue "ouvert" (cb(true)) si l'API est indisponible ou renvoie n'importe quoi —
+   narration.html reste utilisable même sans réseau, la vérification est un plus. */
+function k_verifyDefiPhoto(file,label,hint,cb){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var b64=(e.target.result||'').split(',')[1];
+    if(!b64){cb(true);return}
+    var prompt='Vérifie si cette photo correspond bien à la consigne d\'un défi nutrition : "'+label+'" '
+      +'(exemples typiques acceptés : '+hint+'). Sois tolérant : n\'importe quel aliment plausible de cette '
+      +'catégorie compte, la photo n\'a pas besoin d\'être parfaite. '
+      +'Réponds UNIQUEMENT avec du JSON valide, sans texte autour : '
+      +'{"correspond":true,"raison":""} si ça correspond, ou '
+      +'{"correspond":false,"raison":"explication courte et bienveillante en français, 1 phrase"} sinon.';
+    fetch('/api/claude',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:prompt,max_tokens:200,image:b64,media_type:file.type||'image/jpeg'})
+    }).then(function(r){return r.json()}).then(function(d){
+      if(!d||!d.text){cb(true);return}
+      var json;
+      try{ json=JSON.parse((d.text||'{}').replace(/```[a-z]*|```/g,'').trim()); }
+      catch(err){ cb(true); return; }
+      cb(json.correspond!==false, json.raison);
+    }).catch(function(){ cb(true); });
+  };
+  reader.readAsDataURL(file);
+}
 function sDefiHit(){var c=ac(),t=c.currentTime;var o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(90,t);o.frequency.exponentialRampToValueAtTime(40,t+.5);g.gain.setValueAtTime(.4,t);g.gain.exponentialRampToValueAtTime(.001,t+.6);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.62);
   var o2=c.createOscillator(),g2=c.createGain();o2.type='triangle';o2.frequency.value=660;g2.gain.setValueAtTime(0,t+.1);g2.gain.linearRampToValueAtTime(.12,t+.14);g2.gain.exponentialRampToValueAtTime(.001,t+.5);o2.connect(g2);g2.connect(c.destination);o2.start(t+.1);o2.stop(t+.52)}
 
@@ -2503,22 +2535,41 @@ function renderDefi(el,b){
       +'<div class="defi-label">'+s.label+'</div>'
       +'<div class="defi-hint">'+s.hint+'</div>'
       +'<div class="defi-shot" id="shot"></div>'
+      +'<div class="defi-retry-msg" id="retryMsg"></div>'
       +'<input type="file" accept="image/*" capture="environment" id="cam" style="display:none">'
       +'<div class="cta"><button class="defi-btn" id="snap">📷 Prendre la photo</button></div>';
     var cam=el.querySelector('#cam');
     el.querySelector('#snap').addEventListener('click',function(){sTap();cam.click()});
     cam.addEventListener('change',function(){
       var f=cam.files&&cam.files[0]; if(!f)return;
-      var url=URL.createObjectURL(f); shots[s.key]=url;
+      var url=URL.createObjectURL(f);
       var shot=el.querySelector('#shot');
-      shot.innerHTML='<img src="'+url+'" alt=""><div class="shot-check">✓</div>';
+      el.querySelector('#retryMsg').textContent='';
+      shot.innerHTML='<img src="'+url+'" alt=""><div class="verifying"><div class="defi-spinner"></div>Vérification…</div>';
       shot.classList.add('filled');
-      sOk();vib([25,30,50]);
-      var r=shot.getBoundingClientRect();burst(r.left+r.width/2,r.top+40,['✅','✨']);
-      el.querySelector('.cta').innerHTML='<button class="defi-btn" id="valid">'+(i<b.steps.length-1?'Photo suivante →':'Valider le défi 🎉')+'</button>';
-      el.querySelector('#valid').addEventListener('click',function(){
-        sTap();vib(18); i++;
-        if(i>=b.steps.length){ recap(); } else { step(); }
+      el.querySelector('.cta').innerHTML='';
+      k_verifyDefiPhoto(f,s.label,s.hint,function(ok,raison){
+        var shotNow=el.querySelector('#shot'); if(!shotNow)return; /* la scène a déjà changé */
+        var overlay=shotNow.querySelector('.verifying'); if(overlay)overlay.remove();
+        if(ok){
+          shots[s.key]=url;
+          shotNow.insertAdjacentHTML('beforeend','<div class="shot-check">✓</div>');
+          sOk();vib([25,30,50]);
+          var r=shotNow.getBoundingClientRect();burst(r.left+r.width/2,r.top+40,['✅','✨']);
+          el.querySelector('.cta').innerHTML='<button class="defi-btn" id="valid">'+(i<b.steps.length-1?'Photo suivante →':'Valider le défi 🎉')+'</button>';
+          el.querySelector('#valid').addEventListener('click',function(){
+            sTap();vib(18); i++;
+            if(i>=b.steps.length){ recap(); } else { step(); }
+          });
+        } else {
+          shotNow.insertAdjacentHTML('beforeend','<div class="shot-check err">✕</div>');
+          sTap();vib([40,20,40]);
+          el.querySelector('#retryMsg').textContent=raison||'Cette photo ne semble pas correspondre à la consigne — réessaie.';
+          el.querySelector('.cta').innerHTML='<button class="defi-btn" id="retry">Reprendre la photo</button>';
+          el.querySelector('#retry').addEventListener('click',function(){
+            sTap();shotNow.classList.remove('filled');shotNow.innerHTML='';cam.value='';cam.click();
+          });
+        }
       });
     });
   }
