@@ -1423,6 +1423,10 @@ function k_renderBeat(b,nu){
   markSegs();
 }
 function go(){
+  /* le focus natif d'un bouton cliqué juste avant peut forcer un scroll interne du body
+     (overflow:hidden bloque la scrollbar mais pas le scrollTop programmatique) : on le
+     neutralise à chaque transition de beat, sinon le header et l'écran carte se décalent. */
+  document.body.scrollTop=0;
   var b=STORY[idx];
   var nu=univFor(b,idx);
 
