@@ -395,6 +395,12 @@ Le livrable. Contient le contenu du parcours (`STORY[]`), le moteur d'affichage 
 Ces trois éléments sont décrits dans les sections `[narration]` de ce document (moteur cinématique d'origine, carte de progression, dossier de déploiement iframe) mais **vérification faite (audit juillet 2026) : aucun des trois n'existe dans l'arborescence actuelle, ni sur `main`, ni dans tout l'historique git (`git log --all --diff-filter=A`), ni sur une autre branche.** Le moteur `k_` de `narration.html` est bien présent et fonctionnel (31 fonctions `k_*`, `K_SVG` avec 9 illustrations, confirmé par lecture directe) — donc le contenu qu'ils étaient censés fournir a déjà été porté dans `narration.html`. Mais les fichiers sources eux-mêmes sont absents : soit ils ont été produits dans une session locale jamais commit/push, soit cette doc était partiellement aspirationnelle.
 **Si Pablo fournit ces fichiers** : ils se déploient exactement comme n'importe quel autre fichier du repo (commit → push GitHub → Vercel redéploie automatiquement, ~1 min) — aucune configuration spéciale n'est nécessaire pour `motion_lab.html`/`map.html`. Pour `deploy-demo/` (dossier avec son propre `vercel.json` et `frame-ancestors *`), vérifier d'abord s'il doit être un projet Vercel séparé ou un sous-dossier de celui-ci (à clarifier avec Pablo avant de créer une config qui pourrait entrer en conflit avec le `vercel.json` racine).
 
+> ✅ **Conclusion (tranchée avec Pablo, juillet 2026) : aucun de ces 3 éléments n'est nécessaire pour continuer le travail sur `narration.html`.**
+> - `motion_lab.html` n'était qu'un labo de prototypage — son contenu (le moteur `k_`) est déjà entièrement porté et fonctionnel dans `narration.html`. Ce ne serait utile que pour tester une nouvelle mécanique d'animation avant de la fusionner (règle §9 #25 "Prototyper puis fusionner"), pas une dépendance manquante.
+> - `map.html` n'est pas un fichier perdu à récupérer, c'est une **feature jamais construite** (carte de progression, mise de côté). Si elle est voulue un jour, elle sera à construire from scratch, pas à restaurer.
+> - `deploy-demo/` reste à créer le jour de l'intégration réelle au site (copie de `narration.html` + `vercel.json` iframe-friendly) — non bloquant tant que `narration.html` est testé en accès direct.
+> **`narration.html` est donc autonome et suffisant en l'état pour toute suite de travail sur le parcours gamifié.**
+
 ---
 
 ## 4. Schéma Supabase
