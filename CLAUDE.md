@@ -374,6 +374,12 @@ Le livrable. Contient le contenu du parcours (`STORY[]`), le moteur d'affichage 
 
 **Beats `cine`** : un beat peut porter un tableau `cine:[...]` décrivant une mini-vidéo plan par plan (entrée, contenu, effets de mots, illustration, `cta`). Utilisé pour les intros soignées (Bonjour, macros, cuisine/découpe, métabolisme/brûle).
 
+**Bibliothèque « motion Apple »** (ajoutée juillet 2026) — entrées/sorties sobres, easing spring-like `cubic-bezier(.22,1,.36,1)`, pas de rebond/glitch :
+- Entrées : `glide` (léger rise 14px), `focus` (flou 9px + zoom 1.06 → net, façon pull-focus), `parallax` (translation+scale discret 10px/0.97), `reveal` (wipe par `clip-path`, façon transition Keynote). S'ajoutent aux entrées existantes (`unblur`, `drift`, etc. — voir `[data-enter="X"]` dans le CSS pour la liste complète, 16 au total).
+- Sorties : `settle` (fade + scale-down doux), `lift` (fade + légère remontée). S'ajoutent aux sorties `.plan.out-X` existantes.
+- **`K_ENTERS`/`K_OUTS`/`k_pick()`** : pool + rotateur qui existaient déjà dans le code mais n'étaient **jamais appelés** (découverte de la session) — `k_sayToSeq()` forçait `enter:'unblur'` en dur pour tous les beats `say`, et la fin de séquence kinetic forçait `'out-up'`. Corrigé : les deux utilisent maintenant `k_pick(K_ENTERS)`/`k_pick(K_OUTS)`, donc **chaque beat `say` (~24 dans le parcours actuel) varie automatiquement** sa transition (rotation sans répétition consécutive) au lieu de toujours jouer la même. `K_ENTERS`/`K_OUTS` ne gardent que les effets sobres (glitch/bounce/tunnel/squash/spin/through retirés du pool auto — trop ludiques pour du contenu explicatif — mais restent utilisables manuellement via `cine`/`enter:'X'` explicite si besoin ailleurs, ex. jeux/défis).
+- ⚠️ Un bloc CSS mort a été supprimé au passage : d'anciennes règles `.plan.out-up`/`-shrink`/etc. (keyframes `k_x*`) étaient entièrement masquées par un bloc plus récent définissant les mêmes sélecteurs (`k_o*`, plus loin dans le fichier) — la cascade CSS ne jouait jamais le premier bloc.
+
 **Jeu de la jauge (canette/steak)** — `renderCan(el,b)` :
 - Sujet **détouré** (PNG transparent `K_CUT`) posé sur un **panneau blanc** (`.paint-hero`), sans support ni ombre sous l'objet.
 - Deux images superposées, **exactement même taille** : base en niveaux de gris (`.paint-base`, opacité réduite) + copie couleur (`.paint-fill`) révélée du bas vers le haut par un `clip-path:inset(X% 0 0 0)` → la jauge « épouse la forme » du sujet.
@@ -914,10 +920,11 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - `progression.html` (page orpheline concurrente) supprimée avec ses 2 endpoints
 - **3 bugs de navigation trouvés et corrigés** (retour/carte inaccessibles pendant les scènes kinetic, carte invisible si ouverte pendant une scène kinetic, saut vers un mini-jeu depuis la carte qui laissait l'ancienne scène bloquée à l'écran) — voir §7 pour le détail
 - **Vérification IA des photos de défi** : les 3 défis photo (macros/étiquette/accord) passent désormais par Claude vision (`k_verifyDefiPhoto`) avant de valider la photo, avec fail-open si l'API est indisponible — voir §3
+- **Bibliothèque « motion Apple »** : 4 nouvelles entrées + 2 nouvelles sorties sobres ajoutées, et surtout `K_ENTERS`/`K_OUTS`/`k_pick()` (qui existaient sans jamais être appelés) branchés sur `k_sayToSeq()` et la fin de séquence kinetic — voir §3. **Chaque beat `say` (~24) varie désormais sa transition automatiquement**, ce qui répond en grande partie à "décliner le soin cinématique sur plus de notions" (avant : tous identiques sur `unblur`/`out-up`) sans avoir eu à récrire chaque beat à la main.
 
 ### 🔄 [narration] Reste à faire / à surveiller
 - Valider sur **téléphone réel** le rythme des cinématiques, le figé net des scènes, et le jeu de la jauge
-- **Décliner le niveau de soin cinématique sur plus de notions** (seules les intros clés sont scénarisées à la main) — chantier de contenu ouvert, pas commencé
+- Décliner un niveau de soin **cine hand-authored** (comme Bonjour/macros/cuisine) sur davantage de notions individuelles si voulu — la variété auto (ci-dessus) couvre déjà les beats `say`, mais un traitement sur-mesure reste possible notion par notion
 - Basculer les images base64 → Cloudinary (`CLOUD_BASE`) pour repasser le fichier à ~60 Ko avant prod
 - ~~Intégrer la feature au site~~ — **fait** : onglet Progression de `index.html` → `narration.html`. Reste éventuellement à revoir l'intégration Wix (iframe) si l'app entière y est encore embarquée.
 - Fournir les vraies photos manquantes (étiquette, ustensiles, etc. — placeholders actuels)
