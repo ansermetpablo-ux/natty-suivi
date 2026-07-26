@@ -251,7 +251,7 @@ Défis perso/duo/entreprise. Autonome, aucune dépendance avec `narration.html`.
 Dashboard "progression nutritionnelle". Lit `onboarding` (`completed=eq.true`), `questionnaire_alim`, `meals` (avec `meal_ingredients(*)` imbriqué, `order=created_at.desc&limit=30`).
 
 - Fonctions : `sbFetch`, `init`, `renderObjectif`, `renderCourbes`, `chargerSuggestions` → `POST /api/suggestions-macros`, `chargerAnalyse` → `POST /api/analyse-nutrition`.
-- 🔴 **Ces deux endpoints n'existent pas dans `api/`** → 404 systématique, masqué silencieusement par les fallbacks `renderSuggestionsFallback`/`renderFallbackAnalyse` (aucune erreur visible à l'utilisateur). Les features "suggestions IA" et "analyse nutritionnelle" de cette page sont **cassées en l'état**. À créer si on veut les activer, ou à retirer de l'UI si abandonnées.
+- ✅ **Ces deux endpoints existent désormais** (`api/suggestions-macros.js`, `api/analyse-nutrition.js` — créés juillet 2026, voir plus bas). Fallback `renderSuggestionsFallback`/`renderFallbackAnalyse` conservé côté front en cas d'échec réseau/parsing.
 
 ### `admin.html`
 Back-office multi-rôles — accessible à `natty-suivi.vercel.app/admin.html`.
@@ -349,8 +349,23 @@ Events gérés :
 - `invoice.paid` : `PATCH abonnements?stripe_subscription_id=eq.<id>` → `{statut:'actif'}`.
 - `customer.subscription.deleted` : `PATCH abonnements?stripe_subscription_id=eq.<id>` → `{statut:'annule'}`.
 
-> 🔴 **[PRIORITÉ SÉCURITÉ] Aucune vérification de signature Stripe** : le header `stripe-signature` n'est pas lu, pas de `stripe.webhooks.constructEvent`, pas de `STRIPE_WEBHOOK_SECRET` utilisé — `const event = await req.json()` fait confiance au body brut. **N'importe qui peut POSTer un faux event JSON et activer un abonnement gratuit sur un `user_id` arbitraire.** À corriger avant toute mise en prod réelle (voir aussi §8).
+> ✅ **Signature Stripe vérifiée** (corrigé juillet 2026) : `verifyStripeSignature()` recalcule le HMAC-SHA256 (`Web Crypto`, compatible edge runtime) sur `timestamp + '.' + rawBody` et le compare au header `stripe-signature`, avec tolérance 5 min contre le replay. **Fail-closed** : si `STRIPE_WEBHOOK_SECRET` n'est pas configuré en variable d'env Vercel, le handler rejette tout (500) — **variable requise avant déploiement**, sinon l'activation des abonnements Stripe s'arrête. Récupérer le "Signing secret" (`whsec_...`) dans Stripe Dashboard → Developers → Webhooks → l'endpoint concerné.
 > `SUPABASE_KEY` a un fallback en dur sur la clé anon si la variable d'env est absente — écrire dans `abonnements` suppose que la RLS autorise l'anon en INSERT/UPDATE (sinon échec silencieux, visible uniquement en HTTP 500 côté Stripe).
+
+### `api/suggestions-macros.js` (créé juillet 2026)
+Endpoint manquant appelé par `progression.html` — implémenté pour combler le 404 documenté en §7. Même pattern que `api/claude.js` (CommonJS, module natif `https`, modèle `claude-sonnet-4-5`).
+
+- Entrée : `{profil, repas_du_jour, questionnaire_alim}`. Prompt demandant 3 suggestions (aliment simple / combo express / plat complet) compte tenu des macros restantes du jour et des préférences alimentaires.
+- Sortie attendue par le front : `{suggestions:[{emoji,name,description,proteines,lipides,glucides,calories,preparation,pourquoi}]}` — extraction du JSON via regex sur un éventuel bloc ` ```json ` avant `JSON.parse`.
+- Si `ANTHROPIC_API_KEY` absent ou erreur Claude/parsing → 500, le front retombe sur `renderSuggestionsFallback()` (données statiques).
+
+### `api/analyse-nutrition.js` (créé juillet 2026)
+Endpoint manquant appelé par `progression.html` — implémenté pour combler le 404 documenté en §7. Même pattern que `api/claude.js`.
+
+- Entrée : `{profil, repas, questionnaire_alim}` (jusqu'à 30 repas avec ingrédients). Prompt demandant points forts/faibles, composition réelle vs idéale (% prot/lip/gluc), ingrédients à remplacer/incorporer, plats suggérés, score global (0-100), message coach.
+- Sortie attendue par le front : `{points_forts, points_faibles, composition_reelle, composition_ideale, ingredients_remplacer, ingredients_incorporer, plats_suggeres, score_global, message_coach}` — voir `progression.html` (`renderPointsForts`/`renderDonuts`/`renderRemplacer`/etc.) pour le détail des champs.
+- Le prompt demande explicitement des tableaux vides plutôt que d'inventer des données si l'historique de repas est trop court.
+- **Non testé en conditions réelles** (pas d'appel Claude exécuté pendant cette session — validation faite par `node --check` uniquement). À tester après déploiement : vérifier que Claude renvoie un JSON parsable à chaque appel, ajuster le prompt si le format dérive.
 
 ### [narration] Fichiers du module parcours
 
@@ -790,13 +805,13 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 **Solution appliquée** : les 2 occurrences dans `naviguer()` remplacées par `index.html`.
 **Nuance découverte après coup** : Pablo confirme que `accueil.html` **n'est pas la vraie page d'accueil de l'app** (celle-ci vit sur Wix, hors repo) — donc ce bug avait potentiellement un impact réel très faible ou nul en prod. Le fix reste appliqué (inoffensif, cohérent avec le reste de l'app), mais ne pas re-prioriser de travail sur `accueil.html` sans clarifier d'abord son usage réel avec Pablo.
 
-### `api/progression.js` — doublon HTML déployé comme fonction serverless
-**Problème** : `api/progression.js` est un copier-coller intégral de `progression.html` (contenu identique, hash MD5 identique) avec l'extension `.js`. Si Vercel tente de le construire comme une fonction serverless, le fichier commence par `<!DOCTYPE html>` et non par `export default`/`module.exports` → échec probable du build ou de l'exécution de cette route.
-**Solution** : supprimer ce fichier (le vrai contenu utile est `progression.html`), ou le remplacer par un vrai handler si une route `/api/progression` est réellement nécessaire. Non fait pendant cette session — à valider avec Pablo avant suppression.
+### `api/progression.js` — doublon HTML déployé comme fonction serverless — ✅ corrigé
+**Problème** : `api/progression.js` était un copier-coller intégral de `progression.html` (contenu identique, hash MD5 identique) avec l'extension `.js`. Si Vercel tentait de le construire comme fonction serverless, le fichier commençait par `<!DOCTYPE html>` et non par `export default`/`module.exports` → échec probable du build/exécution de cette route.
+**Solution appliquée** : fichier supprimé (le vrai contenu utile reste `progression.html`).
 
-### Endpoints manquants appelés par `progression.html`
-**Problème** : `chargerSuggestions()` et `chargerAnalyse()` appellent `POST /api/suggestions-macros` et `POST /api/analyse-nutrition`, qui n'existent nulle part dans `api/`. Échec 404 systématique, masqué silencieusement par des fallbacks statiques (`renderSuggestionsFallback`/`renderFallbackAnalyse`) — l'utilisateur ne voit jamais d'erreur, juste des données génériques.
-**Solution** : soit créer ces deux endpoints (probablement en réutilisant le pattern de `api/claude.js`), soit retirer les boutons/sections correspondants de `progression.html` si la feature est abandonnée.
+### Endpoints manquants appelés par `progression.html` — ✅ corrigé (à tester en prod)
+**Problème** : `chargerSuggestions()` et `chargerAnalyse()` appellent `POST /api/suggestions-macros` et `POST /api/analyse-nutrition`, qui n'existaient nulle part dans `api/`. Échec 404 systématique, masqué silencieusement par des fallbacks statiques.
+**Solution appliquée** : les deux endpoints ont été créés (`api/suggestions-macros.js`, `api/analyse-nutrition.js`), sur le pattern de `api/claude.js` — voir §3 pour le détail des entrées/sorties. **Non testés en conditions réelles** (pas d'appel Claude exécuté pendant cette session) : à valider après déploiement que le JSON renvoyé par Claude est bien parsable à chaque appel.
 
 ### Webhook Stripe sans vérification de signature
 **Problème** : `api/webhook.js` traite `await req.json()` sans jamais vérifier le header `stripe-signature` ni utiliser `STRIPE_WEBHOOK_SECRET`. N'importe qui connaissant l'URL peut POSTer un faux event `checkout.session.completed` avec un `user_id` arbitraire et activer un abonnement gratuit.
@@ -858,8 +873,8 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 
 **Bugs de navigation & code mort découverts (audit juillet 2026)**
 - ✅ `accueil.html` redirigeait vers `suivi.html` (legacy) au lieu d'`index.html` — corrigé, mais impact réel incertain : `accueil.html` n'est pas la vraie page d'accueil (celle-ci est sur Wix) — voir §3/§7.
-- `api/progression.js` est un doublon HTML cassé de `progression.html`, à supprimer ou corriger — voir §7.
-- `/api/suggestions-macros` et `/api/analyse-nutrition` sont appelés par `progression.html` mais n'existent pas — à créer ou retirer de l'UI — voir §7.
+- ✅ `api/progression.js` (doublon HTML cassé) — supprimé.
+- ✅ `/api/suggestions-macros` et `/api/analyse-nutrition` — créés (appellent Claude, pattern `api/claude.js`). **Non testés en conditions réelles**, à valider après déploiement — voir §3/§7.
 - `api/scan-plat.js` (pipeline LogMeal + Claude vision) est codé mais jamais appelé par aucune page — à brancher si c'est la feature "Analyse de plat par IA" prévue, sinon à documenter comme volontairement en pause.
 - `api/supabase.js` (proxy générique Supabase) est orphelin, jamais utilisé — à supprimer ou à adopter pour mutualiser les appels.
 - `manifest.json`/`suivi.html`/`onboarding.html` référencent `/icon-192.png` inexistant — voir §7.
