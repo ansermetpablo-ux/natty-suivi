@@ -1,0 +1,820 @@
+# CLAUDE.md — Natty
+
+> Ce fichier couvre deux grands modules développés dans nos échanges :
+> 1. **Module "Mon Suivi / Mon alimentation"** — dashboard client, chat, admin nutritionnistes, onboarding, offre (sections rédigées par la session chat/admin).
+> 2. **Module "Parcours gamifié" (le « Duolingo de l'alimentaire »)** — `narration.html`, `map.html`, `motion_lab.html` et leurs mini-jeux (sections marquées `[narration]`, rédigées par la session parcours/jeux).
+> Pour tout ce qui n'est pas documenté ici, écrire « À COMPLÉTER ».
+>
+> **Mise à jour narration (session parcours/animations — juillet 2026)** : la couche `[narration]` a été entièrement réécrite pour refléter le moteur cinématique « kinetic », la DA noir & blanc, et l'état réel des bugs. Les sections suivi/admin sont conservées telles quelles.
+
+---
+
+## 1. Vue d'ensemble du projet
+
+**Natty** est une app web de coaching nutritionnel qui connecte des clients avec des nutritionnistes.
+Elle permet aux clients de :
+- Suivre leur alimentation (logs de repas, photos, ingrédients)
+- Voir leurs scores nutritionnels (variété, qualité, pertinence)
+- Accéder à leur plan personnalisé (macros, calories, objectifs)
+- Chatter en temps réel avec leur nutritionniste
+- Choisir leur nutritionniste lors de la souscription
+- S'abonner à une formule (3 ou 4 repas/semaine, 9€ le plat)
+- Compléter un questionnaire d'onboarding intelligent (7 étapes, formats variés)
+
+**Trois nutritionnistes de démo** sont disponibles au lancement :
+- Sophie Martin (`sophie@natty.fr`) — spécialiste Performance / Prise de masse
+- Lucas Bernard (`lucas@natty.fr`) — spécialiste Perte de poids / Rééquilibrage
+- Emma Rousseau (`emma@natty.fr`) — spécialiste Bien-être / Alimentation intuitive
+- Mot de passe commun démo : `Nutri26` (encodé base64 dans Supabase : `TnV0cmkyNg==`)
+- Admin global : mdp `Natty2026!` (accès via "Accès administrateur" dans l'écran login)
+- Chef : mdp `Chef2026!`
+- Logistique : mdp `Logistique2026!`
+- Back-office admin : `natty-suivi.vercel.app/admin.html`
+
+### Modèle commercial
+- Formule 3 repas/semaine : **27€/semaine** (3 × 9€)
+- Formule 4 repas/semaine : **36€/semaine** (4 × 9€)
+- Récurrence **hebdomadaire** via Stripe
+- Inclus : repas livrés + kit recettes + suivi nutritionniste + 2 RDV offerts + messagerie illimitée
+- Le suivi nutritionniste est **gratuit** pour les abonnés repas
+
+### [narration] Module "Parcours gamifié" — le « Duolingo de l'alimentaire »
+Parcours d'apprentissage interactif, **entièrement front** (aucun backend, aucune requête réseau), pensé pour la **démo** puis l'intégration au site. Objectif produit : à l'issue du parcours, l'utilisateur maîtrise les bases de la **cuisine ET de la nutrition** (contenu « comme un expert », UX « vidéo interactive immersive »).
+- Structure = une **narration façon vidéo interactive** : ~121 « beats » (plans successifs) répartis en **10 chapitres**, sur 4 « modes » (nutrition/apprentissage, cuisine, jeu, défi).
+- Alterne **écrans de savoir** (flash cards), **cinématiques animées** (mini-vidéos de texte + illustrations), **mini-jeux gestuels** et **défis**.
+- Contenu **français**, orienté action (IG, satiété, timing, ordre des ingrédients, rôle de chaque aliment…). Données nutritionnelles vérifiées (ex. œuf ~13 g protéines/100 g, poulet ~31 g, saumon cru ~20 g, lentilles cuites ~8-9 g).
+- **Statut** : c'est une **feature à intégrer au site Natty existant** (via déploiement Vercel embarqué en iframe Wix), PAS l'app à migrer en natif. La migration Capacitor/App Store est un chantier séparé et ultérieur.
+
+---
+
+## 2. Stack technique & déploiement
+
+| Outil | Usage |
+|---|---|
+| **Vercel** | Hébergement de tous les fichiers HTML + proxy API |
+| **GitHub** (`ansermetpablo-ux/natty-suivi`) | Repo source — push → redéploiement Vercel automatique |
+| **Supabase** | Base de données PostgreSQL (meals, ingrédients, scores, messages, nutritionnistes, onboarding, abonnements, commandes, plans_repas, stocks_mp, recettes, ingredients_base) |
+| **Wix Studio** | Front marketing + page "Mon Suivi" (iFrame vers Vercel) |
+| **Cloudinary** | Stockage photos de repas |
+| **Wix Members** | Authentification utilisateurs |
+| **Stripe** | Paiements récurrents hebdomadaires (formules 3 et 4 repas) |
+| **Resend** | Emails transactionnels (notifications messages nutritionniste) |
+| **Claude API** | IA pour conseils nutritionnels hebdomadaires + analyse de plats |
+
+**URL de production** : `https://natty-suivi.vercel.app`
+**Repo** : `https://github.com/ansermetpablo-ux/natty-suivi`
+**Login Natty (page Wix)** : `https://www.natty-nutrition.com/mon-suivi`
+
+### Workflow de déploiement
+```
+Modifier fichier HTML sur GitHub → Commit → Vercel redéploie automatiquement (~1 min)
+```
+
+> ⚠️ Toujours vérifier dans Vercel → Deployments que le statut est **Ready** avant de tester.
+
+> ⚠️ `vercel.json` contient les crons ET les headers no-cache — ne pas les séparer.
+
+### Credentials connus
+- **Supabase URL** : `https://hrsvcelmwdlcswwagxfa.supabase.co`
+- **Supabase anon key** : `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w`
+- **Cloudinary cloud** : `dujji1s6g`
+- **Cloudinary preset** : `meal_photos` (unsigned)
+- **Stripe price IDs** : `price_1TbhMB0TTrkVKRpiPvbGHLyI` (3 repas/sem — 27€), `price_1TbhWk0TTrkVKRpiFNYOOcEJ` (4 repas/sem — 36€)
+- **Stripe public key** : `pk_test_51TK0Kp0TTrkVKRpi...` (en variable Vercel `STRIPE_PUBLIC_KEY`)
+- **Stripe secret key** : en variable Vercel `STRIPE_SECRET_KEY` (ne jamais committer)
+- **Resend** : clé dans variable d'environnement Vercel `RESEND_API_KEY`
+- **User de test** : `user_id = 7789dd5f-74f8-4f2a-a30f-cea351afb45f`, token hex = `37373839646435662d373466382d346632612d613330662d636561333531616662343566`
+- **URL test** : `https://natty-suivi.vercel.app/index.html?token=37373839646435662d373466382d346632612d613330662d636561333531616662343566`
+
+> ⚠️ Le projet Supabase se **suspend automatiquement** après inactivité (plan gratuit).
+> Si les requêtes échouent avec `ERR_NAME_NOT_RESOLVED`, aller sur supabase.com → **Resume project**.
+
+> ⚠️ **Realtime Supabase** doit être activé manuellement sur la table `messages` :
+> Database → Tables → messages → Enable Realtime
+
+### vercel.json actuel (fusionné — crons + no-cache)
+```json
+{
+  "crons": [
+    { "path": "/api/conseils-hebdo", "schedule": "0 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "5 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "10 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "15 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "20 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "25 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "30 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "35 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "40 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "45 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "50 8 * * 1" },
+    { "path": "/api/conseils-hebdo", "schedule": "55 8 * * 1" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)\\.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Pragma", "value": "no-cache" },
+        { "key": "Expires", "value": "0" }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
+  ]
+}
+```
+
+### masterPage.js (Wix Studio) — état actuel
+- Toutes les URLs pointent vers `natty-suivi.vercel.app` (plus Netlify)
+- Cache-buster `?v=Date.now()` sur toutes les URLs → version fraîche à chaque chargement
+- Guard `hasHtml3` : vérifie que `$w('#html3')` existe ET que `onMessage` est une fonction avant d'appeler — évite le crash sur les pages Wix sans iFrame
+- `verifierEtCharger()` vérifie `onboarding?completed=eq.true` → redirige vers onboarding ou suivi
+- `chargerSuivi()` charge les macros depuis `onboarding` et les passe en URL params
+
+### [narration] Stack du module parcours
+- **100 % statique** : `narration.html` est autonome — **aucun backend, aucune clé, aucun appel Supabase/API**. Seule dépendance externe : Google Fonts (Inter).
+- **Images embarquées en base64** dans le HTML (objet `IMGDATA` → alias `PH`, + `K_CUT` pour les sujets détourés). Conséquence : `narration.html` pèse **~2,4 Mo**. Variable `CLOUD_BASE=''` prévue pour basculer les images sur **Cloudinary** (cloud `dujji1s6g`) en prod → le fichier retomberait à ~60 Ko.
+- Déploiement identique au reste : push GitHub → Vercel. Intégration prévue au site via iframe (comme `index.html`).
+- ⚠️ **Contrainte agent** : pas d'accès réseau pour récupérer des images sur le web (Unsplash/Pexels → 403). Les vraies photos doivent être **fournies par Pablo**, puis détourées/compressées localement (voir `rembg` ci-dessous).
+- **Détourage** : le module `rembg` (Python, installable via pip) retire le fond des photos → PNG transparents. Utilisé pour la canette et le steak (objet `K_CUT.canetteCut`, `K_CUT.steakCut`) afin qu'ils reposent « détourés » sur fond blanc dans le jeu de la jauge.
+
+---
+
+## 3. Structure des fichiers
+
+### `index.html` (= `suivi.html` en output — dernier en date)
+Tableau de bord client principal. Chargé dans un iFrame Wix via `$w('#html3').src = url`.
+
+**Rôle** : afficher score nutritionnel (ring SVG), macros du jour, historique repas, popup conseils hebdo, overlay profil, overlays commande/courses/recettes.
+
+**Fonctions clés** :
+- `resolveUserId()` / `sbFetch()` (async obligatoire) : accès Supabase
+- `init()` : lance en parallèle `chargerRepas()`, `chargerScores()`
+- `conseilsGenererEtSauvegarder(silentRefresh)` : appelle `/api/claude`, sauvegarde via `/api/save-conseils`
+- `verifierEtMontrerPopupConseils()` : vérifie `profil_conseils` en base, affiche le popup si conseils manquants ou périmés
+- `fetchProfilConseils()` : charge et affiche les conseils dans l'overlay profil
+- `afficherOnboardingCTA()` : affiche le CTA "Commencer le suivi" pour les utilisateurs non connectés
+- `lockScroll()` / `unlockScroll()` : gestion du scroll (overflow:hidden uniquement — PAS position:fixed qui casse le scroll mobile)
+- `openProfilOverlay()` / `closeProfilOverlay()` : overlay profil (style.display flex/none — PAS classList)
+- `ouvrirListeCourses()` / `ouvrirRecettes()` : N'appellent PLUS `conseilsGenererEtSauvegarder` — affichent un message si pas de données
+
+**Token et persistance** :
+- Token extrait de l'URL `?token=HEX` → décodé en user_id
+- Si pas de token dans l'URL → cherche dans `localStorage('natty_token')` et `localStorage('natty_user_id')`
+- Au chargement avec token valide → sauvegarde dans localStorage pour les prochains rechargements
+- Déconnexion → efface localStorage
+
+**Conseils hebdomadaires** :
+- Colonnes existantes dans `profil_conseils` : `conseil_prot`, `conseil_gluc`, `conseil_lip`, `conseil_cal`, `conseil_amelioration`, `conseil_points_forts`, `conseils_json`, `semaine`, `generated_at`, `user_id`
+- **Colonnes inexistantes** (NE PAS utiliser) : `liste_courses_json`, `recettes_json`
+- Guard localStorage : `natty_conseils_semaine_{userId}` stocke le lundi de la dernière génération → bloque le popup si semaine identique
+- Guard sessionStorage : `natty_popup_session_{userId}` → bloque re-affichage dans la même session
+
+**Overlays** — tous présents dans le HTML via injection avant `</body>` :
+- `#profilOverlay` : overlay profil avec ring SVG (#psrArc), macros (#pmProt, #pmGluc, #pmLip, #pmCal, #pbProt, #pbGluc, #pbLip, #pbCal), conseils (#profilConseilsCont)
+- `#popupConseils` : popup génération conseils (#pcStepsList, #pcActionBtn)
+- `#onbPopup` : popup onboarding (#onbTrack, #onbNextBtn, #onbD0-3)
+- `#conseilsPopup` : popup conseils du lundi (#conseilsPopupPreview)
+- `#ovProchainRepas` : overlay commande (3 étapes : #prStep1, #prStep2, #prStep3)
+- `#ovListeCourses` : overlay liste courses (#listeCoursesCont)
+- `#ovRecettes` : overlay recettes (#recettesCont)
+
+> ⚠️ Le fichier uploadé par Pablo est souvent **tronqué** (pas de `</body>` ni `</html>`). Toujours vérifier et appendre les overlays + balises fermantes si manquants.
+
+### `admin.html`
+Back-office multi-rôles — accessible à `natty-suivi.vercel.app/admin.html`.
+
+**Authentification** : 3 rôles avec mots de passe hardcodés :
+- Admin : `Natty2026!` — accès complet
+- Chef : `Chef2026!` — onglets Chef et Menu
+- Logistique : `Logistique2026!` — onglets Stocks et Commandes
+
+**Onglets disponibles** :
+- Clients, Repas à programmer, Messages, RDV, Menu, Commandes, Chef, Stocks, Équipe
+
+**`switchNav(tab)`** : gère tous les onglets. Les listeners sont dans DOMContentLoaded — vérifier que `navRepasAProg`, `navChef`, `navStocks` ont bien leurs addEventListener.
+
+**Onglet Menu — saisie des plats** :
+- Formulaire avec champ ingrédients : nom → blur → recherche dans `ingredients_base` (colonnes `cal_per_100g`, `prot_per_100g`, `gluc_per_100g`, `lip_per_100g`) → macros calculées automatiquement
+- Variable `_platIngredients[]` : liste des ingrédients en cours de saisie
+- `renderIngredientsList()` : affiche les ingrédients avec macros readonly (calculées depuis DB)
+- `chargerMacrosIngredient(nom, idx)` : recherche exacte → fuzzy → ilike dans `ingredients_base`
+- `recalculerMacrosPlat()` : calcule les totaux et remplit les champs #platCal, #platProt, #platGluc, #platLip en vert
+- `sauvegarderIngredientsPlat(platId, platNom)` : crée/trouve la recette dans `recettes`, supprime et recrée les `recettes_ingredients`
+
+**Onglet Stocks** :
+- `chargerStocks(view)` : charge `plans_repas` + `recettes` + `recettes_ingredients` pour calculer les vrais besoins en ingrédients (PAS par plat_nom)
+- Calcul : `plans_repas → recette correspondante (match par nom) → recettes_ingredients → besoins en kg`
+- `afficherStockDashboard(el, stocks, needs, nbPlans)` : `needs` est un map `{ingredient_nom_lower → {nom, qty_kg, plats[]}}`
+- Alerte : ingrédient dont `qty_kg_needed > quantite_kg_stock`
+
+**Import facture** :
+- `afficherResultatsFacture()` : utilise `window._factureProduitsCache[]` + `data-idx` (PAS `data-produit=JSON` qui cassait la syntaxe)
+- `importerSelectionStocks()` : lit depuis `window._factureProduitsCache[idx]`
+
+**Règles inline onclick** : TOUS les onclick inline avec `''+var+''` sont interdits — causent `Unexpected string`. Toujours utiliser `data-*` + `addEventListener`.
+
+### `login.html`
+Page de connexion standalone — `natty-suivi.vercel.app/login.html`
+
+**Fonctions** :
+- `doLogin()` : POST sur `/auth/v1/token?grant_type=password` Supabase → user_id → encode hex → redirige vers `index.html?token=HEX`
+- `doSignup()` : POST sur `/auth/v1/signup` + sauvegarde prénom dans `onboarding`
+- `doReset()` : POST sur `/auth/v1/recover`
+- `doGoogle()` : redirect vers `SB_URL/auth/v1/authorize?provider=google&redirect_to=https://natty-suivi.vercel.app/login.html?oauth=1`
+- Callback OAuth : token dans URL hash → fetch `/auth/v1/user` → redirectToApp
+
+**Config Supabase Auth requise** :
+- Site URL : `https://natty-suivi.vercel.app`
+- Redirect URLs : `https://natty-suivi.vercel.app/login.html?oauth=1`
+- Google OAuth : Client ID `63216057563-o9he66er7kbsjk6crfed3t1j94m2annb.apps.googleusercontent.com` configuré dans Supabase → Providers → Google
+
+**Flux dans index.html sans token** :
+- Timeout 2000ms → si pas de USER_ID → `afficherOnboardingCTA()` → bouton "Commencer →" → redirige vers `login.html`
+
+### `api/claude.js`
+Proxy vers l'API Claude pour les conseils nutritionnels.
+
+### `api/save-conseils.js`
+Sauvegarde les conseils générés dans `profil_conseils` Supabase.
+
+### `api/conseils-hebdo.js`
+Cron Vercel — déclenché 12 fois le lundi matin (toutes les 5 min de 8h à 8h55) pour couvrir tous les utilisateurs.
+
+### `api/send-email.js`
+Notifications email via Resend.
+
+### `onboarding.html`
+Questionnaire d'onboarding client — 7 étapes.
+
+### `api/webhook.js` (À CRÉER)
+Webhook Stripe pour activer les abonnements.
+
+### [narration] Fichiers du module parcours
+
+#### `narration.html` — moteur principal (~2,4 Mo, ~121 beats, 10 chapitres)
+Le livrable. Contient le contenu du parcours (`STORY[]`), le moteur d'affichage classique (beats) ET le **moteur cinématique « kinetic »** porté depuis `motion_lab.html`.
+
+**Deux systèmes de rendu cohabitent** :
+1. **Rendu beat classique** (`render(b,pair)`) — pour les flash cards et les mini-jeux interactifs. Élément `.beat` dans `#stage`.
+2. **Moteur kinetic** (`#klayer`, tout préfixé `k_`) — pour les explications/transitions animées « façon vidéo ». C'est le système à privilégier pour tout ce qui est texte/annonce.
+
+**Dispatch central** : `go()` lit le beat courant, calcule son mode via `univFor()`/`k_modeOf()`, puis :
+- beat `chapter` → `k_chapterSeq()` (annonce kinetic) puis enchaîne ;
+- changement de mode (jeu/cuisine/défi) → `k_modeSeq()` (annonce courte) ;
+- beat `say` ou beat portant un champ `cine` → `k_dispatch()` → cinématique kinetic ;
+- sinon → `k_renderBeat()` → rendu beat classique (flash cards, jeux).
+
+**Moteur kinetic — fonctions clés** (toutes préfixées `k_`, scellées dans `#klayer`) :
+- `k_playSeq(seqArr,onDone)` : joue une séquence de « plans » puis appelle `onDone` (souvent `nextBeat`).
+- `k_step()` : affiche le plan courant ; **auto-avance** entre plans SAUF si le plan a un `btn` (alors il attend le clic). Séquence terminée → masque `#klayer` + `onDone`.
+- `k_showPlan(p)` : construit un plan (illustration + contenu). Le **bouton d'action est placé dans une barre fixe en bas** (`#k_cta`), jamais dans le plan animé — il apparaît une fois la scène « posée » (settled) et ne disparaît pas.
+- `k_buildContent(p)` / `k_buildIllu(p)` : texte animé (lignes/tokens) et illustration (emoji, SVG via `p.svg`, morph, photo).
+- `k_sayToSeq(b)` : convertit un beat `say` en une **scène unique** centrée (emoji + titre + sous-titre + bouton) qui reste jusqu'au clic.
+- `k_resolveCine(cine)` : exécute une séquence `cine` explicite ; garantit un bouton sur la dernière frame.
+- `k_modeSeq(mode,b)` / `k_chapterSeq()` : annonces de mode/chapitre (scène unique de ~3 s : illustration SVG + titre).
+- `k_clearPlan(el,outKind)` : applique l'animation de **sortie** au plan sortant puis le retire.
+- Sons/vibrations : `k_sEnter`, `k_sSem`, `k_sFx` (dont l'effet « cut » = son de découpe), réutilisent l'audio existant de la narration.
+
+**Bibliothèque SVG** : `K_SVG{}` = 9 illustrations 2D animées N&B (swipe/tinder, gauge, cut/couteau, balance, flame, macros-trio, plate, tier, paint) ; `K_GAME_SVG{}` mappe un type de jeu → l'illustration montrée pendant la transition de mode.
+
+**Beats `cine`** : un beat peut porter un tableau `cine:[...]` décrivant une mini-vidéo plan par plan (entrée, contenu, effets de mots, illustration, `cta`). Utilisé pour les intros soignées (Bonjour, macros, cuisine/découpe, métabolisme/brûle).
+
+**Jeu de la jauge (canette/steak)** — `renderCan(el,b)` :
+- Sujet **détouré** (PNG transparent `K_CUT`) posé sur un **panneau blanc** (`.paint-hero`), sans support ni ombre sous l'objet.
+- Deux images superposées, **exactement même taille** : base en niveaux de gris (`.paint-base`, opacité réduite) + copie couleur (`.paint-fill`) révélée du bas vers le haut par un `clip-path:inset(X% 0 0 0)` → la jauge « épouse la forme » du sujet.
+- Glisser vers le haut = estimer le % ; bouton « Valider mon estimation » actif dès `frac>0`.
+
+#### `motion_lab.html` — laboratoire cinématique (référence)
+Moteur « vidéo interactive » d'origine (kinetic typography) : entrées (rise, unblur, through, drift…), sorties, effets de mots sémantiques (burn, flow, freeze…), sons, vibrations. **C'est la source** dont le moteur `k_` de `narration.html` est porté. Sert de banc d'essai ; ne pas déployer tel quel (son thème d'origine était sombre — la narration impose désormais la DA N&B, voir §5).
+
+#### `map.html` — carte de progression (mise de côté)
+Carte gamifiée du parcours. Non prioritaire actuellement.
+
+#### `deploy-demo/` — version déployable iframe (prévue)
+Dossier prévu : copie de `narration.html` en `index.html` + `vercel.json` avec `frame-ancestors *`.
+
+---
+
+## 4. Schéma Supabase
+
+### Tables existantes et vérifiées
+
+#### `meals`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| user_id | text | userId Wix hex-encodé |
+| name | text | Nom du plat |
+| photo_url | text | URL Cloudinary |
+| meal_date | date | |
+| created_at | timestamptz | |
+
+#### `meal_ingredients`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| meal_id | uuid | FK → meals |
+| name | text | |
+| quantity_g | numeric | |
+
+#### `nutrition_scores`
+| Colonne | Type | Notes |
+|---|---|---|
+| user_id | text | |
+| variety_score | numeric | 0-100 |
+| quality_score | numeric | 0-100 |
+| relevance_score | numeric | 0-100 |
+| score_date | date | |
+| calculated_at | timestamptz | |
+
+#### `onboarding`
+| Colonne | Type | Notes |
+|---|---|---|
+| user_id | text | |
+| maturite | text | |
+| motivation | text | |
+| score_motivation | integer | 1-10 |
+| score_rigueur | integer | 1-10 |
+| score_nutrition | integer | 1-10 |
+| axe_amelioration | text | |
+| freins | text[] | |
+| repas_sautes | text[] | |
+| nb_repas | integer | |
+| temps_cuisine | text | |
+| sexe | text | |
+| age | integer | |
+| poids | numeric | |
+| taille | numeric | |
+| activite | text | |
+| bmr | numeric | |
+| tdee | numeric | |
+| deficit | numeric | |
+| completed | boolean | |
+| proteines | numeric | calculé côté client |
+| glucides | numeric | calculé côté client |
+| lipides | numeric | calculé côté client |
+| calories | numeric | = tdee |
+| created_at | timestamptz | |
+
+> ⚠️ Les colonnes `proteines`, `lipides`, `glucides`, `calories` EXISTENT dans `onboarding` mais sont calculées client-side depuis `poids` et `tdee` — ne pas supposer qu'elles sont toujours renseignées.
+
+#### `profil_conseils`
+| Colonne | Type | Notes |
+|---|---|---|
+| user_id | uuid | |
+| conseil_prot | text | |
+| conseil_gluc | text | |
+| conseil_lip | text | |
+| conseil_cal | text | |
+| conseil_amelioration | text | |
+| conseil_points_forts | text | |
+| conseils_json | jsonb | |
+| semaine | date | Lundi de la semaine |
+| generated_at | timestamptz | |
+
+> ⚠️ `liste_courses_json` et `recettes_json` N'EXISTENT PAS dans `profil_conseils` — ne jamais les inclure dans les SELECT.
+
+#### `plans_repas`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| user_id | text | |
+| plat_id | uuid | FK → plats_menu |
+| plat_nom | text | |
+| semaine_livraison | date | Lundi |
+| jour_livraison | text | |
+| quantite_g | integer | |
+| prot_g | numeric | |
+| lip_g | numeric | |
+| gluc_g | numeric | |
+| cal_kcal | numeric | |
+| statut | text | en_attente/valide/livre |
+| valide_par | text | |
+| valide_at | timestamptz | |
+| notes | text | |
+| created_at | timestamptz | |
+
+#### `ingredients_base`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| nom | text | |
+| nom_normalise | text | lowercase pour recherche fuzzy |
+| categorie | text | |
+| cal_per_100g | numeric | ← colonnes macros |
+| prot_per_100g | numeric | |
+| lip_per_100g | numeric | |
+| gluc_per_100g | numeric | |
+| fibres_per_100g | numeric | |
+| duree_conservation_j | integer | |
+| temperature_conservation | text | |
+| allergenes | text[] | |
+| fournisseurs | text[] | |
+| prix_kg_moyen | numeric | |
+| ean | text | |
+| zone_stockage | text | |
+| poids_colis_kg | numeric | |
+| prix_achat_ht | numeric | |
+
+> 18 produits Metro importés via `natty_ingredients_base.sql`
+
+#### `stocks_mp`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| ingredient_nom | text | |
+| quantite_kg | numeric | |
+| date_peremption | date | |
+| temperature_stockage | text | frais/ambiant/surgele |
+| statut | text | disponible/epuise/perime |
+| lot | text | |
+| created_at | timestamptz | |
+
+#### `recettes`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| nom | text | = nom du plat dans plats_menu |
+| description | text | |
+| nb_portions | integer | |
+| temps_prep_min | integer | |
+| temps_cuisson_min | integer | |
+| prot_portion | numeric | |
+| gluc_portion | numeric | |
+| lip_portion | numeric | |
+| calories_portion | numeric | |
+| actif | boolean | |
+
+#### `recettes_ingredients`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| recette_id | uuid | FK → recettes |
+| ingredient_nom | text | |
+| ingredient_id | uuid | FK → ingredients_base (optionnel) |
+| quantite_g | numeric | |
+| unite | text | |
+| ordre | integer | |
+
+#### `recettes_etapes`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| recette_id | uuid | FK → recettes |
+| numero | integer | |
+| description | text | |
+
+#### `notes_nutritionniste`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| client_id | text | |
+| note | text | |
+| action_semaine | text | |
+| updated_at | timestamptz | |
+
+#### `abonnements`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| user_id | text | |
+| stripe_customer_id | text | |
+| stripe_subscription_id | text | |
+| formule | text | 3_repas / 4_repas |
+| statut | text | actif/inactif/pause/annule |
+| date_debut | timestamptz | |
+| date_fin | timestamptz | |
+
+#### `plats_menu`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| nom | text | |
+| description | text | |
+| photo_url | text | |
+| calories | integer | |
+| proteines | numeric | |
+| glucides | numeric | |
+| lipides | numeric | |
+| semaine | date | |
+| actif | boolean | |
+| categorie | text | proteines/legumes/equilibre/low_carb |
+
+#### `commandes`
+| Colonne | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| user_id | text | |
+| abonnement_id | uuid | |
+| semaine | date | |
+| plats_choisis | uuid[] | |
+| statut | text | en_attente/confirmee/livree/annulee |
+| skip | boolean | |
+
+### RLS — état actuel
+- `recettes`, `recettes_ingredients`, `recettes_etapes` : **RLS désactivé** (`DISABLE ROW LEVEL SECURITY`)
+- `profil_conseils` : **RLS désactivé**
+- Autres tables : policies permissives `USING (true)` — à sécuriser en production
+
+---
+
+## 5. Design & DA
+
+### Dashboard client / Login / Index (style principal)
+- **Fond** : `#f0f0f3` (gris perle)
+- **Variables CSS** :
+  - `--bg: #f0f0f3`
+  - `--so: 6px 6px 16px rgba(174,174,192,0.42), -6px -6px 16px rgba(255,255,255,0.88)` (ombre sortante)
+  - `--si: inset 3px 3px 8px rgba(174,174,192,0.35), inset -3px -3px 8px rgba(255,255,255,0.85)` (ombre rentrante)
+  - `--sm: 4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85)` (ombre moyenne)
+  - `--text: #2d2d3a`, `--muted: #9a9aaa`, `--black: #1a1a2e`
+  - `--green: #34c759`, `--orange: #ff6b35`, `--amber: #ff9500`
+- **Typographie** : Inter (Google Fonts)
+- **Border-radius** : 16-28px selon les éléments
+- **Overlays** : `display:none` → `display:flex` (PAS classList.add('active') pour les overlays injectés dynamiquement)
+- **Sheets (bottom sheets)** : `-webkit-overflow-scrolling: touch` pour le scroll mobile
+
+### Admin (style neumorphique)
+- Même variables CSS que le dashboard
+- Typographie : DM Sans
+- Onglets : highlight vert `#34c759` sur l'onglet actif
+
+### [narration] DA du module parcours (mise à jour — N&B uniforme)
+- **DA noir & blanc uniforme, neumorphisme sobre façon Apple, police Inter.** Fini les palettes colorées par univers.
+- **Deux thèmes seulement** (via `applyUnivers()` → `body[data-u]`) :
+  - **Clair** (`base`) : fond **blanc pur `#ffffff`**, encre `#0d0d0f` — pour l'apprentissage/lecture.
+  - **Sombre** (`jeu`/`defi`) : fond `#0f1014`, encre blanche — pour les **mini-jeux, la cuisine ET les défis** (blanc sur noir). Accent or `#f0b429` réservé aux défis.
+- **Aucune animation de fond** (pas d'emojis flottants) : fond uni. La fonction `floaters()` a été neutralisée.
+- Surlignages de mots kinetic en **noir** (`hl`) par défaut ; jaune (`hlY`) réservé au sens fort/défis.
+- Le jeu de la jauge utilise un **panneau blanc** dédié même en thème sombre, pour que le sujet détouré et la jauge restent lisibles.
+- Colonne mobile **480 px** : `#klayer` est ancré à cette colonne centrée (et non à la fenêtre entière) pour un rendu correct sur ordinateur comme sur mobile.
+
+---
+
+## 6. Décisions prises
+
+### Architecture & données
+- **postMessage Wix → index.html non fonctionnel** : solution = URL params. Décision actée, ne pas revenir en arrière.
+- **Token persistence** : localStorage (`natty_token`, `natty_user_id`) pour éviter la reconnexion à chaque reload.
+- **Macros** : calculées depuis `poids` et `tdee` côté client. Les colonnes existent dans `onboarding` mais ne sont pas toujours renseignées.
+- **Supabase direct depuis le front** : pas de proxy pour CRUD standard.
+- **`sbFetch` doit être `async`** : elle utilise `await` — la déclarer sans `async` retourne une Promise non résolue → toutes les données semblent vides.
+- **Overlays injectés avant `</body>`** : le fichier `index.html` uploadé par Pablo est tronqué (pas de balises fermantes). Toujours appender les overlays + `</body></html>` à la fin du fichier source.
+- **`lockScroll` = overflow:hidden uniquement** : `position:fixed` sur body casse le scroll mobile iOS/Android. Décision actée.
+- **Overlays : style.display flex/none** (PAS classList.add/remove('active')) pour les overlays injectés dynamiquement — classList ne fonctionnait pas car pas de règle CSS `.active`.
+
+### Conseils hebdomadaires
+- **Colonnes inexistantes** : `liste_courses_json` et `recettes_json` n'existent pas dans `profil_conseils`. Les inclure dans un SELECT retourne une erreur 400 → toutes les données semblent vides.
+- **Guard localStorage** (pas sessionStorage) : `sessionStorage` se vide à chaque reload → toujours utiliser `localStorage` pour le guard "conseils frais cette semaine".
+- **`ouvrirListeCourses` et `ouvrirRecettes`** n'appellent PLUS `conseilsGenererEtSauvegarder` — affichent un message simple si pas de données en cache.
+- **Popup conseils ne lockScroll pas** : le popup est une bottom sheet légère, lockScroll gelait toute la page.
+
+### Admin
+- **Calcul stocks par ingrédient** : `plans_repas → recettes (match par nom) → recettes_ingredients → besoins en kg`. Ne PAS comparer `plat_nom` avec `ingredient_nom` directement (jamais identiques).
+- **Macros auto dans le formulaire plat** : readonly, calculées depuis `ingredients_base` (colonnes `*_per_100g`), fond vert quand calculées auto.
+- **Inline onclick interdit** : `onclick="fn(''+var+'')"`  cause `Unexpected string`. Toujours utiliser `data-*` + `addEventListener`.
+- **`window._factureProduitsCache`** : les données facture sont stockées dans un array global avec `data-idx` plutôt qu'en JSON dans `data-produit` (causait `Unexpected string`).
+
+### Login
+- **login.html** : page standalone pour accès direct sans Wix. Encode user_id en hex → même format que le token Wix.
+- **Google OAuth** : nécessite configuration dans Supabase (Site URL + Redirect URLs) ET dans Google Console (Authorized redirect URIs = `https://hrsvcelmwdlcswwagxfa.supabase.co/auth/v1/callback`).
+
+---
+
+
+### [narration] Décisions du module parcours
+- **Un seul moteur pour les explications** : tout ce qui est texte/annonce/transition passe par le moteur kinetic (`#klayer`), pas par le rendu beat classique — évite les conflits de double rendu qui causaient des chevauchements.
+- **DA N&B uniforme** : seuls les jeux/cuisine/défis passent en thème sombre ; le reste est blanc pur. Décision actée (voir §5).
+- **Bouton d'action hors du plan animé** : placé dans une barre fixe en bas (`#k_cta`). Raison : quand il était dans le plan, l'animation de sortie l'emportait et il « disparaissait » avant le clic.
+- **Auto-avance entre frames, pause sur la frame à bouton** : les frames intermédiaires d'une cinématique s'enchaînent seules ; seule la frame qui porte un bouton attend le clic — et **son texte/illustration reste figé net jusqu'au clic** (voir bug « settled » ci-dessous).
+- **Séquence d'une scène** : entrée (avec flou) → **figée au point net (settled)** → apparition du bouton → au clic, sortie animée (avec flou) → scène suivante.
+- **Transitions de mode = une seule scène de ~3 s** (illustration SVG liée au jeu + titre animé), pas d'enchaînement multi-plans.
+- **Images détourées via `rembg`** pour le jeu de la jauge, posées sur panneau blanc ; jauge par `clip-path` sur une copie couleur superposée pixel-perfect à la base grise.
+- **Validation systématique** : extraire le `<script>` et lancer `node --check` avant toute livraison (le fichier est trop gros pour être relu à l'œil).
+
+## 7. Pièges & bugs récurrents
+
+### `sbFetch` non async
+**Problème** : `function sbFetch(path){var r=await fetch...}` sans `async` → retourne une Promise non résolue → `result = []` partout.
+**Solution** : `async function sbFetch(path){...}`. Vérifier avec `node --check` avant livraison.
+
+### Double async
+**Problème** : chaque session qui corrige sbFetch ajoute `async` même s'il y en a déjà un → `async async function sbFetch` → SyntaxError.
+**Solution** : `re.sub(r'async\s+async\s+function', 'async function', content)` avant livraison.
+
+### Colonnes inexistantes dans profil_conseils
+**Problème** : inclure `liste_courses_json` ou `recettes_json` dans le SELECT → 400 → résultat `[]` → popup s'affiche en boucle.
+**Solution** : SELECT uniquement `conseil_prot, conseil_gluc, conseil_lip, conseil_cal, conseil_amelioration, conseil_points_forts, conseils_json, semaine, generated_at`.
+
+### Overlays manquants (fichier tronqué)
+**Problème** : le fichier uploadé par Pablo n'a pas de `</body>` ni `</html>` → tous les overlays injectés précédemment disparaissent.
+**Solution** : toujours travailler depuis le fichier source uploadé, vérifier `'</body>' in content`, appender les overlays + balises fermantes si absents.
+
+### lockScroll bloque le scroll mobile
+**Problème** : `position:fixed` sur body + `top: -scrollY` → page gelée sur iOS/Android.
+**Solution** : `body.style.overflow = 'hidden'` uniquement, sans position:fixed.
+
+### touch-action:none bloque les clics
+**Problème** : `touch-action: none` sur les overlays interceptait tous les events touch y compris les clics sur les boutons.
+**Solution** : supprimer `touch-action: none` sur le fond des overlays.
+
+### classList.add('active') ne fonctionne pas sur overlays injectés
+**Problème** : les overlays injectés dynamiquement n'ont pas de règle CSS `.active` → classList.add ne les rend pas visibles.
+**Solution** : `el.style.display = 'flex'` / `el.style.display = 'none'` directement.
+
+### forEach addEventListener avec éléments null
+**Problème** : `['ovProchainRepas','ovListeCourses','ovRecettes'].forEach(id => document.getElementById(id).addEventListener(...))` → TypeError si l'élément n'existe pas encore.
+**Solution** : `var el = document.getElementById(id); if (el) el.addEventListener(...)`.
+
+### Inline onclick avec quotes
+**Problème** : `onclick="fn(''+var+'')"` dans des strings JS → `Unexpected string` (quotes non échappées).
+**Solution** : utiliser `data-*` + `addEventListener` systématiquement.
+
+### masterPage.js — $w('#html3').onMessage sur toutes les pages
+**Problème** : `onMessage` n'existe que sur les pages avec un élément `#html3`. Sur les autres pages → `TypeError: $w(...).onMessage is not a function` → tout le `$w.onReady` crashe → pas de token → pas de redirection.
+**Solution** : `const hasHtml3 = typeof $w('#html3').onMessage === 'function'` avant d'appeler.
+
+### Cache Vercel/navigateur
+**Problème** : ancienne version servie malgré un nouveau déploiement.
+**Solution** :
+1. `vercel.json` avec headers `Cache-Control: no-cache` sur les `.html`
+2. `masterPage.js` : `?v=Date.now()` sur toutes les URLs
+3. En dernier recours : vider le cache navigateur (Cmd+Shift+Suppr sur Mac/Chrome)
+
+### sessionStorage vs localStorage pour le guard conseils
+**Problème** : `sessionStorage` se vide à chaque rechargement → popup s'affiche à chaque reload même si conseils frais.
+**Solution** : utiliser `localStorage.setItem('natty_conseils_semaine_' + USER_ID, lundi)` — persiste entre rechargements jusqu'à la semaine suivante.
+
+### postMessage Wix
+**Problème** : `$w('#html3').onMessage is not a function` sur iFrames externes.
+**Solution** : passer TOUTES les données en URL params. Ne plus jamais utiliser postMessage pour `#html3`.
+
+### Supabase RLS 401
+**Problème** : INSERT retourne `401 Unauthorized`.
+**Solution** : `ALTER TABLE table DISABLE ROW LEVEL SECURITY` pour les tables admin/back-office.
+
+### Supabase SQL Editor — syntaxe
+**Problème** : erreur `42601` avec commentaires `--` dans les requêtes.
+**Solution** : exécuter chaque requête séparément, sans commentaires.
+
+### [narration] Fichier vidé / tronqué par script
+**Problème** : un script Python qui plante peut vider ou tronquer `narration.html` ; les uploads de Pablo sont aussi souvent tronqués.
+**Solution** : backup avant toute passe de script ; vérifier la présence des balises fermantes ; `node --check` après chaque édition.
+
+### [narration] Texte/illustration qui disparaît avant le clic (bug « settled »)
+**Problème** : une classe `settled` (ou une animation de « respiration ») ajoutée en fin d'entrée **écrasait l'état final** de l'animation d'entrée (`forwards`), faisant revenir l'opacité ou le flou de départ → le texte/illustration disparaissait ou restait flou pile quand le bouton apparaissait.
+**Solution** : `#klayer .plan.settled{opacity:1!important;filter:none!important;letter-spacing:normal!important;transform:none!important}` et **ne pas** couper l'animation d'entrée (`animation:none` réintroduit le bug). La scène doit rester **figée nette** jusqu'au clic.
+
+### [narration] Animations de sortie absentes → plans qui se chevauchent
+**Problème** : les classes `.out-*` n'avaient jamais été portées → le plan précédent restait affiché sous le nouveau (empilement, chevauchement).
+**Solution** : définir les keyframes de sortie (`k_xUp`, `k_xShrink`, `k_xThrough`, …, avec flou), les sceller sous `#klayer .plan.out-*`, et retirer le plan après ~650 ms.
+
+### [narration] Bouton kinetic invisible / transparent
+**Problème** : doublons de règles `.btn` + une animation d'entrée qui laissait `opacity:0` si interrompue.
+**Solution** : bouton dans la barre fixe `#k_cta`, `opacity:1`, couleur pilotée par le thème (`color:var(--bg);background:var(--ink)` → lisible en clair comme en sombre).
+
+### [narration] Surlignage partiel / mots collés
+**Problème** : `hl/hlY/hlO` en `inline` ne couvraient qu'une partie du mot ; letter-spacing très négatif collait les mots/lignes.
+**Solution** : surlignages en `inline-block` (fond pleine hauteur), letter-spacing et line-height relâchés, `unblur` finit en `letter-spacing:normal`.
+
+### [narration] Jeu de la jauge : sujet mal calé / invisible
+**Problème** : sujet en niveaux de gris quasi invisible sur fond sombre, et copie couleur débordant du panneau (deux images mal alignées).
+**Solution** : panneau **blanc** dédié ; base et copie **strictement même taille** (`height` fixe, `width:auto`) ; révélation par `clip-path` sur la copie ; plus de conteneur de découpe séparé.
+
+---
+
+## 8. État d'avancement
+
+### ✅ Fait (sessions suivi client / admin / conseils — sessions 10-11)
+
+**Page suivi client (`index.html`)**
+- Score nutritionnel ring SVG animé
+- Macros du jour avec barres de progression
+- Historique repas avec photos et scores
+- Popup ajout repas (photo + ingrédients + Cloudinary)
+- Conseils hebdomadaires IA (génération + sauvegarde + affichage)
+- Popup "Générer mes conseils" avec guard localStorage semaine
+- Overlay profil complet (score, macros, infos, conseils, courses, recettes)
+- Overlay commande repas (3 étapes : date/créneau → menu → confirmation)
+- Overlay liste de courses et recettes
+- Token persisté dans localStorage
+- Page login.html standalone (email/password/Google OAuth)
+- CTA "Commencer le suivi" pour utilisateurs non connectés
+- Scroll mobile fonctionnel (overflow:hidden)
+- Tous les overlays présents dans le HTML
+
+**Admin (`admin.html`)**
+- Authentification 3 rôles (Admin/Chef/Logistique)
+- Onglets : Clients, Repas à programmer, Menu, Commandes, Chef, Stocks, Équipe
+- Saisie plats avec ingrédients et macros auto depuis `ingredients_base`
+- Calcul stocks par ingrédient réel (via recettes)
+- Import facture Metro avec `window._factureProduitsCache`
+- Tous les inline onclick remplacés par data-* + addEventListener
+- Syntax JS validée node --check
+
+**Infrastructure**
+- `vercel.json` fusionné : crons + headers no-cache
+- `masterPage.js` : Vercel URLs + cache-buster + guard hasHtml3
+- 18 produits Metro dans `ingredients_base` et `stocks_mp`
+- Tables `recettes`, `recettes_ingredients`, `recettes_etapes` (RLS désactivé)
+- `profil_conseils` (RLS désactivé)
+
+### 🔄 À faire
+
+**Abonnements & paiements**
+- `api/webhook.js` — webhook Stripe
+- `offre.html` — page de présentation offre
+- Stripe Checkout integration
+
+**Améliorations index.html**
+- Connecter l'action de la semaine du nutritionniste → affichage dans l'app
+- Analyse de plat par IA (photo → macros)
+
+**Admin**
+- Calendrier commandes (semaineOffset reset à 0 bug)
+- Vue client premium/standard (badge logic à corriger)
+
+**Sécurité**
+- **[PRIORITÉ SÉCURITÉ] Réactiver les RLS Supabase** (actuellement désactivées sur `recettes*` et `profil_conseils`, et policies `USING(true)` ailleurs) : avec la clé anon publique, ces tables sont lisibles/modifiables par n'importe qui. À traiter avant toute distribution large. Écrire les policies une par une, tester après chaque.
+- Remplacer mots de passe hardcodés par auth Supabase
+
+### ✅ Fait (sessions précédentes)
+- Chat temps réel Supabase Realtime
+- Admin multi-nutritionniste
+- Notifications email Resend
+- Onboarding 7 étapes
+- Module parcours gamifié `narration.html` : moteur kinetic porté et intégré, DA N&B uniforme, cinématiques (Bonjour, macros, cuisine/découpe, métabolisme), bibliothèque `K_SVG` (9 illustrations), jeu de la jauge canette/steak (sujets détourés `rembg`)
+
+### 🔄 [narration] Reste à faire / à surveiller
+- Valider sur **téléphone réel** le rythme des cinématiques, le figé net des scènes, et le jeu de la jauge
+- Décliner le niveau de soin cinématique sur **toutes** les notions (seules les intros clés sont scénarisées à la main)
+- Basculer les images base64 → Cloudinary (`CLOUD_BASE`) pour repasser le fichier à ~60 Ko avant prod
+- Intégrer la feature au site (déploiement Vercel + iframe), comme les autres pages
+- Fournir les vraies photos manquantes (étiquette, ustensiles, etc. — placeholders actuels)
+
+---
+
+## 9. Règles pour Claude Code
+
+1. **Lire le fichier avant de modifier** — ne jamais supposer son contenu
+2. **`node --check` obligatoire** avant livraison — valide la syntaxe JS
+3. **Vérifier `async async`** après toute correction de sbFetch — doublon fréquent
+4. **Ne jamais utiliser postMessage Wix** pour `#html3` — URL params uniquement
+5. **Vérifier `</body>` dans le fichier source** — souvent tronqué ; appender overlays + balises si manquants
+6. **`lockScroll` = overflow:hidden** — jamais position:fixed (casse le scroll mobile)
+7. **Overlays : style.display** (pas classList) pour les overlays injectés dynamiquement
+8. **Inline onclick interdit** — `data-*` + `addEventListener` systématiquement
+9. **Colonnes `profil_conseils`** : ne pas utiliser `liste_courses_json` ni `recettes_json`
+10. **Guard conseils = localStorage** (pas sessionStorage) pour persister entre rechargements
+11. **Calcul stocks = par ingrédient** via `plans_repas → recettes → recettes_ingredients` — jamais par `plat_nom`
+12. **`ingredients_base` colonnes macros** : `cal_per_100g`, `prot_per_100g`, `gluc_per_100g`, `lip_per_100g`
+13. **RLS** : `recettes`, `recettes_ingredients`, `recettes_etapes`, `profil_conseils` → RLS désactivé. Ne pas réactiver sans test.
+14. **Demander confirmation** avant de modifier `vercel.json` ou `masterPage.js`
+15. **SQL sans commentaires** dans Supabase SQL Editor — erreur de syntaxe garantie
+16. **CREATE POLICY une par une** — pas en batch
+17. **Ne jamais supposer l'existence de colonnes** — vérifier avec `information_schema.columns`
+18. **Activer Realtime manuellement** sur toute nouvelle table utilisant les WebSockets
+19. **Après chaque push GitHub**, attendre le redéploiement Vercel (statut Ready) avant de tester
+20. **`window._factureProduitsCache`** — données facture dans array global avec `data-idx`, pas en JSON dans `data-produit`
+
+### [narration] Règles spécifiques au module parcours
+21. **Backup avant grosse édition** : copier avant toute passe de script
+22. **UTF-8 explicite** ; prudence avec les quotes échappées — préférer un heredoc Python à `str_replace` quand le texte contient `\'` (ex. `d'olive`)
+23. **Valider le JS après CHAQUE édition** : extraire le `<script>` et lancer `node --check` (fichier trop gros pour relecture visuelle)
+24. **Ne pas télécharger d'images sur le web** — demander à Pablo ; détourer via `rembg` si besoin
+25. **Prototyper puis fusionner** : valider une mécanique dans un petit fichier avant intégration
+26. **Éditer chirurgicalement** le moteur kinetic : tout est préfixé `k_` et scellé sous `#klayer` — ne pas casser le scoping CSS (une règle non scellée casse le layout)
+27. **Ne jamais couper l'animation d'entrée d'un plan** (`animation:none` sur `.settled`) — réintroduit le bug « texte qui disparaît » ; garder le plan figé net via `!important`
+28. **Bouton d'action toujours dans `#k_cta`** (barre fixe), jamais dans le plan animé
+29. **Auto-avance uniquement sur les frames SANS bouton** ; une frame avec `btn` attend le clic et garde son contenu affiché
+30. **Jauge canette/steak** : base et copie couleur strictement même taille ; révélation par `clip-path` ; sujet détouré sur panneau blanc, sans support
+
+---
+
+*Contribution session 11 (Claude Sonnet, session admin multi-rôles / stocks / conseils / login — juillet 2026) :*
+- **Section 1** : ajout mots de passe Chef et Logistique
+- **Section 2** : ajout URL login, masterPage.js détaillé, vercel.json complet fusionné, user de test, tables Supabase nouvelles
+- **Section 3** : documentation complète `index.html` v11 (overlays, token localStorage, conseils, scroll), `admin.html` (multi-rôles, stocks par ingrédient, import facture, macros auto), `login.html` (OAuth Google, flux)
+- **Section 4** : ajout `profil_conseils` (colonnes exactes + colonnes inexistantes), `plans_repas`, `ingredients_base`, `stocks_mp`, `recettes`, `recettes_ingredients`, `recettes_etapes`, RLS état actuel
+- **Section 5** : ajout variables CSS complètes, règles overlays display:flex/none
+- **Section 6** : 12 nouvelles décisions (sbFetch async, overlays tronqués, lockScroll, localStorage guard, inline onclick interdit, window._factureProduitsCache, login.html, Google OAuth)
+- **Section 7** : 10 nouveaux bugs documentés (double async, overlays manquants, lockScroll mobile, touch-action, classList overlays, forEach null, inline onclick, masterPage hasHtml3, cache Vercel, sessionStorage vs localStorage)
+- **Section 8** : état d'avancement complet mis à jour
+- **Section 9** : règles 3-20 ajoutées ou précisées
+
+---
+
+*Contribution session parcours/animations (Claude Opus, narration.html — juillet 2026) :*
+- **Section 1** : statut de la feature (à intégrer au site, pas à migrer en natif), données nutritionnelles vérifiées
+- **Section 2** : stack narration à jour (base64 + `K_CUT`, ~2,4 Mo, `CLOUD_BASE`, `rembg`)
+- **Section 3** : documentation complète du **moteur kinetic** (`#klayer`, fonctions `k_`, dispatch `go()`, `K_SVG`, beats `cine`) et du **jeu de la jauge** (`renderCan`)
+- **Section 5** : DA narration réécrite (N&B uniforme, thème clair/sombre, colonne 480 px, plus d'emojis de fond)
+- **Section 6** : décisions du module parcours (moteur unique, bouton hors plan, séquence figé-net, transitions 3 s)
+- **Section 7** : bugs narration détaillés (settled/opacité-flou, sorties manquantes, bouton transparent, surlignage, jauge)
+- **Section 8** : état d'avancement narration + reste à faire
+- **Section 9** : règles Claude Code 26-30 spécifiques au moteur kinetic
