@@ -785,7 +785,7 @@ body{ background:#ffffff; }
 .ring-dot{ position:absolute; top:0; left:50%; transform:translateX(-50%); width:9px; height:9px; border-radius:50%; background:#ff3b30; z-index:2; }
 #ringArc{ stroke-width:14; filter:none !important; }
 .hero-ring-wrap svg circle:first-child{ stroke:#eeeef0 !important; stroke-width:14; }
-.hero-score-pct{ font-weight:900; font-size:42px; letter-spacing:-1px; color:#101014; }
+.hero-score-pct{ font-weight:900; font-size:42px; letter-spacing:-1px; color:#101014; transition:color .3s; }
 .hero-score-pct-s{ font-weight:800; font-size:19px; }
 .hero-score-lbl{ font-size:12.5px; color:#9d9da8; }
 .hero-score-badge{ font-weight:700; font-size:12.5px; padding:6px 16px; margin-top:5px; }
@@ -793,7 +793,7 @@ body{ background:#ffffff; }
 .hero-macro-col{ background:#ffffff; border-radius:26px; padding:16px 8px 12px; box-shadow:var(--nm-so), var(--nm-bright); }
 .hero-macro-em{ font-size:24px; }
 .hero-macro-val{ font-weight:900; font-size:24px; letter-spacing:-.3px; display:flex; align-items:baseline; justify-content:center; gap:1px; }
-.hero-macro-val .mu{ font-weight:900; font-size:15px; }
+.hero-macro-val .mu{ font-weight:400; font-size:15px; }
 .hero-macro-unit{ display:none; }
 .hero-macro-lbl{ display:none; }
 .hero-macro-bar{ display:none; }
@@ -809,7 +809,7 @@ body{ background:#ffffff; }
 #mealsList{ background:transparent; box-shadow:none; border-radius:0; display:flex; flex-direction:column; gap:12px; }
 .meal-item{ background:#ffffff; border-radius:26px; padding:12px; border-bottom:none; box-shadow:var(--nm-so), var(--nm-bright); }
 .meal-photo{ width:56px; height:56px; border-radius:16px; box-shadow:none; }
-.meal-name{ font-size:14px; font-weight:700; }
+.meal-name{ font-size:14px; font-weight:500; }
 .meal-ings{ display:none; }
 .meal-tag{ background:none !important; color:#34c759 !important; font-weight:700; font-size:11px; padding:0; margin-top:2px; }
 .meal-right{ gap:6px; }
@@ -2001,11 +2001,12 @@ function calcScoreFromAvg(moy, pp, gp, lp) {
 function setScore(pct) {
   var circ=2*Math.PI*84, dash=(pct/100)*circ;
   var hue=Math.max(0,Math.min(100,pct))/100*120;
-  var col='hsl('+Math.round(hue)+',100%,50%)';
+  var col='hsl('+Math.round(hue)+',60%,42%)';
   var arc=document.getElementById('ringArc');
   arc.style.strokeDasharray=dash+' '+circ; arc.style.stroke=col;
   arc.style.filter='none';
   setText('scorePct',pct);
+  document.getElementById('scorePct').style.color=col;
   var b=document.getElementById('ringBadge');
   b.textContent=pct>=80?'Excellent':pct>=60?'Bon':pct>=40?'Moyen':'À revoir';
   b.style.background=pct>=60?'#e8f9ee':pct>=40?'#fff3e0':'#ffecec';
