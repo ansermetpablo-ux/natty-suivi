@@ -22,24 +22,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 .plate-row{display:flex;justify-content:center;gap:14px;margin-top:22px}
 .plate-circ{width:104px;height:104px;border-radius:50%;overflow:hidden;background:#fff;box-shadow:0 10px 24px rgba(20,20,30,.12);flex:none}
 .plate-circ img{width:100%;height:100%;object-fit:cover}
-.plate-circ:nth-child(1) img{object-position:2% center}
-.plate-circ:nth-child(2) img{object-position:50% center}
-.plate-circ:nth-child(3) img{object-position:98% center}
 
 .two-col{display:flex;gap:12px;margin-top:16px}
 .big-card{flex:1;position:relative;border-radius:var(--r-xl);overflow:hidden;aspect-ratio:3/4;background:#101014;cursor:pointer}
-.big-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.82}
+.big-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .big-card .lbl{position:absolute;top:16px;left:16px;background:var(--ink);color:#fff;font-weight:800;font-size:16px;letter-spacing:.4px;padding:9px 16px;border-radius:999px;text-transform:uppercase;z-index:2}
 .big-card .stats{position:absolute;left:14px;top:38%;right:14px;display:flex;flex-direction:column;gap:8px;z-index:2}
-.big-card .chip{align-self:flex-start;background:rgba(16,16,20,.72);backdrop-filter:blur(4px);color:#fff;font-weight:800;font-size:13px;padding:8px 12px;border-radius:14px}
+.big-card .chip{align-self:flex-start;background:rgba(16,16,20,.86);backdrop-filter:blur(4px);color:#fff;font-weight:800;font-size:13px;padding:8px 12px;border-radius:14px;min-width:118px}
 
-.sec-title{font-weight:900;font-size:21px;margin:26px 0 12px;letter-spacing:-.2px}
-.dish-list{display:flex;flex-direction:column;gap:10px}
-.dish-card{display:flex;align-items:center;gap:12px;background:#f3f3f4;border-radius:var(--r-lg);padding:10px;cursor:pointer}
-.dish-card img{width:52px;height:52px;border-radius:14px;object-fit:cover;flex:none;background:#fff}
-.dish-name{font-weight:700;font-size:14px;flex:1}
-.dish-cal{font-weight:800;font-size:13px;background:var(--ink);color:#fff;padding:6px 12px;border-radius:999px}
-.empty{color:var(--muted);font-size:13px;padding:14px 4px}
 </style>
 </head>
 <body>
@@ -57,19 +47,19 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
   <div class="plate-banner">
     <div class="plate-badge" id="formuleBadge">3 PLATS PAR SEMAINE</div>
     <div class="plate-row" id="plateRow">
-      <div class="plate-circ"><img src="/offre-plats.png" alt=""></div>
-      <div class="plate-circ"><img src="/offre-plats.png" alt=""></div>
-      <div class="plate-circ"><img src="/offre-plats.png" alt=""></div>
+      <div class="plate-circ"><img src="/assets/img/plate1.jpg" alt=""></div>
+      <div class="plate-circ"><img src="/assets/img/plate2.jpg" alt=""></div>
+      <div class="plate-circ"><img src="/assets/img/plate3.jpg" alt=""></div>
     </div>
   </div>
 
   <div class="two-col">
     <a class="big-card" href="coaching.html" style="text-decoration:none">
-      <img src="/plat-hero.png" alt="">
+      <img src="/assets/img/coaching-hero.jpg" alt="">
       <div class="lbl">Coaching</div>
     </a>
     <a class="big-card" href="suivi.html" style="text-decoration:none;background:#0c0c10">
-      <img src="/plat-hero.png" alt="" style="filter:brightness(.55)">
+      <img src="/assets/img/suivi-hero.jpg" alt="">
       <div class="lbl">Suivi</div>
       <div class="stats" id="suiviStats">
         <div class="chip">🔥&nbsp;<span id="stC">–</span>&nbsp;Kcal</div>
@@ -78,9 +68,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
       </div>
     </a>
   </div>
-
-  <div class="sec-title">Tes plats de la semaine</div>
-  <div class="dish-list" id="dishList"><div class="empty">Chargement…</div></div>
 </div>
 
 <script src="/assets/core.js"></script>
@@ -107,28 +94,9 @@ async function loadTargets(){
   }catch(e){}
 }
 
-async function loadWeekPlans(){
-  var list = document.getElementById('dishList');
-  var plans = [];
-  try{
-    plans = await Natty.sbFetch('plans_repas?user_id=eq.'+Natty.USER_ID+'&order=semaine_livraison.desc&limit=6&select=*');
-  }catch(e){}
-  if (!plans.length){
-    list.innerHTML = '<div class="empty">Pas encore de plats programmés cette semaine.</div>';
-    return;
-  }
-  list.innerHTML = plans.map(function(p){
-    return '<div class="dish-card"><img src="/offre-plats.png" alt=""><div class="dish-name">'+(p.plat_nom||'Plat')+'</div>'
-      + '<div class="dish-cal">'+(p.cal_kcal?Math.round(p.cal_kcal):'–')+' kcal</div></div>';
-  }).join('');
-  // Bannière du haut : reprend les 3 premiers plats programmés si dispo
-  var circles = document.querySelectorAll('#plateRow img');
-  plans.slice(0,3).forEach(function(p,i){ if (circles[i]) circles[i].alt = p.plat_nom||''; });
-}
-
 (async function(){
   if (!Natty.requireAuth()) return;
-  await Promise.all([loadFormule(), loadTargets(), loadWeekPlans()]);
+  await Promise.all([loadFormule(), loadTargets()]);
 })();
 </script>
 <script src="/assets/nav.js"></script>
