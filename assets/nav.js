@@ -32,7 +32,7 @@
 
   var ITEMS = [
     { key: 'suivi', label: 'Suivi', href: 'suivi.html', icon: ICONS.suivi },
-    { key: 'menu', label: 'Menu', href: 'menu.html', icon: ICONS.menu },
+    { key: 'repas', label: 'Repas', href: 'repas.html', icon: ICONS.menu },
     { key: 'add', add: true },
     { key: 'coaching', label: 'Coaching', href: 'coaching.html', icon: ICONS.coaching },
     { key: 'defis', label: 'Défis', href: 'narration.html', icon: ICONS.defis }
