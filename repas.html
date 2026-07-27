@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Natty · Repas</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="/natty-icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{ --bg:#ffffff; --card:#ececef; --ink:#101014; --muted:#9d9da8; --r-xl:32px; --r-lg:26px; }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:0 20px}
+.top{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 8px}
+.top a{display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.top button{background:none;border:none;display:flex;align-items:center;justify-content:center;color:var(--ink);cursor:pointer;padding:6px}
+.top svg{width:26px;height:26px}
+
+.head-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-top:6px}
+.plat-title{font-family:'Fredoka',sans-serif;font-weight:700;font-size:28px;line-height:1.1;text-transform:uppercase;flex:1}
+.kcal-badge{background:var(--ink);color:#fff;font-family:'Fredoka',sans-serif;font-weight:700;font-size:18px;padding:10px 18px;border-radius:999px;white-space:nowrap}
+
+.plat-photo{width:100%;aspect-ratio:1/1;border-radius:var(--r-xl);overflow:hidden;margin-top:20px;background:#f0f0f2;display:flex;align-items:center;justify-content:center;font-size:60px}
+.plat-photo img{width:100%;height:100%;object-fit:cover}
+
+.macro-pills{display:flex;gap:10px;margin-top:16px}
+.macro-pill{flex:1;background:var(--card);border-radius:999px;padding:12px 0;text-align:center;font-weight:700;font-size:15px}
+
+.sec-title{font-family:'Fredoka',sans-serif;font-weight:700;font-size:24px;margin:30px 0 14px;text-transform:uppercase}
+.discover-row{display:flex;gap:12px}
+.discover-card{flex:1;background:var(--card);border-radius:var(--r-lg);padding:22px 10px;text-align:center;cursor:pointer}
+.discover-card .em{font-size:34px;margin-bottom:10px}
+.discover-card .t{font-weight:700;font-size:12.5px;line-height:1.25}
+
+.empty{text-align:center;color:var(--muted);font-size:14px;padding:60px 0}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <button id="backBtn" aria-label="Retour">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <a href="profil.html" aria-label="Profil">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+  </a>
+</div>
+
+<div class="wrap" id="content">
+  <div class="empty">Chargement…</div>
+</div>
+
+<script src="/assets/core.js"></script>
+<script>
+document.getElementById('backBtn').addEventListener('click', function(){
+  if (document.referrer) history.back(); else Natty.goto('suivi.html');
+});
+
+function render(meal){
+  var mac = Natty.calcMac(meal.meal_ingredients);
+  var photo = meal.photo_url ? '<img src="'+meal.photo_url+'" alt="">' : '🍽️';
+  document.getElementById('content').innerHTML =
+    '<div class="head-row">'
+      + '<div class="plat-title">'+meal.name+'</div>'
+      + '<div class="kcal-badge">'+(mac.c||'–')+' Kcal</div>'
+    + '</div>'
+    + '<div class="plat-photo">'+photo+'</div>'
+    + '<div class="macro-pills">'
+      + '<div class="macro-pill">🥩'+(mac.p||'–')+'g</div>'
+      + '<div class="macro-pill">🌾'+(mac.g||'–')+'g</div>'
+      + '<div class="macro-pill">🥑'+(mac.l||'–')+'g</div>'
+    + '</div>'
+    + '<div class="sec-title">Découvrir</div>'
+    + '<div class="discover-row">'
+      + '<div class="discover-card"><div class="em">🌍</div><div class="t">Recettes du Monde</div></div>'
+      + '<div class="discover-card"><div class="em">🧺</div><div class="t">Ingrédients</div></div>'
+      + '<div class="discover-card"><div class="em">🎲</div><div class="t">Aléatoire</div></div>'
+    + '</div>';
+}
+
+(async function(){
+  if (!Natty.requireAuth()) return;
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id');
+  var meal = null;
+  try{
+    if (id){
+      var raw = await Natty.sbFetch('meals?id=eq.'+id+'&select=*');
+      if (raw && raw.length) meal = raw[0];
+    }
+    if (!meal){
+      var latest = await Natty.sbFetch('meals?user_id=eq.'+Natty.USER_ID+'&order=created_at.desc&limit=1&select=*');
+      if (latest && latest.length) meal = latest[0];
+    }
+    if (meal){
+      meal.meal_ingredients = await Natty.sbFetch('meal_ingredients?meal_id=eq.'+meal.id+'&select=*');
+      render(meal);
+    } else {
+      document.getElementById('content').innerHTML = '<div class="empty">Aucun repas à afficher.<br>Ajoute ton premier plat avec le bouton +</div>';
+    }
+  }catch(e){
+    document.getElementById('content').innerHTML = '<div class="empty">Impossible de charger ce repas.</div>';
+  }
+})();
+</script>
+<script src="/assets/nav.js"></script>
+</body>
+</html>
