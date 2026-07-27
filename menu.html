@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Natty · Menu</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="/natty-icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{ --bg:#ffffff; --ink:#101014; --muted:#9d9da8; --r-xl:32px; --r-lg:26px; }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:0 20px}
+.top{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 8px}
+.top a{display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.top svg{width:26px;height:26px}
+
+.plate-banner{position:relative;background:#f3f3f4;border-radius:var(--r-xl);padding:24px 20px 30px;margin-top:8px;overflow:hidden}
+.plate-badge{display:inline-block;background:var(--ink);color:#fff;font-family:'Fredoka',sans-serif;font-weight:700;font-size:15px;letter-spacing:.8px;padding:10px 18px;border-radius:999px;text-transform:uppercase}
+.plate-row{display:flex;justify-content:center;gap:14px;margin-top:22px}
+.plate-circ{width:104px;height:104px;border-radius:50%;overflow:hidden;background:#fff;box-shadow:0 10px 24px rgba(20,20,30,.12);flex:none}
+.plate-circ img{width:100%;height:100%;object-fit:cover}
+.plate-circ:nth-child(1) img{object-position:2% center}
+.plate-circ:nth-child(2) img{object-position:50% center}
+.plate-circ:nth-child(3) img{object-position:98% center}
+
+.two-col{display:flex;gap:12px;margin-top:16px}
+.big-card{flex:1;position:relative;border-radius:var(--r-xl);overflow:hidden;aspect-ratio:3/4;background:#101014;cursor:pointer}
+.big-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.82}
+.big-card .lbl{position:absolute;top:16px;left:16px;background:var(--ink);color:#fff;font-family:'Fredoka',sans-serif;font-weight:700;font-size:16px;letter-spacing:.8px;padding:9px 16px;border-radius:999px;text-transform:uppercase;z-index:2}
+.big-card .stats{position:absolute;left:14px;bottom:14px;right:14px;display:flex;flex-direction:column;gap:8px;z-index:2}
+.big-card .chip{align-self:flex-start;background:rgba(16,16,20,.72);backdrop-filter:blur(4px);color:#fff;font-weight:700;font-size:13px;padding:8px 12px;border-radius:14px}
+
+.sec-title{font-family:'Fredoka',sans-serif;font-weight:700;font-size:22px;margin:26px 0 12px}
+.dish-list{display:flex;flex-direction:column;gap:10px}
+.dish-card{display:flex;align-items:center;gap:12px;background:#f3f3f4;border-radius:var(--r-lg);padding:10px;cursor:pointer}
+.dish-card img{width:52px;height:52px;border-radius:14px;object-fit:cover;flex:none;background:#fff}
+.dish-name{font-weight:700;font-size:14px;flex:1}
+.dish-cal{font-family:'Fredoka',sans-serif;font-weight:700;font-size:13px;background:var(--ink);color:#fff;padding:6px 12px;border-radius:999px}
+.empty{color:var(--muted);font-size:13px;padding:14px 4px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <a href="https://www.natty-nutrition.com" aria-label="Accueil">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+  </a>
+  <a href="profil.html" aria-label="Profil">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+  </a>
+</div>
+
+<div class="wrap">
+  <div class="plate-banner">
+    <div class="plate-badge" id="formuleBadge">3 PLATS PAR SEMAINE</div>
+    <div class="plate-row" id="plateRow">
+      <div class="plate-circ"><img src="/offre-plats.png" alt=""></div>
+      <div class="plate-circ"><img src="/offre-plats.png" alt=""></div>
+      <div class="plate-circ"><img src="/offre-plats.png" alt=""></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <a class="big-card" href="coaching.html" style="text-decoration:none">
+      <img src="/plat-hero.png" alt="">
+      <div class="lbl">Coaching</div>
+    </a>
+    <a class="big-card" href="suivi.html" style="text-decoration:none;background:#0c0c10">
+      <img src="/plat-hero.png" alt="" style="filter:brightness(.55)">
+      <div class="lbl">Suivi</div>
+      <div class="stats" id="suiviStats">
+        <div class="chip">🔥&nbsp;<span id="stC">–</span>&nbsp;Kcal</div>
+        <div class="chip">🥩&nbsp;<span id="stP">–</span>g&nbsp;Prot.</div>
+        <div class="chip">🌾&nbsp;<span id="stG">–</span>g&nbsp;Gluc.</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="sec-title">Tes plats de la semaine</div>
+  <div class="dish-list" id="dishList"><div class="empty">Chargement…</div></div>
+</div>
+
+<script src="/assets/core.js"></script>
+<script>
+async function loadFormule(){
+  try{
+    var a = await Natty.sbFetch('abonnements?user_id=eq.'+Natty.USER_ID+'&statut=eq.actif&order=date_debut.desc&limit=1&select=formule');
+    if (a && a.length){
+      var n = a[0].formule==='4_repas' ? 4 : 3;
+      document.getElementById('formuleBadge').textContent = n + ' PLATS PAR SEMAINE';
+    }
+  }catch(e){}
+}
+
+async function loadTargets(){
+  try{
+    var o = await Natty.sbFetch('onboarding?user_id=eq.'+Natty.USER_ID+'&order=created_at.desc&limit=1&select=poids,tdee');
+    if (o && o.length){
+      var tdee = o[0].tdee, poids = o[0].poids;
+      document.getElementById('stC').textContent = tdee ? Math.round(tdee) : '–';
+      document.getElementById('stP').textContent = poids ? Math.round(poids*2) : '–';
+      document.getElementById('stG').textContent = tdee ? Math.round(tdee*0.5/4) : '–';
+    }
+  }catch(e){}
+}
+
+async function loadWeekPlans(){
+  var list = document.getElementById('dishList');
+  var plans = [];
+  try{
+    plans = await Natty.sbFetch('plans_repas?user_id=eq.'+Natty.USER_ID+'&order=semaine_livraison.desc&limit=6&select=*');
+  }catch(e){}
+  if (!plans.length){
+    list.innerHTML = '<div class="empty">Pas encore de plats programmés cette semaine.</div>';
+    return;
+  }
+  list.innerHTML = plans.map(function(p){
+    return '<div class="dish-card"><img src="/offre-plats.png" alt=""><div class="dish-name">'+(p.plat_nom||'Plat')+'</div>'
+      + '<div class="dish-cal">'+(p.cal_kcal?Math.round(p.cal_kcal):'–')+' kcal</div></div>';
+  }).join('');
+  // Bannière du haut : reprend les 3 premiers plats programmés si dispo
+  var circles = document.querySelectorAll('#plateRow img');
+  plans.slice(0,3).forEach(function(p,i){ if (circles[i]) circles[i].alt = p.plat_nom||''; });
+}
+
+(async function(){
+  if (!Natty.requireAuth()) return;
+  await Promise.all([loadFormule(), loadTargets(), loadWeekPlans()]);
+})();
+</script>
+<script src="/assets/nav.js"></script>
+</body>
+</html>
