@@ -769,8 +769,8 @@ html.no-scroll {
 ══════════════════════════════════════════════ */
 .natty-hidden{ display:none !important; }
 
-body{ background:#f2f2f4; }
-.header{ padding:20px 20px 4px; }
+body{ background:#ffffff; }
+.header{ padding:20px 20px 4px; background:#ffffff; }
 .header-name, .header-sub{ display:none; }
 .top-icons{ display:flex; align-items:center; justify-content:space-between; width:100%; }
 .top-icons a{ display:flex; align-items:center; justify-content:center; color:#b5b5bd; }
@@ -778,12 +778,12 @@ body{ background:#f2f2f4; }
 .header-av{ background:none; box-shadow:none; }
 .tabs-bar{ display:none; }
 
-.hero-score{ background:#fbfbfc; box-shadow:0 16px 34px rgba(20,20,30,.05); border-radius:36px; padding:22px 18px 18px; margin-top:2px; }
+.hero-score{ background:#f5f5f6; box-shadow:none; border-radius:36px; padding:22px 18px 18px; margin-top:2px; }
 .hero-ring-wrap{ width:230px; height:230px; margin-bottom:0; }
 .hero-ring-wrap svg{ width:230px !important; height:230px !important; }
 .ring-dot{ position:absolute; top:0; left:50%; transform:translateX(-50%); width:11px; height:11px; border-radius:50%; background:#ff3b30; z-index:2; }
-#ringArc{ stroke:#101014 !important; stroke-width:12; }
-.hero-ring-wrap svg circle:first-child{ stroke:#e4e4e8 !important; stroke-width:12; }
+#ringArc{ stroke-width:20; }
+.hero-ring-wrap svg circle:first-child{ stroke:#e8e8ea !important; stroke-width:20; }
 .hero-score-pct{ font-weight:900; font-size:56px; letter-spacing:-1px; color:#101014; }
 .hero-score-pct-s{ font-weight:800; font-size:24px; }
 .hero-score-lbl{ font-size:15px; color:#9d9da8; }
@@ -791,11 +791,11 @@ body{ background:#f2f2f4; }
 .hero-macros-row{ gap:10px; margin-top:20px; }
 .hero-macro-col{ background:#ececef; border-radius:26px; padding:16px 8px 12px; box-shadow:none; }
 .hero-macro-em{ font-size:24px; }
-.hero-macro-val{ font-weight:900; font-size:24px; letter-spacing:-.3px; }
-.hero-macro-unit{ font-size:12px; }
-.hero-macro-lbl{ font-size:10.5px; font-weight:800; letter-spacing:.3px; color:#101014; margin-top:2px; }
-.hero-macro-bar{ box-shadow:none; background:#dcdce1; margin-top:10px; }
-.hero-macro-fill{ background:#101014 !important; }
+.hero-macro-val{ font-weight:900; font-size:24px; letter-spacing:-.3px; display:flex; align-items:baseline; justify-content:center; gap:1px; }
+.hero-macro-val .mu{ font-weight:900; font-size:15px; }
+.hero-macro-unit{ display:none; }
+.hero-macro-lbl{ font-size:10.5px; font-weight:800; letter-spacing:.3px; color:#101014; margin-top:6px; }
+.hero-macro-bar{ display:none; }
 .hero-cal-row{ background:#ececef; box-shadow:none; border-radius:26px; padding:16px 18px; margin-top:12px; }
 .hero-cal-left{ font-weight:700; font-size:14px; color:#101014; }
 .hero-cal-val{ font-weight:900; font-size:16px; color:#101014; }
@@ -883,7 +883,7 @@ body{ background:#f2f2f4; }
     <div class="hero-macros-row">
       <div class="hero-macro-col" onclick="openMacroPopup('prot')" style="cursor:pointer;">
         <div class="hero-macro-em">🥩</div>
-        <div class="hero-macro-val"><span id="vProt">–</span></div>
+        <div class="hero-macro-val"><span id="vProt">–</span><span class="mu">g</span></div>
         <div class="hero-macro-unit">g</div>
         <div class="hero-macro-lbl">Protéines</div>
         <div class="hero-macro-bar"><div class="hero-macro-fill" id="bProt" style="width:0%;background:#ff6b35;"></div></div>
@@ -891,7 +891,7 @@ body{ background:#f2f2f4; }
       </div>
       <div class="hero-macro-col" onclick="openMacroPopup('gluc')" style="cursor:pointer;">
         <div class="hero-macro-em">🌾</div>
-        <div class="hero-macro-val"><span id="vGluc">–</span></div>
+        <div class="hero-macro-val"><span id="vGluc">–</span><span class="mu">g</span></div>
         <div class="hero-macro-unit">g</div>
         <div class="hero-macro-lbl">Glucides</div>
         <div class="hero-macro-bar"><div class="hero-macro-fill" id="bGluc" style="width:0%;background:#ff9500;"></div></div>
@@ -899,7 +899,7 @@ body{ background:#f2f2f4; }
       </div>
       <div class="hero-macro-col" onclick="openMacroPopup('lip')" style="cursor:pointer;">
         <div class="hero-macro-em">🥑</div>
-        <div class="hero-macro-val"><span id="vLip">–</span></div>
+        <div class="hero-macro-val"><span id="vLip">–</span><span class="mu">g</span></div>
         <div class="hero-macro-unit">g</div>
         <div class="hero-macro-lbl">Lipides</div>
         <div class="hero-macro-bar"><div class="hero-macro-fill" id="bLip" style="width:0%;background:#7b5ea7;"></div></div>
@@ -1998,9 +1998,11 @@ function calcScoreFromAvg(moy, pp, gp, lp) {
 // ═══ SCORE ═══
 function setScore(pct) {
   var circ=2*Math.PI*84, dash=(pct/100)*circ;
-  var col=pct>=70?'#34c759':pct>=40?'#ff9500':'#ff3b30';
+  var hue=Math.max(0,Math.min(100,pct))/100*120;
+  var col='hsl('+Math.round(hue)+',85%,48%)';
   var arc=document.getElementById('ringArc');
   arc.style.strokeDasharray=dash+' '+circ; arc.style.stroke=col;
+  arc.style.filter='drop-shadow(0 0 6px hsla('+Math.round(hue)+',85%,48%,0.4))';
   setText('scorePct',pct);
   var b=document.getElementById('ringBadge');
   b.textContent=pct>=80?'Excellent':pct>=60?'Bon':pct>=40?'Moyen':'À revoir';
