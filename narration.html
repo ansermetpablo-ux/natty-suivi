@@ -29,6 +29,8 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .top{position:absolute;top:0;left:0;right:0;height:52px;display:flex;align-items:center;gap:12px;padding:0 18px;z-index:10000}
 .top-back{width:34px;height:34px;border-radius:50%;background:var(--bg);box-shadow:var(--so);border:none;font-size:15px;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0;pointer-events:none;transition:opacity .3s}
 .top-back.on{opacity:1;pointer-events:auto}
+.top-menu{width:34px;height:34px;border-radius:50%;background:var(--bg);box-shadow:var(--so);border:none;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.top-menu svg{width:18px;height:18px}
 .segs{flex:1;display:flex;gap:4px}
 .seg{flex:1;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
 .seg .fill{height:100%;width:0%;background:var(--ink);border-radius:2px;transition:width .5s ease}
@@ -699,6 +701,7 @@ body[data-u="jeu"] #klayer .hl{color:#0d0d0f}
 <div class="floaters" id="floaters"></div>
 
 <div class="top">
+  <button class="top-menu" id="menuBtn" aria-label="Retour au menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg></button>
   <button class="top-back" id="back">←</button>
   <div class="segs" id="segs"></div>
   <button class="top-map" id="mapBtn">🗺️</button>
@@ -2653,6 +2656,7 @@ function openMap(){buildMap();document.getElementById('mapScreen').classList.add
   setTimeout(function(){var cur=document.querySelector('#mrail .mdot.cur');if(cur)cur.scrollIntoView({block:'center'})},50);}
 function closeMap(){document.getElementById('mapScreen').classList.remove('on')}
 document.getElementById('mapBtn').addEventListener('click',openMap);
+document.getElementById('menuBtn').addEventListener('click',function(){ window.location.href='menu.html'; });
 document.getElementById('mapClose').addEventListener('click',closeMap);
 
 /* swipe */

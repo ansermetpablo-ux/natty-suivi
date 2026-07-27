@@ -780,6 +780,7 @@ body{ background:#f2f2f4; }
 
 .hero-score{ background:#fbfbfc; box-shadow:0 16px 34px rgba(20,20,30,.05); border-radius:36px; padding:22px 18px 18px; margin-top:2px; }
 .hero-ring-wrap{ width:230px; height:230px; margin-bottom:0; }
+.hero-ring-wrap svg{ width:230px !important; height:230px !important; }
 .ring-dot{ position:absolute; top:0; left:50%; transform:translateX(-50%); width:11px; height:11px; border-radius:50%; background:#ff3b30; z-index:2; }
 #ringArc{ stroke:#101014 !important; stroke-width:12; }
 .hero-ring-wrap svg circle:first-child{ stroke:#e4e4e8 !important; stroke-width:12; }
@@ -1758,7 +1759,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Fermeture au clic fond pour profilOverlay
   var profilOvEl = document.getElementById('profilOverlay');
   if (profilOvEl) profilOvEl.addEventListener('click', function(e){ if(e.target===this) closeProfilOverlay(); });
-  if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); }); } else {
+  if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); if (new URLSearchParams(window.location.search).get('add')==='1') openRepasOverlay(); }); } else {
     // Attendre 800ms au cas où Wix envoie le token via postMessage après le load
     setTimeout(function() {
       if (!USER_ID) afficherOnboardingCTA();
