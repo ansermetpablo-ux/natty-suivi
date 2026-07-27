@@ -35,7 +35,7 @@
     { key: 'menu', label: 'Menu', href: 'menu.html', icon: ICONS.menu },
     { key: 'add', add: true },
     { key: 'coaching', label: 'Coaching', href: 'coaching.html', icon: ICONS.coaching },
-    { key: 'defis', label: 'Défis', href: 'defis.html', icon: ICONS.defis }
+    { key: 'defis', label: 'Défis', href: 'narration.html', icon: ICONS.defis }
   ];
 
   function currentKey() {
