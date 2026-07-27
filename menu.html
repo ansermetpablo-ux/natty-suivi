@@ -7,18 +7,18 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#ffffff">
 <link rel="apple-touch-icon" href="/natty-icon-180.png">
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{ --bg:#ffffff; --ink:#101014; --muted:#9d9da8; --r-xl:32px; --r-lg:26px; }
+:root{ --bg:#ffffff; --ink:#101014; --muted:#9d9da8; --icon-mut:#b5b5bd; --r-xl:32px; --r-lg:26px; }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
 .wrap{max-width:480px;margin:0 auto;padding:0 20px}
 .top{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 8px}
-.top a{display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.top a{display:flex;align-items:center;justify-content:center;color:var(--icon-mut)}
 .top svg{width:26px;height:26px}
 
 .plate-banner{position:relative;background:#f3f3f4;border-radius:var(--r-xl);padding:24px 20px 30px;margin-top:8px;overflow:hidden}
-.plate-badge{display:inline-block;background:var(--ink);color:#fff;font-family:'Fredoka',sans-serif;font-weight:700;font-size:15px;letter-spacing:.8px;padding:10px 18px;border-radius:999px;text-transform:uppercase}
+.plate-badge{display:inline-block;background:var(--ink);color:#fff;font-weight:800;font-size:15px;letter-spacing:.4px;padding:10px 18px;border-radius:999px;text-transform:uppercase}
 .plate-row{display:flex;justify-content:center;gap:14px;margin-top:22px}
 .plate-circ{width:104px;height:104px;border-radius:50%;overflow:hidden;background:#fff;box-shadow:0 10px 24px rgba(20,20,30,.12);flex:none}
 .plate-circ img{width:100%;height:100%;object-fit:cover}
@@ -29,16 +29,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 .two-col{display:flex;gap:12px;margin-top:16px}
 .big-card{flex:1;position:relative;border-radius:var(--r-xl);overflow:hidden;aspect-ratio:3/4;background:#101014;cursor:pointer}
 .big-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.82}
-.big-card .lbl{position:absolute;top:16px;left:16px;background:var(--ink);color:#fff;font-family:'Fredoka',sans-serif;font-weight:700;font-size:16px;letter-spacing:.8px;padding:9px 16px;border-radius:999px;text-transform:uppercase;z-index:2}
-.big-card .stats{position:absolute;left:14px;bottom:14px;right:14px;display:flex;flex-direction:column;gap:8px;z-index:2}
-.big-card .chip{align-self:flex-start;background:rgba(16,16,20,.72);backdrop-filter:blur(4px);color:#fff;font-weight:700;font-size:13px;padding:8px 12px;border-radius:14px}
+.big-card .lbl{position:absolute;top:16px;left:16px;background:var(--ink);color:#fff;font-weight:800;font-size:16px;letter-spacing:.4px;padding:9px 16px;border-radius:999px;text-transform:uppercase;z-index:2}
+.big-card .stats{position:absolute;left:14px;top:38%;right:14px;display:flex;flex-direction:column;gap:8px;z-index:2}
+.big-card .chip{align-self:flex-start;background:rgba(16,16,20,.72);backdrop-filter:blur(4px);color:#fff;font-weight:800;font-size:13px;padding:8px 12px;border-radius:14px}
 
-.sec-title{font-family:'Fredoka',sans-serif;font-weight:700;font-size:22px;margin:26px 0 12px}
+.sec-title{font-weight:900;font-size:21px;margin:26px 0 12px;letter-spacing:-.2px}
 .dish-list{display:flex;flex-direction:column;gap:10px}
 .dish-card{display:flex;align-items:center;gap:12px;background:#f3f3f4;border-radius:var(--r-lg);padding:10px;cursor:pointer}
 .dish-card img{width:52px;height:52px;border-radius:14px;object-fit:cover;flex:none;background:#fff}
 .dish-name{font-weight:700;font-size:14px;flex:1}
-.dish-cal{font-family:'Fredoka',sans-serif;font-weight:700;font-size:13px;background:var(--ink);color:#fff;padding:6px 12px;border-radius:999px}
+.dish-cal{font-weight:800;font-size:13px;background:var(--ink);color:#fff;padding:6px 12px;border-radius:999px}
 .empty{color:var(--muted);font-size:13px;padding:14px 4px}
 </style>
 </head>
