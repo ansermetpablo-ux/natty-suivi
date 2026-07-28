@@ -2,10 +2,10 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="/manifest.json">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Natty · Suivi</title>
-  <meta name="theme-color" content="#f5f5f7">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" sizes="120x120" href="/natty-icon-120.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/natty-favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/natty-favicon-16.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 :root {
@@ -762,64 +762,11 @@ html.no-scroll {
 @keyframes spin { to { transform:rotate(360deg); } }
 #onbD0.active, #onbD1.active, #onbD2.active, #onbD3.active { background:var(--black) !important; }
 
-/* ══════════════════════════════════════════════
-   REFONTE VISUELLE — reskin flat façon SUIVI.png
-   Ne touche à aucune logique JS ni aux IDs utilisés
-   par le JS — uniquement la présentation.
-══════════════════════════════════════════════ */
-.natty-hidden{ display:none !important; }
-
-body{ background:#ffffff; }
-.header{ padding:20px 20px 4px; background:#ffffff; }
-.header-name, .header-sub{ display:none; }
-.top-icons{ display:flex; align-items:center; justify-content:space-between; width:100%; }
-.top-icons a{ display:flex; align-items:center; justify-content:center; color:#b5b5bd; }
-.top-icons svg{ width:26px; height:26px; }
-.header-av{ background:none; box-shadow:none; }
-.tabs-bar{ display:none; }
-
-:root{ --nm-so:6px 6px 14px rgba(0,0,0,.07), -6px -6px 14px rgba(255,255,255,.9); --nm-bright:inset 0 1px 1px rgba(255,255,255,.9), inset 0 -1px 1px rgba(0,0,0,.02); }
-.hero-score{ background:#ffffff; box-shadow:var(--nm-so); border-radius:36px; padding:20px 18px 18px; margin-top:2px; }
-.hero-ring-wrap{ width:226px; height:226px; margin-bottom:0; }
-.hero-ring-wrap svg{ width:226px !important; height:226px !important; }
-.ring-dot{ position:absolute; top:0; left:50%; transform:translateX(-50%); width:11px; height:11px; border-radius:50%; background:#ff3b30; z-index:2; }
-#ringArc{ stroke-width:10.5; filter:none !important; }
-.hero-ring-wrap svg circle:first-child{ stroke:#eeeef0 !important; stroke-width:10.5; }
-.hero-score-pct{ font-weight:900; font-size:42px; letter-spacing:-1px; color:#101014; transition:color .3s; }
-.hero-score-pct-s{ font-weight:800; font-size:19px; }
-.hero-score-lbl{ font-size:12.5px; color:#9d9da8; }
-.hero-score-badge{ font-weight:700; font-size:12.5px; padding:6px 16px; margin-top:5px; }
-.hero-macros-row{ gap:10px; margin-top:18px; }
-.hero-macro-col{ background:#ffffff; border-radius:26px; padding:16px 8px 12px; box-shadow:var(--nm-so), var(--nm-bright); }
-.hero-macro-em{ font-size:24px; }
-.hero-macro-val{ font-weight:900; font-size:24px; letter-spacing:-.3px; display:flex; align-items:baseline; justify-content:center; gap:1px; }
-.hero-macro-val .mu{ font-weight:400; font-size:15px; }
-.hero-macro-unit{ display:none; }
-.hero-macro-lbl{ display:none; }
-.hero-macro-bar{ display:none; }
-#oProt, #oGluc, #oLip{ display:none; }
-.hero-cal-row{ background:#ffffff; box-shadow:var(--nm-so), var(--nm-bright); border-radius:26px; padding:16px 18px; margin-top:12px; }
-.hero-cal-left{ font-weight:700; font-size:14px; color:#101014; }
-.hero-cal-val{ font-weight:900; font-size:16px; color:#101014; }
-.hero-cal-unit{ font-size:14px; font-weight:700; color:#101014; }
-
-.sec-header{ margin-top:26px; justify-content:center; }
-.sec-title{ font-weight:900; font-size:25px; letter-spacing:-.3px; }
-.sec-link{ display:none; }
-#mealsList{ background:transparent; box-shadow:none; border-radius:0; display:flex; flex-direction:column; gap:12px; }
-.meal-item{ background:#ffffff; border-radius:26px; padding:12px; border-bottom:none; box-shadow:var(--nm-so), var(--nm-bright); }
-.meal-photo{ width:56px; height:56px; border-radius:16px; box-shadow:none; }
-.meal-name{ font-size:14px; font-weight:500; }
-.meal-ings{ display:none; }
-.meal-tag{ background:none !important; color:#34c759 !important; font-weight:700; font-size:11px; padding:0; margin-top:2px; }
-.meal-right{ gap:6px; }
-.meal-date{ font-size:11px; }
-.sr-wrap{ width:38px; height:38px; }
-.meal-dots{ font-size:14px; }
-
-.pts-grid{ margin-top:4px; }
-.pts-card{ box-shadow:var(--nm-so), var(--nm-bright); background:#ffffff; border-radius:26px; }
-.pc-ico{ box-shadow:none; }
+/* ── Refonte nav : modules retires de l'ecran Suivi ── */
+.natty-hidden { display:none !important; }
+.header-top { align-items:center; }
+.hdr-ico { display:flex; align-items:center; justify-content:center; color:#b5b5bd; background:none; box-shadow:none; width:auto; height:auto; }
+.hdr-ico svg { width:26px; height:26px; }
 
 </style>
 </head>
@@ -827,16 +774,16 @@ body{ background:#ffffff; }
 
 
 <div class="header">
-  <div class="header-top top-icons">
-    <div><div class="header-name" id="headerName">Mon suivi</div><div class="header-sub" id="headerDate">–</div></div>
-    <a href="menu.html" aria-label="Accueil">
+  <div class="header-top">
+    <a href="menu.html" class="hdr-ico" aria-label="Accueil">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
     </a>
-    <div class="header-av" id="btnProfil" style="cursor:pointer;" onclick="openProfilOverlay()">
+    <div style="display:none"><span id="headerName"></span><span id="headerDate"></span></div>
+    <div class="hdr-ico" id="btnProfil" style="cursor:pointer;" onclick="openProfilOverlay()" aria-label="Profil">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
     </div>
   </div>
-  <div class="tabs-bar">
+  <div class="tabs-bar natty-hidden">
     <button class="tab-btn active" id="tabSuivi"  onclick="switchTab('suivi')">Suivi</button>
     <button class="tab-btn" id="tabProg" onclick="switchTab('prog')">Progression</button>
     <button class="tab-btn" id="tabChal" onclick="switchTab('chal')">🏆 Challenges</button>
@@ -865,7 +812,6 @@ body{ background:#ffffff; }
 
     <!-- Grand anneau centré -->
     <div class="hero-ring-wrap" id="ringZone" onclick="switchTab('prog')">
-      <div class="ring-dot"></div>
       <svg viewBox="0 0 200 200" width="200" height="200">
         <!-- Track neumorphique -->
         <circle cx="100" cy="100" r="84" fill="none" stroke="rgba(174,174,192,0.22)" stroke-width="10"/>
@@ -885,7 +831,7 @@ body{ background:#ffffff; }
     <div class="hero-macros-row">
       <div class="hero-macro-col" onclick="openMacroPopup('prot')" style="cursor:pointer;">
         <div class="hero-macro-em">🥩</div>
-        <div class="hero-macro-val"><span id="vProt">–</span><span class="mu">g</span></div>
+        <div class="hero-macro-val"><span id="vProt">–</span></div>
         <div class="hero-macro-unit">g</div>
         <div class="hero-macro-lbl">Protéines</div>
         <div class="hero-macro-bar"><div class="hero-macro-fill" id="bProt" style="width:0%;background:#ff6b35;"></div></div>
@@ -893,7 +839,7 @@ body{ background:#ffffff; }
       </div>
       <div class="hero-macro-col" onclick="openMacroPopup('gluc')" style="cursor:pointer;">
         <div class="hero-macro-em">🌾</div>
-        <div class="hero-macro-val"><span id="vGluc">–</span><span class="mu">g</span></div>
+        <div class="hero-macro-val"><span id="vGluc">–</span></div>
         <div class="hero-macro-unit">g</div>
         <div class="hero-macro-lbl">Glucides</div>
         <div class="hero-macro-bar"><div class="hero-macro-fill" id="bGluc" style="width:0%;background:#ff9500;"></div></div>
@@ -901,7 +847,7 @@ body{ background:#ffffff; }
       </div>
       <div class="hero-macro-col" onclick="openMacroPopup('lip')" style="cursor:pointer;">
         <div class="hero-macro-em">🥑</div>
-        <div class="hero-macro-val"><span id="vLip">–</span><span class="mu">g</span></div>
+        <div class="hero-macro-val"><span id="vLip">–</span></div>
         <div class="hero-macro-unit">g</div>
         <div class="hero-macro-lbl">Lipides</div>
         <div class="hero-macro-bar"><div class="hero-macro-fill" id="bLip" style="width:0%;background:#7b5ea7;"></div></div>
@@ -926,7 +872,7 @@ body{ background:#ffffff; }
   </div>
 
   <!-- HISTORIQUE -->
-  <div class="sec-header"><span class="sec-title">Mes repas</span><span class="sec-link" onclick="openRepasOverlay()">Voir tout ›</span></div>
+  <div class="sec-header"><span class="sec-title">Historique des repas</span><span class="sec-link" onclick="openRepasOverlay()">Voir tout ›</span></div>
   <div class="card" id="mealsList"><div class="loading">Chargement...</div></div>
 
   <!-- POINTS FORTS / FAIBLES -->
@@ -1761,7 +1707,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Fermeture au clic fond pour profilOverlay
   var profilOvEl = document.getElementById('profilOverlay');
   if (profilOvEl) profilOvEl.addEventListener('click', function(e){ if(e.target===this) closeProfilOverlay(); });
-  if (USER_ID) { init().then(function(){ qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); if (new URLSearchParams(window.location.search).get('add')==='1') openRepasOverlay(); }); } else {
+  if (USER_ID) { init().then(function(){ if (new URLSearchParams(window.location.search).get('add')==='1') openRepasOverlay(); qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); }); } else {
     // Attendre 800ms au cas où Wix envoie le token via postMessage après le load
     setTimeout(function() {
       if (!USER_ID) afficherOnboardingCTA();
@@ -2000,13 +1946,10 @@ function calcScoreFromAvg(moy, pp, gp, lp) {
 // ═══ SCORE ═══
 function setScore(pct) {
   var circ=2*Math.PI*84, dash=(pct/100)*circ;
-  var hue=Math.max(0,Math.min(100,pct))/100*120;
-  var col='hsl('+Math.round(hue)+',60%,42%)';
+  var col=pct>=70?'#34c759':pct>=40?'#ff9500':'#ff3b30';
   var arc=document.getElementById('ringArc');
   arc.style.strokeDasharray=dash+' '+circ; arc.style.stroke=col;
-  arc.style.filter='none';
   setText('scorePct',pct);
-  document.getElementById('scorePct').style.color=col;
   var b=document.getElementById('ringBadge');
   b.textContent=pct>=80?'Excellent':pct>=60?'Bon':pct>=40?'Moyen':'À revoir';
   b.style.background=pct>=60?'#e8f9ee':pct>=40?'#fff3e0':'#ffecec';
