@@ -43,6 +43,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 .msg-prev{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .msg-time{font-size:11px;color:var(--muted);flex:none}
 .empty{color:var(--muted);font-size:13px;padding:16px 4px;text-align:center}
+
+/* Conseils de la semaine — même DA que les autres blocs de la page */
+.adv-list{display:flex;flex-direction:column;gap:10px}
+.adv-card{background:var(--card);border-radius:var(--r-lg);padding:14px 16px}
+.adv-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.adv-em{font-size:17px;flex:none}
+.adv-title{font-weight:800;font-size:12px;letter-spacing:.3px;text-transform:uppercase}
+.adv-text{font-size:13px;line-height:1.5;color:#3a3a45}
+.adv-week{font-size:11px;color:var(--muted);margin:-4px 0 12px}
 </style>
 </head>
 <body>
@@ -74,6 +83,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 
   <div class="sec-title">Chat</div>
   <div class="msg-list" id="msgList"><div class="empty">Chargement…</div></div>
+
+  <div class="sec-title">Conseils de la semaine</div>
+  <div class="adv-week" id="advWeek"></div>
+  <div class="adv-list" id="advList"><div class="empty">Chargement…</div></div>
 </div>
 
 <script src="/assets/core.js"></script>
@@ -152,6 +165,49 @@ async function loadMessages(){
   });
 }
 
+// Conseils hebdo — mêmes colonnes que profil_conseils utilisées par suivi.html.
+// Ne jamais inclure liste_courses_json / recettes_json : ces colonnes n'existent
+// pas et feraient échouer la requête en 400 (voir CLAUDE.md §7).
+var ADV_FIELDS = [
+  { k:'conseil_points_forts', em:'⭐', t:'Points forts' },
+  { k:'conseil_amelioration', em:'🎯', t:'À améliorer' },
+  { k:'conseil_prot',         em:'🥩', t:'Protéines' },
+  { k:'conseil_gluc',         em:'🌾', t:'Glucides' },
+  { k:'conseil_lip',          em:'🥑', t:'Lipides' },
+  { k:'conseil_cal',          em:'⚡', t:'Calories' }
+];
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function loadConseils(){
+  var list = document.getElementById('advList');
+  var weekEl = document.getElementById('advWeek');
+  var rows = [];
+  try{
+    rows = await Natty.sbFetch('profil_conseils?user_id=eq.'+Natty.USER_ID
+      + '&order=generated_at.desc&limit=1'
+      + '&select=' + ADV_FIELDS.map(function(f){return f.k;}).join(',') + ',semaine,generated_at');
+  }catch(e){}
+  var c = rows && rows.length ? rows[0] : null;
+  if (!c){
+    weekEl.textContent = '';
+    list.innerHTML = '<div class="empty">Tes conseils personnalisés apparaîtront ici dès leur première génération.</div>';
+    return;
+  }
+  if (c.semaine){
+    var d = new Date(c.semaine + 'T00:00:00');
+    var MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+    weekEl.textContent = 'Semaine du ' + d.getDate() + ' ' + MOIS[d.getMonth()];
+  }
+  var html = ADV_FIELDS.filter(function(f){ return c[f.k]; }).map(function(f){
+    return '<div class="adv-card">'
+      + '<div class="adv-head"><span class="adv-em">'+f.em+'</span><span class="adv-title">'+f.t+'</span></div>'
+      + '<div class="adv-text">'+esc(c[f.k])+'</div>'
+      + '</div>';
+  }).join('');
+  list.innerHTML = html || '<div class="empty">Aucun conseil disponible pour cette semaine.</div>';
+}
+
 document.getElementById('rdvHero').addEventListener('click', function(e){
   e.preventDefault();
   Natty.goto('chat.html');
@@ -161,7 +217,7 @@ document.getElementById('wkNext').addEventListener('click', function(){ weekOffs
 
 (async function(){
   if (!Natty.requireAuth()) return;
-  await Promise.all([loadRdv(), loadMessages()]);
+  await Promise.all([loadRdv(), loadMessages(), loadConseils()]);
 })();
 </script>
 <script src="/assets/nav.js"></script>

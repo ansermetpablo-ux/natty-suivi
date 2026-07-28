@@ -3322,7 +3322,8 @@ function updateMacroCards() {
 }
 
 function openMealDetail(mealId) {
-  window.location.href = '/repas.html?id=' + mealId + '&token=' + TOKEN;
+  var meal = allMeals.find(function(m){ return m.id === mealId; });
+  if (meal) ouvrirAnalysePlat(meal);
 }
 
 // ── SCROLL LOCK avec compteur ──

@@ -2651,9 +2651,19 @@ function buildMap(){
     });
   });
 }
-function openMap(){buildMap();document.getElementById('mapScreen').classList.add('on');
-  // scroll jusqu'au beat courant dans l'index
-  setTimeout(function(){var cur=document.querySelector('#mrail .mdot.cur');if(cur)cur.scrollIntoView({block:'center'})},50);}
+function openMap(){buildMap();var ms=document.getElementById('mapScreen');ms.classList.add('on');
+  // Scroll jusqu'au beat courant DANS la carte uniquement.
+  // scrollIntoView() faisait défiler le <body> (qui est le conteneur de
+  // positionnement de .map-screen, en position:absolute) : la carte partait
+  // alors hors écran vers le haut et paraissait ne pas s'ouvrir.
+  setTimeout(function(){
+    var cur=document.querySelector('#mrail .mdot.cur');
+    if(cur){
+      var r=cur.getBoundingClientRect(),mr=ms.getBoundingClientRect();
+      ms.scrollTop += (r.top-mr.top)-ms.clientHeight/2+r.height/2;
+    }
+    document.body.scrollTop=0;document.documentElement.scrollTop=0;
+  },50);}
 function closeMap(){document.getElementById('mapScreen').classList.remove('on')}
 document.getElementById('mapBtn').addEventListener('click',openMap);
 document.getElementById('menuBtn').addEventListener('click',function(){ window.location.href='menu.html'; });
@@ -3075,10 +3085,24 @@ function k_sayToSeq(b){
   }];
 }
 
-/* ═══ DÉMARRAGE : lance le premier beat via go() (kinetic prêt) ═══ */
+/* ═══ DÉMARRAGE : lance le premier beat via go() (kinetic prêt) ═══
+   L'intro cinématique ne se joue qu'à la toute première venue sur Défis.
+   Ensuite on atterrit directement sur la carte des épreuves.
+   On rend quand même le beat courant sous la carte, pour que la fermeture
+   de la carte retombe sur un écran valide et non sur un stage vide. */
+var NARR_SEEN_KEY='natty_narration_intro_vue';
+function narrIntroDejaVue(){ try{ return localStorage.getItem(NARR_SEEN_KEY)==='1'; }catch(e){ return false; } }
+function narrMarquerIntroVue(){ try{ localStorage.setItem(NARR_SEEN_KEY,'1'); }catch(e){} }
+
 (function k_boot(){
   if(typeof k_stage==='undefined'||!document.getElementById('k_stage')){ return setTimeout(k_boot,30); }
-  go();
+  if(narrIntroDejaVue()){
+    go();
+    openMap();
+  } else {
+    narrMarquerIntroVue();
+    go();
+  }
 })();
 </script>
 </body>
