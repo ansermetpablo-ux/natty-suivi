@@ -133,6 +133,7 @@ body{overflow-x:hidden}
 
 <script src="/assets/core.js"></script>
 <script src="/assets/reco.js"></script>
+<script src="/assets/minijeux.js"></script>
 <script>
 /* ═══ État ═══ */
 var PLATS = [];        // plats affichés (recommandations, ou repas ciblé par ?id=)
@@ -287,13 +288,21 @@ function blocDecouvrir(){
 
 function brancherDecouvrir(){
   document.querySelectorAll('.discover-card').forEach(function(c){
-    c.addEventListener('click', function(){
-      // Les mini-jeux arrivent dans un second temps ; en attendant on ne
-      // laisse pas le clic sans retour.
-      toast('Mini-jeu « ' + c.querySelector('.t').textContent +' » bientôt disponible');
-    });
+    c.addEventListener('click', function(){ NattyMiniJeux.ouvrir(c.dataset.jeu); });
   });
 }
+
+// Une recette choisie à la fin d'un mini-jeu remonte ici : elle prend la
+// tête de la liste et s'affiche dans le hero.
+window.NattyOnRecetteSuivie = function(r){
+  if (!r) return;
+  PLATS.unshift(depuisRecette(r, PLATS.length));
+  actif = 0; ingrOff = {};
+  suivies = {}; suivies[0] = true;
+  render();
+  window.scrollTo({ top:0, behavior:'smooth' });
+  toast('✓ ' + (r.nom || 'Recette') + ' — recette suivie');
+};
 
 function brancher(){
   var cta = document.getElementById('ctaBtn');
