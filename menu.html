@@ -8,19 +8,15 @@
 <meta name="theme-color" content="#ffffff">
 <link rel="apple-touch-icon" href="/natty-icon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
 <style>
-:root{ --bg:#ffffff; --ink:#101014; --muted:#9d9da8; --icon-mut:#b5b5bd; --r-xl:32px; --r-lg:26px; }
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
-.wrap{max-width:480px;margin:0 auto;padding:0 20px}
-.top{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 8px}
-.top a{display:flex;align-items:center;justify-content:center;color:var(--icon-mut)}
-.top svg{width:26px;height:26px}
 
-.plate-banner{position:relative;background:#f3f3f4;border-radius:var(--r-xl);padding:24px 20px 30px;margin-top:8px;overflow:hidden}
+.plate-banner{position:relative;background:#f3f3f4;border-radius:var(--r-xl);padding:22px 14px 22px;margin-top:8px;overflow:hidden}
 .plate-badge{display:inline-block;background:var(--ink);color:#fff;font-weight:800;font-size:15px;letter-spacing:.4px;padding:10px 18px;border-radius:999px;text-transform:uppercase}
-.plate-row{display:flex;justify-content:center;gap:14px;margin-top:22px}
-.plate-circ{width:104px;height:104px;border-radius:50%;overflow:hidden;background:#fff;box-shadow:0 10px 24px rgba(20,20,30,.12);flex:none}
+/* Vignettes plats : nettement plus grandes, presque jointives, et un arrondi
+   de superellipse (carré très arrondi) plutôt qu'un cercle parfait. */
+.plate-row{display:flex;justify-content:center;gap:4px;margin-top:20px}
+.plate-circ{flex:1;min-width:0;aspect-ratio:1/1;border-radius:var(--r-plate);overflow:hidden;background:#fff;box-shadow:0 10px 24px rgba(20,20,30,.12)}
 .plate-circ img{width:100%;height:100%;object-fit:cover}
 
 .two-col{display:flex;gap:12px;margin-top:16px}

@@ -1,0 +1,92 @@
+/* ═══════════════════════════════════════════════════════════
+   Natty — Socle visuel partagé
+   Source de vérité pour les couleurs, rayons, ombres, header,
+   badges, pastilles macro et titres de section.
+
+   Inclus par toutes les pages de la refonte, sur le même principe
+   que assets/core.js et assets/nav.js : on ne redéclare plus ces
+   valeurs dans le <style> de chaque page, sinon elles divergent.
+
+   La barre de navigation basse n'est PAS ici : elle est injectée
+   avec ses propres styles par assets/nav.js.
+   ═══════════════════════════════════════════════════════════ */
+
+:root{
+  /* Couleurs */
+  --bg:#ffffff;
+  --card:#ececef;
+  --ink:#101014;
+  --muted:#9d9da8;
+  --icon-mut:#b5b5bd;
+  --green:#34c759;
+  --amber:#ff9f0a;
+  --red:#ff3b30;
+
+  /* Rayons — superellipse plutôt que cercle parfait, cf. §8 */
+  --r-xl:30px;
+  --r-lg:24px;
+  --r-md:18px;
+  --r-full:999px;
+  --r-plate:34%;      /* vignettes plats : arrondi marqué, non circulaire */
+
+  /* Ombres neumorphiques */
+  --nm-so:6px 6px 14px rgba(0,0,0,.07), -6px -6px 14px rgba(255,255,255,.9);
+  --nm-bright:inset 0 1px 1px rgba(255,255,255,.9), inset 0 -1px 1px rgba(0,0,0,.02);
+  --nm-soft:0 8px 22px rgba(20,20,30,.08);
+
+  /* Gabarit */
+  --col:480px;
+  --pad:20px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100vh;
+}
+
+/* Colonne centrale — même largeur et même gouttière partout */
+.wrap{max-width:var(--col);margin:0 auto;padding:0 var(--pad)}
+
+/* ── Header : icônes maison / profil ── */
+.top{
+  max-width:var(--col);margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px var(--pad) 8px;
+}
+.top a,.top button,.top .hdr-ico{
+  display:flex;align-items:center;justify-content:center;
+  color:var(--icon-mut);background:none;border:none;cursor:pointer;padding:0;
+}
+.top svg{width:26px;height:26px}
+
+/* ── Titres de section ── */
+.sec-title{
+  font-weight:900;font-size:21px;letter-spacing:-.2px;
+  text-transform:uppercase;margin:26px 0 14px;
+}
+.sec-sub{font-size:11px;color:var(--muted);margin:-8px 0 12px}
+
+/* ── Badges noirs (pilules) ── */
+.badge-ink{
+  display:inline-block;background:var(--ink);color:#fff;
+  font-weight:800;font-size:15px;letter-spacing:.4px;
+  padding:10px 18px;border-radius:var(--r-full);white-space:nowrap;
+}
+.badge-ink.sm{font-size:13px;padding:8px 14px}
+
+/* ── Pastilles macro ── */
+.macro-pill{
+  background:var(--card);border-radius:var(--r-full);
+  padding:12px 0;text-align:center;font-weight:800;font-size:15px;
+}
+
+/* ── Cartes ── */
+.card-nm{background:var(--bg);border-radius:var(--r-lg);box-shadow:var(--nm-so),var(--nm-bright)}
+.card-flat{background:var(--card);border-radius:var(--r-lg)}
+
+/* ── États ── */
+.empty{color:var(--muted);font-size:13px;padding:16px 4px;text-align:center}
