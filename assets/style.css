@@ -61,7 +61,11 @@ body{
   display:flex;align-items:center;justify-content:center;
   color:var(--icon-mut);background:none;border:none;cursor:pointer;padding:0;
 }
-.top svg{width:26px;height:26px}
+/* La taille et la couleur sont aussi posées en attributs sur les <svg> des
+   pages : si cette feuille ne se charge pas, les icônes gardent leur
+   dimension au lieu de retomber sur le 300x150 par défaut d'un SVG sans
+   dimensions. Ces règles restent prioritaires sur les attributs. */
+.top svg{width:26px;height:26px;stroke:var(--icon-mut)}
 
 /* ── Titres de section ── */
 .sec-title{
