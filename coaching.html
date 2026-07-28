@@ -44,13 +44,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 .msg-time{font-size:11px;color:var(--muted);flex:none}
 .empty{color:var(--muted);font-size:13px;padding:16px 4px;text-align:center}
 
-/* Conseils de la semaine — même DA que les autres blocs de la page */
-.adv-list{display:flex;flex-direction:column;gap:10px}
-.adv-card{background:var(--card);border-radius:var(--r-lg);padding:14px 16px}
-.adv-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.adv-em{font-size:17px;flex:none}
-.adv-title{font-weight:800;font-size:12px;letter-spacing:.3px;text-transform:uppercase}
-.adv-text{font-size:13px;line-height:1.5;color:#3a3a45}
+/* Conseils de la semaine — l'illustration porte le message, une phrase suffit */
+.adv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.adv-card{background:var(--card);border-radius:var(--r-lg);padding:18px 14px 16px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:8px}
+.adv-card.wide{grid-column:1 / -1}
+.adv-em{font-size:40px;line-height:1}
+.adv-card.wide .adv-em{font-size:46px}
+.adv-title{font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.adv-line{font-size:13.5px;font-weight:700;line-height:1.35;color:var(--ink)}
 .adv-week{font-size:11px;color:var(--muted);margin:-4px 0 12px}
 </style>
 </head>
@@ -86,7 +88,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 
   <div class="sec-title">Conseils de la semaine</div>
   <div class="adv-week" id="advWeek"></div>
-  <div class="adv-list" id="advList"><div class="empty">Chargement…</div></div>
+  <div class="adv-grid" id="advList"><div class="empty">Chargement…</div></div>
 </div>
 
 <script src="/assets/core.js"></script>
@@ -169,8 +171,8 @@ async function loadMessages(){
 // Ne jamais inclure liste_courses_json / recettes_json : ces colonnes n'existent
 // pas et feraient échouer la requête en 400 (voir CLAUDE.md §7).
 var ADV_FIELDS = [
-  { k:'conseil_points_forts', em:'⭐', t:'Points forts' },
-  { k:'conseil_amelioration', em:'🎯', t:'À améliorer' },
+  { k:'conseil_points_forts', em:'⭐', t:'Points forts', wide:true },
+  { k:'conseil_amelioration', em:'🎯', t:'À améliorer',  wide:true },
   { k:'conseil_prot',         em:'🥩', t:'Protéines' },
   { k:'conseil_gluc',         em:'🌾', t:'Glucides' },
   { k:'conseil_lip',          em:'🥑', t:'Lipides' },
@@ -178,6 +180,24 @@ var ADV_FIELDS = [
 ];
 
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Les conseils générés font plusieurs phrases. Ici on n'en garde qu'une :
+// l'illustration porte le message, la phrase le précise. Le détail complet
+// reste disponible dans l'overlay profil de l'écran Suivi.
+function unePhrase(txt, max){
+  var t = (txt||'').trim().replace(/\s+/g,' ');
+  if(!t) return '';
+  max = max || 95;
+  // Première phrase — on évite de couper sur les décimales ("1,5 g") et
+  // les abréviations courantes en fin de mot.
+  var m = t.match(/^[^.!?]*[.!?]/);
+  var s = m ? m[0].trim() : t;
+  if(s.length > max){
+    var cut = s.lastIndexOf(' ', max);
+    s = s.slice(0, cut > 40 ? cut : max).trim() + '…';
+  }
+  return s.replace(/[.!?]$/,'');
+}
 
 async function loadConseils(){
   var list = document.getElementById('advList');
@@ -200,9 +220,10 @@ async function loadConseils(){
     weekEl.textContent = 'Semaine du ' + d.getDate() + ' ' + MOIS[d.getMonth()];
   }
   var html = ADV_FIELDS.filter(function(f){ return c[f.k]; }).map(function(f){
-    return '<div class="adv-card">'
-      + '<div class="adv-head"><span class="adv-em">'+f.em+'</span><span class="adv-title">'+f.t+'</span></div>'
-      + '<div class="adv-text">'+esc(c[f.k])+'</div>'
+    return '<div class="adv-card'+(f.wide?' wide':'')+'" title="'+esc(c[f.k])+'">'
+      + '<div class="adv-em">'+f.em+'</div>'
+      + '<div class="adv-title">'+f.t+'</div>'
+      + '<div class="adv-line">'+esc(unePhrase(c[f.k], f.wide?110:70))+'</div>'
       + '</div>';
   }).join('');
   list.innerHTML = html || '<div class="empty">Aucun conseil disponible pour cette semaine.</div>';
