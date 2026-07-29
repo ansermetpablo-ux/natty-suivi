@@ -1709,8 +1709,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (profilOvEl) profilOvEl.addEventListener('click', function(e){ if(e.target===this) closeProfilOverlay(); });
   if (USER_ID) { init().then(function(){ var _qp = new URLSearchParams(window.location.search);
     if (_qp.get('add')==='1') openRepasOverlay();
-    // profil.html n'existe pas encore : l'icône profil des autres écrans
-    // renvoie ici avec ?profil=1 et on ouvre l'overlay profil complet.
+    // L'icône profil des autres écrans pointe désormais vers profil.html.
+    // ?profil=1 reste géré ici pour les anciens liens (et pour ouvrir
+    // l'overlay conseils, qui n'existe que sur cet écran).
     if (_qp.get('profil')==='1') openProfilOverlay();
     qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); }); } else {
     // Attendre 800ms au cas où Wix envoie le token via postMessage après le load

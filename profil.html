@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Natty · Profil</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="/natty-icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+/* ══════════════════════════════════════════════════════════
+   Profil — maquette Canva « PROFIL », page 18.
+   Trois colonnes en tête (identité / avatar / Natty score),
+   puis la grille « Posts : » des repas photographiés.
+   Les couleurs, rayons et gouttières viennent d'assets/style.css ;
+   seuls le bleu nuit de l'anneau et le vert du score sont propres
+   à cet écran (relevés sur la maquette).
+   ══════════════════════════════════════════════════════════ */
+:root{
+  --navy:#0c0c31;        /* anneau de l'avatar */
+  --score:#3fa959;       /* vert du Natty score (maquette) */
+  --track:#d5d5da;       /* piste de la barre de niveau */
+}
+.top button{background:none;border:none;display:flex;align-items:center;justify-content:center;
+  color:var(--icon-mut);cursor:pointer;padding:0}
+
+/* ══ Tête de profil ══ */
+/* minmax(0,…) et non 1fr : sans ça les colonnes latérales ne descendent pas
+   sous leur min-content et la tête déborde sur les écrans étroits (320 px). */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;gap:clamp(6px,2.5vw,12px);margin-top:14px}
+
+.ident{min-width:0}
+.p-name{font-size:clamp(20px,5.8vw,26px);font-weight:900;line-height:1.02;letter-spacing:-.6px;
+  text-transform:uppercase;word-break:break-word}
+.p-meta{font-size:13px;line-height:1.45;margin-top:12px}
+.p-bio{white-space:pre-wrap}
+.p-bio.empty-bio{color:var(--muted);font-size:12px}
+.p-level{margin-top:22px}
+.lvl-lbl{font-size:13.5px;font-weight:800}
+.lvl-bar{width:100%;max-width:124px;height:6px;border-radius:var(--r-full);
+  background:var(--track);overflow:hidden;margin-top:9px}
+.lvl-bar i{display:block;height:100%;border-radius:var(--r-full);background:var(--ink);
+  width:0;transition:width .9s cubic-bezier(.22,1,.36,1)}
+
+/* Avatar : photo ronde, liseré blanc puis anneau bleu nuit.
+   La hauteur vient de l'aspect-ratio de .av-face — aucun enfant en
+   height:100%, sinon le bouton se met à empiler ses enfants et s'allonge. */
+.p-avatar{position:relative;width:clamp(96px,30vw,148px);border-radius:50%;
+  border:4px solid var(--navy);padding:3px;background:#fff;cursor:pointer;
+  display:block;flex-shrink:0}
+.av-face{display:block;position:relative;width:100%;aspect-ratio:1/1;
+  border-radius:50%;overflow:hidden;background:var(--ink)}
+.av-ini{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:900;font-size:clamp(30px,9vw,44px);letter-spacing:-1px}
+.av-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+.av-face img.on{display:block}
+.p-avatar .cam{position:absolute;right:0;bottom:0;width:26px;height:26px;border-radius:50%;
+  background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:12px;border:2px solid var(--bg)}
+
+/* Natty score */
+.score{text-align:center;min-width:0}
+.score-lbl{font-size:clamp(13px,3.6vw,16px);font-weight:900;text-transform:uppercase;letter-spacing:-.2px}
+.score-num{display:flex;align-items:baseline;justify-content:center;margin-top:2px}
+.score-num b{font-size:clamp(42px,13vw,60px);font-weight:900;color:var(--score);
+  line-height:1;letter-spacing:-2px}
+.score-num i{font-style:normal;font-size:14px;font-weight:700;margin-left:1px}
+.score-sub{font-size:clamp(9.5px,3vw,12.5px);margin-top:6px;white-space:nowrap}
+.score-macros{display:flex;justify-content:space-between;gap:2px;margin-top:12px}
+.score-macros span{font-size:clamp(10px,2.9vw,12px);white-space:nowrap}
+.score-macros b{font-weight:800;font-size:clamp(10.5px,3vw,12.5px)}
+
+/* ══ Posts ══ */
+.posts-title{text-transform:none;font-size:24px;margin:34px 0 16px}
+.posts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.post{position:relative;aspect-ratio:9/10;border-radius:var(--r-lg);overflow:hidden;
+  background:var(--card);border:none;padding:0;cursor:pointer;display:block}
+.post img{width:100%;height:100%;object-fit:cover;display:block}
+.post .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:38px}
+.posts-empty{grid-column:1/-1}
+.posts-empty a{display:block;text-align:center;border-radius:var(--r-lg);background:var(--card);
+  padding:34px 20px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none}
+
+/* ══ Feuilles (réglages / post) ══ */
+.sheet-ov{display:none;position:fixed;inset:0;z-index:600;background:rgba(10,10,14,.45);
+  align-items:flex-end;justify-content:center}
+.sheet-ov.on{display:flex}
+.sheet{width:100%;max-width:var(--col);background:var(--bg);border-radius:28px 28px 0 0;
+  padding:0 var(--pad) calc(26px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;animation:sheetUp .3s cubic-bezier(.32,.72,0,1)}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-grip{width:38px;height:5px;border-radius:3px;background:#dcdce1;margin:12px auto 18px}
+.sheet-title{font-size:17px;font-weight:900;margin-bottom:16px}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.fld input,.fld textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);
+  background:var(--card);border:none;border-radius:var(--r-md);padding:13px 14px;resize:none}
+.fld textarea{min-height:64px;line-height:1.4}
+.btn-ink{width:100%;background:var(--ink);color:#fff;border:none;border-radius:var(--r-md);
+  padding:15px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}
+.btn-ink:active{transform:scale(.99)}
+.btn-ghost{width:100%;background:none;border:none;border-radius:var(--r-md);padding:14px;
+  font-family:inherit;font-size:13px;font-weight:700;color:var(--red);cursor:pointer;margin-top:6px}
+
+/* Visionneuse d'un post */
+.post-view img{width:100%;border-radius:var(--r-lg);display:block;max-height:56vh;object-fit:cover}
+.post-view .pv-name{font-size:17px;font-weight:900;margin-top:16px}
+.post-view .pv-date{font-size:12px;color:var(--muted);margin-top:3px}
+.post-view .pv-mac{display:flex;gap:8px;margin-top:14px}
+.post-view .pv-mac div{flex:1;background:var(--card);border-radius:var(--r-md);padding:10px 0;
+  text-align:center;font-weight:800;font-size:13px}
+
+.toast{position:fixed;left:50%;bottom:118px;transform:translate(-50%,14px);background:var(--ink);
+  color:#fff;border-radius:18px;padding:12px 20px;font-size:12.5px;font-weight:700;opacity:0;
+  transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:700;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <a href="https://www.natty-nutrition.com" aria-label="Accueil">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+  </a>
+  <button id="btnSettings" aria-label="Réglages">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.9 19.3a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.7 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.7 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.1 4.7a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v.09A1.7 1.7 0 0 0 21 10.1h.09a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1.03Z"/></svg>
+  </button>
+</div>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="ident">
+      <h1 class="p-name" id="pName">Mon profil</h1>
+      <div class="p-meta">
+        <div id="pAge"></div>
+        <div class="p-bio empty-bio" id="pBio">Ajouter une description</div>
+      </div>
+      <div class="p-level">
+        <div class="lvl-lbl">Niveau <span id="pLevel">1</span></div>
+        <div class="lvl-bar"><i id="pLevelFill"></i></div>
+      </div>
+    </div>
+
+    <button class="p-avatar" id="pAvatar" aria-label="Changer ma photo de profil">
+      <span class="av-face">
+        <span class="av-ini" id="pInitials">?</span>
+        <img id="pAvatarImg" alt="">
+      </span>
+      <span class="cam" aria-hidden="true">✎</span>
+    </button>
+
+    <div class="score">
+      <div class="score-lbl">Natty score</div>
+      <div class="score-num"><b id="pScore">–</b><i>Pts</i></div>
+      <div class="score-sub">Moyennes par jour</div>
+      <div class="score-macros">
+        <span>🥩<b id="pProt">–</b></span>
+        <span>🌾<b id="pGluc">–</b></span>
+        <span>🥑<b id="pLip">–</b></span>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="sec-title posts-title">Posts :</h2>
+  <div class="posts" id="posts">
+    <div class="posts-empty"><a href="#" onclick="return false">Chargement…</a></div>
+  </div>
+
+</div>
+
+<input type="file" id="avatarInput" accept="image/*" hidden>
+
+<!-- ══ Réglages ══ -->
+<div class="sheet-ov" id="ovSettings">
+  <div class="sheet">
+    <div class="sheet-grip"></div>
+    <div class="sheet-title">Mes informations</div>
+    <div class="fld"><label for="fPrenom">Prénom</label><input id="fPrenom" type="text" autocomplete="given-name"></div>
+    <div class="fld"><label for="fNom">Nom</label><input id="fNom" type="text" autocomplete="family-name"></div>
+    <div class="fld"><label for="fAge">Âge</label><input id="fAge" type="number" min="10" max="110" inputmode="numeric"></div>
+    <div class="fld"><label for="fBio">Description</label><textarea id="fBio" placeholder="Joueur de foot ⚽️"></textarea></div>
+    <button class="btn-ink" id="btnSave">Enregistrer</button>
+    <button class="btn-ghost" id="btnLogout">Se déconnecter</button>
+  </div>
+</div>
+
+<!-- ══ Visionneuse d'un post ══ -->
+<div class="sheet-ov" id="ovPost">
+  <div class="sheet post-view">
+    <div class="sheet-grip"></div>
+    <img id="pvImg" alt="">
+    <div class="pv-name" id="pvName"></div>
+    <div class="pv-date" id="pvDate"></div>
+    <div class="pv-mac" id="pvMac"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/assets/core.js"></script>
+<script>
+/* ═══ État ═══ */
+var ONB = null;      // ligne onboarding de l'utilisateur (peut être absente)
+var MEALS = [];      // repas récents, du plus récent au plus ancien
+var POSTS = [];      // sous-ensemble : ceux qui ont une photo
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function $(id){ return document.getElementById(id); }
+
+function toast(msg){
+  var t = $('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._tm); t._tm = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+
+/* Bio et photo de profil n'ont pas de colonne dédiée en base : on les garde
+   par utilisateur dans localStorage plutôt que d'inventer un schéma. */
+function lsKey(k){ return 'natty_profil_' + k + '_' + Natty.USER_ID; }
+
+/* ═══ Identité ═══ */
+function renderIdentite(){
+  var prenom = (ONB && ONB.prenom) || '';
+  var nom    = (ONB && ONB.nom) || '';
+  var full   = (prenom + ' ' + nom).trim();
+  $('pName').textContent = full || 'Mon profil';
+
+  var ini = ((prenom.charAt(0) || '') + (nom.charAt(0) || '')).toUpperCase();
+  $('pInitials').textContent = ini || '?';
+
+  var age = ONB && ONB.age;
+  $('pAge').textContent = age ? (age + ' Ans') : '';
+
+  var bio = localStorage.getItem(lsKey('bio')) || '';
+  var bioEl = $('pBio');
+  bioEl.textContent = bio || 'Ajouter une description';
+  bioEl.classList.toggle('empty-bio', !bio);
+
+  var photo = localStorage.getItem(lsKey('photo'));
+  var img = $('pAvatarImg');
+  if (photo) { img.src = photo; img.classList.add('on'); }
+  else { img.removeAttribute('src'); img.classList.remove('on'); }
+}
+
+/* ═══ Niveau ═══
+   Pas de table de gamification : le niveau est dérivé du nombre de repas
+   enregistrés (1 niveau tous les 5 repas). La requête est plafonnée à 200
+   repas, donc le niveau affiché l'est aussi. */
+function renderNiveau(){
+  var xp = MEALS.length;
+  var niveau = 1 + Math.floor(xp / 5);
+  var frac = (xp % 5) / 5;
+  $('pLevel').textContent = niveau;
+  requestAnimationFrame(function(){ $('pLevelFill').style.width = Math.round(frac * 100) + '%'; });
+}
+
+/* ═══ Natty score ═══
+   Même définition que l'écran Suivi : moyenne des trois scores de
+   nutrition_scores. Sans ligne en base, on retombe sur la moyenne des
+   scores par repas des 7 derniers jours (formule identique à suivi.html). */
+function mealScore(m){
+  var mac = Natty.calcMac(m.meal_ingredients), ings = (m.meal_ingredients || []).length, s = 50;
+  if (mac.p > 20) s += 15;
+  if (ings >= 3) s += 15;
+  if (mac.c < 600 && mac.c > 200) s += 10;
+  if (mac.g > 0 && mac.p > 0 && mac.l > 0) s += 10;
+  return Math.min(99, s);
+}
+
+async function chargerScore(recents){
+  try{
+    var s = await Natty.sbFetch('nutrition_scores?user_id=eq.' + Natty.USER_ID
+      + '&order=calculated_at.desc&limit=1'
+      + '&select=variety_score,quality_score,relevance_score');
+    if (s && s.length){
+      var v = Math.round(((s[0].variety_score || 0) + (s[0].quality_score || 0) + (s[0].relevance_score || 0)) / 3);
+      if (v > 0){ $('pScore').textContent = v; return; }
+    }
+  }catch(e){}
+  if (recents.length){
+    var tot = recents.reduce(function(a, m){ return a + mealScore(m); }, 0);
+    $('pScore').textContent = Math.round(tot / recents.length);
+  }
+}
+
+/* ═══ Moyennes par jour ═══
+   Somme des macros des repas des 7 derniers jours, ramenée à 7 jours. */
+function renderMoyennes(recents){
+  var t = { p:0, g:0, l:0 };
+  recents.forEach(function(m){
+    var mac = Natty.calcMac(m.meal_ingredients);
+    t.p += mac.p; t.g += mac.g; t.l += mac.l;
+  });
+  $('pProt').textContent = Math.round(t.p / 7) + 'g';
+  $('pGluc').textContent = Math.round(t.g / 7) + 'g';
+  $('pLip').textContent  = Math.round(t.l / 7) + 'g';
+}
+
+/* ═══ Posts ═══ */
+function renderPosts(){
+  var el = $('posts');
+  if (!POSTS.length){
+    el.innerHTML = '<div class="posts-empty"><a href="suivi.html' + (location.search || '')
+      + (location.search ? '&' : '?') + 'add=1">Aucun plat photographié pour l\'instant — ajoutez-en un</a></div>';
+    return;
+  }
+  el.innerHTML = POSTS.map(function(m, i){
+    return '<button class="post" data-i="' + i + '" aria-label="' + esc(m.name || 'Plat') + '">'
+      + '<img src="' + esc(m.photo_url) + '" alt="' + esc(m.name || '') + '" loading="lazy">'
+      + '</button>';
+  }).join('');
+  el.querySelectorAll('.post').forEach(function(b){
+    b.addEventListener('click', function(){ ouvrirPost(parseInt(b.dataset.i, 10)); });
+  });
+}
+
+async function ouvrirPost(i){
+  var m = POSTS[i];
+  if (!m) return;
+  $('pvImg').src = m.photo_url;
+  $('pvName').textContent = m.name || 'Plat';
+  var d = m.meal_date || m.created_at;
+  $('pvDate').textContent = d ? new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }) : '';
+  $('pvMac').innerHTML = '';
+  openSheet('ovPost');
+  // Les ingrédients ne sont chargés qu'à l'ouverture — inutile de les tirer
+  // pour tous les posts de la grille.
+  if (!m.meal_ingredients){
+    try { m.meal_ingredients = await Natty.sbFetch('meal_ingredients?meal_id=eq.' + m.id + '&select=*'); }
+    catch(e){ m.meal_ingredients = []; }
+  }
+  var mac = Natty.calcMac(m.meal_ingredients);
+  $('pvMac').innerHTML = '<div>🥩 ' + Math.round(mac.p) + 'g</div>'
+    + '<div>🌾 ' + Math.round(mac.g) + 'g</div>'
+    + '<div>🥑 ' + Math.round(mac.l) + 'g</div>'
+    + '<div>' + Math.round(mac.c) + ' kcal</div>';
+}
+
+/* ═══ Feuilles ═══ */
+function openSheet(id){ $(id).classList.add('on'); document.body.style.overflow = 'hidden'; }
+function closeSheet(id){ $(id).classList.remove('on'); document.body.style.overflow = ''; }
+
+['ovSettings','ovPost'].forEach(function(id){
+  var el = $(id);
+  if (el) el.addEventListener('click', function(e){ if (e.target === this) closeSheet(id); });
+});
+
+$('btnSettings').addEventListener('click', function(){
+  $('fPrenom').value = (ONB && ONB.prenom) || '';
+  $('fNom').value    = (ONB && ONB.nom) || '';
+  $('fAge').value    = (ONB && ONB.age) || '';
+  $('fBio').value    = localStorage.getItem(lsKey('bio')) || '';
+  openSheet('ovSettings');
+});
+
+$('btnSave').addEventListener('click', async function(){
+  var btn = this;
+  var prenom = $('fPrenom').value.trim();
+  var nom    = $('fNom').value.trim();
+  var ageRaw = $('fAge').value.trim();
+  var age    = ageRaw ? parseInt(ageRaw, 10) : null;
+  var bio    = $('fBio').value.trim();
+
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+  try{
+    var payload = { prenom: prenom || null, nom: nom || null, age: age };
+    if (ONB){
+      await Natty.sbPatch('onboarding?user_id=eq.' + Natty.USER_ID, payload);
+      ONB.prenom = payload.prenom; ONB.nom = payload.nom; ONB.age = payload.age;
+    } else {
+      payload.user_id = Natty.USER_ID;
+      var r = await Natty.sbPost('onboarding', payload);
+      ONB = (r && r[0]) || payload;
+    }
+    if (bio) localStorage.setItem(lsKey('bio'), bio); else localStorage.removeItem(lsKey('bio'));
+    renderIdentite();
+    closeSheet('ovSettings');
+    toast('Profil mis à jour');
+  }catch(e){
+    toast('Enregistrement impossible');
+  }
+  btn.disabled = false; btn.textContent = 'Enregistrer';
+});
+
+$('btnLogout').addEventListener('click', function(){
+  localStorage.removeItem('natty_token');
+  localStorage.removeItem('natty_user_id');
+  window.location.href = 'login.html';
+});
+
+/* ═══ Photo de profil ═══ */
+$('pAvatar').addEventListener('click', function(){ $('avatarInput').click(); });
+
+$('avatarInput').addEventListener('change', async function(){
+  var f = this.files && this.files[0];
+  if (!f) return;
+  toast('Envoi de la photo…');
+  try{
+    var fd = new FormData();
+    fd.append('file', f);
+    fd.append('upload_preset', Natty.CLD_PRE);
+    var res = await fetch('https://api.cloudinary.com/v1_1/' + Natty.CLD_CLD + '/image/upload', { method:'POST', body:fd });
+    var j = await res.json();
+    if (!j.secure_url) throw new Error('upload');
+    localStorage.setItem(lsKey('photo'), j.secure_url);
+    renderIdentite();
+    toast('Photo mise à jour');
+  }catch(e){
+    toast('Envoi impossible');
+  }
+  this.value = '';
+});
+
+/* ═══ Chargement ═══ */
+async function charger(){
+  try{
+    var r = await Natty.sbFetch('onboarding?user_id=eq.' + Natty.USER_ID
+      + '&select=prenom,nom,age&limit=1');
+    ONB = (r && r.length) ? r[0] : null;
+  }catch(e){ ONB = null; }
+  renderIdentite();
+
+  try{
+    MEALS = await Natty.sbFetch('meals?user_id=eq.' + Natty.USER_ID
+      + '&select=id,name,photo_url,meal_date,created_at&order=created_at.desc&limit=200');
+  }catch(e){ MEALS = []; }
+
+  POSTS = MEALS.filter(function(m){ return !!m.photo_url; });
+  renderNiveau();
+  renderPosts();
+
+  // Repas des 7 derniers jours : seuls ceux-là ont besoin de leurs ingrédients
+  // (moyennes par jour + score de repli).
+  var limite = new Date(); limite.setDate(limite.getDate() - 6);
+  var jour = limite.toISOString().split('T')[0];
+  var recents = MEALS.filter(function(m){
+    var d = m.meal_date || (m.created_at || '').split('T')[0];
+    return d && d >= jour;
+  });
+  await Promise.all(recents.map(async function(m){
+    try { m.meal_ingredients = await Natty.sbFetch('meal_ingredients?meal_id=eq.' + m.id + '&select=*'); }
+    catch(e){ m.meal_ingredients = []; }
+  }));
+
+  renderMoyennes(recents);
+  await chargerScore(recents);
+}
+
+(async function(){
+  if (!Natty.requireAuth()) return;
+  await charger();
+})();
+</script>
+<script src="/assets/nav.js"></script>
+</body>
+</html>
