@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Natty · Profil</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f0f0f3">
+<link rel="apple-touch-icon" href="/natty-icon-180.png">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',-apple-system,sans-serif; background:#f0f0f3; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+.spin { width:28px; height:28px; border:3px solid rgba(174,174,192,0.3); border-top-color:#1a1a2e; border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="spin"></div>
+<script>
+/*
+  profil.html — page dédiée pas encore construite (mockup design/mockups/PROFIL.png
+  en attente). En attendant, on redirige vers l'overlay profil déjà fonctionnel
+  de suivi.html (?profil=1), utilisé aussi par menu.html/coaching.html/repas.html.
+  Le jour où profil.html aura sa propre mise en page, ce fichier redeviendra la
+  vraie page et n'aura plus besoin de rediriger.
+
+  Le "Score nutritionnel" (anneau global, ex-suivi.html) a été retiré de l'écran
+  Suivi (demande Pablo) : il doit vivre ici, sous la forme d'un futur "Natty Score"
+  / système de points — pas encore défini (voir mockup PROFIL.png : "NATTY SCORE
+  96 Pts"). À construire quand ce système de points sera spécifié.
+*/
+var qs = new URLSearchParams(window.location.search);
+qs.set('profil', '1');
+window.location.replace('suivi.html?' + qs.toString());
+</script>
+</body>
+</html>

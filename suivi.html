@@ -768,6 +768,84 @@ html.no-scroll {
 .hdr-ico { display:flex; align-items:center; justify-content:center; color:#b5b5bd; background:none; box-shadow:none; width:auto; height:auto; }
 .hdr-ico svg { width:26px; height:26px; }
 
+/* ══════════════════════════════════════════════════════════
+   Nouvelle coquille Suivi (design fourni par Pablo) — cartes
+   sombres pour calories/score/objectif, cartes claires pour
+   l'historique des repas. Le moteur JS existant reste inchange,
+   seuls les ids/classes ci-dessous sont nouveaux.
+   ══════════════════════════════════════════════════════════ */
+:root{
+  --red-1:#ff7a68; --red-2:#e2503d;
+  --yellow-1:#e0b23c; --yellow-2:#b8860b;
+  --green-1:#6fcf7d; --green-2:#2f9e4f;
+  --good:#3f9e6d; --warn:#c98a3c; --tag-ink:#8a5a00;
+  --sh-out: 0 1px 0 rgba(255,255,255,0.8) inset, 8px 8px 16px rgba(163,167,176,0.4), -6px -6px 14px rgba(255,255,255,0.75);
+  --sh-in: inset 4px 4px 9px rgba(163,167,176,0.4), inset -3px -3px 8px rgba(255,255,255,0.7);
+  --sh-dark: 0 1px 0 rgba(255,255,255,0.06) inset, 8px 8px 18px rgba(20,21,24,0.35), -3px -3px 10px rgba(255,255,255,0.5);
+
+  /* Noir métallisé : noir quasi pur + deux reflets doux, sans motif/texture */
+  --metal-black:
+    radial-gradient(130% 65% at 12% -10%, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0) 42%),
+    linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 28%),
+    linear-gradient(165deg, #0c0d0f 0%, #050506 55%, #000000 100%);
+  --sh-metal:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 10px 24px rgba(0,0,0,0.5);
+}
+.suivi-top-group{ display:flex; flex-direction:column; gap:14px; }
+
+.hero{ position:relative; border-radius:28px; padding:26px 22px; background:var(--metal-black); box-shadow:var(--sh-metal); display:flex; align-items:center; justify-content:space-between; }
+.hero .label .t1{ display:flex; align-items:center; gap:6px; color:#fff; font-size:19px; font-weight:800; letter-spacing:-0.01em; }
+.hero .label .t1 svg{ width:15px; height:15px; }
+.hero .label .t2{ color:rgba(255,255,255,0.45); font-size:13px; font-weight:600; margin-top:2px; }
+.hero .value{ text-align:right; }
+.hero .value .num{ color:#fff; font-size:38px; font-weight:800; letter-spacing:-0.03em; line-height:1; }
+.hero .value .unit{ color:rgba(255,255,255,0.55); font-size:16px; font-weight:600; margin-top:2px; }
+
+.score-card{ position:relative; background:var(--metal-black); border-radius:26px; padding:20px 18px; box-shadow:var(--sh-metal); display:flex; align-items:center; gap:18px; cursor:pointer; }
+.score-card .sc-ring{ position:relative; width:96px; height:96px; flex-shrink:0; }
+.score-card .sc-ring svg{ width:100%; height:100%; transform:rotate(-90deg); }
+.score-card .sc-ring .center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.score-card .sc-ring .center b{ color:#fff; font-size:19px; font-weight:800; letter-spacing:-0.02em; }
+.score-card .sc-ring .center span{ color:rgba(255,255,255,0.5); font-size:10px; font-weight:600; margin-top:2px; }
+.score-card .sc-info h2{ font-size:15px; font-weight:800; color:#fff; letter-spacing:-0.01em; margin-bottom:8px; }
+.score-card .sc-badge{ display:inline-block; font-size:12px; font-weight:700; padding:5px 14px; border-radius:999px; }
+
+.objectif-card{ position:relative; background:var(--metal-black); border-radius:26px; padding:20px 18px 22px; box-shadow:var(--sh-metal); }
+.objectif-card h2{ font-size:19px; font-weight:800; letter-spacing:-0.02em; color:#fff; margin-bottom:18px; }
+.rings{ display:flex; justify-content:space-between; gap:8px; }
+.ring-item{ display:flex; flex-direction:column; align-items:center; gap:10px; flex:1 1 0; cursor:pointer; }
+.ring-box{ position:relative; width:88px; height:88px; }
+.ring-box svg{ width:100%; height:100%; transform:rotate(-90deg); }
+.ring-box .center{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:14.5px; font-weight:800; color:#fff; letter-spacing:-0.01em; }
+.macro-tag{ display:flex; align-items:center; gap:5px; background:var(--metal-black); border-radius:999px; padding:7px 12px; font-size:12px; font-weight:700; color:#dfe1e4; box-shadow:inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.18); white-space:nowrap; }
+.ring-obj{ font-size:9px; color:rgba(255,255,255,0.4); margin-top:-2px; }
+
+.banner{ position:relative; border-radius:20px; padding:16px 18px; display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--bg); box-shadow:var(--sh-out); }
+.banner h3{ color:var(--black); font-size:16px; font-weight:800; letter-spacing:-0.01em; }
+.banner .sec-link{ font-size:12px; font-weight:600; color:var(--muted); cursor:pointer; }
+
+#mealsList{ display:flex; flex-direction:column; gap:12px; }
+.meal-card{ position:relative; background:var(--bg); border-radius:22px; padding:14px 14px 12px; box-shadow:var(--sh-out); }
+.meal-card .meal-date{ text-align:right; font-size:11.5px; color:#a3a6ad; font-weight:600; margin-bottom:6px; }
+.meal-card .meal-row{ display:flex; gap:12px; align-items:flex-start; }
+.meal-card .thumb{ flex:0 0 auto; width:58px; height:58px; border-radius:16px; overflow:hidden; box-shadow:var(--sh-in); }
+.meal-card .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+.meal-card .thumb.iconic{ display:flex; align-items:center; justify-content:center; background:var(--metal-black); font-size:24px; }
+.meal-card .meal-info{ flex:1 1 auto; min-width:0; }
+.meal-card .meal-info h4{ font-size:14.5px; font-weight:700; color:var(--black); letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.meal-card .meal-info .desc{ font-size:12px; color:#a3a6ad; font-weight:500; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tag-choice{ display:inline-block; margin-top:8px; background:var(--bg); color:var(--tag-ink); font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:999px; box-shadow:var(--sh-in); }
+.meal-side{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.score-ring{ position:relative; width:46px; height:46px; }
+.score-ring svg{ width:100%; height:100%; transform:rotate(-90deg); }
+.score-ring .val{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:var(--black); }
+.dots{ color:#a3a6ad; font-size:16px; letter-spacing:1px; font-weight:700; cursor:pointer; }
+
+.pts-card{ background:var(--bg); box-shadow:var(--sh-out); }
+.pts-card:active{ box-shadow:var(--sh-in); }
+
 </style>
 </head>
 <body>
@@ -779,9 +857,9 @@ html.no-scroll {
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
     </a>
     <div style="display:none"><span id="headerName"></span><span id="headerDate"></span></div>
-    <div class="hdr-ico" id="btnProfil" style="cursor:pointer;" onclick="openProfilOverlay()" aria-label="Profil">
+    <a href="profil.html" class="hdr-ico" id="btnProfil" aria-label="Profil">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
-    </div>
+    </a>
   </div>
   <div class="tabs-bar natty-hidden">
     <button class="tab-btn active" id="tabSuivi"  onclick="switchTab('suivi')">Suivi</button>
@@ -808,60 +886,62 @@ html.no-scroll {
   </div>
 
   <!-- SCORE + MACROS -->
-  <div class="hero-score card">
+  <div class="suivi-top-group">
 
-    <!-- Grand anneau centré -->
-    <div class="hero-ring-wrap" id="ringZone" onclick="switchTab('prog')">
-      <svg viewBox="0 0 200 200" width="200" height="200">
-        <!-- Track neumorphique -->
-        <circle cx="100" cy="100" r="84" fill="none" stroke="rgba(174,174,192,0.22)" stroke-width="10"/>
-        <!-- Glow arc -->
-        <circle cx="100" cy="100" r="84" fill="none" stroke="#34c759" stroke-width="10"
-                stroke-linecap="round" id="ringArc" stroke-dasharray="0 528"
-                style="transition:stroke-dasharray 1.4s ease;filter:drop-shadow(0 0 6px rgba(52,199,89,0.35));"/>
-      </svg>
-      <div class="ring-center hero-ring-center">
-        <div class="hero-score-pct"><span id="scorePct">–</span><span class="hero-score-pct-s">%</span></div>
-        <div class="ring-lbl hero-score-lbl">Score nutritionnel</div>
-        <div class="hero-score-badge ring-badge" id="ringBadge" style="background:#e8f9ee;color:#34c759;">–</div>
+  <!-- Calories -->
+  <div class="hero">
+    <div class="label">
+      <div class="t1">Calories <svg viewBox="0 0 24 24" fill="none"><path d="M13 3 5 14h5.5L11 21l8-12h-5.5L13 3Z" fill="#dfe1e4"/></svg></div>
+      <div class="t2 hero-cal-left">⚡ Calories aujourd'hui</div>
+    </div>
+    <div class="value"><div class="num"><span id="vCal">–</span></div><div class="unit">/ <span id="oCal">–</span> Kcal</div></div>
+  </div>
+
+  <!-- Score nutritionnel : déplacé dans profil.html (Natty Score / points,
+       système pas encore défini) — plus affiché sur Suivi. -->
+
+  <!-- Objectif (3 macros en anneaux) -->
+  <div class="objectif-card">
+    <h2>Votre objectif</h2>
+    <div class="rings">
+      <div class="ring-item" onclick="openMacroPopup('prot')">
+        <div class="ring-box">
+          <svg viewBox="0 0 88 88">
+            <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
+            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#redGrad)" stroke-width="7" stroke-linecap="round" id="ringProt" stroke-dasharray="0 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
+            <defs><linearGradient id="redGrad"><stop offset="0%" stop-color="var(--red-1)"/><stop offset="100%" stop-color="var(--red-2)"/></linearGradient></defs>
+          </svg>
+          <div class="center"><span id="vProt">–</span>g</div>
+        </div>
+        <div class="macro-tag">Protéines 🥩</div>
+        <div class="ring-obj" id="oProt">Obj. –g</div>
+      </div>
+      <div class="ring-item" onclick="openMacroPopup('gluc')">
+        <div class="ring-box">
+          <svg viewBox="0 0 88 88">
+            <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
+            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#yellowGrad)" stroke-width="7" stroke-linecap="round" id="ringGluc" stroke-dasharray="0 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
+            <defs><linearGradient id="yellowGrad"><stop offset="0%" stop-color="var(--yellow-1)"/><stop offset="100%" stop-color="var(--yellow-2)"/></linearGradient></defs>
+          </svg>
+          <div class="center"><span id="vGluc">–</span>g</div>
+        </div>
+        <div class="macro-tag">Glucides 🌾</div>
+        <div class="ring-obj" id="oGluc">Obj. –g</div>
+      </div>
+      <div class="ring-item" onclick="openMacroPopup('lip')">
+        <div class="ring-box">
+          <svg viewBox="0 0 88 88">
+            <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
+            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#greenGrad2)" stroke-width="7" stroke-linecap="round" id="ringLip" stroke-dasharray="0 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
+            <defs><linearGradient id="greenGrad2"><stop offset="0%" stop-color="var(--green-1)"/><stop offset="100%" stop-color="var(--green-2)"/></linearGradient></defs>
+          </svg>
+          <div class="center"><span id="vLip">–</span>g</div>
+        </div>
+        <div class="macro-tag">Lipides 🥑</div>
+        <div class="ring-obj" id="oLip">Obj. –g</div>
       </div>
     </div>
-
-    <!-- 3 macros en colonnes inset -->
-    <div class="hero-macros-row">
-      <div class="hero-macro-col" onclick="openMacroPopup('prot')" style="cursor:pointer;">
-        <div class="hero-macro-em">🥩</div>
-        <div class="hero-macro-val"><span id="vProt">–</span></div>
-        <div class="hero-macro-unit">g</div>
-        <div class="hero-macro-lbl">Protéines</div>
-        <div class="hero-macro-bar"><div class="hero-macro-fill" id="bProt" style="width:0%;background:#ff6b35;"></div></div>
-        <div style="font-size:9px;color:#c0c0cc;margin-top:2px;" id="oProt">Obj. –g</div>
-      </div>
-      <div class="hero-macro-col" onclick="openMacroPopup('gluc')" style="cursor:pointer;">
-        <div class="hero-macro-em">🌾</div>
-        <div class="hero-macro-val"><span id="vGluc">–</span></div>
-        <div class="hero-macro-unit">g</div>
-        <div class="hero-macro-lbl">Glucides</div>
-        <div class="hero-macro-bar"><div class="hero-macro-fill" id="bGluc" style="width:0%;background:#ff9500;"></div></div>
-        <div style="font-size:9px;color:#c0c0cc;margin-top:2px;" id="oGluc">Obj. –g</div>
-      </div>
-      <div class="hero-macro-col" onclick="openMacroPopup('lip')" style="cursor:pointer;">
-        <div class="hero-macro-em">🥑</div>
-        <div class="hero-macro-val"><span id="vLip">–</span></div>
-        <div class="hero-macro-unit">g</div>
-        <div class="hero-macro-lbl">Lipides</div>
-        <div class="hero-macro-bar"><div class="hero-macro-fill" id="bLip" style="width:0%;background:#7b5ea7;"></div></div>
-        <div style="font-size:9px;color:#c0c0cc;margin-top:2px;" id="oLip">Obj. –g</div>
-      </div>
-    </div>
-
-    <!-- Calories row -->
-    <div class="hero-cal-row">
-      <div class="hero-cal-left">⚡ Calories aujourd'hui</div>
-      <div class="hero-cal-val">
-        <span id="vCal">–</span><span class="hero-cal-unit">/ <span id="oCal">–</span> kcal</span>
-      </div>
-    </div>
+  </div>
 
   </div>
 
@@ -872,8 +952,8 @@ html.no-scroll {
   </div>
 
   <!-- HISTORIQUE -->
-  <div class="sec-header"><span class="sec-title">Historique des repas</span><span class="sec-link" onclick="openRepasOverlay()">Voir tout ›</span></div>
-  <div class="card" id="mealsList"><div class="loading">Chargement...</div></div>
+  <div class="banner"><h3>Historique de repas</h3><span class="sec-link" onclick="openRepasOverlay()">Voir tout ›</span></div>
+  <div id="mealsList"><div class="loading" style="text-align:center;padding:20px;">Chargement...</div></div>
 
   <!-- POINTS FORTS / FAIBLES -->
   <div class="pts-grid">
@@ -1679,7 +1759,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('bandeauBtn').addEventListener('click', goToOffre);
   document.getElementById('nutriCard').addEventListener('click', ouvrirChat);
   document.getElementById('chatFab').addEventListener('click', ouvrirChat);
-  document.getElementById('ringZone').addEventListener('click', function(){ switchTab('prog'); });
+  var ringZoneEl = document.getElementById('ringZone'); if (ringZoneEl) ringZoneEl.addEventListener('click', function(){ switchTab('prog'); });
   document.getElementById('rdvPlusBtn').addEventListener('click', function(){ document.getElementById('rdvForm').classList.toggle('open'); });
   document.getElementById('rdvSubmit').addEventListener('click', soumettreRdv);
   document.getElementById('wkPrev').addEventListener('click', function(){ weekOffset--; chargerRdv(); });
@@ -1895,9 +1975,10 @@ function afficherMacros() {
   var cp = macObj.c>0 ? Math.min(100, Math.round((moy.c/macObj.c)*100)) : 0;
 
   // Valeurs affichées
-  setText('vProt', hasData ? moy.p : (macObj.p||'–'));
-  setText('vGluc', hasData ? moy.g : (macObj.g||'–'));
-  setText('vLip',  hasData ? moy.l : (macObj.l||'–'));
+  // Grammes affichés dans les anneaux = restants (objectif - consommé), pas consommés.
+  setText('vProt', hasData ? Math.max(0, Math.round(macObj.p-moy.p)) : (macObj.p||'–'));
+  setText('vGluc', hasData ? Math.max(0, Math.round(macObj.g-moy.g)) : (macObj.g||'–'));
+  setText('vLip',  hasData ? Math.max(0, Math.round(macObj.l-moy.l)) : (macObj.l||'–'));
   setText('vCal',  hasData ? moy.c : (macObj.c||'–'));
   setText('oCal',  macObj.c||'–');
 
@@ -1920,6 +2001,10 @@ function afficherMacros() {
     var bp=document.getElementById('bProt'); if(bp) bp.style.width=pp+'%';
     var bg=document.getElementById('bGluc'); if(bg) bg.style.width=gp+'%';
     var bl=document.getElementById('bLip');  if(bl) bl.style.width=lp+'%';
+    var mrC=2*Math.PI*38;
+    var rp=document.getElementById('ringProt'); if(rp) rp.style.strokeDasharray=((pp/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
+    var rg2=document.getElementById('ringGluc'); if(rg2) rg2.style.strokeDasharray=((gp/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
+    var rl=document.getElementById('ringLip');  if(rl) rl.style.strokeDasharray=((lp/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
   }, 100);
 
   // Recalculer et afficher le score basé sur la moyenne
@@ -1950,15 +2035,20 @@ function calcScoreFromAvg(moy, pp, gp, lp) {
 
 // ═══ SCORE ═══
 function setScore(pct) {
-  var circ=2*Math.PI*84, dash=(pct/100)*circ;
+  // Anneau "Score nutritionnel" retiré de Suivi (déplacé dans profil.html,
+  // futur "Natty Score"/points — pas encore défini) : ids absents ici,
+  // on garde le calcul (utile ailleurs) mais on ne touche le DOM que s'il existe.
+  var circ=2*Math.PI*40, dash=(pct/100)*circ;
   var col=pct>=70?'#34c759':pct>=40?'#ff9500':'#ff3b30';
   var arc=document.getElementById('ringArc');
-  arc.style.strokeDasharray=dash+' '+circ; arc.style.stroke=col;
+  if (arc) { arc.style.strokeDasharray=dash+' '+circ; arc.style.stroke=col; }
   setText('scorePct',pct);
   var b=document.getElementById('ringBadge');
-  b.textContent=pct>=80?'Excellent':pct>=60?'Bon':pct>=40?'Moyen':'À revoir';
-  b.style.background=pct>=60?'#e8f9ee':pct>=40?'#fff3e0':'#ffecec';
-  b.style.color=pct>=60?'#34c759':pct>=40?'#ff9500':'#ff3b30';
+  if (b) {
+    b.textContent=pct>=80?'Excellent':pct>=60?'Bon':pct>=40?'Moyen':'À revoir';
+    b.style.background=pct>=60?'#e8f9ee':pct>=40?'#fff3e0':'#ffecec';
+    b.style.color=pct>=60?'#34c759':pct>=40?'#ff9500':'#ff3b30';
+  }
 }
 
 // ═══ MEALS DISPLAY ═══
@@ -1982,19 +2072,20 @@ function afficherMeals(meals) {
     var date=new Date(m.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
     var ings=(m.meal_ingredients||[]).map(function(i){return i.name;}).join(', ')||'Aucun ingrédient';
     var tag=tagForMeal(m), sc=mealScore(m);
-    var col=sc>=80?'#34c759':sc>=60?'#ff9500':'#ff3b30';
-    var circ=2*Math.PI*16, dash=((sc/100)*circ).toFixed(1);
-    var photo=m.photo_url?'<div class="meal-photo"><img src="'+m.photo_url+'" alt=""></div>':'<div class="meal-photo">🍽️</div>';
-    return '<div class="meal-item" style="cursor:pointer;" onclick="openMealDetail(\'' + m.id + '\')">'+ photo+'<div class="meal-info"><div class="meal-name">'+m.name+'</div><div class="meal-ings">'+ings+'</div><span class="meal-tag '+tag.c+'">'+tag.l+'</span></div>'
-      +'<div class="meal-right"><div class="meal-date">'+date+'</div>'
-      +'<div class="sr-wrap"><svg viewBox="0 0 42 42" width="42" height="42"><circle cx="21" cy="21" r="16" fill="none" stroke="#f0f0f0" stroke-width="3.5"/><circle cx="21" cy="21" r="16" fill="none" stroke="'+col+'" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="'+dash+' '+circ.toFixed(1)+'" transform="rotate(-90 21 21)"/></svg><div class="sr-num">'+sc+'</div></div>'
-      +'<div class="meal-dots" data-id="'+m.id+'">···</div></div></div>';
+    var col=sc>=80?'var(--good)':sc>=60?'var(--warn)':'var(--red-2)';
+    var circ=2*Math.PI*19, dash=((sc/100)*circ).toFixed(1);
+    var thumb=m.photo_url?'<div class="thumb"><img src="'+m.photo_url+'" alt=""></div>':'<div class="thumb iconic">🍽️</div>';
+    return '<div class="meal-card" style="cursor:pointer;" data-id="'+m.id+'">'
+      +'<div class="meal-date">'+date+'</div>'
+      +'<div class="meal-row">'+thumb
+      +'<div class="meal-info"><h4>'+m.name+'</h4><div class="desc">'+ings+'</div><span class="tag-choice">'+tag.l+'</span></div>'
+      +'<div class="meal-side"><div class="score-ring"><svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="19" fill="none" stroke="#e2e4e8" stroke-width="4.5"/><circle cx="23" cy="23" r="19" fill="none" stroke="'+col+'" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="'+dash+' '+circ.toFixed(1)+'" transform="rotate(-90 23 23)"/></svg><div class="val">'+sc+'</div></div><div class="dots" data-id="'+m.id+'">•••</div></div>'
+      +'</div></div>';
   }).join('');
-  el.querySelectorAll('.meal-dots').forEach(function(btn){
+  el.querySelectorAll('.dots').forEach(function(btn){
     btn.addEventListener('click',function(e){e.stopPropagation();deleteRepas(btn.dataset.id);});
   });
-  el.querySelectorAll('.meal-item').forEach(function(item){
-    item.style.cursor='pointer';
+  el.querySelectorAll('.meal-card').forEach(function(item){
     item.addEventListener('click',function(){
       var meal=allMeals.find(function(m){return m.id===item.dataset.id;});
       if(meal) ouvrirAnalysePlat(meal);
@@ -2724,7 +2815,7 @@ function afficherOnboardingCTA(){
   document.body.style.backgroundImage = 'radial-gradient(circle at 1px 1px, rgba(180,180,200,0.18) 1px, transparent 0)';
   document.body.style.backgroundSize = '26px 26px';
   // Null guards — éléments peuvent ne pas exister si DOM pas encore prêt
-  var _sm = document.querySelector('.score-macro') || document.querySelector('.hero-score');
+  var _sm = document.querySelector('.suivi-top-group') || document.querySelector('.score-macro') || document.querySelector('.hero-score');
   if (_sm) _sm.style.display = 'none';
   var _pg = document.querySelector('.pts-grid');
   if (_pg) _pg.style.display = 'none';
