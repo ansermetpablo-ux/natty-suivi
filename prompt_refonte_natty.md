@@ -1,7 +1,16 @@
 # Prompt pour Claude Code — Refonte complète de l'app Natty
 
-> À utiliser directement dans Claude Code, dans le dossier du repo `natty-suivi`.
-> Joindre les 5 images `PROFIL.png`, `COACHING.png`, `SUIVI.png`, `REPAS.png`, `MENU.png` (glisser-déposer dans le terminal ou les placer dans un dossier `design/` du repo et les référencer par leur chemin).
+> À utiliser directement dans Claude Code, lancé depuis la racine du repo `natty-suivi`.
+> Les 5 maquettes sont dans `design/mockups/design-mockup/` : `PROFIL.png`, `COACHING.png`, `SUIVI.png`, `REPAS.png`, `MENU.png`.
+>
+> **Source exacte (fidélité maximale)** : ces 5 écrans sont les pages 13 à 17 du design Canva `DAHJ8Cj4yrU` ("PROFIL", pages 1080×1920 chacune) — page 13 = Menu, 14 = Suivi, 15 = Repas, 16 = Coaching, 17 = Profil. **Si Claude Code a accès au connecteur MCP Canva**, utilise `read-design`/`export-design` directement sur ce `design_id` pour lire le texte exact et exporter les pages en PNG haute résolution (pro quality) plutôt que de te fier uniquement aux PNG déjà présents dans le repo — ça élimine toute approximation de lecture d'image. Texte exact confirmé par lecture directe du design (à reproduire mot pour mot, y compris emojis et ordre) :
+> - Menu (p.13) : "3 PLATS PAR SEMAINE", cartes "COACHING" / "SUIVI"
+> - Suivi (p.14) : "0%", "Score nutritionnel", "À revoir", "PROTÉINES" / "GLUCIDES" / "LIPIDES", "Calories aujourd'hui", "Mes repas"
+> - Repas (p.15) : "POULET MOUTARDE", "687 Kcal", "88g 🥩", "455g 🌾", "82g 🥑", "DÉCOUVRIR", "Recettes du Monde" / "Ingrédients" / "Aléatoire"
+> - Coaching (p.16) : "12 JUILLET 17H", "RENDEZ-VOUS ONBOARDING", "27 jul - 2 aou 2026", "CHAT"
+> - Profil (p.17) : "ANTOINE DUPONT", "19 Ans", "Joueur de foot ⚽", "Niveau 23", "NATTY SCORE", "96 Pts", "Moyennes par jour", "190g 🥩", "455g 🌾", "82g 🥑", "Posts :"
+>
+> Nav commune confirmée visuellement sur toutes les pages : **Suivi / Menu / (+) / Coaching / Défis** — "Suivi", "Coaching" et "Défis" confirmés mot pour mot par l'extraction de texte du design ; "Menu" est visible sur les captures mais n'est pas ressorti dans l'extraction texte brute (probablement une icône sans calque de texte séparé dans Canva) — vérifier son libellé exact à l'écran avant de coder si un doute subsiste.
 
 ---
 
@@ -70,6 +79,27 @@ Cette barre doit être un composant unique partagé (un seul fichier JS/HTML inj
 - Quand une recette personnalisée est recommandée à l'utilisateur (issue de `conseils.py`), il peut la "suivre"
 - Après qu'il poste sa propre réalisation, un système de notation de ressemblance par IA compare sa photo/son plat à la recette originale et donne un score de similarité en %
 - Plus la ressemblance est élevée, plus l'utilisateur gagne d'XP sur cette action
+
+### Mini-jeux de découverte (cartes "DÉCOUVRIR" de l'écran Repas)
+Les 3 cartes visibles sur `REPAS.png` ("Recettes du Monde", "Ingrédients", "Aléatoire") ouvrent chacune un mini-jeu plein écran (fond blanc, pas de nav visible pendant le jeu) qui détermine quelle recette l'utilisateur va découvrir. Dans les 3 cas, le résultat du jeu débouche sur une liste de propositions de recettes (plat principal + sauces + accompagnements possibles) affichée en dessous, que l'utilisateur peut ensuite "suivre" (voir section notation IA ci-dessus — le suivi d'une recette issue d'un mini-jeu fonctionne exactement pareil).
+
+**Recettes du Monde — fléchette sur le globe**
+- Plein écran blanc avec un globe terrestre illustré qui tourne lentement, titre qui explique la mécanique à venir
+- Au lancement, le globe accélère et se met à tourner rapidement
+- L'utilisateur effectue un geste "drag and throw" (glisser puis relâcher, comme lancer une fléchette) en direction du globe
+- Quand la fléchette touche le globe, un pays est tiré aléatoirement au point d'impact (ex. "Albanie")
+- Résultat : propositions de recettes issues de la cuisine de ce pays (plat, sauce, accompagnement)
+
+**Ingrédients — potager**
+- Plein écran blanc avec une illustration de potager (légumes plantés dans la terre, seules les fanes dépassent)
+- L'utilisateur glisse/tire la fane d'un légume vers le haut (geste "arracher") pour le déterrer
+- Le légume révélé devient la base du repas
+- Résultat : propositions de recettes/sauces/accompagnements construits autour de ce légume
+
+**Aléatoire — défilement rapide**
+- Plein écran blanc, aliments ET recettes de toutes sortes qui défilent très vite (façon machine à sous/roulette verticale)
+- L'utilisateur appuie sur "Stop" pour figer le défilement
+- L'ingrédient ou la recette affiché au moment de l'arrêt est celui proposé à suivre
 
 ### Plats postés — double notation + commentaires
 - Chaque plat posté a une note issue de l'algorithme (calculée dans le module Suivi à partir du Nutri-Score/équilibre macro) ET une note donnée par les autres utilisateurs

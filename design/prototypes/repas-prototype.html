@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Natty — Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f2f2f4;
+    --card:#ffffff;
+    --card-soft:#f7f7f8;
+    --ink:#101012;
+    --muted:#8a8a90;
+    --pill-bg:#101012;
+    --green:#25c26e;
+    --shadow:0 2px 12px rgba(16,16,18,.07);
+    --shadow-lift:0 14px 34px rgba(16,16,18,.13);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    font-family:'Inter','DM Sans',sans-serif;
+    color:var(--ink);
+    max-width:480px; margin:0 auto;
+    padding:18px 16px 120px;
+    -webkit-tap-highlight-color:transparent;
+    overflow-x:hidden;
+  }
+  h1,h2,h3{font-family:'DM Sans','Inter',sans-serif;}
+
+  .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .icon-btn{
+    width:38px; height:38px; border-radius:50%; background:var(--card);
+    box-shadow:var(--shadow); display:flex; align-items:center; justify-content:center;
+    font-size:16px; border:none; cursor:pointer;
+  }
+
+  /* ============ HERO — plat détouré qui déborde ============ */
+  .hero{
+    position:relative; margin-top:78px; margin-bottom:22px;
+    background:var(--card); border-radius:30px; box-shadow:var(--shadow-lift);
+    padding:96px 20px 20px; overflow:visible;
+  }
+  .hero-badge{
+    position:absolute; top:-14px; left:18px; z-index:4;
+    background:var(--pill-bg); color:#fff; font-weight:800; font-size:12.5px;
+    padding:10px 16px; border-radius:20px; letter-spacing:.02em;
+  }
+  /* le plat dépasse largement au-dessus de la carte */
+  .hero-dish{
+    position:absolute; top:-104px; left:50%; transform:translateX(-50%);
+    font-size:186px; line-height:1; z-index:3;
+    filter:drop-shadow(0 22px 26px rgba(16,16,18,.28));
+    animation:floatDish 6s ease-in-out infinite;
+  }
+  @keyframes floatDish{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-9px);}}
+  /* garnitures flottantes hors cadre */
+  .leaf{position:absolute; font-size:34px; z-index:5; filter:drop-shadow(0 8px 10px rgba(16,16,18,.2));}
+  .leaf.l1{top:-46px; left:-14px; transform:rotate(-24deg); animation:floatLeaf 5s ease-in-out infinite;}
+  .leaf.l2{top:52px; right:-18px; transform:rotate(18deg); animation:floatLeaf 6.5s ease-in-out infinite .6s;}
+  .leaf.l3{top:-8px; right:34px; font-size:24px; transform:rotate(-8deg); animation:floatLeaf 5.6s ease-in-out infinite .3s;}
+  @keyframes floatLeaf{0%,100%{translate:0 0;}50%{translate:0 -8px;}}
+
+  .hero-title{font-size:25px; font-weight:900; line-height:1.12; letter-spacing:-.01em;}
+  .hero-time{
+    display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:700;
+    color:var(--muted); margin-top:8px;
+  }
+  .hero-desc{font-size:13px; color:var(--muted); line-height:1.55; margin-top:10px;}
+  .hero-macros{display:flex; gap:8px; margin-top:14px;}
+  .macro-pill{
+    flex:1; background:var(--card-soft); border-radius:16px; padding:9px 0;
+    text-align:center; font-weight:800; font-size:13px;
+  }
+  .hero-foot{display:flex; align-items:center; justify-content:space-between; margin-top:18px; gap:12px;}
+  .hero-kcal .k{font-size:10.5px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+  .hero-kcal .v{font-size:23px; font-weight:900; margin-top:2px;}
+  .cta{
+    display:flex; align-items:center; gap:10px; background:var(--pill-bg); color:#fff;
+    border:none; border-radius:26px; padding:13px 8px 13px 22px; font-family:inherit;
+    font-weight:800; font-size:14.5px; cursor:pointer;
+  }
+  .cta:active{transform:scale(.97);}
+  .cta .plus{
+    width:32px; height:32px; border-radius:50%; background:#fff; color:var(--pill-bg);
+    display:flex; align-items:center; justify-content:center; font-size:19px; font-weight:700;
+  }
+  .heart-btn{
+    width:46px; height:46px; border-radius:50%; background:var(--card-soft); border:none;
+    font-size:17px; cursor:pointer; flex-shrink:0;
+  }
+
+  /* ============ 3 PLATS DE LA SEMAINE ============ */
+  .sec-head{display:flex; align-items:baseline; justify-content:space-between; margin:34px 0 44px;}
+  .sec-title{font-size:18px; font-weight:900;}
+  .sec-note{font-size:11.5px; font-weight:700; color:var(--muted);}
+
+  .week-row{display:flex; gap:11px;}
+  .week-card{
+    flex:1; position:relative; background:var(--card); border-radius:22px;
+    box-shadow:var(--shadow); padding:42px 8px 14px; text-align:center; overflow:visible;
+    cursor:pointer; transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .week-card:active{transform:translateY(2px);}
+  .week-card.on{box-shadow:var(--shadow-lift); transform:translateY(-4px);}
+  .week-dish{
+    position:absolute; top:-38px; left:50%; transform:translateX(-50%);
+    font-size:70px; line-height:1; filter:drop-shadow(0 12px 14px rgba(16,16,18,.24));
+  }
+  .week-day{font-size:9.5px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;}
+  .week-name{font-size:11.5px; font-weight:800; line-height:1.25; margin-top:4px; min-height:29px;}
+  .week-kcal{font-size:10.5px; font-weight:700; color:var(--muted); margin-top:5px;}
+  .week-check{
+    position:absolute; top:8px; right:8px; width:19px; height:19px; border-radius:50%;
+    background:var(--green); color:#fff; font-size:11px; display:none;
+    align-items:center; justify-content:center; font-weight:800;
+  }
+  .week-card.on .week-check{display:flex;}
+
+  /* ============ INGREDIENTS ============ */
+  .panel{background:var(--card); border-radius:26px; box-shadow:var(--shadow); padding:18px; margin-top:22px;}
+  .panel-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;}
+  .panel-title{font-size:15.5px; font-weight:900;}
+  .panel-title span{font-size:11.5px; font-weight:700; color:var(--muted); margin-left:6px;}
+  .panel-link{font-size:12px; font-weight:800; text-decoration:underline; cursor:pointer;}
+
+  .ingr-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:8px;}
+  .ingr{
+    position:relative; background:var(--card-soft); border-radius:15px; padding:12px 4px 9px;
+    text-align:center; cursor:pointer; transition:background .18s ease, opacity .18s ease;
+  }
+  .ingr .em{font-size:26px; line-height:1;}
+  .ingr .nm{font-size:8.5px; font-weight:700; line-height:1.2; margin-top:6px; color:var(--ink);}
+  .ingr .tick{
+    position:absolute; top:5px; left:5px; width:16px; height:16px; border-radius:50%;
+    background:var(--green); color:#fff; font-size:9px; display:flex;
+    align-items:center; justify-content:center; font-weight:800;
+  }
+  .ingr.off{opacity:.4;}
+  .ingr.off .tick{background:#d3d3d8;}
+
+  /* ============ STEPS ============ */
+  .steps-row{display:flex; align-items:stretch; gap:5px;}
+  .step{
+    flex:1; position:relative; background:var(--card-soft); border-radius:15px;
+    padding:11px 5px 10px; text-align:center;
+  }
+  .step .n{
+    width:19px; height:19px; border-radius:50%; background:var(--pill-bg); color:#fff;
+    font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center;
+    margin:0 auto 6px;
+  }
+  .step .em{font-size:19px; line-height:1;}
+  .step .t{font-size:8.5px; font-weight:700; line-height:1.25; margin-top:5px;}
+  .step-link{align-self:center; color:#d3d3d8; font-size:12px; font-weight:800; letter-spacing:-1px;}
+
+  /* ============ COACHING / SUIVI ============ */
+  .duo{display:flex; gap:12px; margin-top:22px;}
+  .duo-card{
+    flex:1; position:relative; border-radius:26px; overflow:hidden; min-height:200px;
+    padding:16px; display:flex; flex-direction:column; justify-content:flex-start;
+    cursor:pointer; box-shadow:var(--shadow);
+  }
+  .duo-card.coaching{background:linear-gradient(165deg,#2f3a34,#14201a);}
+  .duo-card.suivi{background:linear-gradient(165deg,#1e1e22,#0d0d10);}
+  .duo-tag{
+    align-self:flex-start; background:var(--pill-bg); color:#fff; font-weight:800;
+    font-size:12px; padding:7px 13px; border-radius:16px;
+  }
+  .duo-card.coaching .duo-tag{background:#fff; color:#14201a;}
+  .duo-emoji{
+    position:absolute; right:-12px; bottom:-14px; font-size:96px; line-height:1;
+    filter:drop-shadow(0 12px 16px rgba(0,0,0,.4)); opacity:.95;
+  }
+  .duo-stats{margin-top:auto; display:flex; flex-direction:column; gap:6px; position:relative; z-index:2;}
+  .stat-chip{
+    background:rgba(255,255,255,.94); border-radius:12px; padding:6px 10px;
+    font-size:11.5px; font-weight:800; align-self:flex-start;
+  }
+  .duo-card.coaching .duo-sub{
+    margin-top:auto; color:rgba(255,255,255,.82); font-size:11.5px; font-weight:600;
+    line-height:1.45; position:relative; z-index:2; max-width:80%;
+  }
+
+  /* ============ NAV ============ */
+  .bottom-nav{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    width:calc(100% - 32px); max-width:448px; background:#fff; border-radius:30px;
+    box-shadow:0 6px 22px rgba(16,16,18,.15);
+    display:flex; align-items:center; justify-content:space-between; padding:8px 10px; z-index:30;
+  }
+  .nav-item{
+    flex:1; text-align:center; font-size:10.5px; font-weight:700; color:var(--muted);
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 0; cursor:pointer;
+  }
+  .nav-item.active{color:var(--ink);}
+  .nav-item .ic{font-size:18px;}
+  .nav-fab{
+    width:52px; height:52px; border-radius:50%; background:var(--pill-bg); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:25px; margin:0 4px; flex-shrink:0;
+  }
+
+  .toast{
+    position:fixed; left:50%; bottom:96px; transform:translate(-50%,14px);
+    background:var(--pill-bg); color:#fff; border-radius:18px; padding:12px 20px;
+    font-size:12.5px; font-weight:700; opacity:0; transition:all .35s cubic-bezier(.4,0,.2,1);
+    pointer-events:none; z-index:60; white-space:nowrap;
+  }
+  .toast.show{opacity:1; transform:translate(-50%,0);}
+
+  .footer-note{text-align:center; font-size:11px; color:var(--muted); margin-top:26px; line-height:1.6;}
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <button class="icon-btn">🏠</button>
+    <button class="icon-btn">👤</button>
+  </div>
+
+  <!-- ===== HERO : plat détouré qui déborde de la carte ===== -->
+  <div class="hero">
+    <div class="hero-badge">3 PLATS PAR SEMAINE</div>
+    <div class="hero-dish" id="heroDish">🍛</div>
+    <span class="leaf l1">🌿</span>
+    <span class="leaf l2">🌿</span>
+    <span class="leaf l3">🌶️</span>
+
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+      <div class="hero-title" id="heroTitle">Poulet Moutarde<br>&amp; Lentilles</div>
+      <div class="hero-time">🕐 <span id="heroTime">25 min</span></div>
+    </div>
+
+    <div class="hero-desc" id="heroDesc">Repas riche en protéines, poulet snacké, lentilles vertes et sauce moutarde légère — livré prêt à réchauffer.</div>
+
+    <div class="hero-macros">
+      <div class="macro-pill">🥩 <span id="hProt">88</span>g</div>
+      <div class="macro-pill">🌾 <span id="hGluc">455</span>g</div>
+      <div class="macro-pill">🥑 <span id="hLip">82</span>g</div>
+    </div>
+
+    <div class="hero-foot">
+      <div class="hero-kcal">
+        <div class="k">Total</div>
+        <div class="v"><span id="hKcal">687</span> Kcal</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button class="heart-btn" id="heartBtn">🤍</button>
+        <button class="cta" id="ctaBtn">Choisir ce plat <span class="plus">+</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 3 PLATS DE LA SEMAINE ===== -->
+  <div class="sec-head">
+    <span class="sec-title">Ma semaine</span>
+    <span class="sec-note" id="weekNote">1/3 sélectionné</span>
+  </div>
+  <div class="week-row" id="weekRow"></div>
+
+  <!-- ===== INGREDIENTS ===== -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Ingrédients <span id="ingrCount">(8/8)</span></div>
+      <div class="panel-link" id="ingrEdit">Modifier</div>
+    </div>
+    <div class="ingr-grid" id="ingrGrid"></div>
+  </div>
+
+  <!-- ===== STEPS ===== -->
+  <div class="panel">
+    <div class="panel-head"><div class="panel-title">Préparation</div></div>
+    <div class="steps-row" id="stepsRow"></div>
+  </div>
+
+  <!-- ===== COACHING / SUIVI ===== -->
+  <div class="duo">
+    <div class="duo-card coaching">
+      <div class="duo-tag">COACHING</div>
+      <div class="duo-emoji">🥗</div>
+      <div class="duo-sub">2 RDV offerts &amp; messagerie illimitée avec ton nutritionniste</div>
+    </div>
+    <div class="duo-card suivi">
+      <div class="duo-tag">SUIVI</div>
+      <div class="duo-emoji">📱</div>
+      <div class="duo-stats">
+        <div class="stat-chip">🔥 2982 Kcal</div>
+        <div class="stat-chip">🥩 144g Prot.</div>
+        <div class="stat-chip">🌾 418g Glu.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">Prototype — Page Menu<br>plats détourés débordants · DA Natty</div>
+
+  <div class="bottom-nav">
+    <div class="nav-item"><span class="ic">⚡</span>Suivi</div>
+    <div class="nav-item active"><span class="ic">🍴</span>Menu</div>
+    <div class="nav-fab">+</div>
+    <div class="nav-item"><span class="ic">📅</span>Coaching</div>
+    <div class="nav-item"><span class="ic">🔥</span>Défis</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  /* ====== DONNÉES MOCK (à remplacer par Supabase plats_menu / recettes) ====== */
+  const DISHES = [
+    {
+      day:'Lundi', emoji:'🍛', name:'Poulet Moutarde & Lentilles',
+      title:'Poulet Moutarde<br>&amp; Lentilles', time:'25 min', kcal:687, p:88, g:455, l:82,
+      desc:"Repas riche en protéines, poulet snacké, lentilles vertes et sauce moutarde légère — livré prêt à réchauffer.",
+      ingr:[
+        {em:'🍗', nm:'Poulet fermier'},{em:'🫘', nm:'Lentilles vertes'},{em:'🧅', nm:'Oignon rouge'},
+        {em:'🧄', nm:'Ail'},{em:'🌿', nm:'Persil'},{em:'🫒', nm:'Huile d\'olive'},
+        {em:'🧂', nm:'Sel & poivre'},{em:'🥄', nm:'Moutarde'}
+      ],
+      steps:[
+        {em:'🍳', t:'Snacker le poulet'},{em:'🥘', t:'Cuire les lentilles'},
+        {em:'🥣', t:'Monter la sauce'},{em:'🍲', t:'Assembler'},{em:'🍽️', t:'Servir chaud'}
+      ]
+    },
+    {
+      day:'Mercredi', emoji:'🐟', name:'Saumon Rôti & Quinoa',
+      title:'Saumon Rôti<br>&amp; Quinoa', time:'20 min', kcal:612, p:74, g:380, l:96,
+      desc:"Pavé de saumon rôti aux herbes, quinoa aux petits légumes et filet de citron — oméga-3 et satiété longue durée.",
+      ingr:[
+        {em:'🐟', nm:'Pavé de saumon'},{em:'🌾', nm:'Quinoa'},{em:'🥦', nm:'Brocoli'},
+        {em:'🥕', nm:'Carotte'},{em:'🍋', nm:'Citron'},{em:'🫒', nm:'Huile d\'olive'},
+        {em:'🌿', nm:'Aneth'},{em:'🧂', nm:'Sel & poivre'}
+      ],
+      steps:[
+        {em:'🔥', t:'Préchauffer le four'},{em:'🐟', t:'Rôtir le saumon'},
+        {em:'🌾', t:'Cuire le quinoa'},{em:'🥦', t:'Vapeur légumes'},{em:'🍽️', t:'Dresser'}
+      ]
+    },
+    {
+      day:'Vendredi', emoji:'🍲', name:'Curry de Pois Chiches',
+      title:'Curry de<br>Pois Chiches', time:'30 min', kcal:548, p:52, g:520, l:64,
+      desc:"Curry végétarien onctueux aux pois chiches, lait de coco léger et riz complet — fibres et protéines végétales.",
+      ingr:[
+        {em:'🫘', nm:'Pois chiches'},{em:'🥥', nm:'Lait de coco'},{em:'🍚', nm:'Riz complet'},
+        {em:'🍅', nm:'Tomate'},{em:'🧅', nm:'Oignon'},{em:'🧄', nm:'Ail'},
+        {em:'🌶️', nm:'Curry'},{em:'🌿', nm:'Coriandre'}
+      ],
+      steps:[
+        {em:'🧅', t:'Faire revenir'},{em:'🌶️', t:'Ajouter épices'},
+        {em:'🥥', t:'Verser le coco'},{em:'⏲️', t:'Mijoter 15 min'},{em:'🍚', t:'Servir sur riz'}
+      ]
+    }
+  ];
+
+  let activeIdx = 0;
+  const selected = new Set([0]);
+  const offIngr = new Set();
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._tm);
+    t._tm = setTimeout(()=> t.classList.remove('show'), 2000);
+  }
+
+  function renderHero(){
+    const d = DISHES[activeIdx];
+    document.getElementById('heroDish').textContent = d.emoji;
+    document.getElementById('heroTitle').innerHTML = d.title;
+    document.getElementById('heroTime').textContent = d.time;
+    document.getElementById('heroDesc').textContent = d.desc;
+    document.getElementById('hProt').textContent = d.p;
+    document.getElementById('hGluc').textContent = d.g;
+    document.getElementById('hLip').textContent = d.l;
+    document.getElementById('hKcal').textContent = d.kcal;
+  }
+
+  function renderWeek(){
+    const row = document.getElementById('weekRow');
+    row.innerHTML = '';
+    DISHES.forEach((d, i)=>{
+      const el = document.createElement('div');
+      el.className = 'week-card' + (selected.has(i) ? ' on' : '');
+      el.innerHTML =
+        '<div class="week-check">✓</div>' +
+        '<div class="week-dish">'+d.emoji+'</div>' +
+        '<div class="week-day">'+d.day+'</div>' +
+        '<div class="week-name">'+d.name+'</div>' +
+        '<div class="week-kcal">'+d.kcal+' kcal</div>';
+      el.addEventListener('click', ()=>{
+        activeIdx = i;
+        offIngr.clear();
+        renderHero(); renderIngr(); renderSteps(); renderWeek();
+      });
+      row.appendChild(el);
+    });
+    document.getElementById('weekNote').textContent = selected.size + '/3 sélectionné' + (selected.size>1?'s':'');
+  }
+
+  function renderIngr(){
+    const d = DISHES[activeIdx];
+    const grid = document.getElementById('ingrGrid');
+    grid.innerHTML = '';
+    d.ingr.forEach((ing, i)=>{
+      const el = document.createElement('div');
+      const off = offIngr.has(i);
+      el.className = 'ingr' + (off ? ' off' : '');
+      el.innerHTML = '<div class="tick">✓</div><div class="em">'+ing.em+'</div><div class="nm">'+ing.nm+'</div>';
+      el.addEventListener('click', ()=>{
+        if(offIngr.has(i)) offIngr.delete(i); else offIngr.add(i);
+        renderIngr();
+      });
+      grid.appendChild(el);
+    });
+    const total = d.ingr.length;
+    document.getElementById('ingrCount').textContent = '('+(total-offIngr.size)+'/'+total+')';
+  }
+
+  function renderSteps(){
+    const d = DISHES[activeIdx];
+    const row = document.getElementById('stepsRow');
+    row.innerHTML = '';
+    d.steps.forEach((s, i)=>{
+      const el = document.createElement('div');
+      el.className = 'step';
+      el.innerHTML = '<div class="n">'+(i+1)+'</div><div class="em">'+s.em+'</div><div class="t">'+s.t+'</div>';
+      row.appendChild(el);
+      if(i < d.steps.length-1){
+        const sep = document.createElement('span');
+        sep.className = 'step-link';
+        sep.textContent = '···';
+        row.appendChild(sep);
+      }
+    });
+  }
+
+  document.getElementById('ctaBtn').addEventListener('click', ()=>{
+    if(selected.has(activeIdx)){
+      selected.delete(activeIdx);
+      showToast('Plat retiré de ta semaine');
+    } else {
+      selected.add(activeIdx);
+      showToast('✓ ' + DISHES[activeIdx].name + ' ajouté');
+    }
+    renderWeek();
+  });
+
+  document.getElementById('heartBtn').addEventListener('click', function(){
+    const on = this.textContent.trim() === '❤️';
+    this.textContent = on ? '🤍' : '❤️';
+    showToast(on ? 'Retiré des favoris' : '❤️ Ajouté aux favoris');
+  });
+
+  document.getElementById('ingrEdit').addEventListener('click', ()=>{
+    showToast('Touche un ingrédient pour le retirer');
+  });
+
+  renderHero(); renderWeek(); renderIngr(); renderSteps();
+</script>
+
+</body>
+</html>

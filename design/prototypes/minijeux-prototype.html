@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Natty — Repas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f2f2f4;
+    --card:#ffffff;
+    --ink:#101012;
+    --muted:#8a8a90;
+    --pill-bg:#101012;
+    --pill-text:#ffffff;
+    --radius:26px;
+    --card-shadow:0 2px 10px rgba(16,16,18,.06);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    font-family:'Inter','DM Sans',sans-serif;
+    color:var(--ink);
+    max-width:480px;
+    margin:0 auto;
+    padding:18px 16px 110px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  h1,h2,h3{font-family:'DM Sans','Inter',sans-serif;}
+
+  .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:20px;}
+  .topbar span{opacity:.65;}
+
+  .title-row{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  .dish-name{font-size:20px; font-weight:900; text-transform:uppercase; letter-spacing:.01em;}
+  .kcal-pill{background:var(--pill-bg); color:var(--pill-text); font-weight:800; font-size:13px; padding:8px 14px; border-radius:20px; white-space:nowrap;}
+
+  .dish-photo{
+    height:280px; border-radius:var(--radius); overflow:hidden; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:center; font-size:80px;
+    background:linear-gradient(160deg,#f0e4c8,#d8b978); box-shadow:var(--card-shadow);
+  }
+
+  .macro-row{display:flex; gap:10px; margin-bottom:26px;}
+  .macro-pill{
+    flex:1; background:var(--card); border-radius:20px; box-shadow:var(--card-shadow);
+    padding:10px 0; text-align:center; font-weight:800; font-size:14px;
+  }
+
+  .section-title{font-size:19px; font-weight:900; text-transform:uppercase; margin-bottom:12px;}
+
+  .discover-row{display:flex; gap:12px;}
+  .discover-card{
+    flex:1; background:var(--card); border-radius:22px; box-shadow:var(--card-shadow);
+    padding:16px 10px 18px; text-align:center; cursor:pointer; transition:transform .15s ease;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .discover-card:active{transform:scale(.96);}
+  .discover-card .ic{font-size:30px;}
+  .discover-card .lbl{font-size:11.5px; font-weight:800; line-height:1.25;}
+
+  /* ---------- BOTTOM NAV ---------- */
+  .bottom-nav{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+    width:calc(100% - 32px); max-width:448px;
+    background:#fff; border-radius:30px; box-shadow:0 6px 20px rgba(16,16,18,.14);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 10px; z-index:20;
+  }
+  .nav-item{flex:1; text-align:center; font-size:10.5px; font-weight:700; color:var(--muted); display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 0;}
+  .nav-item .ic{font-size:18px;}
+  .nav-fab{
+    width:52px; height:52px; border-radius:50%; background:var(--pill-bg); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700;
+    margin:0 4px; flex-shrink:0;
+  }
+
+  /* ---------- GAME OVERLAYS ---------- */
+  .game-overlay{
+    position:fixed; inset:0; background:#fff; z-index:200;
+    display:none; flex-direction:column; align-items:center;
+    padding:24px 20px 40px; overflow-y:auto;
+  }
+  .game-overlay.open{display:flex;}
+  .game-close{
+    position:absolute; top:20px; right:20px; width:36px; height:36px; border-radius:50%;
+    background:#f2f2f4; border:none; font-size:16px; font-weight:700; cursor:pointer;
+  }
+  .game-title{font-size:20px; font-weight:900; text-align:center; margin:36px 0 6px; text-transform:uppercase;}
+  .game-sub{font-size:13px; color:var(--muted); text-align:center; max-width:280px; margin-bottom:20px; line-height:1.5;}
+  .game-stage{
+    width:100%; max-width:320px; flex:1; display:flex; align-items:center; justify-content:center;
+    position:relative; min-height:260px;
+  }
+  .game-cta{
+    margin-top:20px; background:var(--pill-bg); color:#fff; font-weight:800; font-size:14px;
+    border:none; border-radius:22px; padding:14px 28px; cursor:pointer;
+  }
+  .game-cta:disabled{opacity:.35;}
+
+  .result-panel{width:100%; max-width:340px; margin-top:10px;}
+  .result-panel.hidden{display:none;}
+  .result-head{display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:16px;}
+  .result-head .emoji{font-size:38px;}
+  .result-head .name{font-size:18px; font-weight:900; text-transform:uppercase;}
+  .reco-card{
+    background:#f7f7f8; border-radius:18px; padding:12px 16px; margin-bottom:10px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .reco-card .k{font-size:10.5px; font-weight:800; color:var(--muted); text-transform:uppercase;}
+  .reco-card .v{font-size:13.5px; font-weight:700; text-align:right; max-width:60%;}
+  .follow-btn{
+    width:100%; margin-top:8px; background:var(--pill-bg); color:#fff; font-weight:800;
+    border:none; border-radius:20px; padding:14px; font-size:14px; cursor:pointer;
+  }
+  .retry-link{display:block; text-align:center; margin-top:14px; font-size:12.5px; color:var(--muted); font-weight:700; text-decoration:underline; cursor:pointer;}
+
+  /* --- Globe game --- */
+  .globe-wrap{position:relative; width:220px; height:220px;}
+  .globe{
+    width:220px; height:220px; border-radius:50%;
+    background:
+      radial-gradient(circle at 30% 30%, #7fc9a0, transparent 45%),
+      radial-gradient(circle at 65% 60%, #6fb890, transparent 40%),
+      linear-gradient(160deg,#3b7dd8,#1f4fa0);
+    box-shadow:inset -14px -14px 30px rgba(0,0,0,.25), 0 8px 24px rgba(16,16,18,.15);
+    animation:spinSlow 12s linear infinite;
+  }
+  .globe.fast{animation:spinFast 0.6s linear infinite;}
+  @keyframes spinSlow{from{background-position:0 0;} to{background-position:220px 0;}}
+  @keyframes spinFast{from{filter:blur(0px);} 50%{filter:blur(1.5px);} to{filter:blur(0px);}}
+  .dart{
+    position:absolute; font-size:30px; left:50%; top:50%;
+    transform:translate(-50%,-50%); cursor:grab; touch-action:none; user-select:none;
+    transition:transform .5s cubic-bezier(.2,.8,.3,1.2);
+  }
+  .dart.thrown{cursor:default;}
+
+  /* --- Potager game (un seul plant, identité cachée jusqu'à l'extraction) --- */
+  .garden{
+    width:100%; max-width:300px; height:240px; position:relative;
+    background:#fbfbf9; border-radius:20px; overflow:hidden;
+  }
+  .soil-back{
+    position:absolute; left:0; right:0; bottom:0; height:52%;
+    background:linear-gradient(180deg,#7a4f30,#5c3a20);
+  }
+  .soil-crack{
+    position:absolute; left:50%; bottom:52%; width:64px; height:10px; margin-left:-32px;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,.22), transparent 70%);
+    border-radius:50%; z-index:6; pointer-events:none;
+  }
+  .plant{
+    position:absolute; left:50%; bottom:-134px; width:70px; margin-left:-35px;
+    display:flex; flex-direction:column; align-items:center; z-index:3;
+    cursor:grab; touch-action:none; user-select:none;
+  }
+  .plant .sprout{
+    height:46px; display:flex; align-items:flex-end; justify-content:center; font-size:30px;
+    line-height:1;
+  }
+  .plant .body{
+    height:150px; display:flex; align-items:flex-start; justify-content:center; padding-top:2px;
+    font-size:56px; line-height:1;
+  }
+  .soil-front{
+    position:absolute; left:0; right:0; bottom:0; height:46%; z-index:5;
+    background:linear-gradient(180deg,#8a5a37,#603c22);
+    border-top:3px solid #6b4326;
+  }
+  .soil-front::before{
+    content:''; position:absolute; top:-3px; left:0; right:0; height:8px;
+    background:repeating-linear-gradient(90deg,#7a4f30 0 10px, transparent 10px 14px);
+    opacity:.5;
+  }
+  .dirt-bit{
+    position:absolute; width:7px; height:7px; border-radius:50%; background:#6b4326;
+    z-index:7; pointer-events:none;
+  }
+  .garden-hint{
+    position:absolute; bottom:10px; left:0; right:0; text-align:center; font-size:11px;
+    font-weight:700; color:#fff; opacity:.85; z-index:8; pointer-events:none;
+  }
+
+  /* --- Reel game --- */
+  .reel-window{
+    width:260px; height:120px; border-radius:20px; background:#f7f7f8;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    box-shadow:var(--card-shadow); position:relative;
+  }
+  .reel-window::before, .reel-window::after{
+    content:''; position:absolute; left:0; right:0; height:36px; z-index:2; pointer-events:none;
+  }
+  .reel-window::before{top:0; background:linear-gradient(#f7f7f8,transparent);}
+  .reel-window::after{bottom:0; background:linear-gradient(transparent,#f7f7f8);}
+  .reel-item{font-size:22px; font-weight:800; text-align:center;}
+  .stop-btn{
+    margin-top:22px; background:#e63e30; color:#fff; font-weight:900; font-size:16px;
+    border:none; border-radius:50%; width:84px; height:84px; letter-spacing:.05em; cursor:pointer;
+    box-shadow:0 6px 18px rgba(230,62,48,.35);
+  }
+  .stop-btn:active{transform:scale(.94);}
+
+  .footer-note{text-align:center; font-size:11px; color:var(--muted); margin-top:22px; line-height:1.6;}
+</style>
+</head>
+<body>
+
+  <div class="topbar"><span>🏠</span><span>🌾</span></div>
+
+  <div class="title-row">
+    <div class="dish-name">Poulet<br>Moutarde</div>
+    <div class="kcal-pill">687 Kcal</div>
+  </div>
+
+  <div class="dish-photo">🍗</div>
+
+  <div class="macro-row">
+    <div class="macro-pill">🥩 88g</div>
+    <div class="macro-pill">🌾 455g</div>
+    <div class="macro-pill">🥑 82g</div>
+  </div>
+
+  <div class="section-title">Découvrir</div>
+  <div class="discover-row">
+    <div class="discover-card" id="cardMonde">
+      <div class="ic">🌍</div>
+      <div class="lbl">Recettes<br>du Monde</div>
+    </div>
+    <div class="discover-card" id="cardIngr">
+      <div class="ic">🌱</div>
+      <div class="lbl">Ingrédients</div>
+    </div>
+    <div class="discover-card" id="cardAlea">
+      <div class="ic">🎲</div>
+      <div class="lbl">Aléatoire</div>
+    </div>
+  </div>
+
+  <div class="footer-note">Prototype — Écran Repas &amp; mini-jeux Découvrir<br>DA fidèle aux dernières maquettes Natty</div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-item"><span class="ic">⚡</span>Suivi</div>
+    <div class="nav-item"><span class="ic">🍴</span>Menu</div>
+    <div class="nav-fab">+</div>
+    <div class="nav-item"><span class="ic">📅</span>Coaching</div>
+    <div class="nav-item"><span class="ic">🔥</span>Défis</div>
+  </div>
+
+  <!-- ================= JEU 1 : GLOBE / FLECHETTE ================= -->
+  <div class="game-overlay" id="gameMonde">
+    <button class="game-close" data-close="gameMonde">✕</button>
+    <div class="game-title" id="mondeTitle">Recettes du Monde</div>
+    <div class="game-sub" id="mondeSub">La Terre va se mettre à tourner très vite. Glisse puis relâche pour lancer ta fléchette et découvrir ta destination culinaire.</div>
+
+    <div class="game-stage">
+      <div class="globe-wrap" id="globeWrap">
+        <div class="globe" id="globeEl"></div>
+        <div class="dart" id="dartEl">🎯</div>
+      </div>
+    </div>
+
+    <button class="game-cta" id="mondeStartBtn">Faire tourner la Terre</button>
+
+    <div class="result-panel hidden" id="mondeResult">
+      <div class="result-head"><span class="emoji" id="mondeFlag">🌍</span><span class="name" id="mondeCountry">—</span></div>
+      <div class="reco-card"><span class="k">Plat</span><span class="v" id="mondeDish">—</span></div>
+      <div class="reco-card"><span class="k">Sauce</span><span class="v" id="mondeSauce">—</span></div>
+      <div class="reco-card"><span class="k">Accompagnement</span><span class="v" id="mondeSide">—</span></div>
+      <button class="follow-btn">Suivre cette recette</button>
+      <span class="retry-link" data-retry="monde">Relancer la fléchette</span>
+    </div>
+  </div>
+
+  <!-- ================= JEU 2 : POTAGER ================= -->
+  <div class="game-overlay" id="gameIngr">
+    <button class="game-close" data-close="gameIngr">✕</button>
+    <div class="game-title">Ingrédients</div>
+    <div class="game-sub" id="ingrSub">Tire vers le haut jusqu'à sortir le légume de terre — tu ne sauras ce que c'est qu'à la toute fin.</div>
+
+    <div class="game-stage">
+      <div class="garden" id="gardenEl">
+        <div class="soil-back"></div>
+        <div class="soil-crack"></div>
+        <div class="plant" id="plantEl">
+          <div class="body" id="plantBody"></div>
+          <div class="sprout">🌿</div>
+        </div>
+        <div class="soil-front"></div>
+        <div class="garden-hint" id="gardenHint">Tire ↑</div>
+      </div>
+    </div>
+
+    <div class="result-panel hidden" id="ingrResult">
+      <div class="result-head"><span class="emoji" id="ingrEmoji">🥕</span><span class="name" id="ingrName">—</span></div>
+      <div class="reco-card"><span class="k">Plat</span><span class="v" id="ingrDish">—</span></div>
+      <div class="reco-card"><span class="k">Sauce</span><span class="v" id="ingrSauce">—</span></div>
+      <div class="reco-card"><span class="k">Accompagnement</span><span class="v" id="ingrSide">—</span></div>
+      <button class="follow-btn">Suivre cette recette</button>
+      <span class="retry-link" data-retry="ingr">Replanter le potager</span>
+    </div>
+  </div>
+
+  <!-- ================= JEU 3 : ALEATOIRE ================= -->
+  <div class="game-overlay" id="gameAlea">
+    <button class="game-close" data-close="gameAlea">✕</button>
+    <div class="game-title">Aléatoire</div>
+    <div class="game-sub">Des plats et ingrédients défilent à toute vitesse. Appuie sur STOP pour figer ta prochaine recette.</div>
+
+    <div class="game-stage">
+      <div class="reel-window"><div class="reel-item" id="reelItem">🍜</div></div>
+    </div>
+
+    <button class="stop-btn" id="stopBtn">STOP</button>
+
+    <div class="result-panel hidden" id="aleaResult">
+      <div class="result-head"><span class="emoji" id="aleaEmoji">🍜</span><span class="name" id="aleaName">—</span></div>
+      <button class="follow-btn">Suivre cette recette</button>
+      <span class="retry-link" data-retry="alea">Relancer le défilement</span>
+    </div>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js"></script>
+<script>
+  gsap.registerPlugin(Draggable);
+  /* ============ DONNÉES MOCK ============ */
+  const COUNTRIES = [
+    {flag:'🇮🇹', name:'Italie', dish:'Risotto aux champignons', sauce:'Sauce tomate basilic', side:'Bruschetta'},
+    {flag:'🇯🇵', name:'Japon', dish:'Bol teriyaki au saumon', sauce:'Sauce teriyaki maison', side:'Salade choux-edamame'},
+    {flag:'🇲🇽', name:'Mexique', dish:'Tacos al pastor', sauce:'Salsa verde', side:'Riz mexicain'},
+    {flag:'🇲🇦', name:'Maroc', dish:'Tajine de poulet aux olives', sauce:'Chermoula', side:'Couscous aux légumes'},
+    {flag:'🇮🇳', name:'Inde', dish:'Curry de lentilles corail', sauce:'Raita au concombre', side:'Naan maison'},
+    {flag:'🇬🇷', name:'Grèce', dish:'Souvlaki de poulet', sauce:'Tzatziki', side:'Salade grecque'},
+    {flag:'🇹🇭', name:'Thaïlande', dish:'Curry vert au poulet', sauce:'Sauce cacahuète', side:'Riz jasmin'},
+    {flag:'🇦🇱', name:'Albanie', dish:'Tavë kosi (agneau, yaourt)', sauce:'Sauce ail-yaourt', side:'Légumes grillés'},
+    {flag:'🇵🇪', name:'Pérou', dish:'Ceviche de saumon', sauce:'Leche de tigre', side:'Patate douce rôtie'},
+    {flag:'🇱🇧', name:'Liban', dish:'Poulet chich taouk', sauce:'Toum (sauce ail)', side:'Taboulé'},
+    {flag:'🇻🇳', name:'Vietnam', dish:'Bo bun au bœuf', sauce:'Nuoc cham', side:'Vermicelles de riz'},
+    {flag:'🇪🇸', name:'Espagne', dish:'Paella au poulet', sauce:'Alioli', side:'Poivrons rôtis'}
+  ];
+
+  const VEGGIES = [
+    {emoji:'🥕', name:'Carotte', dish:'Poulet rôti carottes glacées', sauce:'Sauce miel-moutarde', side:'Purée de carottes'},
+    {emoji:'🥦', name:'Brocoli', dish:'Saumon vapeur brocoli', sauce:'Sauce citron-aneth', side:'Riz complet'},
+    {emoji:'🍅', name:'Tomate', dish:'Poulet mijoté à la tomate', sauce:'Sauce tomate maison', side:'Pâtes complètes'},
+    {emoji:'🌽', name:'Maïs', dish:'Poulet grillé Tex-Mex', sauce:'Sauce épicée', side:'Salade de maïs'},
+    {emoji:'🍆', name:'Aubergine', dish:'Moussaka légère', sauce:'Béchamel allégée', side:'Salade verte'},
+    {emoji:'🫑', name:'Poivron', dish:'Poulet basquaise', sauce:'Sauce tomate-poivron', side:'Riz complet'}
+  ];
+
+  const REEL_ITEMS = [
+    {emoji:'🍜', name:'Ramen maison'}, {emoji:'🥑', name:'Toast avocat-œuf'}, {emoji:'🍣', name:'Plateau sushi'},
+    {emoji:'🥗', name:'Bowl quinoa'}, {emoji:'🍲', name:'Chili con carne'}, {emoji:'🧆', name:'Falafel maison'},
+    {emoji:'🍝', name:'Pâtes carbonara légères'}, {emoji:'🍛', name:'Curry de pois chiches'}, {emoji:'🥘', name:'Paella express'},
+    {emoji:'🌯', name:'Wrap poulet avocat'}, {emoji:'🍤', name:'Crevettes sautées'}, {emoji:'🥙', name:'Pita garni'},
+    {emoji:'🍚', name:'Riz cantonais'}, {emoji:'🫓', name:'Naan et dhal'}, {emoji:'🥟', name:'Dumplings vapeur'}, {emoji:'🍳', name:'Omelette aux légumes'}
+  ];
+
+  function openGame(id){ document.getElementById(id).classList.add('open'); }
+  function closeGame(id){ document.getElementById(id).classList.remove('open'); }
+
+  document.getElementById('cardMonde').addEventListener('click', ()=>{ openGame('gameMonde'); });
+  document.getElementById('cardIngr').addEventListener('click', ()=>{ openGame('gameIngr'); resetGarden(); });
+  document.getElementById('cardAlea').addEventListener('click', ()=>{ openGame('gameAlea'); resetReel(); });
+  document.querySelectorAll('[data-close]').forEach(btn=>{
+    btn.addEventListener('click', ()=> closeGame(btn.dataset.close));
+  });
+
+  /* ============ JEU 1 : GLOBE + FLECHETTE ============ */
+  const globeEl = document.getElementById('globeEl');
+  const dartEl = document.getElementById('dartEl');
+  const mondeStartBtn = document.getElementById('mondeStartBtn');
+  let mondeSpinning = false, mondeReady = false;
+
+  mondeStartBtn.addEventListener('click', ()=>{
+    if(mondeSpinning) return;
+    mondeSpinning = true;
+    document.getElementById('mondeSub').textContent = 'La Terre tourne à pleine vitesse ! Glisse la fléchette puis lâche-la sur le globe.';
+    globeEl.classList.add('fast');
+    mondeStartBtn.style.display = 'none';
+    mondeReady = true;
+  });
+
+  let dragging = false, startX=0, startY=0;
+  dartEl.addEventListener('pointerdown', (e)=>{
+    if(!mondeReady) return;
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    dartEl.setPointerCapture(e.pointerId);
+  });
+  dartEl.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    dartEl.style.transition = 'none';
+    dartEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  });
+  dartEl.addEventListener('pointerup', (e)=>{
+    if(!dragging) return;
+    dragging = false;
+    dartEl.style.transition = '';
+    throwDart();
+  });
+
+  function throwDart(){
+    mondeReady = false;
+    dartEl.classList.add('thrown');
+    const angle = Math.random()*2*Math.PI;
+    const r = 60 + Math.random()*30;
+    const tx = Math.cos(angle)*r, ty = Math.sin(angle)*r;
+    dartEl.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0.8)`;
+    setTimeout(()=>{
+      globeEl.classList.remove('fast');
+      revealCountry();
+    }, 550);
+  }
+
+  function revealCountry(){
+    const c = COUNTRIES[Math.floor(Math.random()*COUNTRIES.length)];
+    document.getElementById('mondeFlag').textContent = c.flag;
+    document.getElementById('mondeCountry').textContent = c.name;
+    document.getElementById('mondeDish').textContent = c.dish;
+    document.getElementById('mondeSauce').textContent = c.sauce;
+    document.getElementById('mondeSide').textContent = c.side;
+    document.getElementById('mondeResult').classList.remove('hidden');
+    document.getElementById('mondeSub').textContent = 'Ta destination culinaire :';
+  }
+
+  document.querySelector('[data-retry="monde"]').addEventListener('click', resetMonde);
+  function resetMonde(){
+    mondeSpinning = false; mondeReady = false;
+    globeEl.classList.remove('fast');
+    dartEl.classList.remove('thrown');
+    dartEl.style.transform = 'translate(-50%,-50%)';
+    mondeStartBtn.style.display = '';
+    document.getElementById('mondeResult').classList.add('hidden');
+    document.getElementById('mondeSub').textContent = 'La Terre va se mettre à tourner très vite. Glisse puis relâche pour lancer ta fléchette et découvrir ta destination culinaire.';
+  }
+
+  /* ============ JEU 2 : POTAGER (un seul plant, révélation à la sortie de terre) ============ */
+  const gardenEl = document.getElementById('gardenEl');
+  const plantEl = document.getElementById('plantEl');
+  const plantBody = document.getElementById('plantBody');
+  const gardenHint = document.getElementById('gardenHint');
+  const PULL_RANGE = 154;      // distance totale à tirer pour sortir le légume de terre
+  const HARVEST_THRESHOLD = 0.88; // % du trajet à partir duquel on considère le légume "sorti"
+  let ingrCurrentVeg = null, ingrDraggable = null, ingrHarvested = false;
+
+  function resetGarden(){
+    ingrHarvested = false;
+    ingrCurrentVeg = VEGGIES[Math.floor(Math.random()*VEGGIES.length)]; // choisi en secret, jamais affiché avant la récolte
+    plantBody.textContent = '';           // corps du légume invisible tant qu'il est sous terre
+    document.getElementById('ingrResult').classList.add('hidden');
+    gardenHint.style.opacity = '.85';
+    gsap.set(plantEl, {y:0, scale:1});
+    gardenEl.querySelectorAll('.dirt-bit').forEach(b=>b.remove());
+
+    if(ingrDraggable) ingrDraggable[0].kill();
+    ingrDraggable = Draggable.create(plantEl, {
+      type:'y',
+      bounds:{minY:-PULL_RANGE, maxY:0},
+      edgeResistance:0.6,
+      onDrag: function(){
+        const progress = Math.min(1, -this.y / PULL_RANGE);
+        // le corps du légume ne devient visible que dans le dernier tiers du tirage
+        if(progress > 0.6){
+          const reveal = (progress - 0.6) / 0.4;
+          plantBody.textContent = ingrCurrentVeg.emoji;
+          plantBody.style.opacity = reveal;
+        } else {
+          plantBody.style.opacity = 0;
+        }
+        gardenHint.style.opacity = String(.85 * (1 - progress));
+      },
+      onDragEnd: function(){
+        if(ingrHarvested) return;
+        const progress = Math.min(1, -this.y / PULL_RANGE);
+        if(progress >= HARVEST_THRESHOLD){
+          harvestVeg();
+        } else {
+          gsap.to(plantEl, {y:0, duration:0.5, ease:'elastic.out(1,0.55)'});
+          plantBody.style.opacity = 0;
+          gardenHint.style.opacity = '.85';
+        }
+      }
+    });
+  }
+
+  function harvestVeg(){
+    ingrHarvested = true;
+    ingrDraggable[0].disable();
+    gardenHint.style.opacity = '0';
+    plantBody.textContent = ingrCurrentVeg.emoji;
+    plantBody.style.opacity = 1;
+    // pop hors de terre + éclats de terre
+    gsap.timeline()
+      .to(plantEl, {y:-PULL_RANGE-26, scale:1.12, duration:0.35, ease:'back.out(2.2)'})
+      .to(plantEl, {scale:1, duration:0.2, ease:'power1.out'}, '-=0.05');
+    spawnDirt();
+    setTimeout(()=> revealVeg(ingrCurrentVeg), 380);
+  }
+
+  function spawnDirt(){
+    for(let i=0;i<10;i++){
+      const bit = document.createElement('div');
+      bit.className = 'dirt-bit';
+      bit.style.left = '50%';
+      bit.style.bottom = '46%';
+      gardenEl.appendChild(bit);
+      const angle = (Math.random()*Math.PI) + Math.PI; // vers le haut
+      const dist = 30 + Math.random()*50;
+      gsap.to(bit, {
+        x: Math.cos(angle)*dist, y: Math.sin(angle)*dist,
+        opacity:0, duration:0.6+Math.random()*0.3, ease:'power2.out',
+        onComplete:()=> bit.remove()
+      });
+    }
+  }
+
+  function revealVeg(v){
+    document.getElementById('ingrEmoji').textContent = v.emoji;
+    document.getElementById('ingrName').textContent = v.name;
+    document.getElementById('ingrDish').textContent = v.dish;
+    document.getElementById('ingrSauce').textContent = v.sauce;
+    document.getElementById('ingrSide').textContent = v.side;
+    document.getElementById('ingrSub').textContent = 'Tu as sorti :';
+    document.getElementById('ingrResult').classList.remove('hidden');
+  }
+
+  document.querySelector('[data-retry="ingr"]').addEventListener('click', ()=>{
+    document.getElementById('ingrSub').textContent = "Tire vers le haut jusqu'à sortir le légume de terre — tu ne sauras ce que c'est qu'à la toute fin.";
+    resetGarden();
+  });
+
+  /* ============ JEU 3 : REEL ALEATOIRE ============ */
+  const reelItemEl = document.getElementById('reelItem');
+  const stopBtn = document.getElementById('stopBtn');
+  let reelTimer = null, reelRunning = false, currentItem = null;
+
+  function resetReel(){
+    document.getElementById('aleaResult').classList.add('hidden');
+    stopBtn.style.display = '';
+    startReel();
+  }
+  function startReel(){
+    reelRunning = true;
+    reelTimer = setInterval(()=>{
+      currentItem = REEL_ITEMS[Math.floor(Math.random()*REEL_ITEMS.length)];
+      reelItemEl.textContent = currentItem.emoji + ' ' + currentItem.name;
+    }, 90);
+  }
+  stopBtn.addEventListener('click', ()=>{
+    if(!reelRunning) return;
+    reelRunning = false;
+    clearInterval(reelTimer);
+    stopBtn.style.display = 'none';
+    document.getElementById('aleaEmoji').textContent = currentItem.emoji;
+    document.getElementById('aleaName').textContent = currentItem.name;
+    document.getElementById('aleaResult').classList.remove('hidden');
+  });
+  document.querySelector('[data-retry="alea"]').addEventListener('click', resetReel);
+</script>
+
+</body>
+</html>
