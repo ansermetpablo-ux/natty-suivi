@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
     console.log('body received:', JSON.stringify(body));
 
-    const { priceId, userId, token } = body;
+    const { priceId, userId, token, plateforme } = body;
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
     console.log('priceId:', priceId);
@@ -33,12 +33,22 @@ export default async function handler(req, res) {
 
     const origin = 'https://natty-suivi.vercel.app';
 
+    // Dans l'app native, renvoyer vers le site laisserait l'utilisateur bloqué
+    // hors de l'app apres son paiement. Stripe n'acceptant que des URL http(s),
+    // on passe par checkout-retour.html, qui rebondit vers com.natty.app://.
+    const natif = plateforme === 'natif';
+    const retour = (statut) => natif
+      ? origin + '/checkout-retour.html?statut=' + statut + '&token=' + encodeURIComponent(token || '')
+      : (statut === 'ok'
+          ? origin + '/?token=' + (token || '') + '&subscribed=1'
+          : origin + '/offre.html?token=' + (token || '') + '&cancelled=1');
+
     const params = new URLSearchParams();
     params.append('mode', 'subscription');
     params.append('line_items[0][price]', priceId);
     params.append('line_items[0][quantity]', '1');
-    params.append('success_url', origin + '/?token=' + (token || '') + '&subscribed=1');
-    params.append('cancel_url', origin + '/offre.html?token=' + (token || '') + '&cancelled=1');
+    params.append('success_url', retour('ok'));
+    params.append('cancel_url', retour('annule'));
     params.append('metadata[user_id]', userId || '');
     params.append('subscription_data[metadata][user_id]', userId || '');
 

@@ -818,10 +818,20 @@ async function souscrire(){
         jourLivraison:selectedJour,
         adresse:document.getElementById("adresseInput").value.trim(),
         emailRecap: email,
+        plateforme: estNatif() ? "natif" : "web",
       })
     });
     const data=await res.json();
-    if(data.url){if(window.self!==window.top)window.top.location.href=data.url;else window.location.href=data.url;}
+    if(data.url){
+      // En natif, le paiement se fait dans le navigateur système : la WebView
+      // garde l'app chargée dessous, et checkout-retour.html nous rend la main.
+      if(estNatif()){
+        await window.Capacitor.Plugins.Browser.open({url:data.url});
+        btn.disabled=false;btn.textContent="Payer →";
+      }
+      else if(window.self!==window.top) window.top.location.href=data.url;
+      else window.location.href=data.url;
+    }
     else{showToast("Erreur lors du paiement");btn.disabled=false;btn.textContent="Payer →";}
   }catch(e){showToast("Erreur réseau");btn.disabled=false;btn.textContent="Payer →";}
 }
@@ -831,6 +841,29 @@ function showToast(msg){
   t.textContent=msg;t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),3000);
 }
+
+const CAP_CHECKOUT = "com.natty.app://checkout";
+
+function estNatif(){
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+// Retour de paiement en natif : checkout-retour.html rebondit vers notre scheme,
+// le système réveille l'app et on reprend la main ici. Les URL d'un autre scheme
+// sont ignorées, pour qu'un deep link tiers ne puisse pas simuler un paiement.
+if (estNatif() && window.Capacitor.Plugins.App) {
+  window.Capacitor.Plugins.App.addListener("appUrlOpen", function(event){
+    const url = (event && event.url) || "";
+    if (url.indexOf(CAP_CHECKOUT) !== 0) return;
+    if (window.Capacitor.Plugins.Browser) window.Capacitor.Plugins.Browser.close();
+
+    const q = new URLSearchParams(url.slice(url.indexOf("?") + 1));
+    const tok = q.get("token") || "";
+    if (q.get("statut") === "annule") { showToast("Paiement annulé"); return; }
+    window.location.href = "index.html?token=" + encodeURIComponent(tok) + "&subscribed=1";
+  });
+}
+
 updateCTA();
 </script>
 </body>
