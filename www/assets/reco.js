@@ -185,7 +185,7 @@ var NattyReco = (function () {
   }
 
   async function appelerClaude(prompt, maxTokens) {
-    var r = await fetch('/api/claude', {
+    var r = await fetch('https://natty-suivi.vercel.app/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt, max_tokens: maxTokens || 3000 })
