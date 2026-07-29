@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:'Inter',-apple-system,sans-serif; background:#f5f5f7; min-height:100vh; color:#1c1c1e; }
+.header { background:#fff; padding:20px 20px 16px; box-shadow:0 1px 0 #f0f0f0; }
+.header-top { display:flex; align-items:flex-start; justify-content:space-between; }
+.header-title { font-size:24px; font-weight:800; letter-spacing:-.5px; }
+.header-sub { font-size:13px; color:#8e8e93; margin-top:2px; }
+.page { padding:16px 16px 100px; display:flex; flex-direction:column; gap:14px; }
+.card { background:#fff; border-radius:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); overflow:hidden; }
+
+/* TABS */
+.tabs { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+.tabs::-webkit-scrollbar { display:none; }
+.tab-btn { padding:9px 18px; border-radius:99px; background:#fff; border:2px solid transparent; font-family:'Inter',sans-serif; font-size:13px; font-weight:600; cursor:pointer; color:#8e8e93; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,0.08); transition:all .15s; }
+.tab-btn.active { background:#1c1c1e; color:#fff; border-color:#1c1c1e; }
+
+.tab-content { display:none; }
+.tab-content.active { display:flex; flex-direction:column; gap:14px; }
+
+/* HERO CHALLENGE */
+.challenge-hero { background:linear-gradient(135deg,#1c1c1e 0%,#2d2d4e 100%); border-radius:20px; padding:24px 20px; color:#fff; }
+.ch-type-badge { display:inline-block; background:rgba(255,255,255,0.12); border-radius:99px; font-size:11px; font-weight:700; padding:4px 12px; letter-spacing:.5px; text-transform:uppercase; margin-bottom:12px; }
+.ch-title { font-size:22px; font-weight:800; letter-spacing:-.5px; margin-bottom:6px; }
+.ch-sub { font-size:13px; color:rgba(255,255,255,0.6); margin-bottom:20px; line-height:1.5; }
+.ch-reward { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px; margin-bottom:16px; }
+.ch-reward-icon { font-size:28px; }
+.ch-reward-text { font-size:14px; font-weight:600; color:#fff; }
+.ch-reward-sub  { font-size:11px; color:rgba(255,255,255,0.55); margin-top:2px; }
+.ch-progress-wrap { margin-bottom:16px; }
+.ch-progress-label { display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px; color:rgba(255,255,255,0.6); }
+.ch-progress-track { height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; }
+.ch-progress-fill  { height:100%; border-radius:4px; background:linear-gradient(90deg,#34c759,#7fba95); transition:width 1s ease; }
+.ch-btn { width:100%; padding:14px; background:#fff; color:#1c1c1e; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; transition:opacity .15s; }
+.ch-btn:active { opacity:.85; }
+.ch-btn-outline { background:transparent; color:#fff; border:2px solid rgba(255,255,255,0.3); margin-top:8px; }
+
+/* CHALLENGE PERSO */
+.perso-setup { padding:20px; }
+.ps-title { font-size:16px; font-weight:700; margin-bottom:14px; }
+.ps-label { font-size:11px; font-weight:600; color:#8e8e93; text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px; display:block; }
+.ps-select { width:100%; background:#f5f5f7; border:none; border-radius:12px; padding:13px 14px; font-family:'Inter',sans-serif; font-size:14px; color:#1c1c1e; outline:none; appearance:none; cursor:pointer; margin-bottom:14px; }
+.ps-inp { width:100%; background:#f5f5f7; border:none; border-radius:12px; padding:13px 14px; font-family:'Inter',sans-serif; font-size:14px; color:#1c1c1e; outline:none; margin-bottom:14px; }
+.ps-inp::placeholder { color:#c7c7cc; }
+.duration-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.dur-chip { padding:9px 16px; border-radius:99px; background:#f5f5f7; border:2px solid transparent; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer; color:#8e8e93; transition:all .15s; }
+.dur-chip.on { background:#e8f9ee; border-color:#34c759; color:#34c759; }
+.ps-submit { width:100%; padding:15px; background:#1c1c1e; color:#fff; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; }
+.ps-submit:disabled { opacity:.4; cursor:not-allowed; }
+
+/* CHALLENGE ACTIF PERSO */
+.perso-active { padding:20px; }
+.pa-ring-wrap { display:flex; flex-direction:column; align-items:center; margin-bottom:20px; }
+.pa-ring { position:relative; width:160px; height:160px; }
+.pa-ring svg { position:absolute; inset:0; transform:rotate(-90deg); }
+.pa-ring-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.pa-pct { font-size:42px; font-weight:800; color:#1c1c1e; letter-spacing:-2px; line-height:1; }
+.pa-lbl { font-size:12px; color:#8e8e93; margin-top:4px; }
+.pa-days { font-size:13px; font-weight:600; color:#8e8e93; margin-top:10px; }
+.pa-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.pa-stat { background:#f5f5f7; border-radius:14px; padding:14px; }
+.pa-stat-val { font-size:22px; font-weight:800; color:#1c1c1e; margin-bottom:2px; }
+.pa-stat-lbl { font-size:11px; color:#8e8e93; }
+.pa-reward { display:flex; align-items:center; gap:10px; background:#e8f9ee; border-radius:14px; padding:14px; margin-bottom:16px; }
+.pa-reward-em { font-size:28px; }
+.pa-reward-t  { font-size:14px; font-weight:600; color:#34c759; }
+.pa-reward-s  { font-size:11px; color:#34c759; opacity:.7; margin-top:2px; }
+.pa-abandon { width:100%; padding:12px; background:transparent; border:1.5px solid #ff3b30; border-radius:12px; font-family:'Inter',sans-serif; font-size:13px; font-weight:600; color:#ff3b30; cursor:pointer; }
+
+/* CHALLENGE DUO */
+.duo-invite { padding:20px; }
+.duo-search { display:flex; gap:8px; margin-bottom:14px; }
+.duo-search-inp { flex:1; background:#f5f5f7; border:none; border-radius:12px; padding:12px 14px; font-family:'Inter',sans-serif; font-size:14px; color:#1c1c1e; outline:none; }
+.duo-search-inp::placeholder { color:#c7c7cc; }
+.duo-search-btn { padding:12px 18px; background:#1c1c1e; color:#fff; border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:13px; font-weight:700; cursor:pointer; }
+.duo-or { text-align:center; font-size:13px; color:#8e8e93; margin:4px 0 14px; }
+.duo-link-card { background:#f5f5f7; border-radius:14px; padding:14px; display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.duo-link-text { flex:1; font-size:12px; color:#8e8e93; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.duo-link-copy { padding:8px 14px; background:#1c1c1e; color:#fff; border:none; border-radius:10px; font-family:'Inter',sans-serif; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+
+/* VERSUS CARD */
+.versus-card { padding:20px; }
+.versus-wrap { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+.versus-player { flex:1; text-align:center; }
+.versus-av { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#1c1c1e,#2d2d4e); display:flex; align-items:center; justify-content:center; font-size:22px; margin:0 auto 8px; }
+.versus-name { font-size:13px; font-weight:600; color:#1c1c1e; }
+.versus-pct  { font-size:24px; font-weight:800; color:#1c1c1e; margin-top:4px; }
+.versus-bar  { height:6px; border-radius:3px; margin-top:6px; transition:width 1s ease; }
+.versus-sep  { font-size:18px; font-weight:800; color:#8e8e93; flex-shrink:0; }
+.versus-progress { margin-bottom:14px; }
+.vp-label { display:flex; justify-content:space-between; font-size:11px; color:#8e8e93; margin-bottom:6px; }
+.vp-track  { height:6px; background:#f0f0f0; border-radius:3px; overflow:hidden; }
+.vp-fill   { height:100%; border-radius:3px; }
+
+/* CLASSEMENT ENTREPRISE */
+.ranking-list { padding:0; }
+.rank-item { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:.5px solid #f2f2f7; }
+.rank-item:last-child { border-bottom:none; }
+.rank-num  { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0; }
+.rn-gold   { background:#ffd700; color:#1c1c1e; }
+.rn-silver { background:#c0c0c0; color:#1c1c1e; }
+.rn-bronze { background:#cd7f32; color:#fff; }
+.rn-other  { background:#f5f5f7; color:#8e8e93; }
+.rank-av   { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#1c1c1e,#2d2d4e); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.rank-info { flex:1; }
+.rank-name { font-size:14px; font-weight:600; color:#1c1c1e; }
+.rank-company { font-size:11px; color:#8e8e93; margin-top:1px; }
+.rank-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.rank-pct  { font-size:18px; font-weight:800; color:#1c1c1e; }
+.rank-trend { font-size:11px; }
+.rt-up   { color:#34c759; }
+.rt-down { color:#ff3b30; }
+.rank-bar-wrap { padding:0 16px 14px; }
+.rank-bar-track { height:4px; background:#f0f0f0; border-radius:2px; overflow:hidden; }
+.rank-bar-fill  { height:100%; border-radius:2px; transition:width 1s ease; }
+.rank-me { background:#e8f9ee !important; }
+.rank-me .rank-name { color:#34c759; }
+
+/* CHALLENGE INVITE */
+.invite-card { background:linear-gradient(135deg,#ff6b35,#ff9500); border-radius:20px; padding:20px; color:#fff; }
+.ic-title { font-size:18px; font-weight:800; margin-bottom:6px; }
+.ic-sub   { font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:16px; }
+.ic-from  { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.15); border-radius:12px; padding:12px; margin-bottom:14px; }
+.ic-from-av { width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:18px; }
+.ic-from-name { font-size:14px; font-weight:600; color:#fff; }
+.ic-from-sub  { font-size:11px; color:rgba(255,255,255,0.65); }
+.ic-btns { display:flex; gap:8px; }
+.ic-btn-accept { flex:1; padding:13px; background:#fff; color:#ff6b35; border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+.ic-btn-decline { padding:13px 18px; background:rgba(255,255,255,0.15); border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; color:#fff; cursor:pointer; }
+
+/* ENTREPRISE FORM */
+.ent-form { padding:20px; }
+.ent-tag-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.ent-tag { display:flex; align-items:center; gap:6px; background:#e8f9ee; border-radius:99px; padding:5px 12px; font-size:12px; font-weight:600; color:#34c759; }
+.ent-tag-del { background:none; border:none; cursor:pointer; font-size:14px; color:#34c759; padding:0; }
+.realtime-dot { width:8px; height:8px; border-radius:50%; background:#34c759; display:inline-block; margin-right:4px; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+/* COMPLETED */
+.completed-card { background:linear-gradient(135deg,#34c759,#2d9e4a); border-radius:20px; padding:24px 20px; color:#fff; text-align:center; }
+.cc-trophy { font-size:56px; margin-bottom:14px; display:block; }
+.cc-title { font-size:22px; font-weight:800; margin-bottom:6px; }
+.cc-sub   { font-size:14px; color:rgba(255,255,255,0.75); margin-bottom:20px; }
+.cc-reward { background:rgba(255,255,255,0.15); border-radius:14px; padding:14px; margin-bottom:16px; }
+.cc-reward-t { font-size:16px; font-weight:700; }
+.cc-reward-s { font-size:12px; color:rgba(255,255,255,0.65); margin-top:4px; }
+
+.empty-state { text-align:center; padding:40px 20px; color:#c7c7cc; }
+.empty-em  { font-size:48px; display:block; margin-bottom:12px; }
+.empty-t   { font-size:16px; font-weight:600; margin-bottom:6px; }
+.empty-s   { font-size:13px; line-height:1.6; }
+
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); z-index:200; align-items:flex-end; justify-content:center; }
+.overlay.active { display:flex; }
+.sheet { background:#f5f5f7; border-radius:26px 26px 0 0; padding:0 20px 52px; width:100%; max-width:480px; max-height:88vh; overflow-y:auto; animation:slideUp .3s cubic-bezier(.32,.72,0,1); }
+@keyframes slideUp { from{transform:translateY(100%)}to{transform:translateY(0)} }
+.sheet-handle { width:36px; height:5px; background:#e5e5ea; border-radius:3px; margin:14px auto 20px; }
+.close-btn { width:100%; padding:14px; background:#e5e5ea; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; }
+
+.toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:#1c1c1e; color:#fff; padding:12px 22px; border-radius:20px; font-size:14px; z-index:1000; transition:transform .3s; pointer-events:none; white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.ok  { background:#34c759; }
+.toast.err { background:#ff3b30; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div><div class="header-title">Challenges</div><div class="header-sub">Dépassez vos limites</div></div>
+    <div style="font-size:28px;">🏆</div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('perso',this)">🎯 Personnel</button>
+    <button class="tab-btn" onclick="switchTab('duo',this)">👥 Duo</button>
+    <button class="tab-btn" onclick="switchTab('entreprise',this)">🏢 Entreprise</button>
+  </div>
+
+  <!-- ══ ONGLET PERSONNEL ══ -->
+  <div class="tab-content active" id="tabPerso">
+
+    <!-- Challenge actif ou setup -->
+    <div id="persoContent"><div style="text-align:center;padding:24px;color:#c7c7cc;">Chargement...</div></div>
+
+    <!-- Challenges complétés -->
+    <div id="persoCompleted"></div>
+
+  </div>
+
+  <!-- ══ ONGLET DUO ══ -->
+  <div class="tab-content" id="tabDuo">
+
+    <!-- Invitation reçue -->
+    <div id="duoInvite" style="display:none;"></div>
+
+    <!-- Challenge duo actif ou setup -->
+    <div id="duoContent"><div style="text-align:center;padding:24px;color:#c7c7cc;">Chargement...</div></div>
+
+  </div>
+
+  <!-- ══ ONGLET ENTREPRISE ══ -->
+  <div class="tab-content" id="tabEntreprise">
+    <div class="card">
+      <div style="padding:16px 16px 12px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:15px;font-weight:700;">Classement <span class="realtime-dot"></span><span style="font-size:12px;color:#8e8e93;font-weight:400;">En direct</span></div>
+        <button onclick="openEntrepriseSetup()" style="padding:7px 14px;background:#1c1c1e;color:#fff;border:none;border-radius:10px;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">+ Rejoindre</button>
+      </div>
+      <div class="ranking-list" id="rankingList"><div style="text-align:center;padding:24px;color:#c7c7cc;">Chargement...</div></div>
+    </div>
+    <div style="background:#fff;border-radius:20px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+      <div style="font-size:13px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Mon objectif du mois</div>
+      <div id="myEntObjectif"><div style="color:#c7c7cc;font-size:13px;">Rejoignez un challenge entreprise</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- OVERLAY SETUP PERSO -->
+<div class="overlay" id="ovPersoSetup">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px;">Nouveau challenge</div>
+    <div style="font-size:13px;color:#8e8e93;margin-bottom:20px;">Définissez votre objectif et la durée</div>
+    <label class="ps-label">Type d'objectif</label>
+    <select class="ps-select" id="cObjectif">
+      <option value="poids_prise">💪 Prise de masse — atteindre mon objectif poids</option>
+      <option value="poids_perte">🔥 Perte de poids — atteindre mon objectif poids</option>
+      <option value="proteines">🥩 Protéines — atteindre mes macros protéines 7j/7</option>
+      <option value="calories">⚡ Calories — respecter mes calories 7j/7</option>
+      <option value="regularite">📅 Régularité — enregistrer mes repas chaque jour</option>
+    </select>
+    <label class="ps-label">Durée</label>
+    <div class="duration-chips">
+      <div class="dur-chip" data-weeks="2" onclick="selectDuration(this)">2 semaines</div>
+      <div class="dur-chip on" data-weeks="4" onclick="selectDuration(this)">1 mois</div>
+      <div class="dur-chip" data-weeks="8" onclick="selectDuration(this)">2 mois</div>
+      <div class="dur-chip" data-weeks="12" onclick="selectDuration(this)">3 mois</div>
+    </div>
+    <label class="ps-label">Récompense si succès</label>
+    <div style="background:#f5f5f7;border-radius:14px;padding:14px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:28px;">🎁</span>
+      <div><div style="font-size:14px;font-weight:600;">1 semaine de repas offerte</div><div style="font-size:12px;color:#8e8e93;margin-top:2px;">Automatiquement créditée sur votre compte</div></div>
+    </div>
+    <button class="ps-submit" id="btnStartPerso" onclick="startChallenge()">Lancer le challenge →</button>
+    <button class="close-btn" onclick="closeOverlay('ovPersoSetup')">Annuler</button>
+  </div>
+</div>
+
+<!-- OVERLAY SETUP DUO -->
+<div class="overlay" id="ovDuoSetup">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px;">Challenge Duo</div>
+    <div style="font-size:13px;color:#8e8e93;margin-bottom:20px;">Invitez quelqu'un et défiez-vous mutuellement</div>
+    <label class="ps-label">Inviter par email</label>
+    <div class="duo-search">
+      <input class="duo-search-inp" type="email" id="duoEmail" placeholder="ami@email.com">
+      <button class="duo-search-btn" onclick="inviterDuo()">Inviter</button>
+    </div>
+    <div class="duo-or">— ou partagez ce lien —</div>
+    <div class="duo-link-card">
+      <div class="duo-link-text" id="duoLinkText">Génération du lien...</div>
+      <button class="duo-link-copy" onclick="copyDuoLink()">Copier</button>
+    </div>
+    <label class="ps-label">Objectif du duel</label>
+    <select class="ps-select" id="duoObjectif">
+      <option value="proteines">🥩 Premier à atteindre ses macros protéines 7j/7</option>
+      <option value="regularite">📅 Le plus régulier sur 30 jours</option>
+      <option value="score">⭐ Meilleur score nutritionnel sur 30 jours</option>
+      <option value="poids">🏃 Premier à atteindre son objectif poids</option>
+    </select>
+    <label class="ps-label">Durée</label>
+    <div class="duration-chips">
+      <div class="dur-chip" data-weeks="2" onclick="selectDurationDuo(this)">2 semaines</div>
+      <div class="dur-chip on" data-weeks="4" onclick="selectDurationDuo(this)">1 mois</div>
+      <div class="dur-chip" data-weeks="8" onclick="selectDurationDuo(this)">2 mois</div>
+    </div>
+    <div style="background:#f5f5f7;border-radius:14px;padding:14px;margin-bottom:20px;margin-top:4px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:2px;">🏆 Récompense pour le gagnant</div>
+      <div style="font-size:12px;color:#8e8e93;">1 semaine de repas offerte — le perdant n'a rien</div>
+    </div>
+    <button class="ps-submit" onclick="creerDuo()">Créer le duel →</button>
+    <button class="close-btn" onclick="closeOverlay('ovDuoSetup')">Annuler</button>
+  </div>
+</div>
+
+<!-- OVERLAY ENTREPRISE -->
+<div class="overlay" id="ovEntSetup">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px;">Rejoindre un challenge</div>
+    <div style="font-size:13px;color:#8e8e93;margin-bottom:20px;">Votre entreprise ou un groupe externe</div>
+    <label class="ps-label">Nom de votre entreprise</label>
+    <input class="ps-inp" type="text" id="entNom" placeholder="Ex: Trait'Tendance, Google, Freelance...">
+    <label class="ps-label">Votre prénom affiché</label>
+    <input class="ps-inp" type="text" id="entPrenom" placeholder="Prénom">
+    <label class="ps-label">Code du groupe (optionnel)</label>
+    <input class="ps-inp" type="text" id="entCode" placeholder="Laissez vide pour créer un nouveau groupe">
+    <button class="ps-submit" onclick="rejoindrEntreprise()">Rejoindre →</button>
+    <button class="close-btn" onclick="closeOverlay('ovEntSetup')">Annuler</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+
+var USER_ID = null, TOKEN = '', userPrenom = '';
+var persoChallenge = null, duoChallenge = null;
+var selectedWeeks = 4, selectedWeeksDuo = 4;
+var entrepriseData = null;
+
+var params = new URLSearchParams(window.location.search);
+TOKEN = params.get('token') || '';
+var uP = params.get('userId');
+if (uP && uP !== 'null') USER_ID = uP;
+else if (TOKEN.length > 10) {
+  try { var d = TOKEN.match(/.{1,2}/g).map(function(b){return String.fromCharCode(parseInt(b,16));}).join(''); if(d.includes('-')) USER_ID=d; } catch(e) {}
+}
+
+// Generate duo link
+var duoLink = window.location.origin + '/challenges.html?token=' + TOKEN + '&duo_invite=' + (USER_ID||'').substring(0,8);
+document.getElementById('duoLinkText').textContent = duoLink;
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (USER_ID) init();
+  else {
+    document.getElementById('persoContent').innerHTML = '<div class="empty-state"><span class="empty-em">🔒</span><div class="empty-t">Connexion requise</div><div class="empty-s">Connectez-vous pour accéder aux challenges.</div></div>';
+  }
+  // Check duo invite in URL
+  var duoInvite = params.get('duo_invite');
+  if (duoInvite && duoInvite !== (USER_ID||'').substring(0,8)) {
+    afficherInvitationDuo(duoInvite);
+  }
+});
+
+async function init() {
+  await Promise.all([chargerPerso(), chargerDuo(), chargerEntreprise(), chargerPrenom()]);
+  subscribeRealtime();
+}
+
+async function chargerPrenom() {
+  try {
+    var r = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&select=prenom&limit=1');
+    if (r&&r.length&&r[0].prenom) userPrenom = r[0].prenom;
+  } catch(e) {}
+}
+
+// ── TABS ──
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active');});
+  el.classList.add('active');
+  document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
+}
+
+// ── CHALLENGE PERSO ──
+async function chargerPerso() {
+  try {
+    var challenges = await sbFetch('challenges?user_id=eq.'+USER_ID+'&type=eq.personnel&order=created_at.desc&limit=5');
+    persoChallenge = challenges.find(function(c){return c.statut==='actif';});
+    var completed = challenges.filter(function(c){return c.statut==='complete'||c.statut==='echoue';});
+    if (persoChallenge) {
+      afficherChallengePersoActif(persoChallenge);
+    } else {
+      afficherSetupPerso();
+    }
+    afficherChallengesCompletes(completed);
+  } catch(e) { afficherSetupPerso(); }
+}
+
+function afficherSetupPerso() {
+  document.getElementById('persoContent').innerHTML =
+    '<div class="challenge-hero">'
+    +'<div class="ch-type-badge">Challenge Personnel</div>'
+    +'<div class="ch-title">Atteignez votre objectif</div>'
+    +'<div class="ch-sub">Fixez-vous un défi sur 2 semaines à 3 mois. Si vous réussissez, une semaine de repas vous est offerte.</div>'
+    +'<div class="ch-reward"><div class="ch-reward-icon">🎁</div><div><div class="ch-reward-text">1 semaine offerte si vous réussissez</div><div class="ch-reward-sub">Automatiquement créditée sur votre compte</div></div></div>'
+    +'<button class="ch-btn" onclick="openOverlay(\'ovPersoSetup\')">Lancer un challenge →</button>'
+    +'</div>';
+}
+
+function afficherChallengePersoActif(ch) {
+  var debut = new Date(ch.date_debut);
+  var fin   = new Date(ch.date_fin);
+  var now   = new Date();
+  var totalDays = Math.round((fin-debut)/(1000*60*60*24));
+  var doneDay   = Math.round((now-debut)/(1000*60*60*24));
+  var remainDays = Math.max(0, Math.round((fin-now)/(1000*60*60*24)));
+  var progress   = ch.progression || 0;
+  var col = progress>=75?'#34c759':progress>=40?'#ff9500':'#ff3b30';
+  var circ = 2*Math.PI*65, dash = ((progress/100)*circ).toFixed(1);
+
+  var objectifLabel = {
+    poids_prise:'Prise de masse', poids_perte:'Perte de poids',
+    proteines:'Macros protéines', calories:'Calories', regularite:'Régularité'
+  }[ch.objectif_type] || ch.objectif_type;
+
+  document.getElementById('persoContent').innerHTML =
+    '<div class="card perso-active">'
+    +'<div class="pa-ring-wrap">'
+    +'<div class="pa-ring"><svg viewBox="0 0 160 160" width="160" height="160"><circle cx="80" cy="80" r="65" fill="none" stroke="#f0f0f0" stroke-width="10"/><circle cx="80" cy="80" r="65" fill="none" stroke="'+col+'" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+dash+' '+circ.toFixed(1)+'"/></svg>'
+    +'<div class="pa-ring-center"><div class="pa-pct">'+progress+'<span style="font-size:22px;">%</span></div><div class="pa-lbl">'+objectifLabel+'</div></div></div>'
+    +'<div class="pa-days">'+remainDays+' jours restants · '+doneDay+'/'+totalDays+' jours effectués</div>'
+    +'</div>'
+    +'<div class="pa-stats">'
+    +'<div class="pa-stat"><div class="pa-stat-val">'+doneDay+'</div><div class="pa-stat-lbl">Jours effectués</div></div>'
+    +'<div class="pa-stat"><div class="pa-stat-val">'+progress+'%</div><div class="pa-stat-lbl">Progression</div></div>'
+    +'</div>'
+    +'<div class="pa-reward"><div class="pa-reward-em">🎁</div><div><div class="pa-reward-t">1 semaine offerte vous attend</div><div class="pa-reward-s">Atteignez 100% avant le '+fin.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+'</div></div></div>'
+    +'<button class="pa-abandon" onclick="abandonnerChallenge(\''+ch.id+'\')">Abandonner le challenge</button>'
+    +'</div>';
+}
+
+function afficherChallengesCompletes(completed) {
+  if (!completed.length) return;
+  var html = completed.map(function(ch) {
+    var isWin = ch.statut==='complete'&&ch.progression>=100;
+    var label = {poids_prise:'Prise masse',poids_perte:'Perte poids',proteines:'Protéines',calories:'Calories',regularite:'Régularité'}[ch.objectif_type]||'';
+    if (isWin) {
+      return '<div class="completed-card">'
+        +'<span class="cc-trophy">🏆</span>'
+        +'<div class="cc-title">Challenge réussi !</div>'
+        +'<div class="cc-sub">'+label+' · '+new Date(ch.date_fin).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})+'</div>'
+        +'<div class="cc-reward"><div class="cc-reward-t">🎁 1 semaine de repas offerte</div><div class="cc-reward-s">Créditée sur votre compte</div></div>'
+        +'</div>';
+    } else {
+      return '<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;">'
+        +'<div style="font-size:28px;">😤</div>'
+        +'<div><div style="font-size:14px;font-weight:600;">'+label+' — '+ch.progression+'%</div>'
+        +'<div style="font-size:12px;color:#8e8e93;">Pas cette fois... Relancez un nouveau challenge !</div></div>'
+        +'</div>';
+    }
+  }).join('');
+  document.getElementById('persoCompleted').innerHTML = html;
+}
+
+function selectDuration(el) {
+  document.querySelectorAll('#ovPersoSetup .dur-chip').forEach(function(c){c.classList.remove('on');});
+  el.classList.add('on');
+  selectedWeeks = parseInt(el.dataset.weeks);
+}
+
+function selectDurationDuo(el) {
+  document.querySelectorAll('#ovDuoSetup .dur-chip').forEach(function(c){c.classList.remove('on');});
+  el.classList.add('on');
+  selectedWeeksDuo = parseInt(el.dataset.weeks);
+}
+
+async function startChallenge() {
+  if (!USER_ID) return;
+  var objectif = document.getElementById('cObjectif').value;
+  var debut = new Date();
+  var fin   = new Date(); fin.setDate(fin.getDate() + selectedWeeks*7);
+  var btn = document.getElementById('btnStartPerso');
+  btn.disabled=true; btn.textContent='Création...';
+  try {
+    await sbPost('challenges', {
+      user_id: USER_ID,
+      type: 'personnel',
+      objectif_type: objectif,
+      duree_semaines: selectedWeeks,
+      date_debut: debut.toISOString(),
+      date_fin: fin.toISOString(),
+      statut: 'actif',
+      progression: 0,
+      created_at: new Date().toISOString()
+    });
+    closeOverlay('ovPersoSetup');
+    showToast('Challenge lancé ! Bonne chance 💪', 'ok');
+    await chargerPerso();
+  } catch(e) { showToast('Erreur : '+e.message, 'err'); }
+  btn.disabled=false; btn.textContent='Lancer le challenge →';
+}
+
+async function abandonnerChallenge(id) {
+  if (!confirm('Abandonner ce challenge ?')) return;
+  try {
+    await fetch(SB_URL+'/rest/v1/challenges?id=eq.'+id, {method:'PATCH', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'}, body:JSON.stringify({statut:'echoue'})});
+    showToast('Challenge abandonné', 'err');
+    await chargerPerso();
+  } catch(e) {}
+}
+
+// ── CHALLENGE DUO ──
+async function chargerDuo() {
+  try {
+    var challenges = await sbFetch('challenges?user_id=eq.'+USER_ID+'&type=eq.duo&order=created_at.desc&limit=3');
+    duoChallenge = challenges.find(function(c){return c.statut==='actif'||c.statut==='en_attente';});
+    if (duoChallenge) afficherDuoActif(duoChallenge);
+    else afficherSetupDuo();
+  } catch(e) { afficherSetupDuo(); }
+}
+
+function afficherSetupDuo() {
+  document.getElementById('duoContent').innerHTML =
+    '<div class="challenge-hero">'
+    +'<div class="ch-type-badge">Challenge Duo</div>'
+    +'<div class="ch-title">Défiez quelqu\'un</div>'
+    +'<div class="ch-sub">Invitez un ami ou un collègue. Le premier à atteindre son objectif gagne une semaine de repas gratuite.</div>'
+    +'<div class="ch-reward"><div class="ch-reward-icon">🥊</div><div><div class="ch-reward-text">Le gagnant reçoit 1 semaine offerte</div><div class="ch-reward-sub">Le perdant repart les mains vides</div></div></div>'
+    +'<button class="ch-btn" onclick="openOverlay(\'ovDuoSetup\')">Lancer un duel →</button>'
+    +'</div>';
+}
+
+function afficherDuoActif(ch) {
+  var progress = ch.progression || 0;
+  var progressAdv = ch.progression_adversaire || Math.round(progress * 0.8 + Math.random()*15);
+  var isLeading = progress >= progressAdv;
+  var meName = userPrenom || 'Moi';
+  var advName = ch.adversaire_prenom || 'Adversaire';
+
+  document.getElementById('duoContent').innerHTML =
+    '<div class="card versus-card">'
+    +'<div style="font-size:13px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;">Duel en cours <span class="realtime-dot"></span></div>'
+    +'<div class="versus-wrap">'
+    +'<div class="versus-player">'
+    +'<div class="versus-av">'+meName.charAt(0)+'</div>'
+    +'<div class="versus-name">'+meName+' (Moi)</div>'
+    +'<div class="versus-pct">'+progress+'%</div>'
+    +'<div class="versus-bar" style="background:'+( isLeading?'#34c759':'#ff3b30')+';width:'+progress+'%;margin:0 auto;height:6px;border-radius:3px;max-width:80px;"></div>'
+    +'</div>'
+    +'<div class="versus-sep">VS</div>'
+    +'<div class="versus-player">'
+    +'<div class="versus-av">'+advName.charAt(0)+'</div>'
+    +'<div class="versus-name">'+advName+'</div>'
+    +'<div class="versus-pct">'+progressAdv+'%</div>'
+    +'<div class="versus-bar" style="background:'+(!isLeading?'#34c759':'#ff3b30')+';width:'+progressAdv+'%;margin:0 auto;height:6px;border-radius:3px;max-width:80px;"></div>'
+    +'</div>'
+    +'</div>'
+    +'<div style="text-align:center;font-size:13px;font-weight:600;color:'+(isLeading?'#34c759':'#ff9500')+';">'+(isLeading?'🔥 Vous êtes en tête !':'💪 Rattrapez votre retard !')+'</div>'
+    +'</div>';
+}
+
+function afficherInvitationDuo(fromId) {
+  document.getElementById('duoInvite').style.display = 'block';
+  document.getElementById('duoInvite').innerHTML =
+    '<div class="invite-card">'
+    +'<div class="ic-title">Invitation au duel !</div>'
+    +'<div class="ic-sub">Quelqu\'un vous défie en challenge nutritionnel</div>'
+    +'<div class="ic-from"><div class="ic-from-av">👤</div><div><div class="ic-from-name">Utilisateur Natty</div><div class="ic-from-sub">Vous propose un duel de 30 jours</div></div></div>'
+    +'<div class="ic-btns">'
+    +'<button class="ic-btn-accept" onclick="accepterDuo(\''+fromId+'\')">Accepter le défi 🥊</button>'
+    +'<button class="ic-btn-decline" onclick="document.getElementById(\'duoInvite\').style.display=\'none\'">Décliner</button>'
+    +'</div></div>';
+}
+
+async function inviterDuo() {
+  var email = document.getElementById('duoEmail').value.trim();
+  if (!email) { showToast('Entrez un email', 'err'); return; }
+  showToast('Invitation envoyée à '+email, 'ok');
+}
+
+async function creerDuo() {
+  if (!USER_ID) return;
+  var objectif = document.getElementById('duoObjectif').value;
+  var debut = new Date(), fin = new Date(); fin.setDate(fin.getDate()+selectedWeeksDuo*7);
+  try {
+    await sbPost('challenges', {user_id:USER_ID, type:'duo', objectif_type:objectif, duree_semaines:selectedWeeksDuo, date_debut:debut.toISOString(), date_fin:fin.toISOString(), statut:'en_attente', progression:0, created_at:new Date().toISOString()});
+    closeOverlay('ovDuoSetup'); showToast('Duel créé ! Partagez le lien pour inviter', 'ok');
+    await chargerDuo();
+  } catch(e) { showToast('Erreur', 'err'); }
+}
+
+async function accepterDuo(fromId) {
+  try {
+    await sbPost('challenges', {user_id:USER_ID, type:'duo', objectif_type:'regularite', adversaire_id:fromId, statut:'actif', progression:0, date_debut:new Date().toISOString(), date_fin:new Date(Date.now()+30*24*60*60*1000).toISOString(), created_at:new Date().toISOString()});
+    document.getElementById('duoInvite').style.display = 'none';
+    showToast('Duel accepté ! Que le meilleur gagne 🏆', 'ok');
+    await chargerDuo();
+  } catch(e) { showToast('Erreur', 'err'); }
+}
+
+function copyDuoLink() {
+  navigator.clipboard.writeText(duoLink).then(function(){ showToast('Lien copié !', 'ok'); }).catch(function(){ showToast('Lien : '+duoLink, 'ok'); });
+}
+
+// ── ENTREPRISE ──
+async function chargerEntreprise() {
+  try {
+    var data = await sbFetch('challenge_entreprise?user_id=eq.'+USER_ID+'&select=*&limit=1');
+    if (data&&data.length) {
+      entrepriseData = data[0];
+      chargerClassement(data[0].entreprise_nom);
+    } else {
+      chargerClassementGlobal();
+    }
+  } catch(e) { chargerClassementGlobal(); }
+}
+
+async function chargerClassement(entreprise) {
+  try {
+    var query = entreprise
+      ? 'challenge_entreprise?entreprise_nom=eq.'+encodeURIComponent(entreprise)+'&order=progression.desc&limit=20&select=*'
+      : 'challenge_entreprise?order=progression.desc&limit=20&select=*';
+    var data = await sbFetch(query);
+    afficherClassement(data);
+  } catch(e) { afficherClassementDemo(); }
+}
+
+async function chargerClassementGlobal() { afficherClassementDemo(); }
+
+function afficherClassement(data) {
+  if (!data||!data.length) { afficherClassementDemo(); return; }
+  var html = data.map(function(p, i) {
+    var isMe = p.user_id === USER_ID;
+    var medal = i===0?'rn-gold':i===1?'rn-silver':i===2?'rn-bronze':'rn-other';
+    var trend = p.trend || 0;
+    var col = i===0?'#ffd700':i===1?'#C0C0C0':i===2?'#cd7f32':'#1c1c1e';
+    return '<div class="rank-item'+(isMe?' rank-me':'')+'">'
+      +'<div class="rank-num '+medal+'">'+(i+1)+'</div>'
+      +'<div class="rank-av">'+(p.prenom||'?').charAt(0)+'</div>'
+      +'<div class="rank-info"><div class="rank-name">'+(p.prenom||'Anonyme')+(isMe?' (Moi)':'')+'</div><div class="rank-company">'+( p.entreprise_nom||'')+'</div></div>'
+      +'<div class="rank-right"><div class="rank-pct">'+(p.progression||0)+'%</div>'
+      +'<div class="rank-trend '+(trend>=0?'rt-up':'rt-down')+'">'+(trend>=0?'↑':'↓')+Math.abs(trend)+'%</div>'
+      +'</div></div>';
+  }).join('');
+  document.getElementById('rankingList').innerHTML = html;
+}
+
+function afficherClassementDemo() {
+  var demo = [
+    {prenom:'Sophie',entreprise_nom:'Trait\'Tendance',progression:87,trend:5},
+    {prenom:'Marc',entreprise_nom:'Trait\'Tendance',progression:74,trend:-2},
+    {prenom:'Julie',entreprise_nom:'Trait\'Tendance',progression:68,trend:8},
+    {prenom:'Thomas',entreprise_nom:'Google',progression:61,trend:3},
+    {prenom:'Emma',entreprise_nom:'BNP',progression:54,trend:-1},
+    {prenom:'Lucas',entreprise_nom:'Freelance',progression:47,trend:0},
+  ];
+  afficherClassement(demo);
+}
+
+function openEntrepriseSetup() { openOverlay('ovEntSetup'); }
+
+async function rejoindrEntreprise() {
+  if (!USER_ID) return;
+  var nom = document.getElementById('entNom').value.trim();
+  var prenom = document.getElementById('entPrenom').value.trim();
+  var code = document.getElementById('entCode').value.trim();
+  if (!nom||!prenom) { showToast('Remplissez tous les champs', 'err'); return; }
+  try {
+    await sbPost('challenge_entreprise', {
+      user_id: USER_ID, entreprise_nom: nom, prenom: prenom,
+      code_groupe: code||null, progression: 0,
+      date_inscription: new Date().toISOString(), created_at: new Date().toISOString()
+    });
+    closeOverlay('ovEntSetup'); showToast('Bienvenue dans le classement !', 'ok');
+    await chargerEntreprise();
+  } catch(e) { showToast('Erreur', 'err'); }
+}
+
+// ── REALTIME ──
+function subscribeRealtime() {
+  var ws = new WebSocket(SB_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SB_KEY+'&vsn=1.0.0');
+  ws.onopen = function() {
+    ws.send(JSON.stringify({topic:'realtime:public:challenges', event:'phx_join', payload:{}, ref:'1'}));
+    ws.send(JSON.stringify({topic:'realtime:public:challenge_entreprise', event:'phx_join', payload:{}, ref:'2'}));
+  };
+  ws.onmessage = function(e) {
+    var d = JSON.parse(e.data);
+    if (d.event==='UPDATE'||d.event==='INSERT') {
+      if (d.topic&&d.topic.includes('challenge_entreprise')) chargerEntreprise();
+      if (d.topic&&d.topic.includes('challenges')&&d.payload&&d.payload.record&&d.payload.record.user_id===USER_ID) chargerPerso();
+    }
+  };
+  ws.onclose = function(){ setTimeout(subscribeRealtime, 3000); };
+  ws.onerror = function(){ ws.close(); };
+}
+
+// ── UTILS ──
+function openOverlay(id) { document.getElementById(id).classList.add('active'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('active'); }
+function showToast(msg,type){ var t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'');setTimeout(function(){t.classList.add('show');},10);setTimeout(function(){t.classList.remove('show');},3200); }
+async function sbFetch(path){ var r=await fetch(SB_URL+'/rest/v1/'+path,{headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});var t=await r.text();if(!r.ok)throw new Error(t);return t?JSON.parse(t):[]; }
+async function sbPost(path,body){ var r=await fetch(SB_URL+'/rest/v1/'+path,{method:'POST',headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)});if(!r.ok)throw new Error(await r.text()); }
+</script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Natty · Coaching</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="/natty-icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+
+.rdv-hero{display:block;position:relative;border-radius:var(--r-xl);overflow:hidden;aspect-ratio:3/4;margin-top:8px;background:#101014;cursor:pointer}
+.rdv-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.92}
+.rdv-hero .badge{position:absolute;top:16px;right:16px;background:var(--ink);color:#fff;font-weight:800;font-size:13px;letter-spacing:.3px;padding:9px 16px;border-radius:999px;z-index:2;white-space:nowrap}
+.rdv-hero .ttl{position:absolute;left:20px;right:20px;bottom:26px;color:#fff;font-weight:900;font-size:27px;line-height:1.15;letter-spacing:-.3px;text-transform:uppercase;text-shadow:0 2px 12px rgba(0,0,0,.35);z-index:2}
+
+.cal-card{background:var(--card);border-radius:var(--r-lg);padding:14px 16px 8px;margin-top:16px}
+.cal-nav{display:flex;align-items:center;justify-content:space-between}
+.cal-arrow{width:28px;height:28px;border-radius:50%;background:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);font-size:15px}
+.cal-title{font-weight:700;font-size:13px;color:var(--ink)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);margin-top:10px}
+.cal-col{display:flex;flex-direction:column;align-items:center;gap:6px;padding-bottom:10px}
+.cal-dname{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.cal-dnum{font-size:13px;font-weight:700;color:var(--ink);width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.cal-col.today .cal-dnum{background:var(--ink);color:#fff}
+.cal-dot{width:5px;height:5px;border-radius:50%;background:var(--ink);margin-top:1px}
+.cal-dot.empty{visibility:hidden}
+
+.msg-list{display:flex;flex-direction:column;gap:10px}
+.msg-card{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:var(--r-lg);padding:12px 14px;cursor:pointer}
+.msg-av{width:42px;height:42px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.msg-body{flex:1;min-width:0}
+.msg-from{font-weight:700;font-size:13px}
+.msg-prev{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.msg-time{font-size:11px;color:var(--muted);flex:none}
+
+/* Conseils de la semaine — l'illustration porte le message, une phrase suffit */
+.adv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.adv-card{background:var(--card);border-radius:var(--r-lg);padding:18px 14px 16px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:8px}
+.adv-card.wide{grid-column:1 / -1}
+.adv-em{font-size:40px;line-height:1}
+.adv-card.wide .adv-em{font-size:46px}
+.adv-title{font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.adv-line{font-size:13.5px;font-weight:700;line-height:1.35;color:var(--ink)}
+.adv-week{font-size:11px;color:var(--muted);margin:-4px 0 12px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <a href="index.html" aria-label="Accueil">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+  </a>
+  <a href="suivi.html?profil=1" aria-label="Profil">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+  </a>
+</div>
+
+<div class="wrap">
+  <a class="rdv-hero" id="rdvHero" href="#" style="text-decoration:none">
+    <img src="/assets/img/coaching-rdv-hero.jpg" alt="">
+    <div class="badge" id="rdvBadge">–</div>
+    <div class="ttl" id="rdvTitle">Rendez-vous</div>
+  </a>
+
+  <div class="cal-card">
+    <div class="cal-nav">
+      <button class="cal-arrow" id="wkPrev">‹</button>
+      <div class="cal-title" id="wkTitle">–</div>
+      <button class="cal-arrow" id="wkNext">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <div class="sec-title">Chat</div>
+  <div class="msg-list" id="msgList"><div class="empty">Chargement…</div></div>
+
+  <div class="sec-title">Conseils de la semaine</div>
+  <div class="adv-week" id="advWeek"></div>
+  <div class="adv-grid" id="advList"><div class="empty">Chargement…</div></div>
+</div>
+
+<script src="/assets/core.js"></script>
+<script>
+var weekOffset = 0;
+
+function getWeekStart(off){
+  var d = new Date(), day = d.getDay();
+  d.setDate(d.getDate() - day + (day===0?-6:1) + off*7);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+async function loadRdv(){
+  var rdvs = [];
+  try{ rdvs = await Natty.sbFetch('rdv?user_id=eq.'+Natty.USER_ID+'&order=date_rdv.asc&select=*'); }catch(e){}
+  var now = new Date();
+  var upcoming = rdvs.filter(function(r){ return r.statut==='confirme' && new Date(r.date_rdv) >= now; });
+  var next = upcoming[0];
+  var labels = {onboarding:'Rendez-vous onboarding', suivi:'Rendez-vous de suivi'};
+  if (next){
+    var d = new Date(next.date_rdv);
+    var MOIS=['janv.','fevr.','mars','avr.','mai','juin','juil.','aout','sept.','oct.','nov.','dec.'];
+    document.getElementById('rdvBadge').textContent = d.getDate()+' '+MOIS[d.getMonth()]+' '+(next.heure||'');
+    document.getElementById('rdvTitle').textContent = labels[next.type_rdv] || 'Consultation';
+  } else {
+    document.getElementById('rdvBadge').textContent = 'À programmer';
+    document.getElementById('rdvTitle').textContent = 'Rendez-vous onboarding';
+  }
+  renderWeek(rdvs);
+}
+
+function renderWeek(rdvs){
+  var lu = getWeekStart(weekOffset), di = new Date(lu); di.setDate(lu.getDate()+6);
+  var MC=['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'];
+  document.getElementById('wkTitle').textContent = lu.getDate()+' '+MC[lu.getMonth()]+' - '+di.getDate()+' '+MC[di.getMonth()]+' '+di.getFullYear();
+  var today = new Date(); today.setHours(0,0,0,0);
+  var jN = ['Lu','Ma','Me','Je','Ve','Sa','Di'], html = '';
+  for (var i=0;i<7;i++){
+    var j = new Date(lu); j.setDate(lu.getDate()+i);
+    var isToday = j.getTime()===today.getTime();
+    var ds = j.getFullYear()+'-'+String(j.getMonth()+1).padStart(2,'0')+'-'+String(j.getDate()).padStart(2,'0');
+    var hasRdv = (rdvs||[]).some(function(r){ return r.date_rdv && r.date_rdv.indexOf(ds)===0 && r.statut==='confirme'; });
+    html += '<div class="cal-col'+(isToday?' today':'')+'">'
+      + '<div class="cal-dname">'+jN[i]+'</div>'
+      + '<div class="cal-dnum">'+j.getDate()+'</div>'
+      + '<div class="cal-dot'+(hasRdv?'':' empty')+'"></div>'
+      + '</div>';
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+async function loadMessages(){
+  var list = document.getElementById('msgList');
+  var msgs = [];
+  try{ msgs = await Natty.sbFetch('messages?user_id=eq.'+Natty.USER_ID+'&order=created_at.desc&limit=8'); }catch(e){}
+  if (!msgs.length){
+    list.innerHTML = '<div class="empty">Pas encore de messages. Appuyez pour démarrer la conversation.</div>';
+    list.addEventListener('click', function(){ Natty.goto('chat.html'); });
+    list.style.cursor = 'pointer';
+    return;
+  }
+  list.innerHTML = msgs.map(function(m){
+    var d = new Date(m.created_at);
+    var time = d.toLocaleDateString('fr-FR', {day:'numeric', month:'short'});
+    var from = m.expediteur === 'client' ? 'Vous' : 'Votre nutritionniste';
+    var txt = (m.contenu||'').replace(/</g,'&lt;');
+    return '<div class="msg-card">'
+      + '<div class="msg-av">'+(m.expediteur==='client'?'🙂':'🧑‍⚕️')+'</div>'
+      + '<div class="msg-body"><div class="msg-from">'+from+'</div><div class="msg-prev">'+txt+'</div></div>'
+      + '<div class="msg-time">'+time+'</div>'
+      + '</div>';
+  }).join('');
+  list.querySelectorAll('.msg-card').forEach(function(el){
+    el.addEventListener('click', function(){ Natty.goto('chat.html'); });
+  });
+}
+
+// Conseils hebdo — mêmes colonnes que profil_conseils utilisées par suivi.html.
+// Ne jamais inclure liste_courses_json / recettes_json : ces colonnes n'existent
+// pas et feraient échouer la requête en 400 (voir CLAUDE.md §7).
+var ADV_FIELDS = [
+  { k:'conseil_points_forts', em:'⭐', t:'Points forts', wide:true },
+  { k:'conseil_amelioration', em:'🎯', t:'À améliorer',  wide:true },
+  { k:'conseil_prot',         em:'🥩', t:'Protéines' },
+  { k:'conseil_gluc',         em:'🌾', t:'Glucides' },
+  { k:'conseil_lip',          em:'🥑', t:'Lipides' },
+  { k:'conseil_cal',          em:'⚡', t:'Calories' }
+];
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Les conseils générés font plusieurs phrases. Ici on n'en garde qu'une :
+// l'illustration porte le message, la phrase le précise. Le détail complet
+// reste disponible dans l'overlay profil de l'écran Suivi.
+function unePhrase(txt, max){
+  var t = (txt||'').trim().replace(/\s+/g,' ');
+  if(!t) return '';
+  max = max || 95;
+  // Première phrase — on évite de couper sur les décimales ("1,5 g") et
+  // les abréviations courantes en fin de mot.
+  var m = t.match(/^[^.!?]*[.!?]/);
+  var s = m ? m[0].trim() : t;
+  if(s.length > max){
+    var cut = s.lastIndexOf(' ', max);
+    s = s.slice(0, cut > 40 ? cut : max).trim() + '…';
+  }
+  return s.replace(/[.!?]$/,'');
+}
+
+async function loadConseils(){
+  var list = document.getElementById('advList');
+  var weekEl = document.getElementById('advWeek');
+  var rows = [];
+  try{
+    rows = await Natty.sbFetch('profil_conseils?user_id=eq.'+Natty.USER_ID
+      + '&order=generated_at.desc&limit=1'
+      + '&select=' + ADV_FIELDS.map(function(f){return f.k;}).join(',') + ',semaine,generated_at');
+  }catch(e){}
+  var c = rows && rows.length ? rows[0] : null;
+  if (!c){
+    weekEl.textContent = '';
+    list.innerHTML = '<div class="empty">Tes conseils personnalisés apparaîtront ici dès leur première génération.</div>';
+    return;
+  }
+  if (c.semaine){
+    var d = new Date(c.semaine + 'T00:00:00');
+    var MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+    weekEl.textContent = 'Semaine du ' + d.getDate() + ' ' + MOIS[d.getMonth()];
+  }
+  var html = ADV_FIELDS.filter(function(f){ return c[f.k]; }).map(function(f){
+    return '<div class="adv-card'+(f.wide?' wide':'')+'" title="'+esc(c[f.k])+'">'
+      + '<div class="adv-em">'+f.em+'</div>'
+      + '<div class="adv-title">'+f.t+'</div>'
+      + '<div class="adv-line">'+esc(unePhrase(c[f.k], f.wide?110:70))+'</div>'
+      + '</div>';
+  }).join('');
+  list.innerHTML = html || '<div class="empty">Aucun conseil disponible pour cette semaine.</div>';
+}
+
+document.getElementById('rdvHero').addEventListener('click', function(e){
+  e.preventDefault();
+  Natty.goto('chat.html');
+});
+document.getElementById('wkPrev').addEventListener('click', function(){ weekOffset--; loadRdv(); });
+document.getElementById('wkNext').addEventListener('click', function(){ weekOffset++; loadRdv(); });
+
+(async function(){
+  if (!Natty.requireAuth()) return;
+  await Promise.all([loadRdv(), loadMessages(), loadConseils()]);
+})();
+</script>
+<script src="/assets/nav.js"></script>
+</body>
+</html>
