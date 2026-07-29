@@ -183,7 +183,7 @@ Tableau de bord client principal. Chargé dans un iFrame Wix via `$w('#html3').s
 
 **Conseils hebdomadaires** :
 - Colonnes existantes dans `profil_conseils` : `conseil_prot`, `conseil_gluc`, `conseil_lip`, `conseil_cal`, `conseil_amelioration`, `conseil_points_forts`, `conseils_json`, `semaine`, `generated_at`, `user_id`
-- **Colonnes inexistantes** (NE PAS utiliser) : `liste_courses_json`, `recettes_json`
+- **Colonnes vérifiées présentes (juillet 2026)** : `liste_courses_json`, `recettes_json` et `conseils_json` **existent bien**. L'ancienne consigne « ne pas les utiliser » était fausse — voir §7.
 - Guard localStorage : `natty_conseils_semaine_{userId}` stocke le lundi de la dernière génération → bloque le popup si semaine identique
 - Guard sessionStorage : `natty_popup_session_{userId}` → bloque re-affichage dans la même session
 
@@ -484,7 +484,7 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 | semaine | date | Lundi de la semaine |
 | generated_at | timestamptz | |
 
-> ⚠️ `liste_courses_json` et `recettes_json` N'EXISTENT PAS dans `profil_conseils` — ne jamais les inclure dans les SELECT.
+> ✅ **Correction (juillet 2026)** : `liste_courses_json`, `recettes_json` et `conseils_json` existent bien dans `profil_conseils` (testé : `select=` sur chacune renvoie 200). Les versions précédentes de ce document affirmaient le contraire. Le vrai bug était ailleurs : `api/save-conseils.js` ignorait ces champs à l'écriture, donc tout ce qui y était envoyé était silencieusement perdu.
 
 #### `plans_repas`
 | Colonne | Type | Notes |
@@ -676,7 +676,7 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 - **Overlays : style.display flex/none** (PAS classList.add/remove('active')) pour les overlays injectés dynamiquement — classList ne fonctionnait pas car pas de règle CSS `.active`.
 
 ### Conseils hebdomadaires
-- **Colonnes inexistantes** : `liste_courses_json` et `recettes_json` n'existent pas dans `profil_conseils`. Les inclure dans un SELECT retourne une erreur 400 → toutes les données semblent vides.
+- **Colonnes `*_json`** : `liste_courses_json`, `recettes_json` et `conseils_json` existent. Le piège réel n'est pas la lecture mais l'écriture — voir la règle 9 et §7.
 - **Guard localStorage** (pas sessionStorage) : `sessionStorage` se vide à chaque reload → toujours utiliser `localStorage` pour le guard "conseils frais cette semaine".
 - **`ouvrirListeCourses` et `ouvrirRecettes`** n'appellent PLUS `conseilsGenererEtSauvegarder` — affichent un message simple si pas de données en cache.
 - **Popup conseils ne lockScroll pas** : le popup est une bottom sheet légère, lockScroll gelait toute la page.
@@ -715,9 +715,15 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 **Problème** : chaque session qui corrige sbFetch ajoute `async` même s'il y en a déjà un → `async async function sbFetch` → SyntaxError.
 **Solution** : `re.sub(r'async\s+async\s+function', 'async function', content)` avant livraison.
 
-### Colonnes inexistantes dans profil_conseils
-**Problème** : inclure `liste_courses_json` ou `recettes_json` dans le SELECT → 400 → résultat `[]` → popup s'affiche en boucle.
-**Solution** : SELECT uniquement `conseil_prot, conseil_gluc, conseil_lip, conseil_cal, conseil_amelioration, conseil_points_forts, conseils_json, semaine, generated_at`.
+### ✅ « Colonnes inexistantes dans profil_conseils » — c'était faux (corrigé juillet 2026)
+Ce document a longtemps affirmé que `liste_courses_json` et `recettes_json` n'existaient pas et faisaient échouer les SELECT en 400. **Vérification faite en base : les trois colonnes `*_json` existent** (`select=` sur chacune renvoie 200).
+
+**Le vrai problème était à l'écriture** : `api/save-conseils.js` déstructurait une liste figée de champs et ignorait tout le reste. Les recettes et la liste de courses générées par `suivi.html` étaient donc silencieusement perdues, et `conseils_json` restait `null` — ce qui rendait inopérant le cache hebdo pourtant déjà présent en lecture dans `assets/reco.js`.
+
+**Corrigé** : `save-conseils.js` construit maintenant sa ligne à partir des seuls champs transmis. Effet de bord bénéfique — un appel partiel n'écrase plus le reste de la ligne avec des `null` (l'upsert `merge-duplicates` le faisait potentiellement, ce qui pouvait effacer les conseils juste écrits).
+
+### `conseils_json` est une colonne **texte**, pas jsonb
+PostgREST la renvoie en `string`. Toujours `JSON.stringify` à l'écriture, et reparser à la lecture — `reco.js:lireCache()` tolère les deux cas.
 
 ### Overlays manquants (fichier tronqué)
 **Problème** : le fichier uploadé par Pablo n'a pas de `</body>` ni `</html>` → tous les overlays injectés précédemment disparaissent.
@@ -950,7 +956,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 6. **`lockScroll` = overflow:hidden** — jamais position:fixed (casse le scroll mobile)
 7. **Overlays : style.display** (pas classList) pour les overlays injectés dynamiquement
 8. **Inline onclick interdit** — `data-*` + `addEventListener` systématiquement
-9. **Colonnes `profil_conseils`** : ne pas utiliser `liste_courses_json` ni `recettes_json`
+9. **Colonnes `profil_conseils`** : `conseils_json`, `recettes_json` et `liste_courses_json` existent et sont utilisables. En écriture, passer par `api/save-conseils.js`, qui n'écrit **que** les champs transmis (un appel partiel n'écrase plus le reste).
 10. **Guard conseils = localStorage** (pas sessionStorage) pour persister entre rechargements
 11. **Calcul stocks = par ingrédient** via `plans_repas → recettes → recettes_ingredients` — jamais par `plat_nom`
 12. **`ingredients_base` colonnes macros** : `cal_per_100g`, `prot_per_100g`, `gluc_per_100g`, `lip_per_100g`
@@ -1046,3 +1052,58 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - `api/suggestions-macros.js` et `api/analyse-nutrition.js` créés pour combler les 404 de `progression.html` (non testés en conditions réelles)
 - `api/scan-plat.js` et `api/supabase.js` supprimés (code mort confirmé — `api/scan-plat.js` faisait doublon avec la feature déjà livrée `analyserAvecIA()`/`saveIA()` dans `index.html`, découverte pendant cette session)
 - Toutes les modifications validées avec `node --check` avant commit
+
+---
+
+## 11. Application native (Capacitor) — branche `app-native`
+
+> Section rédigée en juillet 2026, quand le portage est passé de « projet » à « app qui compile et tourne ». Le §10 ci-dessus reste valable comme liste de vigilance ; celle-ci décrit ce qui est **fait**.
+
+### Structure
+- **`www/`** est le bundle de l'app : copie sélective des fichiers web. `menu.html` y devient `index.html` (point d'entrée). `admin.html`, `accueil.html`, l'ancien `index.html` et `api/` en sont volontairement exclus.
+- **`ios/`** et **`android/`** sont commités. Capacitor 8 utilise **Swift Package Manager, pas CocoaPods** — il n'y a rien à installer côté Ruby. `Package.resolved` est figé dans le repo.
+- ⚠️ **Toute modification d'un fichier web doit être répercutée dans `www/`**, puis `npx cap sync`. Les deux arborescences ne sont pas liées automatiquement.
+
+### Build iOS
+```
+npx cap sync ios
+xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO build
+```
+- Xcode fournit le **SDK** iOS mais **pas la plateforme** : si aucune destination simulateur n'est éligible, lancer `xcodebuild -downloadPlatform iOS` (ne demande pas de mot de passe).
+- Au tout premier lancement, la WebView peut mettre ~40 s à afficher quoi que ce soit (warm-up WebKit dans le simulateur). **Ce n'est pas un bug** — ne pas partir en chasse.
+
+### Deep links — `com.natty.app://`
+Le scheme est déclaré dans `ios/App/App/Info.plist` (`CFBundleURLTypes`) et dans `AndroidManifest.xml` (intent-filter `VIEW`/`BROWSABLE`, activité déjà en `launchMode="singleTask"`). Deux usages :
+- **`com.natty.app://oauth-callback`** — connexion Google. Google **refuse** l'auth depuis une WebView embarquée (`disallowed_useragent`) : `login.html` ouvre donc le navigateur système via `@capacitor/browser`, et récupère le retour par l'écouteur `appUrlOpen` de `@capacitor/app`.
+  ⚠️ **Nécessite `com.natty.app://oauth-callback` dans Supabase → Authentication → URL Configuration → Redirect URLs.** Google Console n'a rien à changer (l'auth est courtée par Supabase).
+- **`com.natty.app://checkout`** — retour de paiement. Stripe n'accepte que des URL http(s), d'où la page relais **`checkout-retour.html`** (côté web, racine) qui rebondit vers le scheme. `api/checkout.js` reçoit `plateforme: 'natif'` et pointe vers cette page.
+
+> **Règle** : tout écouteur `appUrlOpen` doit vérifier le préfixe du scheme et ignorer le reste, sinon un deep link tiers peut injecter un jeton ou simuler un paiement.
+
+### Safe area
+La WebView est rendue **bord à bord**. `assets/style.css` applique `env(safe-area-inset-top)` sur `.top` (couvre Menu, Suivi, Coaching, Repas, Profil) ; `offre.html` et `narration.html` ont leur propre header et leur propre correctif. `nav.js` gérait déjà le bas. `env()` vaut 0 sur le web : aucun impact côté navigateur.
+
+### Ne pas piéger l'utilisateur hors du bundle
+Un lien externe suivi dans la WebView sort de l'app **sans barre de navigateur pour revenir** (et c'est un motif possible de refus en review). Toute URL hors bundle doit passer par `@capacitor/browser`. Fait pour l'icône maison de `www/index.html`.
+
+### Icônes et splash
+Générés par `@capacitor/assets` depuis `resources/logo.png` (1024×1024) :
+```
+npx capacitor-assets generate --assetPath resources \
+  --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#101014' \
+  --splashBackgroundColor '#ffffff' --splashBackgroundColorDark '#101014'
+```
+⚠️ **Ne pas utiliser le dossier `assets/` par défaut** : à la racine, il contient déjà les assets web (`core.js`, `style.css`…). D'où `--assetPath resources`.
+L'outil réécrit `www/manifest.json` — repasser derrière : il met `type: image/png` sur des `.webp`, et un `start_url` pointant vers `menu.html` qui n'existe pas dans le bundle.
+
+### Repas de la semaine — une seule génération
+`repas.html` appelait l'IA à chaque ouverture (~21 s). Désormais :
+- La génération a lieu **une fois par semaine**, dans `suivi.html`, en même temps que les conseils (`NattyReco.genererSemaine`), et est stockée dans `profil_conseils.conseils_json`.
+- `repas.html` et la **liste de courses de `coaching.html`** ne font que **lire** ce cache. La liste de courses est **dérivée** des recettes (agrégation des ingrédients), donc jamais désynchronisée et sans appel IA.
+- Le **nombre de repas voulus** (1 à 7) est réglable dans `repas.html`. Préférence en `localStorage` (`natty_nb_repas_<userId>`) — donc **propre à l'appareil**, faute de colonne dédiée. La valeur réellement utilisée est conservée dans `conseils_json.nb_repas`.
+
+### Reste à faire
+- **Android n'a jamais été compilé** (ni JDK ni Android Studio sur la machine de dev).
+- **Signature** : `CODE_SIGNING_ALLOWED=NO` suffit au simulateur ; un appareil réel ou TestFlight demande un Team Apple dans Xcode.
+- `narration.html` pèse toujours ~2,4 Mo (images base64) — bascule Cloudinary prévue via `CLOUD_BASE`.

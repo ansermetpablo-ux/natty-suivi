@@ -4071,37 +4071,18 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
       console.log('[Natty] save-conseils status:', saveRes.status, saveText.substring(0,100));
     } catch(saveErr) { console.warn('[Natty] Sauvegarde error:', saveErr); }
 
-    // 2ème appel : liste de courses + recettes
+    // 2ème appel : les repas de la semaine, générés en même temps que les
+    // conseils puisque les deux découlent du même profil. C'est l'unique
+    // génération de la semaine ; repas.html se contente ensuite de lire le
+    // cache (profil_conseils.conseils_json), d'où plus d'attente à l'ouverture.
     try {
-      var promptC = 'Nutritionniste. Client: ' + (ob.prenom||'?') + ', objectif ' + (ob.objectif_type||'?')
-        + ', cibles prot=' + (macObj.p||0) + 'g cal=' + (macObj.c||0) + 'kcal.'
-        + (qaDesc ? ' Preferences et aliments a decouvrir: ' + qaDesc + '.' : '')
-        + ' Repas recents: ' + mealsDesc.substring(0, 300) + '.'
-        + ' Conseils de la semaine: ' + (data.conseil_amelioration||'') + '.'
-        + ' Genere une liste de courses et 3 recettes UNIQUES et personnalisees pour CE client (varie selon ses gouts, integre ce qu il veut decouvrir).'
-        + ' JSON sans backticks: {"liste_courses":{"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]},"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","..."]}]}';
-      var resC = await fetch(CLAUDE_API, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({prompt: promptC, max_tokens: 1400})
-      });
-      var dC = await resC.json();
-      var parsedC = JSON.parse((dC.text||'{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim());
-      var listeCJ = parsedC.liste_courses ? JSON.stringify(parsedC.liste_courses) : null;
-      var recettesJ = parsedC.recettes && parsedC.recettes.length ? JSON.stringify(parsedC.recettes) : null;
-      if (listeCJ || recettesJ) {
-        await fetch('https://natty-suivi.vercel.app/api/save-conseils', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: USER_ID, liste_courses_json: listeCJ, recettes_json: recettesJ, semaine: semaine })
-        });
-        if (window._conseilsCache) {
-          window._conseilsCache.liste_courses_json = listeCJ;
-          window._conseilsCache.recettes_json = recettesJ;
-        }
-        console.log('[Natty] Courses+recettes sauvegardées');
+      if (window.NattyReco) {
+        var nbVoulu = NattyReco.nbRepas();
+        console.log('[Natty] Génération des repas de la semaine, nb =', nbVoulu);
+        var recettesSem = await NattyReco.genererSemaine(nbVoulu);
+        console.log('[Natty] Repas de la semaine enregistrés :', recettesSem.length);
       }
-    } catch(eC) { console.warn('[Natty] Courses error:', eC); }
+    } catch(eC) { console.warn('[Natty] Repas de la semaine error:', eC); }
 
     // Afficher
     profilConseillsLoaded = false;
@@ -4568,6 +4549,11 @@ function ouvrirRecettes() {
 <script>
 window.NattyOnAdd = function(){ if (typeof openRepasOverlay === 'function') openRepasOverlay(); };
 </script>
+<!-- Nécessaires à la génération hebdo des recettes (NattyReco), déclenchée
+     en même temps que les conseils. Chargés ici, donc disponibles au moment
+     où l'utilisateur lance la génération. -->
+<script src="/assets/core.js"></script>
+<script src="/assets/reco.js"></script>
 <script src="/assets/nav.js"></script>
 </body>
 </html>

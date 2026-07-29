@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Natty · Retour de paiement</title>
+<style>
+  body{font-family:'Inter',-apple-system,sans-serif;background:#f0f0f3;color:#2d2d3a;
+       min-height:100vh;display:flex;align-items:center;justify-content:center;
+       padding:24px 20px;margin:0;text-align:center}
+  .box{max-width:340px}
+  .em{font-size:44px;margin-bottom:14px}
+  h1{font-size:19px;font-weight:700;margin:0 0 8px}
+  p{font-size:14px;color:#9a9aaa;line-height:1.5;margin:0 0 22px}
+  a{display:inline-block;background:#1a1a2e;color:#fff;text-decoration:none;
+    font-size:15px;font-weight:600;padding:14px 26px;border-radius:999px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="em" id="em">✅</div>
+  <h1 id="titre">Paiement confirmé</h1>
+  <p>Retour à l'application…</p>
+  <a id="lien" href="#">Ouvrir Natty</a>
+</div>
+
+<script>
+/* Page relais entre Stripe et l'app native.
+   Stripe n'accepte que des URL http(s) en success_url / cancel_url : on ne peut
+   donc pas lui donner directement com.natty.app://. Cette page, ouverte dans le
+   navigateur système à la fin du paiement, rebondit vers ce scheme, ce qui rend
+   la main à l'app. Le bouton reste affiché si le rebond automatique est bloqué. */
+(function(){
+  var p = new URLSearchParams(location.search);
+  var statut = p.get('statut') === 'annule' ? 'annule' : 'ok';
+  var token  = p.get('token') || '';
+
+  if (statut === 'annule') {
+    document.getElementById('em').textContent = '↩️';
+    document.getElementById('titre').textContent = 'Paiement annulé';
+  }
+
+  var cible = 'com.natty.app://checkout?statut=' + statut +
+              '&token=' + encodeURIComponent(token);
+  document.getElementById('lien').href = cible;
+  location.replace(cible);
+})();
+</script>
+</body>
+</html>

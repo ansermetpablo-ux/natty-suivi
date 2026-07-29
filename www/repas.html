@@ -112,6 +112,20 @@ body{overflow-x:hidden}
   transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:600;white-space:nowrap}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .empty{text-align:center;color:var(--muted);font-size:14px;padding:60px 0}
+
+/* Réglage du nombre de repas voulus pour la semaine. Masqué tant que la page
+   n'a pas confirmé qu'elle affiche bien la semaine (et non un repas précis
+   ouvert via ?id=). */
+.nbbar{display:none;align-items:center;justify-content:space-between;margin:4px 0 18px}
+.nbbar-lbl{font-size:14px;font-weight:600;color:var(--muted)}
+.nbbar-ctl{display:flex;align-items:center;gap:6px;background:var(--card);
+  border-radius:var(--r-full);padding:4px}
+.nbbar-ctl button{width:32px;height:32px;border:none;border-radius:50%;
+  background:#fff;color:var(--ink);font-size:19px;font-weight:600;line-height:1;
+  cursor:pointer;box-shadow:var(--nm-soft)}
+.nbbar-ctl button:active{transform:scale(.94)}
+.nbbar-ctl button:disabled{opacity:.35;cursor:default;box-shadow:none}
+.nbbar-ctl span{min-width:24px;text-align:center;font-size:16px;font-weight:700}
 </style>
 </head>
 <body>
@@ -120,9 +134,20 @@ body{overflow-x:hidden}
   <button id="backBtn" aria-label="Retour">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
-  <a href="suivi.html?profil=1" aria-label="Profil">
+  <a href="profil.html" aria-label="Profil">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
   </a>
+</div>
+
+<div class="wrap">
+  <div class="nbbar" id="nbbar">
+    <span class="nbbar-lbl">Repas de la semaine</span>
+    <div class="nbbar-ctl">
+      <button id="nbMoins" aria-label="Un repas de moins">−</button>
+      <span id="nbVal">4</span>
+      <button id="nbPlus" aria-label="Un repas de plus">+</button>
+    </div>
+  </div>
 </div>
 
 <div class="wrap" id="content">
@@ -345,6 +370,69 @@ document.getElementById('backBtn').addEventListener('click', function(){
   if (document.referrer) history.back(); else Natty.goto('index.html');
 });
 
+/* ═══ Repas de la semaine ═══
+   La page ne génère plus rien à l'ouverture : les recettes sont produites une
+   seule fois par semaine, en même temps que les conseils (voir suivi.html), et
+   relues ici depuis le cache. C'est ce qui supprime l'attente de ~20 s qu'on
+   avait à chaque visite. Le bouton ci-dessous n'est qu'un rattrapage pour la
+   semaine où rien n'a encore été généré. */
+
+var SEMAINE = [];   // tout ce que le cache contient pour la semaine
+
+function afficherNb(n){
+  var el = document.getElementById('nbVal');
+  if (el) el.textContent = n;
+  var moins = document.getElementById('nbMoins'), plus = document.getElementById('nbPlus');
+  if (moins) moins.disabled = (n <= NattyReco.NB_MIN);
+  if (plus)  plus.disabled  = (n >= NattyReco.NB_MAX);
+}
+
+function rendreSemaine(){
+  var nb = NattyReco.nbRepas();
+  afficherNb(nb);
+  PLATS = SEMAINE.slice(0, nb).map(depuisRecette);
+  if (!PLATS.length){ etatVide(); return; }
+  render();
+  // Moins de recettes en cache que demandé : on le dit plutôt que de
+  // regénérer tout seul, une génération coûtant une vingtaine de secondes.
+  if (SEMAINE.length < nb) manqueRecettes(nb);
+}
+
+function etatVide(){
+  document.getElementById('content').innerHTML =
+    '<div class="empty">Aucun repas pour cette semaine.<br><br>' +
+    '<button class="cta" id="btnGen" style="margin:0 auto">Générer mes repas de la semaine</button></div>';
+  document.getElementById('btnGen').addEventListener('click', genererMaintenant);
+}
+
+function manqueRecettes(nb){
+  var c = document.getElementById('content');
+  var d = document.createElement('div');
+  d.className = 'empty';
+  d.style.paddingTop = '24px';
+  d.innerHTML = 'Seulement ' + SEMAINE.length + ' repas générés cette semaine sur ' + nb + ' voulus.<br><br>' +
+    '<button class="cta" id="btnGen" style="margin:0 auto">Régénérer la semaine</button>';
+  c.appendChild(d);
+  document.getElementById('btnGen').addEventListener('click', genererMaintenant);
+}
+
+async function genererMaintenant(){
+  var nb = NattyReco.nbRepas();
+  document.getElementById('content').innerHTML =
+    '<div class="empty">Génération de tes ' + nb + ' repas…<br><span style="font-size:12px">Cela prend une vingtaine de secondes, une seule fois pour la semaine.</span></div>';
+  try{
+    var r = await NattyReco.genererSemaine(nb);
+    SEMAINE = r || [];
+    if (!SEMAINE.length){
+      document.getElementById('content').innerHTML = '<div class="empty">La génération n\'a rien renvoyé. Réessaie dans un instant.</div>';
+      return;
+    }
+    rendreSemaine();
+  }catch(e){
+    document.getElementById('content').innerHTML = '<div class="empty">Impossible de générer les repas.</div>';
+  }
+}
+
 (async function(){
   if (!Natty.requireAuth()) return;
   var params = new URLSearchParams(window.location.search);
@@ -363,22 +451,18 @@ document.getElementById('backBtn').addEventListener('click', function(){
       }
     }
 
-    // Sinon : les plats conseillés par le moteur de recommandation.
-    var recettes = await NattyReco.recettesDeLaSemaine(4);
-    if (recettes && recettes.length){
-      PLATS = recettes.map(depuisRecette);
-      render();
-      return;
-    }
+    var barre = document.getElementById('nbbar');
+    if (barre) barre.style.display = 'flex';
+    afficherNb(NattyReco.nbRepas());
+    document.getElementById('nbMoins').addEventListener('click', function(){
+      NattyReco.setNbRepas(NattyReco.nbRepas() - 1); rendreSemaine();
+    });
+    document.getElementById('nbPlus').addEventListener('click', function(){
+      NattyReco.setNbRepas(NattyReco.nbRepas() + 1); rendreSemaine();
+    });
 
-    // Repli si l'IA est indisponible : le dernier repas enregistré, pour que
-    // la page reste utile plutôt que vide.
-    var last = await Natty.sbFetch('meals?user_id=eq.'+Natty.USER_ID+'&order=created_at.desc&limit=1&select=*');
-    if (last && last.length){
-      last[0].meal_ingredients = await Natty.sbFetch('meal_ingredients?meal_id=eq.'+last[0].id+'&select=*');
-      PLATS = [depuisRepas(last[0])];
-    }
-    render();
+    SEMAINE = await NattyReco.recettesDeLaSemaine(NattyReco.NB_MAX);
+    rendreSemaine();
   }catch(e){
     document.getElementById('content').innerHTML = '<div class="empty">Impossible de charger les recettes.</div>';
   }

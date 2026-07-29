@@ -19,8 +19,25 @@ export default async function handler(req, res) {
       try { body = JSON.parse(raw); } catch(e) { body = {}; }
     }
 
-    const { user_id, conseil_prot, conseil_gluc, conseil_lip, conseil_cal, conseil_amelioration, conseil_points_forts, semaine } = body;
+    const { user_id } = body;
     if (!user_id) return res.status(400).json({ error: 'user_id requis' });
+
+    // L'upsert fusionne sur la ligne existante : n'envoyer que les champs
+    // réellement fournis, sinon un appel partiel (les recettes, par exemple)
+    // écraserait avec des null les conseils écrits juste avant.
+    // Colonnes réellement présentes dans profil_conseils (vérifié en base) :
+    // conseils_json, recettes_json et liste_courses_json existent bien.
+    // Elles étaient simplement ignorées ici, d'où des écritures perdues.
+    const CHAMPS = [
+      'conseil_prot', 'conseil_gluc', 'conseil_lip', 'conseil_cal',
+      'conseil_amelioration', 'conseil_points_forts',
+      'conseils_json', 'recettes_json', 'liste_courses_json', 'semaine'
+    ];
+
+    const ligne = { user_id, generated_at: new Date().toISOString() };
+    for (const champ of CHAMPS) {
+      if (body[champ] !== undefined) ligne[champ] = body[champ];
+    }
 
     const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
     const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY; // À ajouter dans Vercel env vars
@@ -33,17 +50,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates,return=minimal'
       },
-      body: JSON.stringify({
-        user_id,
-        conseil_prot:         conseil_prot || null,
-        conseil_gluc:         conseil_gluc || null,
-        conseil_lip:          conseil_lip || null,
-        conseil_cal:          conseil_cal || null,
-        conseil_amelioration: conseil_amelioration || null,
-        conseil_points_forts: conseil_points_forts || null,
-        semaine:              semaine || null,
-        generated_at:         new Date().toISOString()
-      })
+      body: JSON.stringify(ligne)
     });
 
     if (!response.ok) {

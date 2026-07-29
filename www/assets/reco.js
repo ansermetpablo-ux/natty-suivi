@@ -185,7 +185,7 @@ var NattyReco = (function () {
   }
 
   async function appelerClaude(prompt, maxTokens) {
-    var r = await fetch('/api/claude', {
+    var r = await fetch('https://natty-suivi.vercel.app/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt, max_tokens: maxTokens || 3000 })
@@ -236,14 +236,76 @@ var NattyReco = (function () {
   }
 
   /**
-   * Recommandations de la semaine, avec cache.
-   * Retombe silencieusement sur [] si l'IA est indisponible : les pages
-   * doivent gérer l'état vide, jamais planter.
+   * Écrit les recettes de la semaine dans profil_conseils.conseils_json.
+   * Passe par /api/save-conseils, qui détient la service_role key et ne met à
+   * jour que les champs transmis (les conseils déjà écrits ne sont pas touchés).
+   */
+  async function enregistrerSemaine(recettes, nb) {
+    try {
+      var r = await fetch('https://natty-suivi.vercel.app/api/save-conseils', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: Natty.USER_ID,
+          semaine: lundiCourant(),
+          // conseils_json est une colonne texte : on y met du JSON sérialisé.
+          // lireCache() reparse, et tolère aussi le cas jsonb.
+          conseils_json: JSON.stringify({
+            recettes: recettes, nb_repas: nb, genere_le: new Date().toISOString()
+          })
+        })
+      });
+      return r.ok;
+    } catch (e) { return false; }
+  }
+
+  /* ── 6. Nombre de repas voulus pour la semaine ────────────
+     Préférence stockée en localStorage : pas de colonne dédiée en base, et
+     l'ajouter demanderait une migration Supabase. Conséquence assumée : le
+     réglage est propre à l'appareil. La valeur réellement utilisée pour la
+     génération est, elle, conservée dans conseils_json.nb_repas. */
+
+  var NB_DEFAUT = 4, NB_MIN = 1, NB_MAX = 7;
+
+  function borner(n) {
+    n = parseInt(n, 10);
+    if (isNaN(n)) return NB_DEFAUT;
+    return Math.min(NB_MAX, Math.max(NB_MIN, n));
+  }
+
+  function nbRepas() {
+    try { return borner(localStorage.getItem('natty_nb_repas_' + Natty.USER_ID) || NB_DEFAUT); }
+    catch (e) { return NB_DEFAUT; }
+  }
+
+  function setNbRepas(n) {
+    var v = borner(n);
+    try { localStorage.setItem('natty_nb_repas_' + Natty.USER_ID, String(v)); } catch (e) {}
+    return v;
+  }
+
+  /**
+   * Génère les recettes de la semaine ET les enregistre.
+   * C'est le seul point qui appelle l'IA : les pages, elles, lisent le cache.
+   */
+  async function genererSemaine(nb) {
+    nb = borner(nb || nbRepas());
+    var recettes = await recommander(nb);
+    if (!recettes || !recettes.length) return [];
+    await enregistrerSemaine(recettes, nb);
+    return recettes;
+  }
+
+  /**
+   * Recettes de la semaine, depuis le cache uniquement.
+   * Ne déclenche jamais d'appel IA : une seule génération par semaine, faite
+   * en même temps que les conseils. Renvoie [] s'il n'y a rien pour la semaine
+   * en cours — aux pages d'afficher un état vide et de proposer la génération.
    */
   async function recettesDeLaSemaine(nb) {
     var cache = await lireCache();
-    if (cache) return cache.slice(0, nb || 4);
-    return await recommander(nb || 4);
+    if (!cache) return [];
+    return cache.slice(0, borner(nb || nbRepas()));
   }
 
   return {
@@ -253,6 +315,12 @@ var NattyReco = (function () {
     construirePrompt: construirePrompt,
     recommander: recommander,
     recettesDeLaSemaine: recettesDeLaSemaine,
+    genererSemaine: genererSemaine,
+    enregistrerSemaine: enregistrerSemaine,
+    nbRepas: nbRepas,
+    setNbRepas: setNbRepas,
+    NB_MIN: NB_MIN,
+    NB_MAX: NB_MAX,
     lundiCourant: lundiCourant
   };
 })();
