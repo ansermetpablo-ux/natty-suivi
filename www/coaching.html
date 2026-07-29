@@ -46,6 +46,21 @@
 .adv-title{font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
 .adv-line{font-size:13.5px;font-weight:700;line-height:1.35;color:var(--ink)}
 .adv-week{font-size:11px;color:var(--muted);margin:-4px 0 12px}
+
+/* Liste de courses — déduite des repas de la semaine, pas générée à part :
+   elle reste ainsi toujours cohérente avec ce qu'affiche repas.html. */
+.crs-note{font-size:11px;color:var(--muted);margin:-4px 0 12px}
+.crs{background:var(--card);border-radius:var(--r-lg);overflow:hidden}
+.crs-item{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer;
+  border-bottom:1px solid rgba(0,0,0,.05)}
+.crs-item:last-child{border-bottom:none}
+.crs-em{font-size:21px;line-height:1;flex-shrink:0}
+.crs-nom{flex:1;font-size:14px;font-weight:700;line-height:1.3}
+.crs-qte{font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0}
+.crs-box{width:21px;height:21px;border-radius:50%;border:2px solid #d3d3d8;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+.crs-item.done .crs-box{background:var(--green);border-color:var(--green)}
+.crs-item.done .crs-nom,.crs-item.done .crs-qte{text-decoration:line-through;opacity:.45}
 </style>
 </head>
 <body>
@@ -54,7 +69,7 @@
   <a href="index.html" aria-label="Accueil">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
   </a>
-  <a href="suivi.html?profil=1" aria-label="Profil">
+  <a href="profil.html" aria-label="Profil">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
   </a>
 </div>
@@ -81,9 +96,14 @@
   <div class="sec-title">Conseils de la semaine</div>
   <div class="adv-week" id="advWeek"></div>
   <div class="adv-grid" id="advList"><div class="empty">Chargement…</div></div>
+
+  <div class="sec-title">Liste de courses</div>
+  <div class="crs-note" id="crsNote"></div>
+  <div class="crs" id="crsList"><div class="empty">Chargement…</div></div>
 </div>
 
 <script src="/assets/core.js"></script>
+<script src="/assets/reco.js"></script>
 <script>
 var weekOffset = 0;
 
@@ -160,8 +180,9 @@ async function loadMessages(){
 }
 
 // Conseils hebdo — mêmes colonnes que profil_conseils utilisées par suivi.html.
-// Ne jamais inclure liste_courses_json / recettes_json : ces colonnes n'existent
-// pas et feraient échouer la requête en 400 (voir CLAUDE.md §7).
+// NB : contrairement à ce qu'indiquait ce commentaire, liste_courses_json et
+// recettes_json existent bien en base (vérifié). On ne les sélectionne
+// simplement pas ici, faute d'usage sur cet écran.
 var ADV_FIELDS = [
   { k:'conseil_points_forts', em:'⭐', t:'Points forts', wide:true },
   { k:'conseil_amelioration', em:'🎯', t:'À améliorer',  wide:true },
@@ -228,9 +249,117 @@ document.getElementById('rdvHero').addEventListener('click', function(e){
 document.getElementById('wkPrev').addEventListener('click', function(){ weekOffset--; loadRdv(); });
 document.getElementById('wkNext').addEventListener('click', function(){ weekOffset++; loadRdv(); });
 
+/* ═══ Liste de courses ═══
+   Déduite des repas de la semaine plutôt que générée par un appel séparé :
+   pas d'attente, et la liste correspond toujours exactement aux plats
+   affichés dans repas.html (nombre de repas voulus compris). */
+
+// "120 g" → {n:120, u:'g'} ; "1/2" ou "une pincée" → null (non sommable).
+// L'unité doit être alphabétique, sinon "1/2" serait lu comme 1 unité "/2"
+// et réécrit "1 /2".
+function crsParseQte(q){
+  var m = String(q || '').trim().match(/^([\d]+(?:[.,][\d]+)?)\s*(.*)$/);
+  if (!m) return null;
+  var u = m[2].trim().toLowerCase();
+  if (u && !/^[a-zà-ÿ.\s]+$/i.test(u)) return null;
+  return { n: parseFloat(m[1].replace(',', '.')), u: u };
+}
+
+function crsFormatNombre(n){
+  return (Math.round(n * 10) / 10).toString().replace('.', ',');
+}
+
+function crsAgreger(recettes){
+  var par = {};
+  (recettes || []).forEach(function(r){
+    (r.ingredients || []).forEach(function(i){
+      var nom = (i.nom || '').trim();
+      if (!nom) return;
+      var cle = nom.toLowerCase();
+      if (!par[cle]) par[cle] = { em: i.em || '🥄', nom: nom, qtes: [] };
+      if (i.qte) par[cle].qtes.push(String(i.qte).trim());
+    });
+  });
+
+  return Object.keys(par).map(function(cle){
+    var it = par[cle];
+    var parsees = it.qtes.map(crsParseQte);
+    var unites = {};
+    var sommable = parsees.length > 0 && parsees.every(function(p){
+      if (!p) return false;
+      unites[p.u] = 1;
+      return true;
+    }) && Object.keys(unites).length === 1;
+
+    var qte;
+    if (sommable){
+      var total = parsees.reduce(function(s, p){ return s + p.n; }, 0);
+      qte = crsFormatNombre(total) + (parsees[0].u ? ' ' + parsees[0].u : '');
+    } else {
+      // Unités mélangées ou quantités non chiffrées : on juxtapose plutôt que
+      // d'inventer un total faux.
+      qte = it.qtes.filter(function(v, i, a){ return a.indexOf(v) === i; }).join(' + ');
+    }
+    return { em: it.em, nom: it.nom, qte: qte };
+  }).sort(function(a, b){ return a.nom.localeCompare(b.nom, 'fr'); });
+}
+
+function crsCle(){
+  return 'natty_courses_' + Natty.USER_ID + '_' + NattyReco.lundiCourant();
+}
+function crsCoches(){
+  try { return JSON.parse(localStorage.getItem(crsCle()) || '[]'); } catch(e){ return []; }
+}
+function crsEnregistrer(l){
+  try { localStorage.setItem(crsCle(), JSON.stringify(l)); } catch(e){}
+}
+
+async function loadCourses(){
+  var list = document.getElementById('crsList');
+  var note = document.getElementById('crsNote');
+  var recettes = [];
+  try { recettes = await NattyReco.recettesDeLaSemaine(NattyReco.nbRepas()); } catch(e){}
+
+  if (!recettes || !recettes.length){
+    note.textContent = '';
+    list.innerHTML = '<div class="empty">Ta liste apparaîtra dès que tes repas de la semaine seront générés.</div>';
+    return;
+  }
+
+  var items = crsAgreger(recettes);
+  if (!items.length){
+    note.textContent = '';
+    list.innerHTML = '<div class="empty">Aucun ingrédient à afficher.</div>';
+    return;
+  }
+
+  var coches = crsCoches();
+  note.textContent = 'Pour tes ' + recettes.length + ' repas de la semaine · ' + items.length + ' ingrédients';
+  list.innerHTML = items.map(function(it){
+    var fait = coches.indexOf(it.nom) >= 0;
+    return '<div class="crs-item' + (fait ? ' done' : '') + '" data-nom="' + esc(it.nom) + '">'
+      + '<span class="crs-em">' + esc(it.em) + '</span>'
+      + '<span class="crs-nom">' + esc(it.nom) + '</span>'
+      + (it.qte ? '<span class="crs-qte">' + esc(it.qte) + '</span>' : '')
+      + '<span class="crs-box">✓</span></div>';
+  }).join('');
+
+  list.querySelectorAll('.crs-item').forEach(function(el){
+    el.addEventListener('click', function(){
+      el.classList.toggle('done');
+      var nom = el.dataset.nom;
+      var l = crsCoches();
+      var i = l.indexOf(nom);
+      if (el.classList.contains('done')){ if (i < 0) l.push(nom); }
+      else if (i >= 0) l.splice(i, 1);
+      crsEnregistrer(l);
+    });
+  });
+}
+
 (async function(){
   if (!Natty.requireAuth()) return;
-  await Promise.all([loadRdv(), loadMessages(), loadConseils()]);
+  await Promise.all([loadRdv(), loadMessages(), loadConseils(), loadCourses()]);
 })();
 </script>
 <script src="/assets/nav.js"></script>

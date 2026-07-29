@@ -6,7 +6,11 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { font-family: "DM Sans", sans-serif; background: #f0f0f3; min-height: 100vh; padding: 24px 16px 120px; }
+/* Le padding haut intègre la safe area : la WebView est rendue bord à bord,
+   sinon le fil d'étapes passe sous l'heure et la batterie sur iPhone.
+   env() vaut 0 sur le web, qui garde donc ses 24px. */
+body { font-family: "DM Sans", sans-serif; background: #f0f0f3; min-height: 100vh;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 16px 120px; }
 .bg-pattern { position: fixed; inset: 0; background-color: #f0f0f3; background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0); background-size: 26px 26px; z-index: 0; }
 .wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 

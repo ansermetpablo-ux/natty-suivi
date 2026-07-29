@@ -31,6 +31,18 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
     }
 
+    // Le priceId vient du client : sans contrôle, n'importe quel prix existant
+    // sur le compte Stripe pourrait être souscrit (un prix à 0, par exemple).
+    // Seules les deux formules réelles sont acceptées.
+    const PRIX_AUTORISES = [
+      'price_1TbhMB0TTrkVKRpiPvbGHLyI', // 3 repas / semaine — 27 €
+      'price_1TbhWk0TTrkVKRpiFNYOOcEJ'  // 4 repas / semaine — 36 €
+    ];
+    if (!PRIX_AUTORISES.includes(priceId)) {
+      console.log('priceId refusé:', priceId);
+      return res.status(400).json({ error: 'Formule inconnue' });
+    }
+
     const origin = 'https://natty-suivi.vercel.app';
 
     // Dans l'app native, renvoyer vers le site laisserait l'utilisateur bloqué
