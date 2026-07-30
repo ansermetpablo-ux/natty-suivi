@@ -14,8 +14,8 @@
 body{overflow-x:hidden}
 
 /* ══ HERO : le plat déborde au-dessus de la carte ══ */
-.hero{position:relative;margin-top:88px;background:var(--bg);border-radius:var(--r-xl);
-  box-shadow:var(--nm-so),var(--nm-bright);padding:96px 20px 20px;overflow:visible}
+.hero{position:relative;margin-top:88px;background:var(--metal-white);border-radius:var(--r-xl);
+  box-shadow:var(--sh-metal-light);padding:96px 20px 20px;overflow:visible}
 .hero-dish{position:absolute;top:-104px;left:50%;transform:translateX(-50%);
   z-index:3;line-height:1;font-size:172px;
   filter:drop-shadow(0 22px 26px rgba(16,16,18,.28));animation:floatDish 6s ease-in-out infinite}
@@ -35,54 +35,58 @@ body{overflow-x:hidden}
 @keyframes floatLeaf{0%,100%{translate:0 0}50%{translate:0 -8px}}
 
 .hero-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.hero-title{font-size:23px;font-weight:900;line-height:1.14;letter-spacing:-.2px}
+.hero-title{font-size:23px;font-weight:900;line-height:1.14;letter-spacing:-.2px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .hero-time{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;
   color:var(--muted);white-space:nowrap;margin-top:3px}
 .hero-desc{font-size:13px;color:var(--muted);line-height:1.55;margin-top:10px}
 .hero-macros{display:flex;gap:8px;margin-top:14px}
 .hero-macros .mp{flex:1;background:var(--card);border-radius:16px;padding:9px 0;
-  text-align:center;font-weight:800;font-size:13px}
+  text-align:center;font-weight:800;font-size:13px;box-shadow:var(--nm-in)}
 .hero-foot{display:flex;align-items:center;justify-content:space-between;margin-top:18px;gap:12px}
 .hero-kcal{flex-shrink:0}
 .hero-kcal .k{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 .hero-kcal .v{font-size:21px;font-weight:900;margin-top:2px;white-space:nowrap}
 .hero-act{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .heart-btn{width:44px;height:44px;border-radius:50%;background:var(--card);border:none;
-  font-size:17px;cursor:pointer;flex-shrink:0}
+  box-shadow:var(--nm-so),var(--nm-bright);font-size:17px;cursor:pointer;flex-shrink:0}
 .cta{display:flex;align-items:center;gap:8px;background:var(--ink);color:#fff;border:none;
   border-radius:26px;padding:11px 7px 11px 16px;font-family:inherit;font-weight:800;
-  font-size:13px;cursor:pointer;white-space:nowrap}
+  font-size:13px;cursor:pointer;white-space:nowrap;box-shadow:4px 6px 14px rgba(20,20,22,.28)}
 .cta:active{transform:scale(.97)}
 .cta .plus{width:30px;height:30px;border-radius:50%;background:#fff;color:var(--ink);
   display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700}
 
-/* ══ Ma semaine ══ */
-.sec-head{display:flex;align-items:baseline;justify-content:space-between;margin:34px 0 46px}
-.sec-head .sec-title{margin:0}
-.sec-note{font-size:11.5px;font-weight:700;color:var(--muted)}
-.week-row{display:flex;gap:11px}
-.week-card{flex:1;position:relative;background:var(--bg);border-radius:22px;box-shadow:var(--nm-so);
-  padding:42px 8px 14px;text-align:center;overflow:visible;cursor:pointer;transition:transform .18s ease}
-.week-card.on{transform:translateY(-4px)}
-.week-dish{position:absolute;top:-36px;left:50%;transform:translateX(-50%);font-size:64px;line-height:1;
-  filter:drop-shadow(0 12px 14px rgba(16,16,18,.24))}
-.week-dish img{display:block;width:72px;height:72px;object-fit:cover;border-radius:50%;border:4px solid var(--bg)}
-.week-name{font-size:11.5px;font-weight:800;line-height:1.25;min-height:29px}
-.week-kcal{font-size:10.5px;font-weight:700;color:var(--muted);margin-top:5px}
-.week-check{position:absolute;top:8px;right:8px;width:19px;height:19px;border-radius:50%;
-  background:var(--green);color:#fff;font-size:11px;display:none;align-items:center;
+/* ══ Ma semaine : carte noire métallisée ══ */
+.week-panel{background:var(--metal-black);border-radius:var(--r-lg);box-shadow:var(--sh-metal);
+  padding:18px 16px 16px;margin-top:18px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:34px}
+.sec-head .sec-title{margin:0;color:#fff}
+.sec-note{font-size:10.5px;font-weight:600;color:rgba(255,255,255,0.45)}
+.week-row{display:flex;gap:9px}
+.week-card{flex:1;position:relative;background:rgba(255,255,255,0.06);border-radius:18px;
+  padding:32px 5px 11px;text-align:center;overflow:visible;cursor:pointer;transition:transform .18s ease}
+.week-card.on{transform:translateY(-3px)}
+.week-dish{position:absolute;top:-26px;left:50%;transform:translateX(-50%);font-size:46px;line-height:1;
+  filter:drop-shadow(0 9px 11px rgba(0,0,0,.4))}
+.week-dish img{display:block;width:54px;height:54px;object-fit:cover;border-radius:50%;border:3px solid #1c1d21}
+.week-name{font-size:9.5px;font-weight:800;line-height:1.25;min-height:23px;color:#fff;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.week-kcal{font-size:8.5px;font-weight:600;color:rgba(255,255,255,0.45);margin-top:5px}
+.week-check{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;
+  background:var(--green);color:#fff;font-size:9px;display:none;align-items:center;
   justify-content:center;font-weight:800}
 .week-card.on .week-check{display:flex}
 
 /* ══ Panneaux ingrédients / préparation ══ */
-.panel{background:var(--bg);border-radius:var(--r-lg);box-shadow:var(--nm-so);padding:18px;margin-top:18px}
+.panel{background:var(--metal-white);border-radius:var(--r-lg);box-shadow:var(--sh-metal-light);padding:18px;margin-top:16px}
 .panel-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
 .panel-title{font-size:15.5px;font-weight:900}
 .panel-title span{font-size:11.5px;font-weight:700;color:var(--muted);margin-left:6px}
 .panel-link{font-size:12px;font-weight:800;text-decoration:underline;cursor:pointer}
-.ingr-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ingr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .ingr{position:relative;background:var(--card);border-radius:15px;padding:12px 4px 9px;
-  text-align:center;cursor:pointer;transition:opacity .18s ease}
+  text-align:center;cursor:pointer;transition:opacity .18s ease;box-shadow:var(--nm-in)}
 .ingr .em{font-size:25px;line-height:1}
 .ingr .nm{font-size:8.5px;font-weight:700;line-height:1.2;margin-top:6px}
 .ingr .qt{font-size:8px;color:var(--muted);margin-top:2px}
@@ -91,17 +95,9 @@ body{overflow-x:hidden}
   justify-content:center;font-weight:800}
 .ingr.off{opacity:.4}
 .ingr.off .tick{background:#d3d3d8}
-.steps-row{display:flex;align-items:stretch;gap:5px}
-.step{flex:1;background:var(--card);border-radius:15px;padding:11px 5px 10px;text-align:center}
-.step .n{width:19px;height:19px;border-radius:50%;background:var(--ink);color:#fff;font-size:10.5px;
-  font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 6px}
-.step .em{font-size:18px;line-height:1}
-.step .t{font-size:8.5px;font-weight:700;line-height:1.25;margin-top:5px}
-.step-link{align-self:center;color:#d3d3d8;font-size:12px;font-weight:800;letter-spacing:-1px}
-
 /* ══ Découvrir ══ */
 .discover-row{display:flex;gap:12px}
-.discover-card{flex:1;background:var(--bg);box-shadow:var(--nm-so);border-radius:var(--r-lg);
+.discover-card{flex:1;background:var(--metal-white);box-shadow:var(--sh-metal-light);border-radius:var(--r-lg);
   padding:18px 10px 22px;text-align:center;cursor:pointer;display:flex;flex-direction:column;
   align-items:center;gap:14px}
 .discover-card .em{font-size:34px}
@@ -156,6 +152,13 @@ function toast(msg){
    On les ramène à une forme unique pour que le rendu n'ait qu'un seul cas. */
 
 var EMOJIS = ['🍛','🐟','🍲','🥗','🍝','🍜'];
+// Les recettes conseillées par NattyReco n'ont pas de vraie photo (pas encore
+// photographiées). En attendant, on fait tourner quelques photos de plats
+// réelles et détourées plutôt que de retomber sur un simple emoji.
+var DEMO_PHOTOS = [
+  { hero:'/assets/img/plat-demo1-hero.png', week:'/assets/img/plat-demo1-week.png' },
+  { hero:'/assets/img/plat-demo2-hero.png', week:'/assets/img/plat-demo2-week.png' }
+];
 
 function depuisRecette(r, i){
   var m = r.macros || {};
@@ -166,7 +169,8 @@ function depuisRecette(r, i){
     kcal: Math.round(m.kcal || 0),
     p: Math.round(m.p || 0), g: Math.round(m.g || 0), l: Math.round(m.l || 0),
     emoji: EMOJIS[i % EMOJIS.length],
-    photo: null,
+    photo: DEMO_PHOTOS[i % DEMO_PHOTOS.length].hero,
+    photoWeek: DEMO_PHOTOS[i % DEMO_PHOTOS.length].week,
     ingr: (r.ingredients || []).map(function(x){ return { em:x.em||'🥄', nm:x.nom||'', qt:x.qte||'' }; }),
     steps: (r.steps || []).map(function(s){ return { em:s.em||'👉', t:s.t||'', tip:s.tip||'' }; })
   };
@@ -236,17 +240,20 @@ function render(){
     + '</div>';
 
   if (PLATS.length > 1){
-    html += '<div class="sec-head"><span class="sec-title">Ma semaine</span>'
+    html += '<div class="week-panel">'
+         +  '<div class="sec-head"><span class="sec-title">Ma semaine</span>'
          +  '<span class="sec-note">'+PLATS.length+' recettes conseillées</span></div>'
          +  '<div class="week-row">' + PLATS.map(function(x,i){
-              var vis = x.photo ? '<img src="'+esc(x.photo)+'" alt="">' : x.emoji;
+              var weekImg = x.photoWeek || x.photo;
+              var vis = weekImg ? '<img src="'+esc(weekImg)+'" alt="">' : x.emoji;
               return '<div class="week-card'+(i===actif?' on':'')+'" data-i="'+i+'">'
                 + '<div class="week-check">✓</div>'
                 + '<div class="week-dish">'+vis+'</div>'
                 + '<div class="week-name">'+esc(x.nom)+'</div>'
                 + '<div class="week-kcal">'+(x.kcal||'–')+' kcal</div>'
                 + '</div>';
-            }).join('') + '</div>';
+            }).join('') + '</div>'
+         +  '</div>';
   }
 
   if (d.ingr.length){
@@ -260,15 +267,6 @@ function render(){
             + '<div class="nm">'+esc(x.nm)+'</div>'
             + (x.qt ? '<div class="qt">'+esc(x.qt)+'</div>' : '')
             + '</div>';
-        }).join('') + '</div></div>';
-  }
-
-  if (d.steps.length){
-    html += '<div class="panel"><div class="panel-head"><div class="panel-title">Préparation</div></div>'
-      + '<div class="steps-row">' + d.steps.map(function(s,i){
-          return '<div class="step" title="'+esc(s.tip)+'"><div class="n">'+(i+1)+'</div>'
-            + '<div class="em">'+s.em+'</div><div class="t">'+esc(s.t)+'</div></div>'
-            + (i < d.steps.length-1 ? '<span class="step-link">···</span>' : '');
         }).join('') + '</div></div>';
   }
 

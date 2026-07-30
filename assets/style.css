@@ -33,6 +33,32 @@
   --nm-so:6px 6px 14px rgba(0,0,0,.07), -6px -6px 14px rgba(255,255,255,.9);
   --nm-bright:inset 0 1px 1px rgba(255,255,255,.9), inset 0 -1px 1px rgba(0,0,0,.02);
   --nm-soft:0 8px 22px rgba(20,20,30,.08);
+  --nm-in:inset 4px 4px 9px rgba(163,167,176,.4), inset -3px -3px 8px rgba(255,255,255,.7);
+
+  /* Noir métallisé — cartes sombres (ex. "Ma semaine") : noir quasi pur +
+     deux reflets doux, sans motif/texture. Même recette que suivi.html. */
+  --metal-black:
+    radial-gradient(130% 65% at 12% -10%, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0) 42%),
+    linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 28%),
+    linear-gradient(165deg, #0c0d0f 0%, #050506 55%, #000000 100%);
+  --sh-metal:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 10px 24px rgba(0,0,0,0.5);
+
+  /* Métallisé clair — modules blancs (hero, panneaux, cartes Découvrir) :
+     même principe que --metal-black (reflets doux, pas de motif) mais sur
+     base claire, avec une ombre plus nette/définie que le neumorphisme
+     standard pour un rendu plus sharp. */
+  --metal-white:
+    radial-gradient(130% 65% at 12% -10%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 45%),
+    linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 30%),
+    linear-gradient(165deg, #fcfcfd 0%, #eceef1 55%, #dadce0 100%);
+  --sh-metal-light:
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    inset 0 -1px 0 rgba(150,152,160,0.25),
+    6px 8px 16px rgba(20,20,30,.10),
+    -4px -4px 10px rgba(255,255,255,.85);
 
   /* Gabarit */
   --col:480px;
