@@ -260,12 +260,14 @@ var NattyReco = (function () {
   }
 
   /* ── 6. Nombre de repas voulus pour la semaine ────────────
-     Préférence stockée en localStorage : pas de colonne dédiée en base, et
-     l'ajouter demanderait une migration Supabase. Conséquence assumée : le
-     réglage est propre à l'appareil. La valeur réellement utilisée pour la
-     génération est, elle, conservée dans conseils_json.nb_repas. */
+     Source de vérité : onboarding.nb_repas_semaine, donc partagée entre les
+     appareils. localStorage sert de cache local, ce qui permet à nbRepas() de
+     rester synchrone (les pages l'appellent au fil du rendu) et de fonctionner
+     même si la requête échoue. La valeur réellement utilisée pour une
+     génération reste par ailleurs consignée dans conseils_json.nb_repas. */
 
   var NB_DEFAUT = 4, NB_MIN = 1, NB_MAX = 7;
+  var nbCourant = null;   // renseigné par chargerNbRepas()
 
   function borner(n) {
     n = parseInt(n, 10);
@@ -273,16 +275,60 @@ var NattyReco = (function () {
     return Math.min(NB_MAX, Math.max(NB_MIN, n));
   }
 
+  function cleLocale() { return 'natty_nb_repas_' + Natty.USER_ID; }
+
   function nbRepas() {
-    try { return borner(localStorage.getItem('natty_nb_repas_' + Natty.USER_ID) || NB_DEFAUT); }
+    if (nbCourant !== null) return nbCourant;
+    try { return borner(localStorage.getItem(cleLocale()) || NB_DEFAUT); }
     catch (e) { return NB_DEFAUT; }
   }
 
+  /**
+   * Récupère la préférence en base et la met en cache.
+   * À appeler une fois au chargement, avant de se fier à nbRepas().
+   * Repli silencieux sur la valeur locale : hors ligne, l'écran reste utilisable.
+   */
+  async function chargerNbRepas() {
+    try {
+      var r = await Natty.sbFetch('onboarding?user_id=eq.' + Natty.USER_ID
+        + '&order=created_at.desc&limit=1&select=nb_repas_semaine');
+      if (r && r.length && r[0].nb_repas_semaine != null) {
+        nbCourant = borner(r[0].nb_repas_semaine);
+        try { localStorage.setItem(cleLocale(), String(nbCourant)); } catch (e) {}
+        return nbCourant;
+      }
+    } catch (e) {}
+    nbCourant = nbRepas();
+    return nbCourant;
+  }
+
+  var minuteurPatch = null;
+
+  function ecrireNbEnBase() {
+    if (minuteurPatch) { clearTimeout(minuteurPatch); minuteurPatch = null; }
+    if (nbCourant === null) return;
+    Natty.sbPatch('onboarding?user_id=eq.' + Natty.USER_ID, { nb_repas_semaine: nbCourant })
+      .catch(function () { /* la valeur locale fait foi jusqu'au prochain chargement */ });
+  }
+
+  /**
+   * Le cache et localStorage sont mis à jour immédiatement pour que l'interface
+   * réagisse sans attendre le réseau ; l'écriture en base est différée.
+   * Ce report n'est pas cosmétique : sur - / + enchaînés, deux PATCH concurrents
+   * peuvent se terminer dans le désordre et laisser une valeur périmée en base.
+   * On ne garde donc que la dernière valeur, et on la force au départ de la page.
+   */
   function setNbRepas(n) {
     var v = borner(n);
-    try { localStorage.setItem('natty_nb_repas_' + Natty.USER_ID, String(v)); } catch (e) {}
+    nbCourant = v;
+    try { localStorage.setItem(cleLocale(), String(v)); } catch (e) {}
+    if (minuteurPatch) clearTimeout(minuteurPatch);
+    minuteurPatch = setTimeout(ecrireNbEnBase, 400);
     return v;
   }
+
+  // Quitter l'écran avant la fin du report ne doit pas perdre le réglage.
+  window.addEventListener('pagehide', function () { if (minuteurPatch) ecrireNbEnBase(); });
 
   /**
    * Génère les recettes de la semaine ET les enregistre.
@@ -318,6 +364,7 @@ var NattyReco = (function () {
     genererSemaine: genererSemaine,
     enregistrerSemaine: enregistrerSemaine,
     nbRepas: nbRepas,
+    chargerNbRepas: chargerNbRepas,
     setNbRepas: setNbRepas,
     NB_MIN: NB_MIN,
     NB_MAX: NB_MAX,

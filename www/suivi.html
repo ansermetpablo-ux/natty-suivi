@@ -4077,6 +4077,7 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
     // cache (profil_conseils.conseils_json), d'où plus d'attente à l'ouverture.
     try {
       if (window.NattyReco) {
+        await NattyReco.chargerNbRepas();
         var nbVoulu = NattyReco.nbRepas();
         console.log('[Natty] Génération des repas de la semaine, nb =', nbVoulu);
         var recettesSem = await NattyReco.genererSemaine(nbVoulu);

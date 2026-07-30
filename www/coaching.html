@@ -318,7 +318,10 @@ async function loadCourses(){
   var list = document.getElementById('crsList');
   var note = document.getElementById('crsNote');
   var recettes = [];
-  try { recettes = await NattyReco.recettesDeLaSemaine(NattyReco.nbRepas()); } catch(e){}
+  try {
+    await NattyReco.chargerNbRepas();   // même préférence que repas.html
+    recettes = await NattyReco.recettesDeLaSemaine(NattyReco.nbRepas());
+  } catch(e){}
 
   if (!recettes || !recettes.length){
     note.textContent = '';
@@ -334,7 +337,8 @@ async function loadCourses(){
   }
 
   var coches = crsCoches();
-  note.textContent = 'Pour tes ' + recettes.length + ' repas de la semaine · ' + items.length + ' ingrédients';
+  note.textContent = 'Pour ' + (recettes.length === 1 ? 'ton repas' : 'tes ' + recettes.length + ' repas')
+    + ' de la semaine · ' + items.length + ' ingrédient' + (items.length > 1 ? 's' : '');
   list.innerHTML = items.map(function(it){
     var fait = coches.indexOf(it.nom) >= 0;
     return '<div class="crs-item' + (fait ? ' done' : '') + '" data-nom="' + esc(it.nom) + '">'

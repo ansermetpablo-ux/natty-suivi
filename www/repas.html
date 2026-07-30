@@ -451,6 +451,7 @@ async function genererMaintenant(){
       }
     }
 
+    await NattyReco.chargerNbRepas();   // préférence partagée entre appareils
     var barre = document.getElementById('nbbar');
     if (barre) barre.style.display = 'flex';
     afficherNb(NattyReco.nbRepas());
