@@ -79,6 +79,10 @@
     });
 
     document.getElementById('nnAddBtn').addEventListener('click', function () {
+      // Parcours d'ajout (assets/ajout.js) : ouvre la caméra tout de suite.
+      // L'appel doit rester synchrone dans ce handler, sinon iOS considère
+      // que l'ouverture de la caméra n'est plus déclenchée par l'utilisateur.
+      if (window.NattyAjout && typeof window.NattyAjout.start === 'function') { window.NattyAjout.start(); return; }
       if (typeof window.NattyOnAdd === 'function') { window.NattyOnAdd(); return; }
       window.location.href = 'suivi.html' + qs() + (qs() ? '&' : '?') + 'add=1';
     });

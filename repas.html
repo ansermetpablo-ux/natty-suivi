@@ -130,6 +130,8 @@ body{overflow-x:hidden}
 <script src="/assets/core.js"></script>
 <script src="/assets/reco.js"></script>
 <script src="/assets/minijeux.js"></script>
+<!-- Suivre une recette retire ses ingrédients du garde-manger (voir brancher()). -->
+<script src="/assets/garde-manger.js"></script>
 <script>
 /* ═══ État ═══ */
 var PLATS = [];        // plats affichés (recommandations, ou repas ciblé par ?id=)
@@ -292,22 +294,53 @@ function brancherDecouvrir(){
 
 // Une recette choisie à la fin d'un mini-jeu remonte ici : elle prend la
 // tête de la liste et s'affiche dans le hero.
-window.NattyOnRecetteSuivie = function(r){
+window.NattyOnRecetteSuivie = async function(r){
   if (!r) return;
-  PLATS.unshift(depuisRecette(r, PLATS.length));
+  var d = depuisRecette(r, PLATS.length);
+  PLATS.unshift(d);
   actif = 0; ingrOff = {};
   suivies = {}; suivies[0] = true;
   render();
   window.scrollTo({ top:0, behavior:'smooth' });
-  toast('✓ ' + (r.nom || 'Recette') + ' — recette suivie');
+  // Suivie depuis un mini-jeu : même geste, donc même consommation
+  // du garde-manger que par le bouton du hero.
+  var retires = [];
+  if (window.NattyGardeManger) {
+    try {
+      await NattyGardeManger.charger();
+      retires = await NattyGardeManger.consommer(d.ingr);
+    } catch (e) {}
+  }
+  toast(retires.length
+    ? '✓ ' + d.nom + ' — ' + retires.length + (retires.length > 1 ? ' ingrédients retirés' : ' ingrédient retiré') + ' du garde-manger'
+    : '✓ ' + d.nom + ' — recette suivie');
 };
 
 function brancher(){
   var cta = document.getElementById('ctaBtn');
-  if (cta) cta.addEventListener('click', function(){
-    suivies[actif] = !suivies[actif];
-    toast(suivies[actif] ? '✓ ' + PLATS[actif].nom + ' — recette suivie' : 'Recette retirée');
+  if (cta) cta.addEventListener('click', async function(){
+    var passeEnSuivie = !suivies[actif];
+    var d = PLATS[actif];
+    suivies[actif] = passeEnSuivie;
     render();
+    if (!passeEnSuivie) { toast('Recette retirée'); return; }
+
+    /* Suivre une recette consomme ses ingrédients : ils sortent du
+       garde-manger, sinon les recommandations suivantes repartiraient
+       d'un stock déjà cuisiné. charger() est idempotent, on ne paie la
+       lecture que si l'utilisateur suit vraiment une recette.
+       Le garde-manger n'est jamais bloquant : si le module manque ou
+       échoue, la recette est suivie quand même. */
+    var retires = [];
+    if (window.NattyGardeManger) {
+      try {
+        await NattyGardeManger.charger();
+        retires = await NattyGardeManger.consommer(d.ingr);
+      } catch (e) {}
+    }
+    toast(retires.length
+      ? '✓ ' + d.nom + ' — ' + retires.length + (retires.length > 1 ? ' ingrédients retirés' : ' ingrédient retiré') + ' du garde-manger'
+      : '✓ ' + d.nom + ' — recette suivie');
   });
 
   var heart = document.getElementById('heartBtn');
@@ -382,6 +415,7 @@ document.getElementById('backBtn').addEventListener('click', function(){
   }
 })();
 </script>
+<script src="/assets/ajout.js"></script>
 <script src="/assets/nav.js"></script>
 </body>
 </html>

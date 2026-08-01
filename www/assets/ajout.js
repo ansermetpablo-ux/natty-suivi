@@ -1,0 +1,915 @@
+/* ═══════════════════════════════════════════════════════════
+   Natty — Parcours « Ajouter un plat » (bouton + de la nav)
+   Composant unique, injecté par-dessus n'importe quel écran.
+
+   Le bouton + ouvre DIRECTEMENT la caméra : l'appel input.click()
+   doit rester synchrone dans le geste utilisateur (sinon iOS/WebKit
+   bloque l'ouverture). D'où un overlay et non une page séparée —
+   naviguer d'abord ferait perdre le geste.
+
+   Enchaînement des écrans (cf. maquettes) :
+     photo → analyse IA → « Votre premier repas » (anneaux de macros
+     restantes pour CE repas) → « Réussir votre objectif » (4 options)
+     → carrousel de suggestions → retour aux anneaux, qui diminuent.
+
+   Dépend de assets/core.js (Natty.*). Toute évolution du parcours se
+   fait ici uniquement, pas dupliquée par page.
+   ═══════════════════════════════════════════════════════════ */
+(function () {
+  if (typeof Natty === 'undefined') {
+    console.warn('[natty-ajout] assets/core.js est requis avant assets/ajout.js');
+    return;
+  }
+
+  var CLAUDE_API = 'https://natty-suivi.vercel.app/api/claude';
+  var CIRC = 2 * Math.PI * 52;               // circonférence des anneaux (r=52)
+  var ORD = ['premier', 'deuxième', 'troisième', 'quatrième', 'cinquième', 'sixième', 'septième'];
+
+  var COL = { p: '#ff6b5e', l: '#5ac47d', g: '#f0a94b' };
+  var EM  = { p: '🥩', l: '🥑', g: '🌾' };
+
+  /* ═══ État de la session d'ajout ═══
+     S.plats : tout ce qui a été composé pendant la session. Le premier
+     est le plat photographié ; « Un autre repas » / « dessert » en
+     ajoutent un nouveau, « ingrédients » / « me resservir » enrichissent
+     le plat courant. Rien n'est écrit en base avant « Terminer ». */
+  var S = null;
+  var cibleJour = null;      // objectifs quotidiens (onboarding)
+  var nbRepas = 3;           // repas par jour (onboarding)
+  var repasDuJour = 0;       // repas déjà enregistrés aujourd'hui
+  var dom = null;            // racine de l'overlay, construite une seule fois
+  var inputCam = null, inputGal = null;
+
+  /* ═══════════════════ Styles ═══════════════════ */
+  var CSS = ''
+    + '#nattyAjout{position:fixed;inset:0;z-index:900;background:#000;color:#fff;display:none;'
+      + 'flex-direction:column;font-family:\'Inter\',sans-serif;overflow-y:auto;-webkit-overflow-scrolling:touch}'
+    + '#nattyAjout.on{display:flex}'
+    + '#nattyAjout .na-col{width:100%;max-width:480px;margin:0 auto;padding:0 22px 40px;flex:1;display:flex;flex-direction:column}'
+    + '#nattyAjout .na-top{display:flex;align-items:center;justify-content:space-between;'
+      + 'padding:calc(18px + env(safe-area-inset-top,0px)) 0 6px}'
+    + '#nattyAjout .na-top button{background:none;border:none;padding:0;cursor:pointer;display:flex;'
+      + 'align-items:center;justify-content:center;color:#8a8a92}'
+    + '#nattyAjout .na-top svg{width:26px;height:26px;stroke:#8a8a92;fill:none}'
+    + '#nattyAjout h1{font-size:38px;line-height:1.06;font-weight:900;letter-spacing:-1.2px;'
+      + 'text-align:center;margin:10px 0 0}'
+    + '#nattyAjout .na-screen{display:none;flex:1;flex-direction:column}'
+    + '#nattyAjout .na-screen.on{display:flex;animation:naIn .32s cubic-bezier(.22,1,.36,1)}'
+    + '@keyframes naIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'
+
+    /* — photo du plat — */
+    + '#nattyAjout .na-hero{margin:30px 0 4px;border-radius:26px;border:2px solid rgba(255,255,255,.9);'
+      + 'overflow:hidden;aspect-ratio:4/3;background:#111;display:flex;align-items:center;justify-content:center}'
+    + '#nattyAjout .na-hero img{width:100%;height:100%;object-fit:cover;display:block}'
+    + '#nattyAjout .na-hero .na-hero-em{font-size:58px}'
+    + '#nattyAjout .na-plat-nom{display:block;width:100%;text-align:center;font-family:inherit;font-size:15px;'
+      + 'font-weight:700;color:#d8d8de;margin-top:14px;background:none;border:none;outline:none;padding:2px}'
+    + '#nattyAjout .na-plat-plus{text-align:center;font-size:12.5px;color:#6e6e78;margin-top:2px}'
+
+    /* — anneaux de macros restantes — */
+    + '#nattyAjout .na-rings{display:flex;justify-content:space-between;gap:8px;margin:26px 0 0}'
+    + '#nattyAjout .na-ring{position:relative;flex:1;max-width:132px;aspect-ratio:1}'
+    + '#nattyAjout .na-ring svg{width:100%;height:100%;transform:rotate(-90deg);display:block}'
+    + '#nattyAjout .na-ring .bg{fill:none;stroke:#2b2b30;stroke-width:9}'
+    + '#nattyAjout .na-ring .arc{fill:none;stroke-width:9;stroke-linecap:round;'
+      + 'transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1)}'
+    + '#nattyAjout .na-ring-in{position:absolute;inset:0;display:flex;flex-direction:column;'
+      + 'align-items:center;justify-content:center;gap:1px;pointer-events:none}'
+    + '#nattyAjout .na-ring-lbl{font-size:12.5px;font-weight:600;color:#f2f2f5}'
+    + '#nattyAjout .na-ring-em{font-size:16px;line-height:1}'
+    + '#nattyAjout .na-ring-val{font-size:21px;font-weight:800;color:#c9c9d1;letter-spacing:-.5px}'
+    + '#nattyAjout .na-restants{text-align:center;font-size:26px;font-weight:600;color:#8a8a92;margin:16px 0 2px}'
+    + '#nattyAjout .na-kcal-line{text-align:center;font-size:12.5px;color:#6e6e78}'
+
+    /* — détail du repas en cours — */
+    + '#nattyAjout .na-detail{margin:20px 0 0}'
+    + '#nattyAjout .na-detail-h{width:100%;background:none;border:none;color:#8a8a92;font-family:inherit;'
+      + 'font-size:12.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;cursor:pointer;'
+      + 'display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0}'
+    + '#nattyAjout .na-detail-body{display:none;margin-top:6px}'
+    + '#nattyAjout .na-detail-body.on{display:block}'
+    + '#nattyAjout .na-grp{font-size:11px;font-weight:800;color:#6e6e78;text-transform:uppercase;'
+      + 'letter-spacing:.4px;margin:12px 0 6px}'
+    + '#nattyAjout .na-item{display:flex;align-items:center;gap:10px;background:#141418;border-radius:16px;'
+      + 'padding:10px 12px;margin-bottom:7px}'
+    + '#nattyAjout .na-item .em{font-size:19px}'
+    + '#nattyAjout .na-item .nm{flex:1;font-size:13.5px;font-weight:600;color:#eaeaef;min-width:0;'
+      + 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+    + '#nattyAjout .na-item input{width:62px;background:#0a0a0c;border:1px solid #2b2b30;border-radius:10px;'
+      + 'color:#fff;font-family:inherit;font-size:13px;font-weight:700;padding:6px 8px;text-align:right}'
+    + '#nattyAjout .na-item .u{font-size:12px;color:#6e6e78}'
+    + '#nattyAjout .na-item .del{background:none;border:none;color:#6e6e78;font-size:14px;cursor:pointer;padding:4px}'
+    + '#nattyAjout .na-mini{width:100%;background:none;border:1px dashed #33333a;border-radius:14px;'
+      + 'color:#8a8a92;font-family:inherit;font-size:12.5px;font-weight:600;padding:11px;cursor:pointer;margin-top:4px}'
+
+    /* — boutons — */
+    + '#nattyAjout .na-cta{margin-top:auto;padding-top:26px;display:flex;flex-direction:column;gap:10px}'
+    + '#nattyAjout .na-btn{width:100%;border:none;border-radius:var(--r-full,999px);font-family:inherit;'
+      + 'font-size:23px;font-weight:800;letter-spacing:-.3px;padding:20px;cursor:pointer;'
+      + 'display:flex;align-items:center;justify-content:center;gap:12px;transition:transform .12s}'
+    + '#nattyAjout .na-btn:active{transform:scale(.975)}'
+    + '#nattyAjout .na-btn.primary{background:#f2f2f7;color:#0a0a0c}'
+    + '#nattyAjout .na-btn.ghost{background:none;color:#8a8a92;font-size:15px;font-weight:700;padding:12px}'
+    + '#nattyAjout .na-btn[disabled]{opacity:.5;pointer-events:none}'
+    + '#nattyAjout .na-opts{display:flex;flex-direction:column;gap:18px;margin:44px 0 0}'
+    + '#nattyAjout .na-opt{width:100%;background:#ececf3;color:#0a0a0c;border:none;border-radius:26px;'
+      + 'font-family:inherit;font-size:26px;font-weight:800;letter-spacing:-.6px;line-height:1.15;'
+      + 'padding:26px 18px;cursor:pointer;transition:transform .12s}'
+    + '#nattyAjout .na-opt:active{transform:scale(.975)}'
+
+    /* — analyse / erreur — */
+    + '#nattyAjout .na-wait{flex:1;display:flex;flex-direction:column;align-items:center;'
+      + 'justify-content:center;gap:16px;text-align:center;padding:40px 0}'
+    + '#nattyAjout .na-spin{width:34px;height:34px;border:3px solid #26262c;border-top-color:#fff;'
+      + 'border-radius:50%;animation:naSpin .9s linear infinite}'
+    + '@keyframes naSpin{to{transform:rotate(360deg)}}'
+    + '#nattyAjout .na-wait-t{font-size:17px;font-weight:700}'
+    + '#nattyAjout .na-wait-s{font-size:13px;color:#8a8a92;max-width:260px}'
+
+    /* — carrousel de suggestions — */
+    + '#nattyAjout .na-carou{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;'
+      // Le padding latéral vaut la moitié de ce qui dépasse de la carte :
+      // la première et la dernière se centrent, et les voisines dépassent
+      // des deux côtés comme sur la maquette.
+      + 'margin:34px -22px 0;padding:0 34px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}'
+    + '#nattyAjout .na-carou::-webkit-scrollbar{display:none}'
+    + '#nattyAjout .na-card{scroll-snap-align:center;flex:0 0 100%;background:#0d0d10;'
+      + 'border:1px solid #1c1c22;border-radius:30px;padding:30px 22px 22px;cursor:pointer;'
+      + 'display:flex;flex-direction:column;transition:transform .12s}'
+    + '#nattyAjout .na-card:active{transform:scale(.98)}'
+    + '#nattyAjout .na-card-t{font-size:26px;font-weight:600;text-align:center;letter-spacing:-.4px}'
+    + '#nattyAjout .na-card-vis{position:relative;flex:1;min-height:190px;display:flex;'
+      + 'align-items:center;justify-content:center;margin:8px 0 18px}'
+    + '#nattyAjout .na-card-em{font-size:104px;line-height:1}'
+    + '#nattyAjout .na-card-kcal{position:absolute;top:16%;left:58%;background:#e9e9f2;color:#0a0a0c;'
+      + 'border-radius:999px;font-size:14px;font-weight:600;padding:14px 12px;white-space:nowrap}'
+    + '#nattyAjout .na-card-mac{display:flex;gap:8px}'
+    + '#nattyAjout .na-card-mac span{flex:1;background:#141418;border-radius:14px;padding:10px 4px;'
+      + 'text-align:center;font-size:12.5px;line-height:1.35;color:#e6e6ec}'
+    + '#nattyAjout .na-card-why{font-size:12px;color:#7c7c86;text-align:center;margin-top:12px;min-height:1.2em}'
+    + '#nattyAjout .na-dots{display:flex;justify-content:center;gap:6px;margin-top:16px}'
+    + '#nattyAjout .na-dots i{width:6px;height:6px;border-radius:50%;background:#2f2f36;transition:background .2s}'
+    + '#nattyAjout .na-dots i.on{background:#e9e9f2}'
+    + '#nattyAjout .na-hint{text-align:center;font-size:12.5px;color:#6e6e78;margin-top:12px}'
+
+    /* — confirmation d'abandon — */
+    + '#nattyAjout .na-ask{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);'
+      + 'display:none;align-items:center;justify-content:center;padding:26px}'
+    + '#nattyAjout .na-ask.on{display:flex}'
+    + '#nattyAjout .na-ask-box{width:100%;max-width:340px;background:#141418;border-radius:24px;padding:24px}'
+    + '#nattyAjout .na-ask-t{font-size:16px;font-weight:800;margin-bottom:6px}'
+    + '#nattyAjout .na-ask-s{font-size:13px;color:#8a8a92;margin-bottom:18px}'
+
+    + '.na-toast{position:fixed;left:50%;bottom:120px;transform:translate(-50%,14px);background:#101014;'
+      + 'color:#fff;border-radius:18px;padding:12px 20px;font-family:\'Inter\',sans-serif;font-size:12.5px;'
+      + 'font-weight:700;opacity:0;transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none;'
+      + 'z-index:1000;white-space:nowrap}'
+    + '.na-toast.show{opacity:1;transform:translate(-50%,0)}';
+
+  /* ═══════════════════ Utilitaires ═══════════════════ */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function q(sel) { return dom ? dom.querySelector(sel) : null; }
+  function r1(n) { return Math.round(n * 10) / 10; }
+  function today() { return new Date().toISOString().split('T')[0]; }
+
+  var toastEl = null;
+  function toast(msg) {
+    if (!toastEl) {
+      toastEl = document.createElement('div');
+      toastEl.className = 'na-toast';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastEl._tm);
+    toastEl._tm = setTimeout(function () { toastEl.classList.remove('show'); }, 2200);
+  }
+
+  /* ═══════════════════ Cibles (onboarding) ═══════════════════
+     Les besoins affichés sont ceux d'UN repas : objectif quotidien
+     divisé par le nombre de repas par jour.
+
+     ⚠️ La table `onboarding` ne porte NI les macros NI `nb_repas`
+     (vérifié en base — contrairement à ce qu'indique CLAUDE.md §4) :
+     seulement `poids` / `tdee`, à partir desquels les macros sont
+     dérivées côté client, exactement comme calcMacros() de suivi.html.
+     Le nombre de repas par jour vient du questionnaire alimentaire,
+     sous forme de libellé ("1_2", "3", "3_collations", "grignotage"). */
+  var REPAS_PAR_JOUR = { '1_2': 2, '3': 3, '3_collations': 4, 'grignotage': 4 };
+
+  async function chargerCibles() {
+    try {
+      var r = await Natty.sbFetch('onboarding?user_id=eq.' + Natty.USER_ID
+        + '&completed=eq.true&select=poids,tdee&order=created_at.desc&limit=1');
+      var d = (r && r[0]) || {};
+      var poids = parseFloat(d.poids) || 0;
+      var tdee = parseFloat(d.tdee) || 0;
+      if (poids || tdee) {
+        cibleJour = {
+          p: poids ? Math.round(poids * 2) : 0,
+          l: tdee ? Math.round(tdee * 0.25 / 9) : 0,
+          g: tdee ? Math.round(tdee * 0.5 / 4) : 0,
+          c: tdee ? Math.round(tdee) : 0
+        };
+      }
+    } catch (e) { /* on retombe sur le fallback ci-dessous */ }
+
+    if (!cibleJour || !cibleJour.c) {
+      // Sans onboarding exploitable, on garde des repères plausibles
+      // plutôt que des anneaux vides : 2000 kcal, répartition 30/50/20.
+      cibleJour = { p: 120, l: 67, g: 250, c: 2000 };
+    }
+    try {
+      var qa = await Natty.sbFetch('questionnaire_alim?user_id=eq.' + Natty.USER_ID + '&select=nb_repas&limit=1');
+      var v = qa && qa[0] ? qa[0].nb_repas : null;
+      if (v && REPAS_PAR_JOUR[v]) nbRepas = REPAS_PAR_JOUR[v];
+    } catch (e) {}
+
+    try {
+      var m = await Natty.sbFetch('meals?user_id=eq.' + Natty.USER_ID + '&meal_date=eq.' + today() + '&select=id');
+      repasDuJour = (m || []).length;
+    } catch (e) { repasDuJour = 0; }
+
+    majTitre();
+    majAnneaux();
+  }
+
+  function cibleRepas() {
+    var n = Math.max(1, nbRepas);
+    return {
+      p: Math.round(cibleJour.p / n), l: Math.round(cibleJour.l / n),
+      g: Math.round(cibleJour.g / n), c: Math.round(cibleJour.c / n)
+    };
+  }
+
+  /* ═══════════════════ Macros de la session ═══════════════════ */
+  function macrosIngs(ings) {
+    var t = { p: 0, l: 0, g: 0, c: 0 };
+    (ings || []).forEach(function (i) {
+      if (i.macros) {                       // suggestion IA : macros fournies
+        t.p += i.macros.prot || 0; t.l += i.macros.lip || 0;
+        t.g += i.macros.gluc || 0; t.c += i.macros.cal || 0;
+        return;
+      }
+      var n = Natty.getNutri(i.nom, i.quantite_g || 0);
+      if (n) { t.p += n.p; t.l += n.l; t.g += n.g; t.c += n.c; }
+    });
+    return { p: r1(t.p), l: r1(t.l), g: r1(t.g), c: Math.round(t.c) };
+  }
+
+  function totalSession() {
+    var t = { p: 0, l: 0, g: 0, c: 0 };
+    S.plats.forEach(function (pl) {
+      var m = macrosIngs(pl.ingredients);
+      t.p += m.p; t.l += m.l; t.g += m.g; t.c += m.c;
+    });
+    return { p: r1(t.p), l: r1(t.l), g: r1(t.g), c: Math.round(t.c) };
+  }
+
+  function restant() {
+    var c = cibleRepas(), u = totalSession();
+    return {
+      p: Math.max(0, Math.round(c.p - u.p)), l: Math.max(0, Math.round(c.l - u.l)),
+      g: Math.max(0, Math.round(c.g - u.g)), c: Math.max(0, Math.round(c.c - u.c))
+    };
+  }
+
+  /* ═══════════════════ Construction de l'overlay ═══════════════════ */
+  function ringHTML(k, label) {
+    return '<div class="na-ring">'
+      + '<svg viewBox="0 0 120 120">'
+      + '<circle class="bg" cx="60" cy="60" r="52"/>'
+      + '<circle class="arc" id="naArc' + k + '" cx="60" cy="60" r="52" stroke="' + COL[k] + '" '
+        + 'stroke-dasharray="0 ' + CIRC.toFixed(1) + '"/></svg>'
+      + '<div class="na-ring-in"><div class="na-ring-lbl">' + label + '</div>'
+      + '<div class="na-ring-em">' + EM[k] + '</div>'
+      + '<div class="na-ring-val" id="naVal' + k + '">–</div></div></div>';
+  }
+
+  function build() {
+    var st = document.createElement('style');
+    st.textContent = CSS;
+    document.head.appendChild(st);
+
+    dom = document.createElement('div');
+    dom.id = 'nattyAjout';
+    dom.innerHTML = ''
+      + '<div class="na-col">'
+      + '  <div class="na-top">'
+      + '    <button id="naBack" aria-label="Retour">'
+      + '      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '        <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>'
+      + '    </button>'
+      + '    <button id="naProfil" aria-label="Profil">'
+      + '      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '        <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>'
+      + '    </button>'
+      + '  </div>'
+      + '  <h1 id="naTitre">Votre repas 🥗</h1>'
+
+      /* ── écran 1 : analyse de la photo ── */
+      + '  <div class="na-screen" id="naScAnalyse">'
+      + '    <div class="na-wait">'
+      + '      <div class="na-spin" id="naSpin"></div>'
+      + '      <div class="na-wait-t" id="naWaitT">Analyse de votre plat…</div>'
+      + '      <div class="na-wait-s" id="naWaitS">Identification des aliments et estimation des macros</div>'
+      + '      <div id="naWaitActs" style="display:none;width:100%;max-width:320px;margin-top:8px">'
+      + '        <button class="na-btn primary" id="naReprendre" style="font-size:16px;padding:15px">Reprendre une photo</button>'
+      + '        <button class="na-btn ghost" id="naGalerie">Choisir dans la galerie</button>'
+      + '        <button class="na-btn ghost" id="naManuel">Saisir le plat à la main</button>'
+      + '      </div>'
+      + '    </div>'
+      + '  </div>'
+
+      /* ── écran 2 : le repas et ses macros restantes ── */
+      + '  <div class="na-screen" id="naScRepas">'
+      + '    <div class="na-hero" id="naHero"><span class="na-hero-em">🍽️</span></div>'
+      + '    <input class="na-plat-nom" id="naPlatNom" type="text" aria-label="Nom du plat">'
+      + '    <div class="na-plat-plus" id="naPlatPlus"></div>'
+      + '    <div class="na-rings">'
+      +        ringHTML('p', 'Protéines') + ringHTML('l', 'Lipides') + ringHTML('g', 'Glucides')
+      + '    </div>'
+      + '    <div class="na-restants">Restants</div>'
+      + '    <div class="na-kcal-line" id="naKcal"></div>'
+      + '    <div class="na-detail">'
+      + '      <button class="na-detail-h" id="naDetailH">Détail du repas <span id="naDetailC">▾</span></button>'
+      + '      <div class="na-detail-body" id="naDetailB"></div>'
+      + '    </div>'
+      + '    <div class="na-cta">'
+      + '      <button class="na-btn primary" id="naEnrichir">Enrichir '
+      + '        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+      + '          <path d="M12 2c.9 5.5 4.5 9.1 10 10-5.5.9-9.1 4.5-10 10-.9-5.5-4.5-9.1-10-10 5.5-.9 9.1-4.5 10-10z"/></svg>'
+      + '      </button>'
+      + '      <button class="na-btn ghost" id="naTerminer">Terminer et enregistrer</button>'
+      + '    </div>'
+      + '  </div>'
+
+      /* ── écran 3 : les 4 pistes d'enrichissement ── */
+      + '  <div class="na-screen" id="naScChoix">'
+      + '    <div class="na-opts">'
+      + '      <button class="na-opt" data-mode="resservir">Me resservir 🍽️</button>'
+      + '      <button class="na-opt" data-mode="ingredients">Ajouter des ingrédients 🥕</button>'
+      + '      <button class="na-opt" data-mode="plat">Un autre repas 🥗</button>'
+      + '      <button class="na-opt" data-mode="dessert">Passer au dessert / snack 🍪</button>'
+      + '    </div>'
+      + '    <div class="na-cta"><button class="na-btn ghost" id="naChoixRetour">← Revenir au repas</button></div>'
+      + '  </div>'
+
+      /* ── écran 4 : carrousel de suggestions ── */
+      + '  <div class="na-screen" id="naScCarou">'
+      + '    <div id="naCarouWrap"></div>'
+      + '    <div class="na-cta"><button class="na-btn ghost" id="naCarouRetour">← Autres options</button></div>'
+      + '  </div>'
+
+      + '</div>'
+
+      + '<div class="na-ask" id="naAsk"><div class="na-ask-box">'
+      + '  <div class="na-ask-t">Abandonner ce repas ?</div>'
+      + '  <div class="na-ask-s">Ce qui a été composé ne sera pas enregistré.</div>'
+      + '  <button class="na-btn primary" id="naAskOui" style="font-size:15px;padding:14px">Abandonner</button>'
+      + '  <button class="na-btn ghost" id="naAskNon">Continuer le repas</button>'
+      + '</div></div>';
+
+    document.body.appendChild(dom);
+
+    inputCam = mkInput(true);
+    inputGal = mkInput(false);
+
+    q('#naBack').addEventListener('click', retour);
+    q('#naProfil').addEventListener('click', function () { Natty.goto('profil.html'); });
+    q('#naReprendre').addEventListener('click', function () { inputCam.value = ''; inputCam.click(); });
+    q('#naGalerie').addEventListener('click', function () { inputGal.value = ''; inputGal.click(); });
+    q('#naManuel').addEventListener('click', saisieManuelle);
+    q('#naDetailH').addEventListener('click', toggleDetail);
+    q('#naPlatNom').addEventListener('input', function () {
+      if (S && S.plats[0]) S.plats[0].nom = this.value;
+      rendreDetail();
+    });
+    q('#naEnrichir').addEventListener('click', function () { montrer('naScChoix'); });
+    q('#naTerminer').addEventListener('click', enregistrer);
+    q('#naChoixRetour').addEventListener('click', function () { montrer('naScRepas'); });
+    q('#naCarouRetour').addEventListener('click', function () { montrer('naScChoix'); });
+    q('#naAskNon').addEventListener('click', function () { q('#naAsk').classList.remove('on'); });
+    q('#naAskOui').addEventListener('click', fermer);
+    dom.querySelectorAll('.na-opt').forEach(function (b) {
+      b.addEventListener('click', function () { ouvrirCarrousel(b.dataset.mode); });
+    });
+  }
+
+  function mkInput(camera) {
+    var i = document.createElement('input');
+    i.type = 'file';
+    i.accept = 'image/*';
+    if (camera) i.setAttribute('capture', 'environment');
+    i.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;opacity:0';
+    i.addEventListener('change', function () {
+      var f = this.files && this.files[0];
+      if (!f) return;
+      ouvrir();
+      analyser(f);
+    });
+    document.body.appendChild(i);
+    return i;
+  }
+
+  /* ═══════════════════ Navigation entre écrans ═══════════════════ */
+  function montrer(id) {
+    dom.querySelectorAll('.na-screen').forEach(function (s) { s.classList.toggle('on', s.id === id); });
+    dom.scrollTop = 0;
+    majTitre();
+  }
+  function ecranCourant() {
+    var e = dom.querySelector('.na-screen.on');
+    return e ? e.id : '';
+  }
+  function majTitre() {
+    if (!dom) return;
+    var t = q('#naTitre'), e = ecranCourant();
+    if (e === 'naScChoix' || e === 'naScCarou') t.innerHTML = 'Réussir votre objectif 🚀 :';
+    else if (e === 'naScAnalyse') t.innerHTML = 'Votre plat 📸';
+    else t.innerHTML = 'Votre ' + (ORD[repasDuJour] || '') + ' repas 🥗';
+  }
+  function retour() {
+    var e = ecranCourant();
+    if (e === 'naScCarou') return montrer('naScChoix');
+    if (e === 'naScChoix') return montrer('naScRepas');
+    if (S && S.plats.length && S.plats[0].ingredients.length) { q('#naAsk').classList.add('on'); return; }
+    fermer();
+  }
+
+  function ouvrir() {
+    dom.classList.add('on');
+    document.body.style.overflow = 'hidden';   // jamais position:fixed (casse le scroll iOS)
+    montrer('naScAnalyse');
+  }
+  function fermer() {
+    q('#naAsk').classList.remove('on');
+    dom.classList.remove('on');
+    document.body.style.overflow = '';
+    S = null;
+  }
+
+  /* ═══════════════════ Analyse de la photo ═══════════════════ */
+  function etatAttente(titre, sous, actions) {
+    q('#naSpin').style.display = actions ? 'none' : 'block';
+    q('#naWaitT').textContent = titre;
+    q('#naWaitS').textContent = sous;
+    q('#naWaitActs').style.display = actions ? 'block' : 'none';
+  }
+
+  async function analyser(file) {
+    S.file = file;
+    montrer('naScAnalyse');
+    etatAttente('Analyse de votre plat…', 'Identification des aliments et estimation des macros', false);
+
+    var reader = new FileReader();
+    S.photoDataUrl = await new Promise(function (res) {
+      reader.onload = function (e) { res(e.target.result); };
+      reader.readAsDataURL(file);
+    });
+    var b64 = S.photoDataUrl.split(',')[1];
+
+    var prompt = 'Analyse cette photo de plat avec precision. '
+      + 'Observe la couleur, la texture, la forme et le contexte de chaque aliment visible. '
+      + 'Distingue les proteines (poisson = texture feuilletee rosee/blanche, poulet = fibreuse doree, boeuf = rouge/brun). '
+      + 'Identifie tous les aliments, estime les quantites en grammes selon la taille de l assiette, '
+      + 'et calcule les macronutriments. '
+      + 'Reponds UNIQUEMENT en JSON sans backticks: '
+      + '{"nom":"...","ingredients":[{"emoji":"...","nom":"...","quantite_g":0}],"macros":{"prot":0,"lip":0,"gluc":0,"cal":0}}';
+
+    try {
+      var res = await fetch(CLAUDE_API, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt, max_tokens: 700, image: b64, media_type: file.type })
+      });
+      var d = await res.json();
+      if (!res.ok) throw new Error(d.error || ('Erreur ' + res.status));
+      var data = JSON.parse((d.text || '{}').replace(/```[a-z]*|```/g, '').trim());
+      if (!data.ingredients || !data.ingredients.length) throw new Error('Aucun aliment reconnu');
+
+      S.plats = [{
+        nom: data.nom || 'Plat',
+        photo: S.photoDataUrl,
+        ingredients: data.ingredients.map(function (i) {
+          return { emoji: i.emoji || '🍽️', nom: i.nom, quantite_g: parseFloat(i.quantite_g) || 0 };
+        })
+      }];
+      S.cur = 0;
+      rendreRepas();
+    } catch (e) {
+      etatAttente('Plat non reconnu', 'La photo n\'a pas pu être analysée. Reprenez-la, ou saisissez le plat à la main.', true);
+    }
+  }
+
+  /* Saisie manuelle — filet de sécurité quand l'IA n'est pas joignable
+     (hors-ligne, backend indisponible) : le parcours reste utilisable. */
+  function saisieManuelle() {
+    S.plats = [{ nom: 'Mon plat', photo: S.photoDataUrl, ingredients: [] }];
+    S.cur = 0;
+    rendreRepas();
+    q('#naDetailB').classList.add('on');
+    q('#naDetailC').textContent = '▴';
+    ajouterLigne();
+  }
+
+  /* ═══════════════════ Écran « repas » ═══════════════════ */
+  function rendreRepas() {
+    var base = S.plats[0];
+    var hero = q('#naHero');
+    hero.innerHTML = base.photo
+      ? '<img src="' + esc(base.photo) + '" alt="">'
+      : '<span class="na-hero-em">🍽️</span>';
+    majNoms();
+    rendreDetail();
+    majAnneaux();
+    montrer('naScRepas');
+  }
+
+  /* Le nom du plat photographié reste modifiable — l'IA se trompe parfois,
+     et la saisie manuelle part d'un nom générique. Les plats ajoutés
+     ensuite s'affichent en dessous, et se retrouvent dans le détail. */
+  function majNoms() {
+    q('#naPlatNom').value = S.plats[0] ? S.plats[0].nom : '';
+    q('#naPlatPlus').textContent = S.plats.length > 1
+      ? '+ ' + S.plats.slice(1).map(function (p) { return p.nom; }).join(' + ')
+      : '';
+  }
+
+  function majAnneaux() {
+    if (!dom || !S || !cibleJour) return;
+    var c = cibleRepas(), u = totalSession(), r = restant();
+    ['p', 'l', 'g'].forEach(function (k) {
+      var frac = c[k] > 0 ? Math.max(0, Math.min(1, (c[k] - u[k]) / c[k])) : 0;
+      var arc = q('#naArc' + k);
+      if (arc) arc.setAttribute('stroke-dasharray', (frac * CIRC).toFixed(1) + ' ' + CIRC.toFixed(1));
+      var v = q('#naVal' + k);
+      if (v) v.textContent = r[k] + 'g';
+    });
+    var kc = q('#naKcal');
+    if (kc) {
+      kc.textContent = r.c > 0
+        ? r.c + ' kcal restantes sur ' + c.c + ' pour ce repas (' + nbRepas + ' repas / jour)'
+        : 'Cible du repas atteinte — ' + u.c + ' kcal sur ' + c.c;
+    }
+    var enr = q('#naEnrichir');
+    // « Enrichir » n'a de sens que s'il reste de la marge sur ce repas.
+    var marge = r.c > c.c * 0.08 || r.p > c.p * 0.12;
+    enr.style.display = marge ? 'flex' : 'none';
+    q('#naTerminer').className = 'na-btn ' + (marge ? 'ghost' : 'primary');
+  }
+
+  function rendreDetail() {
+    var b = q('#naDetailB');
+    b.innerHTML = '';
+    S.plats.forEach(function (pl, pi) {
+      var m = macrosIngs(pl.ingredients);
+      var h = document.createElement('div');
+      h.className = 'na-grp';
+      h.textContent = pl.nom + ' — ' + m.c + ' kcal';
+      b.appendChild(h);
+
+      pl.ingredients.forEach(function (ing, ii) {
+        var row = document.createElement('div');
+        row.className = 'na-item';
+
+        var em = document.createElement('span');
+        em.className = 'em';
+        em.textContent = ing.emoji || '🍽️';
+
+        var nm = document.createElement('input');
+        nm.className = 'nm';
+        nm.style.cssText = 'width:auto;flex:1;text-align:left;background:none;border:none;padding:0';
+        nm.type = 'text';
+        nm.value = ing.nom;
+        nm.addEventListener('input', function () { ing.nom = this.value; majAnneaux(); });
+
+        var qty = document.createElement('input');
+        qty.type = 'number';
+        qty.min = 0;
+        qty.value = ing.quantite_g;
+        qty.disabled = !!ing.macros;   // macros fournies par l'IA : quantité figée
+        qty.addEventListener('input', function () {
+          ing.quantite_g = parseFloat(this.value) || 0;
+          majAnneaux();
+        });
+
+        var u = document.createElement('span');
+        u.className = 'u';
+        u.textContent = 'g';
+
+        var del = document.createElement('button');
+        del.className = 'del';
+        del.textContent = '✕';
+        del.setAttribute('aria-label', 'Retirer');
+        del.addEventListener('click', function () {
+          pl.ingredients.splice(ii, 1);
+          if (!pl.ingredients.length && pi > 0) S.plats.splice(pi, 1);
+          if (S.cur >= S.plats.length) S.cur = S.plats.length - 1;
+          rendreDetail(); majAnneaux(); majNoms();
+        });
+
+        row.appendChild(em); row.appendChild(nm); row.appendChild(qty);
+        row.appendChild(u); row.appendChild(del);
+        b.appendChild(row);
+      });
+    });
+
+    var add = document.createElement('button');
+    add.className = 'na-mini';
+    add.textContent = '+ Ajouter un ingrédient';
+    add.addEventListener('click', ajouterLigne);
+    b.appendChild(add);
+  }
+
+  function ajouterLigne() {
+    var pl = S.plats[S.cur] || S.plats[0];
+    pl.ingredients.push({ emoji: '🍽️', nom: '', quantite_g: 100 });
+    rendreDetail();
+    majAnneaux();
+    var inputs = q('#naDetailB').querySelectorAll('.nm');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }
+
+  function toggleDetail() {
+    var b = q('#naDetailB');
+    b.classList.toggle('on');
+    q('#naDetailC').textContent = b.classList.contains('on') ? '▴' : '▾';
+  }
+
+  /* ═══════════════════ Suggestions & carrousel ═══════════════════ */
+
+  /* Repli local quand /api/claude n'est pas joignable : on compose les
+     suggestions depuis la table nutritionnelle de core.js, donc avec
+     exactement les mêmes chiffres que le reste de l'app. */
+  var FB = {
+    ingredients: [
+      { em: '🥚', nom: '3 œufs', base: 'oeufs', qty: 150 },
+      { em: '🍗', nom: 'Blanc de poulet', base: 'poulet', qty: 120 },
+      { em: '🐟', nom: 'Pavé de saumon', base: 'saumon', qty: 110 },
+      { em: '🧀', nom: 'Fromage blanc', base: 'fromage blanc', qty: 200 },
+      { em: '🍚', nom: 'Riz basmati', base: 'riz', qty: 150 },
+      { em: '🍠', nom: 'Patate douce', base: 'patate douce', qty: 180 },
+      { em: '🥑', nom: 'Avocat', base: 'avocat', qty: 100 },
+      { em: '🥜', nom: 'Amandes', base: 'amandes', qty: 30 },
+      { em: '🥦', nom: 'Brocoli vapeur', base: 'brocoli', qty: 200 },
+      { em: '🫒', nom: 'Filet d\'huile d\'olive', base: 'huile olive', qty: 10 }
+    ],
+    plat: [
+      { em: '🍛', nom: 'Poulet, riz, brocoli', ings: [['poulet', 130], ['riz', 150], ['brocoli', 120]] },
+      { em: '🐟', nom: 'Saumon, quinoa, épinards', ings: [['saumon', 120], ['quinoa', 140], ['epinards', 120]] },
+      { em: '🥗', nom: 'Bowl lentilles & feta', ings: [['lentilles', 180], ['feta', 40], ['tomate', 100]] },
+      { em: '🍝', nom: 'Pâtes thon & tomate', ings: [['pates', 160], ['thon', 100], ['tomate', 120]] },
+      { em: '🍳', nom: 'Omelette 3 œufs & champignons', ings: [['oeufs', 165], ['champignons', 100], ['huile olive', 8]] }
+    ],
+    dessert: [
+      { em: '🍨', nom: 'Fromage blanc & fruits rouges', ings: [['fromage blanc', 200], ['fraise', 100]] },
+      { em: '🍌', nom: 'Banane & beurre d\'amande', ings: [['banane', 120], ['amandes', 20]] },
+      { em: '🥣', nom: 'Yaourt, avoine & miel', ings: [['yaourt', 150], ['avoine', 40]] },
+      { em: '🍎', nom: 'Pomme & noix', ings: [['pomme', 150], ['noix', 25]] },
+      { em: '🥭', nom: 'Mangue & yaourt grec', ings: [['mangue', 150], ['yaourt', 150]] }
+    ]
+  };
+
+  function macrosDe(ings) {
+    var t = { prot: 0, gluc: 0, lip: 0, cal: 0 };
+    ings.forEach(function (pair) {
+      var n = Natty.getNutri(pair[0], pair[1]);
+      if (n) { t.prot += n.p; t.gluc += n.g; t.lip += n.l; t.cal += n.c; }
+    });
+    return { prot: r1(t.prot), gluc: r1(t.gluc), lip: r1(t.lip), cal: Math.round(t.cal) };
+  }
+
+  function optionsLocales(mode, r) {
+    var out = [];
+    if (mode === 'resservir') {
+      var pl = S.plats[S.cur] || S.plats[0];
+      [0.5, 1, 1.5].forEach(function (f) {
+        var ings = pl.ingredients.map(function (i) {
+          return { emoji: i.emoji, nom: i.nom, quantite_g: Math.round((i.quantite_g || 0) * f), macros: null };
+        });
+        var m = macrosIngs(ings);
+        out.push({
+          emoji: '🍽️',
+          nom: f === 0.5 ? 'Demi-portion' : f === 1 ? 'Une portion de plus' : 'Portion et demie',
+          macros: { prot: m.p, gluc: m.g, lip: m.l, cal: m.c },
+          ings: ings,
+          pourquoi: 'La même assiette : ' + pl.nom
+        });
+      });
+      return out;
+    }
+    if (mode === 'ingredients') {
+      return FB.ingredients.map(function (o) {
+        var m = macrosDe([[o.base, o.qty]]);
+        return {
+          emoji: o.em, nom: o.nom, macros: m,
+          ings: [{ emoji: o.em, nom: o.base, quantite_g: o.qty }],
+          pourquoi: o.qty + ' g'
+        };
+      });
+    }
+    return FB[mode === 'dessert' ? 'dessert' : 'plat'].map(function (o) {
+      return {
+        emoji: o.em, nom: o.nom, macros: macrosDe(o.ings),
+        ings: o.ings.map(function (p) { return { emoji: o.em, nom: p[0], quantite_g: p[1] }; }),
+        pourquoi: o.ings.map(function (p) { return p[0]; }).join(', ')
+      };
+    });
+  }
+
+  /* Classe les options par adéquation au restant : on privilégie celles
+     qui comblent la macro la plus manquante sans faire exploser le total. */
+  function classer(opts, r) {
+    var tot = (r.p + r.g + r.l) || 1;
+    return opts.map(function (o) {
+      var m = o.macros || {};
+      var s = 0;
+      s += (r.p / tot) * Math.min(m.prot || 0, r.p) / (r.p || 1);
+      s += (r.g / tot) * Math.min(m.gluc || 0, r.g) / (r.g || 1);
+      s += (r.l / tot) * Math.min(m.lip || 0, r.l) / (r.l || 1);
+      if (r.c > 0 && (m.cal || 0) > r.c * 1.3) s -= 0.6;    // dépasse nettement le restant
+      o._s = s;
+      return o;
+    }).sort(function (a, b) { return b._s - a._s; });
+  }
+
+  async function optionsIA(mode, r) {
+    var pl = S.plats[S.cur] || S.plats[0];
+    var quoi = mode === 'ingredients' ? 'ingredients a ajouter au plat'
+      : mode === 'dessert' ? 'desserts ou snacks'
+      : 'plats complets';
+    var prompt = 'Nutritionniste. Il reste a couvrir sur CE repas : proteines ' + r.p + 'g, '
+      + 'glucides ' + r.g + 'g, lipides ' + r.l + 'g, ' + r.c + ' kcal. '
+      + 'Plat deja compose : ' + pl.nom + ' (' + pl.ingredients.map(function (i) {
+        return i.nom + ' ' + i.quantite_g + 'g';
+      }).join(', ') + '). '
+      + 'Propose 5 ' + quoi + ' simples et courants qui comblent ce restant sans le depasser. '
+      + 'Le champ nom doit etre court et concret (ex: "3x Oeufs", "Riz basmati 150 g"). '
+      + 'Reponds UNIQUEMENT en JSON sans backticks: '
+      + '{"options":[{"emoji":"🥚","nom":"3x Oeufs","pourquoi":"...","ingredients":[{"nom":"oeufs","quantite_g":150}],'
+      + '"macros":{"prot":0,"gluc":0,"lip":0,"cal":0}}]}';
+
+    var res = await fetch(CLAUDE_API, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt, max_tokens: 900 })
+    });
+    var d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'erreur');
+    var data = JSON.parse((d.text || '{}').replace(/```[a-z]*|```/g, '').trim());
+    if (!data.options || !data.options.length) throw new Error('vide');
+    return data.options.map(function (o) {
+      var ings = (o.ingredients || []).map(function (i) {
+        return { emoji: o.emoji || '🍽️', nom: i.nom, quantite_g: parseFloat(i.quantite_g) || 0 };
+      });
+      // La carte doit annoncer exactement ce que les anneaux vont retrancher.
+      // Quand les ingrédients sont reconnus par la table de core.js, c'est
+      // elle qui fait foi (même chiffres que partout ailleurs dans l'app).
+      // Sinon on garde les macros de l'IA, portées par la ligne elle-même.
+      var loc = macrosIngs(ings);
+      if (ings.length && loc.c > 0) {
+        return {
+          emoji: o.emoji || '🍽️', nom: o.nom || 'Suggestion', pourquoi: o.pourquoi || '',
+          ings: ings, macros: { prot: loc.p, gluc: loc.g, lip: loc.l, cal: loc.c }
+        };
+      }
+      var m = o.macros || { prot: 0, gluc: 0, lip: 0, cal: 0 };
+      return {
+        emoji: o.emoji || '🍽️', nom: o.nom || 'Suggestion', pourquoi: o.pourquoi || '',
+        macros: m,
+        ings: [{ emoji: o.emoji || '🍽️', nom: o.nom, quantite_g: 0, macros: m }]
+      };
+    });
+  }
+
+  async function ouvrirCarrousel(mode) {
+    montrer('naScCarou');
+    var wrap = q('#naCarouWrap');
+    wrap.innerHTML = '<div class="na-wait"><div class="na-spin"></div>'
+      + '<div class="na-wait-t">Sélection en cours…</div>'
+      + '<div class="na-wait-s">On cherche ce qui complète le mieux votre repas</div></div>';
+
+    var r = restant();
+    var opts;
+    if (mode === 'resservir') {
+      opts = optionsLocales(mode, r);          // pas besoin de l'IA : c'est le plat lui-même
+    } else {
+      try { opts = await optionsIA(mode, r); }
+      catch (e) { opts = []; }
+      // Une suggestion dont les macros sont nulles ne ferait pas bouger les
+      // anneaux ni le suivi une fois enregistrée : on la remplace par des
+      // propositions locales, dont les ingrédients sont toujours reconnus.
+      opts = opts.filter(function (o) { return (o.macros && o.macros.cal) > 0; });
+      if (opts.length < 3) opts = opts.concat(optionsLocales(mode, r));
+    }
+    if (ecranCourant() !== 'naScCarou') return;  // l'utilisateur est déjà reparti
+    rendreCarrousel(classer(opts, r).slice(0, 5), mode);
+  }
+
+  function rendreCarrousel(opts, mode) {
+    var wrap = q('#naCarouWrap');
+    wrap.innerHTML = '<div class="na-carou" id="naCarou"></div>'
+      + '<div class="na-dots" id="naDots"></div>'
+      + '<div class="na-hint">Touchez une carte pour l\'ajouter à votre repas</div>';
+
+    var carou = q('#naCarou'), dots = q('#naDots');
+    opts.forEach(function (o, i) {
+      var m = o.macros || {};
+      var card = document.createElement('div');
+      card.className = 'na-card';
+      card.innerHTML = '<div class="na-card-t">' + esc(o.nom) + '</div>'
+        + '<div class="na-card-vis"><span class="na-card-em">' + esc(o.emoji || '🍽️') + '</span>'
+        + '<span class="na-card-kcal">' + Math.round(m.cal || 0) + ' Kcal</span></div>'
+        + '<div class="na-card-mac">'
+        + '<span>' + Math.round(m.prot || 0) + 'g<br>Protéines🥩</span>'
+        + '<span>' + Math.round(m.gluc || 0) + 'g<br>Glucides🌾</span>'
+        + '<span>' + Math.round(m.lip || 0) + 'g<br>Lipides🥑</span>'
+        + '</div>'
+        + '<div class="na-card-why">' + esc(o.pourquoi || '') + '</div>';
+      card.addEventListener('click', function () { choisirOption(o, mode); });
+      carou.appendChild(card);
+
+      var dot = document.createElement('i');
+      if (i === 0) dot.className = 'on';
+      dots.appendChild(dot);
+    });
+
+    carou.addEventListener('scroll', function () {
+      var i = Math.round(carou.scrollLeft / (carou.scrollWidth / opts.length));
+      dots.querySelectorAll('i').forEach(function (d, j) { d.classList.toggle('on', j === Math.min(i, opts.length - 1)); });
+    });
+  }
+
+  function choisirOption(o, mode) {
+    if (mode === 'plat' || mode === 'dessert') {
+      S.plats.push({ nom: o.nom, photo: null, ingredients: o.ings });
+      S.cur = S.plats.length - 1;
+    } else {
+      var pl = S.plats[S.cur] || S.plats[0];
+      o.ings.forEach(function (i) { pl.ingredients.push(i); });
+    }
+    rendreRepas();
+    toast(o.nom + ' ajouté');
+  }
+
+  /* ═══════════════════ Enregistrement ═══════════════════ */
+  async function enregistrer() {
+    if (!S || !S.plats.length) return;
+    if (!Natty.USER_ID) { toast('Connectez-vous pour enregistrer'); return; }
+    var btn = q('#naTerminer');
+    btn.disabled = true;
+    var libelle = btn.textContent;
+    btn.textContent = 'Enregistrement…';
+
+    try {
+      var photoUrl = null;
+      if (S.file) {
+        try {
+          var fd = new FormData();
+          fd.append('file', S.file);
+          fd.append('upload_preset', Natty.CLD_PRE);
+          var up = await (await fetch('https://api.cloudinary.com/v1_1/' + Natty.CLD_CLD + '/image/upload',
+            { method: 'POST', body: fd })).json();
+          photoUrl = up.secure_url || null;
+        } catch (e) { /* la photo n'est pas bloquante : on enregistre le repas quand même */ }
+      }
+
+      for (var i = 0; i < S.plats.length; i++) {
+        var pl = S.plats[i];
+        var ings = pl.ingredients.filter(function (g) { return (g.nom || '').trim(); });
+        if (!ings.length) continue;
+        var saved = await Natty.sbPost('meals', {
+          user_id: Natty.USER_ID, name: pl.nom || 'Repas',
+          photo_url: i === 0 ? photoUrl : null, meal_date: today()
+        });
+        var meal = saved && saved[0];
+        if (!meal) continue;
+        await Natty.sbPost('meal_ingredients', ings.map(function (g) {
+          return { meal_id: meal.id, name: g.nom, quantity_g: g.quantite_g || 0 };
+        }));
+      }
+
+      fermer();
+      toast('Repas enregistré !');
+      // Les écrans hôtes qui affichent des macros se rafraîchissent sur cet
+      // événement plutôt que de recharger la page (cf. suivi.html).
+      window.dispatchEvent(new CustomEvent('natty:repas-ajoute'));
+    } catch (e) {
+      toast('Enregistrement impossible');
+    }
+    btn.disabled = false;
+    btn.textContent = libelle;
+  }
+
+  /* ═══════════════════ Point d'entrée ═══════════════════ */
+  function start() {
+    if (!dom) build();
+    S = { plats: [], cur: -1, file: null, photoDataUrl: null };
+    chargerCibles();           // en tâche de fond, pendant que la caméra s'ouvre
+    inputCam.value = '';
+    inputCam.click();          // doit rester dans le geste : ouvre la caméra
+  }
+
+  window.NattyAjout = { start: start, open: start };
+})();
