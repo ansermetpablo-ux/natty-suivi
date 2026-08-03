@@ -447,7 +447,7 @@ var NattySocial = (function () {
 
     if (supportAmis === 'table' && Natty.USER_ID) {
       var p = suit
-        ? Natty.sbPost('membre_amis', { user_id: Natty.USER_ID, ami_id: userId },
+        ? Natty.sbPost('membre_amis?on_conflict=user_id,ami_id', { user_id: Natty.USER_ID, ami_id: userId },
             'return=minimal,resolution=ignore-duplicates')
         : sbDelete('membre_amis?user_id=eq.' + Natty.USER_ID + '&ami_id=eq.' + userId);
       p.catch(function () { if (suit) delete AMIS[userId]; else AMIS[userId] = true; });
@@ -494,7 +494,15 @@ var NattySocial = (function () {
     return PLATS.filter(function (p) { return p.id === id; })[0] || null;
   }
 
-  /* ── Likes & vues ────────────────────────────────────────── */
+  /* ── Likes & vues ──────────────────────────────────────────
+     ⚠️ `resolution=ignore-duplicates` ne suffit pas seul : PostgREST
+     résout le conflit sur la CLÉ PRIMAIRE, qui est ici un `id` uuid
+     toujours neuf — la contrainte d'unicité (meal_id, user_id) partait
+     donc en 409 au lieu d'être ignorée. Il faut nommer la contrainte
+     visée avec `?on_conflict=…`. Vérifié en base : sans lui 409, avec
+     lui 201 et toujours une seule ligne. Même remarque pour
+     membre_amis. `membre_prefs`, dont la clé primaire EST `user_id`,
+     n'en a pas besoin. */
 
   function compteurs(id) {
     var l = LIKES[id] || { n: 0, moi: false };
@@ -511,7 +519,8 @@ var NattySocial = (function () {
 
     if (supportLikes === 'table' && Natty.USER_ID) {
       var p = etat.moi
-        ? Natty.sbPost('meal_likes', { meal_id: id, user_id: Natty.USER_ID }, 'return=minimal,resolution=ignore-duplicates')
+        ? Natty.sbPost('meal_likes?on_conflict=meal_id,user_id',
+            { meal_id: id, user_id: Natty.USER_ID }, 'return=minimal,resolution=ignore-duplicates')
         : sbDelete('meal_likes?meal_id=eq.' + id + '&user_id=eq.' + Natty.USER_ID);
       p.catch(function () { LIKES[id] = avant; });
     } else {
@@ -531,7 +540,7 @@ var NattySocial = (function () {
     ecrireLocal('vues', deja);
     VUES[id] = (VUES[id] || 0) + 1;
     if (supportVues === 'table' && Natty.USER_ID) {
-      Natty.sbPost('meal_vues', { meal_id: id, user_id: Natty.USER_ID },
+      Natty.sbPost('meal_vues?on_conflict=meal_id,user_id', { meal_id: id, user_id: Natty.USER_ID },
         'return=minimal,resolution=ignore-duplicates').catch(function () {});
     }
   }

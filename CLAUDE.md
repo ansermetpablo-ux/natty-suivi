@@ -416,11 +416,19 @@ suite. Une amitié réciproque, c'est deux lignes dans `membre_amis`. Les 150 pl
 général ne contiennent pas forcément ceux des membres suivis : `charger()` va les chercher
 explicitement (`user_id=in.(…)`, 60 par lot) et fusionne, sinon « Vos amis » resterait vide.
 
-**⚠️ Persistance** : les tables `meal_likes`, `meal_vues` et `membre_amis` **n'existent pas
-encore**. Sans elles le module bascule seul sur `localStorage` (compteurs et abonnements
-propres à l'appareil, un toast le signale) — `NattySocial.estSynchronise()` renvoie alors
-`false`. Les créer suffit à tout activer, sans toucher au code : SQL dans
-**`natty_social.sql`** à la racine.
+**Persistance** : `meal_likes`, `meal_vues`, `membre_amis`, `membre_prefs` et `meals.partage`
+**existent en base depuis le 2026-08-03** (`natty_social.sql` exécuté par Pablo, vérifié :
+RLS désactivée, contraintes d'unicité et `check (user_id <> ami_id)` actives).
+`NattySocial.estSynchronise()` renvoie `true`. Le repli `localStorage` reste en place au cas
+où une table disparaîtrait, mais n'est plus le chemin normal.
+
+> ⚠️ **Piège PostgREST — `resolution=ignore-duplicates` ne suffit pas seul.** PostgREST résout
+> le conflit sur la **clé primaire**, qui vaut ici un `id` uuid toujours neuf : la contrainte
+> d'unicité `(meal_id, user_id)` repartait donc en **409** au lieu d'être ignorée, et le
+> `.catch()` optimiste annulait le like/abonnement à l'écran. Il faut nommer la contrainte
+> visée dans l'URL : `?on_conflict=meal_id,user_id` (et `?on_conflict=user_id,ami_id` pour
+> `membre_amis`). Mesuré en base : sans lui **409**, avec lui **201** et toujours une seule
+> ligne. `membre_prefs` y échappe, sa clé primaire *étant* `user_id`.
 
 **Vie privée** — deux niveaux, tous deux optionnels côté base :
 - **Global** : `membre_prefs.fil_public`, piloté par l'interrupteur « Mes plats dans le fil »
@@ -1099,10 +1107,14 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   profil quand on ne suit encore personne.
 - ✅ Réglage de confidentialité dans `profil.html` : interrupteur « Mes plats dans le fil »
   (`membre_prefs.fil_public`). Désactivé et explicite tant que la table n'existe pas.
-- 🔄 **À faire côté Supabase — bloquant** : exécuter `natty_social.sql` (`meal_likes`,
-  `meal_vues`, `membre_amis`, `membre_prefs`, + colonne optionnelle `meals.partage`).
-  Sans ces tables, j'aime / vues / abonnements restent locaux à l'appareil, et **le réglage
-  de confidentialité est inopérant : tous les repas sont visibles**.
+- ✅ **`natty_social.sql` exécuté le 2026-08-03** : `meal_likes`, `meal_vues`, `membre_amis`,
+  `membre_prefs` et `meals.partage` sont en base. Vérifié bout en bout — écriture, doublon,
+  suppression, contrainte anti-auto-abonnement, et surtout : un membre passé en
+  `fil_public=false` sort bien du fil des autres (57 → 42 plats sur les données réelles) et
+  de l'annuaire.
+- ✅ Correctif `?on_conflict=…` sur les trois POST concernés (voir l'encadré PostgREST en §3) —
+  sans lui, aimer ou suivre depuis un second appareil repartait en 409 et l'interface annulait
+  le geste.
 - 🔄 `meals.partage` (masquer UN plat) n'est écrit par aucun écran — réglage manuel/admin
   pour l'instant.
 - 🔄 Les scores plafonnent bas (~57/100 sur les données actuelles) parce que beaucoup
@@ -1396,3 +1408,24 @@ session « fil social » :*
   tri amis d'abord puis proximité), et les trois états de l'interrupteur de confidentialité
   (table absente → désactivé ; actif on ; actif off, testés avec un double de `lireMaPref`,
   la création de table n'étant pas possible avec la clé anon).
+
+---
+
+*Contribution session « vérification du SQL social » (Claude Opus, 3 août 2026) :*
+- `natty_social.sql` exécuté par Pablo : les 4 tables et `meals.partage` sont en base, RLS
+  désactivée, contraintes correctes (unicité, `check (user_id <> ami_id)` — testé, rejeté en
+  `23514`).
+- **Défaut trouvé dans le code, pas dans le SQL** : `resolution=ignore-duplicates` sans
+  `?on_conflict=…` fait résoudre PostgREST sur la clé primaire (`id` uuid neuf) et non sur la
+  contrainte d'unicité → **409** au lieu d'un no-op. Le `.catch()` optimiste de `toggleLike` /
+  `basculerAmi` annulait alors le geste à l'écran. Corrigé dans `assets/social.js` (+ `www/`)
+  sur `meal_likes`, `meal_vues` et `membre_amis`. Encadré ajouté en §3.
+- Vérifié après correctif, en rejouant le scénario exact du bug (ligne déjà présente en base,
+  état local qui l'ignore — cas du second appareil) : le cœur et le bouton « Suivi ✓ » tiennent
+  au lieu de revenir en arrière.
+- Vérifié aussi : le réglage de confidentialité de bout en bout (défaut public → privé →
+  relecture en base → retour public), et son effet réel sur le fil d'un AUTRE membre
+  (le membre le plus prolifique passé en privé : 57 → 42 plats, zéro de ses plats dans les
+  cinq sections, disparu de l'annuaire ; restauré ensuite).
+- **Toutes les lignes de test ont été supprimées** : les 4 tables sont vides, les 65 `meals`
+  intacts, aucun `meals.partage` à `false`.
