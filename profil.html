@@ -105,6 +105,20 @@
 .btn-ghost{width:100%;background:none;border:none;border-radius:var(--r-md);padding:14px;
   font-family:inherit;font-size:13px;font-weight:700;color:var(--red);cursor:pointer;margin-top:6px}
 
+/* ══ Confidentialité du fil social ══ */
+.sw-row{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:var(--r-md);
+  padding:13px 14px;margin:22px 0 10px}
+.sw-body{flex:1;min-width:0}
+.sw-lbl{font-size:13.5px;font-weight:800}
+.sw-sub{font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:3px}
+.sw{flex:none;width:48px;height:28px;border-radius:14px;background:#c9c9d0;border:none;padding:0;
+  cursor:pointer;position:relative;transition:background .2s}
+.sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;
+  transition:transform .2s cubic-bezier(.22,1,.36,1);box-shadow:0 2px 5px rgba(20,20,30,.25)}
+.sw.on{background:var(--green)}
+.sw.on i{transform:translateX(20px)}
+.sw:disabled{opacity:.45;cursor:default}
+
 /* Visionneuse d'un post */
 .post-view img{width:100%;border-radius:var(--r-lg);display:block;max-height:56vh;object-fit:cover}
 .post-view .pv-name{font-size:17px;font-weight:900;margin-top:16px}
@@ -184,6 +198,16 @@
     <div class="fld"><label for="fAge">Âge</label><input id="fAge" type="number" min="10" max="110" inputmode="numeric"></div>
     <div class="fld"><label for="fBio">Description</label><textarea id="fBio" placeholder="Joueur de foot ⚽️"></textarea></div>
     <button class="btn-ink" id="btnSave">Enregistrer</button>
+
+    <div class="sw-row">
+      <div class="sw-body">
+        <div class="sw-lbl">Mes plats dans le fil</div>
+        <div class="sw-sub" id="filSub">Chargement…</div>
+      </div>
+      <button class="sw" id="filSwitch" role="switch" aria-checked="false" disabled
+              aria-label="Afficher mes plats dans le fil social"><i></i></button>
+    </div>
+
     <button class="btn-ghost" id="btnLogout">Se déconnecter</button>
   </div>
 </div>
@@ -202,6 +226,9 @@
 <div class="toast" id="toast"></div>
 
 <script src="/assets/core.js"></script>
+<!-- Chargé pour le seul réglage « mes plats dans le fil » (lireMaPref /
+     ecrireMaPref) : le module n'affiche rien de lui-même. -->
+<script src="/assets/social.js"></script>
 <script>
 /* ═══ État ═══ */
 var ONB = null;      // ligne onboarding de l'utilisateur (peut être absente)
@@ -354,6 +381,52 @@ $('btnSettings').addEventListener('click', function(){
   $('fAge').value    = (ONB && ONB.age) || '';
   $('fBio').value    = localStorage.getItem(lsKey('bio')) || '';
   openSheet('ovSettings');
+  chargerPrefFil();
+});
+
+/* ═══ Fil social : mes plats sont-ils visibles ? ═══
+   Réglage porté par la table membre_prefs. Pas de repli localStorage ici,
+   contrairement à la bio ou à la photo : un réglage de confidentialité qui
+   n'aurait d'effet que sur cet appareil laisserait croire à une protection
+   inexistante. Sans la table, l'interrupteur reste désactivé et le dit. */
+var FIL_PUBLIC = null;
+
+function renderPrefFil(){
+  var sw = $('filSwitch');
+  if (FIL_PUBLIC === null){
+    sw.disabled = true;
+    sw.classList.remove('on');
+    sw.setAttribute('aria-checked', 'false');
+    $('filSub').textContent = 'Réglage indisponible : la table membre_prefs n\'existe pas encore. Vos plats restent visibles dans le fil.';
+    return;
+  }
+  sw.disabled = false;
+  sw.classList.toggle('on', FIL_PUBLIC);
+  sw.setAttribute('aria-checked', FIL_PUBLIC ? 'true' : 'false');
+  $('filSub').textContent = FIL_PUBLIC
+    ? 'Les autres membres voient vos plats dans l\'onglet Social.'
+    : 'Vos plats n\'apparaissent nulle part dans le fil des autres membres.';
+}
+
+async function chargerPrefFil(){
+  if (!window.NattySocial){ FIL_PUBLIC = null; renderPrefFil(); return; }
+  FIL_PUBLIC = await NattySocial.lireMaPref();
+  renderPrefFil();
+}
+
+$('filSwitch').addEventListener('click', async function(){
+  if (this.disabled || FIL_PUBLIC === null) return;
+  var vise = !FIL_PUBLIC;
+  this.disabled = true;
+  try{
+    await NattySocial.ecrireMaPref(vise);
+    FIL_PUBLIC = vise;
+    toast(vise ? 'Vos plats sont visibles dans le fil' : 'Vos plats sont retirés du fil');
+  }catch(e){
+    toast('Réglage non enregistré');
+  }
+  this.disabled = false;
+  renderPrefFil();
 });
 
 $('btnSave').addEventListener('click', async function(){
@@ -454,6 +527,7 @@ async function charger(){
   await charger();
 })();
 </script>
+<script src="/assets/ajout.js"></script>
 <script src="/assets/nav.js"></script>
 </body>
 </html>

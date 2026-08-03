@@ -26,6 +26,7 @@
     suivi: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg>',
     menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v7a2 2 0 0 1-2 2v0a2 2 0 0 1-2-2V2M5 11v11M12 2v19M19 2c-1.7 0-3 2-3 5s1.3 5 3 5v9"/></svg>',
     coaching: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>',
+    social: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c0-3.6 2.9-5.8 6.5-5.8s6.5 2.2 6.5 5.8"/><path d="M16.5 4.7a3.4 3.4 0 0 1 0 6.6M18 14.6c2.1.6 3.5 2.3 3.5 4.6"/></svg>',
     defis: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 3-2 4-2 7a3 3 0 0 0 6 0c1.5 1.5 2 3.3 2 5a6 6 0 1 1-12 0c0-4 2-7 6-12Z"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
   };
@@ -34,7 +35,9 @@
     { key: 'suivi', label: 'Suivi', href: 'suivi.html', icon: ICONS.suivi },
     { key: 'repas', label: 'Repas', href: 'repas.html', icon: ICONS.menu },
     { key: 'add', add: true },
-    { key: 'coaching', label: 'Coaching', href: 'coaching.html', icon: ICONS.coaching },
+    // Coaching a laissé sa place au fil social ; la page reste accessible
+    // depuis la carte « Coaching » de menu.html.
+    { key: 'social', label: 'Social', href: 'social.html', icon: ICONS.social },
     { key: 'defis', label: 'Défis', href: 'narration.html', icon: ICONS.defis }
   ];
 
@@ -79,6 +82,10 @@
     });
 
     document.getElementById('nnAddBtn').addEventListener('click', function () {
+      // Parcours d'ajout (assets/ajout.js) : ouvre la caméra tout de suite.
+      // L'appel doit rester synchrone dans ce handler, sinon iOS considère
+      // que l'ouverture de la caméra n'est plus déclenchée par l'utilisateur.
+      if (window.NattyAjout && typeof window.NattyAjout.start === 'function') { window.NattyAjout.start(); return; }
       if (typeof window.NattyOnAdd === 'function') { window.NattyOnAdd(); return; }
       window.location.href = 'suivi.html' + qs() + (qs() ? '&' : '?') + 'add=1';
     });

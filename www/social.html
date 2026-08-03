@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Natty · Social</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="/natty-icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+body{overflow-x:hidden}
+
+/* ══ Barre de recherche ══ */
+.top{gap:12px}
+.search{flex:1;display:flex;align-items:center;gap:10px;background:var(--metal-white);
+  box-shadow:var(--sh-metal-light);border-radius:var(--r-full);padding:13px 18px}
+.search svg{width:19px;height:19px;stroke:var(--muted);flex:none}
+.search input{flex:1;min-width:0;background:none;border:none;outline:none;font-family:inherit;
+  font-size:14.5px;font-weight:600;color:var(--ink)}
+.search input::placeholder{color:var(--muted);font-weight:500}
+.top .prof{width:52px;height:52px;flex:none;border-radius:50%;background:var(--metal-white);
+  box-shadow:var(--sh-metal-light);display:flex;align-items:center;justify-content:center}
+.top .prof svg{width:25px;height:25px}
+
+/* ══ Vedette (Top 1) ══ */
+.hero{position:relative;display:block;border-radius:var(--r-xl);overflow:hidden;
+  aspect-ratio:1/1;background:#101014;cursor:pointer;box-shadow:var(--nm-soft)}
+.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero .fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:96px;background:var(--metal-white)}
+.hero-bar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;
+  padding:16px;z-index:2;background:linear-gradient(180deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,0) 100%)}
+.hero-bar .who{flex:1;min-width:0;font-weight:900;font-size:16px;letter-spacing:-.2px;
+  text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-bar .badge-ink.sm{flex:none}
+.hero-foot{position:absolute;left:0;right:0;bottom:0;padding:26px 18px 16px;z-index:2;color:#fff;
+  background:linear-gradient(0deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,0) 100%)}
+.hero-foot .nm{font-weight:900;font-size:19px;letter-spacing:-.2px;line-height:1.2}
+.hero-foot .st{font-size:11.5px;font-weight:700;opacity:.8;margin-top:4px}
+
+/* ══ Avatar initiale ══ */
+.av{width:34px;height:34px;flex:none;border-radius:50%;background:var(--ink);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+.av.sm{width:28px;height:28px;font-size:11px}
+
+/* ══ Grille de posts ══ */
+.posts{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}
+.post{cursor:pointer;min-width:0}
+.post-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.post-head .who{font-weight:900;font-size:12px;letter-spacing:-.1px;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.post-img{position:relative;aspect-ratio:1/1;border-radius:var(--r-lg);overflow:hidden;
+  background:var(--card);box-shadow:var(--nm-soft)}
+.post-img img{width:100%;height:100%;object-fit:cover;display:block}
+.post-img .fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:52px;background:var(--metal-white)}
+.like{position:absolute;top:9px;right:9px;width:34px;height:34px;border-radius:50%;background:#fff;
+  border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
+  box-shadow:0 4px 12px rgba(20,20,30,.18);z-index:2}
+.like svg{width:17px;height:17px;stroke:var(--ink);fill:none;stroke-width:2;transition:all .18s}
+.like.on svg{stroke:var(--red);fill:var(--red)}
+.like:active{transform:scale(.9)}
+.like .n{position:absolute;bottom:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;
+  background:var(--ink);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;
+  justify-content:center;padding:0 4px}
+.post-name{display:flex;align-items:baseline;gap:6px;margin-top:9px}
+.post-name .nm{flex:1;min-width:0;font-weight:800;font-size:12.5px;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.post-name .kc{flex:none;font-size:10.5px;font-weight:700;color:var(--muted)}
+/* Une colonne fait ~162 px : « Prot 13g 🥩 » trois fois n'y tient pas.
+   L'emoji porte le nom de la macro, il ne reste que la valeur. */
+.post-macros{display:flex;justify-content:space-between;gap:4px;margin-top:5px;font-size:11px;
+  font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden}
+.post-macros.none{justify-content:flex-start;font-weight:600}
+
+/* Pastille de score — cohérente entre grille, vedette et détail */
+.score{display:inline-flex;align-items:center;gap:4px;background:var(--card);border-radius:var(--r-full);
+  padding:4px 10px;font-size:10.5px;font-weight:800;color:var(--ink)}
+.score.hi{background:var(--green);color:#fff}
+.score.mid{background:var(--amber);color:#fff}
+.post-img .score{position:absolute;left:9px;bottom:9px;z-index:2;box-shadow:0 4px 12px rgba(20,20,30,.2)}
+.post-img .score:not(.hi):not(.mid){background:#fff}
+
+/* ══ Rangée horizontale (tendances secondaires) ══ */
+/* scroll-padding : sans lui, le snap alignerait la première carte sur le bord
+   du conteneur, donc 20 px sous la gouttière — la carte partirait rognée. */
+.rail{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;
+  margin:0 calc(var(--pad) * -1);padding:2px var(--pad) 6px;scroll-padding-left:var(--pad);
+  -webkit-overflow-scrolling:touch}
+.rail::-webkit-scrollbar{display:none}
+.rail .post{flex:0 0 46%;scroll-snap-align:start}
+
+.sec-head-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.sec-head-row .sec-title{margin-bottom:6px}
+.sec-sub{margin:0 0 14px}
+.hidden{display:none}
+.lnk{flex:none;background:none;border:none;font-family:inherit;font-size:12px;font-weight:800;
+  color:var(--ink);text-decoration:underline;cursor:pointer;padding:0}
+
+/* ══ Membres : lignes d'annuaire + bouton suivre ══ */
+.mbr-list{display:flex;flex-direction:column;gap:9px}
+.mbr{display:flex;align-items:center;gap:11px;background:var(--card);border-radius:var(--r-lg);
+  padding:11px 13px}
+.mbr-body{flex:1;min-width:0}
+.mbr-nm{font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mbr-sub{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.follow{flex:none;background:var(--ink);color:#fff;border:none;border-radius:var(--r-full);
+  padding:9px 15px;font-family:inherit;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+.follow.on{background:var(--card);color:var(--muted);box-shadow:var(--nm-in)}
+.follow:active{transform:scale(.96)}
+.mbr .follow{box-shadow:none}
+.mbr .follow.on{background:var(--bg)}
+
+/* Suggestions quand on ne suit encore personne */
+.sug-note{font-size:12.5px;color:var(--muted);line-height:1.5;margin:-4px 0 14px}
+
+/* ══ Détail (bottom sheet) ══ */
+.sheet{position:fixed;inset:0;z-index:700;display:none;align-items:flex-end;justify-content:center;
+  background:rgba(16,16,20,.45)}
+.sheet.on{display:flex}
+.sheet-in{width:100%;max-width:var(--col);max-height:92vh;overflow-y:auto;background:var(--bg);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;padding:10px var(--pad) calc(28px + env(safe-area-inset-bottom,0px));
+  -webkit-overflow-scrolling:touch;animation:sheetUp .28s cubic-bezier(.22,1,.36,1)}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:.6}to{transform:translateY(0);opacity:1}}
+.sheet-grip{width:42px;height:4px;border-radius:2px;background:#dcdce2;margin:2px auto 14px}
+.sheet-photo{width:100%;aspect-ratio:4/3;border-radius:var(--r-lg);overflow:hidden;background:var(--card);
+  display:flex;align-items:center;justify-content:center;font-size:76px}
+.sheet-photo img{width:100%;height:100%;object-fit:cover}
+.sheet-head{display:flex;align-items:center;gap:10px;margin-top:16px}
+.sheet-head .who{flex:1;min-width:0}
+.sheet-head .nm{font-weight:800;font-size:13px}
+.sheet-head .dt{font-size:11px;color:var(--muted);margin-top:1px}
+.sheet-title{font-weight:900;font-size:22px;letter-spacing:-.3px;line-height:1.2;margin-top:14px}
+.sheet-stats{display:flex;align-items:center;gap:14px;margin-top:8px;font-size:12px;
+  font-weight:700;color:var(--muted)}
+.sheet-macros{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+.sheet-macros .mp{background:var(--card);border-radius:16px;padding:11px 0;text-align:center;
+  box-shadow:var(--nm-in)}
+.sheet-macros .mp .v{font-weight:900;font-size:15px}
+.sheet-macros .mp .k{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.3px;margin-top:2px}
+.sheet-note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:14px}
+.ingr-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.chip{background:var(--card);border-radius:var(--r-full);padding:8px 13px;font-size:11.5px;font-weight:700}
+.chip .q{color:var(--muted);font-weight:600;margin-left:4px}
+.sheet-acts{display:flex;gap:10px;margin-top:20px}
+.btn-ink{flex:1;background:var(--ink);color:#fff;border:none;border-radius:var(--r-full);padding:15px;
+  font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;
+  box-shadow:4px 6px 14px rgba(20,20,22,.28)}
+.btn-ghost{flex:none;background:var(--card);border:none;border-radius:var(--r-full);padding:15px 20px;
+  font-family:inherit;font-size:13.5px;font-weight:800;color:var(--ink);cursor:pointer}
+.btn-ink:active,.btn-ghost:active{transform:scale(.98)}
+
+.toast{position:fixed;left:50%;bottom:118px;transform:translate(-50%,14px);background:var(--ink);
+  color:#fff;border-radius:18px;padding:12px 20px;font-size:12.5px;font-weight:700;opacity:0;
+  transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:800;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Chercher un plat, un membre…" autocomplete="off">
+  </div>
+  <a class="prof" href="profil.html" aria-label="Profil">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+  </a>
+</div>
+
+<div class="wrap">
+  <div id="etat" class="empty">Chargement du fil…</div>
+
+  <!-- Résultats de recherche : masquent le fil tant qu'une requête est saisie -->
+  <div id="secRech" class="hidden">
+    <div class="sec-title">Résultats</div>
+    <div class="posts" id="rech"></div>
+  </div>
+
+  <div id="fil" class="hidden">
+    <div id="secTend" class="hidden">
+      <div class="sec-title">Tendances</div>
+      <div id="vedette"></div>
+      <div class="rail" id="tend"></div>
+    </div>
+
+    <div id="secAmis" class="hidden">
+      <div class="sec-head-row">
+        <div class="sec-title">Vos amis</div>
+        <button class="lnk" id="btnMembres">Gérer</button>
+      </div>
+      <div class="sec-sub" id="amisSub"></div>
+      <div class="posts" id="amis"></div>
+      <div class="mbr-list hidden" id="sug"></div>
+    </div>
+
+    <div id="secComm" class="hidden">
+      <div class="sec-title">La communauté</div>
+      <div class="sec-sub">Les derniers plats publiés par les membres</div>
+      <div class="posts" id="comm"></div>
+    </div>
+
+    <div id="secTop" class="hidden">
+      <div class="sec-title">Dans le mille</div>
+      <div class="sec-sub">Les plats qui collent le mieux aux objectifs de ceux qui les ont postés</div>
+      <div class="posts" id="top"></div>
+    </div>
+
+    <div id="secSim" class="hidden">
+      <div class="sec-title">Profils comme le vôtre</div>
+      <div class="sec-sub" id="simSub"></div>
+      <div class="posts" id="sim"></div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="sheet-in" id="sheetIn"></div>
+</div>
+
+<div class="sheet" id="sheetMbr">
+  <div class="sheet-in">
+    <div class="sheet-grip"></div>
+    <div class="sheet-title">Les membres</div>
+    <div class="sheet-note" id="mbrNote"></div>
+    <div class="mbr-list" id="mbrList"></div>
+    <div class="sheet-acts"><button class="btn-ink" id="mbrClose">Fermer</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/assets/core.js"></script>
+<script src="/assets/social.js"></script>
+<script>
+var VUE = null;      // dernier rendu de NattySocial.vues()
+var ouvert = null;   // plat affiché dans la bottom sheet
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+var toastT;
+function toast(msg){
+  var t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+
+function initiale(prenom){ return (prenom || '?').trim().charAt(0).toUpperCase(); }
+
+function classeScore(s){ return s >= 75 ? 'hi' : (s >= 50 ? 'mid' : ''); }
+
+function pastilleScore(p){
+  if (p.score === null) return '';
+  return '<span class="score ' + classeScore(p.score) + '">' + p.score + ' / 100</span>';
+}
+
+function ligneMacros(p){
+  var m = p.macros;
+  if (!m || !m.c) return '<div class="post-macros none">Macros non estimées</div>';
+  return '<div class="post-macros">'
+    + '<span>🥩 ' + Math.round(m.p) + 'g</span>'
+    + '<span>🥑 ' + Math.round(m.l) + 'g</span>'
+    + '<span>🌾 ' + Math.round(m.g) + 'g</span>'
+    + '</div>';
+}
+
+function visuel(p, taille){
+  return p.photo
+    ? '<img src="' + esc(p.photo) + '" alt="" loading="lazy">'
+    : '<div class="fallback">' + p.emoji + '</div>';
+}
+
+function coeur(p){
+  var c = NattySocial.compteurs(p.id);
+  return '<button class="like' + (c.aime ? ' on' : '') + '" data-like="' + p.id + '" aria-label="J\'aime">'
+    + '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S3.5 15 3.5 9.2A4.7 4.7 0 0 1 12 6.6a4.7 4.7 0 0 1 8.5 2.6c0 5.8-8.5 11.3-8.5 11.3Z"/></svg>'
+    + (c.likes ? '<span class="n">' + c.likes + '</span>' : '')
+    + '</button>';
+}
+
+function carte(p, avecScore){
+  return '<div class="post" data-id="' + p.id + '">'
+    + '<div class="post-head"><div class="av sm">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
+    + '<div class="who">' + esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div></div>'
+    + '<div class="post-img">' + visuel(p) + coeur(p)
+    + (avecScore ? pastilleScore(p) : '') + '</div>'
+    + '<div class="post-name"><span class="nm">' + esc(p.nom) + '</span>'
+    + (p.macros && p.macros.c ? '<span class="kc">' + Math.round(p.macros.c) + ' kcal</span>' : '')
+    + '</div>'
+    + ligneMacros(p)
+    + '</div>';
+}
+
+function grille(el, plats, avecScore){
+  el.innerHTML = plats.map(function(p){ return carte(p, avecScore); }).join('');
+}
+
+function rendreVedette(p){
+  var c = NattySocial.compteurs(p.id);
+  var stats = [];
+  if (c.likes) stats.push(c.likes + (c.likes > 1 ? ' j\'aime' : ' j\'aime'));
+  if (c.vues) stats.push(c.vues + (c.vues > 1 ? ' vues' : ' vue'));
+  $('vedette').innerHTML = '<div class="hero" data-id="' + p.id + '">'
+    + visuel(p)
+    + '<div class="hero-bar"><div class="av">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
+    + '<div class="who">' + esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div>'
+    + '<div class="badge-ink sm">Top 1 🔥</div></div>'
+    + '<div class="hero-foot"><div class="nm">' + esc(p.nom) + '</div>'
+    + '<div class="st">' + (stats.join(' · ') || 'Le plat du moment') + '</div></div>'
+    + '</div>';
+}
+
+/* ══ Membres ══ */
+
+function boutonSuivre(m){
+  return '<button class="follow' + (m.ami ? ' on' : '') + '" data-follow="' + m.user_id + '">'
+    + (m.ami ? 'Suivi ✓' : 'Suivre') + '</button>';
+}
+
+function ligneMembre(m){
+  var bouts = [];
+  if (m.nbPlats) bouts.push(m.nbPlats + ' plat' + (m.nbPlats > 1 ? 's' : ''));
+  if (m.jour && m.jour.c) bouts.push(m.jour.c + ' kcal/jour');
+  if (m.proximite >= 0.85) bouts.push('profil proche');
+  return '<div class="mbr">'
+    + '<div class="av">' + esc(initiale(m.prenom)) + '</div>'
+    + '<div class="mbr-body"><div class="mbr-nm">' + esc(m.prenom) + '</div>'
+    + '<div class="mbr-sub">' + esc(bouts.join(' · ')) + '</div></div>'
+    + boutonSuivre(m) + '</div>';
+}
+
+function rendreMembres(){
+  var liste = NattySocial.membres();
+  $('mbrList').innerHTML = liste.length
+    ? liste.map(ligneMembre).join('')
+    : '<div class="empty">Aucun autre membre n\'a encore publié de plat.</div>';
+  $('mbrNote').textContent = NattySocial.estSynchronise()
+    ? 'Suivez un membre pour retrouver ses plats dans « Vos amis ».'
+    : 'Suivez un membre pour retrouver ses plats dans « Vos amis ». Vos abonnements sont pour l\'instant enregistrés sur cet appareil seulement.';
+}
+
+function rendreAmis(){
+  var sec = $('secAmis'), grille2 = $('amis'), sug = $('sug');
+  sec.classList.remove('hidden');
+  if (VUE.amis.length){
+    sug.classList.add('hidden');
+    grille2.classList.remove('hidden');
+    $('amisSub').textContent = VUE.nbAmis > 1
+      ? 'Les plats des ' + VUE.nbAmis + ' membres que vous suivez'
+      : 'Les plats du membre que vous suivez';
+    grille(grille2, VUE.amis, false);
+    return;
+  }
+  // Personne à suivre encore, ou aucun plat récent de leur part : plutôt
+  // qu'une section vide, on propose qui suivre.
+  grille2.classList.add('hidden');
+  sug.classList.remove('hidden');
+  $('amisSub').textContent = VUE.nbAmis
+    ? 'Les membres que vous suivez n\'ont rien publié récemment. En voici d\'autres à découvrir.'
+    : 'Vous ne suivez encore personne. Voici des membres dont le profil ressemble au vôtre.';
+  sug.innerHTML = VUE.suggestions.length
+    ? VUE.suggestions.map(ligneMembre).join('')
+    : '<div class="empty">Aucun autre membre n\'a encore publié de plat.</div>';
+}
+
+function section(id, plats){
+  var el = $(id);
+  if (plats.length) el.classList.remove('hidden'); else el.classList.add('hidden');
+  return plats.length > 0;
+}
+
+function rendre(){
+  VUE = NattySocial.vues();
+  if (!VUE.total){
+    $('etat').textContent = 'Personne n\'a encore publié de plat. Ajoutez le vôtre avec le bouton +, il ouvrira le bal.';
+    $('fil').classList.add('hidden');
+    return;
+  }
+  $('etat').classList.add('hidden');
+  $('fil').classList.remove('hidden');
+
+  if (VUE.vedette){
+    $('secTend').classList.remove('hidden');
+    rendreVedette(VUE.vedette);
+    grille($('tend'), VUE.tendances, false);
+  }
+  rendreAmis();
+  if (section('secComm', VUE.recents)) grille($('comm'), VUE.recents, false);
+  if (section('secTop', VUE.top)) grille($('top'), VUE.top, true);
+
+  if (section('secSim', VUE.similaires)){
+    var j = VUE.moi && VUE.moi.jour;
+    $('simSub').textContent = j
+      ? 'Des membres dont les besoins tournent autour de ' + j.c + ' kcal et ' + j.p + ' g de protéines par jour, comme vous'
+      : 'Des membres aux besoins quotidiens proches des vôtres';
+    grille($('sim'), VUE.similaires, true);
+  }
+}
+
+/* ══ Détail ══ */
+
+function ouvrir(id){
+  var p = NattySocial.platParId(id);
+  if (!p) return;
+  ouvert = p;
+  NattySocial.marquerVue(id);
+  rendreSheet();
+  $('sheet').classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+
+function fermer(){
+  $('sheet').classList.remove('on');
+  document.body.style.overflow = '';
+  ouvert = null;
+  rendre();   // les compteurs ont pu bouger pendant la consultation
+}
+
+function rendreSheet(){
+  var p = ouvert;
+  if (!p) return;
+  var c = NattySocial.compteurs(p.id);
+  var ami = NattySocial.estAmi(p.user_id);
+  var m = p.macros || { c:0, p:0, l:0, g:0 };
+  var d = p.date ? new Date(p.date + 'T00:00:00') : null;
+  var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+  var note = '';
+  if (p.score !== null && p.auteur && p.auteur.repas){
+    var r = p.auteur.repas;
+    note = 'Score calculé face aux besoins de ' + esc(p.auteur.prenom) + ' pour un repas : '
+      + r.p + ' g de protéines, ' + r.g + ' g de glucides, ' + r.l + ' g de lipides, ' + r.c + ' kcal.';
+  } else if (!m.c){
+    note = 'Les macros de ce plat n\'ont pas pu être estimées : certains ingrédients ne sont pas dans notre table nutritionnelle.';
+  }
+
+  $('sheetIn').innerHTML = '<div class="sheet-grip"></div>'
+    + '<div class="sheet-photo">' + visuel(p) + '</div>'
+    + '<div class="sheet-head"><div class="av">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
+    + '<div class="who"><div class="nm">' + esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div>'
+    + '<div class="dt">' + (d ? d.getDate() + ' ' + MOIS[d.getMonth()] : '') + (p.type ? ' · ' + esc(p.type) : '') + '</div></div>'
+    + (p.score !== null ? '<span class="score ' + classeScore(p.score) + '">' + p.score + ' / 100</span>' : '')
+    + '</div>'
+    + '<div class="sheet-title">' + esc(p.nom) + '</div>'
+    + '<div class="sheet-stats"><span>' + c.likes + ' j\'aime</span><span>' + c.vues + ' vue' + (c.vues > 1 ? 's' : '') + '</span></div>'
+    + '<div class="sheet-macros">'
+    + '<div class="mp"><div class="v">' + Math.round(m.p) + 'g</div><div class="k">Prot</div></div>'
+    + '<div class="mp"><div class="v">' + Math.round(m.g) + 'g</div><div class="k">Gluc</div></div>'
+    + '<div class="mp"><div class="v">' + Math.round(m.l) + 'g</div><div class="k">Lip</div></div>'
+    + '<div class="mp"><div class="v">' + Math.round(m.c) + '</div><div class="k">Kcal</div></div>'
+    + '</div>'
+    + (note ? '<div class="sheet-note">' + note + '</div>' : '')
+    + (p.ingredients.length
+        ? '<div class="ingr-chips">' + p.ingredients.map(function(i){
+            return '<span class="chip">' + esc(i.name)
+              + (i.quantity_g ? '<span class="q">' + Math.round(i.quantity_g) + 'g</span>' : '') + '</span>';
+          }).join('') + '</div>'
+        : '')
+    + '<div class="sheet-acts">'
+    + '<button class="btn-ink" id="shLike">' + (c.aime ? '❤️ Aimé' : '🤍 J\'aime') + '</button>'
+    + '<button class="btn-ghost" id="shFollow">' + (ami ? 'Suivi ✓' : 'Suivre') + '</button>'
+    + '<button class="btn-ghost" id="shClose">Fermer</button>'
+    + '</div>';
+
+  $('shLike').addEventListener('click', function(){
+    NattySocial.toggleLike(p.id);
+    rendreSheet();
+  });
+  $('shFollow').addEventListener('click', function(){
+    var suit = NattySocial.basculerAmi(p.user_id);
+    rendreSheet();
+    toast(suit ? 'Vous suivez ' + p.auteur.prenom : 'Vous ne suivez plus ' + p.auteur.prenom);
+  });
+  $('shClose').addEventListener('click', fermer);
+}
+
+/* ══ Interactions ══ */
+
+document.addEventListener('click', function(e){
+  var btn = e.target.closest && e.target.closest('[data-like]');
+  if (btn){
+    e.stopPropagation();
+    var etat = NattySocial.toggleLike(btn.dataset.like);
+    btn.classList.toggle('on', etat.aime);
+    var n = btn.querySelector('.n');
+    if (etat.likes){
+      if (n) n.textContent = etat.likes;
+      else btn.insertAdjacentHTML('beforeend', '<span class="n">' + etat.likes + '</span>');
+    } else if (n) n.remove();
+    if (!NattySocial.estSynchronise()) toast('Enregistré sur cet appareil');
+    return;
+  }
+  var fol = e.target.closest && e.target.closest('[data-follow]');
+  if (fol){
+    e.stopPropagation();
+    var uid = fol.dataset.follow;
+    var suit = NattySocial.basculerAmi(uid);
+    var qui = NattySocial.auteurParId(uid);
+    // Toutes les occurrences du membre à l'écran, pas seulement celle cliquée.
+    document.querySelectorAll('[data-follow="' + uid + '"]').forEach(function(b){
+      b.classList.toggle('on', suit);
+      b.textContent = suit ? 'Suivi ✓' : 'Suivre';
+    });
+    toast((suit ? 'Vous suivez ' : 'Vous ne suivez plus ') + (qui ? qui.prenom : 'ce membre'));
+    majAmisPlusTard();
+    return;
+  }
+  var cible = e.target.closest && e.target.closest('[data-id]');
+  if (cible) ouvrir(cible.dataset.id);
+});
+
+/* Le fil se recompose après un abonnement, mais pas pendant que la feuille
+   des membres est ouverte : on ne veut pas que la liste bouge sous le doigt. */
+var majT;
+function majAmisPlusTard(){
+  clearTimeout(majT);
+  majT = setTimeout(function(){
+    if ($('sheetMbr').classList.contains('on') || $('sheet').classList.contains('on')) return;
+    VUE = NattySocial.vues();
+    rendreAmis();
+  }, 400);
+}
+
+$('sheet').addEventListener('click', function(e){ if (e.target === this) fermer(); });
+
+$('btnMembres').addEventListener('click', function(){
+  rendreMembres();
+  $('sheetMbr').classList.add('on');
+  document.body.style.overflow = 'hidden';
+});
+function fermerMembres(){
+  $('sheetMbr').classList.remove('on');
+  document.body.style.overflow = '';
+  VUE = NattySocial.vues();
+  rendreAmis();
+}
+$('mbrClose').addEventListener('click', fermerMembres);
+$('sheetMbr').addEventListener('click', function(e){ if (e.target === this) fermerMembres(); });
+
+var rechT;
+$('q').addEventListener('input', function(){
+  var q = this.value;
+  clearTimeout(rechT);
+  rechT = setTimeout(function(){
+    if (!q.trim()){
+      $('secRech').classList.add('hidden');
+      $('fil').classList.remove('hidden');
+      return;
+    }
+    var res = NattySocial.chercher(q);
+    $('fil').classList.add('hidden');
+    $('secRech').classList.remove('hidden');
+    $('rech').innerHTML = res.length
+      ? res.map(function(p){ return carte(p, true); }).join('')
+      : '<div class="empty" style="grid-column:1/-1">Aucun plat ne correspond à « ' + esc(q) + ' ».</div>';
+  }, 180);
+});
+
+(async function(){
+  if (!Natty.requireAuth()) return;
+  try{
+    await NattySocial.charger();
+    rendre();
+  }catch(e){
+    $('etat').textContent = 'Le fil n\'a pas pu être chargé. Vérifiez votre connexion et réessayez.';
+  }
+})();
+</script>
+<script src="/assets/ajout.js"></script>
+<script src="/assets/nav.js"></script>
+</body>
+</html>
