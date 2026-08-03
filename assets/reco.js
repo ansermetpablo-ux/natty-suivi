@@ -21,6 +21,15 @@
    ═══════════════════════════════════════════════════════════ */
 var NattyReco = (function () {
 
+  /* Une WebView Capacitor sert les pages depuis capacitor://localhost : un
+     chemin relatif « /api/… » n'y résout pas. Sur le web on reste relatif,
+     pour ne dépendre d'aucun domaine. C'est cette seule différence qui
+     justifiait deux copies divergentes de ce fichier — elles sont désormais
+     identiques. */
+  var API_BASE = (location.protocol === 'capacitor:' || location.protocol === 'file:')
+    ? 'https://natty-suivi.vercel.app' : '';
+
+
   /* ── 1. Collecte du profil ───────────────────────────────── */
 
   async function chargerProfil() {
@@ -120,7 +129,7 @@ var NattyReco = (function () {
     return String(v);
   }
 
-  function construirePrompt(profil, nb, contrainte) {
+  function construirePrompt(profil, nb, contrainte, avecConseils) {
     var onb = profil.onboarding || {};
     var q   = profil.questionnaire || {};
     var cibles = macrosCibles(onb);
@@ -128,7 +137,10 @@ var NattyReco = (function () {
     var platsSemaine = (profil.semaine || []).map(function (m) { return m.name; }).slice(0, 15);
 
     var p = '';
-    p += "Tu es le nutritionniste de cet utilisateur. Propose-lui " + nb + " recettes pour les prochains repas.\n\n";
+    p += avecConseils
+      ? ("Tu es le nutritionniste de cet utilisateur. Produis d'un seul coup son programme de la semaine : "
+         + nb + " recettes ET son analyse nutritionnelle.\n\n")
+      : ("Tu es le nutritionniste de cet utilisateur. Propose-lui " + nb + " recettes pour les prochains repas.\n\n");
 
     p += "PROFIL\n";
     if (onb.age)      p += "- " + onb.age + " ans, " + (onb.sexe || '') + ", " + (onb.poids || '?') + " kg, " + (onb.taille || '?') + " cm\n";
@@ -183,11 +195,25 @@ var NattyReco = (function () {
       p += "7. Sur chaque ingrédient, mets \"dispo\":true s'il figure dans les INGRÉDIENTS DISPONIBLES, false s'il faut l'acheter.\n";
     }
 
-    p += "\nRéponds UNIQUEMENT avec un tableau JSON valide, sans texte autour, au format :\n";
-    p += '[{"nom":"Nom du plat","pourquoi":"une phrase expliquant pourquoi ce plat pour LUI","temps_min":25,';
-    p += '"macros":{"p":42,"g":60,"l":18,"kcal":600},';
-    p += '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g","dispo":true}],';
-    p += '"steps":[{"em":"🔪","t":"Étape courte","tip":"astuce"}]}]';
+    var recette = '{"nom":"Nom du plat","pourquoi":"une phrase expliquant pourquoi ce plat pour LUI",'
+      + '"avantages":"ce que ce plat apporte concrètement à SON objectif, une phrase",'
+      + '"temps_min":25,"macros":{"p":42,"g":60,"l":18,"kcal":600},'
+      + '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g","dispo":true}],'
+      + '"steps":[{"em":"🔪","t":"Étape courte","tip":"astuce"}]}';
+
+    if (avecConseils) {
+      // Un seul appel pour les recettes ET l'analyse : les deux découlent du
+      // même profil, et deux appels séparés pouvaient se contredire.
+      p += "\nLes conseils portent sur SES repas réels et SES préférences, jamais de généralité.\n";
+      p += "\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format :\n";
+      p += '{"conseils":{"conseil_prot":"phrase courte","conseil_gluc":"phrase courte",'
+        + '"conseil_lip":"phrase courte","conseil_cal":"phrase courte",'
+        + '"conseil_amelioration":"1-2 phrases","conseil_points_forts":"1-2 phrases"},';
+      p += '"recettes":[' + recette + ']}';
+    } else {
+      p += "\nRéponds UNIQUEMENT avec un tableau JSON valide, sans texte autour, au format :\n";
+      p += '[' + recette + ']';
+    }
 
     return p;
   }
@@ -203,8 +229,18 @@ var NattyReco = (function () {
     try { return JSON.parse(t.slice(i, j + 1)); } catch (e) { return null; }
   }
 
+  /* La génération combinée renvoie un OBJET (conseils + recettes) et non le
+     tableau de recommander() : on isole donc les accolades. */
+  function extraireObjet(txt) {
+    if (!txt) return null;
+    var t = txt.replace(/```json/gi, '').replace(/```/g, '').trim();
+    var i = t.indexOf('{'), j = t.lastIndexOf('}');
+    if (i === -1 || j === -1 || j < i) return null;
+    try { return JSON.parse(t.slice(i, j + 1)); } catch (e) { return null; }
+  }
+
   async function appelerClaude(prompt, maxTokens) {
-    var r = await fetch('/api/claude', {
+    var r = await fetch(API_BASE + '/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt, max_tokens: maxTokens || 3000 })
@@ -255,14 +291,181 @@ var NattyReco = (function () {
   }
 
   /**
-   * Recommandations de la semaine, avec cache.
-   * Retombe silencieusement sur [] si l'IA est indisponible : les pages
-   * doivent gérer l'état vide, jamais planter.
+   * Écrit les recettes de la semaine dans profil_conseils.conseils_json.
+   * Passe par /api/save-conseils, qui détient la service_role key et ne met à
+   * jour que les champs transmis (les conseils déjà écrits ne sont pas touchés).
+   */
+  async function enregistrerSemaine(recettes, nb) {
+    try {
+      var r = await fetch(API_BASE + '/api/save-conseils', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: Natty.USER_ID,
+          semaine: lundiCourant(),
+          // conseils_json est une colonne texte : on y met du JSON sérialisé.
+          // lireCache() reparse, et tolère aussi le cas jsonb.
+          conseils_json: JSON.stringify({
+            recettes: recettes, nb_repas: nb, genere_le: new Date().toISOString()
+          })
+        })
+      });
+      return r.ok;
+    } catch (e) { return false; }
+  }
+
+  /* ── 5 bis. Génération unique de la semaine ───────────────
+     UN SEUL appel Claude produit les 7 recettes ET l'analyse nutritionnelle,
+     et UN SEUL POST les enregistre. Avant, suivi.html appelait Claude pour les
+     conseils puis NattyReco.genererSemaine() pour les repas : deux appels, deux
+     écritures, et deux analyses du même profil qui pouvaient se contredire.
+
+     C'est l'unique génération de la semaine. Tous les écrans se contentent
+     ensuite de lire le cache jusqu'au lundi suivant. */
+
+  async function enregistrerTout(conseils, recettes, nb) {
+    var corps = {
+      user_id: Natty.USER_ID,
+      semaine: lundiCourant(),
+      // conseils_json est une colonne TEXTE : on y met du JSON sérialisé.
+      conseils_json: JSON.stringify({
+        recettes: recettes, nb_repas: nb, genere_le: new Date().toISOString()
+      })
+    };
+    // save-conseils n'écrit que les champs transmis : on n'envoie donc que
+    // ceux que l'IA a réellement remplis, sans écraser le reste de la ligne.
+    ['conseil_prot','conseil_gluc','conseil_lip','conseil_cal',
+     'conseil_amelioration','conseil_points_forts'].forEach(function (k) {
+      if (conseils && conseils[k]) corps[k] = conseils[k];
+    });
+    try {
+      var r = await fetch(API_BASE + '/api/save-conseils', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(corps)
+      });
+      return r.ok;
+    } catch (e) { return false; }
+  }
+
+  /**
+   * Génération hebdomadaire complète : recettes + conseils, en un appel.
+   * @returns {Promise<{conseils:Object, recettes:Array}>}
+   *          recettes vide si l'IA est indisponible — les écrans gèrent le vide.
+   */
+  async function genererTout() {
+    var profil = await chargerProfil();
+    var txt = await appelerClaude(construirePrompt(profil, NB_SEMAINE, null, true), 8000);
+    var out = extraireObjet(txt);
+    if (!out || !out.recettes || !out.recettes.length) {
+      throw new Error('Réponse IA inexploitable');
+    }
+    var recettes = out.recettes.slice(0, NB_SEMAINE);
+    var conseils = out.conseils || {};
+    // Un enregistrement raté doit se voir : sinon l'écran affiche des recettes
+    // que rien ne persiste, et la semaine suivante on régénère sans le savoir.
+    var ecrit = await enregistrerTout(conseils, recettes, NB_SEMAINE);
+    if (!ecrit) throw new Error('Génération réussie mais enregistrement impossible');
+    return { conseils: conseils, recettes: recettes };
+  }
+
+  /* ── 6. Nombre de repas voulus pour la semaine ────────────
+     Source de vérité : onboarding.nb_repas_semaine, donc partagée entre les
+     appareils. localStorage sert de cache local, ce qui permet à nbRepas() de
+     rester synchrone (les pages l'appellent au fil du rendu) et de fonctionner
+     même si la requête échoue. La valeur réellement utilisée pour une
+     génération reste par ailleurs consignée dans conseils_json.nb_repas. */
+
+  /* Une seule génération par semaine, et elle produit 7 recettes — une par
+     jour. Le réglage 1-7 a disparu de l'interface : les bornes restent
+     égales pour que tous les appels existants convergent vers 7. */
+  var NB_SEMAINE = 7, NB_DEFAUT = 7, NB_MIN = 7, NB_MAX = 7;
+  var nbCourant = null;   // renseigné par chargerNbRepas()
+
+  function borner(n) {
+    n = parseInt(n, 10);
+    if (isNaN(n)) return NB_DEFAUT;
+    return Math.min(NB_MAX, Math.max(NB_MIN, n));
+  }
+
+  function cleLocale() { return 'natty_nb_repas_' + Natty.USER_ID; }
+
+  function nbRepas() {
+    if (nbCourant !== null) return nbCourant;
+    try { return borner(localStorage.getItem(cleLocale()) || NB_DEFAUT); }
+    catch (e) { return NB_DEFAUT; }
+  }
+
+  /**
+   * Récupère la préférence en base et la met en cache.
+   * À appeler une fois au chargement, avant de se fier à nbRepas().
+   * Repli silencieux sur la valeur locale : hors ligne, l'écran reste utilisable.
+   */
+  async function chargerNbRepas() {
+    try {
+      var r = await Natty.sbFetch('onboarding?user_id=eq.' + Natty.USER_ID
+        + '&order=created_at.desc&limit=1&select=nb_repas_semaine');
+      if (r && r.length && r[0].nb_repas_semaine != null) {
+        nbCourant = borner(r[0].nb_repas_semaine);
+        try { localStorage.setItem(cleLocale(), String(nbCourant)); } catch (e) {}
+        return nbCourant;
+      }
+    } catch (e) {}
+    nbCourant = nbRepas();
+    return nbCourant;
+  }
+
+  var minuteurPatch = null;
+
+  /* Ne rien écrire en base. onboarding.nb_repas_semaine est la colonne de
+     L'ABONNEMENT (formule 3 ou 4 plats livrés par semaine) : y consigner un
+     nombre de recettes écrasait la formule du client. Le nombre étant
+     désormais fixé à 7, il n'y a plus rien à persister. */
+  function ecrireNbEnBase() {
+    if (minuteurPatch) { clearTimeout(minuteurPatch); minuteurPatch = null; }
+  }
+
+  /**
+   * Le cache et localStorage sont mis à jour immédiatement pour que l'interface
+   * réagisse sans attendre le réseau ; l'écriture en base est différée.
+   * Ce report n'est pas cosmétique : sur - / + enchaînés, deux PATCH concurrents
+   * peuvent se terminer dans le désordre et laisser une valeur périmée en base.
+   * On ne garde donc que la dernière valeur, et on la force au départ de la page.
+   */
+  function setNbRepas(n) {
+    var v = borner(n);
+    nbCourant = v;
+    try { localStorage.setItem(cleLocale(), String(v)); } catch (e) {}
+    if (minuteurPatch) clearTimeout(minuteurPatch);
+    minuteurPatch = setTimeout(ecrireNbEnBase, 400);
+    return v;
+  }
+
+  // Quitter l'écran avant la fin du report ne doit pas perdre le réglage.
+  window.addEventListener('pagehide', function () { if (minuteurPatch) ecrireNbEnBase(); });
+
+  /**
+   * Génère les recettes de la semaine ET les enregistre.
+   * C'est le seul point qui appelle l'IA : les pages, elles, lisent le cache.
+   */
+  async function genererSemaine(nb) {
+    nb = borner(nb || nbRepas());
+    var recettes = await recommander(nb);
+    if (!recettes || !recettes.length) return [];
+    await enregistrerSemaine(recettes, nb);
+    return recettes;
+  }
+
+  /**
+   * Recettes de la semaine, depuis le cache uniquement.
+   * Ne déclenche jamais d'appel IA : une seule génération par semaine, faite
+   * en même temps que les conseils. Renvoie [] s'il n'y a rien pour la semaine
+   * en cours — aux pages d'afficher un état vide et de proposer la génération.
    */
   async function recettesDeLaSemaine(nb) {
     var cache = await lireCache();
-    if (cache) return cache.slice(0, nb || 4);
-    return await recommander(nb || 4);
+    if (!cache) return [];
+    return cache.slice(0, borner(nb || nbRepas()));
   }
 
   return {
@@ -272,6 +475,15 @@ var NattyReco = (function () {
     construirePrompt: construirePrompt,
     recommander: recommander,
     recettesDeLaSemaine: recettesDeLaSemaine,
+    genererSemaine: genererSemaine,
+    enregistrerSemaine: enregistrerSemaine,
+    genererTout: genererTout,
+    NB_SEMAINE: NB_SEMAINE,
+    nbRepas: nbRepas,
+    chargerNbRepas: chargerNbRepas,
+    setNbRepas: setNbRepas,
+    NB_MIN: NB_MIN,
+    NB_MAX: NB_MAX,
     lundiCourant: lundiCourant
   };
 })();

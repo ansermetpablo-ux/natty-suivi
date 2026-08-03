@@ -540,28 +540,20 @@ async function gmScan(file){
 
 /* Régénère la semaine en partant du garde-manger. Le contenu du prompt est
    assemblé par NattyReco : ici on ne fait que déclencher et réafficher. */
-async function gmGenerer(){
-  var nb = (typeof NattyReco.nbRepas === 'function') ? NattyReco.nbRepas() : 4;
-  document.getElementById('content').innerHTML =
-    '<div class="empty">Génération de tes ' + nb + ' repas à partir de ton garde-manger…' +
-    '<br><span style="font-size:12px">Cela prend une vingtaine de secondes.</span></div>';
-  try{
-    var r = NattyReco.genererSemaine
-      ? await NattyReco.genererSemaine(nb)
-      : await NattyReco.recommander(nb);
-    if (!r || !r.length){
-      document.getElementById('content').innerHTML =
-        '<div class="empty">La génération n\'a rien renvoyé. Réessaie dans un instant.</div>';
-      return;
-    }
-    if (typeof SEMAINE !== 'undefined'){ SEMAINE = r; rendreSemaine(); }
-    else { PLATS = r.map(depuisRecette); actif = 0; ingrOff = {}; render(); }
-    toast('Recettes générées à partir de ton garde-manger');
-  }catch(e){
-    document.getElementById('content').innerHTML =
-      '<div class="empty">Impossible de générer les repas.</div>';
-  }
+/* Une seule génération pour toute la semaine, et elle a lieu dans Suivi, en
+   même temps que les conseils (un unique appel Claude produit les deux).
+   Ce bouton n'appelle donc plus l'IA : il y conduit. Le garde-manger n'est pas
+   perdu au passage — NattyReco.chargerProfil() le relit, donc le stock
+   alimente bien le prompt de la génération.
+
+   Cette copie racine (servie sur le web) n'a pas le reste du parcours
+   « semaine » de www/repas.html : elle n'a donc que ce point d'entrée. */
+function versGenerationHebdo(){
+  var q = (typeof Natty !== 'undefined' && Natty.qs) ? Natty.qs() : '';
+  location.href = 'suivi.html' + q + (q ? '&' : '?') + 'gen=1';
 }
+
+async function gmGenerer(){ versGenerationHebdo(); }
 
 document.getElementById('gmCam').addEventListener('change', function(){
   if (this.files && this.files[0]) gmScan(this.files[0]);

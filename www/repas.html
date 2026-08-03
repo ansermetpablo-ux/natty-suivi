@@ -168,14 +168,12 @@ body{overflow-x:hidden}
   </a>
 </div>
 
+<!-- Le réglage 1-7 a disparu : la génération hebdomadaire produit 7 recettes,
+     une par jour. Le compteur reste affiché, en lecture seule. -->
 <div class="wrap">
   <div class="nbbar" id="nbbar">
     <span class="nbbar-lbl">Repas de la semaine</span>
-    <div class="nbbar-ctl">
-      <button id="nbMoins" aria-label="Un repas de moins">−</button>
-      <span id="nbVal">4</span>
-      <button id="nbPlus" aria-label="Un repas de plus">+</button>
-    </div>
+    <div class="nbbar-ctl"><span id="nbVal">7</span></div>
   </div>
 </div>
 
@@ -565,105 +563,18 @@ async function gmScan(file){
 
 /* Régénère la semaine en partant du garde-manger. Le contenu du prompt est
    assemblé par NattyReco : ici on ne fait que déclencher et réafficher. */
-async function gmGenerer(){
-  var nb = (typeof NattyReco.nbRepas === 'function') ? NattyReco.nbRepas() : 4;
-  document.getElementById('content').innerHTML =
-    '<div class="empty">Génération de tes ' + nb + ' repas à partir de ton garde-manger…' +
-    '<br><span style="font-size:12px">Cela prend une vingtaine de secondes.</span></div>';
-  try{
-    var r = NattyReco.genererSemaine
-      ? await NattyReco.genererSemaine(nb)
-      : await NattyReco.recommander(nb);
-    if (!r || !r.length){
-      document.getElementById('content').innerHTML =
-        '<div class="empty">La génération n\'a rien renvoyé. Réessaie dans un instant.</div>';
-      return;
-    }
-    if (typeof SEMAINE !== 'undefined'){ SEMAINE = r; rendreSemaine(); }
-    else { PLATS = r.map(depuisRecette); actif = 0; ingrOff = {}; render(); }
-    toast('Recettes générées à partir de ton garde-manger');
-  }catch(e){
-    document.getElementById('content').innerHTML =
-      '<div class="empty">Impossible de générer les repas.</div>';
-  }
+/* Une seule génération pour toute la semaine, et elle a lieu dans Suivi, en
+   même temps que les conseils (un unique appel Claude produit les deux).
+   Ces deux boutons n'appellent donc plus l'IA : ils y conduisent. Le
+   garde-manger n'est pas perdu au passage — NattyReco.chargerProfil() le
+   relit, donc le stock alimente bien le prompt de la génération. */
+function versGenerationHebdo(){
+  var q = (typeof Natty !== 'undefined' && Natty.qs) ? Natty.qs() : '';
+  location.href = 'suivi.html' + q + (q ? '&' : '?') + 'gen=1';
 }
+async function gmGenerer(){ versGenerationHebdo(); }
 
-document.getElementById('gmCam').addEventListener('change', function(){
-  if (this.files && this.files[0]) gmScan(this.files[0]);
-  this.value = '';
-});
-document.getElementById('gmGal').addEventListener('change', function(){
-  if (this.files && this.files[0]) gmScan(this.files[0]);
-  this.value = '';
-});
-
-/* ═══ Chargement ═══ */
-document.getElementById('backBtn').addEventListener('click', function(){
-  if (document.referrer) history.back(); else Natty.goto('index.html');
-});
-
-/* ═══ Repas de la semaine ═══
-   La page ne génère plus rien à l'ouverture : les recettes sont produites une
-   seule fois par semaine, en même temps que les conseils (voir suivi.html), et
-   relues ici depuis le cache. C'est ce qui supprime l'attente de ~20 s qu'on
-   avait à chaque visite. Le bouton ci-dessous n'est qu'un rattrapage pour la
-   semaine où rien n'a encore été généré. */
-
-var SEMAINE = [];   // tout ce que le cache contient pour la semaine
-
-function afficherNb(n){
-  var el = document.getElementById('nbVal');
-  if (el) el.textContent = n;
-  var moins = document.getElementById('nbMoins'), plus = document.getElementById('nbPlus');
-  if (moins) moins.disabled = (n <= NattyReco.NB_MIN);
-  if (plus)  plus.disabled  = (n >= NattyReco.NB_MAX);
-}
-
-function rendreSemaine(){
-  var nb = NattyReco.nbRepas();
-  afficherNb(nb);
-  PLATS = SEMAINE.slice(0, nb).map(depuisRecette);
-  if (!PLATS.length){ etatVide(); return; }
-  render();
-  // Moins de recettes en cache que demandé : on le dit plutôt que de
-  // regénérer tout seul, une génération coûtant une vingtaine de secondes.
-  if (SEMAINE.length < nb) manqueRecettes(nb);
-}
-
-function etatVide(){
-  document.getElementById('content').innerHTML =
-    '<div class="empty">Aucun repas pour cette semaine.<br><br>' +
-    '<button class="cta" id="btnGen" style="margin:0 auto">Générer mes repas de la semaine</button></div>';
-  document.getElementById('btnGen').addEventListener('click', genererMaintenant);
-}
-
-function manqueRecettes(nb){
-  var c = document.getElementById('content');
-  var d = document.createElement('div');
-  d.className = 'empty';
-  d.style.paddingTop = '24px';
-  d.innerHTML = 'Seulement ' + SEMAINE.length + ' repas générés cette semaine sur ' + nb + ' voulus.<br><br>' +
-    '<button class="cta" id="btnGen" style="margin:0 auto">Régénérer la semaine</button>';
-  c.appendChild(d);
-  document.getElementById('btnGen').addEventListener('click', genererMaintenant);
-}
-
-async function genererMaintenant(){
-  var nb = NattyReco.nbRepas();
-  document.getElementById('content').innerHTML =
-    '<div class="empty">Génération de tes ' + nb + ' repas…<br><span style="font-size:12px">Cela prend une vingtaine de secondes, une seule fois pour la semaine.</span></div>';
-  try{
-    var r = await NattyReco.genererSemaine(nb);
-    SEMAINE = r || [];
-    if (!SEMAINE.length){
-      document.getElementById('content').innerHTML = '<div class="empty">La génération n\'a rien renvoyé. Réessaie dans un instant.</div>';
-      return;
-    }
-    rendreSemaine();
-  }catch(e){
-    document.getElementById('content').innerHTML = '<div class="empty">Impossible de générer les repas.</div>';
-  }
-}
+async function genererMaintenant(){ versGenerationHebdo(); }
 
 (async function(){
   if (!Natty.requireAuth()) return;
@@ -692,12 +603,6 @@ async function genererMaintenant(){
     var barre = document.getElementById('nbbar');
     if (barre) barre.style.display = 'flex';
     afficherNb(NattyReco.nbRepas());
-    document.getElementById('nbMoins').addEventListener('click', function(){
-      NattyReco.setNbRepas(NattyReco.nbRepas() - 1); rendreSemaine();
-    });
-    document.getElementById('nbPlus').addEventListener('click', function(){
-      NattyReco.setNbRepas(NattyReco.nbRepas() + 1); rendreSemaine();
-    });
 
     SEMAINE = await NattyReco.recettesDeLaSemaine(NattyReco.NB_MAX);
     rendreSemaine();

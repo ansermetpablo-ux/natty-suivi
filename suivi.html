@@ -1821,6 +1821,14 @@ document.addEventListener('DOMContentLoaded', function() {
   if (profilOvEl) profilOvEl.addEventListener('click', function(e){ if(e.target===this) closeProfilOverlay(); });
   if (USER_ID) { init().then(function(){ var _qp = new URLSearchParams(window.location.search);
     if (_qp.get('add')==='1') openRepasOverlay();
+    // repas.html renvoie ici pour la génération hebdomadaire : un seul appel
+    // Claude produit les 7 recettes ET les conseils. On ouvre le popup plutôt
+    // que de lancer une génération de ~20 s sans que rien ne l'annonce.
+    if (_qp.get('gen')==='1') {
+      var pcG = document.getElementById('popupConseils');
+      if (pcG) { pcG.style.display = 'flex'; pcG.classList.add('active'); }
+      else if (typeof conseilsGenererEtSauvegarder === 'function') conseilsGenererEtSauvegarder();
+    }
     // L'icône profil des autres écrans pointe désormais vers profil.html.
     // ?profil=1 reste géré ici pour les anciens liens (et pour ouvrir
     // l'overlay conseils, qui n'existe que sur cet écran).
@@ -4157,123 +4165,27 @@ async function conseilsGenererEtSauvegarder(silentRefresh) {
       console.log('[Natty] profilInfoCache chargé:', profilInfoCache ? 'ok' : 'vide');
     } catch(e) { console.warn('[Natty] profil load error:', e); }
   }
-  var ob = profilInfoCache || {};
 
-  // ── Charger le questionnaire alimentaire (goûts, préférences, aliments à découvrir) ──
-  var qaDesc = '';
+  // Le questionnaire alimentaire, les repas récents et le profil sont
+  // désormais collectés par NattyReco.chargerProfil() : les recharger ici
+  // faisait une requête Supabase de plus pour un prompt qui n'existe plus.
+
+  // UNE SEULE génération pour toute la semaine : un appel Claude produit les
+  // 7 recettes ET l'analyse nutritionnelle, un seul POST les enregistre.
+  // Avant : un appel pour les conseils ici, puis un second dans
+  // NattyReco.genererSemaine() pour les repas — deux analyses du même profil,
+  // qui pouvaient se contredire, et deux écritures. Le prompt et le parsing
+  // vivent maintenant dans assets/reco.js, seul point de vérité.
+  if (!window.NattyReco || typeof NattyReco.genererTout !== 'function') {
+    throw new Error('assets/reco.js requis pour la génération hebdomadaire');
+  }
+
   try {
-    var qaRows = await sbFetch('questionnaire_alim?user_id=eq.' + USER_ID + '&select=*&limit=1');
-    if (qaRows && qaRows.length) {
-      var qa = qaRows[0];
-      var parts = [];
-      Object.keys(qa).forEach(function(k) {
-        if (['id','user_id','created_at','updated_at'].indexOf(k) >= 0) return;
-        var v = qa[k];
-        if (v === null || v === undefined || v === '') return;
-        if (Array.isArray(v)) v = v.join(', ');
-        if (typeof v === 'object') { try { v = JSON.stringify(v); } catch(e) { return; } }
-        parts.push(k + ': ' + String(v).substring(0, 120));
-      });
-      qaDesc = parts.join(' | ').substring(0, 600);
-      console.log('[Natty] Questionnaire alim chargé pour le prompt');
-    }
-  } catch(e) { console.warn('[Natty] questionnaire_alim load error:', e); }
-
-  var mealsDesc = allMeals.slice(0, 10).map(function(m) {
-    var mac = calcMac(m.meal_ingredients);
-    var ings = (m.meal_ingredients||[]).map(function(i){ return i.name; }).slice(0,4).join(',');
-    return m.name + (ings ? ' ('+ings+')' : '') + ' prot:' + mac.p + 'g cal:' + mac.c + 'kcal';
-  }).join(' | ') || 'aucun repas';
-
-  var prompt = 'Tu es nutritionniste. Client: ' + (ob.prenom||'?')
-    + ', ' + (ob.poids||'?') + 'kg, ' + (ob.taille||'?') + 'cm'
-    + (ob.age ? ', ' + ob.age + ' ans' : '')
-    + (ob.sexe ? ', ' + ob.sexe : '')
-    + ', activite: ' + (ob.activite||'?')
-    + ', objectif: ' + (ob.objectif_type||'?')
-    + '. Macros cibles: prot=' + (macObj.p||0) + 'g gluc=' + (macObj.g||0) + 'g lip=' + (macObj.l||0) + 'g cal=' + (macObj.c||0) + 'kcal.'
-    + ' Repas recents: ' + mealsDesc + '.'
-    + (qaDesc ? ' Preferences alimentaires du questionnaire: ' + qaDesc + '.' : '')
-    + ' Personnalise chaque conseil selon SON profil, SES repas reels et SES preferences (jamais de conseil generique).'
-    + ' Reponds UNIQUEMENT en JSON valide sans backticks: {"conseil_prot":"phrase courte","conseil_gluc":"phrase courte","conseil_lip":"phrase courte","conseil_cal":"phrase courte","conseil_amelioration":"1-2 phrases","conseil_points_forts":"1-2 phrases"}';
-
-  console.log('[Natty] Appel Claude API:', CLAUDE_API);
-  
-  try {
-    var res = await fetch(CLAUDE_API, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({prompt: prompt, max_tokens: 600})
-    });
-    
-    console.log('[Natty] Claude response status:', res.status);
-    var d = await res.json();
-    console.log('[Natty] Claude response:', d);
-    
-    if (!res.ok) throw new Error('Claude API error: ' + res.status);
-    
-    var raw = (d.text || '{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim();
-    console.log('[Natty] Raw JSON:', raw.substring(0, 200));
-    
-    var data = JSON.parse(raw);
-    if (!data.conseil_prot && !data.conseil_amelioration) throw new Error('JSON vide ou mal formé');
-
+    var res = await NattyReco.genererTout();
+    var data = res.conseils || {};
     var semaine = getLundiSemaine();
     var now = new Date().toISOString();
-    console.log('[Natty] Conseils générés OK, sauvegarde...');
-
-    // Sauvegarder via API Vercel
-    try {
-      var saveRes = await fetch('https://natty-suivi.vercel.app/api/save-conseils', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: USER_ID,
-          conseil_prot: data.conseil_prot || null,
-          conseil_gluc: data.conseil_gluc || null,
-          conseil_lip:  data.conseil_lip  || null,
-          conseil_cal:  data.conseil_cal  || null,
-          conseil_amelioration: data.conseil_amelioration || null,
-          conseil_points_forts: data.conseil_points_forts || null,
-          semaine: semaine
-        })
-      });
-      var saveText = await saveRes.text();
-      console.log('[Natty] save-conseils status:', saveRes.status, saveText.substring(0,100));
-    } catch(saveErr) { console.warn('[Natty] Sauvegarde error:', saveErr); }
-
-    // 2ème appel : liste de courses + recettes
-    try {
-      var promptC = 'Nutritionniste. Client: ' + (ob.prenom||'?') + ', objectif ' + (ob.objectif_type||'?')
-        + ', cibles prot=' + (macObj.p||0) + 'g cal=' + (macObj.c||0) + 'kcal.'
-        + (qaDesc ? ' Preferences et aliments a decouvrir: ' + qaDesc + '.' : '')
-        + ' Repas recents: ' + mealsDesc.substring(0, 300) + '.'
-        + ' Conseils de la semaine: ' + (data.conseil_amelioration||'') + '.'
-        + ' Genere une liste de courses et 3 recettes UNIQUES et personnalisees pour CE client (varie selon ses gouts, integre ce qu il veut decouvrir).'
-        + ' JSON sans backticks: {"liste_courses":{"recettes_ingredients":[{"emoji":"...","nom":"...","quantite":"...","raison":"..."}],"aliments_bonus":[{"emoji":"...","nom":"...","quantite":"...","benefice":"..."}]},"recettes":[{"emoji":"...","nom":"...","macros":{"prot":0,"gluc":0,"lip":0,"cal":0},"ingredients":["..."],"etapes":["...","...","..."]}]}';
-      var resC = await fetch(CLAUDE_API, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({prompt: promptC, max_tokens: 1400})
-      });
-      var dC = await resC.json();
-      var parsedC = JSON.parse((dC.text||'{}').replace(/```[a-z]*/g,'').replace(/```/g,'').trim());
-      var listeCJ = parsedC.liste_courses ? JSON.stringify(parsedC.liste_courses) : null;
-      var recettesJ = parsedC.recettes && parsedC.recettes.length ? JSON.stringify(parsedC.recettes) : null;
-      if (listeCJ || recettesJ) {
-        await fetch('https://natty-suivi.vercel.app/api/save-conseils', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: USER_ID, liste_courses_json: listeCJ, recettes_json: recettesJ, semaine: semaine })
-        });
-        if (window._conseilsCache) {
-          window._conseilsCache.liste_courses_json = listeCJ;
-          window._conseilsCache.recettes_json = recettesJ;
-        }
-        console.log('[Natty] Courses+recettes sauvegardées');
-      }
-    } catch(eC) { console.warn('[Natty] Courses error:', eC); }
-
+    console.log('[Natty] Génération unique OK :', (res.recettes||[]).length, 'recettes');
     // Afficher
     profilConseillsLoaded = false;
     var row = Object.assign({}, data, {generated_at: now, semaine: semaine, liste_courses_json: window._conseilsCache && window._conseilsCache.liste_courses_json});
