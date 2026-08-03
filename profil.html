@@ -96,8 +96,9 @@
 .sheet-title{font-size:17px;font-weight:900;margin-bottom:16px}
 .fld{margin-bottom:12px}
 .fld label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
-.fld input,.fld textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);
+.fld input,.fld textarea,.fld select{width:100%;font-family:inherit;font-size:14px;color:var(--ink);
   background:var(--card);border:none;border-radius:var(--r-md);padding:13px 14px;resize:none}
+.fld select{-webkit-appearance:none;appearance:none}
 .fld textarea{min-height:64px;line-height:1.4}
 .btn-ink{width:100%;background:var(--ink);color:#fff;border:none;border-radius:var(--r-md);
   padding:15px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}
@@ -206,6 +207,20 @@
       </div>
       <button class="sw" id="filSwitch" role="switch" aria-checked="false" disabled
               aria-label="Afficher mes plats dans le fil social"><i></i></button>
+    </div>
+
+    <div class="sw-row">
+      <div class="sw-body">
+        <div class="sw-lbl">Rappel quotidien</div>
+        <div class="sw-sub" id="notifSub">Chargement…</div>
+      </div>
+      <button class="sw" id="notifSwitch" role="switch" aria-checked="false" disabled
+              aria-label="Recevoir un rappel quotidien"><i></i></button>
+    </div>
+
+    <div class="fld" id="notifHeureRow" hidden>
+      <label for="fNotifHeure">Heure du rappel</label>
+      <select id="fNotifHeure"></select>
     </div>
 
     <button class="btn-ghost" id="btnLogout">Se déconnecter</button>
@@ -382,6 +397,7 @@ $('btnSettings').addEventListener('click', function(){
   $('fBio').value    = localStorage.getItem(lsKey('bio')) || '';
   openSheet('ovSettings');
   chargerPrefFil();
+  chargerNotifs();
 });
 
 /* ═══ Fil social : mes plats sont-ils visibles ? ═══
@@ -427,6 +443,72 @@ $('filSwitch').addEventListener('click', async function(){
   }
   this.disabled = false;
   renderPrefFil();
+});
+
+/* ═══ Rappel quotidien (notifications locales) ═══
+   Réglage propre à l'appareil, et assumé comme tel : une notification locale
+   est planifiée sur CE téléphone, la stocker en base laisserait croire qu'elle
+   suit l'utilisateur ailleurs. Hors app native, la ligne reste désactivée et
+   l'explique — le navigateur n'a rien à planifier. */
+
+function renderNotifs(){
+  var sw = $('notifSwitch'), row = $('notifHeureRow');
+
+  if (!window.NattyNotifs || !NattyNotifs.dispo()){
+    sw.disabled = true;
+    sw.classList.remove('on');
+    sw.setAttribute('aria-checked', 'false');
+    row.hidden = true;
+    $('notifSub').textContent = 'Disponible seulement dans l\'application Natty installée sur votre téléphone.';
+    return;
+  }
+
+  var actif = NattyNotifs.activee();
+  sw.disabled = false;
+  sw.classList.toggle('on', actif);
+  sw.setAttribute('aria-checked', actif ? 'true' : 'false');
+  row.hidden = !actif;
+  $('notifSub').textContent = actif
+    ? 'Un rappel à ' + NattyNotifs.heure() + ' h les jours où le parcours n\'a pas été ouvert.'
+    : 'Aucun rappel. Vous ne serez pas prévenu des nouveaux paliers.';
+}
+
+function remplirHeures(){
+  var sel = $('fNotifHeure');
+  if (sel.options.length) return;
+  for (var h = 6; h <= 22; h++){
+    var o = document.createElement('option');
+    o.value = h; o.textContent = h + ' h 00';
+    sel.appendChild(o);
+  }
+}
+
+async function chargerNotifs(){
+  remplirHeures();
+  if (window.NattyNotifs && NattyNotifs.dispo()) $('fNotifHeure').value = NattyNotifs.heure();
+  renderNotifs();
+}
+
+$('notifSwitch').addEventListener('click', async function(){
+  if (this.disabled) return;
+  this.disabled = true;
+  if (NattyNotifs.activee()){
+    await NattyNotifs.desactiver();
+    toast('Rappel quotidien désactivé');
+  } else {
+    var r = await NattyNotifs.activer();
+    if (r.ok) toast('Rappel activé pour ' + NattyNotifs.heure() + ' h');
+    else if (r.raison === 'denied') toast('Notifications refusées — à réactiver dans les réglages du téléphone');
+    else toast('Rappel non activé');
+  }
+  this.disabled = false;
+  renderNotifs();
+});
+
+$('fNotifHeure').addEventListener('change', async function(){
+  await NattyNotifs.setHeure(this.value);
+  toast('Rappel déplacé à ' + NattyNotifs.heure() + ' h');
+  renderNotifs();
 });
 
 $('btnSave').addEventListener('click', async function(){
@@ -528,6 +610,7 @@ async function charger(){
 })();
 </script>
 <script src="/assets/ajout.js"></script>
+<script src="/assets/notifs.js"></script>
 <script src="/assets/nav.js"></script>
 </body>
 </html>

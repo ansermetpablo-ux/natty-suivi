@@ -144,4 +144,13 @@
   } else {
     inject();
   }
+
+  /* Exposé pour assets/notifs.js : le rappel quotidien ne doit pas partir
+     si l'onglet a déjà été ouvert aujourd'hui. La clé de la pastille reste
+     définie ici et nulle part ailleurs. */
+  window.NattyNav = {
+    vuAujourdhui: estVuAujourdhui,
+    marquerVu: marquerVu,
+    jourCourant: jourCourant
+  };
 })();

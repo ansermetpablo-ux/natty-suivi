@@ -379,6 +379,45 @@ ligne `meals` + ses `meal_ingredients` (la photo Cloudinary va sur le premier). 
 l'upload photo n'empêche pas l'enregistrement. À la fin, l'événement `natty:repas-ajoute` est
 émis : `suivi.html` l'écoute pour rafraîchir macros et historique sans recharger la page.
 
+### `assets/notifs.js` — le rappel quotidien (notifications **locales**)
+Chargé par les cinq écrans porteurs de la nav (`suivi`, `repas`, `menu`/`www/index`, `social`,
+`coaching`, `profil`) juste avant `assets/nav.js`. Hors application native, le module se charge
+et ne fait rien : `dispo()` renvoie `false`, toutes les actions sont des no-op.
+
+**Locales, pas push** — tout est planifié sur l'appareil : aucune clé Apple, aucun serveur,
+aucune table de tokens. La contrepartie est que le texte est figé au moment de la planification.
+« Il te reste 40 g de protéines » ou « un ami a ajouté un plat » exigent un calcul à l'envoi ou
+un déclencheur venu d'un autre appareil : **ceux-là relèvent du push serveur**, chantier séparé.
+
+**Sept notifications, pas une répétition.** Une planification `on:{hour,minute}` ne porterait
+qu'un seul texte, à vie. Le module planifie donc **les 7 prochains jours** un par un (ids fixes
+4101..4107, texte différent chacun) et **replanifie à chaque chargement de page** — d'où le
+« tout annuler puis tout replanifier », qui empêche d'empiler deux rappels pour le même jour.
+
+**Le rappel du jour saute si le parcours a déjà été ouvert.** `assets/nav.js` expose désormais
+`window.NattyNav.vuAujourdhui('defis')` — exactement la clé de la pastille rouge quotidienne, pas
+une copie. C'est ce qui relie les deux : la pastille dit « tu n'as pas ouvert », la notification
+le rappelle, et aucune des deux ne se déclenche sur quelque chose de déjà fait.
+
+**Demande d'autorisation** : jamais au lancement. Une invitation maison (feuille « Un rappel par
+jour ? ») s'affiche **une seule fois**, à partir du **2ᵉ jour d'utilisation** (compté par date
+distincte, pas par page affichée), et seulement si la permission est encore en `prompt`. Sur iOS
+un refus est définitif — l'app ne peut plus jamais reposer la question, d'où la prudence.
+
+**Réglage** : interrupteur « Rappel quotidien » + heure (6 h → 22 h, 19 h par défaut) dans les
+réglages de `profil.html`. Volontairement en `localStorage` : une notification locale est
+planifiée sur CET appareil, la stocker en base laisserait croire qu'elle suit l'utilisateur d'un
+téléphone à l'autre.
+
+**Tap sur la notification** → `narration.html`, via `extra.route` comparé à une **liste blanche**
+(`ROUTES`) : une notification est une entrée externe, on ne suit jamais une destination qu'elle
+dicterait.
+
+**Android** : le plugin déclare lui-même `POST_NOTIFICATIONS`, rien à ajouter au manifeste.
+`SCHEDULE_EXACT_ALARM` n'est **volontairement pas** demandé (une alarme exacte se justifie pour
+un réveil, pas pour un rappel de parcours, et Google la scrute en review) : le plugin retombe
+seul sur une alarme approchée.
+
 ### `social.html` + `assets/social.js` — le fil social
 Onglet « Social » de la nav, **à la place de Coaching** (qui n'est pas supprimé : `coaching.html`
 reste accessible par sa carte dans `menu.html`). `social.js` porte les données, `social.html`
@@ -1120,6 +1159,22 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - 🔄 Les scores plafonnent bas (~57/100 sur les données actuelles) parce que beaucoup
   d'ingrédients manquent à la table de `core.js` et que `nb_repas='1_2'` gonfle la cible par
   repas. Le classement reste juste (même biais pour tous), pas les valeurs absolues.
+
+**Notifications**
+- ✅ **Rappel quotidien livré** — `assets/notifs.js` + interrupteur dans `profil.html`
+  (voir §3). `@capacitor/local-notifications` installé, `npx cap sync ios` fait.
+- ✅ Vérifié sur simulateur iPhone 17 Pro (iOS 26.3) : demande d'autorisation, planification,
+  et **notification réellement délivrée** avec le bon texte.
+- 🔄 **Non vérifié** : le tap sur la notification → `narration.html`. Le code est en place
+  (`localNotificationActionPerformed` + liste blanche de routes), mais la cellule du centre de
+  notifications du simulateur n'a pas réagi aux taps synthétiques. À confirmer sur un téléphone.
+- 🔄 **Android jamais compilé** (comme le reste du projet) : le canal, l'icône de statut et
+  la permission `POST_NOTIFICATIONS` n'ont pas pu être testés.
+- 🔄 **Push serveur — non commencé.** Les deux autres besoins ne peuvent PAS être locaux :
+  « il te reste X g de macros » exige un calcul au moment de l'envoi, « un ami a ajouté un
+  plat » est déclenché depuis un autre appareil. Exige une clé APNs (Team `SAZQ9AFAMZ`), FCM
+  pour Android, la capability Push Notifications, une table de tokens d'appareil, un trigger
+  Supabase sur `meals` et un cron. **Ne rien tester sans la clé APNs.**
 
 **Améliorations index.html**
 - Connecter l'action de la semaine du nutritionniste → affichage dans l'app — **toujours à faire**.
