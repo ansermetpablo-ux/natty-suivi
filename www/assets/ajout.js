@@ -62,6 +62,18 @@
       + 'overflow:hidden;aspect-ratio:4/3;background:#111;display:flex;align-items:center;justify-content:center}'
     + '#nattyAjout .na-hero img{width:100%;height:100%;object-fit:cover;display:block}'
     + '#nattyAjout .na-hero .na-hero-em{font-size:58px}'
+    /* — prise de vue DANS le cadre (voir camDemarrer) — */
+    + '#nattyAjout .na-hero{position:relative}'
+    + '#nattyAjout .na-hero video{width:100%;height:100%;object-fit:cover;display:block}'
+    + '#nattyAjout .na-shutter{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);'
+      + 'width:58px;height:58px;border-radius:50%;border:4px solid rgba(255,255,255,.95);'
+      + 'background:rgba(255,255,255,.3);cursor:pointer;padding:0}'
+    + '#nattyAjout .na-shutter:active{background:rgba(255,255,255,.6)}'
+    + '#nattyAjout .na-hero-fb{display:flex;flex-direction:column;align-items:center;gap:9px;'
+      + 'background:none;border:none;font-family:inherit;font-size:13px;font-weight:700;'
+      + 'color:#d8d8de;cursor:pointer;padding:18px;line-height:1.35;text-align:center;'
+      + 'white-space:pre-line}'   /* les \n du message de repli font des retours */
+    + '#nattyAjout .na-hero-fb .em{font-size:42px}'
     + '#nattyAjout .na-plat-nom{display:block;width:100%;text-align:center;font-family:inherit;font-size:15px;'
       + 'font-weight:700;color:#d8d8de;margin-top:14px;background:none;border:none;outline:none;padding:2px}'
     + '#nattyAjout .na-plat-plus{text-align:center;font-size:12.5px;color:#6e6e78;margin-top:2px}'
@@ -446,9 +458,91 @@
   }
   function fermer() {
     q('#naAsk').classList.remove('on');
+    camArreter();
     dom.classList.remove('on');
     document.body.style.overflow = '';
     S = null;
+  }
+
+  /* ═══════════════════ Prise de vue dans le cadre ═══════════════════
+     Le + ouvre l'overlay — les anneaux de macros restantes sont visibles
+     tout de suite — et la photo se prend DANS le cadre, pas dans la
+     feuille native plein écran.
+
+     getUserMedia remplace donc <input capture> ici. La contrainte
+     « input.click() doit rester synchrone dans le geste utilisateur »
+     tombe, mais iOS demande l'autorisation caméra au premier usage
+     (d'où NSCameraUsageDescription dans Info.plist).
+
+     Si l'autorisation est refusée ou le flux indisponible, on retombe sur
+     un BOUTON et non sur un inputCam.click() direct : à ce stade on n'est
+     plus dans un geste utilisateur, et iOS ignorerait le click(). */
+  var flux = null;
+
+  function camArreter() {
+    if (!flux) return;
+    flux.getTracks().forEach(function (t) { t.stop(); });
+    flux = null;
+  }
+
+  /* Repli tactile : le click() part d'un vrai geste, donc iOS l'accepte. */
+  function camRepli(msg) {
+    camArreter();
+    var h = q('#naHero');
+    if (!h) return;
+    h.innerHTML = '';
+    var b = document.createElement('button');
+    b.className = 'na-hero-fb';
+    b.innerHTML = '<span class="em">📷</span>' + esc(msg || 'Prendre une photo');
+    b.addEventListener('click', function () { inputCam.value = ''; inputCam.click(); });
+    h.appendChild(b);
+  }
+
+  async function camDemarrer() {
+    var h = q('#naHero');
+    if (!h) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return camRepli();
+
+    h.innerHTML = '';
+    var v = document.createElement('video');
+    v.setAttribute('playsinline', '');   // sans ça iOS bascule en plein écran
+    v.setAttribute('autoplay', '');
+    v.muted = true;
+    h.appendChild(v);
+
+    try {
+      flux = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } }, audio: false
+      });
+    } catch (e) {
+      return camRepli('Caméra indisponible —\ntoucher pour ouvrir l\'appareil photo');
+    }
+    // L'écran a pu changer pendant l'attente d'autorisation.
+    if (!S || ecranCourant() !== 'naScRepas') return camArreter();
+
+    v.srcObject = flux;
+    try { await v.play(); } catch (e) {}
+
+    var b = document.createElement('button');
+    b.className = 'na-shutter';
+    b.setAttribute('aria-label', 'Prendre la photo');
+    b.addEventListener('click', function () { camCapturer(v); });
+    h.appendChild(b);
+  }
+
+  function camCapturer(v) {
+    var w = v.videoWidth, ht = v.videoHeight;
+    if (!w || !ht) return;                       // flux pas encore prêt
+    var c = document.createElement('canvas');
+    c.width = w; c.height = ht;
+    c.getContext('2d').drawImage(v, 0, 0, w, ht);
+    c.toBlob(function (blob) {
+      if (!blob) return camRepli();
+      camArreter();
+      // Un File plutôt qu'un Blob : l'upload Cloudinary passe par FormData,
+      // qui a besoin d'un nom de fichier.
+      analyser(new File([blob], 'repas.jpg', { type: 'image/jpeg' }));
+    }, 'image/jpeg', 0.9);
   }
 
   /* ═══════════════════ Analyse de la photo ═══════════════════ */
@@ -906,9 +1000,17 @@
   function start() {
     if (!dom) build();
     S = { plats: [], cur: -1, file: null, photoDataUrl: null };
-    chargerCibles();           // en tâche de fond, pendant que la caméra s'ouvre
-    inputCam.value = '';
-    inputCam.click();          // doit rester dans le geste : ouvre la caméra
+    chargerCibles();           // en tâche de fond ; rappelle majAnneaux() en fin
+    // L'overlay s'ouvre sur l'écran du repas : les anneaux de macros
+    // restantes sont visibles avant même la photo, qui se prend dans le
+    // cadre (voir camDemarrer).
+    dom.classList.add('on');
+    document.body.style.overflow = 'hidden';   // jamais position:fixed (scroll iOS)
+    montrer('naScRepas');
+    majNoms();
+    rendreDetail();
+    majAnneaux();
+    camDemarrer();
   }
 
   window.NattyAjout = { start: start, open: start };
