@@ -853,7 +853,7 @@ html.no-scroll {
 
 <div class="header">
   <div class="header-top">
-    <a href="index.html" class="hdr-ico" aria-label="Accueil">
+    <a href="menu.html" class="hdr-ico" aria-label="Accueil">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
     </a>
     <div style="display:none"><span id="headerName"></span><span id="headerDate"></span></div>
@@ -1829,8 +1829,9 @@ document.addEventListener('DOMContentLoaded', function() {
       if (pcG) { pcG.style.display = 'flex'; pcG.classList.add('active'); }
       else if (typeof conseilsGenererEtSauvegarder === 'function') conseilsGenererEtSauvegarder();
     }
-    // profil.html n'existe pas encore : l'icône profil des autres écrans
-    // renvoie ici avec ?profil=1 et on ouvre l'overlay profil complet.
+    // L'icône profil des autres écrans pointe désormais vers profil.html.
+    // ?profil=1 reste géré ici pour les anciens liens (et pour ouvrir
+    // l'overlay conseils, qui n'existe que sur cet écran).
     if (_qp.get('profil')==='1') openProfilOverlay();
     qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); }); } else {
     // Attendre 800ms au cas où Wix envoie le token via postMessage après le load
@@ -1839,43 +1840,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1500);
   }
 
-  // Écouter le postMessage de Wix quand l'utilisateur se connecte
+  // L'identité vient de la session Supabase (core.js), plus d'un message du
+  // parent : les branches de connexion/déconnexion Wix ont été retirées.
   window.addEventListener('message', function(event) {
     var data = event.data;
     if (!data || typeof data !== 'object') return;
-
-    // Connexion détectée depuis masterPage.js
-    if (data.type === 'userConnected' && data.token && data.userId) {
-      TOKEN = data.token;
-      USER_ID = data.userId;
-      // Recharger la page avec le bon token → afficher le suivi
-      var url = new URL(window.location.href);
-      url.searchParams.set('token', data.token);
-      if (data.proteines) url.searchParams.set('proteines', data.proteines);
-      if (data.glucides)  url.searchParams.set('glucides',  data.glucides);
-      if (data.lipides)   url.searchParams.set('lipides',   data.lipides);
-      if (data.calories)  url.searchParams.set('calories',  data.calories);
-      window.location.replace(url.toString()); // replace au lieu de href pour éviter loop
-      return;
-    }
-    // Connexion depuis le header Wix (userId seul, sans token)
-    if (data.type === 'userLoggedIn' && data.userId) {
-      var hexToken = Array.from(data.userId).map(function(c){ return c.charCodeAt(0).toString(16).padStart(2,'0'); }).join('');
-      var url2 = new URL(window.location.href);
-      url2.searchParams.set('token', hexToken);
-      window.location.replace(url2.toString());
-      return;
-    }
-    // Déconnexion
-    if (data.type === 'userLoggedOut') {
-      localStorage.removeItem('natty_token');
-      localStorage.removeItem('natty_user_id');
-      var url3 = new URL(window.location.href);
-      url3.searchParams.delete('token');
-      url3.searchParams.delete('userId');
-      window.location.replace(url3.toString());
-      return;
-    }
 
     // Onboarding terminé depuis onboarding.html
     if (data.type === 'onboardingComplete') {
@@ -2927,14 +2896,7 @@ function afficherOnboardingCTA(){
   page.insertBefore(cta,page.children[0]);
 
   document.getElementById('btnStartOB').addEventListener('click', function() {
-    // Dans Wix (iframe) → postMessage
-    if (window.self !== window.top) {
-      window.parent.postMessage({ type: 'demandeConnexion' }, '*');
-      console.log('postMessage demandeConnexion sent');
-    } else {
-      // PWA standalone → rediriger vers page login dédiée
-      window.location.href = '/login.html';
-    }
+    window.location.href = 'login.html';
   });
 
   document.getElementById('btnLogin') && document.getElementById('btnLogin').addEventListener('click', async function() {
@@ -2954,21 +2916,13 @@ function afficherOnboardingCTA(){
       var data = await res.json();
       if (!res.ok) throw new Error(data.error_description || data.msg || 'Erreur connexion');
       var userId = data.user && data.user.id;
-      var accessToken = data.access_token;
       if (!userId) throw new Error('Utilisateur introuvable');
-      // Encoder userId comme token simple
-      TOKEN = Array.from(userId).map(function(c){ return c.charCodeAt(0).toString(16).padStart(2,'0'); }).join('');
+      // Les jetons sont confiés à core.js, comme depuis login.html : cet écran
+      // ne fabrique plus d'identifiant hexadécimal.
+      Natty.ouvrirSession(data);
       USER_ID = userId;
-      // Vérifier onboarding
-      var onbRes = await fetch(SB_URL + '/rest/v1/onboarding?user_id=eq.' + userId + '&completed=eq.true&select=id&limit=1', {
-        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + accessToken }
-      });
-      var onbData = await onbRes.json();
-      if (onbData && onbData.length > 0) {
-        window.location.href = '/index.html?token=' + TOKEN;
-      } else {
-        window.location.href = '/onboarding.html?token=' + TOKEN;
-      }
+      var onbData = await Natty.sbFetch('onboarding?user_id=eq.' + userId + '&completed=eq.true&select=id&limit=1');
+      window.location.href = (onbData && onbData.length > 0) ? 'suivi.html' : 'onboarding.html';
     } catch(e) {
       err.textContent = e.message;
       btn.disabled = false; btn.textContent = 'Se connecter';
@@ -3558,25 +3512,18 @@ function goToChallenges(){
   switchTab('chal');
 }
 function goToOffre(){
-  var url='https://natty-suivi.vercel.app/offre.html?token='+TOKEN;
-  if(window.self!==window.top){
-    window.parent.postMessage({type:'offre',url:url,token:TOKEN},'*');
-    console.log('postMessage offre sent');
-  } else {
-    window.location.href='/offre.html?token='+TOKEN;
-  }
+  window.location.href='offre.html?token='+TOKEN;
 }
 function ouvrirChat(){
-  var url='https://natty-suivi.vercel.app/chat.html?token='+TOKEN;
-  if(window.self!==window.top){
-    window.parent.postMessage({type:'chat',url:url,token:TOKEN},'*');
-  } else {
-    window.location.href='/chat.html?token='+TOKEN;
-  }
+  window.location.href='chat.html?token='+TOKEN;
 }
-async function sbFetch(path){var r=await fetch(SB_URL+'/rest/v1/'+path,{headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Accept':'application/json'}});var t=await r.text();if(!r.ok)throw new Error(t);return t?JSON.parse(t):[];}
-async function sbPost(path,body){var r=await fetch(SB_URL+'/rest/v1/'+path,{method:'POST',headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)});if(!r.ok)throw new Error(await r.text());}
-async function sbPostR(path,body){var r=await fetch(SB_URL+'/rest/v1/'+path,{method:'POST',headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(body)});var t=await r.text();if(!r.ok)throw new Error(t);return JSON.parse(t);}
+// Ces trois helpers délèguent à core.js, qui porte la session : fabriquer les
+// en-têtes ici enverrait la clé anon, et cet écran ne verrait plus rien une
+// fois les RLS actives. Les signatures sont inchangées — les ~40 appels de
+// cette page n'ont pas à bouger.
+async function sbFetch(path){return Natty.sbFetch(path);}
+async function sbPost(path,body){await Natty.sbPost(path,body,'return=minimal');}
+async function sbPostR(path,body){return Natty.sbPost(path,body,'return=representation');}
 function setText(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
 function showToast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'');setTimeout(function(){t.classList.add('show');},10);setTimeout(function(){t.classList.remove('show');},3200);}
 
@@ -3814,7 +3761,7 @@ async function qaVerifier() {
       {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
     var data = await res.json();
     if (!data || data.length === 0) {
-      window.location.href = '/questionnaire-alim.html?token=' + TOKEN;
+      window.location.href = 'questionnaire-alim.html?token=' + TOKEN;
     }
   } catch(e) { console.log('[QA] Erreur:', e.message); }
 }
@@ -4535,9 +4482,9 @@ async function pcActionClick() {
       showToast('Erreur lors de la génération', 'err');
     }
   }
-  else if (action==='questionnaire') { closePopupConseils(); window.location.href='/questionnaire-alim.html?token='+TOKEN; }
+  else if (action==='questionnaire') { closePopupConseils(); window.location.href='questionnaire-alim.html?token='+TOKEN; }
   else if (action==='repas') { closePopupConseils(); openRepasOverlay(); }
-  else { if(window.self!==window.top) window.parent.postMessage({type:'demandeConnexion'},'*'); else window.location.href='/onboarding.html?token='+TOKEN; }
+  else { window.location.href='onboarding.html?token='+TOKEN; }
 }
 function closePopupConseils() {
   var el = document.getElementById('popupConseils');
@@ -4662,14 +4609,8 @@ window.addEventListener('natty:repas-ajoute', function(){
   }
 });
 </script>
-<!-- Nécessaires à la génération hebdo des recettes (NattyReco), déclenchée
-     en même temps que les conseils. Chargés ici, donc disponibles au moment
-     où l'utilisateur lance la génération. -->
+<!-- core.js avant ajout.js : le parcours du bouton + s'appuie sur Natty.* -->
 <script src="/assets/core.js"></script>
-<!-- Le garde-manger alimente le prompt de NattyReco : il doit être chargé
-     ici aussi, puisque la génération hebdo part de cet écran. -->
-<script src="/assets/garde-manger.js"></script>
-<script src="/assets/reco.js"></script>
 <script src="/assets/ajout.js"></script>
 <script src="/assets/notifs.js"></script>
 <script src="/assets/push.js"></script>

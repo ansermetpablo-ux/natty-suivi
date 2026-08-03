@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Natty</title>
+<!--
+  Capacitor exige que le point d'entrée du bundle s'appelle index.html : le
+  menu y est donc publié sous ce nom. Sans ce relais, chaque page liant
+  « menu.html » devrait diverger entre la racine (web) et www/ (natif) — ce
+  qui a déjà coûté 109 lignes d'écart sur suivi.html seul.
+-->
+<script>location.replace('index.html' + (location.search || '') + (location.hash || ''));</script>

@@ -821,7 +821,7 @@ async function souscrire(){
       })
     });
     const data=await res.json();
-    if(data.url){if(window.self!==window.top)window.top.location.href=data.url;else window.location.href=data.url;}
+    if(data.url){window.location.href=data.url;}
     else{showToast("Erreur lors du paiement");btn.disabled=false;btn.textContent="Payer →";}
   }catch(e){showToast("Erreur réseau");btn.disabled=false;btn.textContent="Payer →";}
 }

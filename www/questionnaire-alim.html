@@ -669,11 +669,8 @@ document.getElementById('btn7').addEventListener('click', async function() {
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('Erreur Supabase');
-    window.parent.postMessage({ type: 'questionnaireAlimDone', userId: USER_ID }, '*');
     setTimeout(function() {
-      const url = '/index.html?token=' + token + '&qalim=1';
-      if (window.self !== window.top) window.top.location.href = url;
-      else window.location.href = url;
+      window.location.href = 'suivi.html?token=' + token + '&qalim=1';
     }, 800);
   } catch(e) {
     document.getElementById('savingOverlay').classList.remove('active');

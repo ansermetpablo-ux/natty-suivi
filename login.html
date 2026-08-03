@@ -357,9 +357,10 @@ function setLoading(btnId, loading) {
 // enverra à chaque requête — l'identité ne transite plus par l'URL.
 function entrerDansApp(auth) {
   if (auth && auth.access_token && window.Natty) Natty.ouvrirSession(auth);
-  // Le bundle natif publie menu.html sous le nom index.html ; sur le web,
-  // index.html est encore l'ancien tableau de bord, qu'on n'ouvre plus.
-  window.location.href = estNatif() ? 'index.html' : 'menu.html';
+  // menu.html existe des deux côtés : à la racine c'est le fichier lui-même,
+  // dans le bundle natif c'est un relais vers index.html (nom imposé par
+  // Capacitor). L'ancien tableau de bord n'est plus le point d'arrivée.
+  window.location.href = 'menu.html';
 }
 
 async function doLogin() {

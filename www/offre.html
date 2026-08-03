@@ -833,7 +833,6 @@ async function souscrire(){
         await window.Capacitor.Plugins.Browser.open({url:data.url});
         btn.disabled=false;btn.textContent="Payer →";
       }
-      else if(window.self!==window.top) window.top.location.href=data.url;
       else window.location.href=data.url;
     }
     else{showToast("Erreur lors du paiement");btn.disabled=false;btn.textContent="Payer →";}

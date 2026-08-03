@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Natty">
-  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="apple-touch-icon" href="/natty-icon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -439,7 +439,6 @@ function tdee(b) {
 
 function skipOffre() {
   document.getElementById('offreOverlay').classList.remove('on');
-  window.parent.postMessage({ type: 'onboardingComplete', userId: UID }, '*');
 }
 
 async function save() {
@@ -518,9 +517,6 @@ async function save() {
 
     toast('Profil enregistré !', 'ok');
 
-    // Notify parent iframe (Wix) that onboarding is done
-    window.parent.postMessage({ type: 'onboardingComplete', userId: UID }, '*');
-
     // Send welcome email
     try {
       const poids = parseFloat(A.poids)||0, tdee = parseFloat(A.tdee)||0;
@@ -577,25 +573,6 @@ upd(); chk();
       });
     }
   
-// ══ ÉCOUTER CONNEXION WIX ══
-window.addEventListener('message', function(event) {
-  var data = event.data;
-  if (!data || typeof data !== 'object') return;
-  // Connexion depuis masterPage.js
-  if (data.type === 'userConnected' && data.token && data.userId) {
-    if (!UID) {
-      UID = data.userId;
-      token = data.token;
-      console.log('onboarding: UID reçu via postMessage:', UID.substring(0,8));
-    }
-  }
-  if (data.type === 'userLoggedIn' && data.userId) {
-    if (!UID) {
-      UID = data.userId;
-      console.log('onboarding: UID reçu userLoggedIn:', UID.substring(0,8));
-    }
-  }
-});
 </script>
 </body>
 </html>

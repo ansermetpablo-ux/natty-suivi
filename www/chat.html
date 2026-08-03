@@ -197,12 +197,10 @@ function resolveUserId() {
 
 USER_ID = resolveUserId();
 
+// Chemin relatif : dans le bundle natif, les pages ne sont pas servies
+// depuis la racine d'un domaine, et un '/suivi.html' n'y résoudrait pas.
 function retourSuivi() {
-  if (window.self !== window.top) {
-    window.parent.postMessage({ type: 'navigate', page: 'suivi' }, '*');
-  } else {
-    window.location.href = '/index.html?token=' + token;
-  }
+  window.location.href = 'suivi.html?token=' + token;
 }
 
 async function sb(path, options = {}) {

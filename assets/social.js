@@ -60,10 +60,13 @@ var NattySocial = (function () {
     return out;
   }
 
+  // Les en-têtes viennent de core.js : fabriquées ici, elles porteraient la
+  // clé anon et non le JWT de l'utilisateur — donc un retrait de j'aime ou
+  // d'abonnement serait refusé par les policies une fois les RLS actives.
   async function sbDelete(path) {
     var r = await fetch(Natty.SB_URL + '/rest/v1/' + path, {
       method: 'DELETE',
-      headers: { apikey: Natty.SB_KEY, Authorization: 'Bearer ' + Natty.SB_KEY, Prefer: 'return=minimal' }
+      headers: await Natty.entetes({ Prefer: 'return=minimal' })
     });
     if (!r.ok) throw new Error(await r.text());
   }
