@@ -952,7 +952,7 @@ html.no-scroll {
   </div>
 
   <!-- HISTORIQUE -->
-  <div class="banner"><h3>Historique de repas</h3><span class="sec-link" onclick="openRepasOverlay()">Voir tout ›</span></div>
+  <div class="banner"><h3>Historique de repas</h3><span class="sec-link" onclick="ouvrirHistorique()">Voir tout ›</span></div>
   <div id="mealsList"><div class="loading" style="text-align:center;padding:20px;">Chargement...</div></div>
 
   <!-- POINTS FORTS / FAIBLES -->
@@ -1240,6 +1240,23 @@ html.no-scroll {
 </div>
 
 <!-- ══ OVERLAY REPAS ══ -->
+<!-- HISTORIQUE COMPLET — tous les repas enregistrés.
+     L'écran Suivi n'en montre que ceux du jour (ou les 3 derniers s'il n'y en
+     a aucun aujourd'hui) ; « Voir tout › » ouvre cette feuille. -->
+<div class="overlay" id="ovHistorique">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:20px;font-weight:800;">Historique de repas</div>
+      <button onclick="closeOverlay('ovHistorique')" style="width:30px;height:30px;border-radius:50%;background:#e5e5ea;border:none;cursor:pointer;font-size:13px;color:#8e8e93;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div id="histoCount" style="font-size:12.5px;color:var(--muted);margin-bottom:16px;"></div>
+    <!-- La nav du bas (#nattyNav, z-index 500) passe au-dessus des overlays
+         (z-index 200) : sans cette marge, la derniere carte reste cachee. -->
+    <div id="histoList" style="display:flex;flex-direction:column;gap:12px;padding-bottom:calc(104px + env(safe-area-inset-bottom));"></div>
+  </div>
+</div>
+
 <div class="overlay" id="ovRepas">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1769,13 +1786,28 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btnSaveIA').addEventListener('click', saveIA);
   document.getElementById('btnCamManu').addEventListener('click', function(){ document.getElementById('inputCamManu').click(); });
   document.getElementById('btnGalManu').addEventListener('click', function(){ document.getElementById('inputGalManu').click(); });
-  document.getElementById('btnCamIA').addEventListener('click', function(){ document.getElementById('inputCamIA').click(); });
-  document.getElementById('btnGalIA').addEventListener('click', function(){ document.getElementById('inputGalIA').click(); });
+  // Un seul parcours d'ajout par photo : ces deux boutons délèguent à
+  // assets/ajout.js (anneaux de macros restantes, enrichissement, carrousel).
+  // Sans cette délégation, deux parcours coexistaient et celui-ci — le plus
+  // ancien — restait atteignable, ce qui donnait l'impression d'une version
+  // périmée de l'app. Le repli local (inputCamIA/inputGalIA + analyserAvecIA)
+  // est conservé si le module n'est pas chargé, et la saisie manuelle reste
+  // accessible dans cet overlay.
+  function ajoutPhoto(inputId){
+    if (window.NattyAjout && typeof window.NattyAjout.start === 'function') {
+      closeOverlay('ovRepas');
+      window.NattyAjout.start();
+      return;
+    }
+    document.getElementById(inputId).click();   // synchrone : iOS l'exige
+  }
+  document.getElementById('btnCamIA').addEventListener('click', function(){ ajoutPhoto('inputCamIA'); });
+  document.getElementById('btnGalIA').addEventListener('click', function(){ ajoutPhoto('inputGalIA'); });
   document.getElementById('inputCamManu').addEventListener('change', function(){ previewPhoto(this,'prevManu'); photoManuFile=this.files[0]; });
   document.getElementById('inputGalManu').addEventListener('change', function(){ previewPhoto(this,'prevManu'); photoManuFile=this.files[0]; });
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
-  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse'].forEach(function(id){
+  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovHistorique'].forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e){ if(e.target===this) closeOverlay(id); });
   });
@@ -1879,19 +1911,26 @@ async function loadOnboarding() {
 
 async function loadMeals() {
   try {
-    var mealsRaw = await sbFetch('meals?user_id=eq.'+USER_ID+'&select=*&order=created_at.desc&limit=30');
-    // Fetch ingredients separately to avoid join issues
-    allMeals = await Promise.all(mealsRaw.map(async function(m) {
+    // 200 et non 30 : « Voir tout › » affiche l'historique complet.
+    var mealsRaw = await sbFetch('meals?user_id=eq.'+USER_ID+'&select=*&order=created_at.desc&limit=200');
+    // Ingrédients par lots, et non une requête par repas : le N+1 d'avant
+    // aurait fait 200 allers-retours. PostgREST plafonnant la longueur d'URL,
+    // on interroge par paquets de 50 — même choix que assets/social.js.
+    var parRepas = {};
+    for (var i=0; i<mealsRaw.length; i+=50) {
+      var ids = mealsRaw.slice(i, i+50).map(function(m){ return m.id; });
       try {
-        var ings = await sbFetch('meal_ingredients?meal_id=eq.'+m.id+'&select=*');
-        m.meal_ingredients = ings;
-      } catch(e) { m.meal_ingredients = []; }
-      return m;
-    }));
-    afficherMeals(allMeals.slice(0,10));
+        var lot = await sbFetch('meal_ingredients?meal_id=in.('+ids.join(',')+')&select=*');
+        (lot||[]).forEach(function(ing){
+          (parRepas[ing.meal_id] = parRepas[ing.meal_id] || []).push(ing);
+        });
+      } catch(e) {}
+    }
+    allMeals = mealsRaw.map(function(m){ m.meal_ingredients = parRepas[m.id] || []; return m; });
+    afficherMeals(repasAAfficher());
     var today = new Date().toISOString().split('T')[0];
     macAuj = {p:0,l:0,g:0,c:0};
-    allMeals.filter(function(m){ return (m.meal_date===today)||(m.created_at&&m.created_at.startsWith(today)); })
+    allMeals.filter(function(m){ return estDuJour(m, today); })
       .forEach(function(m){ var mac=calcMac(m.meal_ingredients); macAuj.p+=mac.p; macAuj.l+=mac.l; macAuj.g+=mac.g; macAuj.c+=mac.c; });
   } catch(e) {}
 }
@@ -2081,8 +2120,10 @@ function mealScore(m) {
   if(mac.p>20)s+=15; if(ings>=3)s+=15; if(mac.c<600&&mac.c>200)s+=10; if(mac.g>0&&mac.p>0&&mac.l>0)s+=10;
   return Math.min(99,s);
 }
-function afficherMeals(meals) {
-  var el=document.getElementById('mealsList');
+// elId permet de réutiliser le même rendu dans la feuille d'historique complet.
+function afficherMeals(meals, elId) {
+  var el=document.getElementById(elId||'mealsList');
+  if(!el) return;
   if(!meals||!meals.length){el.innerHTML='<div style="text-align:center;color:#c7c7cc;font-size:13px;padding:28px;">Ajoutez votre premier repas !</div>';return;}
   el.innerHTML=meals.map(function(m){
     var date=new Date(m.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
@@ -2107,6 +2148,28 @@ function afficherMeals(meals) {
       if(meal) ouvrirAnalysePlat(meal);
     });
   });
+}
+
+// Repas du jour : la date de référence est meal_date, avec created_at en
+// secours — les deux ne concordent pas toujours selon l'écran d'ajout.
+function estDuJour(m, jour) {
+  return m.meal_date===jour || (m.created_at && m.created_at.indexOf(jour)===0);
+}
+
+// L'écran Suivi montre la journée en cours ; s'il n'y a rien aujourd'hui, les
+// 3 derniers repas, pour ne pas laisser un bloc vide.
+function repasAAfficher() {
+  var jour = new Date().toISOString().split('T')[0];
+  var duJour = allMeals.filter(function(m){ return estDuJour(m, jour); });
+  return duJour.length ? duJour : allMeals.slice(0,3);
+}
+
+function ouvrirHistorique() {
+  var n = allMeals.length;
+  setText('histoCount', n ? (n + ' repas enregistré' + (n>1?'s':'')) : '');
+  afficherMeals(allMeals, 'histoList');
+  lockScroll();
+  document.getElementById('ovHistorique').classList.add('active');
 }
 
 // ═══ DIAGNOSTICS (dynamic) ═══
@@ -3474,7 +3537,7 @@ function closeOverlay(id) {
     el.style.display = 'none';
   }
   // Vérifier si un overlay est encore ouvert
-  var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
+  var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovHistorique','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
   var hasVisible = allIds.some(function(eid) {
     var e = document.getElementById(eid);
     if (!e) return false;
@@ -3793,7 +3856,7 @@ function openProfilOverlay() {
 function closeProfilOverlay() {
   var el = document.getElementById('profilOverlay');
   if (el) el.style.display = 'none';
-  var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
+  var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovHistorique','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
   var hasVisible = allIds.some(function(eid) {
     var e = document.getElementById(eid);
     if (!e || eid === 'profilOverlay') return false;
