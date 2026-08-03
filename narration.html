@@ -376,11 +376,18 @@ body.map-on .top{background:var(--bg)}
 .map-hd{position:sticky;top:0;z-index:6;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:4px 22px 18px}
 .map-hd h2{font-size:20px;font-weight:900}
 .map-close{width:34px;height:34px;border-radius:50%;background:var(--bg);box-shadow:var(--so);border:none;font-size:15px;cursor:pointer}
+.map-act{display:flex;align-items:center;gap:9px;flex-shrink:0}
+/* remise à zéro en deux temps : `confirm()` natif est proscrit ici (rendu et
+   blocage variables en WebView Capacitor, cf. portage mobile). */
+.map-reset{height:34px;padding:0 12px;border-radius:99px;background:var(--bg);box-shadow:var(--so);border:none;font-family:'Inter',sans-serif;font-size:13px;font-weight:800;color:var(--muted);cursor:pointer}
+.map-reset.arme{background:var(--red);color:#fff;box-shadow:none}
 .mrail{position:relative;display:flex;flex-direction:column-reverse;align-items:center;padding:16px 0}
 .mrail::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:4px;transform:translateX(-50%);background:var(--line);border-radius:2px}
 .mnode{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;margin:11px 0}
 .mdot{width:56px;height:56px;border-radius:18px;background:var(--bg);box-shadow:var(--so);display:flex;align-items:center;justify-content:center;font-size:24px;border:none}
 .mdot.done{border:2px solid var(--green)}
+/* beat pas encore atteint : visible pour donner envie, mais pas cliquable */
+.mdot.futur{opacity:.4;cursor:default;box-shadow:var(--si)}
 .mdot.cur{width:66px;height:66px;font-size:29px;background:var(--ink);color:#fff}
 .mlbl{font-size:10px;font-weight:700;color:var(--muted);margin-top:5px}
 .mbelt{position:relative;z-index:2;background:var(--ink);color:#fff;border-radius:99px;padding:8px 18px;font-size:13px;font-weight:800;margin:18px 0}
@@ -406,6 +413,10 @@ body.map-on .top{background:var(--bg)}
 .mpal.cur .mpal-n,.mpal.cur .mpal-meta,.mpal.cur .mpal-chev{color:rgba(255,255,255,.62)}
 .mpal.done>.mpal-hd{border:2px solid var(--green);padding:11px 13px}
 .mpal.todo>.mpal-hd{opacity:.62}
+.mpal.lock>.mpal-hd{opacity:.45;cursor:default}
+.mpal.lock .mpal-jauge{display:none}
+.mpal.nope>.mpal-hd{animation:mpalNope .38s}
+@keyframes mpalNope{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}45%{transform:translateX(6px)}70%{transform:translateX(-3px)}}
 .mpal-jauge{height:3px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:7px}
 .mpal.cur .mpal-jauge{background:rgba(255,255,255,.2)}
 .mpal-jauge i{display:block;height:100%;border-radius:2px;background:var(--ink);transition:width .4s ease}
@@ -608,7 +619,6 @@ body[data-u="jeu"] #klayer{background:#0f1014}
 #klayer .k-dots{position:absolute;top:22px;left:0;right:0;display:flex;gap:6px;justify-content:center;z-index:30;pointer-events:none}
 #klayer .k-dots .d{width:6px;height:6px;border-radius:50%;background:var(--muted);opacity:.3;transition:all .3s}
 #klayer .k-dots .d.on{opacity:1;width:20px;border-radius:3px;background:var(--ink)}
-#klayer .k-skip{position:absolute;bottom:30px;right:24px;z-index:40;font-size:12px;font-weight:700;color:var(--muted);background:none;border:none;cursor:pointer}
 #klayer .btn{padding:17px 32px;border:none;border-radius:20px;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;cursor:pointer;color:var(--bg);background:var(--ink);box-shadow:0 12px 30px rgba(13,13,15,.22);opacity:1;min-width:240px;width:100%;max-width:360px}
 #klayer .btn:active{transform:scale(.97)}
 /* highlights uniformes : noir (hl) / jaune réservé au sens fort. hlO suit --ink pour rester N&B */
@@ -725,7 +735,6 @@ body[data-u="jeu"] #klayer .hl{color:#0d0d0f}
   <div class="k-cta" id="k_cta"></div>
   <div id="k_hint" style="position:absolute;top:44px;left:0;right:0;text-align:center;font-size:11px;color:var(--muted);font-weight:600;z-index:40"></div>
   <div class="stage" id="k_stage" style="position:absolute;inset:0;z-index:10"></div>
-  <button class="k-skip" onclick="k_skip()">Passer ›</button>
 </div>
 
 
@@ -744,7 +753,9 @@ body[data-u="jeu"] #klayer .hl{color:#0d0d0f}
 <div class="defi-announce" id="defiAnnounce"></div>
 
 <div class="map-screen" id="mapScreen">
-  <div class="map-hd"><h2>Toutes les épreuves</h2><button class="map-close" id="mapClose">✕</button></div>
+  <div class="map-hd"><h2>Toutes les épreuves</h2>
+    <div class="map-act"><button class="map-reset" id="mapReset">↺</button><button class="map-close" id="mapClose">✕</button></div>
+  </div>
   <div class="mrail" id="mrail"></div>
 </div>
 
@@ -1313,6 +1324,44 @@ function palierDe(i){for(var k=i;k>=0;k--){if(STORY[k]&&STORY[k].palier)return S
 var stage=document.getElementById('stage');
 var idx=0,xp=0,current=null;
 
+/* ═══ PROGRESSION ═══
+   Sauvegardée sur l'appareil : sans elle le parcours repartait du premier beat
+   à chaque ouverture, et les trois paliers réapparaissaient « à venir ».
+   `maxIdx` = le beat le plus loin atteint. C'est LUI qui fait foi pour les
+   épreuves faites, les XP gagnés et le déverrouillage — pas `idx`, qui recule
+   dès qu'on revient en arrière ou qu'on saute depuis la carte. */
+var PROG_KEY='natty_narration_progres';
+var maxIdx=0;
+
+/* ─── UN PALIER PAR JOUR ───
+   `palierOuvert` = le palier le plus haut où l'on a le droit d'entrer.
+   `palierFinLe`  = le jour (AAAA-MM-JJ) où ce palier a été terminé ; tant qu'il
+   est nul, le palier est encore en cours et rien ne bloque — la limite porte sur
+   le passage au palier SUIVANT, pas sur le temps passé dans le palier du jour.
+   Le lendemain, `progRollover()` échange l'un contre l'autre. Un seul palier
+   peut donc s'ouvrir par journée, même après une semaine d'absence. */
+var palierOuvert=1,palierFinLe=null;
+/* date locale, pas `toISOString()` qui bascule en UTC : à 23 h à Paris il aurait
+   déjà donné le lendemain, et le palier suivant se serait ouvert une heure trop tôt. */
+function jourCourant(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
+function progLire(){try{return JSON.parse(localStorage.getItem(PROG_KEY))||null}catch(e){return null}}
+function progEcrire(){try{localStorage.setItem(PROG_KEY,JSON.stringify({idx:idx,max:maxIdx,ouvert:palierOuvert,finLe:palierFinLe}))}catch(e){}}
+/* efface aussi le drapeau d'intro : « recommencer » doit rejouer la cinématique d'ouverture */
+function progEffacer(){try{localStorage.removeItem(PROG_KEY);localStorage.removeItem(NARR_SEEN_KEY)}catch(e){}}
+/* comparaison de chaînes ISO, et `>` strict : une horloge remise en arrière ne
+   débloque rien, et repasser plusieurs fois dans la journée n'ouvre qu'un palier. */
+function progRollover(){
+  if(!palierFinLe||palierOuvert>=PALIERS.length)return false;
+  if(jourCourant()>palierFinLe){palierOuvert++;palierFinLe=null;progEcrire();return true}
+  return false;
+}
+function palierTermine(P){if(P===palierOuvert&&!palierFinLe){palierFinLe=jourCourant();progEcrire()}}
+/* vrai quand le beat suivant ouvre un palier auquel on n'a pas encore droit */
+function auBordDuPalier(){var s=idx+1;return s<STORY.length&&palierDe(s)>palierDe(idx)}
+/* les XP se recalculent depuis `maxIdx` au lieu de s'accumuler : revoir une
+   récompense déjà obtenue ne doit pas la compter une seconde fois. */
+function xpGagnes(){var s=0;for(var i=0;i<maxIdx&&i<STORY.length;i++){var b=STORY[i];if(b.type==='reward'&&b.xp)s+=b.xp}return s}
+
 /* barre du haut : progression globale fluide (robuste quel que soit le nb de chapitres) */
 function buildSegs(){document.getElementById('segs').innerHTML='<div class="seg" style="flex:1"><div class="fill" id="globalFill"></div></div>'}
 function markSegs(){var f=document.getElementById('globalFill');if(f)f.style.width=Math.round((idx)/(STORY.length-1)*100)+'%'}
@@ -1485,6 +1534,8 @@ function go(){
      (overflow:hidden bloque la scrollbar mais pas le scrollTop programmatique) : on le
      neutralise à chaque transition de beat, sinon le header et l'écran carte se décalent. */
   document.body.scrollTop=0;
+  if(idx>maxIdx)maxIdx=idx;
+  progEcrire();
   var b=STORY[idx];
   var nu=univFor(b,idx);
 
@@ -1538,7 +1589,19 @@ function k_resolveCine(cine){
   return seq;
 }
 function chapterNo(i){var n=0;for(var k=0;k<=i;k++)if(STORY[k].type==='chapter')n++;return n}
-function nextBeat(){if(idx<STORY.length-1){idx++;go()}else{openMap()}}
+/* Le passage d'un palier au suivant est LE point de blocage du parcours : c'est
+   ici, et nulle part ailleurs, qu'on refuse d'avancer tant que le jour n'a pas
+   tourné. Toute autre façon d'arriver sur un beat (reprise, carte) doit donc
+   respecter `palierOuvert` de son côté. */
+function nextBeat(){
+  if(idx>=STORY.length-1){openMap();return}
+  if(auBordDuPalier()&&palierDe(idx+1)>palierOuvert){
+    palierTermine(palierDe(idx));
+    k_playSeq(k_demainSeq(palierDe(idx)),function(){ openMap(); });
+    return;
+  }
+  idx++;go();
+}
 function prevBeat(){if(idx>0){idx--;go()}}
 document.getElementById('back').addEventListener('click',prevBeat);
 
@@ -2671,38 +2734,54 @@ var mapOuverts={};
 function buildMap(){
   var r=document.getElementById('mrail');
   /* bilan par palier : bornes, nombre d'épreuves et XP (total / déjà gagné) */
+  /* Borne des épreuves faites. `maxIdx` est le beat le plus loin ATTEINT, donc
+     encore en cours : d'où le `<` strict. Sauf quand la journée nous a arrêtés au
+     bord du palier — ce dernier beat-là a bien été joué, on n'a simplement pas pu
+     franchir la marche. Sans ce +1, un palier terminé resterait à « 12/13 ». */
+  var borne=(palierFinLe&&palierDe(maxIdx)===palierOuvert)?maxIdx+1:maxIdx;
   var bilan={};
   STORY.forEach(function(b,i){
     var p=palierDe(i),o=bilan[p]||(bilan[p]={premier:i,dernier:i,total:0,faits:0,xp:0,xpFaits:0});
     o.dernier=i;
-    if(b.type!=='chapter'){o.total++;if(i<idx)o.faits++}
-    if(b.type==='reward'&&b.xp){o.xp+=b.xp;if(i<idx)o.xpFaits+=b.xp}
+    if(b.type!=='chapter'){o.total++;if(i<borne)o.faits++}
+    if(b.type==='reward'&&b.xp){o.xp+=b.xp;if(i<borne)o.xpFaits+=b.xp}
   });
   var pCur=palierDe(idx),html='';
   PALIERS.forEach(function(P){
     var o=bilan[P.n];if(!o)return;
-    var etat=idx>o.dernier?'done':(P.n===pCur?'cur':'todo');
-    var ouvert=(mapOuverts[P.n]===undefined)?(etat==='cur'):mapOuverts[P.n];
-    var meta=etat==='done'?('Terminé ✓ · '+o.xp+' XP')
-      :etat==='cur'?(o.faits+'/'+o.total+' épreuves · '+o.xpFaits+' XP')
+    var fini=borne>o.dernier;
+    /* le déverrouillage ne dépend plus de la seule progression : un palier
+       s'ouvre le lendemain du jour où le précédent a été bouclé (cf. progRollover). */
+    var dispo=P.n<=palierOuvert;
+    var etat=!dispo?'lock':(P.n===pCur&&!fini?'cur':(fini?'done':'todo'));
+    var ouvert=etat==='lock'?false:((mapOuverts[P.n]===undefined)?(etat==='cur'):mapOuverts[P.n]);
+    var meta=etat==='lock'
+        ?(P.n===palierOuvert+1&&palierFinLe?'Disponible demain ☀️':'Termine le palier '+(P.n-1)+' pour l\'ouvrir')
+      :fini?('Terminé ✓ · '+o.xp+' XP')
+      :o.faits?(o.faits+'/'+o.total+' épreuves · '+o.xpFaits+' XP')
       :(o.total+' épreuves · '+o.xp+' XP à gagner');
     var pct=o.total?Math.round(o.faits/o.total*100):0;
     var corps='';
     for(var i=o.premier;i<=o.dernier;i++){
       var b=STORY[i];
       if(b.type==='chapter'){corps+='<div class="mbelt">'+b.label+'</div>';continue}
-      var st=i<idx?'done':i===idx?'cur':'';
+      var st=i<borne?'done':i===idx?'cur':'';
       var lbl=(b.type==='flash')?(b.name||'Flash'):(b.type==='say'?(b.title||'').slice(0,18):BEAT_LBL[b.type]||b.type);
-      corps+='<div class="mnode"><button class="mdot '+st+'" data-goto="'+i+'">'+(BEAT_ICON[b.type]||'•')+'</button><div class="mlbl">'+lbl+'</div></div>';
+      /* On ne peut sauter QUE sur un beat déjà atteint : revoir une notion reste
+         libre, prendre de l'avance non — sinon la carte contournerait d'un clic
+         le blocage journalier qu'on vient de poser dans nextBeat(). */
+      var futur=i>maxIdx;
+      corps+='<div class="mnode"><button class="mdot '+st+(futur?' futur':'')+'"'
+        +(futur?'':' data-goto="'+i+'"')+'>'+(BEAT_ICON[b.type]||'•')+'</button><div class="mlbl">'+lbl+'</div></div>';
     }
     html+='<div class="mpal '+etat+(ouvert?' open':'')+'" data-palier="'+P.n+'">'
       +'<button class="mpal-hd" data-toggle="'+P.n+'">'
-        +'<div class="mpal-em">'+P.em+'</div>'
+        +'<div class="mpal-em">'+(etat==='lock'?'🔒':P.em)+'</div>'
         +'<div class="mpal-txt"><div class="mpal-n">Palier '+P.n+'</div>'
           +'<div class="mpal-t">'+P.titre+'</div>'
           +'<div class="mpal-meta">'+meta+'</div>'
           +'<div class="mpal-jauge"><i style="width:'+pct+'%"></i></div></div>'
-        +'<div class="mpal-chev">▾</div>'
+        +'<div class="mpal-chev">'+(etat==='lock'?'':'▾')+'</div>'
       +'</button>'
       +'<div class="mpal-body">'+corps+'</div>'
     +'</div>';
@@ -2711,6 +2790,11 @@ function buildMap(){
   r.querySelectorAll('.mpal-hd[data-toggle]').forEach(function(btn){
     btn.addEventListener('click',function(){
       var sec=btn.parentNode,n=+btn.dataset.toggle;
+      /* verrouillé : on ne déplie pas, on secoue pour dire non */
+      if(sec.classList.contains('lock')){
+        sec.classList.remove('nope');void sec.offsetWidth;sec.classList.add('nope');
+        vib(24);return;
+      }
       sec.classList.toggle('open');
       mapOuverts[n]=sec.classList.contains('open');
       sTap();vib(10);
@@ -2757,6 +2841,18 @@ document.getElementById('mapBtn').addEventListener('click',function(){
 });
 document.getElementById('menuBtn').addEventListener('click',function(){ window.location.href='menu.html'; });
 document.getElementById('mapClose').addEventListener('click',closeMap);
+/* recommencer : deux clics, le second dans les 3 s. Efface la progression ET le
+   drapeau d'intro, puis recharge — plus simple et plus sûr que de remettre à zéro
+   à la main les drapeaux `_seen`/`_kdone`/`_modeAnn` semés sur les beats. */
+(function(){
+  var b=document.getElementById('mapReset'),arme=false,t=null;
+  b.addEventListener('click',function(){
+    if(!arme){arme=true;b.classList.add('arme');b.textContent='Tout effacer ?';
+      clearTimeout(t);t=setTimeout(function(){arme=false;b.classList.remove('arme');b.textContent='↺'},3000);
+      sTap();vib(14);return;}
+    clearTimeout(t);progEffacer();location.reload();
+  });
+})();
 
 /* swipe */
 var tx=null;
@@ -3115,7 +3211,9 @@ k_step=function(){
     return;
   });
 })();
-function k_skip(){clearTimeout(k_timer);k_si=k_seq.length;k_step();}
+/* « Passer › » retiré : il sautait la fin de la séquence donc le beat entier, ce
+   qui permettait d'expédier le palier du jour en quelques secondes — exactement
+   ce que le rythme d'un palier par jour cherche à empêcher. */
 
 
 /* ═══ SÉQUENCES KINETIC PAR MODE & CHAPITRE ═══ */
@@ -3149,6 +3247,28 @@ function k_chapterSeq(no,label,mode){
   return [{
     enter:'glide', hold:3200, size:'big',
     lines:[[{t:'Chapitre '+no}]], sub:label, fxDelay:600
+  }];
+}
+/* fin de la journée : le palier est bouclé, le suivant attend demain.
+   Frame à bouton → elle reste figée jusqu'au clic (cf. k_step), ce qui laisse le
+   temps de lire ce qui arrive demain. */
+function k_demainSeq(P){
+  var suiv=PALIERS[P]; /* PALIERS est indexé de 0 : PALIERS[P] est bien le palier P+1 */
+  return [{
+    enter:'reveal', size:'big', illo:'🌙', illoAnim:'float',
+    lines:[[{t:'Palier '+P+' '},{t:'terminé',fx:'hl'}]],
+    sub: suiv ? ('Le palier '+(P+1)+' — '+suiv.titre+' — s\'ouvre demain. Une journée, un palier : c\'est ce qui fait tenir.')
+              : 'Tu as tout terminé.',
+    fxDelay:600, btn:'Voir ma progression'
+  }];
+}
+/* ouverture d'une nouvelle journée. 2 s, calendrier, puis on enchaîne sur le
+   chapitre — même forme qu'une annonce de chapitre, volontairement. */
+function k_jourSeq(P){
+  var p=PALIERS[P-1];
+  return [{
+    enter:'glide', hold:2000, size:'big', illo:'📅', illoAnim:'float',
+    lines:[[{t:'Jour '+P}]], sub:p?p.titre:'', fxDelay:600
   }];
 }
 /* convertit un beat 'say' (titre + hl + sub + em) en mini-vidéo kinetic uniforme */
@@ -3185,9 +3305,29 @@ function narrMarquerIntroVue(){ try{ localStorage.setItem(NARR_SEEN_KEY,'1'); }c
 
 (function k_boot(){
   if(typeof k_stage==='undefined'||!document.getElementById('k_stage')){ return setTimeout(k_boot,30); }
+  /* reprise là où on s'était arrêté ; borné à STORY au cas où le scénario aurait
+     raccourci depuis la dernière visite (un idx périmé planterait go()) */
+  var p=progLire();
+  if(p){
+    maxIdx=Math.max(0,Math.min(p.max|0,STORY.length-1));
+    idx=Math.max(0,Math.min(p.idx|0,maxIdx));
+    palierOuvert=Math.max(1,Math.min(p.ouvert|0||1,PALIERS.length));
+    palierFinLe=p.finLe||null;
+    xp=xpGagnes();
+  }
+  /* le jour a-t-il tourné depuis la dernière visite ? */
+  var nouveauJour=progRollover();
   if(narrIntroDejaVue()){
-    go();
-    openMap();
+    /* on repartait bloqué au bord d'un palier, et il vient de s'ouvrir : on
+       franchit le pas nous-même et on annonce la journée, plutôt que de rendre
+       à nouveau le dernier beat de la veille déjà joué. */
+    if(nouveauJour&&auBordDuPalier()&&palierDe(idx+1)<=palierOuvert){
+      idx++;progEcrire();
+      k_playSeq(k_jourSeq(palierDe(idx)),function(){ go(); });
+    } else {
+      go();
+      openMap();
+    }
   } else {
     narrMarquerIntroVue();
     go();
