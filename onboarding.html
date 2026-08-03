@@ -565,11 +565,13 @@ upd(); chk();
 </script>
 
   <script>
+    // Aucun service worker : sw.js se désinscrit lui-même à l'activation, et
+    // index.html/suivi.html désinscrivent ceux qui traînent. Enregistrer ici
+    // n'avait donc aucun effet, seulement une incohérence de plus — et une
+    // WebView Capacitor n'a de toute façon rien à faire d'un cache SW.
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(r => console.log('SW registered'))
-          .catch(e => console.log('SW error:', e));
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        regs.forEach(function (reg) { reg.unregister(); });
       });
     }
   

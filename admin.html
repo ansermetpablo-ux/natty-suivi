@@ -1992,7 +1992,12 @@ async function sauvegarderNotes() {
   const btn = document.getElementById('btnSaveNotes');
   btn.textContent = 'Enregistrement...';
   try {
-    await sb('notes_nutritionniste', {method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=representation'}, body:JSON.stringify({client_id:currentClient.user_id, note:document.getElementById('notesArea').value, action_semaine:document.getElementById('actionInp').value, updated_at:new Date().toISOString()})});
+    // ?on_conflict=client_id est OBLIGATOIRE : sans lui PostgREST résout le
+    // conflit sur la clé primaire (un id neuf à chaque fois) et repart en 409
+    // dès la 2e sauvegarde pour un même client — mesuré en base. Le
+    // nutritionniste pouvait donc écrire sa note une fois, jamais la corriger.
+    // Même piège que meal_likes / membre_amis, voir §3 de CLAUDE.md.
+    await sb('notes_nutritionniste?on_conflict=client_id', {method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=representation'}, body:JSON.stringify({client_id:currentClient.user_id, note:document.getElementById('notesArea').value, action_semaine:document.getElementById('actionInp').value, updated_at:new Date().toISOString()})});
     btn.textContent='✓ Enregistré'; btn.classList.add('saved');
     setTimeout(()=>{ btn.textContent='Enregistrer'; btn.classList.remove('saved'); }, 2000);
     toast('Notes enregistrées !','ok');

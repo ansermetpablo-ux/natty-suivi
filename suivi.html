@@ -104,6 +104,18 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .nutri-prev { padding:0 16px 14px; font-size:13px; color:var(--muted); }
 .nutri-prev.unread { color:var(--black); font-weight:500; }
 
+/* ── ACTION DE LA SEMAINE (écrite par le nutritionniste dans l'admin) ──
+   Fond noir : c'est la seule carte de l'écran qui porte la parole d'un être
+   humain, elle ne doit pas se confondre avec les cartes de chiffres. */
+.action-card  { background:var(--black); border-radius:20px; padding:16px 18px; margin-bottom:14px;
+                box-shadow:4px 4px 14px rgba(26,26,46,0.3); }
+.action-head  { display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+.action-em    { font-size:17px; line-height:1; }
+.action-lbl   { font-size:10px; font-weight:700; color:rgba(255,255,255,0.5);
+                text-transform:uppercase; letter-spacing:.9px; }
+.action-txt   { font-size:14.5px; font-weight:600; color:#fff; line-height:1.5; white-space:pre-wrap; }
+.action-date  { font-size:11px; color:rgba(255,255,255,0.4); margin-top:9px; }
+
 /* ── OFFRES BANNER ── */
 .offres-banner { background:var(--black); border-radius:20px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; box-shadow:4px 4px 14px rgba(26,26,46,0.3); }
 .ob-title { font-size:14px; font-weight:700; color:#fff; }
@@ -883,6 +895,18 @@ html.no-scroll {
       <div class="unread-pill" id="unreadPill">0</div>
     </div>
     <div class="nutri-prev" id="nutriPrev">Appuyez pour ouvrir la conversation</div>
+  </div>
+
+  <!-- Action de la semaine : ce que le nutritionniste a écrit dans l'admin.
+       Masquée tant qu'il n'a rien écrit — une carte vide vaudrait moins que
+       pas de carte du tout. -->
+  <div class="action-card" id="actionSemaine" style="display:none;">
+    <div class="action-head">
+      <span class="action-em">🎯</span>
+      <span class="action-lbl" id="actionLbl">L'action de ta semaine</span>
+    </div>
+    <div class="action-txt" id="actionTxt"></div>
+    <div class="action-date" id="actionDate"></div>
   </div>
 
   <!-- SCORE + MACROS -->
@@ -1855,7 +1879,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function init() {
   if (urlP.p||urlP.c) { macObj.p=urlP.p; macObj.l=urlP.l; macObj.g=urlP.g; macObj.c=urlP.c; }
-  await Promise.all([loadOnboarding(), loadMeals(), loadScore(), loadDailyHistory(), verifierAbonnement()]);
+  await Promise.all([loadOnboarding(), loadMeals(), loadScore(), loadDailyHistory(), verifierAbonnement(), chargerActionSemaine()]);
   afficherMacros(); chargerRdv(); chargerDiagnostics();
   resetIfNewDay();
   if (document.getElementById('pageProg').classList.contains('active')) dessinerProgression();
@@ -2579,6 +2603,39 @@ async function verifierAbonnement(){
     else{document.getElementById('nutriCard').style.display='block';document.getElementById('offresBanner').style.display='none';chargerMessages();}
   }catch(e){}
 }
+/* ═══ ACTION DE LA SEMAINE ═══
+   Écrite par le nutritionniste dans admin.html (table notes_nutritionniste,
+   colonne action_semaine). `note` est sa note interne : elle ne sort JAMAIS
+   d'ici, seule `action_semaine` s'adresse au client.
+
+   Chargée indépendamment de l'abonnement : si un nutritionniste a pris la
+   peine d'écrire quelque chose, on l'affiche, même à quelqu'un dont
+   l'abonnement vient d'expirer. */
+async function chargerActionSemaine(){
+  try{
+    var r = await sbFetch('notes_nutritionniste?client_id=eq.'+USER_ID+'&select=action_semaine,updated_at&limit=1');
+    var a = r && r[0];
+    var txt = a && (a.action_semaine||'').trim();
+    if(!txt) return;
+
+    document.getElementById('actionTxt').textContent = txt;
+
+    // Une action de trois semaines n'est plus « de la semaine » : le dire
+    // plutôt que de laisser croire à une consigne fraîche.
+    var jours = a.updated_at ? Math.floor((Date.now() - new Date(a.updated_at).getTime())/86400000) : null;
+    if(jours !== null && jours > 21){
+      document.getElementById('actionLbl').textContent = 'Dernière action de ton nutritionniste';
+    }
+    document.getElementById('actionDate').textContent =
+      jours === null ? '' :
+      jours <= 0 ? "Mise à jour aujourd'hui" :
+      jours === 1 ? 'Mise à jour hier' :
+      'Mise à jour il y a ' + jours + ' jours';
+
+    document.getElementById('actionSemaine').style.display = 'block';
+  }catch(e){}
+}
+
 async function chargerMessages(){
   try{var msgs=await sbFetch('messages?user_id=eq.'+USER_ID+'&order=created_at.desc&limit=5');
     var u=msgs.filter(function(m){return m.expediteur==='nutritionniste'&&!m.lu;}).length;

@@ -138,8 +138,15 @@ Modifier fichier HTML sur GitHub → Commit → Vercel redéploie automatiquemen
 - `index.html` désinscrit activement tout SW existant au chargement (`getRegistrations().then(reg => reg.unregister())`) et ne réenregistre jamais `sw.js`. `suivi.html`/`onboarding.html`, eux, appellent encore `navigator.serviceWorker.register('/sw.js')` — sans effet réel puisque `sw.js` s'auto-désinscrit, mais incohérence de code à nettoyer si ces pages sont retouchées.
 - ⚠️ **Pertinent pour Capacitor** : un service worker n'a pas le même comportement (ni la même utilité) dans une WebView Capacitor que dans un navigateur — cet état "désactivé partout" est en réalité une base saine pour la migration (pas de cache SW à gérer/désactiver spécifiquement pour la WebView).
 
-### Fichier `vercel` (sans extension, racine) — artefact à nettoyer
-Copie JSON partielle de `vercel.json` (mêmes crons, **sans** les headers no-cache), probablement un artefact d'un "Add files via upload" antérieur. Vercel ne lit que `vercel.json` — ce fichier n'a aucun effet, mais pollue la racine. À supprimer après confirmation de Pablo (pas fait pendant cette session, lecture seule).
+### ✅ Fichier `vercel` (sans extension, racine) — supprimé, et il expliquait un vrai bug
+Ce n'était pas qu'un artefact inerte. Ce fichier contenait **les headers no-cache**, que
+`vercel.json` n'a **jamais** portés dans tout l'historique du dépôt — vérifié
+(`git log -p`). Vercel ne lisant que `vercel.json`, les en-têtes
+`Cache-Control: no-cache` sur les `.html` **n'ont donc jamais été appliqués**, ce qui explique
+le « ancienne version servie malgré un nouveau déploiement » documenté en §7 et le
+`?v=Date.now()` de `masterPage.js` qui compensait à la main.
+**Corrigé (août 2026)** : les deux règles `headers` sont passées dans `vercel.json`, et le
+fichier orphelin a été supprimé.
 
 ### masterPage.js (Wix Studio) — état actuel
 - Toutes les URLs pointent vers `natty-suivi.vercel.app` (plus Netlify)
@@ -1011,10 +1018,16 @@ PostgREST la renvoie en `string`. Toujours `JSON.stringify` à l'écriture, et r
 **Problème** : `onMessage` n'existe que sur les pages avec un élément `#html3`. Sur les autres pages → `TypeError: $w(...).onMessage is not a function` → tout le `$w.onReady` crashe → pas de token → pas de redirection.
 **Solution** : `const hasHtml3 = typeof $w('#html3').onMessage === 'function'` avant d'appeler.
 
-### Cache Vercel/navigateur
+### Cache Vercel/navigateur — ✅ cause trouvée (août 2026)
 **Problème** : ancienne version servie malgré un nouveau déploiement.
+**Cause réelle, longtemps invisible** : les headers `no-cache` existaient bien… dans un fichier
+nommé **`vercel`**, sans extension, que Vercel ne lit pas. `vercel.json` ne les a **jamais**
+portés (vérifié sur tout l'historique git). La parade n° 2 ci-dessous masquait le symptôme sur
+les pages Wix, d'où la persistance du bug ailleurs. Corrigé : headers rapatriés dans
+`vercel.json`, fichier orphelin supprimé.
 **Solution** :
-1. `vercel.json` avec headers `Cache-Control: no-cache` sur les `.html`
+1. `vercel.json` avec headers `Cache-Control: no-cache` sur les `.html` — **c'est fait**,
+   et ne jamais les remettre dans un fichier au nom approchant
 2. `masterPage.js` : `?v=Date.now()` sur toutes les URLs
 3. En dernier recours : vider le cache navigateur (Cmd+Shift+Suppr sur Mac/Chrome)
 
@@ -1170,8 +1183,14 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ `progression.html` (page orpheline, jamais reliée) et ses endpoints `/api/suggestions-macros`/`/api/analyse-nutrition` — supprimés, remplacés par `narration.html` dans l'usage réel (voir ci-dessous et §3).
 - ✅ `api/scan-plat.js` — supprimé, doublon d'une feature déjà livrée (`analyserAvecIA()`/`saveIA()` dans `index.html`, voir §3).
 - ✅ `api/supabase.js` (proxy générique Supabase, orphelin) — supprimé.
-- `manifest.json`/`suivi.html`/`onboarding.html` référencent `/icon-192.png` inexistant — voir §7. **Pas encore corrigé.**
-- Fichier `vercel` (sans extension, racine) — artefact sans effet à nettoyer, confirmation Pablo requise. **Pas encore fait.**
+- ✅ Icônes PWA : plus aucune référence à `/icon-192.png`. `manifest.json` pointe sur
+  `/natty-icon-192.png` (présent), `www/manifest.json` sur ses `.webp` (tous présents, types
+  corrects). Cette entrée était **périmée** — rien à faire.
+- ✅ Fichier `vercel` (sans extension) supprimé, et ses headers no-cache **rapatriés dans
+  `vercel.json`** : ils n'avaient jamais été actifs (voir §2, c'est la cause du bug de cache).
+- ✅ Service worker : `onboarding.html` (+ `www/`) enregistrait encore `/sw.js` alors que
+  `index.html`/`suivi.html` désinscrivent tout. Aligné sur la désinscription — `sw.js`
+  s'auto-désinscrivant, l'enregistrement n'avait aucun effet, seulement une incohérence.
 
 **Abonnements & paiements**
 - ✅ `api/webhook.js` sécurisé (vérification de signature Stripe, voir §3/§7). **Nécessite d'ajouter `STRIPE_WEBHOOK_SECRET` dans Vercel avant push**, sinon le webhook rejette tout en fail-closed.
@@ -1271,7 +1290,17 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      de schéma.
 
 **Améliorations index.html**
-- Connecter l'action de la semaine du nutritionniste → affichage dans l'app — **toujours à faire**.
+- ✅ **Action de la semaine du nutritionniste — livrée** (août 2026). Carte noire en tête de
+  `suivi.html` (`#actionSemaine`), alimentée par `notes_nutritionniste.action_semaine`.
+  La colonne `note` est la note **interne** du nutritionniste : elle ne sort jamais de
+  l'admin, seule `action_semaine` s'adresse au client (vérifié : la note de test n'apparaît
+  nulle part dans la page). Passé 21 jours, le libellé devient « Dernière action de ton
+  nutritionniste » plutôt que de faire passer une consigne d'un mois pour celle de la semaine.
+  Chargée indépendamment de l'abonnement.
+  > ⚠️ **Bug bloquant trouvé et corrigé au passage** : `sauvegarderNotes()` d'`admin.html`
+  > postait sans `?on_conflict=client_id` — **409 dès la 2ᵉ sauvegarde** pour un même client
+  > (mesuré en base : 201 puis 409). Le nutritionniste pouvait écrire son action une fois et
+  > ne jamais la corriger. Même piège que `meal_likes`/`membre_amis`, voir §3.
 - ~~Analyse de plat par IA (photo → macros)~~ — **déjà livré** (`analyserAvecIA()`/`saveIA()`), ce n'était pas un backend à créer mais une feature existante mal documentée. Corrigé en §3.
 
 **Admin**
