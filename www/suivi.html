@@ -1856,9 +1856,18 @@ async function init() {
 async function loadOnboarding() {
   if (macObj.p&&macObj.c) return;
   try {
-    var r = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&completed=eq.true&select=poids,tdee,bmr,prenom&limit=1');
+    // Pas de filtre `completed=eq.true` : un membre peut avoir plusieurs
+    // lignes d'onboarding, dont une inachevée plus récente. Filtrer dessus
+    // ne renvoyait alors RIEN, macObj restait à 0, et les anneaux affichaient
+    // « 0 g restant » — ce qui se lit « objectif atteint », soit l'inverse.
+    // On prend donc la ligne la plus exploitable : celle qui porte un tdee.
+    // Même logique que assets/social.js.
+    var r = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&select=poids,tdee,bmr,prenom,completed&order=created_at.desc');
     if (!r||!r.length) return;
-    var d=r[0];
+    var d = null;
+    for (var i=0;i<r.length;i++) { if (parseFloat(r[i].tdee)>0 && parseFloat(r[i].poids)>0) { d=r[i]; break; } }
+    if (!d) for (var j=0;j<r.length;j++) { if (parseFloat(r[j].tdee)>0) { d=r[j]; break; } }
+    if (!d) d = r[0];
     if (d.prenom) setText('headerName', d.prenom);
     var poids=parseFloat(d.poids)||0, tdee=parseFloat(d.tdee)||0;
     if (!macObj.p) macObj.p = poids?Math.round(poids*2):0;
@@ -1976,9 +1985,16 @@ function afficherMacros() {
 
   // Valeurs affichées
   // Grammes affichés dans les anneaux = restants (objectif - consommé), pas consommés.
-  setText('vProt', hasData ? Math.max(0, Math.round(macObj.p-moy.p)) : (macObj.p||'–'));
-  setText('vGluc', hasData ? Math.max(0, Math.round(macObj.g-moy.g)) : (macObj.g||'–'));
-  setText('vLip',  hasData ? Math.max(0, Math.round(macObj.l-moy.l)) : (macObj.l||'–'));
+  // Sans objectif connu (onboarding sans poids ni tdee), « restant » n'a aucun
+  // sens : afficher 0 se lirait « objectif atteint », soit l'inverse de la
+  // réalité. On affiche un tiret jusqu'à ce que le profil soit renseigné.
+  function restantAffiche(obj, conso) {
+    if (!obj) return '–';
+    return hasData ? Math.max(0, Math.round(obj - conso)) : obj;
+  }
+  setText('vProt', restantAffiche(macObj.p, moy.p));
+  setText('vGluc', restantAffiche(macObj.g, moy.g));
+  setText('vLip',  restantAffiche(macObj.l, moy.l));
   setText('vCal',  hasData ? moy.c : (macObj.c||'–'));
   setText('oCal',  macObj.c||'–');
 
