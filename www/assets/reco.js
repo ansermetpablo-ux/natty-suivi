@@ -26,8 +26,17 @@ var NattyReco = (function () {
      pour ne dépendre d'aucun domaine. C'est cette seule différence qui
      justifiait deux copies divergentes de ce fichier — elles sont désormais
      identiques. */
-  var API_BASE = (location.protocol === 'capacitor:' || location.protocol === 'file:')
-    ? 'https://natty-suivi.vercel.app' : '';
+  var API_BASE = (function () {
+    var h = location.hostname, pr = location.protocol;
+    // Relatif UNIQUEMENT quand la page est servie par le vrai déploiement web :
+    // là, /api/... résout. Partout ailleurs — capacitor://localhost (iOS),
+    // http://localhost (WebView Android), file:// — il faut l'URL absolue.
+    // Tester seulement le protocole ne suffisait pas : Android est en http:,
+    // l'appel repartait en relatif vers un hôte sans backend.
+    var web = (pr === 'http:' || pr === 'https:')
+      && h && h !== 'localhost' && h !== '127.0.0.1' && h !== '[::1]';
+    return web ? '' : 'https://natty-suivi.vercel.app';
+  })();
 
 
   /* ── 1. Collecte du profil ───────────────────────────────── */
@@ -357,8 +366,13 @@ var NattyReco = (function () {
     var profil = await chargerProfil();
     var txt = await appelerClaude(construirePrompt(profil, NB_SEMAINE, null, true), 8000);
     var out = extraireObjet(txt);
-    if (!out || !out.recettes || !out.recettes.length) {
-      throw new Error('Réponse IA inexploitable');
+    if (!out) {
+      // Cas le plus courant : réponse tronquée par la limite de tokens, le
+      // JSON n'a alors pas d'accolade fermante. La longueur permet de trancher.
+      throw new Error('Réponse IA illisible (' + (txt || '').length + ' caractères, JSON incomplet ?)');
+    }
+    if (!out.recettes || !out.recettes.length) {
+      throw new Error('Réponse IA sans recette');
     }
     var recettes = out.recettes.slice(0, NB_SEMAINE);
     var conseils = out.conseils || {};
@@ -376,10 +390,13 @@ var NattyReco = (function () {
      même si la requête échoue. La valeur réellement utilisée pour une
      génération reste par ailleurs consignée dans conseils_json.nb_repas. */
 
-  /* Une seule génération par semaine, et elle produit 7 recettes — une par
-     jour. Le réglage 1-7 a disparu de l'interface : les bornes restent
-     égales pour que tous les appels existants convergent vers 7. */
-  var NB_SEMAINE = 7, NB_DEFAUT = 7, NB_MIN = 7, NB_MAX = 7;
+  /* Une seule génération par semaine, et elle produit 2 recettes par personne.
+     Le réglage 1-7 a disparu de l'interface : les bornes restent égales pour
+     que tous les appels existants convergent vers la même valeur.
+     À 7 recettes complètes (ingrédients + étapes + avantages) plus l'analyse,
+     la réponse frôlait la limite de tokens et le JSON revenait tronqué, donc
+     inparsable — d'où l'erreur de génération. */
+  var NB_SEMAINE = 2, NB_DEFAUT = 2, NB_MIN = 2, NB_MAX = 2;
   var nbCourant = null;   // renseigné par chargerNbRepas()
 
   function borner(n) {
