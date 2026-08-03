@@ -13,9 +13,11 @@
    Le résultat est mis en cache dans profil_conseils.conseils_json
    pour ne pas rappeler l'IA à chaque ouverture de page.
 
-   ⚠️ Ne JAMAIS ajouter liste_courses_json / recettes_json à un
-   SELECT sur profil_conseils : ces colonnes n'existent pas et la
-   requête échoue en 400 (piège documenté dans CLAUDE.md §7).
+   Les recettes de la semaine partent aussi du garde-manger quand
+   assets/garde-manger.js est chargé : la liste des ingrédients
+   disponibles est injectée dans le prompt (section « INGRÉDIENTS
+   DISPONIBLES »), et les recettes marquent alors ce qu'il reste à
+   acheter.
    ═══════════════════════════════════════════════════════════ */
 var NattyReco = (function () {
 
@@ -42,6 +44,14 @@ var NattyReco = (function () {
     out.onboarding   = res[0] && res[0].length ? res[0][0] : null;
     out.questionnaire= res[1] && res[1].length ? res[1][0] : null;
     out.semaine      = res[2] || [];
+
+    // Garde-manger : optionnel (le module n'est pas chargé sur tous les
+    // écrans). Absent, les recettes sont proposées comme avant.
+    out.garde = '';
+    if (typeof NattyGardeManger !== 'undefined') {
+      try { await NattyGardeManger.charger(); out.garde = NattyGardeManger.pourPrompt(); }
+      catch (e) { out.garde = ''; }
+    }
     return out;
   }
 
@@ -152,6 +162,11 @@ var NattyReco = (function () {
     p += platsSemaine.length ? ("- Plats : " + platsSemaine.join(' | ') + "\n") : "- Aucun repas enregistré\n";
     if (recurrents.length) p += "- Ingrédients récurrents : " + recurrents.map(function (r) { return r.nom + ' (x' + r.n + ')'; }).join(', ') + "\n";
 
+    if (profil.garde) {
+      p += "\nINGRÉDIENTS DISPONIBLES (garde-manger de l'utilisateur)\n";
+      p += "- " + profil.garde + "\n";
+    }
+
     if (contrainte) {
       p += "\nCONTRAINTE DU TIRAGE (impérative)\n- " + contrainte + "\n";
     }
@@ -163,11 +178,15 @@ var NattyReco = (function () {
     p += "   Si la liste des goûts contredit le régime (ex. régime vegan mais viande citée dans les aliments aimés), le RÉGIME l'emporte toujours : propose l'équivalent compatible, jamais l'aliment interdit.\n";
     p += "4. Respecte le temps de cuisine disponible.\n";
     p += "5. Écris en français, ton direct et concret (tutoiement).\n";
+    if (profil.garde) {
+      p += "6. Pars des INGRÉDIENTS DISPONIBLES : chaque recette doit en utiliser plusieurs, et l'ensemble des recettes doit écouler ce stock en priorité. N'ajoute d'ingrédient absent de la liste que si la recette ne tient pas debout sans lui, et garde ces ajouts courants et peu nombreux.\n";
+      p += "7. Sur chaque ingrédient, mets \"dispo\":true s'il figure dans les INGRÉDIENTS DISPONIBLES, false s'il faut l'acheter.\n";
+    }
 
     p += "\nRéponds UNIQUEMENT avec un tableau JSON valide, sans texte autour, au format :\n";
     p += '[{"nom":"Nom du plat","pourquoi":"une phrase expliquant pourquoi ce plat pour LUI","temps_min":25,';
     p += '"macros":{"p":42,"g":60,"l":18,"kcal":600},';
-    p += '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g"}],';
+    p += '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g","dispo":true}],';
     p += '"steps":[{"em":"🔪","t":"Étape courte","tip":"astuce"}]}]';
 
     return p;

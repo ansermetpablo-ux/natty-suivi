@@ -109,6 +109,39 @@ body{overflow-x:hidden}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .empty{text-align:center;color:var(--muted);font-size:14px;padding:60px 0}
 
+/* ══ Garde-manger : ce que l'utilisateur a chez lui ══ */
+/* Le plat du hero déborde de 104 px vers le haut : on lui laisse la place. */
+#gmWrap .panel{margin-bottom:26px}
+.gm-acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:13px}
+.gm-act{background:var(--card);border:none;border-radius:15px;padding:11px 2px 9px;font-family:inherit;
+  font-size:9.5px;font-weight:700;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:6px;box-shadow:var(--nm-in);line-height:1.15;text-align:center}
+.gm-act:active{transform:scale(.96)}
+.gm-act .em{font-size:20px}
+.gm-saisie{display:none;gap:8px;margin-bottom:13px}
+.gm-saisie.on{display:flex}
+.gm-saisie input{flex:1;min-width:0;background:var(--bg);border:1px solid #e3e3e8;border-radius:14px;
+  padding:11px 13px;font-family:inherit;font-size:13px;color:var(--ink)}
+.gm-saisie button{background:var(--ink);color:#fff;border:none;border-radius:14px;padding:0 16px;
+  font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap}
+.gm-etat{display:none;font-size:12.5px;color:var(--muted);text-align:center;padding:8px 0 12px}
+.gm-etat.on{display:block}
+.gm-etat .sp{display:inline-block;width:14px;height:14px;border:2px solid #dcdce2;border-top-color:var(--ink);
+  border-radius:50%;animation:gmSpin .8s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes gmSpin{to{transform:rotate(360deg)}}
+.gm-vide{font-size:12.5px;color:var(--muted);line-height:1.5;text-align:center;padding:2px 4px 4px}
+.gm-gen{width:100%;margin-top:14px;background:var(--ink);color:#fff;border:none;border-radius:var(--r-full);
+  padding:14px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;
+  box-shadow:4px 6px 14px rgba(20,20,22,.28)}
+.gm-gen:disabled{opacity:.3;box-shadow:none;cursor:default}
+.gm-note{font-size:10.5px;color:var(--muted);text-align:center;margin-top:9px;line-height:1.4}
+/* Croix de retrait sur une pastille du garde-manger */
+.ingr .del{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;background:var(--bg);
+  border:none;color:var(--muted);font-size:9px;line-height:1;cursor:pointer;box-shadow:var(--nm-soft);
+  display:flex;align-items:center;justify-content:center;padding:0}
+/* Ingrédient de recette absent du garde-manger : à acheter */
+.ingr.buy .tick{background:var(--amber)}
+
 /* Réglage du nombre de repas voulus pour la semaine. Masqué tant que la page
    n'a pas confirmé qu'elle affiche bien la semaine (et non un repas précis
    ouvert via ?id=). */
@@ -146,14 +179,22 @@ body{overflow-x:hidden}
   </div>
 </div>
 
+<div class="wrap" id="gmWrap"></div>
+
 <div class="wrap" id="content">
   <div class="empty">Chargement…</div>
 </div>
+
+<!-- Déclenchés depuis les boutons du garde-manger : le .click() reste dans le
+     geste utilisateur, sinon iOS refuse d'ouvrir la caméra. -->
+<input type="file" id="gmCam" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="gmGal" accept="image/*" style="display:none">
 
 <div class="toast" id="toast"></div>
 
 <script src="/assets/core.js"></script>
 <script src="/assets/reco.js"></script>
+<script src="/assets/garde-manger.js"></script>
 <script src="/assets/minijeux.js"></script>
 <script>
 /* ═══ État ═══ */
@@ -283,12 +324,19 @@ function render(){
 
   if (d.ingr.length){
     var actifs = d.ingr.length - Object.keys(ingrOff).length;
+    // Quand le garde-manger est rempli, on distingue ce qu'il faut acheter.
+    // Le test est fait ici plutôt qu'en se fiant au champ "dispo" renvoyé par
+    // l'IA : la liste a pu changer depuis la génération.
+    var gmOn = typeof NattyGardeManger !== 'undefined' && NattyGardeManger.nbItems() > 0;
+    var manque = d.ingr.map(function(x){ return gmOn && !NattyGardeManger.contient(x.nm); });
+    var nbAchat = manque.filter(Boolean).length;
     html += '<div class="panel">'
-      + '<div class="panel-head"><div class="panel-title">Ingrédients <span>('+actifs+'/'+d.ingr.length+')</span></div>'
+      + '<div class="panel-head"><div class="panel-title">Ingrédients <span>('+actifs+'/'+d.ingr.length
+      + (nbAchat ? ' · '+nbAchat+' à acheter' : '')+')</span></div>'
       + '<div class="panel-link" id="ingrEdit">Modifier</div></div>'
       + '<div class="ingr-grid">' + d.ingr.map(function(x,i){
-          return '<div class="ingr'+(ingrOff[i]?' off':'')+'" data-i="'+i+'">'
-            + '<div class="tick">✓</div><div class="em">'+x.em+'</div>'
+          return '<div class="ingr'+(ingrOff[i]?' off':'')+(manque[i]?' buy':'')+'" data-i="'+i+'">'
+            + '<div class="tick">'+(manque[i]?'+':'✓')+'</div><div class="em">'+x.em+'</div>'
             + '<div class="nm">'+esc(x.nm)+'</div>'
             + (x.qt ? '<div class="qt">'+esc(x.qt)+'</div>' : '')
             + '</div>';
@@ -363,6 +411,160 @@ function brancher(){
   brancherDecouvrir();
 }
 
+/* ═══ Garde-manger ═══
+   Ce que l'utilisateur a chez lui, rempli par scan (courses, ticket,
+   photo) ou saisie. C'est la base de la génération de recettes : le
+   prompt de NattyReco reçoit cette liste (voir assets/reco.js). */
+
+var gmType = 'courses';   // type du scan en cours, pour le prompt
+
+function gmEtat(msg, spin){
+  var e = document.getElementById('gmEtat');
+  if (!e) return;
+  e.classList.toggle('on', !!msg);
+  e.innerHTML = msg ? ((spin ? '<span class="sp"></span>' : '') + esc(msg)) : '';
+}
+
+function rendreGardeManger(){
+  var w = document.getElementById('gmWrap');
+  if (!w) return;
+  var items = NattyGardeManger.liste();
+
+  var corps = items.length
+    ? '<div class="ingr-grid">' + items.map(function(x, i){
+        return '<div class="ingr" data-gmi="' + i + '">'
+          + '<button class="del" data-gmdel="' + i + '" aria-label="Retirer">✕</button>'
+          + '<div class="em">' + esc(x.em || '🥄') + '</div>'
+          + '<div class="nm">' + esc(x.nom) + '</div>'
+          + (x.qt || x.qte ? '<div class="qt">' + esc(x.qte || x.qt) + '</div>' : '')
+          + '</div>';
+      }).join('') + '</div>'
+    : '<div class="gm-vide">Scanne tes courses ou ton ticket de caisse : tes recettes de la semaine partiront de ce que tu as déjà.</div>';
+
+  w.innerHTML = '<div class="panel">'
+    + '<div class="panel-head">'
+      + '<div class="panel-title">Mon garde-manger <span>(' + items.length + ')</span></div>'
+      + (items.length ? '<div class="panel-link" id="gmVider">Tout vider</div>' : '')
+    + '</div>'
+    + '<div class="gm-acts">'
+      + '<button class="gm-act" data-gm="courses"><span class="em">🛒</span>Mes courses</button>'
+      + '<button class="gm-act" data-gm="ticket"><span class="em">🧾</span>Ticket</button>'
+      + '<button class="gm-act" data-gm="galerie"><span class="em">🖼️</span>Une photo</button>'
+      + '<button class="gm-act" data-gm="saisie"><span class="em">✏️</span>Saisir</button>'
+    + '</div>'
+    + '<div class="gm-saisie" id="gmSaisie">'
+      + '<input id="gmInput" type="text" placeholder="poulet, riz 500 g, brocoli…" autocomplete="off">'
+      + '<button id="gmAdd">Ajouter</button>'
+    + '</div>'
+    + '<div class="gm-etat" id="gmEtat"></div>'
+    + corps
+    + '<button class="gm-gen" id="gmGen"' + (items.length ? '' : ' disabled') + '>'
+      + 'Générer mes repas avec ces ingrédients</button>'
+    + (NattyGardeManger.estSynchronise() ? ''
+        : '<div class="gm-note">Liste gardée sur cet appareil uniquement.</div>')
+    + '</div>';
+
+  brancherGardeManger();
+}
+
+function brancherGardeManger(){
+  document.querySelectorAll('.gm-act').forEach(function(b){
+    b.addEventListener('click', function(){
+      var mode = b.dataset.gm;
+      if (mode === 'saisie'){
+        var z = document.getElementById('gmSaisie');
+        z.classList.toggle('on');
+        if (z.classList.contains('on')) document.getElementById('gmInput').focus();
+        return;
+      }
+      if (mode === 'galerie'){ gmType = 'auto'; document.getElementById('gmGal').click(); return; }
+      gmType = mode;                                   // 'courses' | 'ticket'
+      document.getElementById('gmCam').click();        // appel synchrone : ouvre la caméra
+    });
+  });
+
+  var add = document.getElementById('gmAdd');
+  if (add) add.addEventListener('click', gmAjoutSaisie);
+  var inp = document.getElementById('gmInput');
+  if (inp) inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') gmAjoutSaisie(); });
+
+  document.querySelectorAll('[data-gmdel]').forEach(function(b){
+    b.addEventListener('click', async function(){
+      await NattyGardeManger.retirer(+b.dataset.gmdel);
+      rendreGardeManger();
+    });
+  });
+
+  var vider = document.getElementById('gmVider');
+  if (vider) vider.addEventListener('click', async function(){
+    await NattyGardeManger.vider();
+    rendreGardeManger();
+    toast('Garde-manger vidé');
+  });
+
+  var gen = document.getElementById('gmGen');
+  if (gen) gen.addEventListener('click', gmGenerer);
+}
+
+async function gmAjoutSaisie(){
+  var inp = document.getElementById('gmInput');
+  var trouves = NattyGardeManger.depuisTexte(inp.value);
+  if (!trouves.length){ toast('Rien à ajouter'); return; }
+  await NattyGardeManger.ajouter(trouves);
+  rendreGardeManger();
+  toast(trouves.length + (trouves.length > 1 ? ' ingrédients ajoutés' : ' ingrédient ajouté'));
+}
+
+async function gmScan(file){
+  gmEtat(gmType === 'ticket' ? 'Lecture du ticket…' : 'Lecture de la photo…', true);
+  try{
+    var trouves = await NattyGardeManger.scanner(file, gmType);
+    if (!trouves.length){
+      gmEtat('Aucun aliment reconnu. Reprends la photo, ou saisis-les à la main.');
+      return;
+    }
+    await NattyGardeManger.ajouter(trouves);
+    rendreGardeManger();
+    toast(trouves.length + (trouves.length > 1 ? ' ingrédients ajoutés' : ' ingrédient ajouté'));
+  }catch(e){
+    gmEtat('Lecture impossible. Réessaie, ou saisis les ingrédients à la main.');
+  }
+}
+
+/* Régénère la semaine en partant du garde-manger. Le contenu du prompt est
+   assemblé par NattyReco : ici on ne fait que déclencher et réafficher. */
+async function gmGenerer(){
+  var nb = (typeof NattyReco.nbRepas === 'function') ? NattyReco.nbRepas() : 4;
+  document.getElementById('content').innerHTML =
+    '<div class="empty">Génération de tes ' + nb + ' repas à partir de ton garde-manger…' +
+    '<br><span style="font-size:12px">Cela prend une vingtaine de secondes.</span></div>';
+  try{
+    var r = NattyReco.genererSemaine
+      ? await NattyReco.genererSemaine(nb)
+      : await NattyReco.recommander(nb);
+    if (!r || !r.length){
+      document.getElementById('content').innerHTML =
+        '<div class="empty">La génération n\'a rien renvoyé. Réessaie dans un instant.</div>';
+      return;
+    }
+    if (typeof SEMAINE !== 'undefined'){ SEMAINE = r; rendreSemaine(); }
+    else { PLATS = r.map(depuisRecette); actif = 0; ingrOff = {}; render(); }
+    toast('Recettes générées à partir de ton garde-manger');
+  }catch(e){
+    document.getElementById('content').innerHTML =
+      '<div class="empty">Impossible de générer les repas.</div>';
+  }
+}
+
+document.getElementById('gmCam').addEventListener('change', function(){
+  if (this.files && this.files[0]) gmScan(this.files[0]);
+  this.value = '';
+});
+document.getElementById('gmGal').addEventListener('change', function(){
+  if (this.files && this.files[0]) gmScan(this.files[0]);
+  this.value = '';
+});
+
 /* ═══ Chargement ═══ */
 document.getElementById('backBtn').addEventListener('click', function(){
   if (document.referrer) history.back(); else Natty.goto('index.html');
@@ -433,6 +635,11 @@ async function genererMaintenant(){
 
 (async function(){
   if (!Natty.requireAuth()) return;
+
+  // Le garde-manger s'affiche avant les recettes : c'est lui qui les alimente,
+  // et il reste visible même quand la semaine est vide ou en cours de génération.
+  await NattyGardeManger.charger();
+  rendreGardeManger();
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
 
@@ -467,6 +674,7 @@ async function genererMaintenant(){
   }
 })();
 </script>
+<script src="/assets/ajout.js"></script>
 <script src="/assets/nav.js"></script>
 </body>
 </html>

@@ -4658,8 +4658,22 @@ function ouvrirRecettes() {
 
 </script>
 <script>
+// Repli si assets/ajout.js ne se charge pas : la nav retombe sur l'ancien
+// overlay d'ajout de cet écran.
 window.NattyOnAdd = function(){ if (typeof openRepasOverlay === 'function') openRepasOverlay(); };
+// Un repas ajouté depuis le parcours + (assets/ajout.js) rafraîchit les
+// macros et l'historique sans recharger la page.
+window.addEventListener('natty:repas-ajoute', function(){
+  if (typeof loadMeals === 'function') {
+    loadMeals().then(function(){
+      if (typeof afficherMacros === 'function') afficherMacros();
+      if (typeof chargerDiagnostics === 'function') chargerDiagnostics();
+    });
+  }
+});
 </script>
+<script src="/assets/core.js"></script>
+<script src="/assets/ajout.js"></script>
 <script src="/assets/nav.js"></script>
 </body>
 </html>
