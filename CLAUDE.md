@@ -1243,13 +1243,17 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      `App.app-Simulated.xcent` généré porte bien `aps-environment: development` et
      `SAZQ9AFAMZ.com.pabloansermet.nattysuivi`. **Un simulateur ne peut de toute façon pas
      obtenir de vrai jeton APNs** : le premier jeton réel viendra d'un iPhone.
-  4. **Les crons dans `vercel.json`** — délibérément pas ajoutés (règle §9 #14, et voir
-     [[vercel-crons-a-verifier]] : 12 crons déclarés alors que le plan Hobby en autorise 2).
-     Ligne à ajouter pour le rappel du soir :
+  4. **Les crons dans `vercel.json`** — délibérément pas ajoutés (règle §9 #14 : ce fichier ne
+     se modifie pas sans l'accord de Pablo). Ligne à ajouter pour le rappel du soir :
      `{ "path": "/api/rappel-macros", "schedule": "0 16 * * *" }` (16 h UTC = 18 h à Paris en
-     été). ⚠️ **`push-amis` n'a de sens qu'à ~15 min de cadence** : sous Hobby (2 crons/jour)
-     la notification « un ami a ajouté un plat » arriverait le lendemain. Soit un plan qui
-     autorise les crons fréquents, soit un déclencheur Supabase + pg_net.
+     été, 17 h en hiver — Vercel ne connaît que l'UTC).
+     ✅ **Un cron quotidien ne pose pas de problème** : mesuré le 2026-08-03 dans Vercel →
+     Observability, les 12 crons hebdo déclarés se sont bien exécutés (12 invocations, 0 %
+     d'erreur) — la crainte d'une limite Hobby bloquante était infondée.
+     ⚠️ **Reste ouvert : `push-amis` n'a de sens qu'à ~15 min de cadence**, et ça, rien ne le
+     démontre. Ce qui est mesuré, c'est 12 crons **hebdomadaires** qui partent, pas un cron
+     qui se répète dans la journée. Si une cadence courte n'est pas honorée : déclencheur
+     Supabase + `pg_net` sur `meals`, ou plan supérieur.
   5. **Android : bloqué en amont.** Le plugin passe par Firebase Cloud Messaging et exige un
      `google-services.json` (donc un projet Firebase) ; l'app Android n'a de toute façon jamais
      été compilée. `appareils.plateforme` est prévu pour accueillir des jetons FCM sans changer
