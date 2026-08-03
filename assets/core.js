@@ -9,56 +9,185 @@ var Natty = (function () {
   var CLD_CLD = 'dujji1s6g';
   var CLD_PRE = 'meal_photos';
 
+  /* ── Session Supabase ────────────────────────────────────────
+     L'identité vient du JWT émis par Supabase Auth, pas d'un identifiant
+     passé dans l'URL : c'est lui qui permettra aux policies RLS de
+     reconnaître l'utilisateur. Le jeton est court (1 h) et renouvelé à la
+     demande avec le refresh_token.
+     ─────────────────────────────────────────────────────────── */
+  var SESSION_KEY = 'natty_session';
+  var SESSION = null;
+  var refreshEnCours = null;
+
+  // Décode la charge utile d'un JWT sans la vérifier : elle ne sert qu'à
+  // connaître l'identifiant et l'expiration. La vérification, elle, est faite
+  // par Supabase à chaque requête — on ne lui fait pas confiance ici.
+  function charge(jwt) {
+    try {
+      var p = String(jwt).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      var bin = atob(p + '==='.slice((p.length + 3) % 4));
+      var pct = Array.prototype.map.call(bin, function (c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join('');
+      return JSON.parse(decodeURIComponent(pct));
+    } catch (e) { return null; }
+  }
+
+  function lireSession() {
+    try {
+      var s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+      return (s && s.access_token && s.refresh_token) ? s : null;
+    } catch (e) { return null; }
+  }
+
+  function ecrireSession(d) {
+    if (!d || !d.access_token) return null;
+    SESSION = {
+      access_token: d.access_token,
+      refresh_token: d.refresh_token || (SESSION && SESSION.refresh_token) || '',
+      expires_at: d.expires_at || (Math.floor(Date.now() / 1000) + (d.expires_in || 3600))
+    };
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(SESSION)); } catch (e) {}
+    return SESSION;
+  }
+
+  // Marge de 60 s : un jeton qui expire pendant le vol de la requête serait
+  // refusé côté serveur alors qu'il paraissait encore valide ici.
+  function expireBientot(s) {
+    return !s || !s.expires_at || (s.expires_at - 60) * 1000 <= Date.now();
+  }
+
+  // Un seul renouvellement à la fois : plusieurs écrans chargent leurs données
+  // en parallèle, et un refresh_token consommé deux fois est invalidé.
+  function rafraichirSession() {
+    if (refreshEnCours) return refreshEnCours;
+    if (!SESSION || !SESSION.refresh_token) return Promise.resolve(null);
+    var jetonRafraichissement = SESSION.refresh_token;
+    refreshEnCours = fetch(SB_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { apikey: SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: jetonRafraichissement })
+    }).then(function (r) {
+      return r.json().then(function (d) {
+        if (r.ok && d && d.access_token) return ecrireSession(d);
+        // Refus explicite du serveur : la session est morte. On renvoie vers
+        // la connexion plutôt que de retomber sur la clé anon — sinon, une
+        // fois les RLS actives, l'utilisateur verrait des écrans vides sans
+        // comprendre qu'il est déconnecté.
+        deconnecter();
+        return null;
+      });
+    }).catch(function () {
+      // Panne réseau : on garde la session, elle re-servira au retour en ligne.
+      return null;
+    }).then(function (s) { refreshEnCours = null; return s; });
+    return refreshEnCours;
+  }
+
+  async function jeton() {
+    if (!SESSION) return null;
+    if (!expireBientot(SESSION)) return SESSION.access_token;
+    var s = await rafraichirSession();
+    return s ? s.access_token : null;
+  }
+
+  function deconnecter(redirige) {
+    SESSION = null;
+    try {
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem('natty_token');
+      localStorage.removeItem('natty_user_id');
+    } catch (e) {}
+    // Jamais depuis la page de connexion elle-même : elle charge aussi core.js,
+    // et une session périmée y déclencherait une boucle de rechargement.
+    var surLogin = /login\.html$/.test(window.location.pathname);
+    if (redirige !== false && !surLogin) window.location.href = 'login.html';
+  }
+
+  SESSION = lireSession();
+
+  /* ── Identité ──────────────────────────────────────────────── */
   var params = new URLSearchParams(window.location.search);
   var TOKEN = params.get('token') || '';
   var USER_ID = null;
-  var uP = params.get('userId');
-  if (uP && uP !== 'null') {
-    USER_ID = uP;
-  } else if (TOKEN.length > 10) {
-    try {
-      var d = TOKEN.match(/.{1,2}/g).map(function (b) { return String.fromCharCode(parseInt(b, 16)); }).join('');
-      if (d.indexOf('-') > -1) USER_ID = d;
-    } catch (e) {}
-  }
-  if (TOKEN && USER_ID) {
-    localStorage.setItem('natty_token', TOKEN);
-    localStorage.setItem('natty_user_id', USER_ID);
-  } else if (!TOKEN) {
-    var savedToken = localStorage.getItem('natty_token');
-    var savedUserId = localStorage.getItem('natty_user_id');
-    if (savedToken && savedUserId) { TOKEN = savedToken; USER_ID = savedUserId; }
+
+  var claims = SESSION ? charge(SESSION.access_token) : null;
+  if (claims && claims.sub) USER_ID = claims.sub;
+
+  // Repli transitoire : les identifiants passés par l'URL ou laissés en
+  // localStorage par l'ancien fonctionnement. À supprimer une fois les RLS
+  // actives — à ce moment-là ces requêtes ne renverront plus rien de toute
+  // façon, faute de JWT.
+  if (!USER_ID) {
+    var uP = params.get('userId');
+    if (uP && uP !== 'null') {
+      USER_ID = uP;
+    } else if (TOKEN.length > 10) {
+      try {
+        var d = TOKEN.match(/.{1,2}/g).map(function (b) { return String.fromCharCode(parseInt(b, 16)); }).join('');
+        if (d.indexOf('-') > -1) USER_ID = d;
+      } catch (e) {}
+    }
+    if (TOKEN && USER_ID) {
+      localStorage.setItem('natty_token', TOKEN);
+      localStorage.setItem('natty_user_id', USER_ID);
+    } else if (!TOKEN) {
+      var savedToken = localStorage.getItem('natty_token');
+      var savedUserId = localStorage.getItem('natty_user_id');
+      if (savedToken && savedUserId) { TOKEN = savedToken; USER_ID = savedUserId; }
+    }
   }
 
-  async function sbFetch(path) {
+  /* ── Accès Supabase ────────────────────────────────────────── */
+  // Sans session, on retombe sur la clé anon : c'est ce qui fait tenir les
+  // écrans tant que les RLS sont désactivées. Une fois les policies posées,
+  // seul le JWT donnera accès aux données.
+  async function entetes(sup) {
+    var t = await jeton();
+    var h = {
+      apikey: SB_KEY,
+      Authorization: 'Bearer ' + (t || SB_KEY),
+      'Content-Type': 'application/json'
+    };
+    if (sup) for (var k in sup) h[k] = sup[k];
+    return h;
+  }
+
+  async function appel(path, init, reessai) {
+    var o = init || {};
     var r = await fetch(SB_URL + '/rest/v1/' + path, {
-      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', Accept: 'application/json' }
+      method: o.method || 'GET',
+      headers: await entetes(o.headers),
+      body: o.body
     });
+    // Jeton refusé alors qu'on en avait un : il a pu être révoqué côté serveur.
+    // On tente un renouvellement, une seule fois.
+    if ((r.status === 401 || r.status === 403) && SESSION && !reessai) {
+      if (await rafraichirSession()) return appel(path, init, true);
+    }
     var t = await r.text();
     if (!r.ok) throw new Error(t);
     return t ? JSON.parse(t) : [];
   }
 
-  async function sbPost(path, body, prefer) {
-    var r = await fetch(SB_URL + '/rest/v1/' + path, {
+  function sbFetch(path) {
+    return appel(path, { headers: { Accept: 'application/json' } });
+  }
+
+  function sbPost(path, body, prefer) {
+    return appel(path, {
       method: 'POST',
-      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', Prefer: prefer || 'return=representation' },
+      headers: { Prefer: prefer || 'return=representation' },
       body: JSON.stringify(body)
     });
-    var t = await r.text();
-    if (!r.ok) throw new Error(t);
-    return t ? JSON.parse(t) : [];
   }
 
-  async function sbPatch(path, body) {
-    var r = await fetch(SB_URL + '/rest/v1/' + path, {
+  function sbPatch(path, body) {
+    return appel(path, {
       method: 'PATCH',
-      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      headers: { Prefer: 'return=representation' },
       body: JSON.stringify(body)
     });
-    var t = await r.text();
-    if (!r.ok) throw new Error(t);
-    return t ? JSON.parse(t) : [];
   }
 
   // Table nutritionnelle (~100g), identique à celle d'index.html — même calcul partout.
@@ -115,29 +244,15 @@ var Natty = (function () {
     return false;
   }
 
-  // Redirige les postMessage Wix (connexion/déconnexion) vers un rechargement propre —
-  // même logique que index.html, centralisée pour tous les écrans.
-  window.addEventListener('message', function (event) {
-    var data = event.data;
-    if (!data || typeof data !== 'object') return;
-    if (data.type === 'userConnected' && data.token && data.userId) {
-      var url = new URL(window.location.href);
-      url.searchParams.set('token', data.token);
-      window.location.replace(url.toString());
-    } else if (data.type === 'userLoggedOut') {
-      localStorage.removeItem('natty_token');
-      localStorage.removeItem('natty_user_id');
-      var url3 = new URL(window.location.href);
-      url3.searchParams.delete('token');
-      url3.searchParams.delete('userId');
-      window.location.replace(url3.toString());
-    }
-  });
-
   return {
     SB_URL: SB_URL, SB_KEY: SB_KEY, CLD_CLD: CLD_CLD, CLD_PRE: CLD_PRE,
     TOKEN: TOKEN, USER_ID: USER_ID,
     sbFetch: sbFetch, sbPost: sbPost, sbPatch: sbPatch,
-    calcMac: calcMac, getNutri: getNutri, goto: goto, requireAuth: requireAuth
+    calcMac: calcMac, getNutri: getNutri, goto: goto, requireAuth: requireAuth,
+    // Session : entetes() sert aux appels qui n'utilisent pas les helpers
+    // ci-dessus (Cloudinary, /auth/v1, requêtes en return=minimal).
+    entetes: entetes, jeton: jeton, deconnecter: deconnecter,
+    estConnecte: function () { return !!SESSION; },
+    ouvrirSession: ecrireSession
   };
 })();

@@ -307,6 +307,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="assets/core.js"></script>
 <script>
 var SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
@@ -351,13 +352,14 @@ function setLoading(btnId, loading) {
   }
 }
 
-function toHex(str) {
-  return Array.from(str).map(function(c){ return c.charCodeAt(0).toString(16).padStart(2,'0'); }).join('');
-}
-
-function redirectToApp(userId) {
-  var token = toHex(userId);
-  window.location.href = 'index.html?token=' + token;
+// Ouvre la session à partir de la réponse de Supabase Auth et entre dans
+// l'app. Les jetons sont confiés à core.js, qui les renouvellera et les
+// enverra à chaque requête — l'identité ne transite plus par l'URL.
+function entrerDansApp(auth) {
+  if (auth && auth.access_token && window.Natty) Natty.ouvrirSession(auth);
+  // Le bundle natif publie menu.html sous le nom index.html ; sur le web,
+  // index.html est encore l'ancien tableau de bord, qu'on n'ouvre plus.
+  window.location.href = estNatif() ? 'index.html' : 'menu.html';
 }
 
 async function doLogin() {
@@ -375,7 +377,7 @@ async function doLogin() {
     var data = await r.json();
     if (!r.ok) throw new Error(data.error_description || data.msg || 'Erreur de connexion');
     toast('Connexion réussie !', 'ok');
-    setTimeout(function(){ redirectToApp(data.user.id); }, 600);
+    setTimeout(function(){ entrerDansApp(data); }, 600);
   } catch(e) {
     toast(e.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect' : e.message, 'err');
     setLoading('btnLogin', false);
@@ -408,22 +410,18 @@ async function doSignup() {
       return;
     }
 
-    // Save prenom in onboarding
+    // La session s'ouvre avant l'écriture : la ligne d'onboarding porte le
+    // user_id du nouveau compte, et devra donc être écrite en son nom une
+    // fois les RLS actives.
+    if (data.access_token && window.Natty) Natty.ouvrirSession(data);
+
     try {
-      await fetch(SB_URL + '/rest/v1/onboarding', {
-        method: 'POST',
-        headers: {
-          'apikey': SB_KEY,
-          'Authorization': 'Bearer ' + SB_KEY,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({ user_id: userId, prenom: prenom })
-      });
+      await Natty.sbPost('onboarding', { user_id: userId, prenom: prenom },
+        'resolution=merge-duplicates,return=minimal');
     } catch(e) {}
 
     toast('Compte créé !', 'ok');
-    setTimeout(function(){ redirectToApp(userId); }, 600);
+    setTimeout(function(){ entrerDansApp(data); }, 600);
   } catch(e) {
     toast(e.message, 'err');
     setLoading('btnSignup', false);
@@ -450,39 +448,78 @@ async function doReset() {
   setLoading('btnReset', false);
 }
 
+// Dans l'app native, l'URL de retour est un scheme custom capté par l'app
+// (voir CAP_REDIRECT) ; sur le web, c'est la page elle-même sur Vercel.
+var CAP_REDIRECT = 'com.natty.app://oauth-callback';
+
+function estNatif() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+function urlAutorisationGoogle(redirectTo) {
+  return SB_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(redirectTo);
+}
+
 async function doGoogle() {
+  // Google refuse l'authentification depuis une WebView embarquée
+  // (erreur disallowed_useragent) : en natif on ouvre le navigateur système,
+  // qui renvoie ensuite vers l'app via le scheme custom.
+  if (estNatif()) {
+    var Browser = window.Capacitor.Plugins.Browser;
+    if (!Browser) { toast('Navigateur indisponible', 'err'); return; }
+    await Browser.open({ url: urlAutorisationGoogle(CAP_REDIRECT) });
+    return;
+  }
   // Redirect doit pointer vers Vercel, pas localhost
-  var redirectTo = 'https://natty-suivi.vercel.app/login.html?oauth=1';
-  window.location.href = SB_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(redirectTo);
+  window.location.href = urlAutorisationGoogle('https://natty-suivi.vercel.app/login.html?oauth=1');
+}
+
+// Traite le retour OAuth, que les jetons viennent du hash de la page (web)
+// ou de l'URL du deep link (natif). Renvoie true si un jeton a été trouvé.
+function traiterRetourOAuth(fragment) {
+  var hash = new URLSearchParams(String(fragment || '').replace(/^#/, ''));
+
+  var accessToken = hash.get('access_token');
+  if (accessToken) {
+    // Le fragment porte déjà les deux jetons — inutile d'aller redemander
+    // l'utilisateur à /auth/v1/user, son identifiant est dans le JWT. Et
+    // surtout : sans le refresh_token, la session Google expirerait au bout
+    // d'une heure sans pouvoir se renouveler.
+    toast('Connexion Google réussie !', 'ok');
+    setTimeout(function(){
+      entrerDansApp({
+        access_token: accessToken,
+        refresh_token: hash.get('refresh_token') || '',
+        expires_in: parseInt(hash.get('expires_in') || '3600', 10)
+      });
+    }, 600);
+    return true;
+  }
+
+  var errDesc = hash.get('error_description');
+  if (errDesc) toast(errDesc, 'err');
+  return false;
 }
 
 // Handle OAuth callback
 (function() {
   var params = new URLSearchParams(window.location.search);
-  var hash = new URLSearchParams(window.location.hash.replace('#',''));
+
+  // En natif, Supabase renvoie vers com.natty.app://oauth-callback#access_token=…
+  // que le système transmet à l'app sans recharger la page.
+  if (estNatif() && window.Capacitor.Plugins.App) {
+    window.Capacitor.Plugins.App.addListener('appUrlOpen', function(event) {
+      var url = (event && event.url) || '';
+      if (url.indexOf(CAP_REDIRECT) !== 0) return;
+      var Browser = window.Capacitor.Plugins.Browser;
+      if (Browser) Browser.close();
+      var i = url.indexOf('#');
+      traiterRetourOAuth(i === -1 ? '' : url.slice(i + 1));
+    });
+  }
 
   // OAuth callback — token in URL hash after Supabase redirect
-  var accessToken = hash.get('access_token');
-  if (accessToken) {
-    fetch(SB_URL + '/auth/v1/user', {
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + accessToken }
-    }).then(function(r){ return r.json(); }).then(function(u){
-      if (u && u.id) {
-        toast('Connexion Google réussie !', 'ok');
-        setTimeout(function(){ redirectToApp(u.id); }, 600);
-      } else {
-        toast('Erreur: utilisateur introuvable', 'err');
-      }
-    }).catch(function(){
-      toast('Erreur OAuth', 'err');
-    });
-    return;
-  }
-  // Also check for error in hash
-  var errDesc = hash.get('error_description');
-  if (errDesc) {
-    toast(errDesc, 'err');
-  }
+  if (traiterRetourOAuth(window.location.hash)) return;
 
   // Enter key on inputs
   document.addEventListener('keydown', function(e) {

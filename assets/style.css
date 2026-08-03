@@ -78,10 +78,14 @@ body{
 .wrap{max-width:var(--col);margin:0 auto;padding:0 var(--pad)}
 
 /* ── Header : icônes maison / profil ── */
+/* Le haut de la WebView passe sous la barre d'état sur iPhone (encoche /
+   Dynamic Island) : sans cette marge, les icônes se retrouvent collées à
+   l'heure et à la batterie. env() vaut 0 sur le web, qui reste inchangé.
+   Le pendant bas est géré par assets/nav.js (safe-area-inset-bottom). */
 .top{
   max-width:var(--col);margin:0 auto;
   display:flex;align-items:center;justify-content:space-between;
-  padding:20px var(--pad) 8px;
+  padding:calc(20px + env(safe-area-inset-top, 0px)) var(--pad) 8px;
 }
 .top a,.top button,.top .hdr-ico{
   display:flex;align-items:center;justify-content:center;
