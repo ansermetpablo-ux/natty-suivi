@@ -375,6 +375,7 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="assets/core.js"></script>
 <script>
 const PRICE_3 = "price_1TbhMB0TTrkVKRpiPvbGHLyI";
 const PRICE_4 = "price_1TbhWk0TTrkVKRpiFNYOOcEJ";
@@ -400,6 +401,9 @@ if (token) {
   try { userId = token.match(/.{1,2}/g).map(h => String.fromCharCode(parseInt(h,16))).join(""); }
   catch(e) { userId = token; }
 }
+// La session Supabase fait autorité ; le décodage du jeton hexadécimal
+// ci-dessus n'est qu'un repli transitoire.
+if (window.Natty && Natty.USER_ID) userId = Natty.USER_ID;
 if (urlParams.get("cancelled")) showToast("Paiement annulé — vous pouvez réessayer");
 
 const NUTRI_DEMO = [
@@ -501,11 +505,7 @@ async function initSlider() {
   clientBMRData = null;
   if (userId) {
     try {
-      const res = await fetch(
-        SB_URL + "/rest/v1/onboarding?user_id=eq." + encodeURIComponent(userId) + "&select=poids,taille,age,sexe,activite&limit=1",
-        { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
-      );
-      const rows = await res.json();
+      const rows = await Natty.sbFetch("onboarding?user_id=eq." + encodeURIComponent(userId) + "&select=poids,taille,age,sexe,activite&limit=1");
       if (rows && rows.length) {
         const p = rows[0];
         const poids = parseFloat(p.poids);    // kg
@@ -718,10 +718,7 @@ function drawSliderGraph(weeks) {
 // STEP 4 NUTRI
 async function chargerNutris() {
   try {
-    const res=await fetch(SB_URL+"/rest/v1/nutritionnistes?actif=eq.true&select=*",{
-      headers:{"apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY}
-    });
-    const data=await res.json();
+    const data=await Natty.sbFetch("nutritionnistes?actif=eq.true&select=*");
     afficherNutris(data&&data.length?data:NUTRI_DEMO);
   } catch(e){afficherNutris(NUTRI_DEMO);}
 }
@@ -791,20 +788,13 @@ async function souscrire(){
   // 1. Upsert email dans onboarding
   if(userId && email){
     try {
-      await fetch(SB_URL+"/rest/v1/onboarding?user_id=eq."+encodeURIComponent(userId), {
-        method: "PATCH",
-        headers: {
-          "apikey": SB_KEY, "Authorization": "Bearer "+SB_KEY,
-          "Content-Type": "application/json", "Prefer": "return=minimal"
-        },
-        body: JSON.stringify({ email: email })
-      });
+      await Natty.sbPatch("onboarding?user_id=eq."+encodeURIComponent(userId), { email: email });
     } catch(e) { /* non bloquant */ }
   }
 
   btn.textContent="Redirection vers le paiement…";
   try{
-    const res=await fetch("/api/checkout",{
+    const res=await fetch(Natty.API+"/api/checkout",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({

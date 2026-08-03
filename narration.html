@@ -26,7 +26,10 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 @keyframes floatUp{from{transform:translateY(110vh) rotate(0)}to{transform:translateY(-20vh) rotate(320deg)}}
 
 /* ── barre du haut ── */
-.top{position:absolute;top:0;left:0;right:0;height:52px;display:flex;align-items:center;gap:12px;padding:0 18px;z-index:10002}
+/* height + padding-top intègrent la safe area : ce fichier est autonome et ne
+   charge pas assets/style.css, il ne bénéficie donc pas du correctif commun.
+   Sans ça, retour et carte passent sous l'encoche sur iPhone. */
+.top{position:absolute;top:0;left:0;right:0;height:calc(52px + env(safe-area-inset-top, 0px));padding:env(safe-area-inset-top, 0px) 18px 0;display:flex;align-items:center;gap:12px;z-index:10002}
 .top-back{width:34px;height:34px;border-radius:50%;background:var(--bg);box-shadow:var(--so);border:none;font-size:15px;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0;pointer-events:none;transition:opacity .3s}
 .top-back.on{opacity:1;pointer-events:auto}
 .top-menu{width:34px;height:34px;border-radius:50%;background:var(--bg);box-shadow:var(--so);border:none;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -760,6 +763,16 @@ body[data-u="jeu"] #klayer .hl{color:#0d0d0f}
 </div>
 
 <script>
+// Base des routes /api/*. Ce fichier est volontairement autonome (aucun
+// import), la règle de core.js est donc recopiée ici : relatif seulement
+// quand la page vient du vrai déploiement web — la WebView Android sert en
+// http://localhost, où /api/... ne résout pas.
+var NARR_API = (function(){
+  var h=location.hostname, pr=location.protocol;
+  var web=(pr==='http:'||pr==='https:') && h && h!=='localhost' && h!=='127.0.0.1' && h!=='[::1]';
+  return web ? '' : 'https://natty-suivi.vercel.app';
+})();
+
 /* ═══ SONS ═══ */
 var AC=null;
 function ac(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC}
@@ -2634,7 +2647,7 @@ function k_verifyDefiPhoto(file,label,hint,cb){
       +'Réponds UNIQUEMENT avec du JSON valide, sans texte autour : '
       +'{"correspond":true,"raison":""} si ça correspond, ou '
       +'{"correspond":false,"raison":"explication courte et bienveillante en français, 1 phrase"} sinon.';
-    fetch('/api/claude',{
+    fetch(NARR_API+'/api/claude',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({prompt:prompt,max_tokens:200,image:b64,media_type:file.type||'image/jpeg'})
     }).then(function(r){return r.json()}).then(function(d){

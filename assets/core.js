@@ -9,6 +9,18 @@ var Natty = (function () {
   var CLD_CLD = 'dujji1s6g';
   var CLD_PRE = 'meal_photos';
 
+  // Base des routes /api/*. Même règle que assets/reco.js, centralisée ici
+  // pour que les pages n'aient plus à choisir entre un chemin relatif (qui ne
+  // résout que sur le vrai déploiement web) et une URL absolue en dur (qui
+  // faisait diverger la racine et www/). Tester le seul protocole ne suffit
+  // pas : la WebView Android sert en http://localhost.
+  var API = (function () {
+    var h = location.hostname, pr = location.protocol;
+    var web = (pr === 'http:' || pr === 'https:')
+      && h && h !== 'localhost' && h !== '127.0.0.1' && h !== '[::1]';
+    return web ? '' : 'https://natty-suivi.vercel.app';
+  })();
+
   /* ── Session Supabase ────────────────────────────────────────
      L'identité vient du JWT émis par Supabase Auth, pas d'un identifiant
      passé dans l'URL : c'est lui qui permettra aux policies RLS de
@@ -245,7 +257,7 @@ var Natty = (function () {
   }
 
   return {
-    SB_URL: SB_URL, SB_KEY: SB_KEY, CLD_CLD: CLD_CLD, CLD_PRE: CLD_PRE,
+    SB_URL: SB_URL, SB_KEY: SB_KEY, CLD_CLD: CLD_CLD, CLD_PRE: CLD_PRE, API: API,
     TOKEN: TOKEN, USER_ID: USER_ID,
     sbFetch: sbFetch, sbPost: sbPost, sbPatch: sbPatch,
     calcMac: calcMac, getNutri: getNutri, goto: goto, requireAuth: requireAuth,

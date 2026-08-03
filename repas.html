@@ -141,6 +141,20 @@ body{overflow-x:hidden}
   display:flex;align-items:center;justify-content:center;padding:0}
 /* Ingrédient de recette absent du garde-manger : à acheter */
 .ingr.buy .tick{background:var(--amber)}
+
+/* Réglage du nombre de repas voulus pour la semaine. Masqué tant que la page
+   n'a pas confirmé qu'elle affiche bien la semaine (et non un repas précis
+   ouvert via ?id=). */
+.nbbar{display:none;align-items:center;justify-content:space-between;margin:4px 0 18px}
+.nbbar-lbl{font-size:14px;font-weight:600;color:var(--muted)}
+.nbbar-ctl{display:flex;align-items:center;gap:6px;background:var(--card);
+  border-radius:var(--r-full);padding:4px}
+.nbbar-ctl button{width:32px;height:32px;border:none;border-radius:50%;
+  background:#fff;color:var(--ink);font-size:19px;font-weight:600;line-height:1;
+  cursor:pointer;box-shadow:var(--nm-soft)}
+.nbbar-ctl button:active{transform:scale(.94)}
+.nbbar-ctl button:disabled{opacity:.35;cursor:default;box-shadow:none}
+.nbbar-ctl span{min-width:24px;text-align:center;font-size:16px;font-weight:700}
 </style>
 </head>
 <body>
@@ -152,6 +166,14 @@ body{overflow-x:hidden}
   <a href="profil.html" aria-label="Profil">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
   </a>
+</div>
+
+<!-- Le réglage 1-7 a disparu : la génération hebdomadaire produit 2 recettes. Le compteur reste affiché, en lecture seule. -->
+<div class="wrap">
+  <div class="nbbar" id="nbbar">
+    <span class="nbbar-lbl">Repas de la semaine</span>
+    <div class="nbbar-ctl"><span id="nbVal">2</span></div>
+  </div>
 </div>
 
 <div class="wrap" id="gmWrap"></div>
@@ -542,32 +564,16 @@ async function gmScan(file){
    assemblé par NattyReco : ici on ne fait que déclencher et réafficher. */
 /* Une seule génération pour toute la semaine, et elle a lieu dans Suivi, en
    même temps que les conseils (un unique appel Claude produit les deux).
-   Ce bouton n'appelle donc plus l'IA : il y conduit. Le garde-manger n'est pas
-   perdu au passage — NattyReco.chargerProfil() le relit, donc le stock
-   alimente bien le prompt de la génération.
-
-   Cette copie racine (servie sur le web) n'a pas le reste du parcours
-   « semaine » de www/repas.html : elle n'a donc que ce point d'entrée. */
+   Ces deux boutons n'appellent donc plus l'IA : ils y conduisent. Le
+   garde-manger n'est pas perdu au passage — NattyReco.chargerProfil() le
+   relit, donc le stock alimente bien le prompt de la génération. */
 function versGenerationHebdo(){
   var q = (typeof Natty !== 'undefined' && Natty.qs) ? Natty.qs() : '';
   location.href = 'suivi.html' + q + (q ? '&' : '?') + 'gen=1';
 }
-
 async function gmGenerer(){ versGenerationHebdo(); }
 
-document.getElementById('gmCam').addEventListener('change', function(){
-  if (this.files && this.files[0]) gmScan(this.files[0]);
-  this.value = '';
-});
-document.getElementById('gmGal').addEventListener('change', function(){
-  if (this.files && this.files[0]) gmScan(this.files[0]);
-  this.value = '';
-});
-
-/* ═══ Chargement ═══ */
-document.getElementById('backBtn').addEventListener('click', function(){
-  if (document.referrer) history.back(); else Natty.goto('menu.html');
-});
+async function genererMaintenant(){ versGenerationHebdo(); }
 
 (async function(){
   if (!Natty.requireAuth()) return;
@@ -592,22 +598,13 @@ document.getElementById('backBtn').addEventListener('click', function(){
       }
     }
 
-    // Sinon : les plats conseillés par le moteur de recommandation.
-    var recettes = await NattyReco.recettesDeLaSemaine(4);
-    if (recettes && recettes.length){
-      PLATS = recettes.map(depuisRecette);
-      render();
-      return;
-    }
+    await NattyReco.chargerNbRepas();   // préférence partagée entre appareils
+    var barre = document.getElementById('nbbar');
+    if (barre) barre.style.display = 'flex';
+    afficherNb(NattyReco.nbRepas());
 
-    // Repli si l'IA est indisponible : le dernier repas enregistré, pour que
-    // la page reste utile plutôt que vide.
-    var last = await Natty.sbFetch('meals?user_id=eq.'+Natty.USER_ID+'&order=created_at.desc&limit=1&select=*');
-    if (last && last.length){
-      last[0].meal_ingredients = await Natty.sbFetch('meal_ingredients?meal_id=eq.'+last[0].id+'&select=*');
-      PLATS = [depuisRepas(last[0])];
-    }
-    render();
+    SEMAINE = await NattyReco.recettesDeLaSemaine(NattyReco.NB_MAX);
+    rendreSemaine();
   }catch(e){
     document.getElementById('content').innerHTML = '<div class="empty">Impossible de charger les recettes.</div>';
   }

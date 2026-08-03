@@ -763,6 +763,16 @@ body[data-u="jeu"] #klayer .hl{color:#0d0d0f}
 </div>
 
 <script>
+// Base des routes /api/*. Ce fichier est volontairement autonome (aucun
+// import), la règle de core.js est donc recopiée ici : relatif seulement
+// quand la page vient du vrai déploiement web — la WebView Android sert en
+// http://localhost, où /api/... ne résout pas.
+var NARR_API = (function(){
+  var h=location.hostname, pr=location.protocol;
+  var web=(pr==='http:'||pr==='https:') && h && h!=='localhost' && h!=='127.0.0.1' && h!=='[::1]';
+  return web ? '' : 'https://natty-suivi.vercel.app';
+})();
+
 /* ═══ SONS ═══ */
 var AC=null;
 function ac(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC}
@@ -2637,7 +2647,7 @@ function k_verifyDefiPhoto(file,label,hint,cb){
       +'Réponds UNIQUEMENT avec du JSON valide, sans texte autour : '
       +'{"correspond":true,"raison":""} si ça correspond, ou '
       +'{"correspond":false,"raison":"explication courte et bienveillante en français, 1 phrase"} sinon.';
-    fetch('https://natty-suivi.vercel.app/api/claude',{
+    fetch(NARR_API+'/api/claude',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({prompt:prompt,max_tokens:200,image:b64,media_type:file.type||'image/jpeg'})
     }).then(function(r){return r.json()}).then(function(d){
@@ -2842,7 +2852,7 @@ function closeMap(){document.getElementById('mapScreen').classList.remove('on');
 document.getElementById('mapBtn').addEventListener('click',function(){
   if(document.getElementById('mapScreen').classList.contains('on'))closeMap();else openMap();
 });
-document.getElementById('menuBtn').addEventListener('click',function(){ window.location.href='index.html'; });
+document.getElementById('menuBtn').addEventListener('click',function(){ window.location.href='menu.html'; });
 document.getElementById('mapClose').addEventListener('click',closeMap);
 /* recommencer : deux clics, le second dans les 3 s. Efface la progression ET le
    drapeau d'intro, puis recharge — plus simple et plus sûr que de remettre à zéro

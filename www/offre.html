@@ -6,11 +6,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-/* Le padding haut intègre la safe area : la WebView est rendue bord à bord,
-   sinon le fil d'étapes passe sous l'heure et la batterie sur iPhone.
-   env() vaut 0 sur le web, qui garde donc ses 24px. */
-body { font-family: "DM Sans", sans-serif; background: #f0f0f3; min-height: 100vh;
-  padding: calc(24px + env(safe-area-inset-top, 0px)) 16px 120px; }
+body { font-family: "DM Sans", sans-serif; background: #f0f0f3; min-height: 100vh; padding: 24px 16px 120px; }
 .bg-pattern { position: fixed; inset: 0; background-color: #f0f0f3; background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0); background-size: 26px 26px; z-index: 0; }
 .wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
@@ -379,6 +375,7 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="assets/core.js"></script>
 <script>
 const PRICE_3 = "price_1TbhMB0TTrkVKRpiPvbGHLyI";
 const PRICE_4 = "price_1TbhWk0TTrkVKRpiFNYOOcEJ";
@@ -404,6 +401,9 @@ if (token) {
   try { userId = token.match(/.{1,2}/g).map(h => String.fromCharCode(parseInt(h,16))).join(""); }
   catch(e) { userId = token; }
 }
+// La session Supabase fait autorité ; le décodage du jeton hexadécimal
+// ci-dessus n'est qu'un repli transitoire.
+if (window.Natty && Natty.USER_ID) userId = Natty.USER_ID;
 if (urlParams.get("cancelled")) showToast("Paiement annulé — vous pouvez réessayer");
 
 const NUTRI_DEMO = [
@@ -505,11 +505,7 @@ async function initSlider() {
   clientBMRData = null;
   if (userId) {
     try {
-      const res = await fetch(
-        SB_URL + "/rest/v1/onboarding?user_id=eq." + encodeURIComponent(userId) + "&select=poids,taille,age,sexe,activite&limit=1",
-        { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
-      );
-      const rows = await res.json();
+      const rows = await Natty.sbFetch("onboarding?user_id=eq." + encodeURIComponent(userId) + "&select=poids,taille,age,sexe,activite&limit=1");
       if (rows && rows.length) {
         const p = rows[0];
         const poids = parseFloat(p.poids);    // kg
@@ -722,10 +718,7 @@ function drawSliderGraph(weeks) {
 // STEP 4 NUTRI
 async function chargerNutris() {
   try {
-    const res=await fetch(SB_URL+"/rest/v1/nutritionnistes?actif=eq.true&select=*",{
-      headers:{"apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY}
-    });
-    const data=await res.json();
+    const data=await Natty.sbFetch("nutritionnistes?actif=eq.true&select=*");
     afficherNutris(data&&data.length?data:NUTRI_DEMO);
   } catch(e){afficherNutris(NUTRI_DEMO);}
 }
@@ -795,20 +788,13 @@ async function souscrire(){
   // 1. Upsert email dans onboarding
   if(userId && email){
     try {
-      await fetch(SB_URL+"/rest/v1/onboarding?user_id=eq."+encodeURIComponent(userId), {
-        method: "PATCH",
-        headers: {
-          "apikey": SB_KEY, "Authorization": "Bearer "+SB_KEY,
-          "Content-Type": "application/json", "Prefer": "return=minimal"
-        },
-        body: JSON.stringify({ email: email })
-      });
+      await Natty.sbPatch("onboarding?user_id=eq."+encodeURIComponent(userId), { email: email });
     } catch(e) { /* non bloquant */ }
   }
 
   btn.textContent="Redirection vers le paiement…";
   try{
-    const res=await fetch("https://natty-suivi.vercel.app/api/checkout",{
+    const res=await fetch(Natty.API+"/api/checkout",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
@@ -822,19 +808,10 @@ async function souscrire(){
         jourLivraison:selectedJour,
         adresse:document.getElementById("adresseInput").value.trim(),
         emailRecap: email,
-        plateforme: estNatif() ? "natif" : "web",
       })
     });
     const data=await res.json();
-    if(data.url){
-      // En natif, le paiement se fait dans le navigateur système : la WebView
-      // garde l'app chargée dessous, et checkout-retour.html nous rend la main.
-      if(estNatif()){
-        await window.Capacitor.Plugins.Browser.open({url:data.url});
-        btn.disabled=false;btn.textContent="Payer →";
-      }
-      else window.location.href=data.url;
-    }
+    if(data.url){window.location.href=data.url;}
     else{showToast("Erreur lors du paiement");btn.disabled=false;btn.textContent="Payer →";}
   }catch(e){showToast("Erreur réseau");btn.disabled=false;btn.textContent="Payer →";}
 }
@@ -844,29 +821,6 @@ function showToast(msg){
   t.textContent=msg;t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),3000);
 }
-
-const CAP_CHECKOUT = "com.natty.app://checkout";
-
-function estNatif(){
-  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-}
-
-// Retour de paiement en natif : checkout-retour.html rebondit vers notre scheme,
-// le système réveille l'app et on reprend la main ici. Les URL d'un autre scheme
-// sont ignorées, pour qu'un deep link tiers ne puisse pas simuler un paiement.
-if (estNatif() && window.Capacitor.Plugins.App) {
-  window.Capacitor.Plugins.App.addListener("appUrlOpen", function(event){
-    const url = (event && event.url) || "";
-    if (url.indexOf(CAP_CHECKOUT) !== 0) return;
-    if (window.Capacitor.Plugins.Browser) window.Capacitor.Plugins.Browser.close();
-
-    const q = new URLSearchParams(url.slice(url.indexOf("?") + 1));
-    const tok = q.get("token") || "";
-    if (q.get("statut") === "annule") { showToast("Paiement annulé"); return; }
-    window.location.href = "index.html?token=" + encodeURIComponent(tok) + "&subscribed=1";
-  });
-}
-
 updateCTA();
 </script>
 </body>

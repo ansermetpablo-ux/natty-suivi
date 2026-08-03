@@ -313,6 +313,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:#f5f5f7; min-hei
 
 <div class="toast" id="toast"></div>
 
+<script src="assets/core.js"></script>
 <script>
 const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
@@ -325,7 +326,8 @@ var entrepriseData = null;
 var params = new URLSearchParams(window.location.search);
 TOKEN = params.get('token') || '';
 var uP = params.get('userId');
-if (uP && uP !== 'null') USER_ID = uP;
+if (window.Natty && Natty.USER_ID) USER_ID = Natty.USER_ID;
+else if (uP && uP !== 'null') USER_ID = uP;
 else if (TOKEN.length > 10) {
   try { var d = TOKEN.match(/.{1,2}/g).map(function(b){return String.fromCharCode(parseInt(b,16));}).join(''); if(d.includes('-')) USER_ID=d; } catch(e) {}
 }
@@ -488,7 +490,7 @@ async function startChallenge() {
 async function abandonnerChallenge(id) {
   if (!confirm('Abandonner ce challenge ?')) return;
   try {
-    await fetch(SB_URL+'/rest/v1/challenges?id=eq.'+id, {method:'PATCH', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'}, body:JSON.stringify({statut:'echoue'})});
+    await Natty.sbPatch('challenges?id=eq.'+id, {statut:'echoue'});
     showToast('Challenge abandonné', 'err');
     await chargerPerso();
   } catch(e) {}
@@ -683,8 +685,10 @@ function subscribeRealtime() {
 function openOverlay(id) { document.getElementById(id).classList.add('active'); }
 function closeOverlay(id) { document.getElementById(id).classList.remove('active'); }
 function showToast(msg,type){ var t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'');setTimeout(function(){t.classList.add('show');},10);setTimeout(function(){t.classList.remove('show');},3200); }
-async function sbFetch(path){ var r=await fetch(SB_URL+'/rest/v1/'+path,{headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});var t=await r.text();if(!r.ok)throw new Error(t);return t?JSON.parse(t):[]; }
-async function sbPost(path,body){ var r=await fetch(SB_URL+'/rest/v1/'+path,{method:'POST',headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)});if(!r.ok)throw new Error(await r.text()); }
+// Délégation à core.js, qui porte la session : les défis appartiennent à un
+// utilisateur, ils seront filtrés par les policies sur son identifiant.
+async function sbFetch(path){ return Natty.sbFetch(path); }
+async function sbPost(path,body){ await Natty.sbPost(path,body,'return=minimal'); }
 </script>
 </body>
 </html>

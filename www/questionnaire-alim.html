@@ -383,6 +383,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
   <div class="saving-text">Enregistrement de votre profil...</div>
 </div>
 
+<script src="assets/core.js"></script>
 <script>
 const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
@@ -411,6 +412,9 @@ if (token && token.length > 10) {
   } catch(e) {}
 }
 if (!USER_ID) USER_ID = params.get('userId') || null;
+// La session Supabase fait autorité sur l'identité ; le décodage du jeton
+// hexadécimal ci-dessus n'est qu'un repli transitoire.
+if (window.Natty && Natty.USER_ID) USER_ID = Natty.USER_ID;
 
 const FOODS = {
   fruits: [
@@ -665,7 +669,7 @@ document.getElementById('btn7').addEventListener('click', async function() {
   try {
     const res = await fetch(SB_URL + '/rest/v1/questionnaire_alim', {
       method: 'POST',
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: await Natty.entetes({ 'Prefer': 'return=minimal' }),
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('Erreur Supabase');
