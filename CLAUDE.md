@@ -418,6 +418,54 @@ dicterait.
 un réveil, pas pour un rappel de parcours, et Google la scrute en review) : le plugin retombe
 seul sur une alarme approchée.
 
+### `assets/push.js` + `api/_apns.js` — les notifications **push** (serveur)
+Ce que `assets/notifs.js` ne peut pas faire. Une notification locale est figée au moment où on
+la planifie : « il te reste 40 g de protéines » suppose un calcul à l'instant de l'envoi, et
+« un ami a ajouté un plat » est déclenché depuis **un autre appareil**. D'où un envoi serveur.
+
+**Côté appareil** — `assets/push.js` (chargé partout où `notifs.js` l'est, juste après) ne fait
+qu'une chose : obtenir le jeton APNs et le déposer dans `appareils`. Il **ne demande jamais
+d'autorisation** : sur iOS, push et notifications locales partagent la même, donc si
+`notifs.js` l'a obtenue `register()` passe sans redemander — vérifié sur simulateur
+(`permission push: granted` sans 2ᵉ dialogue). Le tap suit la même liste blanche de routes que
+`notifs.js` : un push est une entrée distante, sa destination ne doit jamais pouvoir sortir de
+nos écrans.
+
+**Côté serveur** — `api/_apns.js` (module partagé ; Vercel ignore les fichiers d'`api/`
+préfixés `_`) :
+- **`http2`, pas `fetch`** : l'API provider d'Apple n'accepte que HTTP/2, qu'undici ne parle pas
+  par défaut. Donc **runtime Node obligatoire, jamais edge**, dans tous les endpoints push.
+- JWT **ES256** signé avec la clé `.p8`, mis en cache ~50 min (Apple refuse un jeton régénéré
+  trop souvent, et un jeton de plus d'une heure). Signature via
+  `crypto.sign(…, { dsaEncoding: 'ieee-p1363' })` : **sans ce réglage** Node produit du DER et
+  Apple répond un laconique **403**. Vérifié : signature de 64 octets, r|s brut.
+- Un `410 Unregistered` / `400 BadDeviceToken` **désactive le jeton en base** — sinon on le
+  repaie à chaque envoi.
+
+**Trois endpoints**, tous derrière `CRON_SECRET` (même garde qu'`api/conseils-hebdo`) :
+- **`api/push-test.js`** — le premier endroit où regarder. Sans paramètre il rend compte de la
+  configuration ; avec `user_id` ou `token` il envoie et **remonte la réponse brute d'APNs**.
+  Son en-tête liste ce que veut dire chaque `reason`.
+- **`api/rappel-macros.js`** — le rappel du soir. `?dry=1` calcule sans envoyer.
+- **`api/push-amis.js`** — relevé des repas apparus depuis le dernier passage
+  (`push_etat`), puis notification des abonnés de leurs auteurs. **Respecte
+  `membre_prefs.fil_public` et `meals.partage`** : un membre sorti du fil ne déclenche pas plus
+  de notification qu'il n'apparaît dans le fil, sinon le réglage mentirait. Un abonné reçoit
+  **une** notification par passage, même si trois personnes qu'il suit ont publié.
+
+**`api/_nutrition.js` — copie assumée de la table `NT` d'`assets/core.js`.** Le serveur ne peut
+pas importer core.js (IIFE navigateur), et les macros ne sont stockées **nulle part** :
+`meal_ingredients` n'a que `name` et `quantity_g`. `daily_macros` ne peut pas servir non plus —
+`suivi.html` (`resetIfNewDay`) n'y écrit **que la veille**, au premier lancement du lendemain ;
+les totaux du jour ne vivent que dans le localStorage de l'appareil. L'arrondi est fait **par
+ingrédient**, comme core.js : sommer puis arrondir une fois serait plus juste mais donnerait un
+gramme d'écart avec l'écran. Vérifié sur 10 repas réels : **0 écart** avec `Natty.calcMac`.
+Commande de régénération dans l'en-tête du fichier.
+
+> ⚠️ **`onboarding` contient des doublons** (constaté : deux lignes pour le même `user_id`, dont
+> une sans `poids` ni `tdee`). Un `limit=1` en attrape une au hasard : `rappel-macros` prend
+> donc la première ligne réellement exploitable. À garder en tête partout ailleurs.
+
 ### `social.html` + `assets/social.js` — le fil social
 Onglet « Social » de la nav, **à la place de Coaching** (qui n'est pas supprimé : `coaching.html`
 reste accessible par sa carte dans `menu.html`). `social.js` porte les données, `social.html`
@@ -1170,11 +1218,42 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   notifications du simulateur n'a pas réagi aux taps synthétiques. À confirmer sur un téléphone.
 - 🔄 **Android jamais compilé** (comme le reste du projet) : le canal, l'icône de statut et
   la permission `POST_NOTIFICATIONS` n'ont pas pu être testés.
-- 🔄 **Push serveur — non commencé.** Les deux autres besoins ne peuvent PAS être locaux :
-  « il te reste X g de macros » exige un calcul au moment de l'envoi, « un ami a ajouté un
-  plat » est déclenché depuis un autre appareil. Exige une clé APNs (Team `SAZQ9AFAMZ`), FCM
-  pour Android, la capability Push Notifications, une table de tokens d'appareil, un trigger
-  Supabase sur `meals` et un cron. **Ne rien tester sans la clé APNs.**
+- ✅ **Push serveur — code écrit et testé aussi loin que possible sans la clé Apple.**
+  `assets/push.js`, `api/_apns.js`, `api/_nutrition.js`, `api/push-test.js`,
+  `api/rappel-macros.js`, `api/push-amis.js`, `natty_push.sql`, plugin installé,
+  capability + entitlement iOS en place, `AppDelegate` complété. Détail en §3.
+  **Vérifié** : signature ES256 (64 octets, r|s), calcul des macros identique à l'app sur
+  10 repas réels, les deux endpoints en dry-run sur les vraies données (rappel du soir avec
+  le bon reste en grammes, agrégation « Hélène a ajouté 4 plats », et le filtre de
+  confidentialité qui fait tomber 11 repas à 7), payload reçu par le plugin sur simulateur
+  (`xcrun simctl push`).
+
+  🔄 **Ce qui manque, et qui n'est PAS du code :**
+  1. **La clé APNs** (Apple Developer → Keys → Apple Push Notifications service, Team
+     `SAZQ9AFAMZ`), puis sur Vercel : `APNS_KEY_ID`, `APNS_P8` (contenu du .p8),
+     `APNS_TEAM_ID`, `APNS_TOPIC` = **`com.pabloansermet.nattysuivi`** (le bundle id réel —
+     **PAS** `com.natty.app` de `capacitor.config.json`), `APNS_ENV` = `sandbox` pour un build
+     Xcode, `production` pour TestFlight/App Store. Plus `CRON_SECRET` et
+     `SUPABASE_SERVICE_KEY` s'ils manquent. Vérification : `GET /api/push-test?secret=…`.
+  2. **`natty_push.sql`** à exécuter (tables `appareils` et `push_etat`). Sans elles aucun
+     jeton n'est stocké et rien ne part.
+  3. **Un build signé.** ⚠️ Le `CODE_SIGNING_ALLOWED=NO` documenté en §11 empêche l'embarquement
+     de l'entitlement : l'enregistrement échoue alors avec « aucune autorisation
+     *aps-environment* valide » (constaté). L'entitlement lui-même est correct — le
+     `App.app-Simulated.xcent` généré porte bien `aps-environment: development` et
+     `SAZQ9AFAMZ.com.pabloansermet.nattysuivi`. **Un simulateur ne peut de toute façon pas
+     obtenir de vrai jeton APNs** : le premier jeton réel viendra d'un iPhone.
+  4. **Les crons dans `vercel.json`** — délibérément pas ajoutés (règle §9 #14, et voir
+     [[vercel-crons-a-verifier]] : 12 crons déclarés alors que le plan Hobby en autorise 2).
+     Ligne à ajouter pour le rappel du soir :
+     `{ "path": "/api/rappel-macros", "schedule": "0 16 * * *" }` (16 h UTC = 18 h à Paris en
+     été). ⚠️ **`push-amis` n'a de sens qu'à ~15 min de cadence** : sous Hobby (2 crons/jour)
+     la notification « un ami a ajouté un plat » arriverait le lendemain. Soit un plan qui
+     autorise les crons fréquents, soit un déclencheur Supabase + pg_net.
+  5. **Android : bloqué en amont.** Le plugin passe par Firebase Cloud Messaging et exige un
+     `google-services.json` (donc un projet Firebase) ; l'app Android n'a de toute façon jamais
+     été compilée. `appareils.plateforme` est prévu pour accueillir des jetons FCM sans changer
+     de schéma.
 
 **Améliorations index.html**
 - Connecter l'action de la semaine du nutritionniste → affichage dans l'app — **toujours à faire**.
@@ -1377,6 +1456,10 @@ L'outil réécrit `www/manifest.json` — repasser derrière : il met `type: ima
 ### Reste à faire
 - **Android n'a jamais été compilé** (ni JDK ni Android Studio sur la machine de dev).
 - **Signature** : `CODE_SIGNING_ALLOWED=NO` suffit au simulateur ; un appareil réel ou TestFlight demande un Team Apple dans Xcode.
+  ⚠️ **Sauf pour le push** : sans signature, l'entitlement `aps-environment` n'est pas embarqué
+  et `PushNotifications.register()` échoue (« aucune autorisation *aps-environment* valide »).
+  Ce n'est pas un défaut de configuration — et un simulateur ne peut de toute façon pas obtenir
+  de jeton APNs utilisable. Le premier jeton réel viendra d'un iPhone. Voir §8.
 - `narration.html` pèse toujours ~2,4 Mo (images base64) — bascule Cloudinary prévue via `CLOUD_BASE`.
 
 ---

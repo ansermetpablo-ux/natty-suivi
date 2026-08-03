@@ -208,6 +208,12 @@ var NattyNotifs = (function () {
 
     ecrire('actif', '1');
     await replanifier();
+
+    // L'autorisation qu'on vient d'obtenir couvre AUSSI le push sur iOS.
+    // On enchaîne tout de suite plutôt que d'attendre le prochain chargement
+    // de page : c'est le seul moment où l'on est sûr qu'elle est fraîche.
+    if (window.NattyPush && typeof NattyPush.sync === 'function') NattyPush.sync();
+
     return { ok: true };
   }
 
