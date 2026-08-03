@@ -253,6 +253,10 @@ var Natty = (function () {
     // ci-dessus (Cloudinary, /auth/v1, requêtes en return=minimal).
     entetes: entetes, jeton: jeton, deconnecter: deconnecter,
     estConnecte: function () { return !!SESSION; },
-    ouvrirSession: ecrireSession
+    ouvrirSession: ecrireSession,
+    // Contenu du jeton courant (sub, email, user_metadata…). Relu à chaque
+    // appel, contrairement à USER_ID qui est figé au chargement de la page —
+    // après ouvrirSession, c'est ici qu'est la bonne valeur.
+    profil: function () { return SESSION ? charge(SESSION.access_token) : null; }
   };
 })();

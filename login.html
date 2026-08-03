@@ -355,8 +355,28 @@ function setLoading(btnId, loading) {
 // Ouvre la session à partir de la réponse de Supabase Auth et entre dans
 // l'app. Les jetons sont confiés à core.js, qui les renouvellera et les
 // enverra à chaque requête — l'identité ne transite plus par l'URL.
-function entrerDansApp(auth) {
-  if (auth && auth.access_token && window.Natty) Natty.ouvrirSession(auth);
+// Le prénom est saisi à l'inscription, mais la confirmation d'email fait que
+// la session n'existe pas encore à ce moment-là : impossible d'écrire dans
+// `onboarding`. Il est donc rangé dans les métadonnées du compte, qui
+// survivent à la confirmation, et reporté ici à la première connexion.
+// `onboarding` n'a pas de contrainte d'unicité sur user_id (la base contient
+// déjà des doublons) : on lit avant d'écrire, sinon on en créerait un de plus.
+async function reporterPrenom() {
+  try {
+    var p = Natty.profil();
+    var prenom = p && p.user_metadata && p.user_metadata.prenom;
+    if (!prenom || !p.sub) return;
+    var l = await Natty.sbFetch('onboarding?user_id=eq.' + p.sub + '&select=id,prenom&limit=1');
+    if (!l.length) await Natty.sbPost('onboarding', { user_id: p.sub, prenom: prenom }, 'return=minimal');
+    else if (!l[0].prenom) await Natty.sbPatch('onboarding?id=eq.' + l[0].id, { prenom: prenom });
+  } catch (e) {}
+}
+
+async function entrerDansApp(auth) {
+  if (auth && auth.access_token && window.Natty) {
+    Natty.ouvrirSession(auth);
+    await reporterPrenom();
+  }
   // menu.html existe des deux côtés : à la racine c'est le fichier lui-même,
   // dans le bundle natif c'est un relais vers index.html (nom imposé par
   // Capacitor). L'ancien tableau de bord n'est plus le point d'arrivée.
@@ -394,11 +414,14 @@ async function doSignup() {
 
   setLoading('btnSignup', true);
   try {
-    // Create account
+    // `data` range le prénom dans les métadonnées du compte : avec la
+    // confirmation d'email activée, l'inscription ne renvoie pas de session,
+    // et une écriture dans `onboarding` serait impossible à cet instant.
+    // reporterPrenom() le récupère à la première connexion.
     var r = await fetch(SB_URL + '/auth/v1/signup', {
       method: 'POST',
       headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, password: password })
+      body: JSON.stringify({ email: email, password: password, data: { prenom: prenom } })
     });
     var data = await r.json();
     if (!r.ok) throw new Error(data.msg || 'Erreur inscription');
