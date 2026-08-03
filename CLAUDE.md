@@ -300,6 +300,142 @@ Page de connexion standalone — `natty-suivi.vercel.app/login.html`
 **Flux dans index.html sans token** :
 - Timeout 2000ms → si pas de USER_ID → `afficherOnboardingCTA()` → bouton "Commencer →" → redirige vers `login.html`
 
+### `assets/garde-manger.js` — les ingrédients dont l'utilisateur dispose
+Module partagé (`NattyGardeManger`), chargé par `repas.html` et `suivi.html` (+ copies `www/`).
+Dépend de `assets/core.js`.
+
+**Remplissage** — quatre entrées, toutes dans le panneau « Mon garde-manger » de `repas.html` :
+`🛒 Mes courses` et `🧾 Ticket` ouvrent la caméra, `🖼️ Une photo` ouvre la galerie (prompt en
+détection automatique), `✏️ Saisir` accepte une liste libre (`poulet 600 g, riz basmati 1 kg,
+6 oeufs`) parsée localement. Les photos passent par `/api/claude` en vision.
+
+**Fiabilité de l'extraction** : le prompt exclut explicitement les produits ménagers, et
+`nettoyer()` repasse derrière avec un filtre local `NON_ALIMENTAIRE` — testé sur un ticket de
+caisse, l'IA laissait passer « liquide vaisselle ». Un emoji est déduit du nom (`emojiPour`)
+quand le scan n'en fournit pas.
+
+**Rapprochement avec les recettes** : `contient(nom)` compare **mot à mot**, jamais en
+sous-chaîne — sinon « ail » serait trouvé dans « volaille ». Un ingrédient de recette absent du
+garde-manger s'affiche avec une pastille orange `+` et le compteur « N à acheter ».
+
+**⚠️ Persistance** : la table `garde_manger` **n'existe pas encore** sur l'instance. Tant
+qu'elle est absente, le module bascule seul sur `localStorage` (liste propre à l'appareil) et
+l'affiche à l'utilisateur. La créer suffit à activer la synchronisation, sans toucher au code :
+```sql
+create table public.garde_manger (
+  user_id    text primary key,
+  items      jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.garde_manger disable row level security;
+```
+
+**Effet sur les recettes** : `assets/reco.js` → `chargerProfil()` appelle `NattyGardeManger`
+s'il est chargé et remplit `profil.garde` ; `construirePrompt()` ajoute alors la section
+« INGRÉDIENTS DISPONIBLES » et deux règles (partir de ce stock, marquer `dispo` sur chaque
+ingrédient). Sans le module, le prompt est strictement celui d'avant.
+
+### `assets/ajout.js` — parcours « Ajouter un plat » (bouton + de la nav)
+Module partagé, injecté par-dessus l'écran courant (overlay `#nattyAjout`, tout préfixé `na-`/`na`).
+Chargé par `suivi.html`, `repas.html`, `coaching.html`, `profil.html` et `menu.html`
+(+ leurs copies `www/`), juste avant `assets/nav.js`. Dépend de `assets/core.js`.
+
+**Pourquoi un overlay et pas une page** : le bouton `+` doit ouvrir la caméra *directement*.
+L'appel `input.click()` doit donc rester **synchrone dans le handler du clic** — naviguer
+d'abord vers une page ferait perdre le geste utilisateur et iOS/WebKit refuserait d'ouvrir
+la caméra. `assets/nav.js` appelle `window.NattyAjout.start()` en premier, et retombe sur
+l'ancien `window.NattyOnAdd` puis sur `suivi.html?add=1` si le module n'est pas chargé.
+
+**Enchaînement des écrans** (maquettes fournies par Pablo) :
+1. `<input capture="environment">` → caméra native.
+2. `naScAnalyse` — photo envoyée à `/api/claude` (vision), même prompt que `analyserAvecIA()`
+   de `suivi.html`. En cas d'échec : « Reprendre une photo » / « Galerie » / « Saisir à la main »
+   (le parcours reste utilisable hors-ligne).
+3. `naScRepas` — photo dans un cadre blanc arrondi, **3 anneaux SVG** (protéines / lipides /
+   glucides) affichant les **grammes restants pour CE repas**, la ligne « Restants », le détail
+   dépliable du repas (ingrédients éditables, quantités, suppression) et les CTA
+   « Enrichir ✦ » / « Terminer et enregistrer ». Les anneaux se recalculent à chaque
+   modification (`majAnneaux()`), donc ils diminuent au fur et à mesure des ajouts.
+4. `naScChoix` — « Réussir votre objectif 🚀 : » → 4 pistes : `resservir`, `ingredients`,
+   `plat`, `dessert`.
+5. `naScCarou` — carrousel scroll-snap de 5 cartes (titre, emoji, pastille kcal, 3 pastilles
+   macro, raison). Un tap ajoute au repas et renvoie à l'écran 3.
+
+**Cible par repas** : `chargerCibles()` lit `onboarding` (`poids`, `tdee`) et refait le calcul
+de `calcMacros()`, puis divise par le nombre de repas par jour issu de
+`questionnaire_alim.nb_repas` (libellé → entier via `REPAS_PAR_JOUR`). Fallback 2000 kcal /
+30-50-20 si l'onboarding n'est pas exploitable. **Ne jamais demander `nb_repas` ni les macros
+à `onboarding` : ces colonnes n'existent pas** (voir §4).
+
+**Suggestions** : `optionsIA()` interroge `/api/claude` (texte seul) ; `optionsLocales()` les
+compose depuis la table nutritionnelle de `core.js`. Une suggestion dont les macros sont nulles
+(ingrédient non reconnu) est écartée et remplacée par des options locales, sinon elle ne ferait
+bouger ni les anneaux ni le suivi une fois enregistrée. `classer()` trie par adéquation au
+restant, en pénalisant ce qui dépasse nettement. « Me resservir » n'appelle pas l'IA : c'est
+l'assiette courante en ½ / 1 / 1½ portion.
+
+**Enregistrement** : rien n'est écrit avant « Terminer ». Chaque plat de la session devient une
+ligne `meals` + ses `meal_ingredients` (la photo Cloudinary va sur le premier). L'échec de
+l'upload photo n'empêche pas l'enregistrement. À la fin, l'événement `natty:repas-ajoute` est
+émis : `suivi.html` l'écoute pour rafraîchir macros et historique sans recharger la page.
+
+### `social.html` + `assets/social.js` — le fil social
+Onglet « Social » de la nav, **à la place de Coaching** (qui n'est pas supprimé : `coaching.html`
+reste accessible par sa carte dans `menu.html`). `social.js` porte les données, `social.html`
+le rendu — même découpage que `reco.js` / `repas.html`.
+
+**Source du fil** : la table `meals` elle-même, `user_id=neq.<moi>`, 150 dernières lignes.
+Aucune table de posts : un plat enregistré depuis le bouton `+` est *déjà* un post. Les macros
+sont recalculées côté client par `Natty.calcMac` (les colonnes `calories`/`proteins_g`/… de
+`meal_ingredients` existent mais sont **à 0 sur les 227 lignes en base** — ne pas s'y fier).
+Auteurs lus dans `onboarding` (prénom, `poids`, `tdee`) et `questionnaire_alim` (`nb_repas`),
+tout par lots de 50 ids (`?col=in.(…)`) pour ne pas dépasser la longueur d'URL.
+
+**Cinq sections** :
+1. **Tendances** — tri par `likes × 5 + vues`, à égalité le plus récent. Le premier passe en
+   carte vedette « Top 1 🔥 », les suivants dans un rail horizontal.
+2. **Vos amis** — les plats des membres suivis, du plus récent au plus ancien, sans plafond
+   par membre. Si on ne suit personne (ou si les membres suivis n'ont rien publié récemment),
+   la section affiche à la place une liste de membres à suivre, triée par proximité de profil.
+   Le lien « Gérer » ouvre l'annuaire complet (`NattySocial.membres()`).
+3. **La communauté** — les derniers plats publiés, **2 par membre au maximum** : sans ce
+   plafond, le membre le plus assidu occupe tout le fil.
+4. **Dans le mille** — meilleur score nutritionnel. Le score compare les macros du plat à la
+   cible **par repas de celui qui l'a posté** (donc pas aux besoins du lecteur) : `100 −
+   moyenne(|ratio−1|)`, un dépassement pesant 1,25× un manque. Un plat dont les ingrédients ne
+   sont pas dans la table de `core.js` a des macros nulles → pas de score, écarté d'office.
+5. **Profils comme le vôtre** — membres dont le besoin quotidien (kcal **et** protéines) est à
+   ~15 % du sien. Vide si l'utilisateur n'a pas d'onboarding exploitable. 2 plats par membre.
+
+Plus une recherche (nom de plat, membre, ingrédient) et une bottom sheet de détail
+(photo, macros, ingrédients, j'aime, suivre, vues).
+
+**Amis = abonnement à sens unique**, sans demande ni acceptation : l'app n'a aucun canal de
+notification pour porter une file de demandes en attente, et le fil doit se remplir tout de
+suite. Une amitié réciproque, c'est deux lignes dans `membre_amis`. Les 150 plats du fil
+général ne contiennent pas forcément ceux des membres suivis : `charger()` va les chercher
+explicitement (`user_id=in.(…)`, 60 par lot) et fusionne, sinon « Vos amis » resterait vide.
+
+**⚠️ Persistance** : les tables `meal_likes`, `meal_vues` et `membre_amis` **n'existent pas
+encore**. Sans elles le module bascule seul sur `localStorage` (compteurs et abonnements
+propres à l'appareil, un toast le signale) — `NattySocial.estSynchronise()` renvoie alors
+`false`. Les créer suffit à tout activer, sans toucher au code : SQL dans
+**`natty_social.sql`** à la racine.
+
+**Vie privée** — deux niveaux, tous deux optionnels côté base :
+- **Global** : `membre_prefs.fil_public`, piloté par l'interrupteur « Mes plats dans le fil »
+  des réglages de `profil.html` (via `NattySocial.lireMaPref()` / `ecrireMaPref()`). Un membre
+  à `false` disparaît entièrement du fil des autres. **Volontairement sans repli
+  localStorage** : un réglage de confidentialité qui n'agirait que sur l'appareil de son auteur
+  serait un mensonge. Sans la table, l'interrupteur reste désactivé et l'explique.
+- **Par plat** : colonne `meals.partage`, détectée seule par `social.js`
+  (`or=(partage.is.null,partage.eq.true)`, avec repli sur une requête sans le filtre si la
+  colonne est absente — une colonne inexistante ferait échouer toute la requête, cf. §7).
+  **Rien dans l'app n'écrit encore cette colonne** : elle se règle à la main ou depuis l'admin.
+
+⚠️ Tant que `membre_prefs` n'existe pas, **tous** les repas enregistrés sont visibles par les
+autres membres.
+
 ### `api/claude.js`
 Proxy vers l'API Claude pour les conseils nutritionnels.
 
@@ -440,21 +576,27 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 | calculated_at | timestamptz | |
 
 #### `onboarding`
+Colonnes **relevées en base** (`select=*`, juillet 2026) :
+
 | Colonne | Type | Notes |
 |---|---|---|
+| id | uuid | PK |
 | user_id | text | |
+| created_at | timestamptz | |
 | maturite | text | |
 | motivation | text | |
-| score_motivation | integer | 1-10 |
-| score_rigueur | integer | 1-10 |
-| score_nutrition | integer | 1-10 |
+| objectif_type | text | ex. `prise_masse` |
+| objectif_valeur | numeric | |
+| objectif_semaines | integer | |
 | axe_amelioration | text | |
-| freins | text[] | |
-| repas_sautes | text[] | |
-| nb_repas | integer | |
-| temps_cuisine | text | |
-| sexe | text | |
+| contexte_repas | text | |
+| hydratation_litres | numeric | |
+| regime | text | |
+| allergies | text | |
+| aliments_refuses | text | |
+| aliments_plaisir | text | |
 | age | integer | |
+| sexe | text | |
 | poids | numeric | |
 | taille | numeric | |
 | activite | text | |
@@ -462,13 +604,23 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 | tdee | numeric | |
 | deficit | numeric | |
 | completed | boolean | |
-| proteines | numeric | calculé côté client |
-| glucides | numeric | calculé côté client |
-| lipides | numeric | calculé côté client |
-| calories | numeric | = tdee |
-| created_at | timestamptz | |
+| score_motivation | integer | 1-10 |
+| score_rigueur | integer | 1-10 |
+| score_nutrition | integer | 1-10 |
+| email / prenom / nom | text | |
+| rgpd_accepte | boolean | |
+| nb_repas_semaine | integer | **repas livrés par semaine** (abonnement), PAS repas par jour |
 
-> ⚠️ Les colonnes `proteines`, `lipides`, `glucides`, `calories` EXISTENT dans `onboarding` mais sont calculées client-side depuis `poids` et `tdee` — ne pas supposer qu'elles sont toujours renseignées.
+> ⚠️ **Correction (juillet 2026)** : les versions précédentes de ce document listaient aussi
+> `freins`, `repas_sautes`, `nb_repas`, `temps_cuisine`, `proteines`, `glucides`, `lipides`,
+> `calories` dans cette table. **Aucune de ces colonnes n'existe** — un `select` qui les
+> demande renvoie `42703 column onboarding.X does not exist` et fait échouer toute la requête
+> (piège rencontré en développant `assets/ajout.js`, voir §7).
+> - Les **macros quotidiennes** ne sont pas stockées : elles se dérivent de `poids` et `tdee`
+>   côté client (`calcMacros()` de `suivi.html` : prot = poids×2, lip = tdee×0,25/9,
+>   gluc = tdee×0,5/4, cal = tdee). Tout écran qui affiche des objectifs doit refaire ce calcul.
+> - Le **nombre de repas par jour** vit dans `questionnaire_alim.nb_repas`, et c'est un
+>   **libellé texte**, pas un entier : `1_2`, `3`, `3_collations`, `grignotage`.
 
 #### `profil_conseils`
 | Colonne | Type | Notes |
@@ -839,6 +991,19 @@ PostgREST la renvoie en `string`. Toujours `JSON.stringify` à l'écriture, et r
 **Problème** : `api/webhook.js` traite `await req.json()` sans jamais vérifier le header `stripe-signature` ni utiliser `STRIPE_WEBHOOK_SECRET`. N'importe qui connaissant l'URL peut POSTer un faux event `checkout.session.completed` avec un `user_id` arbitraire et activer un abonnement gratuit.
 **Solution** : implémenter `stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET)` et rejeter (400) toute requête dont la signature ne correspond pas. **Priorité sécurité avant toute mise en prod réelle** (voir aussi §8).
 
+### Colonnes fantômes de `onboarding` (`42703`)
+**Problème** : demander `nb_repas`, `proteines`, `glucides`, `lipides`, `calories`, `freins`,
+`repas_sautes` ou `temps_cuisine` dans un `select` sur `onboarding` renvoie
+`42703 column onboarding.X does not exist`. PostgREST rejette **toute la requête** : on ne perd
+pas juste la colonne, on perd la ligne entière — donc les objectifs retombent silencieusement
+sur les valeurs par défaut. Rencontré en écrivant `assets/ajout.js` (les anneaux affichaient
+2000 kcal/jour au lieu du vrai TDEE de 3494).
+**Solution** : ne demander à `onboarding` que `poids`/`tdee` et refaire le calcul des macros
+côté client (`calcMacros()`), et lire le nombre de repas par jour dans
+`questionnaire_alim.nb_repas` — qui est un **libellé** (`1_2`, `3`, `3_collations`,
+`grignotage`), pas un entier : `parseInt("1_2")` vaut 1, d'où un « 1 repas / jour » faux.
+Tableau des colonnes réelles en §4.
+
 ### Realtime WebSocket manuel (protocole obsolète ?)
 **Problème** : `chat.html`, `challenges.html` et `suivi.html` ouvrent chacun un `WebSocket` manuel vers `wss://.../realtime/v1/websocket` avec un `phx_join` minimal (`{topic:'realtime:public:<table>', payload:{}}`), sans `config.postgres_changes` — c'est le protocole Supabase Realtime **pré-`postgres_changes`**, potentiellement incompatible avec une instance Supabase récente (qui exige ce champ de config pour router les événements).
 **Solution** : à tester en conditions réelles (envoyer un message/défi et vérifier la réception live) ; si cassé, migrer vers le client `supabase-js` (`.channel().on('postgres_changes', ...)`) plutôt que le protocole WebSocket brut.
@@ -904,6 +1069,45 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 
 **Abonnements & paiements**
 - ✅ `api/webhook.js` sécurisé (vérification de signature Stripe, voir §3/§7). **Nécessite d'ajouter `STRIPE_WEBHOOK_SECRET` dans Vercel avant push**, sinon le webhook rejette tout en fail-closed.
+
+**Ajout de plat (bouton +)**
+- ✅ Parcours complet livré dans `assets/ajout.js` (voir §3) : caméra directe, analyse IA,
+  anneaux de macros restantes **par repas**, enrichissement (resservir / ingrédients / autre
+  repas / dessert) et carrousel de suggestions. Branché sur les 5 écrans porteurs de la nav.
+- 🔄 À valider sur téléphone réel : ouverture de la caméra depuis la WebView Capacitor
+  (le `capture="environment"` n'a pu être testé qu'en navigateur desktop).
+- 🔄 Le suivi ne stocke toujours pas les macros par ingrédient : un aliment absent de la table
+  de `core.js` compte pour 0. C'est la limite héritée du modèle `meal_ingredients`, pas de ce
+  parcours — les suggestions non reconnues sont écartées pour ne pas l'aggraver.
+
+**Garde-manger & génération de recettes**
+- ✅ Panneau « Mon garde-manger » dans `repas.html` : scan des courses, du ticket de caisse ou
+  d'une photo importée, plus saisie libre ; bouton « Générer mes repas avec ces ingrédients ».
+  Les recettes affichent ce qu'il reste à acheter. Voir `assets/garde-manger.js` en §3.
+- 🔄 **À faire côté Supabase** : créer la table `garde_manger` (SQL en §3) pour que la liste
+  suive l'utilisateur d'un appareil à l'autre. Sans elle, tout marche mais en local.
+- 🔄 Le garde-manger ne se décrémente pas quand une recette est suivie ou un repas enregistré :
+  l'utilisateur retire les ingrédients à la main.
+
+**Fil social**
+- ✅ `social.html` + `assets/social.js` livrés (voir §3) : tendances, amis, communauté,
+  meilleurs scores nutritionnels, profils aux besoins proches, recherche, détail en bottom
+  sheet. L'onglet « Coaching » de la nav a laissé sa place à « Social » ; `coaching.html`
+  reste atteignable depuis `menu.html`.
+- ✅ Abonnements entre membres (`membre_amis`) : section « Vos amis », annuaire « Gérer »,
+  bouton Suivre dans les listes et dans le détail d'un plat, suggestions par proximité de
+  profil quand on ne suit encore personne.
+- ✅ Réglage de confidentialité dans `profil.html` : interrupteur « Mes plats dans le fil »
+  (`membre_prefs.fil_public`). Désactivé et explicite tant que la table n'existe pas.
+- 🔄 **À faire côté Supabase — bloquant** : exécuter `natty_social.sql` (`meal_likes`,
+  `meal_vues`, `membre_amis`, `membre_prefs`, + colonne optionnelle `meals.partage`).
+  Sans ces tables, j'aime / vues / abonnements restent locaux à l'appareil, et **le réglage
+  de confidentialité est inopérant : tous les repas sont visibles**.
+- 🔄 `meals.partage` (masquer UN plat) n'est écrit par aucun écran — réglage manuel/admin
+  pour l'instant.
+- 🔄 Les scores plafonnent bas (~57/100 sur les données actuelles) parce que beaucoup
+  d'ingrédients manquent à la table de `core.js` et que `nb_repas='1_2'` gonfle la cible par
+  repas. Le classement reste juste (même biais pour tous), pas les valeurs absolues.
 
 **Améliorations index.html**
 - Connecter l'action de la semaine du nutritionniste → affichage dans l'app — **toujours à faire**.
@@ -1107,3 +1311,88 @@ L'outil réécrit `www/manifest.json` — repasser derrière : il met `type: ima
 - **Android n'a jamais été compilé** (ni JDK ni Android Studio sur la machine de dev).
 - **Signature** : `CODE_SIGNING_ALLOWED=NO` suffit au simulateur ; un appareil réel ou TestFlight demande un Team Apple dans Xcode.
 - `narration.html` pèse toujours ~2,4 Mo (images base64) — bascule Cloudinary prévue via `CLOUD_BASE`.
+
+---
+
+*Contribution session « ajouter un plat » (Claude Opus, juillet 2026) :*
+- **Nouveau** `assets/ajout.js` : parcours complet du bouton `+` (caméra directe → analyse IA →
+  anneaux de macros restantes par repas → enrichissement → carrousel de suggestions →
+  enregistrement). Documenté en §3.
+- `assets/nav.js` : le `+` appelle `NattyAjout.start()` en priorité (appel synchrone, sinon iOS
+  n'ouvre pas la caméra), avec repli sur `NattyOnAdd` puis `suivi.html?add=1`.
+- `suivi.html`, `repas.html`, `coaching.html`, `profil.html`, `menu.html` (+ copies `www/`) :
+  chargement de `assets/ajout.js` ; `suivi.html` écoute `natty:repas-ajoute` pour rafraîchir.
+- **§4 corrigé** : le tableau de `onboarding` listait 8 colonnes inexistantes (`nb_repas`,
+  `proteines`, `glucides`, `lipides`, `calories`, `freins`, `repas_sautes`, `temps_cuisine`).
+  Relevé réel en base + explication de où vivent vraiment les macros et le nombre de repas.
+- **§7** : nouveau piège « colonnes fantômes de `onboarding` » (erreur `42703` qui fait échouer
+  la requête entière, pas seulement la colonne).
+- Vérifié dans le navigateur (viewport mobile) : les 4 écrans, la décroissance des anneaux à
+  chaque ajout, le repli hors-ligne, et un enregistrement réel en base — lignes de test
+  supprimées après vérification.
+
+---
+
+*Contribution session « garde-manger » (Claude Opus, juillet 2026) :*
+- **Nouveau** `assets/garde-manger.js` : liste des ingrédients disponibles, remplie par scan
+  (courses / ticket de caisse / photo importée) ou saisie libre. Documenté en §3.
+- `assets/reco.js` (racine **et** `www/`) : `chargerProfil()` récupère le garde-manger,
+  `construirePrompt()` ajoute la section « INGRÉDIENTS DISPONIBLES » + les règles 6 et 7
+  (partir de ce stock, marquer `dispo`). Le commentaire d'en-tête affirmant que
+  `liste_courses_json`/`recettes_json` n'existent pas a été retiré : il était faux (§7).
+- `repas.html` et `www/repas.html` : panneau « Mon garde-manger » (4 actions, grille
+  d'ingrédients avec retrait, bouton de génération) ; le panneau vit dans `#gmWrap`, hors du
+  `#content` que `render()` remplace, pour rester visible pendant la génération. Les
+  ingrédients d'une recette absents du garde-manger sont marqués « à acheter ».
+- `www/suivi.html` : charge aussi le module, puisque la génération hebdomadaire part de cet écran.
+- Vérifié en navigateur : saisie libre parsée (quantités avant/après le nom), scan d'un ticket
+  de caisse factice via le vrai `/api/claude` (8 aliments extraits, totaux et sac écartés,
+  « liquide vaisselle » filtré localement), génération réelle de 4 recettes partant du stock,
+  et pastilles « 3 à acheter » sur la recette affichée.
+- ⚠️ **Reste à faire** : créer la table `garde_manger` (SQL en §3). Sans elle le module
+  fonctionne, mais la liste reste sur l'appareil.
+
+
+---
+
+*Contribution session « fil social » (Claude Opus, août 2026) :*
+- **Nouveau** `social.html` + `assets/social.js` (+ copies `www/`) : mini réseau social sur les
+  plats des membres — tendances, communauté, meilleurs scores nutritionnels, profils aux besoins
+  proches, recherche, détail en bottom sheet. Documenté en §3.
+- **Nouveau** `natty_social.sql` : tables `meal_likes` / `meal_vues` + colonne `meals.partage`.
+  Non exécuté (pas d'accès DDL avec la clé anon) — à lancer par Pablo.
+- `assets/nav.js` (racine **et** `www/`) : l'entrée « Coaching » devient « Social »
+  (`social.html`), nouvelle icône. `coaching.html` n'est pas touché et reste atteignable par sa
+  carte dans `menu.html`.
+- Aucune table de posts créée : un repas enregistré depuis le bouton `+` est déjà un post.
+  Le fil lit `meals` directement et recalcule les macros avec `Natty.calcMac` — les colonnes
+  `calories`/`proteins_g`/… de `meal_ingredients` sont à 0 sur **les 227 lignes** en base.
+- Vérifié en navigateur (viewport mobile, données réelles : 57 plats, 21 membres) : les quatre
+  sections, la vedette « Top 1 🔥 », le rail, la recherche, la bottom sheet, le j'aime dans les
+  deux sens et le comptage des vues. Aucune écriture en base pendant les tests (les tables
+  n'existent pas encore, tout est passé par le repli localStorage).
+- ⚠️ **Vie privée** : en l'état tous les repas sont publics dans le fil. `social.js` gère déjà
+  `meals.partage`, mais le réglage côté profil reste à écrire.
+
+---
+
+*Contribution session « amis + confidentialité » (Claude Opus, août 2026) — suite directe de la
+session « fil social » :*
+- `assets/social.js` : abonnements entre membres (`membre_amis`, modèle « je suis quelqu'un »
+  sans validation), annuaire `membres()`, section « Vos amis » avec repli en suggestions,
+  et réglage global de confidentialité (`membre_prefs.fil_public`) via `lireMaPref()` /
+  `ecrireMaPref()` / `estPrefsDispo()`. `charger()` va chercher explicitement les plats des
+  membres suivis, car les 150 plus récents du fil général ne les contiennent pas forcément.
+- `social.html` : section « Vos amis » + lien « Gérer » ouvrant la feuille des membres, boutons
+  Suivre partout (listes, suggestions, détail d'un plat), toutes les occurrences d'un même
+  membre à l'écran se mettent à jour ensemble.
+- `profil.html` (+ `www/`) : interrupteur « Mes plats dans le fil » dans les réglages. Charge
+  `assets/social.js` uniquement pour ce réglage. **Aucun repli localStorage volontairement** —
+  un réglage de confidentialité local serait trompeur ; sans la table l'interrupteur est
+  désactivé et le dit.
+- `natty_social.sql` : ajout de `membre_amis` et `membre_prefs`.
+- Vérifié en navigateur : suivre/ne plus suivre (persistance entre rechargements, bascule des
+  sections, mise à jour de tous les boutons d'un même membre), feuille des membres (19 membres,
+  tri amis d'abord puis proximité), et les trois états de l'interrupteur de confidentialité
+  (table absente → désactivé ; actif on ; actif off, testés avec un double de `lireMaPref`,
+  la création de table n'étant pas possible avec la clé anon).
