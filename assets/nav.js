@@ -51,7 +51,48 @@
     return location.search || '';
   }
 
+  /* ── Pastille rouge quotidienne ─────────────────────────────
+     Un onglet non ouvert aujourd'hui porte un point rouge. L'état est stocké
+     par onglet ET par jour : au changement de date, la clé du jour n'existe
+     plus, donc la pastille réapparaît d'elle-même sans minuteur ni réveil.
+     Le clic sur l'onglet la retire immédiatement, avant la navigation. */
+
+  function jourCourant() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+      + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function cleVu(key) {
+    var u = (window.Natty && Natty.USER_ID) ? Natty.USER_ID : 'anon';
+    return 'natty_onglet_vu_' + key + '_' + u;
+  }
+
+  function estVuAujourdhui(key) {
+    try { return localStorage.getItem(cleVu(key)) === jourCourant(); }
+    catch (e) { return true; }   // sans stockage, pas de pastille trompeuse
+  }
+
+  function marquerVu(key) {
+    try { localStorage.setItem(cleVu(key), jourCourant()); } catch (e) {}
+  }
+
+  var CSS_PASTILLE =
+    '#nattyNav .nn-item{position:relative}' +
+    '#nattyNav .nn-dot{position:absolute;top:6px;right:calc(50% - 15px);width:8px;height:8px;' +
+      'border-radius:50%;background:#ff3b30;box-shadow:0 0 0 2px var(--nn-bg,#fff);pointer-events:none}';
+
+  function injecterCssPastille() {
+    if (document.getElementById('nnCssDot')) return;
+    var st = document.createElement('style');
+    st.id = 'nnCssDot';
+    st.textContent = CSS_PASTILLE;
+    document.head.appendChild(st);
+  }
+
   function inject() {
+    injecterCssPastille();
+
     var style = document.createElement('style');
     style.textContent = CSS;
     document.head.appendChild(style);
@@ -65,8 +106,12 @@
       if (it.add) {
         html += '<button class="nn-add" id="nnAddBtn" aria-label="Ajouter un plat">' + ICONS.plus + '</button>';
       } else {
-        html += '<button class="nn-item' + (it.key === active ? ' active' : '') + '" data-href="' + it.href + '">' +
-          it.icon + '<span>' + it.label + '</span></button>';
+        // L'onglet courant est vu par définition : on le marque avant le rendu
+        // pour qu'il n'affiche pas une pastille au moment même où on l'ouvre.
+        if (it.key === active) marquerVu(it.key);
+        var pastille = estVuAujourdhui(it.key) ? '' : '<span class="nn-dot"></span>';
+        html += '<button class="nn-item' + (it.key === active ? ' active' : '') + '" data-href="' + it.href + '" data-key="' + it.key + '">' +
+          it.icon + '<span>' + it.label + '</span>' + pastille + '</button>';
       }
     });
     html += '</div>';
@@ -76,6 +121,9 @@
     wrap.querySelectorAll('.nn-item').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var href = btn.dataset.href;
+        marquerVu(btn.dataset.key);
+        var d = btn.querySelector('.nn-dot');
+        if (d) d.remove();
         if (href.replace('.html', '') === active) return;
         window.location.href = href + qs();
       });
