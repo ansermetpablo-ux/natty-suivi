@@ -374,7 +374,9 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 /* La barre du haut (retour menu + progression) reste au-dessus de la carte et
    ne défile pas : plus besoin de remonter en haut pour revenir au menu. */
 body.map-on .top{background:var(--bg)}
-.map-hd{position:sticky;top:0;z-index:2;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:4px 22px 18px}
+/* z-index au-dessus des sections de palier (2) : elles créent leur propre
+   contexte d'empilement et passeraient sinon par-dessus le titre collant. */
+.map-hd{position:sticky;top:0;z-index:6;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:4px 22px 18px}
 .map-hd h2{font-size:20px;font-weight:900}
 .map-close{width:34px;height:34px;border-radius:50%;background:var(--bg);box-shadow:var(--so);border:none;font-size:15px;cursor:pointer}
 .mrail{position:relative;display:flex;flex-direction:column-reverse;align-items:center;padding:16px 0}
@@ -385,6 +387,33 @@ body.map-on .top{background:var(--bg)}
 .mdot.cur{width:66px;height:66px;font-size:29px;background:var(--ink);color:#fff}
 .mlbl{font-size:10px;font-weight:700;color:var(--muted);margin-top:5px}
 .mbelt{position:relative;z-index:2;background:var(--ink);color:#fff;border-radius:99px;padding:8px 18px;font-size:13px;font-weight:800;margin:18px 0}
+
+/* ── sections de PALIER dans la carte ──
+   Le rail est en column-reverse (le parcours monte) : la section du palier 1 est
+   donc en bas, et l'en-tête d'un palier — premier enfant dans le DOM — se pose
+   sous ses épreuves, comme un portique qu'on franchit en grimpant. */
+.mpal{position:relative;z-index:2;width:100%;display:flex;flex-direction:column-reverse}
+.mpal-hd{display:flex;align-items:center;gap:12px;width:calc(100% - 32px);margin:26px 16px 12px;padding:13px 15px;border:none;border-radius:20px;background:var(--bg);box-shadow:var(--so);font-family:'Inter',sans-serif;text-align:left;cursor:pointer;color:var(--ink)}
+.mpal-em{width:44px;height:44px;flex-shrink:0;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:23px;background:var(--line)}
+.mpal-txt{flex:1;min-width:0}
+.mpal-n{font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.mpal-t{font-size:15px;font-weight:800;line-height:1.25;margin-top:1px}
+.mpal-meta{font-size:11px;font-weight:700;color:var(--muted);margin-top:3px}
+.mpal-chev{flex-shrink:0;font-size:12px;color:var(--muted);transition:transform .3s}
+.mpal.open>.mpal-hd .mpal-chev{transform:rotate(180deg)}
+.mpal-body{display:none;flex-direction:column-reverse;align-items:center;width:100%}
+.mpal.open>.mpal-body{display:flex}
+/* palier en cours : en négatif, comme le nœud courant du rail */
+.mpal.cur>.mpal-hd{background:var(--ink);color:#fff}
+.mpal.cur .mpal-em{background:rgba(255,255,255,.14)}
+.mpal.cur .mpal-n,.mpal.cur .mpal-meta,.mpal.cur .mpal-chev{color:rgba(255,255,255,.62)}
+.mpal.done>.mpal-hd{border:2px solid var(--green);padding:11px 13px}
+.mpal.todo>.mpal-hd{opacity:.62}
+.mpal-jauge{height:3px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:7px}
+.mpal.cur .mpal-jauge{background:rgba(255,255,255,.2)}
+.mpal-jauge i{display:block;height:100%;border-radius:2px;background:var(--ink);transition:width .4s ease}
+.mpal.cur .mpal-jauge i{background:#fff}
+.mpal.done .mpal-jauge i{background:var(--green)}
 
 /* ── TIER LIST glisser-déposer ── */
 .tl-wrap{width:100%;max-width:340px}
@@ -859,7 +888,7 @@ var STORY=[
     {enter:'pop', hold:1500, size:'xl', lines:[[{t:'Il en existe '},{t:'3',fx:'zoom',big:true}]], fxDelay:700, outPrev:'shrink'},
     {enter:'through', hold:2400, svg:'macros', size:'sm', outPrev:'up', cta:'Les comprendre'}
   ]},
-  {type:'chapter',anim:'slide',univers:'nutrition',tr:'iris',label:'Comprendre le rôle des macronutriments'},
+  {type:'chapter',anim:'slide',univers:'nutrition',tr:'iris',palier:1,label:'Comprendre le rôle des macronutriments'},
   {type:'flash',anim:'slide',em:'🥩',name:'Les protéines',photo:PH.steak,btitle:'Les protéines 🥩',desc:'Servent à constituer la fibre musculaire.'},
   {type:'flash',anim:'slide',em:'🌾',name:'Les glucides',photo:PH.rice,btitle:'Les glucides 🌾',desc:"Le carburant : elles donnent l'énergie du quotidien."},
   {type:'flash',anim:'slide',em:'🥑',name:'Les lipides',photo:PH.avocado,btitle:'Les lipides 🥑',desc:'Hormones, cerveau, réserve : le bon gras est vital.'},
@@ -1189,7 +1218,7 @@ var STORY=[
   /* ═══════════════════════════════════════════════════════════
      PALIER 2 — RÉPONDRE À SES PROPRES BESOINS
      ═══════════════════════════════════════════════════════════ */
-  {type:'chapter',anim:'slide',univers:'nutrition',tr:'liquid',label:'Comprendre tes besoins quotidiens'},
+  {type:'chapter',anim:'slide',univers:'nutrition',tr:'liquid',palier:2,label:'Comprendre tes besoins quotidiens'},
   {type:'flash',anim:'slide',em:'🔥',name:'Le métabolisme',photo:PH.body,btitle:'Le BMR 🔥',desc:'L\'énergie que ton corps brûle au repos, rien qu\'à exister. Ta base.'},
   {type:'flash',anim:'slide',em:'🏃',name:'La dépense totale',photo:PH.body,btitle:'Le TDEE 🏃',desc:'BMR + ton activité de la journée. C\'est ça, ton vrai besoin calorique.'},
   {type:'flash',anim:'slide',em:'🎯',name:'Ton objectif',photo:PH.body,btitle:'Manger selon ton but 🎯',desc:'Perdre : un peu en dessous. Prendre du muscle : un peu au dessus.'},
@@ -1229,7 +1258,7 @@ var STORY=[
   /* ═══════════════════════════════════════════════════════════
      PALIER 3 — RECONNAÎTRE LES QUANTITÉS & CRÉER SES RECETTES
      ═══════════════════════════════════════════════════════════ */
-  {type:'chapter',anim:'slide',univers:'jeu',tr:'shatter',label:'Reconnaître les quantités au coup d\'œil'},
+  {type:'chapter',anim:'slide',univers:'jeu',tr:'shatter',palier:3,label:'Reconnaître les quantités au coup d\'œil'},
   {type:'flash',anim:'slide',em:'✋',name:'La paume',photo:PH.steak,btitle:'Une paume 🖐️',desc:'≈ 100 g de protéine, soit ~25 g de protéines. Ton meilleur outil de mesure : ta main.'},
   {type:'flash',anim:'slide',em:'👊',name:'Le poing',photo:PH.rice,btitle:'Un poing ✊',desc:'≈ une portion de féculents cuits (~40 g de glucides). Toujours sur toi.'},
   {type:'flash',anim:'slide',em:'👍',name:'Le pouce',photo:PH.avocado,btitle:'Un pouce 👍',desc:'≈ une portion de matière grasse (~10-15 g de lipides). Huile, beurre, fromage.'},
@@ -1270,6 +1299,18 @@ var STORY=[
   {type:'reward',anim:'zoom',em:'🌟',xp:250,label:'Palier 3 terminé — tu es un vrai cuisinier !'},
   {type:'say',anim:'up',title:'Incroyable, Pablo.',sub:'Tu es passé de la survie à la création. Tu sais nourrir ton corps ET te faire plaisir. Bienvenue chez les autonomes.',cta:'Terminer 🎉'}
 ];
+
+/* ═══ PALIERS ═══
+   Les trois grands blocs du parcours. Un palier s'ouvre sur le premier `chapter`
+   qui porte `palier:N` ; tout ce qui suit en hérite en remontant — même règle que
+   `univFor` pour l'univers. Un chapitre non tagué reste donc dans le palier courant,
+   et les beats d'intro (avant le premier chapitre) retombent sur le palier 1. */
+var PALIERS=[
+  {n:1,em:'🍳',titre:'Cuisiner et se nourrir',sub:'Macros, étiquettes, cuissons, composition d\'un plat'},
+  {n:2,em:'🎯',titre:'Répondre à ses propres besoins',sub:'Calculer ses cibles et les atteindre chaque jour'},
+  {n:3,em:'🌟',titre:'Reconnaître et créer',sub:'Estimer les quantités à l\'œil, inventer ses recettes'}
+];
+function palierDe(i){for(var k=i;k>=0;k--){if(STORY[k]&&STORY[k].palier)return STORY[k].palier}return 1}
 
 /* ═══ MOTEUR ═══ */
 var stage=document.getElementById('stage');
@@ -2626,19 +2667,58 @@ var BEAT_LBL={say:'Narration',choice:'Question',chapter:'Chapitre',macros:'Les 3
   gameTier:'Tier list',gamePlate:'Équilibre',gameFill:'Remplir macro',gameMeal:'Analyse repas',
   defi:'Défi photo',defiRecette:'Défi recette',defiCompose:'Défi compose',defiCreation:'Défi création'};
 
+/* sections dépliées : mémorisé d'une ouverture de carte à l'autre, sinon replier
+   le palier qu'on vient d'ouvrir à chaque aller-retour serait exaspérant. */
+var mapOuverts={};
+
 function buildMap(){
-  var r=document.getElementById('mrail');var palier=1;var html='';
+  var r=document.getElementById('mrail');
+  /* bilan par palier : bornes, nombre d'épreuves et XP (total / déjà gagné) */
+  var bilan={};
   STORY.forEach(function(b,i){
-    if(b.type==='chapter'){
-      html+='<div class="mbelt">'+b.label+'</div>';
-      return;
+    var p=palierDe(i),o=bilan[p]||(bilan[p]={premier:i,dernier:i,total:0,faits:0,xp:0,xpFaits:0});
+    o.dernier=i;
+    if(b.type!=='chapter'){o.total++;if(i<idx)o.faits++}
+    if(b.type==='reward'&&b.xp){o.xp+=b.xp;if(i<idx)o.xpFaits+=b.xp}
+  });
+  var pCur=palierDe(idx),html='';
+  PALIERS.forEach(function(P){
+    var o=bilan[P.n];if(!o)return;
+    var etat=idx>o.dernier?'done':(P.n===pCur?'cur':'todo');
+    var ouvert=(mapOuverts[P.n]===undefined)?(etat==='cur'):mapOuverts[P.n];
+    var meta=etat==='done'?('Terminé ✓ · '+o.xp+' XP')
+      :etat==='cur'?(o.faits+'/'+o.total+' épreuves · '+o.xpFaits+' XP')
+      :(o.total+' épreuves · '+o.xp+' XP à gagner');
+    var pct=o.total?Math.round(o.faits/o.total*100):0;
+    var corps='';
+    for(var i=o.premier;i<=o.dernier;i++){
+      var b=STORY[i];
+      if(b.type==='chapter'){corps+='<div class="mbelt">'+b.label+'</div>';continue}
+      var st=i<idx?'done':i===idx?'cur':'';
+      var lbl=(b.type==='flash')?(b.name||'Flash'):(b.type==='say'?(b.title||'').slice(0,18):BEAT_LBL[b.type]||b.type);
+      corps+='<div class="mnode"><button class="mdot '+st+'" data-goto="'+i+'">'+(BEAT_ICON[b.type]||'•')+'</button><div class="mlbl">'+lbl+'</div></div>';
     }
-    // marqueur de palier sur les grosses récompenses finales
-    var st=i<idx?'done':i===idx?'cur':'';
-    var lbl=(b.type==='flash')?(b.name||'Flash'):(b.type==='say'?(b.title||'').slice(0,18):BEAT_LBL[b.type]||b.type);
-    html+='<div class="mnode"><button class="mdot '+st+'" data-goto="'+i+'">'+(BEAT_ICON[b.type]||'•')+'</button><div class="mlbl">'+lbl+'</div></div>';
+    html+='<div class="mpal '+etat+(ouvert?' open':'')+'" data-palier="'+P.n+'">'
+      +'<button class="mpal-hd" data-toggle="'+P.n+'">'
+        +'<div class="mpal-em">'+P.em+'</div>'
+        +'<div class="mpal-txt"><div class="mpal-n">Palier '+P.n+'</div>'
+          +'<div class="mpal-t">'+P.titre+'</div>'
+          +'<div class="mpal-meta">'+meta+'</div>'
+          +'<div class="mpal-jauge"><i style="width:'+pct+'%"></i></div></div>'
+        +'<div class="mpal-chev">▾</div>'
+      +'</button>'
+      +'<div class="mpal-body">'+corps+'</div>'
+    +'</div>';
   });
   r.innerHTML=html;
+  r.querySelectorAll('.mpal-hd[data-toggle]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var sec=btn.parentNode,n=+btn.dataset.toggle;
+      sec.classList.toggle('open');
+      mapOuverts[n]=sec.classList.contains('open');
+      sTap();vib(10);
+    });
+  });
   r.querySelectorAll('.mdot[data-goto]').forEach(function(btn){
     btn.addEventListener('click',function(){
       var target=+btn.dataset.goto;
@@ -2664,7 +2744,9 @@ function openMap(){buildMap();var ms=document.getElementById('mapScreen');ms.cla
   // alors hors écran vers le haut et paraissait ne pas s'ouvrir.
   setTimeout(function(){
     var cur=document.querySelector('#mrail .mdot.cur');
-    if(cur){
+    /* offsetParent nul = le palier courant est replié : son nœud n'a pas de
+       position mesurable, le recentrage n'aurait aucun sens. */
+    if(cur&&cur.offsetParent){
       var r=cur.getBoundingClientRect(),mr=ms.getBoundingClientRect();
       ms.scrollTop += (r.top-mr.top)-ms.clientHeight/2+r.height/2;
     }
