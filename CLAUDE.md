@@ -447,11 +447,22 @@ préfixés `_`) :
   configuration ; avec `user_id` ou `token` il envoie et **remonte la réponse brute d'APNs**.
   Son en-tête liste ce que veut dire chaque `reason`.
 - **`api/rappel-macros.js`** — le rappel du soir. `?dry=1` calcule sans envoyer.
-- **`api/push-amis.js`** — relevé des repas apparus depuis le dernier passage
-  (`push_etat`), puis notification des abonnés de leurs auteurs. **Respecte
-  `membre_prefs.fil_public` et `meals.partage`** : un membre sorti du fil ne déclenche pas plus
-  de notification qu'il n'apparaît dans le fil, sinon le réglage mentirait. Un abonné reçoit
-  **une** notification par passage, même si trois personnes qu'il suit ont publié.
+- **`api/push-amis.js`** — **déclenché par la base** (choix de Pablo, 2026-08-03) : un
+  `after insert` sur `meals` appelle l'endpoint via `pg_net` avec l'id du repas, donc la
+  notification part dans la foulée au lieu d'attendre un cron. Le mode « relevé depuis le
+  dernier passage » (`push_etat`) reste comme filet et pour les tests. Un appel ciblé
+  **n'avance pas le curseur** du relevé — sinon le déclencheur ferait sauter au filet
+  exactement ce qu'il est censé rattraper. **Respecte `membre_prefs.fil_public` et
+  `meals.partage`** : un membre sorti du fil ne déclenche pas plus de notification qu'il
+  n'apparaît dans le fil, sinon le réglage mentirait. Un abonné reçoit **une** notification par
+  passage, même si trois personnes qu'il suit ont publié.
+
+> ⚠️ **Le secret d'un cron Vercel ne voyage pas là où on croit.** Une entrée `crons` de
+> `vercel.json` ne porte ni `?secret=` ni `x-cron-secret` : Vercel envoie
+> `Authorization: Bearer $CRON_SECRET` tout seul. `autorise()` lit donc les **trois** formes.
+> C'est ce qui manquait à `api/conseils-hebdo` (corrigé) : dès que `CRON_SECRET` est
+> configurée, ses 12 crons du lundi repartaient en 401 — invisible, puisque la génération se
+> déclenche aussi à l'ouverture de `suivi.html`.
 
 **`api/_nutrition.js` — copie assumée de la table `NT` d'`assets/core.js`.** Le serveur ne peut
 pas importer core.js (IIFE navigateur), et les macros ne sont stockées **nulle part** :
@@ -1235,25 +1246,25 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      **PAS** `com.natty.app` de `capacitor.config.json`), `APNS_ENV` = `sandbox` pour un build
      Xcode, `production` pour TestFlight/App Store. Plus `CRON_SECRET` et
      `SUPABASE_SERVICE_KEY` s'ils manquent. Vérification : `GET /api/push-test?secret=…`.
-  2. **`natty_push.sql`** à exécuter (tables `appareils` et `push_etat`). Sans elles aucun
-     jeton n'est stocké et rien ne part.
+  2. **`natty_push.sql`** à exécuter — tables `appareils`, `push_etat`, `push_config`, plus
+     `pg_net` et le déclencheur `meals_notifier_amis`. Sans elles aucun jeton n'est stocké et
+     rien ne part. ⚠️ **Remplacer `REMPLACER_PAR_LE_CRON_SECRET`** par la vraie valeur avant
+     d'exécuter : le déclencheur doit s'authentifier auprès de l'endpoint. Le secret vit dans
+     `push_config`, dont la **RLS est activée sans aucune policy** — donc illisible depuis la
+     clé anon, et lu uniquement par la fonction `SECURITY DEFINER`. Ne pas l'écrire en dur
+     dans le corps de la fonction.
   3. **Un build signé.** ⚠️ Le `CODE_SIGNING_ALLOWED=NO` documenté en §11 empêche l'embarquement
      de l'entitlement : l'enregistrement échoue alors avec « aucune autorisation
      *aps-environment* valide » (constaté). L'entitlement lui-même est correct — le
      `App.app-Simulated.xcent` généré porte bien `aps-environment: development` et
      `SAZQ9AFAMZ.com.pabloansermet.nattysuivi`. **Un simulateur ne peut de toute façon pas
      obtenir de vrai jeton APNs** : le premier jeton réel viendra d'un iPhone.
-  4. **Les crons dans `vercel.json`** — délibérément pas ajoutés (règle §9 #14 : ce fichier ne
-     se modifie pas sans l'accord de Pablo). Ligne à ajouter pour le rappel du soir :
-     `{ "path": "/api/rappel-macros", "schedule": "0 16 * * *" }` (16 h UTC = 18 h à Paris en
-     été, 17 h en hiver — Vercel ne connaît que l'UTC).
-     ✅ **Un cron quotidien ne pose pas de problème** : mesuré le 2026-08-03 dans Vercel →
-     Observability, les 12 crons hebdo déclarés se sont bien exécutés (12 invocations, 0 %
-     d'erreur) — la crainte d'une limite Hobby bloquante était infondée.
-     ⚠️ **Reste ouvert : `push-amis` n'a de sens qu'à ~15 min de cadence**, et ça, rien ne le
-     démontre. Ce qui est mesuré, c'est 12 crons **hebdomadaires** qui partent, pas un cron
-     qui se répète dans la journée. Si une cadence courte n'est pas honorée : déclencheur
-     Supabase + `pg_net` sur `meals`, ou plan supérieur.
+  4. ✅ **Crons : réglé.** `{ "path": "/api/rappel-macros", "schedule": "0 16 * * *" }` ajouté
+     à `vercel.json` avec l'accord de Pablo (16 h UTC = 18 h à Paris en été, 17 h en hiver —
+     Vercel ne connaît que l'UTC). Un cron quotidien passe sans problème : mesuré le
+     2026-08-03 dans Vercel → Observability, les 12 crons hebdo déclarés se sont bien exécutés.
+     **`push-amis` ne dépend plus d'un cron du tout** : Pablo a tranché pour le déclencheur
+     Supabase (`pg_net`), donc la question d'une cadence courte ne se pose plus.
   5. **Android : bloqué en amont.** Le plugin passe par Firebase Cloud Messaging et exige un
      `google-services.json` (donc un projet Firebase) ; l'app Android n'a de toute façon jamais
      été compilée. `appareils.plateforme` est prévu pour accueillir des jetons FCM sans changer
@@ -1268,6 +1279,12 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - Vue client premium/standard (badge logic à corriger)
 
 **Sécurité**
+- 🔄 **`api/conseils-hebdo` est ouvert si `CRON_SECRET` n'est pas configurée** : la garde
+  compare `secret !== process.env.CRON_SECRET`, donc `undefined === undefined` laisse passer
+  n'importe qui — et chaque appel consomme l'API Claude. Volontairement **pas** rendu
+  fail-closed : si la variable n'existe pas encore sur Vercel, ça couperait net la génération
+  hebdomadaire. À trancher avec Pablo — une fois `CRON_SECRET` posée (elle l'est de toute
+  façon pour le push), remplacer la ligne par la garde d'`_apns.js` (`autorise`).
 - ✅ Signature Stripe vérifiée dans `api/webhook.js` (voir §3/§7) — reste à ajouter `STRIPE_WEBHOOK_SECRET` sur Vercel avant déploiement.
 - **[PRIORITÉ SÉCURITÉ] Réactiver les RLS Supabase** (actuellement désactivées sur `recettes*` et `profil_conseils`, et policies `USING(true)` ailleurs) : avec la clé anon publique, ces tables sont lisibles/modifiables par n'importe qui. À traiter avant toute distribution large. Écrire les policies une par une, tester après chaque.
 - Remplacer mots de passe hardcodés par auth Supabase

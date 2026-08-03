@@ -209,8 +209,23 @@ export async function ecrireEtat(cle, valeur) {
   } catch (e) { /* sans mémoire, on renverra au pire un doublon */ }
 }
 
-/** Garde commune : les endpoints push ne sont jamais publics. */
+/** Garde commune : les endpoints push ne sont jamais publics.
+ *
+ *  ⚠️ Trois façons de présenter le secret, et la troisième compte :
+ *  un cron Vercel n'ajoute **ni** `?secret=` **ni** `x-cron-secret` — il envoie
+ *  `Authorization: Bearer $CRON_SECRET` tout seul, à condition que la variable
+ *  existe. Une garde qui ne lirait que les deux premières formes laisserait
+ *  chaque exécution programmée repartir en 401 sans que rien ne le signale
+ *  (c'est le cas d'`api/conseils-hebdo`, voir §7).
+ *
+ *  Fail-closed : sans `CRON_SECRET` configurée, tout est refusé. Une garde qui
+ *  comparerait deux `undefined` laisserait l'endpoint ouvert à qui connaît
+ *  l'URL — et ces endpoints envoient des notifications à de vraies personnes. */
 export function autorise(req) {
-  const secret = req.query?.secret || req.headers?.['x-cron-secret'];
-  return !!process.env.CRON_SECRET && secret === process.env.CRON_SECRET;
+  const attendu = process.env.CRON_SECRET;
+  if (!attendu) return false;
+  const entetes = req.headers || {};
+  const porteur = String(entetes.authorization || '').replace(/^Bearer\s+/i, '');
+  const secret = req.query?.secret || entetes['x-cron-secret'] || porteur;
+  return secret === attendu;
 }

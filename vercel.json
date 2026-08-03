@@ -11,6 +11,7 @@
     { "path": "/api/conseils-hebdo", "schedule": "40 8 * * 1" },
     { "path": "/api/conseils-hebdo", "schedule": "45 8 * * 1" },
     { "path": "/api/conseils-hebdo", "schedule": "50 8 * * 1" },
-    { "path": "/api/conseils-hebdo", "schedule": "55 8 * * 1" }
+    { "path": "/api/conseils-hebdo", "schedule": "55 8 * * 1" },
+    { "path": "/api/rappel-macros", "schedule": "0 16 * * *" }
   ]
 }

@@ -5,23 +5,22 @@
 // enregistré sur l'appareil de QUELQU'UN D'AUTRE. Aucun téléphone ne peut le
 // savoir tout seul.
 //
-// Fonctionne par relevé, pas par déclencheur base : on regarde les repas
-// apparus depuis le dernier passage (mémorisé dans `push_etat`, clé `amis`) et
-// on prévient ceux qui suivent leur auteur. Un déclencheur Postgres + pg_net
-// serait plus immédiat mais suppose du DDL et une extension ; le relevé se
-// rejoue sans risque, ne perd rien si une exécution saute, et se teste depuis
-// un navigateur.
+// DÉCLENCHÉ PAR LA BASE (choix de Pablo, 2026-08-03) : un `after insert` sur
+// `meals` appelle cet endpoint via `pg_net`, avec l'id du repas. La
+// notification part donc dans la foulée de l'enregistrement, sans attendre le
+// passage d'un cron. Le SQL est dans natty_push.sql.
 //
-//   GET /api/push-amis?secret=…            depuis le dernier passage
-//   GET /api/push-amis?secret=…&dry=1      calcule et renvoie SANS envoyer
-//   GET /api/push-amis?secret=…&minutes=60 fenêtre explicite (ignore la mémoire)
+// Le mode « relevé » est conservé comme filet : il rattrape ce qu'un
+// déclencheur en échec aurait laissé passer, et il se teste depuis un
+// navigateur sans rien insérer en base.
 //
-// ⚠️ CADENCE. Un relevé n'est pertinent que s'il tourne souvent (~15 min).
-//    Le plan Vercel Hobby n'autorise que 2 crons/jour — à cette cadence le
-//    « un ami a ajouté un plat » arriverait le lendemain, ce qui n'a aucun
-//    intérêt. Voir §8 : soit le projet passe sur un plan qui autorise les
-//    crons fréquents, soit ce rappel passe par un déclencheur Supabase.
-//    **Rien n'est déclaré dans vercel.json pour l'instant** (règle §9 #14).
+//   POST /api/push-amis            {"meal_id":"…"}   ← le déclencheur
+//   GET  /api/push-amis?secret=…                      depuis le dernier passage
+//   GET  /api/push-amis?secret=…&dry=1                calcule SANS envoyer
+//   GET  /api/push-amis?secret=…&minutes=60           fenêtre explicite
+//
+// Dans tous les cas le secret est exigé (?secret=, x-cron-secret, ou
+// Authorization: Bearer — voir `autorise`).
 //
 // ⚠️ RUNTIME NODE OBLIGATOIRE : _apns.js utilise `http2`. Pas d'edge ici.
 // ═══════════════════════════════════════════════════════════
@@ -33,6 +32,7 @@ export default async function handler(req, res) {
 
   const dry = req.query?.dry === '1';
   const minutes = parseInt(req.query?.minutes || '', 10);
+  const mealId = lireMealId(req);
 
   const maintenant = new Date();
   let depuis = await lireEtat('amis');
@@ -41,13 +41,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Les repas apparus depuis le dernier passage.
-    const repas = await sbGet(
-      `meals?created_at=gt.${encodeURIComponent(depuis)}&select=id,user_id,name,partage,created_at` +
-      `&order=created_at.asc&limit=200`
-    );
+    // 1. Le repas désigné par le déclencheur, ou tous ceux apparus depuis le
+    //    dernier passage. Un appel ciblé ne touche PAS la mémoire du relevé :
+    //    sinon un déclencheur ferait avancer le curseur et le filet laisserait
+    //    passer les repas qu'il était censé rattraper.
+    const repas = mealId
+      ? await sbGet(`meals?id=eq.${encodeURIComponent(mealId)}&select=id,user_id,name,partage,created_at`)
+      : await sbGet(
+          `meals?created_at=gt.${encodeURIComponent(depuis)}&select=id,user_id,name,partage,created_at` +
+          `&order=created_at.asc&limit=200`
+        );
     if (!repas.length) {
-      if (!dry) await ecrireEtat('amis', maintenant.toISOString());
+      if (!dry && !mealId) await ecrireEtat('amis', maintenant.toISOString());
       return res.status(200).json({ ok: true, depuis, repas: 0 });
     }
 
@@ -58,7 +63,7 @@ export default async function handler(req, res) {
     const prives = await membresPrives(auteurs);
     const visibles = repas.filter(r => r.partage !== false && !prives.has(r.user_id));
     if (!visibles.length) {
-      if (!dry) await ecrireEtat('amis', maintenant.toISOString());
+      if (!dry && !mealId) await ecrireEtat('amis', maintenant.toISOString());
       return res.status(200).json({ ok: true, depuis, repas: repas.length, visibles: 0 });
     }
 
@@ -84,7 +89,7 @@ export default async function handler(req, res) {
 
     const abonnes = Object.keys(pourAbonne);
     if (!abonnes.length) {
-      if (!dry) await ecrireEtat('amis', maintenant.toISOString());
+      if (!dry && !mealId) await ecrireEtat('amis', maintenant.toISOString());
       return res.status(200).json({ ok: true, depuis, repas: visibles.length, abonnes: 0 });
     }
 
@@ -99,18 +104,36 @@ export default async function handler(req, res) {
         rapport.push({ abonne, envoi: false, apercu: msg, jetons: (jetons[abonne] || []).length });
         continue;
       }
-      const r = await apnsEnvoyer(jetons[abonne], {
-        titre: msg.titre, corps: msg.corps, data: { route: 'social.html' }
-      });
-      envoyes += r.envoyes;
-      rapport.push({ abonne, envoi: true, apercu: msg, apns: { ok: r.envoyes, ko: r.echecs } });
+      // Un envoi qui échoue ne doit pas priver les autres abonnés du leur :
+      // sans ce filet, un seul jeton fâché fait tomber toute la boucle.
+      try {
+        const r = await apnsEnvoyer(jetons[abonne], {
+          titre: msg.titre, corps: msg.corps, data: { route: 'social.html' }
+        });
+        envoyes += r.envoyes;
+        rapport.push({ abonne, envoi: true, apercu: msg, apns: { ok: r.envoyes, ko: r.echecs } });
+      } catch (e) {
+        rapport.push({ abonne, envoi: false, apercu: msg, erreur: e.message });
+      }
     }
 
-    if (!dry) await ecrireEtat('amis', maintenant.toISOString());
+    if (!dry && !mealId) await ecrireEtat('amis', maintenant.toISOString());
     return res.status(200).json({ ok: true, depuis, repas: visibles.length, abonnes: abonnes.length, envoyes, rapport });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
+}
+
+/* Le déclencheur pg_net poste {"meal_id":"…"}. Selon le Content-Type et la
+   version du runtime, `req.body` arrive tantôt en objet, tantôt en chaîne —
+   même prudence que dans api/checkout.js. `?meal_id=` reste accepté pour
+   pouvoir rejouer un cas précis à la main. */
+function lireMealId(req) {
+  if (req.query?.meal_id) return req.query.meal_id;
+  let b = req.body;
+  if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = null; } }
+  const id = b && (b.meal_id || (b.record && b.record.id));
+  return id ? String(id) : null;
 }
 
 function composer(items, prenoms) {

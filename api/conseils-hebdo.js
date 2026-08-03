@@ -2,8 +2,19 @@
 // vercel.json: { "crons": [{ "path": "/api/conseils-hebdo", "schedule": "0 7 * * 1" }] }
 
 export default async function handler(req, res) {
-  const secret = req.query?.secret || req.headers?.['x-cron-secret'];
+  // ⚠️ Les entrées cron de vercel.json ne portent PAS de `?secret=` : Vercel
+  // envoie `Authorization: Bearer $CRON_SECRET` de lui-même. Sans cette
+  // troisième forme, chaque lundi matin repartait en 401 dès que la variable
+  // était configurée — et personne ne s'en apercevait, la génération se
+  // déclenchant aussi à l'ouverture de suivi.html.
+  const porteur = String(req.headers?.authorization || '').replace(/^Bearer\s+/i, '');
+  const secret = req.query?.secret || req.headers?.['x-cron-secret'] || porteur;
   if (secret !== process.env.CRON_SECRET) return res.status(401).json({ error: 'Unauthorized' });
+  // ⚠️ Si CRON_SECRET n'est pas configurée, la comparaison ci-dessus vaut
+  // `undefined === undefined` : l'endpoint est OUVERT à qui connaît l'URL, et
+  // chaque appel consomme l'API Claude. À décider avec Pablo (voir §8) — le
+  // rendre fail-closed maintenant couperait la génération hebdomadaire si la
+  // variable n'existe pas encore.
 
   const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
   const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
