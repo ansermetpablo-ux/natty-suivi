@@ -84,6 +84,12 @@ var Natty = (function () {
     return !s || !s.expires_at || (s.expires_at - 60) * 1000 <= Date.now();
   }
 
+  // Sans la marge : « ce jeton est-il réellement mort ? ». Sert à décider si
+  // un renouvellement refusé doit déconnecter, ou seulement être ignoré.
+  function perime(s) {
+    return !s || !s.expires_at || s.expires_at * 1000 <= Date.now();
+  }
+
   // Un seul renouvellement à la fois : plusieurs écrans chargent leurs données
   // en parallèle, et un refresh_token consommé deux fois est invalidé.
   function rafraichirSession() {
@@ -97,10 +103,20 @@ var Natty = (function () {
     }).then(function (r) {
       return r.json().then(function (d) {
         if (r.ok && d && d.access_token) return ecrireSession(d);
-        // Refus explicite du serveur : la session est morte. On renvoie vers
-        // la connexion plutôt que de retomber sur la clé anon — sinon, une
-        // fois les RLS actives, l'utilisateur verrait des écrans vides sans
-        // comprendre qu'il est déconnecté.
+        // ⚠️ Un refus ici ne veut PAS dire que la session est morte. Un
+        // refresh_token est à usage unique : deux écrans qui le dépensent en
+        // même temps (ou un rechargement au mauvais moment) suffisent à ce
+        // qu'Apple… pardon, que GoTrue réponde « Refresh token is not valid »
+        // alors que l'access_token en poche est encore parfaitement bon.
+        // Déconnecter dans ce cas renvoie à la connexion quelqu'un qui vient
+        // de se connecter — c'est la boucle constatée le 2026-08-04 (cinq
+        // connexions réussies en treize minutes dans les journaux GoTrue).
+        // On ne coupe donc que si le jeton courant est vraiment périmé.
+        if (SESSION && !perime(SESSION)) return SESSION;
+        // Refus explicite du serveur ET jeton périmé : la session est morte.
+        // On renvoie vers la connexion plutôt que de retomber sur la clé anon
+        // — sinon, une fois les RLS actives, l'utilisateur verrait des écrans
+        // vides sans comprendre qu'il est déconnecté.
         deconnecter();
         return null;
       });
@@ -187,12 +203,19 @@ var Natty = (function () {
       headers: await entetes(o.headers),
       body: o.body
     });
-    // Jeton refusé alors qu'on en avait un : il a pu être révoqué côté serveur.
-    // On tente un renouvellement, une seule fois.
-    if ((r.status === 401 || r.status === 403) && SESSION && !reessai) {
+    var t = await r.text();
+    // ⚠️ Un 401/403 de PostgREST veut dire DEUX choses très différentes, et
+    // les confondre déconnecte des gens parfaitement connectés :
+    //   • le jeton est en cause  → `PGRST301` / « JWT expired » : renouveler ;
+    //   • la POLICY refuse       → `42501` : le jeton est bon, c'est l'écriture
+    //     qui n'est pas permise. Renouveler n'y changera rien, et si le
+    //     refresh_token a déjà été dépensé ailleurs, on repart en boucle vers
+    //     login.html. Depuis l'activation des RLS, ce second cas est devenu
+    //     le cas courant — d'où le tri explicite ci-dessous.
+    if ((r.status === 401 || r.status === 403) && SESSION && !reessai
+        && /PGRST301|PGRST303|JWT/i.test(t) && !/42501/.test(t)) {
       if (await rafraichirSession()) return appel(path, init, true);
     }
-    var t = await r.text();
     if (!r.ok) throw new Error(t);
     return t ? JSON.parse(t) : [];
   }
