@@ -19,13 +19,16 @@ export default async function handler(req, res) {
       try { body = JSON.parse(raw); } catch(e) { body = {}; }
     }
 
-    console.log('body received:', JSON.stringify(body));
-
     const { priceId, userId, token, plateforme } = body;
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
-    console.log('priceId:', priceId);
-    console.log('STRIPE_SECRET_KEY present:', !!STRIPE_SECRET_KEY);
+    // ⚠️ Ne jamais journaliser le body : offre.html y met l'adresse de
+    // livraison, l'email et le token de session. Les logs Vercel sont
+    // consultables par toute personne ayant accès au projet, et conservés —
+    // une adresse postale n'a rien à y faire. On ne trace que ce qui sert au
+    // diagnostic, et rien qui identifie quelqu'un.
+    console.log('checkout: formule=%s, natif=%s, cle=%s',
+      priceId, plateforme === 'natif', !!STRIPE_SECRET_KEY);
 
     if (!STRIPE_SECRET_KEY) {
       return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
@@ -64,8 +67,6 @@ export default async function handler(req, res) {
     params.append('metadata[user_id]', userId || '');
     params.append('subscription_data[metadata][user_id]', userId || '');
 
-    console.log('Calling Stripe...');
-
     const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: {
@@ -76,8 +77,13 @@ export default async function handler(req, res) {
     });
 
     const session = await stripeRes.json();
-    console.log('Stripe status:', stripeRes.status);
-    console.log('Stripe response:', JSON.stringify(session).substring(0, 300));
+
+    // La réponse de Stripe contient l'email et l'id client : on ne la
+    // journalise qu'en cas d'échec, et seulement son message d'erreur.
+    if (!stripeRes.ok) {
+      console.log('checkout: Stripe %s — %s', stripeRes.status,
+        (session && session.error && session.error.message) || 'sans détail');
+    }
 
     if (!session.url) {
       return res.status(500).json({ error: 'No URL in response', details: session });

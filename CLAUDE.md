@@ -1351,14 +1351,25 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   2. ✅ **Fil social** : `social.js` lit désormais la vue `membre_public` au lieu
      d'`onboarding`/`questionnaire_alim` (commit `b7b6b9d`, session parallèle). La RLS
      filtrant des lignes et non des colonnes, c'est la vue qui restreint les colonnes.
-  Et un point de migration, toujours ouvert : `core.js` retombe sur la clé anon sans
-  session, donc les utilisateurs connectés avant la bascule JWT verraient un écran vide au
-  lieu d'être renvoyés vers `login.html`.
+  3. ✅ **Migration des sessions — faite** (août 2026). `SESSION_OBLIGATOIRE` est passé à
+     `true` : un utilisateur sans session est renvoyé vers `login.html`, et s'il avait une
+     identité héritée (`natty_token` / `?token=`) il arrive sur `login.html?reconnexion=1`
+     avec un mot d'explication — il se croyait connecté, on ne le dépose pas devant un
+     formulaire sans rien dire. L'identité héritée est effacée au passage, sinon la page
+     suivante rejouait le même aller-retour. **Fait maintenant plutôt qu'au moment
+     d'activer la RLS** : ce drapeau vivant dans le code et la RLS dans le SQL, les basculer
+     ensemble se serait payé en écrans vides. Vérifié : hérité → message + nettoyage ;
+     visiteur sans rien → `login.html` nu ; aucune boucle.
 - 🔴 **`nutritionnistes.mdp_hash` n'est pas un hachage, c'est du base64** — réversible en une
   ligne, et la table est lisible avec la clé anon publique : les mots de passe de toute
   l'équipe sont en clair pour qui sait regarder. La colonne disparaît une fois chaque
   nutritionniste doté d'un compte Auth (fin de `natty_staff.sql`).
-- Valider côté serveur que `priceId` dans `api/checkout.js` fait bien partie de `PRICE_3`/`PRICE_4` (actuellement non vérifié).
+- ✅ `priceId` validé côté serveur dans `api/checkout.js` (allowlist des deux formules,
+  commit `d6aafbe`).
+- ✅ **Journalisation de `api/checkout.js` nettoyée** (août 2026) : le handler écrivait le
+  body entier dans les logs Vercel — donc **l'adresse de livraison, l'email et le token de
+  session** de chaque personne qui souscrit. Ne restent qu'un identifiant de formule et des
+  booléens ; la réponse Stripe n'est tracée qu'en cas d'échec, et seulement son message.
 
 ### ✅ Fait (sessions précédentes)
 - Chat temps réel Supabase Realtime

@@ -242,6 +242,15 @@
     <div class="logo-sub">Votre nutritionniste personnel</div>
   </div>
 
+  <!-- Reconnexion : affiché quand core.js a renvoyé ici quelqu'un qui se
+       croyait connecté (identité héritée, sans session). Sans ce mot, la
+       personne se retrouve devant un formulaire sans savoir pourquoi. -->
+  <div id="msgReconnexion" style="display:none;background:#fff4e5;border-radius:14px;padding:12px 14px;
+       margin-bottom:16px;font-size:13px;line-height:1.5;color:#8a5a00;text-align:center;">
+    Reconnectez-vous une fois : Natty sécurise désormais votre compte,
+    vos données ne sont plus accessibles sans connexion.
+  </div>
+
   <!-- Tabs connexion / inscription -->
   <div class="tabs" id="authTabs">
     <button class="tab active" id="tabLogin" onclick="switchTab('login')">Connexion</button>
@@ -370,6 +379,13 @@ async function reporterPrenom() {
     if (!l.length) await Natty.sbPost('onboarding', { user_id: p.sub, prenom: prenom }, 'return=minimal');
     else if (!l[0].prenom) await Natty.sbPatch('onboarding?id=eq.' + l[0].id, { prenom: prenom });
   } catch (e) {}
+}
+
+// core.js renvoie ici avec ?reconnexion=1 quand il a trouvé une identité
+// héritée sans session : la personne se croyait connectée, on le lui explique.
+if (new URLSearchParams(location.search).get('reconnexion') === '1') {
+  var _mr = document.getElementById('msgReconnexion');
+  if (_mr) _mr.style.display = 'block';
 }
 
 async function entrerDansApp(auth) {

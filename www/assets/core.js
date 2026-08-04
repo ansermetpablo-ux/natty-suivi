@@ -39,7 +39,12 @@ var Natty = (function () {
   // connecter que lui afficher une app qui a l'air cassée. Les comptes créés
   // avant la bascule JWT n'ont qu'un `natty_token` en localStorage et
   // repasseront donc par login.html une fois — c'est attendu.
-  var SESSION_OBLIGATOIRE = false;
+  // Passé à true le 2026-08-03 : la migration se fait MAINTENANT, pendant
+  // qu'on la regarde, plutôt qu'au moment où les policies seront posées. Sinon
+  // ce drapeau serait à basculer dans le code exactement en même temps que la
+  // RLS en SQL — deux endroits, deux systèmes, et un oubli qui se paie en
+  // écrans vides chez des gens qui ne comprennent pas pourquoi.
+  var SESSION_OBLIGATOIRE = true;
 
   // Décode la charge utile d'un JWT sans la vérifier : elle ne sert qu'à
   // connaître l'identifiant et l'expiration. La vérification, elle, est faite
@@ -261,7 +266,20 @@ var Natty = (function () {
   function requireAuth() {
     if (SESSION_OBLIGATOIRE ? !!SESSION : !!USER_ID) return true;
     setTimeout(function () {
-      if (SESSION_OBLIGATOIRE ? !SESSION : !USER_ID) window.location.href = 'login.html';
+      if (SESSION_OBLIGATOIRE ? !!SESSION : !!USER_ID) return;
+      // Quelqu'un qui avait une identité héritée (natty_token / ?token=) mais
+      // pas de session n'est pas un visiteur anonyme : il se croyait connecté.
+      // On le lui dit, au lieu de le déposer sans explication devant un
+      // formulaire de connexion. Et on efface l'identité héritée, sinon la
+      // page suivante rejouerait le même aller-retour.
+      var herite = !!USER_ID;
+      if (herite) {
+        try {
+          localStorage.removeItem('natty_token');
+          localStorage.removeItem('natty_user_id');
+        } catch (e) {}
+      }
+      window.location.href = 'login.html' + (herite ? '?reconnexion=1' : '');
     }, 1500);
     return false;
   }
