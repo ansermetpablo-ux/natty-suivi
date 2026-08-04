@@ -67,6 +67,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .ctag-green { background: var(--gl); color: var(--green); box-shadow: none; }
 .ctag-amber { background: var(--al); color: var(--amber); box-shadow: none; }
 .ctag-red   { background: var(--rl); color: var(--red); box-shadow: none; }
+/* Abonné : noir plein, la seule pastille de la carte à l'être — c'est
+   l'information qu'on cherche d'un coup d'œil dans la liste. */
+.ctag-abo     { background: var(--black); color: #fff; box-shadow: none; font-weight: 600; }
+.ctag-sansabo { background: transparent; color: var(--muted); box-shadow: none; border: 1px solid rgba(154,154,170,0.35); }
 .client-scores { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; flex-shrink: 0; }
 .score-mini { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
 .score-dot  { width: 8px; height: 8px; border-radius: 50%; }
@@ -1195,6 +1199,25 @@ async function chargerClients() {
     let query = 'onboarding?completed=eq.true&order=created_at.desc&select=*';
     // nutritionniste_id not in schema — load all for now
     allClients = await sb(query);
+
+    // Abonné ou non : l'information la plus utile de la liste, et elle n'y
+    // était pas. Elle ne vit pas dans `onboarding` mais dans `abonnements`,
+    // d'où cette seconde requête plutôt qu'un champ deviné.
+    try {
+      const abos = await sb('abonnements?statut=eq.actif&select=user_id,formule');
+      const parUser = {};
+      // `formule` est nulle sur les abonnements réels en base (le webhook ne
+      // la renseigne que s'il retrouve le priceId). Un abonné sans formule
+      // reste un abonné : on retient donc la PRÉSENCE de la ligne, pas sa
+      // formule — sinon la pastille afficherait « Sans abonnement » à
+      // quelqu'un qui paie.
+      (abos || []).forEach(a => { parUser[a.user_id] = a.formule || ''; });
+      allClients.forEach(c => {
+        c._abo = Object.prototype.hasOwnProperty.call(parUser, c.user_id);
+        c._formule = c._abo ? parUser[c.user_id] : null;
+      });
+    } catch(e) { /* sans abonnements, la liste reste utilisable */ }
+
     updateStats(allClients); afficherClients(allClients);
   } catch(e) { document.getElementById('clientsList').innerHTML = '<div class="empty">Erreur : '+e.message+'</div>'; }
 }
@@ -1217,11 +1240,15 @@ function afficherClients(data) {
     const date = new Date(c.created_at).toLocaleDateString('fr-FR', {day:'numeric', month:'short'});
     const sc = v => v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
     const emailTag = c.email ? '<span class="ctag ctag-green">✉️ '+c.email+'</span>' : '';
+    const FORMULES = { '3_repas': '3 repas/sem', '4_repas': '4 repas/sem' };
+    const aboTag = c._abo
+      ? '<span class="ctag ctag-abo">★ '+(FORMULES[c._formule] || c._formule || 'Abonné')+'</span>'
+      : '<span class="ctag ctag-sansabo">Sans abonnement</span>';
     return '<div class="client-card '+(isAlerte?'alert':isWarn?'warn':'')+'" data-id="'+c.id+'">'
       +'<div class="client-avatar '+(isAlerte?'red-av':'')+'">'+((c.user_id||'?').substring(0,2).toUpperCase())+'</div>'
       +'<div class="client-info"><div class="client-name">'+(c.prenom ? (c.prenom+' '+(c.nom||'')).trim() : c.email ? c.email.split("@")[0] : 'Client '+(c.user_id||'').substring(0,8))+'</div>'
       +'<div class="client-meta">'+(motivL[c.motivation]||c.motivation||'–')+' · '+(maturL[c.maturite]||c.maturite||'–')+'</div>'
-      +'<div class="client-tags">'+(isAlerte?'<span class="ctag ctag-red">🚨 Alerte</span>':'')+(c.axe_amelioration?'<span class="ctag ctag-green">'+c.axe_amelioration+'</span>':'')+(c.poids?'<span class="ctag">'+c.poids+' kg</span>':'')+emailTag+'</div></div>'
+      +'<div class="client-tags">'+aboTag+(isAlerte?'<span class="ctag ctag-red">🚨 Alerte</span>':'')+(c.axe_amelioration?'<span class="ctag ctag-green">'+c.axe_amelioration+'</span>':'')+(c.poids?'<span class="ctag">'+c.poids+' kg</span>':'')+emailTag+'</div></div>'
       +'<div class="client-scores"><div class="score-mini"><div class="score-dot" style="background:'+sc(sm)+'"></div>Motiv. '+sm+'/10</div>'
       +'<div class="score-mini"><div class="score-dot" style="background:'+sc(sr)+'"></div>Rigueur '+sr+'/10</div>'
       +'<div class="score-mini"><div class="score-dot" style="background:'+sc(sn)+'"></div>Nutri. '+sn+'/10</div>'
@@ -3086,11 +3113,13 @@ function switchCmdSub(sub, el) {
 
 async function chargerCommandesCalendrier() {
   try {
-    // Support semaine navigation
-    const baseLundi = getLundiSemaineAdmin();
-    const d = new Date(baseLundi + 'T00:00:00');
-    d.setDate(d.getDate() + (semaineOffset || 0) * 7);
-    const lundi = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    // ⚠️ getLundiSemaineAdmin() APPLIQUE DÉJÀ semaineOffset (elle appelle
+    // getLundi(semaineOffset)). Le décalage était ajouté une seconde fois ici :
+    // un clic sur « semaine suivante » sautait donc deux semaines, et le
+    // libellé calculé par updateSemaineLabel() — qui ne compte l'offset qu'une
+    // fois — désignait une autre semaine que les données affichées.
+    const lundi = getLundiSemaineAdmin();
+    const d = new Date(lundi + 'T00:00:00');
     // Update nav label
     const finAff = new Date(d); finAff.setDate(finAff.getDate() + 4);
     const fmtD = dt => dt.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});

@@ -1304,8 +1304,21 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ~~Analyse de plat par IA (photo → macros)~~ — **déjà livré** (`analyserAvecIA()`/`saveIA()`), ce n'était pas un backend à créer mais une feature existante mal documentée. Corrigé en §3.
 
 **Admin**
-- Calendrier commandes (semaineOffset reset à 0 bug)
-- Vue client premium/standard (badge logic à corriger)
+- ✅ **Calendrier commandes — corrigé** (août 2026). Ce n'était pas un « reset à 0 » :
+  `getLundiSemaineAdmin()` **applique déjà** `semaineOffset` (elle appelle
+  `getLundi(semaineOffset)`), et `chargerCommandesCalendrier()` le rajoutait. Un clic sur
+  « semaine suivante » sautait donc **deux** semaines, et le libellé d'`updateSemaineLabel()`
+  — qui ne compte l'offset qu'une fois — désignait une autre semaine que les données
+  affichées. Mesuré avant/après : offset 1 interrogeait le 16 août au lieu du 10.
+  Vérifié en navigateur : 3 → 10 → 17 août, libellé et requête d'accord.
+- ✅ **Badge abonnement dans la liste clients — livré** (août 2026). Il n'existait pas du
+  tout : « badge logic à corriger » désignait une feature absente, pas un bug. La liste
+  affiche désormais « ★ Abonné » (noir plein, seule pastille pleine de la carte) ou
+  « Sans abonnement ». L'info vient d'`abonnements?statut=eq.actif`, pas d'`onboarding`.
+  > ⚠️ **`abonnements.formule` est nulle sur les lignes réelles** (le webhook ne la
+  > renseigne que s'il retrouve le priceId). La pastille se fonde donc sur la **présence**
+  > de la ligne, pas sur la formule — sinon elle affichait « Sans abonnement » à quelqu'un
+  > qui paie (défaut attrapé au test : 0 abonné détecté sur 2 réels).
 
 **Sécurité**
 - 🔄 **`api/conseils-hebdo` est ouvert si `CRON_SECRET` n'est pas configurée** : la garde
@@ -1315,8 +1328,30 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   hebdomadaire. À trancher avec Pablo — une fois `CRON_SECRET` posée (elle l'est de toute
   façon pour le push), remplacer la ligne par la garde d'`_apns.js` (`autorise`).
 - ✅ Signature Stripe vérifiée dans `api/webhook.js` (voir §3/§7) — reste à ajouter `STRIPE_WEBHOOK_SECRET` sur Vercel avant déploiement.
-- **[PRIORITÉ SÉCURITÉ] Réactiver les RLS Supabase** (actuellement désactivées sur `recettes*` et `profil_conseils`, et policies `USING(true)` ailleurs) : avec la clé anon publique, ces tables sont lisibles/modifiables par n'importe qui. À traiter avant toute distribution large. Écrire les policies une par une, tester après chaque.
-- Remplacer mots de passe hardcodés par auth Supabase
+- ✅ **`api/conseils-hebdo` verrouillé** (août 2026) : garde fail-closed, et les trois formes
+  du secret acceptées. Pablo a confirmé que `CRON_SECRET` existe sur Vercel.
+- 🔴 **[PRIORITÉ SÉCURITÉ] RLS — état MESURÉ le 2026-08-03, et c'est pire que « à faire ».**
+  Avec la seule clé anon publique (présente dans le code de chaque page, donc dans le
+  navigateur de n'importe qui) :
+  - **lecture de toutes les tables** — 31 profils, 66 repas, les conversations privées avec
+    le nutritionniste, les allergies, les poids, les âges ;
+  - **écriture sur les données d'autrui** — un `PATCH` sur l'`onboarding` d'un autre membre
+    renvoie **204**. Vérifié par une preuve non destructive (valeur réécrite par elle-même).
+  Le plan est écrit dans **`natty_rls.sql`**, en trois étapes, avec la marche arrière pour
+  chacune. L'étape 1 (`push_etat`, `appareils`) est **sans risque et exécutable tout de
+  suite**. Les étapes 2 et 3 sont bloquées par deux points, détaillés dans le fichier :
+  1. **`admin.html` n'a aucune identité en base** (mots de passe en dur + clé anon) : dès
+     que les tables passent en RLS, le back-office ne voit plus rien. Il faut d'abord des
+     comptes Supabase Auth pour l'équipe, ou faire passer l'admin par des endpoints serveur.
+  2. **Le fil social lit `meals`, `onboarding` et `questionnaire_alim` pour les autres
+     membres.** Or la RLS filtre des lignes, pas des colonnes : autoriser la lecture de la
+     ligne `onboarding` d'un membre pour son prénom livre aussi son email et son âge. Il
+     faut d'abord une vue `membre_public` et y faire pointer `social.js`.
+  Et un point de migration : `core.js` retombe sur la clé anon sans session, donc les
+  utilisateurs connectés avant la bascule JWT verraient un écran vide au lieu d'être
+  renvoyés vers `login.html`.
+- Remplacer mots de passe hardcodés par auth Supabase — **c'est le même chantier que la RLS**
+  (point 1 ci-dessus), pas un sujet séparé.
 - Valider côté serveur que `priceId` dans `api/checkout.js` fait bien partie de `PRICE_3`/`PRICE_4` (actuellement non vérifié).
 
 ### ✅ Fait (sessions précédentes)

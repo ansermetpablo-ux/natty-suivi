@@ -7,14 +7,15 @@ export default async function handler(req, res) {
   // troisième forme, chaque lundi matin repartait en 401 dès que la variable
   // était configurée — et personne ne s'en apercevait, la génération se
   // déclenchant aussi à l'ouverture de suivi.html.
+  // Fail-closed : sans CRON_SECRET configurée, tout est refusé. La version
+  // précédente comparait `undefined === undefined` et laissait donc l'endpoint
+  // OUVERT à qui connaissait l'URL — chaque appel consommant l'API Claude.
+  // Pablo a confirmé le 2026-08-03 que la variable existe sur Vercel.
   const porteur = String(req.headers?.authorization || '').replace(/^Bearer\s+/i, '');
   const secret = req.query?.secret || req.headers?.['x-cron-secret'] || porteur;
-  if (secret !== process.env.CRON_SECRET) return res.status(401).json({ error: 'Unauthorized' });
-  // ⚠️ Si CRON_SECRET n'est pas configurée, la comparaison ci-dessus vaut
-  // `undefined === undefined` : l'endpoint est OUVERT à qui connaît l'URL, et
-  // chaque appel consomme l'API Claude. À décider avec Pablo (voir §8) — le
-  // rendre fail-closed maintenant couperait la génération hebdomadaire si la
-  // variable n'existe pas encore.
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
   const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
