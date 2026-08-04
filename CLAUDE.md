@@ -1180,6 +1180,30 @@ côté client (`calcMacros()`), et lire le nombre de repas par jour dans
 `grignotage`), pas un entier : `parseInt("1_2")` vaut 1, d'où un « 1 repas / jour » faux.
 Tableau des colonnes réelles en §4.
 
+### Boucle de connexion : un refus de POLICY pris pour une session morte — ✅ corrigé
+**Problème** (constaté par Pablo le 2026-08-04, juste après l'activation des RLS) : on se
+connecte, on appuie sur « Suivi », on retombe sur l'écran de connexion, indéfiniment. Les
+journaux GoTrue le disaient sans ambiguïté — **cinq connexions réussies en treize minutes**
+depuis la même adresse, entrecoupées de « 400: Refresh token is not valid ».
+**Deux confusions en série**, toutes deux inoffensives tant que la RLS dormait :
+1. `appel()` (`assets/core.js`) traitait **tout** 401/403 de PostgREST comme un jeton
+   révoqué. Or PostgREST répond aussi 401/403 quand c'est la **policy** qui refuse
+   (`42501`) : le jeton est bon, c'est l'écriture qui n'est pas permise, et renouveler n'y
+   change rien. Depuis les RLS, ce cas est devenu le cas courant.
+2. `rafraichirSession()` appelait `deconnecter()` dès qu'un renouvellement était refusé. Un
+   `refresh_token` est **à usage unique** : deux écrans qui le dépensent en même temps
+   suffisent à le faire refuser, alors que l'`access_token` en poche vaut encore une heure.
+**Solution** : ne renouveler que sur `PGRST301`/`PGRST303`/`JWT` et jamais sur `42501` ; et
+ne déconnecter que si le jeton courant est **réellement** périmé (`perime()`, sans la marge
+de 60 s d'`expireBientot()`).
+**Vérifié en A/B**, même session factice et même page : ancienne version → `menu.html`
+finit sur `login.html` ; nouvelle → `menu.html` ouvre le suivi et la session tient. Refait
+sur la prod après déploiement.
+> ⚠️ Leçon transposable : **un `catch` qui déconnecte est un piège**. Tant que la RLS était
+> désactivée, aucune requête ne revenait en 403, donc ce chemin n'avait jamais été
+> emprunté. Toute la classe « erreur serveur → on suppose que la session est morte » est à
+> relire avant d'activer une sécurité côté base.
+
 ### Realtime WebSocket manuel (protocole obsolète ?)
 **Problème** : `chat.html`, `challenges.html` et `suivi.html` ouvrent chacun un `WebSocket` manuel vers `wss://.../realtime/v1/websocket` avec un `phx_join` minimal (`{topic:'realtime:public:<table>', payload:{}}`), sans `config.postgres_changes` — c'est le protocole Supabase Realtime **pré-`postgres_changes`**, potentiellement incompatible avec une instance Supabase récente (qui exige ce champ de config pour router les événements).
 **Solution** : à tester en conditions réelles (envoyer un message/défi et vérifier la réception live) ; si cassé, migrer vers le client `supabase-js` (`.channel().on('postgres_changes', ...)`) plutôt que le protocole WebSocket brut.
@@ -1598,6 +1622,26 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - Toutes les modifications validées avec `node --check` avant commit
 
 ---
+
+### ⚠️ `e01e20b` contient le travail de deux sessions — tranché : on ne réécrit pas
+Le commit **`e01e20b` « Recettes : des étapes qu'on peut suivre en cuisinant… »** a emporté,
+via un `git add -A`, le travail d'une session parallèle : `cgu.html`, `cgv.html`,
+`confidentialite.html`, `assets/legal.css`, `api/supprimer-compte.js` et la zone
+« supprimer mon compte » de `profil.html`. Son message n'en dit rien.
+
+**Décision (2026-08-04, Pablo : « fais au mieux ») : on laisse l'historique tel quel.**
+Le découpage propre exigerait un `git push --force` sur `app-native` **et** sur `main`, or :
+- le commit est déjà **sur `main` et déployé** — réécrire le fait disparaître d'une branche
+  qui sert la production ;
+- **une autre session travaille sur ce dépôt en parallèle** : un force-push la laisse sur
+  une base qui n'existe plus, à réparer à la main, sans prévenir ;
+- le contenu, lui, est **intact et vérifié** (syntaxe, balises fermantes, endpoint valide).
+Le seul dommage est un message de commit incomplet. Le coût de la réparation est très
+supérieur au défaut. Cette note **est** la réparation : `git log` ne dit pas d'où viennent
+les pages légales et la suppression de compte, ce paragraphe le dit.
+
+> Règle qui en découle : **jamais de `git add -A` sur ce dépôt.** Plusieurs sessions y
+> écrivent en même temps ; n'ajouter que les chemins qu'on a soi-même modifiés.
 
 ## 11. Application native (Capacitor) — branche `app-native`
 
