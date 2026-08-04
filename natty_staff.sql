@@ -107,34 +107,62 @@ grant execute on function public.staff_configure() to anon, authenticated;
 -- update public.staff set actif = false where user_id = '…';
 
 
--- § 5. Rouvrir le back-office une fois la RLS activée.
---      `natty_rls.sql` ferme les tables au seul propriétaire des lignes. Ces
---      policies-ci rendent l'équipe capable de faire son travail — et elles ne
---      peuvent exister qu'APRÈS le § 3, sinon `est_staff()` ne reconnaît
---      personne et l'admin reste aveugle.
+-- § 5. Rouvrir le back-office. À EXÉCUTER MAINTENANT, PAS À L'ÉTAPE 2.
+--      Ce paragraphe était prévu « en même temps que natty_rls.sql ». C'était
+--      une erreur de séquencement, constatée le 2026-08-04 : dès que
+--      `admin.html` se connecte par un compte, il parle à PostgREST en rôle
+--      `authenticated` et non plus `anon`. Or plusieurs tables ont déjà la RLS
+--      active avec des policies qui ne visent qu'`anon` — mesuré : `onboarding`
+--      rend 31 lignes à la clé anon et **0** au JWT de l'admin, d'où une liste
+--      clients vide alors que `offres_clients` (RLS inactive) affichait bien
+--      ses 24 lignes. Le back-office est donc devenu aveugle AVANT l'activation
+--      de la RLS, pas après.
 --
---      À exécuter en même temps que l'étape 2 de natty_rls.sql, pas avant.
+--      Le bloc ci-dessous n'enlève rien et ne touche pas aux policies d'`anon` :
+--      il ajoute, sur chaque table du back-office, une autorisation réservée
+--      aux membres de l'équipe. Sur une table dont la RLS est encore inactive
+--      il ne change rien aujourd'hui — et fait déjà le travail le jour où on
+--      l'activera. Une seule instruction, sans commentaire : le SQL Editor
+--      l'avale d'un bloc.
 
--- create policy onboarding_staff on public.onboarding
---   for all to authenticated using (public.est_staff()) with check (public.est_staff());
--- create policy messages_staff on public.messages
---   for all to authenticated using (public.est_staff()) with check (public.est_staff());
--- create policy nutrition_scores_staff on public.nutrition_scores
---   for select to authenticated using (public.est_staff());
--- create policy questionnaire_alim_staff on public.questionnaire_alim
---   for select to authenticated using (public.est_staff());
--- create policy commandes_staff on public.commandes
---   for all to authenticated using (public.est_staff()) with check (public.est_staff());
--- create policy notes_staff on public.notes_nutritionniste
---   for all to authenticated using (public.est_staff()) with check (public.est_staff());
--- create policy meals_staff on public.meals
---   for select to authenticated using (public.est_staff());
--- create policy abonnements_staff on public.abonnements
---   for select to authenticated using (public.est_staff());
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'onboarding','questionnaire_alim','messages','meals','meal_ingredients',
+    'nutrition_scores','daily_macros','abonnements','commandes','offres_clients',
+    'notes_nutritionniste','plans_repas','plats_menu','rdv','recettes',
+    'recettes_ingredients','recettes_etapes','ingredients_base','stocks_mp',
+    'profil_conseils','nutritionnistes','challenges','challenge_entreprise',
+    'meal_likes','meal_vues','membre_amis','membre_prefs','garde_manger'
+  ]
+  loop
+    if exists (select 1 from pg_class c
+                where c.relnamespace = 'public'::regnamespace
+                  and c.relname = t and c.relkind = 'r')
+       and not exists (select 1 from pg_policies
+                        where schemaname = 'public' and tablename = t
+                          and policyname = t || '_staff')
+    then
+      execute format(
+        'create policy %I on public.%I for all to authenticated using (public.est_staff()) with check (public.est_staff())',
+        t || '_staff', t);
+    end if;
+  end loop;
+end $$;
 
 --      Plusieurs policies sur une même table se cumulent en OU : « je suis le
 --      propriétaire de la ligne » OU « je suis de l'équipe ». Il n'y a donc
 --      rien à retoucher aux policies de natty_rls.sql.
+--
+--      Voir l'état réel, table par table — c'est cette requête qui a révélé le
+--      décalage anon / authenticated :
+-- select c.relname as nom_table, c.relrowsecurity as rls_active,
+--        p.policyname, p.roles::text as roles, p.cmd
+--   from pg_class c
+--   left join pg_policies p on p.schemaname = 'public' and p.tablename = c.relname
+--  where c.relnamespace = 'public'::regnamespace and c.relkind = 'r'
+--  order by c.relname, p.policyname;
 
 
 -- § 6. Où j'en suis, et comment me rouvrir la porte.
