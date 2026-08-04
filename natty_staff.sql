@@ -137,6 +137,32 @@ grant execute on function public.staff_configure() to anon, authenticated;
 --      rien à retoucher aux policies de natty_rls.sql.
 
 
+-- § 6. Où j'en suis, et comment me rouvrir la porte.
+--      Le nouveau admin.html est en ligne depuis le 2026-08-04, et
+--      `staff_configure()` renvoie déjà `true` : les mots de passe partagés
+--      (Natty2026! / Chef2026! / Logistique2026!) sont donc REFUSÉS en prod.
+--      Seuls les comptes de la table `staff` entrent.
+--
+-- Qui a un compte Auth, et qui a sa ligne d'équipe :
+-- select u.id, u.email, u.email_confirmed_at is not null as confirme,
+--        s.role, s.nom, s.actif
+--   from auth.users u
+--   left join public.staff s on s.user_id = u.id::text
+--  order by u.created_at;
+--
+-- Les comptes créés dans Authentication mais oubliés au § 3 (ils ne peuvent
+-- pas entrer : « Ce compte n'appartient pas à l'équipe. ») :
+-- select u.email, u.id from auth.users u
+--  where not exists (select 1 from public.staff s where s.user_id = u.id::text);
+--
+-- ⚠️ ENFERMÉ DEHORS ? Repasser toutes les lignes en inactif rouvre le mode de
+--    secours (mots de passe partagés) le temps de se remettre d'aplomb —
+--    `staff_configure()` retombe à false, sans redéploiement :
+-- update public.staff set actif = false;
+--    Puis, une fois le bon compte prêt, refermer :
+-- update public.staff set actif = true where user_id = '…';
+
+
 -- ═══════════════════════════════════════════════════════════
 -- ⚠️ À FAIRE ENSUITE, ET C'EST LIÉ : les mots de passe des nutritionnistes
 -- ───────────────────────────────────────────────────────────
