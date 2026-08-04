@@ -286,6 +286,107 @@ var Natty = (function () {
     window.location.href = page + qs;
   }
 
+  /* ── Demander, et prévenir — sans dialogue natif ────────────
+     `confirm()` et `alert()` fonctionnent dans une WebView, mais s'y affichent
+     avec l'origine du bundle en titre — « capacitor://localhost », ou une page
+     web quand l'app est servie autrement. Sur un écran d'app, ça ressemble à
+     un avertissement de sécurité, pas à une question de l'application ; et
+     c'est ce que verra le testeur d'Apple. `narration.html` les avait déjà
+     proscrits pour cette raison, chacun avec sa propre feuille : celle-ci est
+     la version partagée.
+
+     Deux fonctions, une seule mise en scène :
+       await Natty.confirmer('Supprimer ce repas ?')       → true / false
+       await Natty.alerte('Enregistrement impossible.')    → une fois lu
+
+     Tout est préfixé `nconf` et scellé sous `#nconf`, parce que ce module
+     s'invite sur des écrans qui ont chacun leur style. */
+  function feuille() {
+    if (document.getElementById('nconf-css')) return;
+    var s = document.createElement('style');
+    s.id = 'nconf-css';
+    s.textContent = [
+      '#nconf{position:fixed;inset:0;z-index:100001;display:flex;align-items:center;',
+      'justify-content:center;padding:24px;background:rgba(20,20,30,.42);',
+      '-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;',
+      'transition:opacity .2s ease;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif}',
+      '#nconf.on{opacity:1}',
+      '#nconf .box{width:100%;max-width:320px;background:#fff;border-radius:22px;',
+      'padding:24px 22px 18px;text-align:center;transform:scale(.94);',
+      'transition:transform .24s cubic-bezier(.22,1,.36,1);',
+      'box-shadow:0 24px 60px rgba(0,0,0,.24)}',
+      '#nconf.on .box{transform:scale(1)}',
+      '#nconf .q{font-size:16px;font-weight:700;color:#1a1a2e;line-height:1.45}',
+      '#nconf .d{font-size:13px;color:#9a9aaa;margin-top:8px;line-height:1.5}',
+      '#nconf .btns{display:flex;flex-direction:column;gap:9px;margin-top:20px}',
+      '#nconf button{padding:14px;border:none;border-radius:14px;font-family:inherit;',
+      'font-size:14.5px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}',
+      '#nconf .oui{background:#1a1a2e;color:#fff}',
+      '#nconf .oui.danger{background:#ff3b30}',
+      '#nconf .non{background:#f0f0f3;color:#6a6a78}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+
+  function demander(question, opts) {
+    opts = opts || {};
+    feuille();
+    // Une feuille déjà ouverte : on ne l'empile pas, sinon deux taps rapides
+    // laissent un fond assombri que plus rien ne retire.
+    var vieux = document.getElementById('nconf');
+    if (vieux && vieux.parentNode) vieux.parentNode.removeChild(vieux);
+
+    return new Promise(function (repondre) {
+      var d = document.createElement('div');
+      d.id = 'nconf';
+      var esc = function (t) {
+        return String(t == null ? '' : t)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      };
+      d.innerHTML = '<div class="box" role="dialog" aria-modal="true">'
+        + '<div class="q">' + esc(question) + '</div>'
+        + (opts.detail ? '<div class="d">' + esc(opts.detail) + '</div>' : '')
+        + '<div class="btns">'
+        +   '<button class="oui' + (opts.danger ? ' danger' : '') + '" id="nconfOui">'
+        +     esc(opts.ok || 'Confirmer') + '</button>'
+        +   (opts.seul ? '' : '<button class="non" id="nconfNon">'
+        +     esc(opts.annuler || 'Annuler') + '</button>')
+        + '</div></div>';
+      document.body.appendChild(d);
+      // rAF seule ne suffit pas : elle ne se déclenche pas si la page ne peint
+      // pas. Sans le minuteur, la feuille resterait invisible ET bloquante.
+      requestAnimationFrame(function () { d.classList.add('on'); });
+      setTimeout(function () { d.classList.add('on'); }, 60);
+
+      var fini = false;
+      function fermer(reponse) {
+        if (fini) return; fini = true;
+        d.classList.remove('on');
+        setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 220);
+        repondre(reponse);
+      }
+      d.querySelector('#nconfOui').addEventListener('click', function () { fermer(true); });
+      var non = d.querySelector('#nconfNon');
+      if (non) non.addEventListener('click', function () { fermer(false); });
+      // Taper le fond, c'est annuler — jamais confirmer : un geste imprécis ne
+      // doit pas pouvoir supprimer un repas.
+      d.addEventListener('click', function (e) { if (e.target === d) fermer(false); });
+    });
+  }
+
+  function confirmer(question, opts) {
+    opts = opts || {};
+    if (opts.ok === undefined) opts.ok = 'Confirmer';
+    return demander(question, opts);
+  }
+
+  function alerte(message, opts) {
+    opts = opts || {};
+    opts.seul = true;
+    if (opts.ok === undefined) opts.ok = 'J’ai compris';
+    return demander(message, opts);
+  }
+
   function requireAuth() {
     if (SESSION_OBLIGATOIRE ? !!SESSION : !!USER_ID) return true;
     setTimeout(function () {
@@ -312,6 +413,8 @@ var Natty = (function () {
     TOKEN: TOKEN, USER_ID: USER_ID,
     sbFetch: sbFetch, sbPost: sbPost, sbPatch: sbPatch,
     calcMac: calcMac, getNutri: getNutri, goto: goto, requireAuth: requireAuth,
+    // Questions et avertissements, sans dialogue natif (voir plus haut).
+    confirmer: confirmer, alerte: alerte,
     // Session : entetes() sert aux appels qui n'utilisent pas les helpers
     // ci-dessus (Cloudinary, /auth/v1, requêtes en return=minimal).
     entetes: entetes, jeton: jeton, deconnecter: deconnecter,

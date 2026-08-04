@@ -721,7 +721,13 @@ function drawSliderGraph(weeks) {
 // STEP 4 NUTRI
 async function chargerNutris() {
   try {
-    const data=await Natty.sbFetch("nutritionnistes?actif=eq.true&select=*");
+    /* Les colonnes nommées, pas `select=*` : la table porte aussi l'`email`
+       professionnel de chaque nutritionniste, dont cet écran n'a aucun besoin.
+       Ne rien demander qu'on n'affiche, c'est la version la moins coûteuse du
+       moindre privilège — la version complète passe par la vue
+       `nutritionnistes_publics` (voir natty_avant_publication.sql § 5). */
+    const data=await Natty.sbFetch("nutritionnistes?actif=eq.true"
+      + "&select=id,nom,specialites,bio,photo_url,objectifs_cibles,clients_max");
     afficherNutris(data&&data.length?data:NUTRI_DEMO);
   } catch(e){afficherNutris(NUTRI_DEMO);}
 }

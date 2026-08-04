@@ -488,7 +488,7 @@ async function startChallenge() {
 }
 
 async function abandonnerChallenge(id) {
-  if (!confirm('Abandonner ce challenge ?')) return;
+  if (!await Natty.confirmer('Abandonner ce challenge ?', {detail:'Il sera marqué comme échoué.', ok:'Abandonner', danger:true})) return;
   try {
     await Natty.sbPatch('challenges?id=eq.'+id, {statut:'echoue'});
     showToast('Challenge abandonné', 'err');

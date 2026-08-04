@@ -678,7 +678,10 @@ document.getElementById('btn7').addEventListener('click', async function() {
     }, 800);
   } catch(e) {
     document.getElementById('savingOverlay').classList.remove('active');
-    alert('Erreur lors de la sauvegarde. Veuillez reessayer.');
+    // Un `alert()` natif arrive ici après un questionnaire de sept étapes :
+    // c'est le pire moment pour afficher une boîte qui a l'air de venir du
+    // navigateur. Et rien n'est perdu — les réponses sont encore à l'écran.
+    Natty.alerte('Enregistrement impossible.', {detail:'Vos réponses sont toujours là : vérifiez votre connexion, puis validez à nouveau.'});
   }
 });
 

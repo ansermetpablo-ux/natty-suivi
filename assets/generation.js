@@ -164,7 +164,11 @@ window.NattyGeneration = (function () {
     }
     d.querySelector('#ngenBtn').addEventListener('click', function () { fermer(); });
     d.querySelector('#ngenFond').addEventListener('click', arrierePlan);
+    // Même précaution que pour Natty.confirmer : rAF ne se déclenche pas quand
+    // la page ne peint pas, et un écran d'attente invisible qui couvre tout est
+    // pire qu'aucun écran d'attente.
     requestAnimationFrame(function () { d.classList.add('on'); });
+    setTimeout(function () { d.classList.add('on'); }, 60);
     return d;
   }
 
@@ -271,6 +275,7 @@ window.NattyGeneration = (function () {
     });
     document.body.appendChild(b);
     requestAnimationFrame(function () { b.classList.add('on'); });
+    setTimeout(function () { b.classList.add('on'); }, 60);
   }
 
   function otterPill() {

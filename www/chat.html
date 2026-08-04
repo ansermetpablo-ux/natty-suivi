@@ -305,15 +305,53 @@ function scrollToBottom() {
   c.scrollTop = c.scrollHeight;
 }
 
-// Supabase Realtime
+/* ── Temps réel ────────────────────────────────────────────────────────────
+   ⚠️ La reconnexion était `setTimeout(subscribeRealtime, 3000)` sur `onclose`,
+   sans condition ni palier. Dans une WebView, ça ne pardonne pas : hors ligne
+   dans le métro, ou simplement l'app passée en arrière-plan, la connexion est
+   refusée et on la retente TOUTES LES TROIS SECONDES, indéfiniment, batterie
+   comprise. Et le serveur voit un client qui tambourine.
+   Trois changements, aucun sur le fond :
+     • palier qui double (3 s → 6 → 12 … plafonné à 1 min) ;
+     • rien ne se retente quand l'onglet est caché — on rattrape au retour,
+       et `chargerMessages()` recharge alors ce qui a été manqué ;
+     • une seule socket vivante à la fois.
+   Le protocole lui-même reste celui d'origine (`phx_join` sans
+   `postgres_changes`), à migrer un jour vers supabase-js — voir CLAUDE.md §7. */
+var rtSocket = null, rtDelai = 3000, rtMinuteur = null;
+const RT_DELAI_MIN = 3000, RT_DELAI_MAX = 60000;
+
+function rtReplanifier() {
+  if (rtMinuteur) return;
+  // Caché : on ne planifie rien du tout. `visibilitychange` s'en chargera.
+  if (document.visibilityState === 'hidden') return;
+  rtMinuteur = setTimeout(function () {
+    rtMinuteur = null;
+    subscribeRealtime();
+  }, rtDelai);
+  rtDelai = Math.min(RT_DELAI_MAX, rtDelai * 2);
+}
+
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState !== 'visible') return;
+  // De retour à l'écran : on repart du palier le plus court, et on recharge la
+  // conversation — le temps réel a pu manquer des messages pendant l'absence.
+  rtDelai = RT_DELAI_MIN;
+  if (!rtSocket || rtSocket.readyState > 1) subscribeRealtime();
+  chargerMessages();
+});
+
 function subscribeRealtime() {
   if (!USER_ID) return;
+  if (rtSocket && rtSocket.readyState <= 1) return;   // une seule socket vivante
 
   // Use Supabase Realtime via WebSocket
   const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_KEY + '&vsn=1.0.0';
   const ws = new WebSocket(wsUrl);
+  rtSocket = ws;
 
   ws.onopen = () => {
+    rtDelai = RT_DELAI_MIN;          // connexion obtenue : on oublie les paliers
     // Join channel for messages table filtered by user_id
     ws.send(JSON.stringify({
       topic: 'realtime:public:messages:user_id=eq.' + USER_ID,
@@ -337,8 +375,8 @@ function subscribeRealtime() {
   };
 
   ws.onclose = () => {
-    // Reconnect after 3s
-    setTimeout(subscribeRealtime, 3000);
+    if (rtSocket === ws) rtSocket = null;
+    rtReplanifier();
   };
 
   ws.onerror = () => ws.close();

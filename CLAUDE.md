@@ -1560,8 +1560,15 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   `stocks_mp`, `recettes*`, `ingredients_base`, `offres_clients` → **0 ligne**.
   `staff_configure()` renvoie `true` (les mots de passe partagés sont donc refusés) et
   `nutritionnistes.mdp_hash` a bien été supprimée.
-  > 🔴 **Conséquence non anticipée, et c'est le point qui commande tout le reste : la prod
-  > est éteinte.** `natty-suivi.vercel.app` est déployé depuis **`main`**, dont
+  > ✅ **Déployé le 2026-08-04** : `main` sert le code d'app-native (vérifié en prod —
+  > `POST /api/generer-conseils` répond « Session requise », ce qui n'existe que sur cette
+  > branche). Il reste **l'étape 5** à coller : mesuré le même jour, `abonnements` (2),
+  > `commandes` (3), `plats_menu` (3), `nutritionnistes` (3) et la vue `membre_public` (26
+  > prénoms + poids + TDEE) répondent **encore à la clé anon publique**. Le runbook est
+  > `natty_avant_publication.sql` § 1, et sa seule précaution est que le § 5 de
+  > `natty_staff.sql` soit passé — sinon l'admin perd la vue sur les abonnements.
+  > Contexte historique de ce point (à conserver, il explique le séquencement) :
+  > **la prod était éteinte.** `natty-suivi.vercel.app` est déployé depuis **`main`**, dont
   > l'`index.html` parle à Supabase avec la clé anon et **rien d'autre**
   > (`Authorization: Bearer SB_KEY`, 7 occurrences). Toutes les tables qu'il lit
   > renvoient désormais `[]` — en HTTP **200**, donc sans la moindre erreur visible :
@@ -1828,8 +1835,72 @@ L'outil réécrit `www/manifest.json` — repasser derrière : il met `type: ima
 - `repas.html` et la **liste de courses de `coaching.html`** ne font que **lire** ce cache. La liste de courses est **dérivée** des recettes (agrégation des ingrédients), donc jamais désynchronisée et sans appel IA.
 - Le **nombre de repas voulus** (1 à 7) est réglable dans `repas.html`. Préférence en `localStorage` (`natty_nb_repas_<userId>`) — donc **propre à l'appareil**, faute de colonne dédiée. La valeur réellement utilisée est conservée dans `conseils_json.nb_repas`.
 
+### Conformité App Store — fait en août 2026
+Quatre choses qu'Apple vérifie à l'envoi, et qui n'existaient pas.
+
+- **`ios/App/App/PrivacyInfo.xcprivacy`** — sans manifeste de confidentialité, App Store
+  Connect renvoie **ITMS-91053 « Missing API declaration »** : Capacitor lit et écrit
+  `UserDefaults`, qui fait partie des *required reason APIs*. Déclaré avec le motif
+  **CA92.1** (accéder aux informations de l'app elle-même). Le fichier déclare aussi ce que
+  l'app collecte — prénom, email, identifiant, santé (poids/taille/âge/repas), activité,
+  photos, contenu des messages, état de l'abonnement — tout **lié à l'identité**, tout pour
+  le **fonctionnement**, **rien pour le pistage**.
+  > ⚠️ Le manifeste doit être **dans le bundle** : il est référencé dans `project.pbxproj`
+  > (PBXFileReference + phase Resources), à la main, comme `App.entitlements` avant lui.
+  > Vérifié après build : `App.app/PrivacyInfo.xcprivacy` présent. Capacitor et Cordova
+  > apportent chacun le leur, ce qui couvre leurs propres API.
+  > ⚠️ Les noms de catégories ne sont validés qu'à l'envoi : c'est le seul point de cette
+  > liste qu'un build local ne peut pas prouver.
+- **`ITSAppUsesNonExemptEncryption` = false** — l'app ne chiffre rien elle-même, elle ne
+  fait que du HTTPS (exempté). Sans la clé, Apple repose la question à chaque envoi.
+- **iPhone seulement** (`TARGETED_DEVICE_FAMILY = 1`, était `"1,2"`) — en universel, Apple
+  **révise l'app sur iPad**, alors que toute la mise en page est une colonne mobile de
+  480 px avec une barre d'onglets en bas.
+- **Portrait seulement** — le plist promettait les deux paysages, que rien ne gère.
+
+Vérifié : `xcodebuild` réussit, l'app se lance sur iPhone 17 Pro, et l'écran Repas affiche
+les recettes de la semaine **depuis le cache** (aucune régénération) — la chaîne complète de
+§3 fonctionne sur l'appareil.
+
+### Dialogues natifs retirés du bundle — `Natty.confirmer` / `Natty.alerte`
+`confirm()` et `alert()` **fonctionnent** dans une WebView, mais s'y affichent avec l'origine
+du bundle en titre (« capacitor://localhost ») : sur un écran d'app, ça ressemble à un
+avertissement de sécurité, et c'est ce que verra le testeur d'Apple. `narration.html` les
+avait déjà proscrits ; `assets/core.js` porte maintenant la version partagée (feuille centrée,
+promesse, taper le fond = annuler, jamais confirmer). Remplacés : la suppression d'un repas et
+l'abandon d'un défi dans `suivi.html`, l'échec d'enregistrement de `questionnaire-alim.html`
+(un `alert()` après sept étapes de questionnaire), l'abandon dans `challenges.html`.
+`admin.html` et `index.html` gardent les leurs : ils vivent dans un navigateur, pas dans l'app.
+
+> ⚠️ **Une classe de visibilité posée par la seule `requestAnimationFrame` ne se pose pas si
+> la page ne peint pas** (onglet caché, app en arrière-plan) : la feuille resterait à
+> `opacity:0` **tout en interceptant les taps**. Constaté en test — opacité encore 0 une demi-
+> seconde après la création, jusqu'à ce qu'une capture force un rendu. Un `setTimeout(…, 60)`
+> double la rAF, dans `core.js` **et** dans `assets/generation.js`.
+
+### Reconnexion temps réel : palier au lieu d'acharnement (`chat.html`)
+`ws.onclose` faisait `setTimeout(subscribeRealtime, 3000)`, sans condition. Hors ligne — ou
+simplement app en arrière-plan — c'était une tentative toutes les trois secondes, sans fin,
+batterie comprise. Désormais : palier qui double (3 s → 60 s max), **rien n'est retenté quand
+l'écran est caché**, une seule socket vivante, et au retour à l'écran on repart du palier court
+en rechargeant la conversation (le temps réel a pu manquer des messages). Le protocole, lui,
+reste l'ancien `phx_join` — voir §7.
+
 ### Reste à faire
-- **Android n'a jamais été compilé** (ni JDK ni Android Studio sur la machine de dev).
+- **Android n'a jamais été compilé** — et ne peut pas l'être ici : **aucun JDK**
+  (`java -version` → « Unable to locate a Java Runtime »), aucun SDK Android, pas de
+  `ANDROID_HOME`. C'est Android Studio à installer, donc une décision de Pablo. Tant que
+  ce n'est pas fait, **le Play Store est hors d'atteinte** (le push Android l'est aussi : le
+  plugin exige un `google-services.json`, donc un projet Firebase).
+- **Emoji affichés en `?` dans le simulateur** — visible sur toutes les captures. Le même HTML
+  rend les emoji correctement dans WebKit sur macOS : c'est donc très probablement le runtime
+  du simulateur qui n'a pas la police, pas l'app. **À confirmer sur un iPhone réel avant de
+  toucher au code** — les emoji servent d'icônes dans presque tous les écrans, donc si le
+  défaut est réel il est bloquant, et s'il ne l'est pas, y toucher serait une régression
+  gratuite.
+- **`challenges.html` est orphelin dans le bundle** : plus aucun lien n'y mène (l'onglet
+  « Défis » ouvre `narration.html`). Le fichier reste embarqué. À supprimer de `www/` ou à
+  relier — mais pas à laisser en l'état indéfiniment.
 - **Signature** : `CODE_SIGNING_ALLOWED=NO` suffit au simulateur ; un appareil réel ou TestFlight demande un Team Apple dans Xcode.
   ⚠️ **Sauf pour le push** : sans signature, l'entitlement `aps-environment` n'est pas embarqué
   et `PushNotifications.register()` échoue (« aucune autorisation *aps-environment* valide »).

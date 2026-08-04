@@ -382,13 +382,24 @@ grant select on public.nutritionnistes_publics to authenticated;
 --   membre_public  26 lignes   (prénom, poids, tdee — une VUE, donc hors RLS :
 --                               c'est un GRANT, pas une policy)
 --
--- 🔴 NE PAS EXÉCUTER CE BLOC AVANT QUE `main` NE SERVE LE CODE D'app-native.
---    La prod déployée depuis `main` interroge Supabase avec la clé anon et
---    RIEN d'autre (`index.html` : `Authorization: Bearer SB_KEY`, 7 fois).
---    Ces quatre tables sont donc littéralement tout ce qui lui répond encore.
---    Les fermer maintenant, c'est finir d'éteindre la prod ; les fermer après
---    le déploiement, c'est refermer la dernière porte. L'ordre est : déployer,
---    vérifier l'app connectée, puis coller ceci.
+-- ✅ LA CONDITION EST REMPLIE (vérifié le 2026-08-04, après la fusion) :
+--    `main` sert bien le code d'app-native — `POST /api/generer-conseils`
+--    répond « Session requise » en prod, ce qui n'existe que sur cette
+--    branche. Et le relevé à la clé anon est inchangé : abonnements 2,
+--    commandes 3, plats_menu 3, nutritionnistes 3, membre_public lit encore.
+--    Donc ce bloc est **à exécuter maintenant**, c'est la dernière porte.
+--
+-- ⚠️ Une seule précaution AVANT de le coller : que le § 5 de natty_staff.sql
+--    soit passé. Il ajoute une policy `<table>_staff` sur chaque table du
+--    back-office, dont `abonnements`, `commandes`, `plats_menu` et
+--    `nutritionnistes`. Sans elle, les policies ci-dessous étant
+--    propriétaire-seul, `admin.html` ne verrait plus l'abonnement ni les
+--    commandes de PERSONNE (la pastille « ★ Abonné » retomberait sur « Sans
+--    abonnement » pour tout le monde). Pour vérifier en une requête :
+--      select tablename from pg_policies
+--       where schemaname='public' and policyname like '%\_staff'
+--       order by tablename;
+--    Les quatre noms ci-dessus doivent y figurer.
 --
 -- Le bloc pose d'abord la lecture `authenticated` là où elle manquerait — sans
 -- ça, retirer anon rendrait l'offre et le menu vides pour tout le monde — puis

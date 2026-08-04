@@ -3013,7 +3013,12 @@ async function saveManuel(){
 
 // Clé anon = suppression refusée par la RLS, en silence : le repas
 // réapparaissait au rechargement. Passe par la session, comme le reste.
-async function deleteRepas(id){if(!confirm('Supprimer ?'))return;try{await fetch(SB_URL+'/rest/v1/meals?id=eq.'+id,{method:'DELETE',headers:await Natty.entetes()});await loadMeals();afficherMacros();chargerDiagnostics();showToast('Supprimé','ok');}catch(e){}}
+async function deleteRepas(id){
+  // Dialogue de l'app, pas du moteur web : un `confirm()` natif s'affiche
+  // dans la WebView avec « capacitor://localhost » en titre, ce qui ressemble
+  // à un avertissement de sécurité plutôt qu'à une question de Natty.
+  if (!await Natty.confirmer('Supprimer ce repas ?', {detail:'Il disparaîtra de votre historique et de vos macros du jour.', ok:'Supprimer', danger:true})) return;
+  try{await fetch(SB_URL+'/rest/v1/meals?id=eq.'+id,{method:'DELETE',headers:await Natty.entetes()});await loadMeals();afficherMacros();chargerDiagnostics();showToast('Supprimé','ok');}catch(e){}}
 
 // ═══ ONBOARDING CTA ═══
 function afficherOnboardingCTA(){
@@ -3781,7 +3786,7 @@ async function chalStartChallenge() {
 }
 
 async function chalAbandonner(id) {
-  if (!confirm('Abandonner ?')) return;
+  if (!await Natty.confirmer('Abandonner ce défi ?', {detail:'Il sera marqué comme échoué.', ok:'Abandonner', danger:true})) return;
   try { await fetch(SB_URL+'/rest/v1/challenges?id=eq.'+id,{method:'PATCH',headers:await Natty.entetes(),body:JSON.stringify({statut:'echoue'})}); showToast('Abandonné','err'); await chalChargerPerso(); } catch(e){}
 }
 
