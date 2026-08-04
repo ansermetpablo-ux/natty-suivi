@@ -9,15 +9,24 @@
      2. questionnaire_alim — allergies, régime, goûts (contrainte dure)
      3. meals + meal_ingredients — ce qui a réellement été mangé
 
-   La génération elle-même passe par /api/claude (proxy existant).
-   Le résultat est mis en cache dans profil_conseils.conseils_json
-   pour ne pas rappeler l'IA à chaque ouverture de page.
+   ⚠️ CE MODULE NE GÉNÈRE PLUS LA SEMAINE. Depuis août 2026, les
+   conseils, les recettes et la liste de courses sont produits en
+   un seul appel CÔTÉ SERVEUR (`api/_generation.js`, déclenché par
+   `assets/generation.js`) : la réponse complète demande ~71 s, ce
+   qui ne survit ni au changement d'écran ni au délai réseau d'une
+   WebView. Voir le bloc « 5 bis » plus bas.
 
-   Les recettes de la semaine partent aussi du garde-manger quand
-   assets/garde-manger.js est chargé : la liste des ingrédients
-   disponibles est injectée dans le prompt (section « INGRÉDIENTS
-   DISPONIBLES »), et les recettes marquent alors ce qu'il reste à
-   acheter.
+   Il reste donc deux choses ici :
+     • `recommander(nb, contrainte)` — les tirages « Découvrir »,
+       à la demande, via /api/claude ;
+     • `recettesDeLaSemaine()` — LECTURE du cache
+       `profil_conseils.conseils_json`, sans aucun appel à l'IA.
+
+   Le garde-manger, quand `assets/garde-manger.js` est chargé, est
+   injecté dans le prompt (section « INGRÉDIENTS DISPONIBLES ») et
+   les recettes marquent alors ce qu'il reste à acheter. Pour la
+   génération de la semaine, c'est `generation.js` qui le transmet
+   au serveur — le serveur ne peut pas lire un localStorage.
    ═══════════════════════════════════════════════════════════ */
 var NattyReco = (function () {
 
@@ -138,18 +147,21 @@ var NattyReco = (function () {
     return String(v);
   }
 
-  function construirePrompt(profil, nb, contrainte, avecConseils) {
+  /* ⚠️ Ne sert plus QUE aux tirages « Découvrir » (recettes à la demande, avec
+     une contrainte de mini-jeu). Le prompt de la semaine — celui qui produit
+     aussi les six conseils — vit désormais dans `api/_generation.js`, côté
+     serveur. Le schéma des recettes est le même dans les deux : toute
+     modification ici doit y être répercutée, sinon `assets/recette.js` ne saura
+     plus dessiner les étapes. */
+  function construirePrompt(profil, nb, contrainte) {
     var onb = profil.onboarding || {};
     var q   = profil.questionnaire || {};
     var cibles = macrosCibles(onb);
     var recurrents = ingredientsRecurrents(profil.semaine);
     var platsSemaine = (profil.semaine || []).map(function (m) { return m.name; }).slice(0, 15);
 
-    var p = '';
-    p += avecConseils
-      ? ("Tu es le nutritionniste de cet utilisateur. Produis d'un seul coup son programme de la semaine : "
-         + nb + " recettes ET son analyse nutritionnelle.\n\n")
-      : ("Tu es le nutritionniste de cet utilisateur. Propose-lui " + nb + " recettes pour les prochains repas.\n\n");
+    var p = "Tu es le nutritionniste de cet utilisateur. Propose-lui "
+          + nb + " recettes pour les prochains repas.\n\n";
 
     p += "PROFIL\n";
     if (onb.age)      p += "- " + onb.age + " ans, " + (onb.sexe || '') + ", " + (onb.poids || '?') + " kg, " + (onb.taille || '?') + " cm\n";
@@ -231,19 +243,8 @@ var NattyReco = (function () {
       + '"steps":[{"illu":"couper","t":"Titre court de l\'étape","detail":"la consigne précise, avec les repères",'
       + '"qte":[{"nom":"Poulet","qte":"150 g"}],"duree_min":5,"temp_c":0,"feu":"","tip":"astuce facultative"}]}';
 
-    if (avecConseils) {
-      // Un seul appel pour les recettes ET l'analyse : les deux découlent du
-      // même profil, et deux appels séparés pouvaient se contredire.
-      p += "\nLes conseils portent sur SES repas réels et SES préférences, jamais de généralité.\n";
-      p += "\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format :\n";
-      p += '{"conseils":{"conseil_prot":"phrase courte","conseil_gluc":"phrase courte",'
-        + '"conseil_lip":"phrase courte","conseil_cal":"phrase courte",'
-        + '"conseil_amelioration":"1-2 phrases","conseil_points_forts":"1-2 phrases"},';
-      p += '"recettes":[' + recette + ']}';
-    } else {
-      p += "\nRéponds UNIQUEMENT avec un tableau JSON valide, sans texte autour, au format :\n";
-      p += '[' + recette + ']';
-    }
+    p += "\nRéponds UNIQUEMENT avec un tableau JSON valide, sans texte autour, au format :\n";
+    p += '[' + recette + ']';
 
     return p;
   }
@@ -255,16 +256,6 @@ var NattyReco = (function () {
     // L'IA encadre parfois le JSON de ``` ou d'une phrase.
     var t = txt.replace(/```json/gi, '').replace(/```/g, '').trim();
     var i = t.indexOf('['), j = t.lastIndexOf(']');
-    if (i === -1 || j === -1 || j < i) return null;
-    try { return JSON.parse(t.slice(i, j + 1)); } catch (e) { return null; }
-  }
-
-  /* La génération combinée renvoie un OBJET (conseils + recettes) et non le
-     tableau de recommander() : on isole donc les accolades. */
-  function extraireObjet(txt) {
-    if (!txt) return null;
-    var t = txt.replace(/```json/gi, '').replace(/```/g, '').trim();
-    var i = t.indexOf('{'), j = t.lastIndexOf('}');
     if (i === -1 || j === -1 || j < i) return null;
     try { return JSON.parse(t.slice(i, j + 1)); } catch (e) { return null; }
   }
@@ -290,14 +281,20 @@ var NattyReco = (function () {
     nb = nb || 4;
     try {
       var profil = await chargerProfil();
-      /* Le plafond suit le nombre de recettes demandées. Les étapes détaillées
-         (détail, quantités, durée, température) pèsent environ 900 jetons par
-         recette : les 3000 par défaut suffisaient pour des étapes d'une ligne,
-         plus pour celles-ci — et un JSON tronqué revient vide, sans erreur
-         visible. C'est exactement ainsi que la génération de 7 recettes avait
-         cassé (voir NB_SEMAINE). */
+      /* Le plafond suit le nombre de recettes demandées. ⚠️ Chiffre MESURÉ, pas
+         estimé : le 2026-08-04, deux recettes détaillées (ingrédients + 10
+         étapes avec repères, quantités, durées) plus l'analyse ont produit
+         12 511 caractères de JSON. L'ancien budget — 1300 jetons par recette —
+         coupait donc la réponse en pleine étape ; `extraireJson` renvoyait null,
+         cette fonction renvoyait [], et l'écran concluait « Échec, vérifiez
+         votre connexion ». Un plafond n'est pas une cible : ce qui n'est pas
+         produit n'est pas facturé.
+         ⚠️ Reste à vérifier sur téléphone : à 3 recettes (le tirage
+         « Découvrir »), la réponse demande ~100 s. La génération de la semaine,
+         elle, a été déplacée côté serveur pour cette raison même — voir
+         assets/generation.js. */
       var txt = await appelerClaude(construirePrompt(profil, nb, contrainte),
-        Math.min(8000, 1300 * nb + 800));
+        Math.min(16000, 3200 * nb + 1600));
       var recettes = extraireJson(txt);
       if (!recettes || !recettes.length) return [];
       return recettes.slice(0, nb);
@@ -327,89 +324,27 @@ var NattyReco = (function () {
     } catch (e) { return null; }
   }
 
-  /**
-   * Écrit les recettes de la semaine dans profil_conseils.conseils_json.
-   * Passe par /api/save-conseils, qui détient la service_role key et ne met à
-   * jour que les champs transmis (les conseils déjà écrits ne sont pas touchés).
-   */
-  async function enregistrerSemaine(recettes, nb) {
-    try {
-      var r = await fetch(API_BASE + '/api/save-conseils', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: Natty.USER_ID,
-          semaine: lundiCourant(),
-          // conseils_json est une colonne texte : on y met du JSON sérialisé.
-          // lireCache() reparse, et tolère aussi le cas jsonb.
-          conseils_json: JSON.stringify({
-            recettes: recettes, nb_repas: nb, genere_le: new Date().toISOString()
-          })
-        })
-      });
-      return r.ok;
-    } catch (e) { return false; }
-  }
+  /* ── 5 bis. La génération de la semaine a DÉMÉNAGÉ ────────
+     Elle est côté serveur : `/api/generer-conseils`, cœur dans
+     `api/_generation.js`, déclenchée et surveillée par `assets/generation.js`.
 
-  /* ── 5 bis. Génération unique de la semaine ───────────────
-     UN SEUL appel Claude produit les 7 recettes ET l'analyse nutritionnelle,
-     et UN SEUL POST les enregistre. Avant, suivi.html appelait Claude pour les
-     conseils puis NattyReco.genererSemaine() pour les repas : deux appels, deux
-     écritures, et deux analyses du même profil qui pouvaient se contredire.
+     Ce qui vivait ici — `genererTout()`, `genererSemaine()`,
+     `enregistrerTout()`, `enregistrerSemaine()` — a été retiré, et ce n'est pas
+     un déplacement cosmétique. Deux défauts mesurés le 2026-08-04 :
+     • DURÉE : la réponse complète demande ~71 s. Depuis une page, l'appel meurt
+       avec la page (changement d'écran, téléphone verrouillé) et se fait couper
+       par le délai réseau de la WebView. Côté serveur, il aboutit même app
+       fermée — c'est exactement ce que Pablo demandait (« les conseils et repas
+       se chargent même si on quitte la page »).
+     • DEUX SOURCES POUR UNE MÊME LIGNE : le cron du lundi écrivait
+       `conseils_json` dans un schéma d'affichage SANS clé `recettes`, tandis
+       qu'ici on écrivait `{recettes:[…]}`. `lireCache()` ne trouvait donc rien
+       après un passage du cron, et l'écran Repas reproposait « Générer »
+       indéfiniment. Un seul écrivain, un seul schéma.
 
-     C'est l'unique génération de la semaine. Tous les écrans se contentent
-     ensuite de lire le cache jusqu'au lundi suivant. */
-
-  async function enregistrerTout(conseils, recettes, nb) {
-    var corps = {
-      user_id: Natty.USER_ID,
-      semaine: lundiCourant(),
-      // conseils_json est une colonne TEXTE : on y met du JSON sérialisé.
-      conseils_json: JSON.stringify({
-        recettes: recettes, nb_repas: nb, genere_le: new Date().toISOString()
-      })
-    };
-    // save-conseils n'écrit que les champs transmis : on n'envoie donc que
-    // ceux que l'IA a réellement remplis, sans écraser le reste de la ligne.
-    ['conseil_prot','conseil_gluc','conseil_lip','conseil_cal',
-     'conseil_amelioration','conseil_points_forts'].forEach(function (k) {
-      if (conseils && conseils[k]) corps[k] = conseils[k];
-    });
-    try {
-      var r = await fetch(API_BASE + '/api/save-conseils', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(corps)
-      });
-      return r.ok;
-    } catch (e) { return false; }
-  }
-
-  /**
-   * Génération hebdomadaire complète : recettes + conseils, en un appel.
-   * @returns {Promise<{conseils:Object, recettes:Array}>}
-   *          recettes vide si l'IA est indisponible — les écrans gèrent le vide.
-   */
-  async function genererTout() {
-    var profil = await chargerProfil();
-    var txt = await appelerClaude(construirePrompt(profil, NB_SEMAINE, null, true), 8000);
-    var out = extraireObjet(txt);
-    if (!out) {
-      // Cas le plus courant : réponse tronquée par la limite de tokens, le
-      // JSON n'a alors pas d'accolade fermante. La longueur permet de trancher.
-      throw new Error('Réponse IA illisible (' + (txt || '').length + ' caractères, JSON incomplet ?)');
-    }
-    if (!out.recettes || !out.recettes.length) {
-      throw new Error('Réponse IA sans recette');
-    }
-    var recettes = out.recettes.slice(0, NB_SEMAINE);
-    var conseils = out.conseils || {};
-    // Un enregistrement raté doit se voir : sinon l'écran affiche des recettes
-    // que rien ne persiste, et la semaine suivante on régénère sans le savoir.
-    var ecrit = await enregistrerTout(conseils, recettes, NB_SEMAINE);
-    if (!ecrit) throw new Error('Génération réussie mais enregistrement impossible');
-    return { conseils: conseils, recettes: recettes };
-  }
+     Ce module garde ce qui n'a pas de raison de partir : `recommander()` pour
+     les tirages « Découvrir » (à la demande, avec contrainte) et la LECTURE du
+     cache hebdomadaire ci-dessous, qui n'appelle jamais l'IA. */
 
   /* ── 6. Nombre de repas voulus pour la semaine ────────────
      Source de vérité : onboarding.nb_repas_semaine, donc partagée entre les
@@ -490,18 +425,6 @@ var NattyReco = (function () {
   window.addEventListener('pagehide', function () { if (minuteurPatch) ecrireNbEnBase(); });
 
   /**
-   * Génère les recettes de la semaine ET les enregistre.
-   * C'est le seul point qui appelle l'IA : les pages, elles, lisent le cache.
-   */
-  async function genererSemaine(nb) {
-    nb = borner(nb || nbRepas());
-    var recettes = await recommander(nb);
-    if (!recettes || !recettes.length) return [];
-    await enregistrerSemaine(recettes, nb);
-    return recettes;
-  }
-
-  /**
    * Recettes de la semaine, depuis le cache uniquement.
    * Ne déclenche jamais d'appel IA : une seule génération par semaine, faite
    * en même temps que les conseils. Renvoie [] s'il n'y a rien pour la semaine
@@ -520,9 +443,6 @@ var NattyReco = (function () {
     construirePrompt: construirePrompt,
     recommander: recommander,
     recettesDeLaSemaine: recettesDeLaSemaine,
-    genererSemaine: genererSemaine,
-    enregistrerSemaine: enregistrerSemaine,
-    genererTout: genererTout,
     NB_SEMAINE: NB_SEMAINE,
     nbRepas: nbRepas,
     chargerNbRepas: chargerNbRepas,

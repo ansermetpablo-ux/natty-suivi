@@ -94,6 +94,10 @@
 <script src="/assets/core.js"></script>
 <script src="/assets/reco.js"></script>
 <script src="/assets/liste.js"></script>
+<!-- Cet écran ne génère rien : il lit. Le module est chargé pour deux raisons —
+     reprendre l'écran d'attente si une génération est en cours ailleurs, et
+     proposer de la lancer quand la semaine est encore vide. -->
+<script src="/assets/generation.js"></script>
 <script>
 var weekOffset = 0;
 
@@ -309,7 +313,21 @@ async function loadCourses(){
 
   if (!recettes || !recettes.length){
     note.textContent = '';
-    list.innerHTML = '<div class="empty">Ta liste apparaîtra dès que tes repas de la semaine seront générés.</div>';
+    // Un écran vide qui ne dit pas comment le remplir laisse l'utilisateur
+    // attendre quelque chose qui ne viendra jamais tout seul.
+    list.innerHTML = '<div class="empty" style="text-align:center">'
+      + 'Ta liste se déduit de tes recettes de la semaine.<br>'
+      + '<button id="crsGen" style="margin-top:14px;padding:13px 22px;background:var(--ink,#1a1a2e);'
+      + 'color:#fff;border:none;border-radius:14px;font-family:Inter,sans-serif;font-size:14px;'
+      + 'font-weight:700;cursor:pointer;">✨ Générer ma semaine</button></div>';
+    var b = document.getElementById('crsGen');
+    if (b) b.addEventListener('click', function(){
+      if (!window.NattyGeneration) return;
+      b.disabled = true;
+      NattyGeneration.lancer().then(function(row){
+        if (row) loadCourses(); else b.disabled = false;
+      });
+    });
     return;
   }
 
@@ -335,6 +353,11 @@ async function loadCourses(){
     vide: 'Aucun ingrédient à afficher.'
   });
 }
+
+/* Génération terminée ailleurs : conseils et liste se remplissent d'eux-mêmes. */
+document.addEventListener('natty:conseils-prets', function(){
+  loadConseils(); loadCourses();
+});
 
 (async function(){
   if (!Natty.requireAuth()) return;

@@ -1735,6 +1735,12 @@ html.no-scroll {
      change rien d'autre. Les autres modules (ajout/notifs/push/nav) restent en
      bas, après lui, comme avant. -->
 <script src="/assets/core.js"></script>
+<!-- La génération de la semaine (conseils + recettes + liste de courses) part
+     d'ici, et ne vit PLUS dans cette page : elle est côté serveur, et ce module
+     n'en montre que l'attente. ⚠️ Cet écran exigeait `NattyReco` sans jamais le
+     charger — d'où des conseils qui ne se généraient jamais, la fonction levant
+     « assets/reco.js requis » avant le moindre appel. -->
+<script src="/assets/generation.js"></script>
 <script>
 // ═══ CONFIG ═══
 const SB_URL  = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
@@ -4242,11 +4248,12 @@ async function fetchProfilConseils() {
     return;
   }
 
-  // Guard: si déjà chargés cette session → ne pas régénérer
-  if (sessionStorage.getItem('natty_conseils_ok_' + USER_ID)) {
-    profilConseillsLoaded = true;
-    return;
-  }
+  /* ⚠️ Il y avait ici un garde de session qui sortait de la fonction SANS RIEN
+     AFFICHER : le « Chargement des conseils… » écrit en dur dans le HTML de
+     l'overlay restait alors à l'écran pour toujours. Un garde doit empêcher un
+     travail inutile, jamais laisser un écran à moitié peint. On continue donc
+     jusqu'à l'affichage ; le garde ne sert plus qu'à ne pas relancer de
+     génération, ce que cette fonction ne fait plus de toute façon. */
 
   if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Chargement...</div>';
 
@@ -4282,22 +4289,23 @@ async function fetchProfilConseils() {
           profilConseillsLoaded = true;
           sessionStorage.setItem('natty_conseils_ok_' + USER_ID, '1');
           return;
-        } else {
-          // Conseils périmés → afficher les anciens + régénérer en arrière-plan
-          window._conseilsCache = row;
-          conseilsRenderColonnes(row);
-          profilConseillsLoaded = true;
-          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 1500);
-          return;
         }
+        /* Conseils de la semaine dernière : on les affiche — mieux vaut un texte
+           daté qu'un écran vide — et on propose de les renouveler. On ne
+           régénère PLUS tout seul : une génération coûte un appel à Claude, et
+           la déclencher sans que personne ne l'ait demandée revient à la payer
+           pour un overlay que l'utilisateur refermera peut-être aussitôt. Le
+           cron du lundi, lui, s'en charge pour tout le monde. */
+        window._conseilsCache = row;
+        conseilsRenderColonnes(row);
+        profilConseillsLoaded = true;
+        montrerCTAConseils(cont, true);
+        return;
       }
     }
 
-    // Aucun conseil en base → générer maintenant
-    if (cont) cont.innerHTML = '<div class="profil-loading"><div class="profil-spinner"></div>Génération de vos conseils personnalisés...</div>';
-    await conseilsGenererEtSauvegarder(false);
-    profilConseillsLoaded = true;
-    sessionStorage.setItem('natty_conseils_ok_' + USER_ID, '1');
+    // Aucun conseil en base : on propose, on n'impose pas.
+    montrerCTAConseils(cont, false);
 
   } catch(e) {
     console.warn('fetchProfilConseils:', e);
@@ -4305,54 +4313,78 @@ async function fetchProfilConseils() {
   }
 }
 
-async function conseilsGenererEtSauvegarder(silentRefresh) {
-  console.log('[Natty] conseilsGenererEtSauvegarder start, silentRefresh=', silentRefresh);
-  
-  // Charger le profil si pas encore fait
-  if (!profilInfoCache) {
-    try {
-      var profData = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&select=poids,taille,activite,tdee,objectif_type,prenom,nom,age,sexe&limit=1');
-      if (profData && profData.length) profilInfoCache = profData[0];
-      console.log('[Natty] profilInfoCache chargé:', profilInfoCache ? 'ok' : 'vide');
-    } catch(e) { console.warn('[Natty] profil load error:', e); }
-  }
-
-  // Le questionnaire alimentaire, les repas récents et le profil sont
-  // désormais collectés par NattyReco.chargerProfil() : les recharger ici
-  // faisait une requête Supabase de plus pour un prompt qui n'existe plus.
-
-  // UNE SEULE génération pour toute la semaine : un appel Claude produit les
-  // 7 recettes ET l'analyse nutritionnelle, un seul POST les enregistre.
-  // Avant : un appel pour les conseils ici, puis un second dans
-  // NattyReco.genererSemaine() pour les repas — deux analyses du même profil,
-  // qui pouvaient se contredire, et deux écritures. Le prompt et le parsing
-  // vivent maintenant dans assets/reco.js, seul point de vérité.
-  if (!window.NattyReco || typeof NattyReco.genererTout !== 'function') {
-    throw new Error('assets/reco.js requis pour la génération hebdomadaire');
-  }
-
-  try {
-    var res = await NattyReco.genererTout();
-    var data = res.conseils || {};
-    var semaine = getLundiSemaine();
-    var now = new Date().toISOString();
-    console.log('[Natty] Génération unique OK :', (res.recettes||[]).length, 'recettes');
-    // Afficher
-    profilConseillsLoaded = false;
-    var row = Object.assign({}, data, {generated_at: now, semaine: semaine, liste_courses_json: window._conseilsCache && window._conseilsCache.liste_courses_json});
-    window._conseilsCache = row;
-    conseilsRenderColonnes(row);
-    profilConseillsLoaded = true;
-    console.log('[Natty] Conseils affichés avec succès');
-
-  } catch(e) {
-    console.error('[Natty] conseilsGenererEtSauvegarder ERROR:', e);
-    if (!silentRefresh && document.getElementById('profilConseilsCont')) {
-      document.getElementById('profilConseilsCont').innerHTML = '<div style="color:#c0392b;font-size:13px;padding:16px;text-align:center;">Erreur: ' + e.message + '</div>';
-    }
-    throw e; // Re-throw pour que pcActionClick puisse catcher
-  }
+/* L'appel à l'action, à la place de l'ancienne génération automatique.
+   `apres` = true quand des conseils périmés sont déjà affichés au-dessus : le
+   bouton s'ajoute alors sous eux au lieu de les remplacer. */
+function montrerCTAConseils(cont, apres) {
+  if (!cont) return;
+  var bloc = '<div id="profilConseilsCTA" style="text-align:center;padding:' + (apres ? '18px 24px 4px' : '24px') + ';">'
+    + (apres ? '' : '<div style="font-size:36px;margin-bottom:10px;">✨</div>'
+        + '<div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px;">'
+        + 'Vos conseils, vos recettes et votre liste de courses se composent en une fois,'
+        + ' à partir de votre profil et de vos repas.</div>')
+    + '<button id="profilConseilsGen" style="width:100%;padding:15px;background:var(--black);'
+    + 'color:#fff;border:none;border-radius:16px;font-family:\'Inter\',sans-serif;font-size:15px;'
+    + 'font-weight:700;cursor:pointer;">' + (apres ? '↻ Renouveler pour cette semaine' : '✨ Générer mes conseils') + '</button>'
+    + '<div style="font-size:11.5px;color:var(--muted);margin-top:10px;">Une seule fois par semaine — vous pouvez quitter l’écran pendant la préparation.</div>'
+    + '</div>';
+  if (apres) cont.insertAdjacentHTML('beforeend', bloc);
+  else cont.innerHTML = bloc;
+  // data-* + addEventListener : pas d'onclick inline (règle §9 #8).
+  var b = document.getElementById('profilConseilsGen');
+  if (b) b.addEventListener('click', function () {
+    b.disabled = true;
+    conseilsGenererEtSauvegarder(false).catch(function () {
+      b.disabled = false;
+    });
+  });
 }
+
+/* UNE SEULE génération par semaine, et elle se passe SUR LE SERVEUR.
+   ─────────────────────────────────────────────────────────────
+   Ce que fait cette fonction, désormais : elle déclenche, elle regarde, elle
+   affiche. Elle n'appelle plus l'IA, ne construit plus de prompt et n'écrit
+   plus en base — tout cela vit dans /api/generer-conseils, via
+   assets/generation.js.
+
+   ⚠️ Deux raisons de ne pas revenir en arrière, toutes deux mesurées le
+   2026-08-04 :
+   1. Cette page exigeait `NattyReco` (« assets/reco.js requis ») sans jamais
+      charger reco.js : la génération levait AVANT tout appel, à chaque fois,
+      depuis chaque bouton. C'est là que « les conseils tournaient dans le vide ».
+   2. La génération demande ~56 s. Depuis la page, elle mourait avec la page
+      (changer d'écran, verrouiller le téléphone) et se faisait couper à 60 s par
+      la WebView. Côté serveur, elle aboutit même app fermée.
+
+   @param {boolean} silentRefresh  true = rafraîchissement de fond, sans écran
+          d'attente (semaine périmée). L'utilisateur n'a rien demandé : on ne
+          lui impose pas un plein écran.
+   @returns {Promise<object>} la ligne fraîche. Lève si elle n'a pas abouti —
+          les appelants (pcActionClick, actionBoutonConseils…) le catchent déjà. */
+async function conseilsGenererEtSauvegarder(silentRefresh) {
+  if (!window.NattyGeneration) throw new Error('assets/generation.js requis');
+
+  var row = await NattyGeneration.lancer({ discret: !!silentRefresh });
+  if (!row) throw new Error('Génération non aboutie');
+
+  profilConseillsLoaded = false;
+  conseilsRenderColonnes(row);      // pose aussi window._conseilsCache
+  profilConseillsLoaded = true;
+  _listeCourseCache = null;         // la liste de courses a changé avec les recettes
+  try { sessionStorage.setItem('natty_conseils_ok_' + USER_ID, '1'); } catch(e) {}
+  return row;
+}
+
+/* Terminé pendant qu'on regardait ailleurs (autre écran, ou « continuer en
+   arrière-plan ») : l'affichage se met à jour tout seul, sans rien recharger. */
+document.addEventListener('natty:conseils-prets', function (e) {
+  if (!e.detail) return;
+  profilConseillsLoaded = false;
+  conseilsRenderColonnes(e.detail);
+  profilConseillsLoaded = true;
+  _listeCourseCache = null;
+  if (typeof majBoutonConseils === 'function') majBoutonConseils();
+});
 
 async function conseilsForceRefresh() {
   profilConseillsLoaded = false;
@@ -4455,6 +4487,10 @@ function onbAnimateSlide(n) {
 
 function checkShowOnbPopup() {
   if (!USER_ID) return;
+  /* L'écran d'attente de la génération occupe déjà tout l'écran : un popup
+     par-dessus se retrouverait à moitié caché, et le bouton qu'il propose
+     déclencherait une seconde génération. */
+  if (window.NattyGeneration && NattyGeneration.enCours()) return;
   var key = 'natty_onb_popup_' + USER_ID;
   if (!localStorage.getItem(key)) {
     setTimeout(function() {
@@ -4563,6 +4599,11 @@ async function verifierEtMontrerPopupConseils() {
   console.log('[Popup] USER_ID:', USER_ID ? USER_ID.substring(0,8)+'...' : 'null');
 
   if (!USER_ID) { console.log('[Popup] → STOP: pas de USER_ID'); return; }
+
+  /* L'écran d'attente de la génération occupe déjà tout l'écran : un popup
+     par-dessus se retrouverait à moitié caché, et le bouton qu'il propose
+     déclencherait une seconde génération. */
+  if (window.NattyGeneration && NattyGeneration.enCours()) return;
 
   // Guard 1: localStorage — conseils déjà confirmés pour cette semaine
   var lundi = getLundiSemaine();

@@ -191,6 +191,10 @@ body{overflow-x:hidden}
 
 <script src="/assets/core.js"></script>
 <script src="/assets/reco.js"></script>
+<!-- La génération de la semaine part sur le serveur ; ce module en montre
+     l'attente et la reprend d'un écran à l'autre. Chargé AVANT garde-manger.js
+     n'aurait pas suffi : il va le chercher au moment de l'envoi. -->
+<script src="/assets/generation.js"></script>
 <script src="/assets/garde-manger.js"></script>
 <script src="/assets/minijeux.js"></script>
 <!-- Suivre une recette retire ses ingrédients du garde-manger (voir brancher()). -->
@@ -240,25 +244,61 @@ function rendreSemaine(){
   if (b) b.addEventListener('click', genererSemaineMaintenant);
 }
 
+/* La génération n'a plus lieu ici. Elle part sur le serveur
+   (/api/generer-conseils, via NattyGeneration) et produit d'un coup les
+   conseils, les recettes et la liste de courses. Cet écran déclenche, puis
+   relit le cache.
+
+   ⚠️ Pourquoi ce n'est plus `NattyReco.genererSemaine()` : mesuré le 2026-08-04,
+   son budget de jetons (1300 par recette) coupait la réponse en plein milieu du
+   JSON pour deux recettes détaillées. `extraireJson` renvoyait alors null,
+   `recommander()` renvoyait [], et le seul mot qui arrivait à l'utilisateur
+   était « Échec — vérifiez votre connexion » : une histoire de longueur de
+   réponse déguisée en panne de réseau. Il fallait 8000 jetons (vérifié :
+   JSON complet, 2 recettes de 10 étapes) — et 71 s, soit au-delà de ce qu'une
+   WebView laisse à une requête. D'où le serveur. */
 var _genSemaineOccupe = false;
 async function genererSemaineMaintenant(){
   if (_genSemaineOccupe) return;
+  if (!window.NattyGeneration){ toast('Module de génération absent'); return; }
   _genSemaineOccupe = true;
   var b = document.getElementById('btnGenSemaine');
   var e = document.getElementById('genSemaineEtat');
   if (b){ b.disabled = true; b.textContent = '⏳ Composition en cours…'; }
-  if (e) e.textContent = 'Une trentaine de secondes. C’est la seule fois de la semaine.';
+  if (e) e.textContent = 'Environ une minute. Vous pouvez quitter cet écran.';
   try{
-    SEMAINE = await NattyReco.genererSemaine(NattyReco.NB_MAX);
+    var row = await NattyGeneration.lancer();
+    if (!row) throw new Error('non aboutie');
+    await chargerSemaineDepuisCache();
     if (!SEMAINE || !SEMAINE.length) throw new Error('vide');
     rendreSemaine();          // repasse en affichage, sans nouvel appel
     toast('Vos recettes sont prêtes');
   }catch(err){
     if (b){ b.disabled = false; b.textContent = '✨ Générer mes conseils repas'; }
-    if (e) e.textContent = 'Échec — vérifiez votre connexion et réessayez.';
+    if (e) e.textContent = 'La préparation n’a pas abouti. Réessayez dans un moment.';
   }
   _genSemaineOccupe = false;
 }
+
+/* Lecture pure du cache hebdomadaire — aucun appel à l'IA, jamais. */
+async function chargerSemaineDepuisCache(){
+  try { SEMAINE = await NattyReco.recettesDeLaSemaine(NattyReco.NB_MAX) || []; }
+  catch(e){ SEMAINE = []; }
+  return SEMAINE;
+}
+
+/* Terminé pendant qu'on était ailleurs (autre écran, ou « continuer en
+   arrière-plan ») : les recettes apparaissent sans que l'utilisateur ait à
+   revenir sur le bouton. */
+document.addEventListener('natty:conseils-prets', function(){
+  // Seulement si l'écran est encore sur l'état vide (le bouton « Générer » est
+  // à l'écran) : sinon on remplacerait sous les yeux de l'utilisateur le repas
+  // précis qu'il est venu voir avec ?id=.
+  if (!document.getElementById('btnGenSemaine')) return;
+  chargerSemaineDepuisCache().then(function(){
+    if (SEMAINE && SEMAINE.length) rendreSemaine();
+  });
+});
 
 function toast(msg){
   var t = document.getElementById('toast');
@@ -647,18 +687,28 @@ async function gmScan(file){
   }
 }
 
-/* Régénère la semaine en partant du garde-manger. Le contenu du prompt est
-   assemblé par NattyReco : ici on ne fait que déclencher et réafficher. */
-/* Une seule génération pour toute la semaine, et elle a lieu dans Suivi, en
-   même temps que les conseils (un unique appel Claude produit les deux).
-   Ces deux boutons n'appellent donc plus l'IA : ils y conduisent. Le
-   garde-manger n'est pas perdu au passage — NattyReco.chargerProfil() le
-   relit, donc le stock alimente bien le prompt de la génération. */
-function versGenerationHebdo(){
-  var q = (typeof Natty !== 'undefined' && Natty.qs) ? Natty.qs() : '';
-  location.href = 'suivi.html' + q + (q ? '&' : '?') + 'gen=1';
+/* Génération de la semaine en partant du garde-manger.
+   ⚠️ Ces boutons RENVOYAIENT vers `suivi.html?gen=1`, parce que la génération
+   n'existait que là-bas. Elle vit maintenant sur le serveur et son écran
+   d'attente se rouvre sur n'importe quel écran : il n'y a donc plus aucune
+   raison de déplacer l'utilisateur pour appuyer sur un bouton. Le garde-manger
+   n'est pas perdu au passage — `NattyGeneration.envoyer()` le transmet à
+   l'endpoint, qui l'injecte dans le prompt. */
+function versGenerationHebdo(){ genererSemaineMaintenant(); }
+async function gmGenerer(){
+  if (!window.NattyGeneration){ toast('Module de génération absent'); return; }
+  gmEtat('Composition de vos repas… vous pouvez quitter cet écran.', true);
+  try{
+    var row = await NattyGeneration.lancer();
+    if (!row) throw new Error('non aboutie');
+    gmEtat('');
+    await chargerSemaineDepuisCache();
+    rendreSemaine();
+    toast('Vos recettes sont prêtes');
+  }catch(e){
+    gmEtat('La préparation n’a pas abouti. Réessaie dans un moment.');
+  }
 }
-async function gmGenerer(){ versGenerationHebdo(); }
 
 async function genererMaintenant(){ versGenerationHebdo(); }
 
@@ -690,7 +740,7 @@ async function genererMaintenant(){ versGenerationHebdo(); }
     if (barre) barre.style.display = 'flex';
     afficherNb(NattyReco.nbRepas());
 
-    SEMAINE = await NattyReco.recettesDeLaSemaine(NattyReco.NB_MAX);
+    await chargerSemaineDepuisCache();
     rendreSemaine();
   }catch(e){
     document.getElementById('content').innerHTML = '<div class="empty">Impossible de charger les recettes.</div>';

@@ -610,10 +610,85 @@ autres membres.
 Proxy vers l'API Claude pour les conseils nutritionnels.
 
 ### `api/save-conseils.js`
-Sauvegarde les conseils générés dans `profil_conseils` Supabase.
+Sauvegarde les conseils dans `profil_conseils` avec la clé service. **N'est plus appelé que
+par `index.html`** (l'ancien dashboard web) : depuis août 2026, l'écriture de la génération
+hebdomadaire est faite directement par `api/_generation.js`.
+
+### `api/_generation.js` + `api/generer-conseils.js` — la génération de la semaine, côté serveur
+**Un seul appel à Claude produit tout ce que les écrans lisent, et une seule écriture le range.**
+`_generation.js` est le cœur partagé (Vercel ignore les fichiers d'`api/` préfixés `_`) ;
+`generer-conseils.js` est la route qu'appelle l'app pour UNE personne, `conseils-hebdo.js` le cron
+du lundi pour tout le monde.
+
+**Pourquoi côté serveur** — deux mesures du 2026-08-04 :
+- La réponse complète (2 recettes détaillées + les six conseils) demande **~71 s**. Depuis une
+  page, l'appel meurt avec la page (changement d'écran, téléphone verrouillé) et se fait couper
+  par le délai réseau de la WebView. `maxDuration = 120` sur la route ; mesuré, une fonction de
+  ce déploiement a tenu **204 s** sans être coupée.
+- ⚠️ **Le plafond de jetons était LE défaut** qui répondait « Échec » à l'écran Repas :
+  `1300 × nb + 800` donnait 3400 jetons pour deux recettes, la réponse était **coupée en plein
+  JSON**, donc inparsable, donc « aucune recette ». Vérifié : 3500 → tronqué, **8000 → JSON
+  complet** (`MAX_TOKENS = 3200 × NB_RECETTES + 1600`). Un plafond n'est pas une cible : ce qui
+  n'est pas produit n'est pas facturé.
+
+**Ce qu'une génération écrit, en une requête** (c'est ce qui garantit qu'aucun écran ne
+régénère) :
+
+| Colonne | Lue par |
+|---|---|
+| `conseil_prot` … `conseil_points_forts` | overlay « Conseils personnalisés » de `suivi.html`, cartes de `coaching.html` |
+| `conseils_json` = `{recettes:[schéma app], nb_repas, conseils, genere_le}` | `repas.html` et la liste de courses de `coaching.html`, via `NattyReco.recettesDeLaSemaine` |
+| `recettes_json` (schéma d'affichage : `emoji`, `macros.prot/gluc/lip/cal`, étapes en chaînes) | overlay « Mes recettes » de `suivi.html` |
+| `liste_courses_json` | overlay « Liste de courses » de `suivi.html` |
+
+> ⚠️ **Le bug qui a motivé cette fusion** : le cron écrivait `conseils_json` **sans clé
+> `recettes`** (son schéma d'affichage), alors que la génération navigateur y écrivait
+> `{recettes:[…]}`. Après un passage du cron, `NattyReco.lireCache()` ne trouvait donc rien et
+> l'écran Repas reproposait « Générer » indéfiniment. Un seul écrivain, un seul schéma.
+
+`recettes_json` et `liste_courses_json` sont **dérivées** des recettes (`versAffichage()`,
+`listeDeCourses()`), jamais redemandées à l'IA : deux textes différents décriraient sinon le même
+plat, et l'écran qui affiche le second donnerait l'impression que la génération a changé d'avis.
+
+Autres points de vigilance :
+- **`semaine` vient du client** quand il la fournit. Le serveur est en UTC : un lundi entre 00 h
+  et 02 h à Paris, il calculerait le lundi *précédent* et la page conclurait aussitôt « périmés ».
+- **Le garde-manger est transmis dans le corps de la requête** — il vit dans le `localStorage` de
+  l'appareil (la table `garde_manger` n'existe pas encore), le serveur ne peut pas le lire.
+- **`forcer`** (vrai depuis l'app, faux depuis le cron) : sans lui, `processUser` s'arrête dès
+  qu'une ligne existe pour la semaine — **même vide**, ce qui était l'état de la base et bloquait
+  le bouton en silence. Une ligne sans `conseils_json` ne compte plus pour faite.
+- Vérifié de bout en bout contre l'API réelle : JSON complet, 6 conseils, 2 recettes × 10 étapes,
+  **aucune clé `illu` inconnue** (donc `assets/recette.js` sait toutes les dessiner), `dispo`
+  renseigné quand un garde-manger est transmis.
+
+### `assets/generation.js` — l'attente, et sa mise en scène
+Écran plein blanc (`#ngen`, tout préfixé `ngen`), chargé par **suivi, repas, coaching, menu/
+www/index, profil, social**. Anneau qui tourne avec l'emoji de l'étape, titre + sous-titre qui
+nomment l'étape réelle en cours, **barre de progression**, points d'étape, et le mot qui compte :
+« vous pouvez fermer l'application ».
+
+- **Le drapeau est dans `localStorage`** (`natty_generation_en_cours` = `{debut, discret, semaine}`) :
+  chaque écran qui charge le module le lit et **reprend l'attente là où elle en était** — le texte
+  et la barre suivent le temps écoulé depuis le début RÉEL, pas depuis l'ouverture de l'écran.
+- **« Continuer en arrière-plan »** ferme l'écran et laisse une pastille « Conseils en
+  préparation… » (tapable pour revenir). Le travail étant sur le serveur, il n'y a rien à
+  interrompre.
+- **La barre ne dépasse pas 96 %** avant que la ligne ne soit lue en base, et ne revient jamais
+  en arrière. Une barre qui atteint la fin sans que rien n'arrive est pire que pas de barre.
+- ⚠️ **On n'attend PAS la réponse HTTP de l'endpoint** et on ne peut pas compter sur elle (la
+  WebView la coupe souvent avant). La preuve d'aboutissement, c'est la relecture de
+  `profil_conseils` toutes les 3 s. Un `fetch` rejeté ne déclenche donc **pas** d'échec — seul un
+  `!r.ok` explicite, ou l'expiration au bout de 4 min.
+- À l'aboutissement, l'événement **`natty:conseils-prets`** est émis avec la ligne : `suivi.html`
+  repeint ses conseils, `repas.html` ses recettes, `coaching.html` sa liste — sans rechargement.
+  `lancer()` renvoie aussi une promesse, pour les écrans qui préfèrent `await`.
 
 ### `api/conseils-hebdo.js`
-Cron Vercel — déclenché 12 fois le lundi matin (toutes les 5 min de 8h à 8h55) pour couvrir tous les utilisateurs.
+Cron Vercel — déclenché 12 fois le lundi matin (toutes les 5 min de 8h à 8h55) pour couvrir tous
+les utilisateurs. `maxDuration = 300`, et un **budget de 230 s** : on n'entame pas un utilisateur
+qu'on ne pourra pas finir (un appel coupé au milieu est de l'API payée pour rien). Les 12 passages
+se relaient, `processUser` sautant ceux qui ont déjà une ligne pleine pour la semaine.
 
 ### `api/send-email.js`
 Notifications email via Resend.
@@ -1204,6 +1279,47 @@ sur la prod après déploiement.
 > emprunté. Toute la classe « erreur serveur → on suppose que la session est morte » est à
 > relire avant d'activer une sécurité côté base.
 
+### « Les conseils ne se génèrent jamais » — trois défauts empilés, tous mesurés — ✅ corrigés
+Constaté par Pablo le 2026-08-04 : dans l'app, les conseils tournent indéfiniment
+(« Chargement des conseils… » qui ne devient jamais rien) et l'écran Repas répond « Échec —
+vérifiez votre connexion » avec une connexion parfaitement valide. Trois causes distinctes, dont
+aucune n'était une panne de réseau :
+
+1. **`suivi.html` exigeait `assets/reco.js`… sans jamais le charger.** La page ne chargeait que
+   `core.js`, et `conseilsGenererEtSauvegarder()` commençait par
+   `if (!window.NattyReco) throw new Error('assets/reco.js requis')`. La génération levait donc
+   **avant le moindre appel**, depuis chaque bouton, à chaque fois. C'était structurellement
+   impossible depuis le refactor qui avait déplacé le prompt dans reco.js.
+   > Leçon : une dépendance vérifiée à l'exécution (`if (!window.X) throw`) ne prouve rien tant
+   > que personne ne vérifie la balise `<script>`. Le message d'erreur était juste, et invisible.
+2. **Plafond de jetons trop bas → JSON tronqué → « aucune recette ».** `recommander()` demandait
+   `1300 × nb + 800` jetons, soit 3400 pour deux recettes détaillées. Mesuré : la réponse est
+   coupée en pleine étape, `extraireJson()` renvoie null, `recommander()` renvoie `[]`, et le seul
+   mot qui parvient à l'utilisateur est « Échec — vérifiez votre connexion ». Il faut **8000**
+   jetons (vérifié : JSON complet, 12 511 caractères, 2 recettes de 10 étapes).
+   > Leçon : une troncature par `max_tokens` ne ressemble PAS à une erreur d'API — elle ressemble
+   > à une réponse vide. Toujours faire dire au message d'erreur la longueur reçue.
+3. **Un garde qui sortait sans rien afficher.** `fetchProfilConseils()` faisait
+   `if (sessionStorage.getItem('natty_conseils_ok_…')) return;` — sans peindre. Le
+   « Chargement des conseils… » écrit **en dur dans le HTML** de l'overlay restait alors à l'écran
+   pour toujours. Un garde doit empêcher un travail inutile, jamais laisser un écran à moitié peint.
+
+**Corrigé** en déplaçant la génération côté serveur (voir §3, `api/_generation.js` et
+`assets/generation.js`) : la page déclenche, regarde et affiche ; elle ne génère plus. Et parce
+que la réponse complète demande **~71 s**, elle ne pouvait de toute façon pas vivre dans une page
+— ni survivre au changement d'écran, ni au délai réseau d'une WebView.
+
+### Analyse critique d'un plat : générée une fois, figée ensuite — ✅ vérifié
+`ouvrirAnalysePlat()` (suivi.html) lit d'abord un cache à deux étages — `localStorage`, puis la
+colonne `meals.analyse_json` si elle existe — et n'appelle Claude que s'il est vide.
+`peindreAnalysePlat()` est un rendu pur, utilisé aussi bien à la première génération qu'aux
+ouvertures suivantes : l'affichage est donc strictement le même dans les deux cas.
+**Vérifié en navigateur** : première ouverture = 1 appel à `/api/claude` ; fermeture puis
+réouverture du même plat = **toujours 1 appel**, texte identique, et ce même avec la colonne
+absente (repli local).
+🔄 `natty_analyse_plat.sql` (une ligne) reste à exécuter pour que l'analyse suive l'utilisateur
+d'un appareil à l'autre. Sans elle, tout marche, mais en local.
+
 ### Realtime WebSocket manuel (protocole obsolète ?)
 **Problème** : `chat.html`, `challenges.html` et `suivi.html` ouvrent chacun un `WebSocket` manuel vers `wss://.../realtime/v1/websocket` avec un `phx_join` minimal (`{topic:'realtime:public:<table>', payload:{}}`), sans `config.postgres_changes` — c'est le protocole Supabase Realtime **pré-`postgres_changes`**, potentiellement incompatible avec une instance Supabase récente (qui exige ce champ de config pour router les événements).
 **Solution** : à tester en conditions réelles (envoyer un message/défi et vérifier la réception live) ; si cassé, migrer vers le client `supabase-js` (`.channel().on('postgres_changes', ...)`) plutôt que le protocole WebSocket brut.
@@ -1369,6 +1485,27 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      `google-services.json` (donc un projet Firebase) ; l'app Android n'a de toute façon jamais
      été compilée. `appareils.plateforme` est prévu pour accueillir des jetons FCM sans changer
      de schéma.
+
+**Génération de la semaine (conseils + recettes + liste de courses)**
+- ✅ **Une seule génération, côté serveur, pour tous les écrans** (août 2026) : `api/_generation.js`
+  + `api/generer-conseils.js` + `assets/generation.js`. Un appui sur un bouton, une attente
+  plein écran avec barre de progression, et ensuite **plus aucune régénération** — tous les écrans
+  lisent `profil_conseils` jusqu'au lundi suivant. Détail et mesures en §3, causes du blocage
+  précédent en §7.
+- ✅ **Quitter l'écran ne perd plus rien** : le travail est sur le serveur, l'attente se reprend
+  sur n'importe quel écran (drapeau `localStorage`), et « Continuer en arrière-plan » laisse une
+  pastille. Vérifié en navigateur : passage Repas → Suivi en cours de génération, l'attente
+  reprend au bon palier et au bon pourcentage ; à l'aboutissement, conseils et recettes
+  s'affichent d'eux-mêmes sans que l'utilisateur touche à quoi que ce soit.
+- ✅ `assets/reco.js` ne génère plus la semaine (`genererTout`, `genererSemaine`,
+  `enregistrerTout`, `enregistrerSemaine` retirés) : il ne reste que `recommander()` pour
+  « Découvrir » et la LECTURE du cache. Un seul écrivain pour `profil_conseils`.
+- 🔄 **Non vérifié en conditions réelles** : l'endpoint n'a pas encore tourné avec une vraie
+  session (il faut un mot de passe de compte, que je n'ai pas). Le contenu, lui, a été validé
+  contre l'API réelle bout en bout.
+- 🔄 « Découvrir » (`assets/minijeux.js` → `recommander(3, contrainte)`) reste un appel **depuis la
+  page**. Son plafond de jetons est corrigé, mais 3 recettes demandent ~100 s : à vérifier sur
+  téléphone, et à basculer côté serveur si ça échoue.
 
 **Améliorations index.html**
 - ✅ **Action de la semaine du nutritionniste — livrée** (août 2026). Carte noire en tête de

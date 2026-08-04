@@ -759,6 +759,9 @@ async function charger(){
   await charger();
 })();
 </script>
+<!-- Reprend l’écran d’attente si une génération de la semaine est en cours
+     (elle tourne sur le serveur : elle survit au changement d’écran). -->
+<script src="/assets/generation.js"></script>
 <script src="/assets/ajout.js"></script>
 <script src="/assets/notifs.js"></script>
 <script src="/assets/push.js"></script>
