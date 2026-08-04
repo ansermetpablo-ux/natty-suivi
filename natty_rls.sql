@@ -23,6 +23,74 @@
 
 
 -- ╔═══════════════════════════════════════════════════════════╗
+-- ║ ÉTAPE 0 — À EXÉCUTER AVANT LA FUSION VERS main            ║
+-- ╚═══════════════════════════════════════════════════════════╝
+-- Mesuré le 2026-08-04 avec un vrai compte connecté : SIX tables ont
+-- déjà la RLS activée, avec des policies qui autorisent `anon` mais PAS
+-- `authenticated`. Même requête, deux résultats :
+--
+--   onboarding      anon 31 lignes / connecté 0
+--   messages        anon  3 / connecté 0
+--   abonnements     anon  2 / connecté 0
+--   commandes       anon  3 / connecté 0
+--   plats_menu      anon  3 / connecté 0
+--   nutritionnistes anon  3 / connecté 0
+--
+-- Personne ne l'a jamais vu parce que le front envoyait la clé anon. Depuis
+-- la bascule JWT, un utilisateur CONNECTÉ ne lit plus son propre profil :
+-- macros et TDEE retombent sur les valeurs par défaut, la messagerie et
+-- l'abonnement paraissent vides, le menu et la liste des nutritionnistes
+-- aussi. Sans cette étape, la fusion casse l'app pour tout le monde.
+
+-- 0.1 Voir les policies en place et à qui elles s'adressent.
+select tablename, policyname, cmd, roles
+from pg_policies where schemaname = 'public'
+order by tablename, policyname;
+
+-- 0.2 Rendre ces six tables lisibles par leur propriétaire connecté.
+create policy onboarding_soi_lecture on public.onboarding
+  for select to authenticated using (auth.uid()::text = user_id);
+
+create policy messages_soi_lecture on public.messages
+  for select to authenticated using (auth.uid()::text = user_id);
+
+create policy abonnements_soi_lecture on public.abonnements
+  for select to authenticated using (auth.uid()::text = user_id);
+
+create policy commandes_soi_lecture on public.commandes
+  for select to authenticated using (auth.uid()::text = user_id);
+
+-- Menu et nutritionnistes sont du catalogue : lisibles de tout connecté.
+create policy plats_menu_lecture on public.plats_menu
+  for select to authenticated using (true);
+
+create policy nutritionnistes_lecture on public.nutritionnistes
+  for select to authenticated using (actif = true);
+
+-- 0.3 L'écriture aussi, sinon l'app ne peut plus rien enregistrer.
+create policy onboarding_soi_ecriture on public.onboarding
+  for all to authenticated
+  using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);
+
+create policy messages_soi_ecriture on public.messages
+  for all to authenticated
+  using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);
+
+create policy commandes_soi_ecriture on public.commandes
+  for all to authenticated
+  using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);
+
+-- 0.4 VÉRIFIER DANS L'APP que le profil, le chat et l'offre se remplissent
+-- de nouveau. Ensuite seulement, retirer les policies `anon` — ce sont
+-- elles, le trou : elles donnent tout à la clé publique. Lister d'abord
+-- avec 0.1, puis pour chacune :
+--   drop policy "<nom>" on public.<table>;
+--
+-- ⚠️ Les étapes 2 et 3 dupliquent certaines de ces policies. Si une
+-- création échoue en « already exists », c'est normal : passer à la suivante.
+
+
+-- ╔═══════════════════════════════════════════════════════════╗
 -- ║ ÉTAPE 1 — sans aucun risque pour les écrans existants     ║
 -- ╚═══════════════════════════════════════════════════════════╝
 -- Ces tables ne sont lues par AUCUN écran : le serveur y accède avec
@@ -107,27 +175,157 @@ create policy notes_lire_soi on public.notes_nutritionniste
 
 
 -- ╔═══════════════════════════════════════════════════════════╗
--- ║ ÉTAPE 3 — le fil social : PAS ENCORE FAISABLE             ║
+-- ║ ÉTAPE 3 — le fil social : côté app, c'est fait            ║
 -- ╚═══════════════════════════════════════════════════════════╝
--- `meals`, `onboarding` et `questionnaire_alim` sont lues POUR LES AUTRES
--- MEMBRES par assets/social.js (prénom, poids, tdee, nb_repas, plats).
+-- Le constat de départ reste le bon : la RLS filtre des LIGNES, pas des
+-- COLONNES. Autoriser autrui à lire la ligne `onboarding` d'un membre pour
+-- son prénom lui donnerait du même coup son email, son âge et son poids.
 --
--- Or la RLS filtre des LIGNES, pas des COLONNES : autoriser autrui à lire la
--- ligne `onboarding` d'un membre pour son prénom lui donne du même coup son
--- email, son âge et son poids. Un `grant select (colonnes)` ne suffit pas non
--- plus, PostgREST demandant `select *` sur plusieurs chemins.
---
--- La bonne forme est une **vue exposant seulement le public** :
---
---   create view public.membre_public as
---     select o.user_id, o.prenom, o.poids, o.tdee
---     from public.onboarding o
---     left join public.membre_prefs p on p.user_id = o.user_id
---     where coalesce(p.fil_public, true);
---
--- …puis faire pointer social.js sur `membre_public` au lieu d'`onboarding`.
--- C'est une modification d'application, pas de SQL : à faire AVANT de toucher
--- à la RLS de ces trois tables. Sans ça, activer la RLS vide le fil social.
+-- `assets/social.js` interroge désormais la vue `membre_public` définie
+-- ci-dessous, et retombe sur les deux tables tant qu'elle n'existe pas —
+-- donc ce bloc peut être exécuté sans rien casser, et l'app basculera
+-- d'elle-même. (Commit « Fil social : lire les autres membres par une vue ».)
+
+-- La vue est en security definer (le défaut) : c'est volontaire, c'est elle
+-- la fenêtre contrôlée qui lit `onboarding` malgré sa RLS. Elle n'expose que
+-- les colonnes nécessaires et écarte déjà les membres retirés du fil.
+-- distinct on : un membre peut avoir plusieurs lignes d'onboarding (la base
+-- en contient), on garde celle qui porte un tdee, sinon la plus récente.
+create or replace view public.membre_public as
+select distinct on (o.user_id)
+       o.user_id,
+       o.prenom,
+       o.poids,
+       o.tdee,
+       (select q.nb_repas from public.questionnaire_alim q
+         where q.user_id::text = o.user_id::text limit 1) as nb_repas
+from public.onboarding o
+left join public.membre_prefs p on p.user_id::text = o.user_id::text
+where coalesce(p.fil_public, true)
+order by o.user_id, (o.tdee is null), o.created_at desc;
+
+grant select on public.membre_public to authenticated;
+
+-- Une fois la vue en place, ces deux tables peuvent passer en RLS
+-- propriétaire-seul sans vider le fil.
+-- ⚠️ Mais pas avant d'avoir réglé admin.html (bloc suivant).
+alter table public.onboarding enable row level security;
+create policy onboarding_soi on public.onboarding
+  for all to authenticated
+  using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);
+
+alter table public.questionnaire_alim enable row level security;
+create policy questionnaire_alim_soi on public.questionnaire_alim
+  for all to authenticated
+  using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);
+
+-- `meals`, lui, doit rester lisible par les autres : c'est le fil lui-même.
+-- Deux filtres, tous deux optionnels — une valeur NULL vaut « public ».
+alter table public.meals enable row level security;
+
+create policy meals_soi on public.meals
+  for all to authenticated
+  using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);
+
+create policy meals_fil on public.meals
+  for select to authenticated
+  using (
+    coalesce(partage, true)
+    and not exists (
+      select 1 from public.membre_prefs p
+      where p.user_id::text = meals.user_id::text and p.fil_public = false
+    )
+  );
+
+-- meal_ingredients n'a pas de user_id : on passe par le repas parent.
+alter table public.meal_ingredients enable row level security;
+
+create policy meal_ingredients_soi on public.meal_ingredients
+  for all to authenticated
+  using (exists (select 1 from public.meals m
+                  where m.id = meal_ingredients.meal_id
+                    and m.user_id = auth.uid()::text))
+  with check (exists (select 1 from public.meals m
+                  where m.id = meal_ingredients.meal_id
+                    and m.user_id = auth.uid()::text));
+
+create policy meal_ingredients_fil on public.meal_ingredients
+  for select to authenticated
+  using (exists (
+    select 1 from public.meals m
+    where m.id = meal_ingredients.meal_id
+      and coalesce(m.partage, true)
+      and not exists (
+        select 1 from public.membre_prefs p
+        where p.user_id::text = m.user_id::text and p.fil_public = false
+      )
+  ));
+
+-- J'aime, vues, abonnements : compteurs lisibles de tous, écriture en son
+-- seul nom. membre_prefs doit rester lisible — c'est la table que les
+-- policies du fil interrogent.
+alter table public.meal_likes enable row level security;
+create policy meal_likes_lecture on public.meal_likes for select to authenticated using (true);
+create policy meal_likes_ajout on public.meal_likes
+  for insert to authenticated with check (auth.uid()::text = user_id);
+create policy meal_likes_retrait on public.meal_likes
+  for delete to authenticated using (auth.uid()::text = user_id);
+
+alter table public.meal_vues enable row level security;
+create policy meal_vues_lecture on public.meal_vues for select to authenticated using (true);
+create policy meal_vues_ajout on public.meal_vues
+  for insert to authenticated with check (auth.uid()::text = user_id);
+
+alter table public.membre_amis enable row level security;
+create policy membre_amis_lecture on public.membre_amis for select to authenticated using (true);
+create policy membre_amis_ajout on public.membre_amis
+  for insert to authenticated with check (auth.uid()::text = user_id);
+create policy membre_amis_retrait on public.membre_amis
+  for delete to authenticated using (auth.uid()::text = user_id);
+
+alter table public.membre_prefs enable row level security;
+create policy membre_prefs_lecture on public.membre_prefs for select to authenticated using (true);
+create policy membre_prefs_sienne on public.membre_prefs
+  for all to authenticated
+  using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id);
+
+
+-- ╔═══════════════════════════════════════════════════════════╗
+-- ║ ÉTAPE 4 — catalogue et back-office                        ║
+-- ╚═══════════════════════════════════════════════════════════╝
+-- Le catalogue se lit, ne s'écrit pas depuis l'app.
+alter table public.plats_menu enable row level security;
+create policy plats_menu_lecture on public.plats_menu for select to authenticated using (true);
+
+alter table public.recettes enable row level security;
+create policy recettes_lecture on public.recettes for select to authenticated using (true);
+
+alter table public.recettes_ingredients enable row level security;
+create policy recettes_ingredients_lecture on public.recettes_ingredients for select to authenticated using (true);
+
+alter table public.recettes_etapes enable row level security;
+create policy recettes_etapes_lecture on public.recettes_etapes for select to authenticated using (true);
+
+alter table public.ingredients_base enable row level security;
+create policy ingredients_base_lecture on public.ingredients_base for select to authenticated using (true);
+
+-- Stocks : purement interne, aucune policy donc aucun accès client.
+alter table public.stocks_mp enable row level security;
+
+-- `nutritionnistes` expose mdp_hash, qui n'est pas un hash mais du base64
+-- (TnV0cmkyNg== = Nutri26), aujourd'hui lisible par n'importe qui.
+-- offre.html n'a besoin que du nom, de la photo et des spécialités.
+alter table public.nutritionnistes enable row level security;
+
+create or replace view public.nutritionnistes_publics as
+  select id, nom, specialites, photo_url, bio, actif
+  from public.nutritionnistes where actif = true;
+
+grant select on public.nutritionnistes_publics to authenticated;
+
+-- ⚠️ Puis dans offre.html : "nutritionnistes?actif=eq.true&select=*"
+--    devient "nutritionnistes_publics?select=*".
+-- ⚠️ Et faire tourner les trois mots de passe de démo, qui ont circulé.
 
 
 -- ╔═══════════════════════════════════════════════════════════╗

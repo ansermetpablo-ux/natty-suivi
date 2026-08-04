@@ -60,6 +60,32 @@ var NattySocial = (function () {
     return out;
   }
 
+  /* Profil public des AUTRES membres — prénom et besoins, rien de plus.
+     La RLS filtre des lignes, pas des colonnes : laisser un membre lire la
+     ligne `onboarding` d'un autre pour son prénom lui donnerait du même coup
+     son email, son âge et son poids. La vue `membre_public` (natty_rls.sql)
+     n'expose que le nécessaire et écarte déjà ceux qui se sont retirés du fil.
+     Tant qu'elle n'existe pas en base, on retombe sur les deux tables — ce qui
+     reste le fonctionnement d'aujourd'hui, RLS désactivées. */
+  var vueDispo = null;
+
+  async function profilsPublics(users) {
+    if (vueDispo !== false) {
+      try {
+        var v = await enLots('membre_public', 'user_id', users, 'user_id,prenom,poids,tdee,nb_repas');
+        vueDispo = true;
+        return { profils: v, repas: v };
+      } catch (e) { vueDispo = false; }
+    }
+    var r = await Promise.all([
+      enLots('onboarding', 'user_id', users, 'user_id,prenom,poids,tdee')
+        .then(function (x) { return x; }, function () { return []; }),
+      enLots('questionnaire_alim', 'user_id', users, 'user_id,nb_repas')
+        .then(function (x) { return x; }, function () { return []; })
+    ]);
+    return { profils: r[0], repas: r[1] };
+  }
+
   // Les en-têtes viennent de core.js : fabriquées ici, elles porteraient la
   // clé anon et non le JWT de l'utilisateur — donc un retrait de j'aime ou
   // d'abonnement serait refusé par les policies une fois les RLS actives.
@@ -271,10 +297,9 @@ var NattySocial = (function () {
     await Promise.all([
       enLots('meal_ingredients', 'meal_id', ids, 'meal_id,name,quantity_g')
         .then(function (r) { ingrs = r; }, function () { ingrs = []; }),
-      enLots('onboarding', 'user_id', users, 'user_id,prenom,poids,tdee')
-        .then(function (r) { onbs = r; }, function () { onbs = []; }),
-      enLots('questionnaire_alim', 'user_id', users, 'user_id,nb_repas')
-        .then(function (r) { qals = r; }, function () { qals = []; }),
+      profilsPublics(users)
+        .then(function (r) { onbs = r.profils; qals = r.repas; },
+              function () { onbs = []; qals = []; }),
       chargerLikes(ids),
       chargerVues(ids)
     ]);

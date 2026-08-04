@@ -31,6 +31,16 @@ var Natty = (function () {
   var SESSION = null;
   var refreshEnCours = null;
 
+  // Interrupteur de bascule, à passer à true EN MÊME TEMPS que l'activation
+  // des RLS (natty_rls.sql). Tant qu'il est à false, un utilisateur sans
+  // session continue d'être servi par la clé anon — c'est ce qui fait tenir
+  // l'app aujourd'hui. Une fois les policies posées, ce même utilisateur ne
+  // recevrait plus que des tableaux vides : mieux vaut alors le renvoyer se
+  // connecter que lui afficher une app qui a l'air cassée. Les comptes créés
+  // avant la bascule JWT n'ont qu'un `natty_token` en localStorage et
+  // repasseront donc par login.html une fois — c'est attendu.
+  var SESSION_OBLIGATOIRE = false;
+
   // Décode la charge utile d'un JWT sans la vérifier : elle ne sert qu'à
   // connaître l'identifiant et l'expiration. La vérification, elle, est faite
   // par Supabase à chaque requête — on ne lui fait pas confiance ici.
@@ -249,9 +259,9 @@ var Natty = (function () {
   }
 
   function requireAuth() {
-    if (USER_ID) return true;
+    if (SESSION_OBLIGATOIRE ? !!SESSION : !!USER_ID) return true;
     setTimeout(function () {
-      if (!USER_ID) window.location.href = 'login.html';
+      if (SESSION_OBLIGATOIRE ? !SESSION : !USER_ID) window.location.href = 'login.html';
     }, 1500);
     return false;
   }
