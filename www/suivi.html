@@ -1716,6 +1716,11 @@ html.no-scroll {
   </div>
 </div>
 
+<!-- core.js doit être chargé AVANT le script ci-dessous : celui-ci lit
+     maintenant `Natty.USER_ID` au tout début, pour prendre son identité dans
+     la session. Aucun accès au DOM à l'exécution, donc le monter ici ne change
+     rien d'autre. Les autres modules restent en bas, après lui. -->
+<script src="/assets/core.js"></script>
 <script>
 // ═══ CONFIG ═══
 const SB_URL  = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
@@ -1771,23 +1776,22 @@ var photoIAFile=null, photoManuFile=null, aiMealData=null;
 var weekOffset=0, currentPeriod='7j';
 
 var params = new URLSearchParams(window.location.search);
-TOKEN = params.get('token')||'';
-var uP = params.get('userId');
-if (uP&&uP!=='null') USER_ID=uP;
-else if (TOKEN.length>10) {
-  try{var d=TOKEN.match(/.{1,2}/g).map(function(b){return String.fromCharCode(parseInt(b,16));}).join('');if(d.includes('-'))USER_ID=d;}catch(e){}
-}
-// Persister le token entre rechargements
-if (TOKEN && USER_ID) {
-  localStorage.setItem('natty_token', TOKEN);
-  localStorage.setItem('natty_user_id', USER_ID);
-} else if (!TOKEN) {
-  // Essayer de récupérer depuis localStorage
-  var savedToken = localStorage.getItem('natty_token');
-  var savedUserId = localStorage.getItem('natty_user_id');
-  if (savedToken && savedUserId) {
-    TOKEN = savedToken;
-    USER_ID = savedUserId;
+TOKEN = Natty.TOKEN || params.get('token') || '';
+/* ⚠️ L'identité vient de la SESSION, et d'elle seule.
+   Cet écran gardait sa propre résolution — `?userId=`, `?token=` en hexa, puis
+   `localStorage.natty_user_id` — sans jamais regarder le JWT. Or plus rien
+   n'écrit ces clés depuis la bascule Auth, et core.js les EFFACE quand il
+   trouve une identité héritée sans session. Résultat, constaté le 2026-08-04 :
+   on se connecte, la session est bien là, mais `suivi.html` ne la voit pas,
+   décide au bout d'1,5 s qu'il n'y a personne, et affiche son formulaire de
+   connexion intégré. On se reconnecte, il recharge `suivi.html`… qui ne voit
+   toujours pas la session. C'est LA boucle « login en boucle ». */
+USER_ID = Natty.USER_ID || null;
+if (!USER_ID) {
+  var uP = params.get('userId');
+  if (uP && uP !== 'null') USER_ID = uP;
+  else if (TOKEN.length > 10) {
+    try{var d=TOKEN.match(/.{1,2}/g).map(function(b){return String.fromCharCode(parseInt(b,16));}).join('');if(d.includes('-'))USER_ID=d;}catch(e){}
   }
 }
 var urlP={p:parseInt(params.get('proteines'))||0, l:parseInt(params.get('lipides'))||0,
@@ -4667,7 +4671,6 @@ window.addEventListener('natty:repas-ajoute', function(){
 });
 </script>
 <!-- core.js avant ajout.js : le parcours du bouton + s'appuie sur Natty.* -->
-<script src="/assets/core.js"></script>
 <script src="/assets/ajout.js"></script>
 <script src="/assets/notifs.js"></script>
 <script src="/assets/push.js"></script>

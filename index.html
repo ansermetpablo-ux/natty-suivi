@@ -1639,23 +1639,17 @@ var photoIAFile=null, photoManuFile=null, aiMealData=null;
 var weekOffset=0, currentPeriod='7j';
 
 var params = new URLSearchParams(window.location.search);
-TOKEN = params.get('token')||'';
-var uP = params.get('userId');
-if (uP&&uP!=='null') USER_ID=uP;
-else if (TOKEN.length>10) {
-  try{var d=TOKEN.match(/.{1,2}/g).map(function(b){return String.fromCharCode(parseInt(b,16));}).join('');if(d.includes('-'))USER_ID=d;}catch(e){}
-}
-// Persister le token entre rechargements
-if (TOKEN && USER_ID) {
-  localStorage.setItem('natty_token', TOKEN);
-  localStorage.setItem('natty_user_id', USER_ID);
-} else if (!TOKEN) {
-  // Essayer de récupérer depuis localStorage
-  var savedToken = localStorage.getItem('natty_token');
-  var savedUserId = localStorage.getItem('natty_user_id');
-  if (savedToken && savedUserId) {
-    TOKEN = savedToken;
-    USER_ID = savedUserId;
+TOKEN = Natty.TOKEN || params.get('token') || '';
+// Même correction que suivi.html : l'identité vient de la session (le `sub` du
+// JWT), pas de `localStorage.natty_user_id` — plus rien ne l'écrit, et core.js
+// l'efface. Sans ça, cette page affiche son formulaire de connexion à
+// quelqu'un qui vient de se connecter, et on tourne en rond.
+USER_ID = Natty.USER_ID || null;
+if (!USER_ID) {
+  var uP = params.get('userId');
+  if (uP && uP !== 'null') USER_ID = uP;
+  else if (TOKEN.length > 10) {
+    try{var d=TOKEN.match(/.{1,2}/g).map(function(b){return String.fromCharCode(parseInt(b,16));}).join('');if(d.includes('-'))USER_ID=d;}catch(e){}
   }
 }
 var urlP={p:parseInt(params.get('proteines'))||0, l:parseInt(params.get('lipides'))||0,
