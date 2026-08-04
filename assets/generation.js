@@ -133,6 +133,11 @@ window.NattyGeneration = (function () {
     otterPill();
     var d = document.getElementById('ngen');
     if (d) return d;
+    // Écran neuf, donc barre à zéro : `dernierePart` ne sert qu'à empêcher la
+    // barre de RECULER. Sans cette remise à zéro, réouvrir l'attente depuis la
+    // pastille laissait une barre bloquée à 0 % — la nouvelle barre partant de
+    // zéro alors que le compteur, lui, se souvenait de 60 %.
+    dernierePart = 0;
     d = document.createElement('div');
     d.id = 'ngen';
     d.innerHTML =
