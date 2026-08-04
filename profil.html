@@ -106,6 +106,24 @@
 .btn-ghost{width:100%;background:none;border:none;border-radius:var(--r-md);padding:14px;
   font-family:inherit;font-size:13px;font-weight:700;color:var(--red);cursor:pointer;margin-top:6px}
 
+/* ══ Zone sensible : suppression du compte ══
+   Volontairement séparée du reste par un filet et placée en dernier : ce
+   bouton est irréversible, il ne doit pas voisiner « Enregistrer ». */
+.zone-danger{margin-top:26px;padding-top:18px;border-top:1px solid rgba(157,157,168,.22)}
+.zone-danger .zd-title{font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:10px}
+.btn-danger{width:100%;background:none;border:1.5px solid var(--red);border-radius:var(--r-md);
+  padding:13px;font-family:inherit;font-size:13px;font-weight:800;color:var(--red);cursor:pointer}
+.btn-danger:disabled{opacity:.5;cursor:default}
+.del-warn{font-size:12.5px;line-height:1.55;color:#3a3a44;margin:0 0 14px}
+.del-warn ul{margin:8px 0 0;padding-left:19px}
+.del-warn li{margin-bottom:4px}
+.del-conf{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 8px}
+
+/* Liens légaux — obligatoires dans l'app (fiche App Store) et attendus ici. */
+.legal-liens{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:22px;
+  font-size:12px;font-weight:700}
+.legal-liens a{color:var(--muted);text-decoration:none}
+
 /* ══ Confidentialité du fil social ══ */
 .sw-row{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:var(--r-md);
   padding:13px 14px;margin:22px 0 10px}

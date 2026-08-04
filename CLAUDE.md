@@ -386,6 +386,63 @@ ligne `meals` + ses `meal_ingredients` (la photo Cloudinary va sur le premier). 
 l'upload photo n'empêche pas l'enregistrement. À la fin, l'événement `natty:repas-ajoute` est
 émis : `suivi.html` l'écoute pour rafraîchir macros et historique sans recharger la page.
 
+### `assets/recette.js` — préparation détaillée et cinématique « Suivre la recette »
+Chargé par `repas.html` (+ `www/`). Trois entrées : `fiche(recette)` (HTML des étapes),
+`monter(el, recette)`, `suivre(recette)` (cinématique plein écran). Plus `galerie()`, la planche
+de contrôle des 16 gestes — utile pour vérifier une animation sans dérouler une recette.
+
+**Une animation par ACTION, l'aliment en slot** (idée de Pablo, 2026-08-04). La bibliothèque est
+indexée par geste — `couper`, `saisir`, `bouillir`, `mijoter`, `enfourner`, `melanger`,
+`fouetter`, `mixer`, `assaisonner`, `huiler`, `rincer`, `peser`, `refrigerer`, `reposer`,
+`attendre`, `dresser` — et chaque scène réserve un emplacement où l'on dépose l'aliment de
+l'étape (l'emoji de l'ingrédient, déjà présent dans les recettes). **Conséquence : une
+génération de recettes n'a rien à dessiner, elle ne fait que piocher la bonne action.** L'IA ne
+renvoie donc jamais de SVG, seulement une clé ; une clé inconnue retombe sur `melanger`, et
+`ALIAS` rattrape les synonymes (`poele`→`saisir`, `four`→`enfourner`…).
+
+**Le thermostat n'est jamais demandé à l'IA** : `libTemp()` le calcule (÷ 30) et écrit
+« 200 °C · th. 6-7 » quand la valeur tombe entre deux crans — arrondir au plus proche donnait
+« th. 7 », soit 210 °C.
+
+**Marche sur l'ANCIEN format de recette.** `normaliser()` déduit action, durée, température, feu
+et quantités d'une étape écrite en texte libre (`{em, t, tip}`), parce que les recettes en cache
+dans `conseils_json` sont à l'ancien schéma et que la génération n'a lieu qu'une fois par
+semaine. Trois pièges rencontrés, tous vérifiés en navigateur :
+- ⚠️ **`fill="currentColor"` obligatoire sur l'aliment** : le `<svg>` parent impose
+  `fill="none"`, et un glyphe sans remplissage est purement invisible — tous les ustensiles
+  s'affichaient, aucun aliment.
+- ⚠️ **Jamais de classe de caractères contenant des emojis** : `[🍳🍽️…]` contient des
+  demi-surrogates isolés (U+D83C traîne seul) et fait correspondre **tous** les emojis de la
+  plage. Le test « est-ce un ustensile ? » se fait par `indexOf` sur une liste.
+- ⚠️ **Tous les plans sortent, pas seulement le premier** : avec `querySelector`, deux taps
+  rapprochés laissaient un plan orphelin sous le nouveau et désynchronisaient l'étape affichée
+  du compteur (4 plans empilés après 3 clics rapides) — le chevauchement déjà connu de
+  `narration.html`.
+
+L'aliment **s'hérite** d'une étape à la suivante (« Enfourne 18 min » ne nomme rien, mais c'est
+ce qu'on vient de préparer qui part au four), sauf après `huiler` et `assaisonner` : sinon une
+olive finissait au four à la place du poulet.
+
+### `assets/liste.js` — liste de courses : cocher, masquer, copier
+Chargé par `coaching.html` (+ `www/`). `monter(el, items, opts)` où `opts.cle` est la clé
+localStorage — **fournie par l'appelant** parce que `coaching.html` avait déjà sa clé
+hebdomadaire remplie de cases cochées.
+
+Deux gestes qui manquaient : **masquer les articles déjà pris** (une liste de 20 lignes dont 15
+barrées ne se lit plus) et **copier**. Les deux se tiennent : le bouton copie ce qui est
+**affiché**, donc masquer puis copier donne « ce qu'il reste à acheter » sans troisième réglage —
+et le libellé du bouton l'annonce (« Copier les 3 restants »).
+
+`navigator.clipboard` exige un contexte sécurisé ; le repli `textarea` + `execCommand` couvre le
+reste. ⚠️ **Un clic simulé en JS ne copie rien** (pas d'activation utilisateur) : tester la copie
+avec un vrai clic souris, sinon on conclut à tort à un bug.
+
+> **Envoi par email abandonné (2026-08-04, décision de Pablo).** Ces deux modules remplacent le
+> projet d'envoyer courses et recettes par mail : ça dépendait d'une clé Resend et d'un domaine
+> vérifié, pour un résultat que l'utilisateur ne contrôlait pas. Le type
+> `courses_et_recettes` d'`api/send-email.js` n'est **appelé par aucun écran** — code mort à
+> retirer un jour ; les autres types (récap admin, notification de message) servent toujours.
+
 ### `assets/notifs.js` — le rappel quotidien (notifications **locales**)
 Chargé par les cinq écrans porteurs de la nav (`suivi`, `repas`, `menu`/`www/index`, `social`,
 `coaching`, `profil`) juste avant `assets/nav.js`. Hors application native, le module se charge

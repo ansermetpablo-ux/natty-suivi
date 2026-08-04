@@ -50,17 +50,6 @@
 /* Liste de courses — déduite des repas de la semaine, pas générée à part :
    elle reste ainsi toujours cohérente avec ce qu'affiche repas.html. */
 .crs-note{font-size:11px;color:var(--muted);margin:-4px 0 12px}
-.crs{background:var(--card);border-radius:var(--r-lg);overflow:hidden}
-.crs-item{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer;
-  border-bottom:1px solid rgba(0,0,0,.05)}
-.crs-item:last-child{border-bottom:none}
-.crs-em{font-size:21px;line-height:1;flex-shrink:0}
-.crs-nom{flex:1;font-size:14px;font-weight:700;line-height:1.3}
-.crs-qte{font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0}
-.crs-box{width:21px;height:21px;border-radius:50%;border:2px solid #d3d3d8;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
-.crs-item.done .crs-box{background:var(--green);border-color:var(--green)}
-.crs-item.done .crs-nom,.crs-item.done .crs-qte{text-decoration:line-through;opacity:.45}
 </style>
 </head>
 <body>
@@ -99,11 +88,12 @@
 
   <div class="sec-title">Liste de courses</div>
   <div class="crs-note" id="crsNote"></div>
-  <div class="crs" id="crsList"><div class="empty">Chargement…</div></div>
+  <div id="crsList"><div class="empty">Chargement…</div></div>
 </div>
 
 <script src="/assets/core.js"></script>
 <script src="/assets/reco.js"></script>
+<script src="/assets/liste.js"></script>
 <script>
 var weekOffset = 0;
 
@@ -307,12 +297,6 @@ function crsAgreger(recettes){
 function crsCle(){
   return 'natty_courses_' + Natty.USER_ID + '_' + NattyReco.lundiCourant();
 }
-function crsCoches(){
-  try { return JSON.parse(localStorage.getItem(crsCle()) || '[]'); } catch(e){ return []; }
-}
-function crsEnregistrer(l){
-  try { localStorage.setItem(crsCle(), JSON.stringify(l)); } catch(e){}
-}
 
 async function loadCourses(){
   var list = document.getElementById('crsList');
@@ -336,28 +320,19 @@ async function loadCourses(){
     return;
   }
 
-  var coches = crsCoches();
   note.textContent = 'Pour ' + (recettes.length === 1 ? 'ton repas' : 'tes ' + recettes.length + ' repas')
-    + ' de la semaine · ' + items.length + ' ingrédient' + (items.length > 1 ? 's' : '');
-  list.innerHTML = items.map(function(it){
-    var fait = coches.indexOf(it.nom) >= 0;
-    return '<div class="crs-item' + (fait ? ' done' : '') + '" data-nom="' + esc(it.nom) + '">'
-      + '<span class="crs-em">' + esc(it.em) + '</span>'
-      + '<span class="crs-nom">' + esc(it.nom) + '</span>'
-      + (it.qte ? '<span class="crs-qte">' + esc(it.qte) + '</span>' : '')
-      + '<span class="crs-box">✓</span></div>';
-  }).join('');
+    + ' de la semaine';
 
-  list.querySelectorAll('.crs-item').forEach(function(el){
-    el.addEventListener('click', function(){
-      el.classList.toggle('done');
-      var nom = el.dataset.nom;
-      var l = crsCoches();
-      var i = l.indexOf(nom);
-      if (el.classList.contains('done')){ if (i < 0) l.push(nom); }
-      else if (i >= 0) l.splice(i, 1);
-      crsEnregistrer(l);
-    });
+  /* Le rendu, le masquage et la copie sont dans NattyListe. La clé passée est
+     celle d'avant : les cases déjà cochées cette semaine sont conservées. */
+  var lu = new Date(NattyReco.lundiCourant() + 'T00:00:00');
+  var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août',
+              'septembre','octobre','novembre','décembre'];
+  NattyListe.monter(list, items, {
+    cle: crsCle(),
+    titre: 'Liste de courses Natty',
+    sousTitre: 'semaine du ' + lu.getDate() + ' ' + MOIS[lu.getMonth()],
+    vide: 'Aucun ingrédient à afficher.'
   });
 }
 

@@ -193,6 +193,7 @@ body{overflow-x:hidden}
 <script src="/assets/reco.js"></script>
 <script src="/assets/garde-manger.js"></script>
 <script src="/assets/minijeux.js"></script>
+<script src="/assets/recette.js"></script>
 <!-- Suivre une recette retire ses ingrédients du garde-manger (voir brancher()). -->
 <script>
 /* ═══ État ═══ */
@@ -236,7 +237,11 @@ function depuisRecette(r, i){
     photo: DEMO_PHOTOS[i % DEMO_PHOTOS.length].hero,
     photoWeek: DEMO_PHOTOS[i % DEMO_PHOTOS.length].week,
     ingr: (r.ingredients || []).map(function(x){ return { em:x.em||'🥄', nm:x.nom||'', qt:x.qte||'' }; }),
-    steps: (r.steps || []).map(function(s){ return { em:s.em||'👉', t:s.t||'', tip:s.tip||'' }; })
+    steps: (r.steps || []).map(function(s){ return { em:s.em||'👉', t:s.t||'', tip:s.tip||'' }; }),
+    // La recette d'origine, telle que NattyReco l'a produite : NattyRecette
+    // en a besoin (illu/durée/température/quantités par étape) et la forme
+    // aplatie ci-dessus les a perdues.
+    src: r
   };
 }
 
@@ -298,7 +303,8 @@ function render(){
         + '<div class="hero-kcal"><div class="k">Total</div><div class="v">'+(d.kcal||'–')+' Kcal</div></div>'
         + '<div class="hero-act">'
           + '<button class="heart-btn" id="heartBtn">🤍</button>'
-          + '<button class="cta" id="ctaBtn">'+(suivie?'Recette suivie':'Suivre cette recette')+' <span class="plus">'+(suivie?'✓':'+')+'</span></button>'
+          + (suivie ? '<button class="heart-btn" id="unfollowBtn" aria-label="Retirer la recette">✓</button>' : '')
+          + '<button class="cta" id="ctaBtn">'+(suivie?'Revoir les étapes':'Suivre cette recette')+' <span class="plus">'+(suivie?'▸':'+')+'</span></button>'
         + '</div>'
       + '</div>'
     + '</div>';
@@ -340,6 +346,10 @@ function render(){
             + '</div>';
         }).join('') + '</div></div>';
   }
+
+  // Préparation détaillée : rendue seulement s'il y a des étapes (un repas
+  // venu de `meals` n'en a pas, la fonction renvoie alors une chaîne vide).
+  if (d.src && window.NattyRecette) html += NattyRecette.fiche(d.src, { bouton:false });
 
   html += blocDecouvrir();
   document.getElementById('content').innerHTML = html;
@@ -386,13 +396,26 @@ window.NattyOnRecetteSuivie = async function(r){
 };
 
 function brancher(){
+  /* « Suivre cette recette » ouvre la cinématique des étapes. C'est le geste
+     qui déclenche la cuisine, donc l'écran qui doit suivre est celui qui
+     guide — pas un toast. Le retrait, lui, part sur son propre bouton : il
+     partageait celui-ci, et le tap aurait fini par vouloir dire deux choses. */
   var cta = document.getElementById('ctaBtn');
   if (cta) cta.addEventListener('click', async function(){
-    var passeEnSuivie = !suivies[actif];
     var d = PLATS[actif];
-    suivies[actif] = passeEnSuivie;
+    var dejaSuivie = !!suivies[actif];
+
+    function guider(){
+      if (!window.NattyRecette || !NattyRecette.suivre(d.src || {})) {
+        // Un repas venu de `meals` n'a pas d'étapes : rien à guider.
+        toast('Aucune étape détaillée pour ce plat');
+      }
+    }
+
+    if (dejaSuivie) { guider(); return; }
+
+    suivies[actif] = true;
     render();
-    if (!passeEnSuivie) { toast('Recette retirée'); return; }
 
     /* Suivre une recette consomme ses ingrédients : ils sortent du
        garde-manger, sinon les recommandations suivantes repartiraient
@@ -407,9 +430,17 @@ function brancher(){
         retires = await NattyGardeManger.consommer(d.ingr);
       } catch (e) {}
     }
-    toast(retires.length
-      ? '✓ ' + d.nom + ' — ' + retires.length + (retires.length > 1 ? ' ingrédients retirés' : ' ingrédient retiré') + ' du garde-manger'
-      : '✓ ' + d.nom + ' — recette suivie');
+    if (retires.length) {
+      toast('✓ ' + retires.length + (retires.length > 1 ? ' ingrédients retirés' : ' ingrédient retiré') + ' du garde-manger');
+    }
+    guider();
+  });
+
+  var unfollow = document.getElementById('unfollowBtn');
+  if (unfollow) unfollow.addEventListener('click', function(){
+    suivies[actif] = false;
+    render();
+    toast('Recette retirée');
   });
 
   var heart = document.getElementById('heartBtn');

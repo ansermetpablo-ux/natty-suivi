@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Natty · Politique de confidentialité</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="/natty-icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/legal.css">
+</head>
+<body>
+
+<!-- Cette page a deux vies : écran de l'app (bouton retour) et URL publique
+     déclarée à l'App Store. Elle ne doit donc dépendre ni de la nav basse ni
+     d'une session — aucun script applicatif ici. -->
+<div class="lg-top">
+  <button class="lg-back" id="lgBack" aria-label="Retour">←</button>
+  <h1>Politique de confidentialité</h1>
+</div>
+
+<div class="lg-wrap">
+  <p class="lg-maj">Dernière mise à jour : 4 août 2026</p>
+
+  <div class="lg-note">
+    <p>Natty traite des informations qui parlent de votre corps et de votre
+    alimentation. Cette page dit exactement lesquelles, pourquoi, qui d'autre
+    y a accès, et comment tout effacer en deux tapotements depuis l'application.</p>
+  </div>
+
+  <h2>1. Qui est responsable de vos données</h2>
+  <p>
+    L'éditeur de Natty est <span class="lg-todo">[À COMPLÉTER : raison sociale]</span>,
+    <span class="lg-todo">[À COMPLÉTER : forme juridique et capital]</span>,
+    immatriculée sous le numéro <span class="lg-todo">[À COMPLÉTER : SIRET / RCS]</span>,
+    dont le siège est <span class="lg-todo">[À COMPLÉTER : adresse postale]</span>.
+  </p>
+  <p>
+    Contact pour toute question relative à vos données :
+    <span class="lg-todo">[À COMPLÉTER : email de contact]</span>.
+  </p>
+
+  <h2>2. Les données que nous traitons</h2>
+  <div class="lg-tblwrap">
+    <table>
+      <tr><th>Donnée</th><th>D'où elle vient</th><th>À quoi elle sert</th></tr>
+      <tr><td>Email, mot de passe</td><td>Vous, à l'inscription</td><td>Créer et sécuriser votre compte</td></tr>
+      <tr><td>Prénom, nom, âge, sexe</td><td>Vous</td><td>Vous identifier dans l'app et auprès de votre nutritionniste</td></tr>
+      <tr><td>Poids, taille, niveau d'activité</td><td>Vous, au questionnaire</td><td>Calculer vos besoins (métabolisme, calories, macronutriments)</td></tr>
+      <tr><td>Objectif, motivation, ressenti</td><td>Vous</td><td>Adapter les conseils et le programme</td></tr>
+      <tr><td>Allergies, régime alimentaire, aliments évités</td><td>Vous</td><td>Écarter ce que vous ne pouvez pas ou ne voulez pas manger</td></tr>
+      <tr><td>Repas enregistrés, ingrédients, quantités</td><td>Vous</td><td>Votre suivi, vos scores, vos recettes</td></tr>
+      <tr><td>Photos de plats, de courses, de tickets de caisse</td><td>Votre appareil photo ou votre galerie, avec votre autorisation</td><td>Reconnaître automatiquement les aliments et leurs quantités</td></tr>
+      <tr><td>Messages échangés avec votre nutritionniste</td><td>Vous et lui</td><td>Le suivi personnalisé</td></tr>
+      <tr><td>Adresse de livraison, jour de livraison</td><td>Vous, à la souscription</td><td>Livrer vos repas</td></tr>
+      <tr><td>Identifiant de notification de l'appareil</td><td>Apple ou Google, si vous acceptez les notifications</td><td>Vous envoyer vos rappels</td></tr>
+      <tr><td>Identifiants d'abonnement Stripe</td><td>Stripe</td><td>Savoir si votre abonnement est actif</td></tr>
+    </table>
+  </div>
+  <p>
+    <strong>Nous ne collectons pas</strong> votre position, votre carnet de contacts,
+    votre identifiant publicitaire, ni votre historique de navigation. Natty ne
+    contient aucun traqueur publicitaire et ne vend aucune donnée.
+  </p>
+
+  <h2>3. Données de santé</h2>
+  <p>
+    Votre poids, votre taille, vos allergies et vos habitudes alimentaires sont
+    des données de santé au sens du RGPD. Nous les traitons sur la base de votre
+    <strong>consentement explicite</strong>, donné à l'inscription, et
+    uniquement pour vous fournir le suivi nutritionnel que vous demandez. Vous
+    pouvez retirer ce consentement à tout moment en supprimant votre compte
+    (section 8).
+  </p>
+
+  <h2>4. Vos photos et l'analyse automatique</h2>
+  <p>
+    Quand vous photographiez un plat, un ticket de caisse ou vos courses, l'image
+    est envoyée à un modèle d'intelligence artificielle (Claude, fourni par
+    Anthropic) qui identifie les aliments et estime les quantités. Elle est
+    ensuite stockée chez notre hébergeur d'images (Cloudinary) pour que vous
+    puissiez la revoir dans votre historique.
+  </p>
+  <p>
+    Anthropic traite ces images pour notre compte et
+    <strong>ne les utilise pas pour entraîner ses modèles</strong> dans le cadre
+    de son offre destinée aux entreprises. L'estimation produite est indicative :
+    elle peut se tromper, et vous pouvez la corriger avant enregistrement.
+  </p>
+
+  <h2>5. Qui d'autre accède à vos données</h2>
+  <p>Nous faisons appel à des prestataires techniques, chacun pour une tâche précise :</p>
+  <div class="lg-tblwrap">
+    <table>
+      <tr><th>Prestataire</th><th>Rôle</th></tr>
+      <tr><td>Supabase</td><td>Base de données et gestion des comptes</td></tr>
+      <tr><td>Vercel</td><td>Hébergement de l'application</td></tr>
+      <tr><td>Cloudinary</td><td>Stockage des photos</td></tr>
+      <tr><td>Anthropic (Claude)</td><td>Analyse des photos et génération des conseils</td></tr>
+      <tr><td>Stripe</td><td>Paiement de l'abonnement</td></tr>
+      <tr><td>Resend</td><td>Emails de notification</td></tr>
+      <tr><td>Apple, Google</td><td>Acheminement des notifications</td></tr>
+    </table>
+  </div>
+  <p>
+    <strong>Votre nutritionniste</strong> accède à votre profil, à vos repas et à
+    vos messages : c'est l'objet même du service. L'équipe de Natty y accède pour
+    l'assistance et le fonctionnement technique, dans la limite du nécessaire.
+  </p>
+  <p>
+    Certains de ces prestataires sont établis hors de l'Union européenne. Les
+    transferts s'appuient sur les clauses contractuelles types de la Commission
+    européenne. <span class="lg-todo">[À COMPLÉTER : préciser la région
+    d'hébergement de votre instance Supabase et de votre compte Cloudinary]</span>
+  </p>
+
+  <h2>6. Le fil social</h2>
+  <p>
+    Natty comporte un fil où les membres voient les plats des autres. Un repas
+    que vous enregistrez y apparaît avec sa photo, son nom, ses macronutriments
+    et votre prénom. Vous pouvez en sortir entièrement à tout moment :
+    <strong>Profil → Réglages → « Mes plats dans le fil »</strong>. Vos messages
+    avec votre nutritionniste, votre poids, votre âge et vos allergies
+    n'apparaissent jamais dans le fil.
+  </p>
+
+  <h2>7. Combien de temps nous les gardons</h2>
+  <ul>
+    <li><strong>Compte actif</strong> : tant que vous l'utilisez.</li>
+    <li><strong>Après suppression du compte</strong> : effacement immédiat des
+      données de suivi, de vos photos et de vos messages.</li>
+    <li><strong>Factures et données comptables</strong> : conservées 10 ans, comme
+      la loi l'exige, indépendamment de la suppression du compte.</li>
+    <li><strong>Compte inactif</strong> : supprimé après
+      <span class="lg-todo">[À COMPLÉTER : durée, 3 ans recommandé]</span>
+      sans connexion, après un email d'avertissement.</li>
+  </ul>
+
+  <h2>8. Vos droits</h2>
+  <p>Vous disposez à tout moment des droits d'accès, de rectification,
+    d'effacement, de limitation, d'opposition et de portabilité, ainsi que du
+    droit de retirer votre consentement.</p>
+  <p>
+    <strong>Supprimer votre compte se fait depuis l'application</strong>, sans
+    nous écrire et sans délai : <strong>Profil → Réglages → Supprimer mon compte</strong>.
+    Cette action efface votre profil, vos repas, vos photos, vos messages, vos
+    scores et votre compte de connexion, et résilie votre abonnement. Elle est
+    définitive.
+  </p>
+  <p>
+    Pour les autres droits, écrivez à
+    <span class="lg-todo">[À COMPLÉTER : email de contact]</span>. Nous répondons
+    sous un mois. Si notre réponse ne vous satisfait pas, vous pouvez saisir la
+    CNIL (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>).
+  </p>
+
+  <h2>9. Sécurité</h2>
+  <p>
+    Les échanges avec nos serveurs sont chiffrés (HTTPS). Votre mot de passe est
+    stocké sous forme de condensat par notre prestataire d'authentification :
+    personne chez Natty ne peut le lire. Vos identifiants de carte bancaire ne
+    transitent jamais par nos serveurs — ils sont saisis directement chez Stripe.
+  </p>
+
+  <h2>10. Mineurs</h2>
+  <p>
+    Natty est destiné aux personnes de 16 ans et plus. En dessous de 18 ans,
+    l'utilisation suppose l'accord d'un parent ou du titulaire de l'autorité
+    parentale. Nous ne cherchons pas à collecter les données d'enfants ; si vous
+    constatez qu'un compte a été créé par un mineur de moins de 16 ans,
+    signalez-le nous et nous le supprimerons.
+  </p>
+
+  <h2>11. Modifications</h2>
+  <p>
+    Cette politique peut évoluer. Toute modification substantielle vous sera
+    signalée dans l'application. La date en haut de page indique la version en
+    vigueur.
+  </p>
+
+  <div class="lg-liens">
+    <a href="/cgu.html">Conditions d'utilisation</a>
+    <a href="/cgv.html">Conditions de vente</a>
+  </div>
+</div>
+
+<script>
+/* Retour : l'historique quand il y en a (on vient de l'app), le menu sinon
+   (la page a été ouverte directement, depuis la fiche App Store par exemple). */
+document.getElementById('lgBack').addEventListener('click', function () {
+  if (history.length > 1) history.back();
+  else window.location.href = '/menu.html';
+});
+</script>
+</body>
+</html>

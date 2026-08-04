@@ -204,11 +204,32 @@ var NattyReco = (function () {
       p += "7. Sur chaque ingrédient, mets \"dispo\":true s'il figure dans les INGRÉDIENTS DISPONIBLES, false s'il faut l'acheter.\n";
     }
 
+    /* ÉTAPES DÉTAILLÉES — les consignes ci-dessous existent parce que
+       `assets/recette.js` en a besoin pour guider quelqu'un qui cuisine :
+       - `illu` est une clé de sa bibliothèque de gestes ; le module dessine
+         l'animation et y dépose l'aliment de l'étape. Il ne faut donc pas
+         inventer de clé, mais choisir dans la liste imposée.
+       - `duree_min` arme un vrai minuteur à l'écran.
+       - `temp_c` : SEULEMENT les degrés. Le thermostat est calculé côté app
+         (division par 30) — le demander à l'IA revenait à demander une
+         division, avec le risque d'erreur en prime.
+       - `qte` répète la quantité utilisée à CETTE étape : « 150 g » se lit
+         devant la balance, pas en remontant la liste d'ingrédients. */
+    p += "\nÉTAPES\n";
+    p += "- 8 à 12 étapes par recette, UNE action par étape. Pas de \"préparer les ingrédients\" fourre-tout.\n";
+    p += "- \"illu\" vaut EXACTEMENT une de ces clés : couper, saisir, bouillir, mijoter, enfourner, melanger, fouetter, mixer, assaisonner, huiler, rincer, peser, refrigerer, reposer, attendre, dresser.\n";
+    p += "- \"detail\" donne des repères concrets et vérifiables : taille de coupe en cm, couleur attendue, texture, signe que c'est prêt.\n";
+    p += "- \"duree_min\" est la durée de l'étape (0 si le geste est immédiat).\n";
+    p += "- \"temp_c\" seulement pour une cuisson au four, en degrés Celsius. N'écris JAMAIS de thermostat, l'app le calcule.\n";
+    p += "- \"feu\" vaut doux, moyen ou vif pour une cuisson à la poêle ou en casserole ; omets-le sinon.\n";
+    p += "- \"qte\" liste les ingrédients utilisés à cette étape, avec leur quantité exacte.\n";
+
     var recette = '{"nom":"Nom du plat","pourquoi":"une phrase expliquant pourquoi ce plat pour LUI",'
       + '"avantages":"ce que ce plat apporte concrètement à SON objectif, une phrase",'
       + '"temps_min":25,"macros":{"p":42,"g":60,"l":18,"kcal":600},'
       + '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g","dispo":true}],'
-      + '"steps":[{"em":"🔪","t":"Étape courte","tip":"astuce"}]}';
+      + '"steps":[{"illu":"couper","t":"Titre court de l\'étape","detail":"la consigne précise, avec les repères",'
+      + '"qte":[{"nom":"Poulet","qte":"150 g"}],"duree_min":5,"temp_c":0,"feu":"","tip":"astuce facultative"}]}';
 
     if (avecConseils) {
       // Un seul appel pour les recettes ET l'analyse : les deux découlent du
@@ -269,7 +290,14 @@ var NattyReco = (function () {
     nb = nb || 4;
     try {
       var profil = await chargerProfil();
-      var txt = await appelerClaude(construirePrompt(profil, nb, contrainte));
+      /* Le plafond suit le nombre de recettes demandées. Les étapes détaillées
+         (détail, quantités, durée, température) pèsent environ 900 jetons par
+         recette : les 3000 par défaut suffisaient pour des étapes d'une ligne,
+         plus pour celles-ci — et un JSON tronqué revient vide, sans erreur
+         visible. C'est exactement ainsi que la génération de 7 recettes avait
+         cassé (voir NB_SEMAINE). */
+      var txt = await appelerClaude(construirePrompt(profil, nb, contrainte),
+        Math.min(8000, 1300 * nb + 800));
       var recettes = extraireJson(txt);
       if (!recettes || !recettes.length) return [];
       return recettes.slice(0, nb);
