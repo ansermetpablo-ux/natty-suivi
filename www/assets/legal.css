@@ -1,0 +1,83 @@
+/* ═══════════════════════════════════════════════════════════
+   Natty — Pages légales (confidentialité, CGU, CGV)
+   ───────────────────────────────────────────────────────────
+   Une seule feuille pour les trois pages : elles ont la même forme
+   (un titre, des sections numérotées, du texte long) et doivent
+   rester identiques entre elles. Les couleurs et rayons viennent
+   d'assets/style.css — rien n'est redéclaré ici.
+
+   Ces pages doivent rester lisibles DANS l'app (WebView, colonne
+   étroite, encoche) ET depuis un navigateur : c'est la même URL qui
+   sert de lien public pour l'App Store et d'écran d'app.
+   ═══════════════════════════════════════════════════════════ */
+
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:'Inter',-apple-system,sans-serif;
+  margin:0;padding:0;
+  -webkit-text-size-adjust:100%;
+}
+
+.lg-top{
+  position:sticky;top:0;z-index:10;background:var(--bg);
+  padding:calc(14px + env(safe-area-inset-top,0px)) 20px 12px;
+  display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid rgba(157,157,168,.18);
+}
+.lg-back{
+  background:none;border:none;padding:0;cursor:pointer;color:var(--ink);
+  font:inherit;font-size:22px;line-height:1;flex:none;
+}
+.lg-top h1{font-size:16px;font-weight:900;margin:0;letter-spacing:-.2px}
+
+.lg-wrap{
+  max-width:640px;margin:0 auto;
+  padding:22px 20px calc(56px + env(safe-area-inset-bottom,0px));
+}
+
+.lg-maj{font-size:12px;color:var(--muted);font-weight:700;margin:0 0 22px}
+
+.lg-wrap h2{
+  font-size:15px;font-weight:900;margin:30px 0 10px;letter-spacing:-.2px;
+}
+.lg-wrap h2:first-of-type{margin-top:4px}
+.lg-wrap h3{font-size:13.5px;font-weight:800;margin:20px 0 8px}
+
+.lg-wrap p,.lg-wrap li{font-size:13.5px;line-height:1.62;color:#3a3a44}
+.lg-wrap p{margin:0 0 12px}
+.lg-wrap ul{margin:0 0 14px;padding-left:20px}
+.lg-wrap li{margin-bottom:6px}
+.lg-wrap a{color:var(--ink);font-weight:700}
+.lg-wrap strong{font-weight:800;color:var(--ink)}
+
+/* Tableau des données / durées : il doit défiler seul sur mobile plutôt que
+   de faire défiler la page entière en largeur. */
+.lg-tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 0 16px}
+.lg-wrap table{border-collapse:collapse;width:100%;min-width:420px;font-size:12.5px}
+.lg-wrap th,.lg-wrap td{
+  text-align:left;padding:9px 10px;border-bottom:1px solid rgba(157,157,168,.22);
+  vertical-align:top;line-height:1.5;
+}
+.lg-wrap th{font-weight:800;color:var(--ink);white-space:nowrap}
+.lg-wrap td{color:#3a3a44}
+
+/* Encadré d'avertissement (santé, absence d'avis médical). */
+.lg-note{
+  background:var(--card);border-radius:var(--r-md);
+  padding:14px 16px;margin:0 0 18px;
+}
+.lg-note p{margin:0;font-size:13px}
+
+/* Ce qui reste à renseigner par l'éditeur : visible exprès, pour qu'une page
+   incomplète ne puisse pas être publiée par inadvertance. */
+.lg-todo{
+  background:#fff4e5;color:#8a5a00;border-radius:8px;
+  padding:1px 7px;font-weight:800;font-size:12.5px;
+  display:inline-block;
+}
+
+.lg-liens{
+  margin-top:34px;padding-top:18px;border-top:1px solid rgba(157,157,168,.18);
+  display:flex;flex-wrap:wrap;gap:8px 16px;font-size:12.5px;font-weight:700;
+}
+.lg-liens a{color:var(--muted);text-decoration:none}

@@ -361,7 +361,10 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
         <input class="email-field" id="emailField" type="email" placeholder="votre@email.com" oninput="updateCTA()">
         <div class="rgpd-row" onclick="toggleRGPD()">
           <div class="rgpd-box" id="rgpdBox">✓</div>
-          <div class="rgpd-text">J'accepte que mes données soient utilisées pour le suivi de mon programme, conformément à la <a href="#" onclick="return false">politique de confidentialité</a> de Natty.</div>
+          <!-- Le lien était mort (href="#") : une case RGPD qui renvoie vers rien
+               ne vaut pas consentement éclairé. stopPropagation, sinon le clic
+               sur le lien décoche aussi la case (la ligne entière est cliquable). -->
+          <div class="rgpd-text">J'accepte que mes données soient utilisées pour le suivi de mon programme, conformément à la <a href="/confidentialite.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">politique de confidentialité</a> de Natty. Je reconnais avoir lu les <a href="/cgv.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">conditions de vente</a>.</div>
         </div>
       </div>
     </div>

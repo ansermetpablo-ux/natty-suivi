@@ -106,6 +106,24 @@
 .btn-ghost{width:100%;background:none;border:none;border-radius:var(--r-md);padding:14px;
   font-family:inherit;font-size:13px;font-weight:700;color:var(--red);cursor:pointer;margin-top:6px}
 
+/* ══ Zone sensible : suppression du compte ══
+   Volontairement séparée du reste par un filet et placée en dernier : ce
+   bouton est irréversible, il ne doit pas voisiner « Enregistrer ». */
+.zone-danger{margin-top:26px;padding-top:18px;border-top:1px solid rgba(157,157,168,.22)}
+.zone-danger .zd-title{font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:10px}
+.btn-danger{width:100%;background:none;border:1.5px solid var(--red);border-radius:var(--r-md);
+  padding:13px;font-family:inherit;font-size:13px;font-weight:800;color:var(--red);cursor:pointer}
+.btn-danger:disabled{opacity:.5;cursor:default}
+.del-warn{font-size:12.5px;line-height:1.55;color:#3a3a44;margin:0 0 14px}
+.del-warn ul{margin:8px 0 0;padding-left:19px}
+.del-warn li{margin-bottom:4px}
+.del-conf{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 8px}
+
+/* Liens légaux — obligatoires dans l'app (fiche App Store) et attendus ici. */
+.legal-liens{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:22px;
+  font-size:12px;font-weight:700}
+.legal-liens a{color:var(--muted);text-decoration:none}
+
 /* ══ Confidentialité du fil social ══ */
 .sw-row{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:var(--r-md);
   padding:13px 14px;margin:22px 0 10px}
@@ -224,6 +242,45 @@
     </div>
 
     <button class="btn-ghost" id="btnLogout">Se déconnecter</button>
+
+    <div class="legal-liens">
+      <a href="/confidentialite.html">Confidentialité</a>
+      <a href="/cgu.html">Conditions d'utilisation</a>
+      <a href="/cgv.html">Conditions de vente</a>
+    </div>
+
+    <div class="zone-danger">
+      <div class="zd-title">Compte</div>
+      <button class="btn-danger" id="btnSupprCompte">Supprimer mon compte</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Suppression du compte ══
+     Un écran à part, et une confirmation à écrire : ce geste efface tout et
+     ne se rejoue pas. Un simple « êtes-vous sûr ? » se tapote par réflexe. -->
+<div class="sheet-ov" id="ovSuppr">
+  <div class="sheet">
+    <div class="sheet-grip"></div>
+    <div class="sheet-title">Supprimer mon compte</div>
+    <div class="del-warn">
+      Cette action est <strong>définitive</strong>. Seront effacés :
+      <ul>
+        <li>votre profil et vos objectifs ;</li>
+        <li>tous vos repas, leurs ingrédients et leurs photos ;</li>
+        <li>vos messages avec votre nutritionniste ;</li>
+        <li>vos scores, vos défis et vos abonnés ;</li>
+        <li>votre compte de connexion.</li>
+      </ul>
+    </div>
+    <div class="del-warn" id="delAbo" hidden></div>
+    <p class="del-conf">Pour confirmer, écrivez <strong>SUPPRIMER</strong> ci-dessous.</p>
+    <div class="fld">
+      <input id="fSupprConf" type="text" autocomplete="off" autocapitalize="characters"
+             spellcheck="false" placeholder="SUPPRIMER" aria-label="Confirmation">
+    </div>
+    <button class="btn-danger" id="btnSupprGo" disabled>Supprimer définitivement</button>
+    <button class="btn-ghost" id="btnSupprAnnuler" style="color:var(--muted)">Annuler</button>
   </div>
 </div>
 
@@ -385,7 +442,7 @@ async function ouvrirPost(i){
 function openSheet(id){ $(id).classList.add('on'); document.body.style.overflow = 'hidden'; }
 function closeSheet(id){ $(id).classList.remove('on'); document.body.style.overflow = ''; }
 
-['ovSettings','ovPost'].forEach(function(id){
+['ovSettings','ovPost','ovSuppr'].forEach(function(id){
   var el = $(id);
   if (el) el.addEventListener('click', function(e){ if (e.target === this) closeSheet(id); });
 });
@@ -540,10 +597,103 @@ $('btnSave').addEventListener('click', async function(){
   btn.disabled = false; btn.textContent = 'Enregistrer';
 });
 
+/* Déconnexion — par core.js, pas à la main : effacer natty_token/natty_user_id
+   laissait la session JWT (`natty_session`) en place, donc la page suivante
+   reconnaissait l'utilisateur et il n'était pas vraiment déconnecté. */
 $('btnLogout').addEventListener('click', function(){
-  localStorage.removeItem('natty_token');
-  localStorage.removeItem('natty_user_id');
-  window.location.href = 'login.html';
+  Natty.deconnecter();
+});
+
+/* ═══ Suppression du compte ═══
+   Exigée par Apple (guideline 5.1.1(v)) : une app qui laisse créer un compte
+   doit laisser le supprimer depuis l'app. L'effacement lui-même est fait par
+   api/supprimer-compte.js — la clé service ne peut pas vivre ici, et la ligne
+   `auth.users` n'est effaçable qu'avec elle.
+
+   L'identité n'est PAS transmise : le serveur la déduit du jeton de session.
+   C'est ce qui empêche d'effacer le compte de quelqu'un d'autre en changeant
+   un identifiant dans la requête. */
+var MOT_CONF = 'SUPPRIMER';
+
+$('btnSupprCompte').addEventListener('click', async function(){
+  $('fSupprConf').value = '';
+  $('btnSupprGo').disabled = true;
+  $('btnSupprGo').textContent = 'Supprimer définitivement';
+  openSheet('ovSuppr');
+
+  // Un abonnement en cours mérite d'être dit ici, pas découvert après coup :
+  // le serveur le résilie, encore faut-il que la personne le sache avant.
+  var el = $('delAbo');
+  el.hidden = true;
+  try{
+    var a = await Natty.sbFetch('abonnements?user_id=eq.' + Natty.USER_ID
+      + '&statut=eq.actif&select=formule&limit=1');
+    if (a && a.length){
+      el.innerHTML = 'Votre <strong>abonnement repas est actif</strong> : il sera '
+        + 'résilié en même temps. Les repas déjà payés de la semaine en cours '
+        + 'restent livrés.';
+      el.hidden = false;
+    }
+  }catch(e){ /* pas d'abonnement lisible : rien à annoncer */ }
+});
+
+$('btnSupprAnnuler').addEventListener('click', function(){ closeSheet('ovSuppr'); });
+
+$('fSupprConf').addEventListener('input', function(){
+  $('btnSupprGo').disabled = this.value.trim().toUpperCase() !== MOT_CONF;
+});
+
+$('btnSupprGo').addEventListener('click', async function(){
+  if ($('fSupprConf').value.trim().toUpperCase() !== MOT_CONF) return;
+  var btn = this;
+  btn.disabled = true; btn.textContent = 'Suppression…';
+
+  try{
+    var jeton = await Natty.jeton();
+    if (!jeton){
+      // Cas des comptes d'avant la bascule JWT : sans session, le serveur ne
+      // peut pas prouver qui demande la suppression. On ne devine pas.
+      toast('Reconnectez-vous pour supprimer votre compte');
+      btn.disabled = false; btn.textContent = 'Supprimer définitivement';
+      return;
+    }
+
+    var r = await fetch(Natty.API + '/api/supprimer-compte', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + jeton, 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    var d = null;
+    try{ d = await r.json(); }catch(e){}
+
+    if (!r.ok){
+      // 404 = l'endpoint n'est pas encore déployé sur ce serveur. Le dire
+      // franchement plutôt que « erreur inconnue » : rien n'a été supprimé.
+      toast(r.status === 404
+        ? 'Service de suppression indisponible — réessayez plus tard'
+        : ((d && d.error) ? d.error : 'Suppression impossible'));
+      btn.disabled = false; btn.textContent = 'Supprimer définitivement';
+      return;
+    }
+
+    // Tout ce que cet appareil gardait de la personne (bio, photo, réglages de
+    // rappel, caches) part aussi : sinon un compte recréé avec le même
+    // identifiant hériterait de traces de l'ancien.
+    try{
+      var aEffacer = [];
+      for (var i = 0; i < localStorage.length; i++){
+        var k = localStorage.key(i);
+        if (k && (k.indexOf(Natty.USER_ID) > -1 || k.indexOf('natty_') === 0)) aEffacer.push(k);
+      }
+      aEffacer.forEach(function(k){ localStorage.removeItem(k); });
+    }catch(e){}
+
+    toast('Compte supprimé');
+    setTimeout(function(){ Natty.deconnecter(); }, 900);
+  }catch(e){
+    toast('Suppression impossible — vérifiez votre connexion');
+    btn.disabled = false; btn.textContent = 'Supprimer définitivement';
+  }
 });
 
 /* ═══ Photo de profil ═══ */
