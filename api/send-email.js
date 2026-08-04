@@ -267,6 +267,12 @@ export default async function handler(req, res) {
     }
 
     // ══ Send via Resend ══
+    // `onboarding@resend.dev` est l'adresse de test de Resend : elle n'autorise
+    // l'envoi QUE vers l'adresse du titulaire du compte. Pour écrire aux
+    // clients, vérifier un domaine dans Resend puis poser `RESEND_FROM` sur
+    // Vercel (ex. « Natty <bonjour@natty-nutrition.com> ») — sans cette
+    // variable, le comportement reste exactement celui d'avant.
+    const FROM = process.env.RESEND_FROM || 'Natty <onboarding@resend.dev>';
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -274,7 +280,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'Natty <onboarding@resend.dev>',
+        from: FROM,
         to: [to_email],
         subject,
         html
