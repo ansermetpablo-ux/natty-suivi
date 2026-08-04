@@ -201,8 +201,64 @@ var PLATS = [];        // plats affichés (recommandations, ou repas ciblé par 
 var actif = 0;         // index du plat au hero
 var suivies = {};      // recettes que l'utilisateur a choisi de suivre
 var ingrOff = {};      // ingrédients décochés du plat courant
+var SEMAINE = [];      // recettes de la semaine, telles que reco.js les rend
 
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ⚠️ `afficherNb()` et `rendreSemaine()` étaient APPELÉES en bas de page et
+   définies NULLE PART : une seule occurrence de chaque dans tout le fichier,
+   celle de l'appel. La ReferenceError partait dans le `catch` du bloc de
+   chargement, qui affichait « Impossible de charger les recettes » — un
+   message d'erreur réseau pour un défaut de code. L'écran Repas ne montrait
+   donc jamais les recettes de la semaine, quel que soit l'état du cache. */
+function afficherNb(n){
+  var el = document.getElementById('nbVal');
+  if (el) el.textContent = n;
+}
+
+/* Le cache hebdomadaire ne se génère qu'une fois par semaine, et depuis
+   `suivi.html`. Quand il est vide, cet écran n'avait rien à dire : il propose
+   maintenant la génération, une seule fois, et bascule ensuite en affichage —
+   c'est exactement ce que le commentaire de `recettesDeLaSemaine()` dans
+   assets/reco.js demandait aux pages de faire. */
+function rendreSemaine(){
+  if (SEMAINE && SEMAINE.length){
+    PLATS = SEMAINE.map(depuisRecette);
+    actif = 0;
+    render();
+    return;
+  }
+  document.getElementById('content').innerHTML =
+      '<div class="empty" style="text-align:center">'
+    + '<div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;">Vos recettes de la semaine</div>'
+    + '<div style="font-size:13px;margin-bottom:16px;">Elles se composent à partir de votre profil, de vos repas récents et de votre garde-manger. Une génération par semaine.</div>'
+    + '<button id="btnGenSemaine" style="width:100%;padding:15px;background:var(--ink);color:var(--bg);border:none;border-radius:16px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">✨ Générer mes conseils repas</button>'
+    + '<div id="genSemaineEtat" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>'
+    + '</div>' + blocDecouvrir();
+  brancherDecouvrir();
+  var b = document.getElementById('btnGenSemaine');
+  if (b) b.addEventListener('click', genererSemaineMaintenant);
+}
+
+var _genSemaineOccupe = false;
+async function genererSemaineMaintenant(){
+  if (_genSemaineOccupe) return;
+  _genSemaineOccupe = true;
+  var b = document.getElementById('btnGenSemaine');
+  var e = document.getElementById('genSemaineEtat');
+  if (b){ b.disabled = true; b.textContent = '⏳ Composition en cours…'; }
+  if (e) e.textContent = 'Une trentaine de secondes. C’est la seule fois de la semaine.';
+  try{
+    SEMAINE = await NattyReco.genererSemaine(NattyReco.NB_MAX);
+    if (!SEMAINE || !SEMAINE.length) throw new Error('vide');
+    rendreSemaine();          // repasse en affichage, sans nouvel appel
+    toast('Vos recettes sont prêtes');
+  }catch(err){
+    if (b){ b.disabled = false; b.textContent = '✨ Générer mes conseils repas'; }
+    if (e) e.textContent = 'Échec — vérifiez votre connexion et réessayez.';
+  }
+  _genSemaineOccupe = false;
+}
 
 function toast(msg){
   var t = document.getElementById('toast');

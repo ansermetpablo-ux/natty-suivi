@@ -30,7 +30,12 @@
 body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-height:100vh; color:var(--text); }
 
 /* ── HEADER ── */
-.header { background:var(--bg); padding:20px 20px 0; position:sticky; top:0; z-index:50; }
+/* Le padding haut doit inclure la safe-area : sans elle, l'accueil et le
+   profil passent SOUS la barre d'état de l'iPhone et deviennent inatteignables
+   (constaté sur iPhone 17 Pro). Cette page n'utilise pas assets/style.css, qui
+   porte déjà le correctif pour les autres écrans — d'où la répétition ici.
+   env() vaut 0 sur le web : aucun effet hors application native. */
+.header { background:var(--bg); padding:calc(20px + env(safe-area-inset-top, 0px)) 20px 0; position:sticky; top:0; z-index:50; }
 .header-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; }
 .header-name { font-size:26px; font-weight:800; letter-spacing:-.6px; color:var(--black); }
 .header-sub  { font-size:13px; color:var(--muted); margin-top:2px; }
@@ -1058,6 +1063,12 @@ html.no-scroll {
     <div class="wc-nav"><button class="wc-btn" id="wkPrev">‹</button><div class="wc-title" id="wkTitle">–</div><button class="wc-btn" id="wkNext">›</button></div>
     <div class="wc-grid" id="wkGrid"></div>
   </div>
+
+  <!-- GÉNÉRER MES CONSEILS — une fois par semaine, puis affichage -->
+  <div id="blocGenConseils" style="margin-top:4px;">
+    <button id="btnGenConseils" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:18px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;box-shadow:var(--sm);">✨ Générer mes conseils</button>
+    <div id="genConseilsEtat" style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px;"></div>
+  </div>
 </div>
 
 <!-- ══ ONGLET PROGRESSION ══ -->
@@ -1866,7 +1877,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // ?profil=1 reste géré ici pour les anciens liens (et pour ouvrir
     // l'overlay conseils, qui n'existe que sur cet écran).
     if (_qp.get('profil')==='1') openProfilOverlay();
-    qaVerifier(); checkShowOnbPopup(); setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); }); } else {
+    qaVerifier(); checkShowOnbPopup();
+    var _bgc = document.getElementById('btnGenConseils');
+    if (_bgc) { _bgc.addEventListener('click', actionBoutonConseils); majBoutonConseils(); }
+    setTimeout(function(){ if(typeof verifierEtMontrerPopupConseils==='function') verifierEtMontrerPopupConseils(); }, 4000); }); } else {
     // Attendre 800ms au cas où Wix envoie le token via postMessage après le load
     setTimeout(function() {
       if (!USER_ID) afficherOnboardingCTA();
@@ -2844,7 +2858,59 @@ function ouvrirAnalysePlat(meal) {
     + '<div id="mealAnalyseIA"><div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Analyse critique en cours...</div></div>';
   document.getElementById('mealAnalyseContent').innerHTML = html;
   lockScroll(); document.getElementById('ovMealAnalyse').classList.add('active');
-  fetchAnalysePlat(meal, mac);
+
+  /* Une seule génération par plat, puis affichage pur.
+     Une analyse coûte un appel à Claude et quelques secondes. La refaire à
+     chaque ouverture du même plat, c'est payer deux fois le même texte — et
+     surtout en afficher un DIFFÉRENT à chaque fois pour un plat qui, lui, n'a
+     pas changé. Donc : on regarde d'abord le cache, et on ne génère que s'il
+     est vide. Les ouvertures suivantes n'attendent rien et ne rechargent
+     rien. */
+  lireAnalysePlat(meal.id).then(function (cache) {
+    if (cache) { peindreAnalysePlat(cache); return; }
+    fetchAnalysePlat(meal, mac);
+  });
+}
+
+/* ── Cache d'analyse ─────────────────────────────────────────
+   Deux étages. `localStorage` répond instantanément et marche toujours ;
+   la colonne `meals.analyse_json` — si elle existe — fait suivre l'analyse
+   d'un appareil à l'autre. Elle est détectée toute seule : tant qu'elle
+   n'est pas créée, tout fonctionne, en local. Pour l'activer, une ligne :
+     alter table public.meals add column analyse_json jsonb;
+   ─────────────────────────────────────────────────────────── */
+var ANALYSE_EN_BASE = null;   // null = pas encore testé
+function cleAnalyse(id) { return 'natty_analyse_plat_' + id; }
+
+async function lireAnalysePlat(id) {
+  if (!id) return null;
+  try { var l = localStorage.getItem(cleAnalyse(id)); if (l) return JSON.parse(l); } catch (e) {}
+  if (ANALYSE_EN_BASE === false) return null;
+  try {
+    var r = await Natty.sbFetch('meals?id=eq.' + id + '&select=analyse_json&limit=1');
+    ANALYSE_EN_BASE = true;
+    var v = r && r[0] && r[0].analyse_json;
+    if (!v) return null;
+    var d = (typeof v === 'string') ? JSON.parse(v) : v;
+    try { localStorage.setItem(cleAnalyse(id), JSON.stringify(d)); } catch (e) {}
+    return d;
+  } catch (e) { ANALYSE_EN_BASE = false; return null; }
+}
+
+async function ecrireAnalysePlat(id, data) {
+  if (!id || !data) return;
+  try { localStorage.setItem(cleAnalyse(id), JSON.stringify(data)); } catch (e) {}
+  if (ANALYSE_EN_BASE === false) return;
+  try {
+    var r = await fetch(SB_URL + '/rest/v1/meals?id=eq.' + id, {
+      method: 'PATCH',
+      headers: await Natty.entetes({ 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ analyse_json: data })
+    });
+    // Colonne absente : PostgREST répond 400/404. On le note une fois pour
+    // toutes et on cesse d'essayer — sans jamais gêner l'utilisateur.
+    ANALYSE_EN_BASE = r.ok;
+  } catch (e) { ANALYSE_EN_BASE = false; }
 }
 
 async function fetchAnalysePlat(meal, mac) {
@@ -2863,6 +2929,19 @@ async function fetchAnalysePlat(meal, mac) {
     var d = await res.json();
     if (!res.ok) throw new Error(d.error||'erreur');
     var data = JSON.parse((d.text||'{}').replace(/```[a-z]*|```/g,'').trim());
+    peindreAnalysePlat(data);
+    ecrireAnalysePlat(meal.id, data);   // la prochaine ouverture sera instantanée
+  } catch(e) {
+    document.getElementById('mealAnalyseIA').innerHTML = '<div style="color:#c7c7cc;font-size:13px;">Analyse indisponible — vérifiez votre connexion.</div>';
+  }
+}
+
+// Rendu pur : aucun appel réseau. Sert à la fois à la première génération et
+// à toutes les ouvertures suivantes, pour que l'affichage soit strictement le
+// même dans les deux cas.
+function peindreAnalysePlat(data) {
+    var cible = document.getElementById('mealAnalyseIA');
+    if (!cible) return;
     var html = '';
     if (data.points_positifs&&data.points_positifs.length) {
       html += '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#34c759;">✅ Points positifs</div>';
@@ -2888,10 +2967,7 @@ async function fetchAnalysePlat(meal, mac) {
         return '<div class="ap-card"><div style="font-size:13px;font-weight:600;">'+s.remplacer+' → '+s.par+'</div><div class="ap-desc">'+s.pourquoi+'</div></div>';
       }).join('');
     }
-    document.getElementById('mealAnalyseIA').innerHTML = html || '<div style="color:#c7c7cc;font-size:13px;">Analyse indisponible.</div>';
-  } catch(e) {
-    document.getElementById('mealAnalyseIA').innerHTML = '<div style="color:#c7c7cc;font-size:13px;">Analyse indisponible — vérifiez votre connexion.</div>';
-  }
+    cible.innerHTML = html || '<div style="color:#c7c7cc;font-size:13px;">Analyse indisponible.</div>';
 }
 
 async function saveIA(){
@@ -4010,6 +4086,62 @@ function getLundiSemaine() {
   var diff = (day === 0 ? -6 : 1 - day);
   d.setDate(d.getDate() + diff);
   return d.toISOString().split('T')[0];
+}
+
+/* ── Bouton « Générer mes conseils » ─────────────────────────
+   Une génération, puis affichage. Le bouton se relit en base plutôt que de
+   se fier au seul localStorage : sinon il repropose de générer sur un
+   deuxième appareil, et on repaie un appel à Claude pour un texte qui existe
+   déjà. Une fois les conseils là, il devient « Voir mes conseils » et
+   n'appelle plus rien.
+   ─────────────────────────────────────────────────────────── */
+var _genConseilsOccupe = false;
+
+async function majBoutonConseils() {
+  var btn = document.getElementById('btnGenConseils');
+  var etat = document.getElementById('genConseilsEtat');
+  if (!btn || !USER_ID) return;
+  try {
+    var r = await Natty.sbFetch('profil_conseils?user_id=eq.' + USER_ID
+      + '&select=semaine,generated_at&limit=1');
+    var row = r && r[0];
+    if (row && row.generated_at) {
+      btn.textContent = '📋 Voir mes conseils';
+      var d = new Date(row.generated_at);
+      etat.textContent = 'Générés le ' + d.toLocaleDateString('fr-FR', {day:'numeric', month:'long'})
+        + (row.semaine === getLundiSemaine() ? '' : ' — la semaine prochaine, ils se renouvellent');
+      btn.dataset.mode = 'voir';
+    } else {
+      btn.textContent = '✨ Générer mes conseils';
+      etat.textContent = 'Une fois par semaine, à partir de vos repas et de votre profil.';
+      btn.dataset.mode = 'generer';
+    }
+  } catch (e) { /* hors ligne : on laisse le libellé par défaut */ }
+}
+
+async function actionBoutonConseils() {
+  var btn = document.getElementById('btnGenConseils');
+  var etat = document.getElementById('genConseilsEtat');
+  if (!btn || _genConseilsOccupe) return;
+
+  // Déjà générés : simple affichage, aucun appel.
+  if (btn.dataset.mode === 'voir') { openProfilOverlay(); return; }
+
+  _genConseilsOccupe = true;
+  btn.disabled = true;
+  btn.textContent = '⏳ Génération en cours…';
+  etat.textContent = 'Une trentaine de secondes. C’est la seule fois.';
+  try {
+    await conseilsGenererEtSauvegarder(false);
+    await majBoutonConseils();
+    showToast('Conseils prêts !', 'ok');
+    openProfilOverlay();
+  } catch (e) {
+    btn.textContent = '✨ Générer mes conseils';
+    etat.textContent = 'Échec — vérifiez votre connexion et réessayez.';
+  }
+  btn.disabled = false;
+  _genConseilsOccupe = false;
 }
 
 // Render les conseils depuis les colonnes structurées
