@@ -1718,8 +1718,11 @@ html.no-scroll {
 
 <!-- core.js doit être chargé AVANT le script ci-dessous : celui-ci lit
      maintenant `Natty.USER_ID` au tout début, pour prendre son identité dans
-     la session. Aucun accès au DOM à l'exécution, donc le monter ici ne change
-     rien d'autre. Les autres modules restent en bas, après lui. -->
+     la session. Il était jusqu'ici tout en bas de la page, ce qui allait tant
+     que `Natty` n'était touché que depuis des fonctions appelées après le
+     chargement. Il ne fait aucun accès au DOM à l'exécution : le monter ici ne
+     change rien d'autre. Les autres modules (ajout/notifs/push/nav) restent en
+     bas, après lui, comme avant. -->
 <script src="/assets/core.js"></script>
 <script>
 // ═══ CONFIG ═══
@@ -1785,7 +1788,9 @@ TOKEN = Natty.TOKEN || params.get('token') || '';
    on se connecte, la session est bien là, mais `suivi.html` ne la voit pas,
    décide au bout d'1,5 s qu'il n'y a personne, et affiche son formulaire de
    connexion intégré. On se reconnecte, il recharge `suivi.html`… qui ne voit
-   toujours pas la session. C'est LA boucle « login en boucle ». */
+   toujours pas la session. C'est LA boucle « login en boucle ».
+   Natty.USER_ID est le `sub` du jeton : la seule identité que les policies RLS
+   reconnaissent de toute façon. */
 USER_ID = Natty.USER_ID || null;
 if (!USER_ID) {
   var uP = params.get('userId');
@@ -2924,7 +2929,9 @@ async function saveManuel(){
   btn.disabled=false;btn.textContent='Enregistrer';
 }
 
-async function deleteRepas(id){if(!confirm('Supprimer ?'))return;try{await fetch(SB_URL+'/rest/v1/meals?id=eq.'+id,{method:'DELETE',headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});await loadMeals();afficherMacros();chargerDiagnostics();showToast('Supprimé','ok');}catch(e){}}
+// Clé anon = suppression refusée par la RLS, en silence : le repas
+// réapparaissait au rechargement. Passe par la session, comme le reste.
+async function deleteRepas(id){if(!confirm('Supprimer ?'))return;try{await fetch(SB_URL+'/rest/v1/meals?id=eq.'+id,{method:'DELETE',headers:await Natty.entetes()});await loadMeals();afficherMacros();chargerDiagnostics();showToast('Supprimé','ok');}catch(e){}}
 
 // ═══ ONBOARDING CTA ═══
 function afficherOnboardingCTA(){
@@ -3693,7 +3700,7 @@ async function chalStartChallenge() {
 
 async function chalAbandonner(id) {
   if (!confirm('Abandonner ?')) return;
-  try { await fetch(SB_URL+'/rest/v1/challenges?id=eq.'+id,{method:'PATCH',headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({statut:'echoue'})}); showToast('Abandonné','err'); await chalChargerPerso(); } catch(e){}
+  try { await fetch(SB_URL+'/rest/v1/challenges?id=eq.'+id,{method:'PATCH',headers:await Natty.entetes(),body:JSON.stringify({statut:'echoue'})}); showToast('Abandonné','err'); await chalChargerPerso(); } catch(e){}
 }
 
 async function chalChargerDuo() {
@@ -3818,9 +3825,14 @@ async function qaVerifier() {
   if (!USER_ID || qaChecked) return;
   qaChecked = true;
   try {
-    var res = await fetch(SB_URL+'/rest/v1/questionnaire_alim?user_id=eq.'+USER_ID+'&select=id&limit=1',
-      {headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY}});
-    var data = await res.json();
+    /* ⚠️ Natty.entetes(), surtout pas la clé anon. Cette requête décide si on
+       renvoie l'utilisateur remplir le questionnaire. Avec la clé anon et la
+       RLS active, elle répond TOUJOURS `[]` — même quand la ligne existe. On
+       renvoyait donc au questionnaire quelqu'un qui venait de le remplir, et
+       ainsi de suite : constaté le 2026-08-04, trois lignes enregistrées en
+       trois minutes pour le même compte. Le questionnaire s'enregistrait
+       parfaitement ; c'est la vérification qui était aveugle. */
+    var data = await Natty.sbFetch('questionnaire_alim?user_id=eq.'+USER_ID+'&select=id&limit=1');
     if (!data || data.length === 0) {
       window.location.href = 'questionnaire-alim.html?token=' + TOKEN;
     }
@@ -4218,7 +4230,7 @@ async function conseilsForceRefresh() {
     // Reset la semaine pour forcer régénération (sans supprimer la ligne)
     await fetch(SB_URL + '/rest/v1/profil_conseils?user_id=eq.' + USER_ID, {
       method: 'PATCH',
-      headers: { apikey:SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      headers: await Natty.entetes({ 'Prefer':'return=minimal' }),
       body: JSON.stringify({ semaine: '2000-01-01' })
     });
   } catch(e) {}
