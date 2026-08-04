@@ -2587,6 +2587,35 @@ async function staffConfigure() {
   catch(e) { return false; }
 }
 
+/* Le refus « pas de l'équipe », détaillé. Rendu en HTML dans #loginErr, donc
+   tout ce qui vient de la base ou d'un message d'erreur passe par escHtml.
+   `user-select:all` sur les blocs de code : un UUID se recopie à la main une
+   fois, pas trois. */
+function bloc(txt) {
+  return '<code style="user-select:all;display:inline-block;background:#fff;border-radius:6px;'
+       + 'padding:3px 7px;margin-top:4px;font-size:11px;color:#1a1a2e;word-break:break-all;'
+       + 'font-family:ui-monospace,SFMono-Regular,Menlo,monospace">' + escHtml(txt) + '</code>';
+}
+
+function messageHorsEquipe(uuid, ligne, erreur) {
+  const enTete = '<div style="text-align:left;line-height:1.6">';
+  if (erreur) {
+    return enTete + 'Compte reconnu, mais la table <b>staff</b> est illisible : ' + escHtml(erreur)
+      + '<br>Vérifie la policy <b>staff_lire_soi</b> et les droits de lecture (natty_staff.sql § 1).'
+      + '<br>UUID de ce compte : ' + bloc(uuid) + '</div>';
+  }
+  if (ligne && !ligne.actif) {
+    return enTete + 'Ta ligne d\'équipe existe (<b>' + escHtml(ligne.role || 'sans rôle')
+      + '</b>) mais elle est <b>désactivée</b>. À exécuter dans le SQL Editor :'
+      + '<br>' + bloc("update public.staff set actif = true where user_id = '" + uuid + "';") + '</div>';
+  }
+  return enTete + 'Compte reconnu, mais <b>aucune ligne d\'équipe</b> pour cet UUID — c\'est le § 3 de '
+    + 'natty_staff.sql qui manque, ou il a été exécuté avec un autre UUID. À exécuter dans le SQL Editor :'
+    + '<br>' + bloc("insert into public.staff (user_id, role, nom) values ('" + uuid + "', 'admin', 'Pablo');")
+    + '<br>Pour voir les lignes déjà présentes : ' + bloc('select user_id, role, nom, actif from public.staff;')
+    + '</div>';
+}
+
 async function connexionSupabase(email, pwd) {
   const res = await fetch(SB_URL+'/auth/v1/token?grant_type=password', {
     method:'POST',
@@ -2610,11 +2639,18 @@ window.login = async function() {
       ecrireStaffSession(session);
       // Le rôle vient de la base. Sa propre ligne, et rien d'autre : la
       // policy `staff_lire_soi` ne laisse voir que celle-là.
-      let ligne = null;
-      try { ligne = (await sb('staff?user_id=eq.'+session.user_id+'&select=*&limit=1'))[0] || null; } catch(e) {}
+      // Trois causes très différentes se cachaient derrière un même refus :
+      // la table est illisible, la ligne n'existe pas, ou elle est
+      // désactivée. Les confondre coûte une heure de recherche — donc on les
+      // nomme, et on affiche l'UUID du compte, seule chose que l'insert du
+      // § 3 de natty_staff.sql réclame et qu'on ne peut lire nulle part
+      // ailleurs sans repasser par le SQL Editor.
+      let ligne = null, erreurLecture = null;
+      try { ligne = (await sb('staff?user_id=eq.'+session.user_id+'&select=*&limit=1'))[0] || null; }
+      catch(e) { erreurLecture = (e && e.message) ? e.message : String(e); }
       if (!ligne || !ligne.actif) {
         ecrireStaffSession(null);
-        errEl.textContent = "Ce compte n'appartient pas à l'équipe.";
+        errEl.innerHTML = messageHorsEquipe(session.user_id, ligne, erreurLecture);
         return;
       }
       STAFF_ROLE   = ligne.role;
