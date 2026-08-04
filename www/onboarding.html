@@ -342,9 +342,11 @@ input[type=range]::-webkit-slider-thumb:active { transform: scale(1.15); }
 
 <div class="toast" id="toast"></div>
 
+<script src="assets/core.js"></script>
 <script>
 const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+// (la clé anon ne sert plus ici : les en-têtes viennent de Natty.entetes(),
+//  qui pose le JWT de la session quand il y en a un)
 
 // 5 étapes : 1 Maturité, 2 Motivation, 3 Auto-éval, 4 Axe, 5 Données physiques
 const TOT = 5;
@@ -358,12 +360,15 @@ const A = {
   sexe: null, activite: null, age: null, poids: null, taille: null
 };
 
+// L'identité vient de la session, pas de l'URL. Cette page écrit dans
+// `onboarding`, table désormais sous RLS : sans le JWT de la personne
+// connectée, l'INSERT repart en 42501 et le profil est perdu à la dernière
+// étape, après tout le questionnaire. `requireAuth()` renvoie se connecter
+// AVANT de faire remplir quoi que ce soit.
 const params = new URLSearchParams(window.location.search);
-let UID = null;
-let token = params.get('token') || '';
-if (token && token.length > 10) {
-  try { const d = token.match(/.{1,2}/g).map(b=>String.fromCharCode(parseInt(b,16))).join(''); if(d.includes('-')) UID=d; } catch(e){}
-}
+let UID = Natty.USER_ID;
+let token = Natty.TOKEN || params.get('token') || '';
+Natty.requireAuth();
 
 document.getElementById('offreBtnMain').onclick = function() {
   window.location.href = '/offre.html?token=' + token;
@@ -478,14 +483,16 @@ async function save() {
     if (!UID) throw new Error('Vous devez être connecté pour enregistrer votre profil.');
     
     // Upsert : insert ou update si user_id existe déjà
+    // ⚠️ Pas de `on_conflict=user_id` ici, malgré le `merge-duplicates` :
+    // `onboarding.user_id` n'a AUCUNE contrainte d'unicité (la table contient
+    // des doublons réels), et PostgREST répondrait 42P10. C'est aussi pourquoi
+    // un second passage crée une ligne de plus au lieu de corriger la
+    // première — défaut connu, à régler en base, pas ici.
     const r = await fetch(SB_URL + '/rest/v1/onboarding', {
       method: 'POST',
-      headers: { 
-        'apikey': SB_KEY, 
-        'Authorization': 'Bearer ' + SB_KEY, 
-        'Content-Type': 'application/json', 
+      headers: await Natty.entetes({
         'Prefer': 'resolution=merge-duplicates,return=representation'
-      },
+      }),
       body: JSON.stringify(payload)
     });
     if (!r.ok) {

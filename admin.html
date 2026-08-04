@@ -914,7 +914,7 @@ input[type="file"] { display: none; }
             <div class="form-title" id="formNutriTitle">Nouveau nutritionniste</div>
             <input type="hidden" id="nutriEditId">
             <div class="form-row"><div class="form-group"><div class="form-lbl">Prénom & Nom</div><input class="form-inp" type="text" id="nutriNom" placeholder="Sophie Martin"></div><div class="form-group"><div class="form-lbl">Email</div><input class="form-inp" type="email" id="nutriEmail" placeholder="sophie@natty.fr"></div></div>
-            <div class="form-row"><div class="form-group"><div class="form-lbl">Mot de passe</div><input class="form-inp" type="password" id="nutriMdp"></div><div class="form-group"><div class="form-lbl">Clients max</div><input class="form-inp" type="number" id="nutriClientsMax" value="20"></div></div>
+            <div class="form-row"><div class="form-group"><div class="form-lbl">Clients max</div><input class="form-inp" type="number" id="nutriClientsMax" value="20"></div><div class="form-group"><div class="form-lbl">Connexion</div><div style="font-size:12px;line-height:1.5;color:#9a9aaa;padding-top:8px">Le mot de passe ne se règle plus ici : chaque nutritionniste entre avec son compte Supabase Auth. Marche à suivre affichée après l'enregistrement.</div></div></div>
             <div class="form-row"><div class="form-group full"><div class="form-lbl">Bio</div><input class="form-inp" type="text" id="nutriBio"></div></div>
             <div class="form-row"><div class="form-group full"><div class="form-lbl">Spécialités (séparées par virgules)</div><input class="form-inp" type="text" id="nutriSpecs"></div></div>
             <div class="form-row"><div class="form-group full"><div class="form-lbl">Objectifs cibles</div>
@@ -927,6 +927,7 @@ input[type="file"] { display: none; }
             </div></div>
             <div class="form-actions"><button class="btn-cancel-form" id="btnCancelNutri">Annuler</button><button class="btn-submit" id="btnSaveNutri">Enregistrer</button></div>
           </div>
+          <div id="nutriApres" style="display:none"></div>
           <div class="nutri-admin-list" id="nutriAdminList"><div class="loading">Chargement...</div></div>
         </div>
       </div>
@@ -1039,23 +1040,12 @@ function dayLabel(iso) {
 }
 
 // ── AUTH ──
-function login() {
-  const email = document.getElementById('emailInput').value.trim();
-  const pwd = document.getElementById('pwdInput').value;
-  const errEl = document.getElementById('loginErr');
-  errEl.textContent = '';
-  if (pwd === MASTER_PWD) { isMasterAdmin=true; currentNutri={nom:'Admin',id:null}; demarrerApp(); return; }
-  if (!email || !pwd) { errEl.textContent = 'Email et mot de passe requis'; return; }
-  sb('nutritionnistes?email=eq.'+encodeURIComponent(email)+'&actif=eq.true&select=*')
-    .then(nutris => {
-      if (!nutris||!nutris.length) { errEl.textContent='Email introuvable'; return; }
-      const nutri = nutris[0];
-      if (btoa(pwd) !== nutri.mdp_hash) { errEl.textContent='Mot de passe incorrect'; return; }
-      currentNutri = nutri; isMasterAdmin = false;
-      localStorage.setItem('nutri_session', JSON.stringify({id:nutri.id, email:nutri.email}));
-      demarrerApp();
-    }).catch(e => { errEl.textContent = 'Erreur : '+e.message; });
-}
+// L'ancienne `login()` vivait ici : mot de passe maître comparé en clair, puis
+// `btoa(pwd) === nutri.mdp_hash`. Elle était déjà morte — `window.login`, plus
+// bas, écrase ce nom avant que le listener ne soit posé — mais elle lisait une
+// colonne qui n'existe PLUS (`nutritionnistes.mdp_hash`, retirée à la fin de
+// natty_staff.sql). Supprimée : la seule porte est désormais `window.login`,
+// c'est-à-dire un compte Supabase Auth dont le rôle est lu dans `staff`.
 
 function toggleMasterLogin() {
   const el = document.getElementById('emailInput');
@@ -1076,15 +1066,10 @@ function logout() {
   document.getElementById('emailInput').value='';
 }
 
-function demarrerApp() {
-  document.getElementById('loginScreen').style.display='none';
-  document.getElementById('mainApp').classList.add('visible');
-  document.getElementById('nutriBadgeName').textContent = isMasterAdmin ? 'Admin' : currentNutri.nom.split(' ')[0];
-  document.getElementById('navEquipe').style.display = isMasterAdmin ? 'block' : 'none';
-  chargerClients(); chargerPlats(); chargerThreadsMessages(); chargerRdvAdmin();
-  if (isMasterAdmin) chargerEquipe();
-  subscribeGlobalRealtime();
-}
+// (`demarrerApp()` est partie avec `login()` : elle ouvrait le back-office sans
+//  jeton d'équipe, donc sur des tables désormais fermées par la RLS — un écran
+//  d'apparence normale et vide de bout en bout. `demarrerAppAvecRole()` la
+//  remplace partout.)
 
 // ── ÉVÉNEMENTS (remplace les onclick inline) ──
 document.addEventListener('DOMContentLoaded', function() {
@@ -1171,17 +1156,11 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
 
-  // Restore session
-  const saved = localStorage.getItem('nutri_session');
-  if (saved) {
-    try {
-      const s = JSON.parse(saved);
-      sb('nutritionnistes?id=eq.'+s.id+'&actif=eq.true&select=*').then(nutris => {
-        if (nutris&&nutris.length>0) { currentNutri=nutris[0]; isMasterAdmin=false; demarrerApp(); }
-        else localStorage.removeItem('nutri_session');
-      }).catch(() => localStorage.removeItem('nutri_session'));
-    } catch(e) { localStorage.removeItem('nutri_session'); }
-  }
+  // Une vieille clé `nutri_session` rouvrait le back-office sans jeton : les
+  // écrans s'affichaient, mais chaque requête repartait en anon et la RLS
+  // vidait tout. Un back-office qui a l'air de marcher et ne montre rien est
+  // pire qu'un écran de connexion — on efface la clé, on ne la suit plus.
+  localStorage.removeItem('nutri_session');
 });
 
 // ── NAV ──
@@ -2426,33 +2405,62 @@ function toggleObjChip(el, val) {
 function toggleFormNutri() {
   const form=document.getElementById('formNutri');
   const open=form.classList.toggle('open');
-  if(open){['nutriEditId','nutriNom','nutriEmail','nutriMdp','nutriBio','nutriSpecs'].forEach(id=>document.getElementById(id).value='');document.getElementById('nutriClientsMax').value='20';document.getElementById('formNutriTitle').textContent='Nouveau nutritionniste';document.getElementById('btnSaveNutri').textContent='Enregistrer';selectedObjChips=[];document.querySelectorAll('.obj-chip').forEach(c=>c.classList.remove('on'));form.scrollIntoView({behavior:'smooth'});}
+  if(open){['nutriEditId','nutriNom','nutriEmail','nutriBio','nutriSpecs'].forEach(id=>document.getElementById(id).value='');document.getElementById('nutriClientsMax').value='20';document.getElementById('formNutriTitle').textContent='Nouveau nutritionniste';document.getElementById('btnSaveNutri').textContent='Enregistrer';selectedObjChips=[];document.querySelectorAll('.obj-chip').forEach(c=>c.classList.remove('on'));form.scrollIntoView({behavior:'smooth'});}
 }
 
 function editerNutri(id) {
   const n=allNutris.find(x=>x.id===id);if(!n)return;
-  document.getElementById('nutriEditId').value=id;document.getElementById('nutriNom').value=n.nom||'';document.getElementById('nutriEmail').value=n.email||'';document.getElementById('nutriMdp').value='';document.getElementById('nutriBio').value=n.bio||'';document.getElementById('nutriSpecs').value=(n.specialites||[]).join(', ');document.getElementById('nutriClientsMax').value=n.clients_max||20;
+  document.getElementById('nutriEditId').value=id;document.getElementById('nutriNom').value=n.nom||'';document.getElementById('nutriEmail').value=n.email||'';document.getElementById('nutriBio').value=n.bio||'';document.getElementById('nutriSpecs').value=(n.specialites||[]).join(', ');document.getElementById('nutriClientsMax').value=n.clients_max||20;
   selectedObjChips=[...(n.objectifs_cibles||[])];
   document.querySelectorAll('.obj-chip').forEach(c=>{const val=c.id.replace('chip_','');c.classList.toggle('on',selectedObjChips.includes(val));});
   document.getElementById('formNutriTitle').textContent='Modifier';document.getElementById('btnSaveNutri').textContent='Mettre à jour';
   const form=document.getElementById('formNutri');form.classList.add('open');form.scrollIntoView({behavior:'smooth'});
 }
 
+/* Créer une fiche de nutritionniste ne crée AUCUN accès. Le mot de passe se
+   posait ici, en base64 dans `nutritionnistes.mdp_hash` — colonne retirée à la
+   fin de natty_staff.sql, et l'envoyer quand même faisait échouer tout
+   l'enregistrement (PostgREST refuse une colonne inconnue). Entrer dans le
+   back-office, c'est maintenant un compte Supabase Auth plus une ligne dans
+   `staff` : deux gestes qu'on ne peut pas faire depuis cette page, donc on les
+   affiche, avec l'identifiant de la fiche déjà rempli. */
 async function sauvegarderNutri() {
-  const nom=document.getElementById('nutriNom').value.trim(),email=document.getElementById('nutriEmail').value.trim(),pwd=document.getElementById('nutriMdp').value,editId=document.getElementById('nutriEditId').value;
-  if(!nom||!email){toast('Nom et email requis','err');return;}if(!editId&&!pwd){toast('Mot de passe requis','err');return;}
+  const nom=document.getElementById('nutriNom').value.trim(),email=document.getElementById('nutriEmail').value.trim(),editId=document.getElementById('nutriEditId').value;
+  if(!nom||!email){toast('Nom et email requis','err');return;}
   const btn=document.getElementById('btnSaveNutri');btn.disabled=true;btn.textContent='Enregistrement...';
   const specs=document.getElementById('nutriSpecs').value.split(',').map(s=>s.trim()).filter(Boolean);
   const payload={nom,email,bio:document.getElementById('nutriBio').value,specialites:specs,objectifs_cibles:selectedObjChips,clients_max:parseInt(document.getElementById('nutriClientsMax').value)||20,actif:true};
-  if(pwd)payload.mdp_hash=btoa(pwd);
   try{
+    let ligne=null;
     if(editId)await sb('nutritionnistes?id=eq.'+editId,{method:'PATCH',body:JSON.stringify(payload)});
-    else await sb('nutritionnistes',{method:'POST',body:JSON.stringify(payload)});
+    else ligne=(await sb('nutritionnistes',{method:'POST',body:JSON.stringify(payload)}))[0]||null;
     toast(editId?'Mis à jour !':'Ajouté !','ok');
     document.getElementById('formNutri').classList.remove('open');
+    if(!editId) afficherSuiteCompteNutri(nom, email, ligne&&ligne.id);
     await chargerEquipe();
   }catch(e){toast('Erreur : '+e.message,'err');}
   finally{btn.disabled=false;btn.textContent=editId?'Mettre à jour':'Enregistrer';}
+}
+
+function afficherSuiteCompteNutri(nom, email, nutriId) {
+  const el=document.getElementById('nutriApres'); if(!el) return;
+  const sql = nutriId
+    ? "insert into public.staff (user_id, role, nom, nutritionniste_id) values\n  ('UUID-DU-COMPTE-AUTH', 'nutritionniste', '"+nom.replace(/'/g,"''")+"', '"+nutriId+"');"
+    : "insert into public.staff (user_id, role, nom) values\n  ('UUID-DU-COMPTE-AUTH', 'nutritionniste', '"+nom.replace(/'/g,"''")+"');";
+  el.style.display='block';
+  el.innerHTML =
+    '<div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:var(--sm);font-size:13px;line-height:1.6">'
+    + '<b>Fiche créée. Il reste deux gestes pour que ' + escHtml(nom) + ' puisse se connecter :</b>'
+    + '<div style="margin-top:10px">1. Supabase → Authentication → Users → « Add user » : '
+    + escHtml(email) + ', un mot de passe, et cocher « Auto Confirm User ». Copier l\'UUID affiché.</div>'
+    + '<div style="margin-top:10px">2. SQL Editor, en remplaçant l\'UUID :</div>'
+    + '<pre style="background:#f0f0f3;border-radius:10px;padding:10px;margin-top:6px;overflow-x:auto;font-size:12px;white-space:pre-wrap">'
+    + escHtml(sql) + '</pre>'
+    + '<div style="margin-top:10px;color:#9a9aaa">Sans la ligne <b>staff</b>, le compte existe mais se voit refuser l\'entrée — le back-office le dira, avec l\'UUID à coller.</div>'
+    + '<div style="text-align:right;margin-top:10px"><button class="btn-cancel-form" id="btnFermerSuiteNutri">Fermer</button></div>'
+    + '</div>';
+  const f=document.getElementById('btnFermerSuiteNutri');
+  if(f) f.addEventListener('click',function(){ el.style.display='none'; el.innerHTML=''; });
 }
 
 async function toggleNutriActif(id,actif) {
@@ -2689,17 +2697,13 @@ async function connexionDeSecours(email, pwd, errEl) {
     currentNutri = {nom: currentRole === 'chef' ? 'Chef' : 'Logistique', id:null};
     return demarrerAppAvecRole(true);
   }
+  // Les nutritionnistes n'ont plus de secours du tout : leur mot de passe
+  // vivait dans `nutritionnistes.mdp_hash`, colonne supprimée. Le dire, plutôt
+  // que de laisser « Mot de passe incorrect » envoyer chercher une faute de
+  // frappe qui n'existe pas.
   if (currentRole === 'nutritionniste') {
-    if (!email || !pwd) { errEl.textContent = 'Email et mot de passe requis'; return; }
-    try {
-      const nutris = await sb('nutritionnistes?email=eq.'+encodeURIComponent(email)+'&actif=eq.true&select=*');
-      if (!nutris || !nutris.length) { errEl.textContent = 'Email introuvable'; return; }
-      const nutri = nutris[0];
-      if (btoa(pwd) !== nutri.mdp_hash) { errEl.textContent = 'Mot de passe incorrect'; return; }
-      currentNutri = nutri; isMasterAdmin = false;
-      localStorage.setItem('nutri_session', JSON.stringify({id:nutri.id, email:nutri.email}));
-      return demarrerAppAvecRole(true);
-    } catch(e) { errEl.textContent = 'Erreur : '+e.message; return; }
+    errEl.textContent = "Les nutritionnistes entrent avec leur compte Supabase Auth — l'ancien mot de passe de la fiche n'existe plus. Demande à l'administrateur de créer le compte.";
+    return;
   }
   errEl.textContent = 'Mot de passe incorrect';
 }

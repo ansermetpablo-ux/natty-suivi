@@ -1387,24 +1387,49 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ Signature Stripe vérifiée dans `api/webhook.js` (voir §3/§7) — reste à ajouter `STRIPE_WEBHOOK_SECRET` sur Vercel avant déploiement.
 - ✅ **`api/conseils-hebdo` verrouillé** (août 2026) : garde fail-closed, et les trois formes
   du secret acceptées. Pablo a confirmé que `CRON_SECRET` existe sur Vercel.
-- 🔴 **[PRIORITÉ SÉCURITÉ] RLS — état MESURÉ le 2026-08-03, et c'est pire que « à faire ».**
-  Avec la seule clé anon publique (présente dans le code de chaque page, donc dans le
-  navigateur de n'importe qui) :
-  - **lecture de toutes les tables** — 31 profils, 66 repas, les conversations privées avec
-    le nutritionniste, les allergies, les poids, les âges ;
-  - **écriture sur les données d'autrui** — un `PATCH` sur l'`onboarding` d'un autre membre
-    renvoie **204**. Vérifié par une preuve non destructive (valeur réécrite par elle-même).
-  Le plan est écrit dans **`natty_rls.sql`**, en trois étapes, avec la marche arrière pour
-  chacune. L'étape 1 (`push_etat`, `appareils`) est **sans risque et exécutable tout de
-  suite**. Les étapes 2 et 3 sont bloquées par deux points, détaillés dans le fichier :
+- ✅ **[PRIORITÉ SÉCURITÉ] RLS — ACTIVÉE. Pablo a exécuté `natty_rls.sql` le 2026-08-04.**
+  Le trou de départ (mesuré le 2026-08-03) : avec la seule clé anon publique, lecture de
+  **toutes** les tables — 31 profils, 66 repas, les conversations privées avec le
+  nutritionniste, les allergies, les poids, les âges — et **écriture sur les données
+  d'autrui** (`PATCH` sur l'`onboarding` d'un autre membre → **204**).
+  **Relevé après activation**, refait table par table avec la clé anon : `onboarding`,
+  `meals`, `meal_ingredients`, `messages`, `nutrition_scores`, `questionnaire_alim`,
+  `profil_conseils`, `notes_nutritionniste`, `daily_macros`, `challenges`, `membre_*`,
+  `meal_likes`, `meal_vues`, `staff`, `appareils`, `push_etat`, `rdv`, `plans_repas`,
+  `stocks_mp`, `recettes*`, `ingredients_base`, `offres_clients` → **0 ligne**.
+  `staff_configure()` renvoie `true` (les mots de passe partagés sont donc refusés) et
+  `nutritionnistes.mdp_hash` a bien été supprimée.
+  > 🔴 **Conséquence non anticipée, et c'est le point qui commande tout le reste : la prod
+  > est éteinte.** `natty-suivi.vercel.app` est déployé depuis **`main`**, dont
+  > l'`index.html` parle à Supabase avec la clé anon et **rien d'autre**
+  > (`Authorization: Bearer SB_KEY`, 7 occurrences). Toutes les tables qu'il lit
+  > renvoient désormais `[]` — en HTTP **200**, donc sans la moindre erreur visible :
+  > tableau de bord vide, macros par défaut, historique vide, messagerie vide.
+  > **Déployer `app-native` sur `main` n'est plus une option de confort, c'est la
+  > réparation** : c'est cette branche qui porte `assets/core.js` (JWT) et
+  > `SESSION_OBLIGATOIRE`. Voir aussi §11.
+  > ⚠️ Il reste **quatre tables et une vue** ouvertes à la clé anon — `abonnements` (2
+  > lignes), `commandes` (3), `plats_menu` (3), `nutritionnistes` (3), `membre_public`
+  > (26 : prénom, poids, tdee ; une vue, donc un GRANT et non une policy). C'est
+  > aujourd'hui **tout ce qui répond encore à la prod** : le bloc qui les referme est
+  > l'**étape 5 de `natty_rls.sql`**, à ne coller **qu'après** le déploiement.
+  Les trois points qui bloquaient l'activation, pour mémoire :
   1. ✅ **`admin.html` a maintenant une identité en base** (option A, tranchée par Pablo le
-     2026-08-03). Le back-office se connecte par Supabase Auth, envoie le JWT de la personne
-     connectée à PostgREST, et lit son rôle dans la table `staff` (voir `natty_staff.sql`).
-     🔴 **Reste à créer les comptes** (§ 1 à 3 du fichier) : tant qu'il n'y en a aucun,
-     l'admin accepte encore les anciens mots de passe, avec un bandeau rouge qui le dit.
-     Ce secours **se ferme tout seul** dès la première ligne insérée dans `staff` —
-     `staff_configure()` bascule à `true` et plus aucun mot de passe partagé ne passe,
-     sans nouveau déploiement. Vérifié en simulant les deux états.
+     2026-08-03), **et les comptes existent** : `staff_configure()` renvoie `true`, donc le
+     mode de secours par mots de passe partagés est fermé, de lui-même et sans
+     redéploiement. Le back-office se connecte par Supabase Auth, envoie le JWT de la
+     personne connectée à PostgREST, et lit son rôle dans `staff` (`natty_staff.sql`).
+     > ⚠️ **Trois restes de l'ancien monde retirés le 2026-08-04**, tous devenus faux par la
+     > suppression de `nutritionnistes.mdp_hash` : l'ancienne `login()` (mot de passe maître
+     > en clair + `btoa(pwd) === mdp_hash`) — déjà morte, `window.login` écrasant ce nom
+     > avant la pose du listener, mais elle lisait une colonne disparue ; la reprise de
+     > session `nutri_session`, qui rouvrait le back-office **sans jeton d'équipe** et donc
+     > sur des tables fermées par la RLS (un écran d'apparence normale, vide de bout en
+     > bout) ; et surtout `sauvegarderNutri()`, qui envoyait encore `mdp_hash` — PostgREST
+     > refusant une colonne inconnue, **ajouter ou modifier un nutritionniste échouait
+     > entièrement**. Le champ « Mot de passe » du formulaire d'équipe est remplacé par la
+     > marche à suivre (compte Auth + ligne `staff`), affichée après l'enregistrement avec
+     > l'identifiant de la fiche déjà rempli.
   2. ✅ **Fil social** : `social.js` lit désormais la vue `membre_public` au lieu
      d'`onboarding`/`questionnaire_alim` (commit `b7b6b9d`, session parallèle). La RLS
      filtrant des lignes et non des colonnes, c'est la vue qui restreint les colonnes.
@@ -1417,10 +1442,20 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      d'activer la RLS** : ce drapeau vivant dans le code et la RLS dans le SQL, les basculer
      ensemble se serait payé en écrans vides. Vérifié : hérité → message + nettoyage ;
      visiteur sans rien → `login.html` nu ; aucune boucle.
-- 🔴 **`nutritionnistes.mdp_hash` n'est pas un hachage, c'est du base64** — réversible en une
-  ligne, et la table est lisible avec la clé anon publique : les mots de passe de toute
-  l'équipe sont en clair pour qui sait regarder. La colonne disparaît une fois chaque
-  nutritionniste doté d'un compte Auth (fin de `natty_staff.sql`).
+- ✅ **`nutritionnistes.mdp_hash` supprimée** (2026-08-04, fin de `natty_staff.sql`). Ce
+  n'était pas un hachage mais du base64, réversible en une ligne, dans une table lisible
+  avec la clé anon publique : les mots de passe de toute l'équipe étaient en clair pour qui
+  savait regarder. Vérifié : la colonne n'existe plus (`42703`), et plus aucun code ne la
+  demande. Les nutritionnistes entrent désormais par leur compte Auth.
+- ✅ **`onboarding.html` branché sur la session** (2026-08-04). Il postait son profil avec la
+  clé anon : une fois `onboarding` sous RLS, l'INSERT repartait en `42501` **à la dernière
+  étape, après tout le questionnaire**. La page charge maintenant `assets/core.js`, tire son
+  identité de la session (plus de `?token=` hex) et appelle `Natty.entetes()`.
+  `requireAuth()` renvoie se connecter **avant** de faire remplir quoi que ce soit.
+  ⚠️ Pas de `on_conflict=user_id` malgré le `merge-duplicates` : `onboarding.user_id` n'a
+  aucune contrainte d'unicité (la table contient de vrais doublons), PostgREST répondrait
+  `42P10`. C'est aussi pourquoi un second passage ajoute une ligne au lieu de corriger la
+  première — à régler en base.
 - ✅ `priceId` validé côté serveur dans `api/checkout.js` (allowlist des deux formules,
   commit `d6aafbe`).
 - ✅ **Journalisation de `api/checkout.js` nettoyée** (août 2026) : le handler écrivait le

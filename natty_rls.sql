@@ -364,6 +364,76 @@ grant select on public.nutritionnistes_publics to authenticated;
 
 
 -- ╔═══════════════════════════════════════════════════════════╗
+-- ║ ÉTAPE 5 — ce qui reste ouvert à anon (mesuré le 2026-08-04)║
+-- ╚═══════════════════════════════════════════════════════════╝
+-- Les étapes ci-dessus sont EXÉCUTÉES. Relevé refait table par table avec la
+-- seule clé anon publique, après coup : `onboarding`, `meals`,
+-- `meal_ingredients`, `messages`, `nutrition_scores`, `questionnaire_alim`,
+-- `profil_conseils`, `notes_nutritionniste`, `daily_macros`, `challenges`,
+-- `membre_*`, `meal_likes`, `meal_vues`, `staff`, `appareils`, `push_etat`,
+-- `rdv`, `plans_repas`, `stocks_mp`, `recettes*`, `ingredients_base`,
+-- `offres_clients` → **0 ligne**. `nutritionnistes.mdp_hash` a disparu.
+--
+-- Quatre tables et une vue répondent encore à la clé anon :
+--   abonnements     2 lignes   (user_id + statut d'abonnement)
+--   commandes       3 lignes
+--   plats_menu      3 lignes   (catalogue)
+--   nutritionnistes 3 lignes   (catalogue, mdp_hash retiré)
+--   membre_public  26 lignes   (prénom, poids, tdee — une VUE, donc hors RLS :
+--                               c'est un GRANT, pas une policy)
+--
+-- 🔴 NE PAS EXÉCUTER CE BLOC AVANT QUE `main` NE SERVE LE CODE D'app-native.
+--    La prod déployée depuis `main` interroge Supabase avec la clé anon et
+--    RIEN d'autre (`index.html` : `Authorization: Bearer SB_KEY`, 7 fois).
+--    Ces quatre tables sont donc littéralement tout ce qui lui répond encore.
+--    Les fermer maintenant, c'est finir d'éteindre la prod ; les fermer après
+--    le déploiement, c'est refermer la dernière porte. L'ordre est : déployer,
+--    vérifier l'app connectée, puis coller ceci.
+--
+-- Le bloc pose d'abord la lecture `authenticated` là où elle manquerait — sans
+-- ça, retirer anon rendrait l'offre et le menu vides pour tout le monde — puis
+-- retire toute policy adressée à anon sur ces quatre tables. Idempotent.
+
+do $$
+declare p record;
+begin
+  if not exists (select 1 from pg_policies where schemaname='public'
+                  and tablename='abonnements' and policyname='abonnements_lire_soi') then
+    execute 'create policy abonnements_lire_soi on public.abonnements for select to authenticated using (auth.uid()::text = user_id)';
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public'
+                  and tablename='commandes' and policyname='commandes_soi') then
+    execute 'create policy commandes_soi on public.commandes for all to authenticated using (auth.uid()::text = user_id) with check (auth.uid()::text = user_id)';
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public'
+                  and tablename='plats_menu' and policyname='plats_menu_lecture') then
+    execute 'create policy plats_menu_lecture on public.plats_menu for select to authenticated using (true)';
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public'
+                  and tablename='nutritionnistes' and policyname='nutritionnistes_lecture') then
+    execute 'create policy nutritionnistes_lecture on public.nutritionnistes for select to authenticated using (actif = true)';
+  end if;
+
+  for p in select tablename, policyname from pg_policies
+            where schemaname='public'
+              and tablename in ('abonnements','commandes','plats_menu','nutritionnistes')
+              and 'anon' = any(roles)
+  loop
+    execute format('drop policy %I on public.%I', p.policyname, p.tablename);
+  end loop;
+end $$;
+
+-- La vue `membre_public` : Supabase accorde par défaut le SELECT à `anon` sur
+-- tout nouvel objet du schéma public. La vue est en security definer, donc ce
+-- grant contourne la RLS d'`onboarding` — c'est bien pour ça qu'elle existe,
+-- mais pour les membres CONNECTÉS, pas pour la clé publique.
+revoke select on public.membre_public from anon;
+
+-- Vérifier ensuite, avec la seule clé anon (doit renvoyer 0 ligne partout) :
+--   curl -s "$SB/rest/v1/abonnements?select=user_id" -H "apikey: <anon>" -H "Authorization: Bearer <anon>"
+
+
+-- ╔═══════════════════════════════════════════════════════════╗
 -- ║ VÉRIFICATIONS                                             ║
 -- ╚═══════════════════════════════════════════════════════════╝
 -- Où en est-on, table par table :
