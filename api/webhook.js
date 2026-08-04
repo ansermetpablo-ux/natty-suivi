@@ -49,7 +49,15 @@ export default async function handler(req) {
     const event = JSON.parse(rawBody);
 
     const SUPABASE_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
-    const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+    // La clé service d'abord. Ce handler écrit dans `abonnements` pour le
+    // compte d'un utilisateur qui n'est pas là — c'est Stripe qui appelle, pas
+    // un navigateur : aucun JWT ne peut accompagner la requête. Avec la seule
+    // clé anon, l'activation des abonnements s'arrêterait net le jour où la
+    // RLS est posée sur cette table (natty_rls.sql), et en silence : Stripe
+    // verrait un 200, la ligne ne serait jamais écrite.
+    // `SUPABASE_KEY` reste accepté pour ne rien casser si elle est déjà posée
+    // quelque part ; le repli anon en dur ne sert plus que de dernier recours.
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
 
     const supabase = async (path, method, body) => {
       return fetch(SUPABASE_URL + '/rest/v1/' + path, {
