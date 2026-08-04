@@ -983,10 +983,38 @@ let currentFilter='tous', currentSearch='', currentCatFilter='all', currentRdvFi
 let currentClient=null, semaineOffset=0, uploadedPhotoUrl=null;
 let chatMessagesMap={}, currentNutri=null, isMasterAdmin=false, selectedObjChips=[];
 
+/* ═══ SESSION DE L'ÉQUIPE ═══
+   Le back-office parle désormais à Supabase avec le JWT de la personne
+   connectée, plus avec la clé anon. C'est ce qui lui donne une identité
+   (`auth.uid()`) et rend possibles les policies RLS — sans ça, activer la RLS
+   rendait l'admin aveugle. Voir natty_staff.sql et natty_rls.sql. */
+const STAFF_SESSION_KEY = 'natty_staff_session';
+let STAFF_SESSION = null;
+let STAFF_ROLE = null;
+
+function lireStaffSession() {
+  try { const s = JSON.parse(localStorage.getItem(STAFF_SESSION_KEY)||'null');
+        return (s && s.access_token) ? s : null; } catch(e) { return null; }
+}
+function ecrireStaffSession(s) {
+  STAFF_SESSION = s;
+  try { s ? localStorage.setItem(STAFF_SESSION_KEY, JSON.stringify(s))
+          : localStorage.removeItem(STAFF_SESSION_KEY); } catch(e) {}
+}
+STAFF_SESSION = lireStaffSession();
+
+/* Le jeton porteur : celui de la session s'il y en a une, la clé anon sinon.
+   Le repli est ce qui laisse le back-office fonctionner tant que les comptes
+   d'équipe n'existent pas — il cessera d'être suffisant à la seconde où la
+   RLS sera activée, et c'est voulu. */
+function jetonStaff() {
+  return (STAFF_SESSION && STAFF_SESSION.access_token) || SB_KEY;
+}
+
 async function sb(path, options={}) {
   const res = await fetch(SB_URL+'/rest/v1/'+path, {
     ...options,
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation', ...(options.headers||{}) }
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer '+jetonStaff(), 'Content-Type': 'application/json', 'Prefer': 'return=representation', ...(options.headers||{}) }
   });
   const text = await res.text();
   if (!res.ok) throw new Error(text);
@@ -1038,7 +1066,10 @@ function toggleMasterLogin() {
 
 function logout() {
   localStorage.removeItem('nutri_session');
+  ecrireStaffSession(null);              // le JWT d'équipe part avec le reste
+  STAFF_ROLE = null;
   currentNutri=null; isMasterAdmin=false;
+  var b = document.getElementById('bandeauSecours'); if (b) b.remove();
   document.getElementById('mainApp').classList.remove('visible');
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('pwdInput').value='';
@@ -1124,6 +1155,22 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('ficheSendBtn').addEventListener('click', envoyerReponse);
   document.getElementById('ficheMessageInput').addEventListener('keydown', function(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();envoyerReponse();} });
   document.getElementById('ficheMessageInput').addEventListener('input', function() { this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,100)+'px'; });
+  // Reprise d'une session d'équipe : le JWT vaut mieux que l'ancienne
+  // session `nutri_session`, on l'essaie en premier. Si le jeton est périmé,
+  // la lecture de `staff` échoue et on retombe sur l'écran de connexion.
+  if (STAFF_SESSION && STAFF_SESSION.user_id) {
+    sb('staff?user_id=eq.'+STAFF_SESSION.user_id+'&select=*&limit=1').then(function(r){
+      var ligne = r && r[0];
+      if (!ligne || !ligne.actif) { ecrireStaffSession(null); return; }
+      STAFF_ROLE   = ligne.role;
+      currentRole  = STAFF_VERS_CONFIG[ligne.role] || 'admin';
+      isMasterAdmin = ligne.role === 'admin';
+      currentNutri = { nom: ligne.nom || 'Équipe', id: ligne.nutritionniste_id || null };
+      demarrerAppAvecRole();
+    }).catch(function(){ ecrireStaffSession(null); });
+    return;
+  }
+
   // Restore session
   const saved = localStorage.getItem('nutri_session');
   if (saved) {
@@ -2487,8 +2534,11 @@ function selectionnerRole(role) {
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginLogo').textContent = cfg.logo;
   document.getElementById('loginTitle').textContent = cfg.title;
-  document.getElementById('loginSubtitle').textContent = cfg.pwdOnly ? 'Entrez le mot de passe' : 'Connectez-vous';
-  document.getElementById('emailInput').style.display = cfg.pwdOnly ? 'none' : 'block';
+  // L'email est TOUJOURS demandé : la connexion passe par un vrai compte.
+  // Le rôle choisi ici ne sert plus qu'au mode de secours et à l'affichage —
+  // dès qu'un compte d'équipe existe, c'est la base qui décide du rôle.
+  document.getElementById('loginSubtitle').textContent = 'Connectez-vous avec votre compte';
+  document.getElementById('emailInput').style.display = 'block';
 }
 
 function retourRoleSelector() {
@@ -2497,48 +2547,135 @@ function retourRoleSelector() {
   currentRole = null;
 }
 
-// Override login to handle roles
-const origLogin = window.login;
-window.login = function() {
-  if (!currentRole) { selectionnerRole('admin'); return; }
-  const cfg = ROLE_CONFIG[currentRole];
-  const pwd = document.getElementById('pwdInput').value;
+/* ═══ CONNEXION ═══
+   Un seul chemin : un vrai compte Supabase Auth, et le rôle vient de la base
+   (table `staff`), pas d'un mot de passe partagé écrit dans cette page.
+
+   Le mode de secours en dessous n'existe que tant qu'AUCUN compte d'équipe
+   n'a été créé — `staff_configure()` le dit. Dès la première ligne insérée
+   dans `staff`, il se ferme tout seul, sans nouveau déploiement. */
+
+const STAFF_VERS_CONFIG = { admin:'admin', nutritionniste:'nutritionniste', chef:'chef', logistique:'commandes' };
+
+function afficherBandeauSecours() {
+  if (document.getElementById('bandeauSecours')) return;
+  const b = document.createElement('div');
+  b.id = 'bandeauSecours';
+  b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:900;background:#c0392b;color:#fff;'
+    + 'font-family:inherit;font-size:12.5px;font-weight:600;padding:10px 16px;text-align:center;line-height:1.45';
+  b.innerHTML = 'Connexion par mot de passe partagé — ces mots de passe sont lisibles dans le code de cette page. '
+    + 'Créez les comptes d\'équipe (natty_staff.sql) pour fermer cet accès.';
+  document.body.appendChild(b);
+}
+
+async function rpc(nom, args) {
+  const res = await fetch(SB_URL+'/rest/v1/rpc/'+nom, {
+    method:'POST',
+    headers:{ 'apikey':SB_KEY, 'Authorization':'Bearer '+jetonStaff(), 'Content-Type':'application/json' },
+    body: JSON.stringify(args||{})
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const t = await res.text();
+  return t ? JSON.parse(t) : null;
+}
+
+/* Y a-t-il au moins un compte d'équipe ? Si la fonction n'existe pas encore
+   (natty_staff.sql pas exécuté), on répond « non » : le mode de secours doit
+   rester ouvert, sinon plus personne n'entre dans le back-office. */
+async function staffConfigure() {
+  try { return (await rpc('staff_configure')) === true; }
+  catch(e) { return false; }
+}
+
+async function connexionSupabase(email, pwd) {
+  const res = await fetch(SB_URL+'/auth/v1/token?grant_type=password', {
+    method:'POST',
+    headers:{ 'apikey':SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ email:email, password:pwd })
+  });
+  const d = await res.json().catch(()=>null);
+  if (!res.ok || !d || !d.access_token) return null;
+  return { access_token:d.access_token, refresh_token:d.refresh_token||'', user_id:(d.user&&d.user.id)||'' };
+}
+
+window.login = async function() {
+  const pwd   = document.getElementById('pwdInput').value;
   const email = document.getElementById('emailInput').value.trim();
   const errEl = document.getElementById('loginErr');
   errEl.textContent = '';
 
-  if (currentRole === 'admin') {
-    if (pwd === MASTER_PWD) {
-      isMasterAdmin = true; currentNutri = {nom:'Admin',id:null};
+  if (email && pwd) {
+    const session = await connexionSupabase(email, pwd);
+    if (session) {
+      ecrireStaffSession(session);
+      // Le rôle vient de la base. Sa propre ligne, et rien d'autre : la
+      // policy `staff_lire_soi` ne laisse voir que celle-là.
+      let ligne = null;
+      try { ligne = (await sb('staff?user_id=eq.'+session.user_id+'&select=*&limit=1'))[0] || null; } catch(e) {}
+      if (!ligne || !ligne.actif) {
+        ecrireStaffSession(null);
+        errEl.textContent = "Ce compte n'appartient pas à l'équipe.";
+        return;
+      }
+      STAFF_ROLE   = ligne.role;
+      currentRole  = STAFF_VERS_CONFIG[ligne.role] || 'admin';
+      isMasterAdmin = ligne.role === 'admin';
+      currentNutri = { nom: ligne.nom || email.split('@')[0], id: ligne.nutritionniste_id || null };
       demarrerAppAvecRole();
-    } else { errEl.textContent = 'Mot de passe incorrect'; }
-    return;
+      return;
+    }
+    // Identifiants refusés par Supabase : on ne bascule sur le secours que si
+    // aucun compte d'équipe n'existe encore.
+    if (await staffConfigure()) { errEl.textContent = 'Email ou mot de passe incorrect'; return; }
   }
-  if (currentRole === 'chef' || currentRole === 'commandes') {
-    if (pwd === MASTER_PWD || pwd === 'Chef2026!' || pwd === 'Logistique2026!') {
-      isMasterAdmin = false;
-      currentNutri = {nom: currentRole === 'chef' ? 'Chef' : 'Logistique', id:null};
-      demarrerAppAvecRole();
-    } else { errEl.textContent = 'Mot de passe incorrect'; }
-    return;
-  }
-  // nutritionniste: email + pwd
-  if (!email || !pwd) { errEl.textContent = 'Email et mot de passe requis'; return; }
-  sb('nutritionnistes?email=eq.'+encodeURIComponent(email)+'&actif=eq.true&select=*')
-    .then(nutris => {
-      if (!nutris||!nutris.length) { errEl.textContent='Email introuvable'; return; }
-      const nutri = nutris[0];
-      if (btoa(pwd) !== nutri.mdp_hash) { errEl.textContent='Mot de passe incorrect'; return; }
-      currentNutri = nutri; isMasterAdmin = false;
-      localStorage.setItem('nutri_session', JSON.stringify({id:nutri.id, email:nutri.email}));
-      demarrerAppAvecRole();
-    }).catch(e => { errEl.textContent = 'Erreur : '+e.message; });
+
+  await connexionDeSecours(email, pwd, errEl);
 };
 
-function demarrerAppAvecRole() {
+/* ⚠️ MODE DE SECOURS — mots de passe partagés, écrits dans cette page, donc
+   lisibles par quiconque ouvre le code source. Il ne survit que jusqu'à la
+   création du premier compte d'équipe (natty_staff.sql § 3), après quoi
+   `staff_configure()` renvoie true et ce chemin devient inaccessible. */
+async function connexionDeSecours(email, pwd, errEl) {
+  if (await staffConfigure()) {
+    errEl.textContent = 'Email et mot de passe requis';
+    return;
+  }
+  if (!currentRole) { selectionnerRole('admin'); return; }
+
+  if (currentRole === 'admin' && pwd === MASTER_PWD) {
+    isMasterAdmin = true; currentNutri = {nom:'Admin',id:null};
+    return demarrerAppAvecRole(true);
+  }
+  if ((currentRole === 'chef' || currentRole === 'commandes')
+      && (pwd === MASTER_PWD || pwd === 'Chef2026!' || pwd === 'Logistique2026!')) {
+    isMasterAdmin = false;
+    currentNutri = {nom: currentRole === 'chef' ? 'Chef' : 'Logistique', id:null};
+    return demarrerAppAvecRole(true);
+  }
+  if (currentRole === 'nutritionniste') {
+    if (!email || !pwd) { errEl.textContent = 'Email et mot de passe requis'; return; }
+    try {
+      const nutris = await sb('nutritionnistes?email=eq.'+encodeURIComponent(email)+'&actif=eq.true&select=*');
+      if (!nutris || !nutris.length) { errEl.textContent = 'Email introuvable'; return; }
+      const nutri = nutris[0];
+      if (btoa(pwd) !== nutri.mdp_hash) { errEl.textContent = 'Mot de passe incorrect'; return; }
+      currentNutri = nutri; isMasterAdmin = false;
+      localStorage.setItem('nutri_session', JSON.stringify({id:nutri.id, email:nutri.email}));
+      return demarrerAppAvecRole(true);
+    } catch(e) { errEl.textContent = 'Erreur : '+e.message; return; }
+  }
+  errEl.textContent = 'Mot de passe incorrect';
+}
+
+function demarrerAppAvecRole(deSecours) {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').classList.add('visible');
   document.getElementById('nutriBadgeName').textContent = isMasterAdmin ? 'Admin' : (currentNutri.nom||'').split(' ')[0];
+
+  // Entré par le mode de secours : le dire, en évidence. Un back-office
+  // ouvert par un mot de passe partagé ne doit pas avoir l'air normal.
+  if (deSecours) afficherBandeauSecours();
 
   // Show/hide tabs based on role
   const cfg = currentRole ? ROLE_CONFIG[currentRole] : ROLE_CONFIG.admin;

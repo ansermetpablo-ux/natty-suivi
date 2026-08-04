@@ -329,22 +329,27 @@ grant select on public.nutritionnistes_publics to authenticated;
 
 
 -- ╔═══════════════════════════════════════════════════════════╗
--- ║ LE BLOQUEUR TRANSVERSAL : admin.html                      ║
+-- ║ LE BLOQUEUR TRANSVERSAL : admin.html — côté app, c'est fait║
 -- ╚═══════════════════════════════════════════════════════════╝
--- admin.html s'authentifie avec des mots de passe EN DUR dans le HTML
--- (Natty2026! / Chef2026! / Logistique2026!) et parle à Supabase avec la clé
--- anon. Il n'a donc aucune identité au sens de la base : `auth.uid()` y est
--- nul, et toute policy `to authenticated` l'exclut.
+-- admin.html s'authentifiait avec des mots de passe EN DUR dans le HTML
+-- (Natty2026! / Chef2026! / Logistique2026!) et parlait à Supabase avec la clé
+-- anon : aucune identité au sens de la base, donc toute policy
+-- `to authenticated` l'excluait.
 --
--- Deux issues, à trancher avec Pablo :
---   A. Comptes Supabase Auth pour l'équipe + une colonne de rôle, et des
---      policies « ou bien je suis le propriétaire, ou bien je suis staff ».
---      C'est la bonne fin, et elle supprime les mots de passe en dur.
---   B. Faire passer l'admin par des endpoints serveur qui utilisent
---      SUPABASE_SERVICE_KEY. Plus rapide, mais déplace le problème : il faut
---      alors protéger ces endpoints, donc de toute façon une vraie auth.
+-- Pablo a tranché pour l'option A (2026-08-03). C'est fait côté application :
+-- le back-office se connecte par Supabase Auth, envoie le JWT de la personne
+-- connectée à PostgREST, et lit son rôle dans la table `staff`.
 --
--- Tant que ce point n'est pas réglé, l'ÉTAPE 2 casse le back-office.
+-- ⚠️ IL RESTE À CRÉER LES COMPTES : voir **natty_staff.sql**, § 1 à 3. Tant
+--    qu'aucun compte n'existe, admin.html accepte encore les anciens mots de
+--    passe (avec un bandeau rouge qui le dit) pour ne enfermer personne
+--    dehors — et ce secours se ferme TOUT SEUL dès la première ligne insérée
+--    dans `staff`, sans nouveau déploiement.
+--
+-- Les policies qui rouvrent les tables à l'équipe sont au § 5 de
+-- natty_staff.sql : à exécuter EN MÊME TEMPS que l'étape 2 ci-dessus, jamais
+-- avant le § 3 — sinon `est_staff()` ne reconnaît personne et l'admin reste
+-- aveugle.
 
 
 -- ╔═══════════════════════════════════════════════════════════╗

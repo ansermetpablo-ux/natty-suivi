@@ -1340,18 +1340,24 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   Le plan est écrit dans **`natty_rls.sql`**, en trois étapes, avec la marche arrière pour
   chacune. L'étape 1 (`push_etat`, `appareils`) est **sans risque et exécutable tout de
   suite**. Les étapes 2 et 3 sont bloquées par deux points, détaillés dans le fichier :
-  1. **`admin.html` n'a aucune identité en base** (mots de passe en dur + clé anon) : dès
-     que les tables passent en RLS, le back-office ne voit plus rien. Il faut d'abord des
-     comptes Supabase Auth pour l'équipe, ou faire passer l'admin par des endpoints serveur.
-  2. **Le fil social lit `meals`, `onboarding` et `questionnaire_alim` pour les autres
-     membres.** Or la RLS filtre des lignes, pas des colonnes : autoriser la lecture de la
-     ligne `onboarding` d'un membre pour son prénom livre aussi son email et son âge. Il
-     faut d'abord une vue `membre_public` et y faire pointer `social.js`.
-  Et un point de migration : `core.js` retombe sur la clé anon sans session, donc les
-  utilisateurs connectés avant la bascule JWT verraient un écran vide au lieu d'être
-  renvoyés vers `login.html`.
-- Remplacer mots de passe hardcodés par auth Supabase — **c'est le même chantier que la RLS**
-  (point 1 ci-dessus), pas un sujet séparé.
+  1. ✅ **`admin.html` a maintenant une identité en base** (option A, tranchée par Pablo le
+     2026-08-03). Le back-office se connecte par Supabase Auth, envoie le JWT de la personne
+     connectée à PostgREST, et lit son rôle dans la table `staff` (voir `natty_staff.sql`).
+     🔴 **Reste à créer les comptes** (§ 1 à 3 du fichier) : tant qu'il n'y en a aucun,
+     l'admin accepte encore les anciens mots de passe, avec un bandeau rouge qui le dit.
+     Ce secours **se ferme tout seul** dès la première ligne insérée dans `staff` —
+     `staff_configure()` bascule à `true` et plus aucun mot de passe partagé ne passe,
+     sans nouveau déploiement. Vérifié en simulant les deux états.
+  2. ✅ **Fil social** : `social.js` lit désormais la vue `membre_public` au lieu
+     d'`onboarding`/`questionnaire_alim` (commit `b7b6b9d`, session parallèle). La RLS
+     filtrant des lignes et non des colonnes, c'est la vue qui restreint les colonnes.
+  Et un point de migration, toujours ouvert : `core.js` retombe sur la clé anon sans
+  session, donc les utilisateurs connectés avant la bascule JWT verraient un écran vide au
+  lieu d'être renvoyés vers `login.html`.
+- 🔴 **`nutritionnistes.mdp_hash` n'est pas un hachage, c'est du base64** — réversible en une
+  ligne, et la table est lisible avec la clé anon publique : les mots de passe de toute
+  l'équipe sont en clair pour qui sait regarder. La colonne disparaît une fois chaque
+  nutritionniste doté d'un compte Auth (fin de `natty_staff.sql`).
 - Valider côté serveur que `priceId` dans `api/checkout.js` fait bien partie de `PRICE_3`/`PRICE_4` (actuellement non vérifié).
 
 ### ✅ Fait (sessions précédentes)
