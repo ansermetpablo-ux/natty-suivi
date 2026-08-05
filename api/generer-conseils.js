@@ -25,11 +25,14 @@
 
 import { processUser, getLundiSemaine } from './_generation.js';
 
-// Vercel coupe la fonction à `maxDuration`. Le défaut ne suffit pas ici : un
-// appel mesuré à 56 s doit avoir de la marge, notamment quand l'API répond plus
-// lentement qu'à l'accoutumée. Mesuré sur ce déploiement : une fonction a tenu
-// 204 s sans être coupée, donc 120 s est accordé sans risque de refus au build.
-export const maxDuration = 120;
+// Vercel coupe la fonction à `maxDuration`, et une coupure au milieu de l'appel
+// n'écrit RIEN : ni conseils, ni recettes, ni plats macro.
+// ⚠️ Porté de 120 s à 180 s (août 2026). La génération produit maintenant aussi
+// les trois plats macro de la planification : **mesuré 85 s** contre ~56 s quand
+// 120 avait été choisi. 120 laissait 35 s de marge à un appel qui varie de
+// plusieurs dizaines de secondes selon la charge d'Anthropic. Mesuré sur ce
+// déploiement : une fonction a tenu 204 s sans être coupée.
+export const maxDuration = 180;
 
 const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';

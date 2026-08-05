@@ -489,17 +489,29 @@ si une génération occupe déjà le plein écran, ou si un plat est en cours d'
     pas — souvent ceux qu'il expédie. Elle vaut `0,55`.
   - Une case porte la **moyenne** par repas, pas le cumul : quatre lundis midis enregistrés ne
     doivent pas passer pour un excédent.
-- Les **3 plats macro** sont demandés à `/api/claude` à partir des conseils **déjà écrits en
-  base** (jamais une régénération de la semaine). Appel court, **fail-open** : au moindre
-  accroc un trio de repli local prend la place et la séquence continue.
-- Les **2 recettes** sont celles de la semaine, lues dans `profil_conseils.conseils_json` —
-  exactement celles qu'affiche `repas.html`.
+- **Ce module n'appelle plus l'IA du tout** (août 2026, demande de Pablo : « la génération
+  doit être unique »). Les **3 plats macro** ET les **2 recettes** sortent de la génération de
+  la semaine, lues dans `profil_conseils.conseils_json` (`plats_macro` et `recettes`). Un trio
+  de repli local reste, pour les lignes générées avant ce changement.
+  > ⚠️ Avant, la planification faisait un **second** appel à `/api/claude` : deux factures pour
+  > une semaine, ~10 s d'attente de plus, et deux avis qui pouvaient se contredire — les
+  > conseils disant une chose, les plats placés en illustrant une autre. Ils sont désormais
+  > demandés dans le MÊME appel, ce qui est aussi la seule façon qu'un plat « protéines »
+  > découle vraiment du conseil protéines écrit le même jour.
 
 **Total : 5 repas sur 21**, et c'est ce que dit le compteur.
 
-⚠️ **Dépendance** : sans la génération de la semaine il n'y a ni recettes ni axes macro à
-placer. Si elle manque, la séquence la déclenche (`NattyGeneration.lancer()`) et s'efface le
-temps que l'autre écran passe.
+⚠️ **Dépendance, et ORDRE.** Sans la génération de la semaine il n'y a ni recettes ni plats à
+placer. Si elle manque : on la fait faire d'abord (`NattyGeneration.lancer()`, son propre plein
+écran ~85 s), on la stocke, et **seulement ensuite** l'animation de planification commence.
+Avant, elle était lancée *pendant* cette animation, qu'il fallait masquer puis rallumer — deux
+attentes empilées dont une qui mentait sur ce qui se passait. Si la génération n'aboutit pas, la
+séquence le dit (`scEchecGeneration`) plutôt que de placer trois plats de repli en les faisant
+passer pour personnalisés.
+
+**La mise en scène de la planification dure 3,6 s**, plus les quelques centaines de
+millisecondes du calcul. Elle durait 15 s quand il y avait un appel à l'IA ici : garder ce
+compte à rebours maintenant serait une attente inventée, et ça se voit.
 
 **Persistance** : table `planning_semaine` (`natty_planning.sql`, §4). Tant qu'elle n'existe
 pas le plan vit dans le `localStorage` de l'appareil — et l'écran **le dit** plutôt que de
@@ -545,6 +557,14 @@ vide.
 > ment pas. Le module écoute `natty:repas-ajoute` (émis sur **`window`**, contrairement à
 > `natty:conseils-prets` / `natty:planning-pret` qui passent par `document`) et se recalcule ;
 > l'écran hôte n'a rien à faire.
+
+**La carte « Ma semaine » est NOIRE et petite** (`--metal-black`, comme le panneau qui existait
+déjà dans `repas.html`). ⚠️ **Les jours sont en COLONNES, les créneaux en lignes** : la première
+version faisait l'inverse, sept rangées, une carte plus haute que le repas du jour lui-même —
+alors qu'on ne vient pas sur cet écran pour lire un planning. Trois lignes suffisent, la semaine
+tient en ~115 px, et c'est la grammaire d'un calendrier Apple : petit, dense, muet tant qu'on ne
+le touche pas. La fiche `detail()` est noire elle aussi : tout ce qui touche à la planification
+l'est.
 
 **Dans `repas.html`** : `#planWrap` vit **hors** de `#content`, que `render()` remplace en
 entier — à l'intérieur, le calendrier disparaîtrait au premier tap sur une vignette. Taper une
@@ -747,7 +767,7 @@ régénère) :
 | Colonne | Lue par |
 |---|---|
 | `conseil_prot` … `conseil_points_forts` | overlay « Conseils personnalisés » de `suivi.html`, cartes de `coaching.html` |
-| `conseils_json` = `{recettes:[schéma app], nb_repas, conseils, genere_le}` | `repas.html` et la liste de courses de `coaching.html`, via `NattyReco.recettesDeLaSemaine` |
+| `conseils_json` = `{recettes:[schéma app], plats_macro, nb_repas, conseils, genere_le}` | `.recettes` → `repas.html` et la liste de courses de `coaching.html` (via `NattyReco.recettesDeLaSemaine`) ; `.plats_macro` → la planification de la semaine (`assets/planning.js`) |
 | `recettes_json` (schéma d'affichage : `emoji`, `macros.prot/gluc/lip/cal`, étapes en chaînes) | overlay « Mes recettes » de `suivi.html` |
 | `liste_courses_json` | overlay « Liste de courses » de `suivi.html` |
 
@@ -755,6 +775,18 @@ régénère) :
 > `recettes`** (son schéma d'affichage), alors que la génération navigateur y écrivait
 > `{recettes:[…]}`. Après un passage du cron, `NattyReco.lireCache()` ne trouvait donc rien et
 > l'écran Repas reproposait « Générer » indéfiniment. Un seul écrivain, un seul schéma.
+
+**`plats_macro` — les trois plats de la planification, ajoutés en août 2026.** Un par
+macronutriment, dans l'ordre p → g → l, plus simples qu'une recette (pas d'étapes). Ils sont
+demandés ICI et non par `assets/planning.js`, parce que ce sont les mêmes que les conseils :
+un plat « protéines » n'a de sens que s'il découle du conseil protéines écrit le même jour.
+- `MAX_TOKENS` porté de `3200×n + 1600` à `+1400` : un plafond trop juste tronque le JSON
+  entier, et c'est la **fin** de la réponse qui saute — donc précisément ce qu'on vient
+  d'ajouter.
+- ⚠️ **La génération dure maintenant ~85 s** (mesuré contre l'API réelle le 2026-08-05, contre
+  ~71 s avant). Deux marges ont bougé en conséquence : `maxDuration` de `generer-conseils`
+  (120 → 180 s) et le `BUDGET_MS` du cron (230 → 180 s — le test regarde le temps *écoulé*, pas
+  celui qui reste, donc à 230 s un utilisateur entamé à 229 s se faisait couper).
 
 `recettes_json` et `liste_courses_json` sont **dérivées** des recettes (`versAffichage()`,
 `listeDeCourses()`), jamais redemandées à l'IA : deux textes différents décriraient sinon le même
@@ -1598,6 +1630,13 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   « Je prépare / J'achète », et « Tout voir d'un coup » vers la grille. Vérifié : les choix
   tiennent en revenant en arrière, une seule carte dans le DOM après sept passages (pas
   d'empilement, cf. le bug connu de `narration.html`).
+- ✅ **Génération unique** (août 2026, demande de Pablo) : les 3 plats macro sortent du même
+  appel que les conseils et les recettes (`conseils_json.plats_macro`). `assets/planning.js`
+  n'appelle plus l'IA du tout — il lit et place. **Vérifié contre l'API réelle** : 6/6 conseils,
+  2 recettes de 11 et 10 étapes, 3/3 plats macro avec leurs macros et leur « pourquoi » ancré
+  dans le profil, aucune clé `illu` inconnue, JSON complet (15 730 caractères) en **85,4 s**.
+- ✅ **Carte « Ma semaine » refaite** : noire, jours en colonnes, ~115 px de haut au lieu d'une
+  carte plus haute que le repas du jour. La fiche d'un repas passe au noir aussi.
 - 🔄 **Les 3 plats macro n'ont pas de photo** — seulement leur emoji. Les deux seules photos de
   plats du dépôt (`plat-demo1/2-week.png`) sont des plats précis : les coller sur « Poulet
   rôti » serait un mensonge à l'écran. Il faut de vraies photos, fournies par Pablo (règle §9
@@ -2228,3 +2267,15 @@ session « fil social » :*
   jours (sept scènes auraient fait clignoter le bouton d'action sept fois), avec bascule vers
   la grille par « Tout voir d'un coup ».
 - Le module écoute lui-même `natty:repas-ajoute` : l'écran hôte n'a rien à brancher.
+
+*Troisième passe de la même session (5 août 2026) — une seule génération, et une carte discrète :*
+- **`api/_generation.js` produit désormais `plats_macro`** (3 plats, un par macro) dans le même
+  appel que les conseils et les recettes. `assets/planning.js` les LIT : il n'appelle plus
+  `/api/claude`. Un seul avis pour la semaine, une seule facture.
+- Deux marges recalées sur la mesure réelle (85,4 s) : `maxDuration` de `api/generer-conseils`
+  120 → 180 s, `BUDGET_MS` d'`api/conseils-hebdo` 230 → 180 s.
+- **Ordre de la séquence corrigé** : générer d'abord, stocker, animer ensuite — au lieu de
+  masquer/rallumer l'animation de planification autour du plein écran de génération.
+- La mise en scène de la planification passe de 15 s à **3,6 s** : il n'y a plus d'appel à
+  attendre, et une attente inventée se voit.
+- **Carte « Ma semaine » : noire, jours en colonnes, trois lignes.** La fiche d'un repas suit.

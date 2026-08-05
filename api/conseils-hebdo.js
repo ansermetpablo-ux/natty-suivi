@@ -15,7 +15,13 @@ export const maxDuration = 300;
 // Un utilisateur coupé au milieu de son appel Claude est de l'API payée pour
 // rien ; les 12 crons du lundi (toutes les 5 min) reprendront de toute façon là
 // où celui-ci s'est arrêté, puisque processUser saute ceux qui sont déjà faits.
-const BUDGET_MS = 230 * 1000;
+// ⚠️ Abaissé de 230 s à 180 s (août 2026), depuis que la génération produit
+// aussi les trois plats macro : **mesuré 85 s** contre ~71 s avant. Le test
+// ci-dessous regarde le temps ÉCOULÉ, pas celui qu'il reste — à 230 s, un
+// utilisateur entamé à 229 s finissait vers 339 s et se faisait couper par
+// `maxDuration`, c'est-à-dire exactement le gâchis que cette marge existe pour
+// éviter. À 180 s, le dernier entamé termine vers 290 s.
+const BUDGET_MS = 180 * 1000;
 
 export default async function handler(req, res) {
   const depart = Date.now();

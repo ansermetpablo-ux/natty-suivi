@@ -17,15 +17,16 @@
      case à la cible du créneau. Le repas « protéines » va là où il manque le
      plus de protéines. Aucune IA, donc aucune latence et un résultat qu'on peut
      expliquer ligne à ligne — c'est exactement ce que Pablo a demandé.
-   • Les 3 PLATS macro, eux, sont demandés à `/api/claude` (appel court, ~10 s)
-     à partir des conseils de la semaine déjà en base. Fail-open : si l'appel
-     échoue, un trio de repli local prend la place et la séquence continue.
-   • Les 2 RECETTES ne sont pas régénérées : ce sont celles de la semaine, lues
-     dans `profil_conseils` — les mêmes que celles affichées par `repas.html`.
+   • CE MODULE N'APPELLE PLUS L'IA DU TOUT. Les 3 plats macro ET les 2 recettes
+     viennent tous de la génération de la semaine, lue dans `profil_conseils` —
+     ce sont les mêmes objets que ceux affichés par `repas.html` et par les
+     conseils. Une génération, une facture, un seul avis pour la semaine.
 
-   ⚠️ DÉPENDANCE. La séquence a besoin de la génération de la semaine. Si elle
-   n'a pas eu lieu, on la déclenche (`NattyGeneration.lancer()`) et on reprend
-   après : on ne planifie pas des repas qui n'existent pas.
+   ⚠️ DÉPENDANCE, ET ORDRE. La séquence a besoin de cette génération. Si elle
+   n'a pas eu lieu, on la fait faire D'ABORD (`NattyGeneration.lancer()`, son
+   propre plein écran), on la stocke, et l'animation de planification ne
+   commence qu'ensuite : on ne planifie pas des repas qui n'existent pas, et on
+   ne montre pas deux attentes l'une par-dessus l'autre.
 
    Dépend de `assets/core.js`. Utilise `assets/generation.js` et
    `assets/reco.js` s'ils sont chargés, et sait s'en passer.
@@ -321,11 +322,20 @@ window.NattyPlanning = (function () {
   }
 
   /* ═══ 4. Les trois plats macro ═══════════════════════════
-     Demandés à l'IA à partir des conseils DÉJÀ écrits en base : on ne relance
-     jamais la génération de la semaine pour ça. Appel court (un objet JSON de
-     trois plats), donc rapide — il tient dans l'animation de planification.
-     ⚠️ Fail-open : au moindre accroc, le trio de repli prend la place. Une
-     planification qui échoue parce qu'une suggestion manque serait absurde. */
+     ILS NE SONT PLUS DEMANDÉS ICI. Ils sortent de la génération de la semaine,
+     au même titre que les conseils et les recettes — parce que ce sont les
+     mêmes : un plat « protéines » n'a de sens que s'il découle du conseil
+     protéines écrit le même jour. Voir `plats_macro` dans `api/_generation.js`.
+
+     ⚠️ Ce que ça change, et pourquoi c'est mieux : la planification faisait un
+     SECOND appel à `/api/claude`. Donc deux factures pour une semaine, ~10 s
+     d'attente de plus, et surtout deux avis qui pouvaient se contredire — les
+     conseils disant une chose, les plats placés en illustrant une autre.
+     Désormais la séquence ne fait que lire et placer : elle est immédiate.
+
+     Le trio de repli reste, pour les lignes générées AVANT ce changement : elles
+     n'ont pas de `plats_macro`, et une semaine déjà payée ne doit pas être
+     régénérée pour trois plats. */
   var REPLI = [
     { macro: 'p', nom: 'Poulet rôti, quinoa et brocoli', em: '🍗', p: 46, g: 38, l: 11, kcal: 445,
       pourquoi: 'Une base simple qui apporte l’essentiel des protéines du créneau.',
@@ -338,64 +348,28 @@ window.NattyPlanning = (function () {
       ingredients: [{ em: '🐟', nom: 'Saumon', qte: '130 g' }, { em: '🥑', nom: 'Avocat', qte: '80 g' }, { em: '🍚', nom: 'Riz', qte: '90 g' }] }
   ];
 
-  function extraireJson(t) {
-    if (!t) return null;
-    var i = t.indexOf('{'), j = t.lastIndexOf('}');
-    if (i < 0 || j <= i) return null;
-    try { return JSON.parse(t.slice(i, j + 1)); } catch (e) { return null; }
-  }
-
-  async function platsMacro(conseils, cbl, analyse) {
-    var creux = ['p', 'g', 'l'].map(function (m) {
-      var meilleur = null;
-      for (var i = 0; i < 7; i++) for (var j = 0; j < 3; j++) {
-        var c = analyse.cases[i][j];
-        if (!meilleur || c.manque[m] > meilleur.v) meilleur = { v: c.manque[m], i: i, j: j };
-      }
-      return MACROS[m].nom + ' : il en manque surtout le ' + JOURS[meilleur.i].toLowerCase()
-           + ' au créneau « ' + CRENEAUX[meilleur.j].nom.toLowerCase() + ' »';
-    }).join('\n');
-
-    var p = 'Tu es le nutritionniste de cette personne. Propose exactement TROIS plats,'
-      + ' un par macronutriment, à intégrer dans sa semaine.\n\n'
-      + 'CIBLES PAR REPAS : ' + cbl.repas.p + ' g de protéines, ' + cbl.repas.g + ' g de glucides, '
-      + cbl.repas.l + ' g de lipides, ' + cbl.repas.c + ' kcal.\n\n'
-      + 'CE QUI MANQUE, ET QUAND :\n' + creux + '\n\n'
-      + 'CONSEILS DE LA SEMAINE, déjà écrits pour elle :\n'
-      + '- Protéines : ' + ((conseils && conseils.conseil_prot) || '—') + '\n'
-      + '- Glucides : ' + ((conseils && conseils.conseil_gluc) || '—') + '\n'
-      + '- Lipides : ' + ((conseils && conseils.conseil_lip) || '—') + '\n\n'
-      + 'Chaque plat doit corriger SA macro sans faire exploser les deux autres,'
-      + ' rester réalisable en moins de 30 minutes, et être courant en France.\n\n'
-      + 'Réponds UNIQUEMENT par un objet JSON, sans texte autour :\n'
-      + '{"repas":[{"macro":"p","nom":"Nom du plat","em":"🍗",'
-      + '"pourquoi":"une phrase, adressée à la personne","p":45,"g":40,"l":12,"kcal":450,'
-      + '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g"}]}]}\n'
-      + 'Les macros sont des nombres en grammes pour UNE portion. L\'ordre : "p", puis "g", puis "l".';
-
-    try {
-      var r = await fetch(Natty.API + '/api/claude', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: p, max_tokens: 1400 })
-      });
-      if (!r.ok) throw new Error('http');
-      var d = await r.json();
-      var out = extraireJson(d.text);
-      var liste = out && out.repas;
-      if (!liste || !liste.length) throw new Error('vide');
-      // On garantit l'ordre p/g/l : le placement s'y fie.
-      return ['p', 'g', 'l'].map(function (m, k) {
-        var t = liste.filter(function (x) { return x && x.macro === m; })[0] || liste[k];
-        if (!t || !t.nom) return REPLI[k];
-        return {
-          macro: m, nom: t.nom, em: t.em || MACROS[m].em, pourquoi: t.pourquoi || '',
-          p: +t.p || 0, g: +t.g || 0, l: +t.l || 0, kcal: +t.kcal || 0,
-          ingredients: Array.isArray(t.ingredients) ? t.ingredients : []
-        };
-      });
-    } catch (e) {
-      return REPLI.slice();
-    }
+  /**
+   * Les trois plats de la ligne `profil_conseils`, dans l'ordre p → g → l.
+   * @param {object} ligne  la ligne de la semaine
+   * @returns {Array} trois plats ; le repli local si la génération n'en a pas.
+   */
+  function platsMacro(ligne) {
+    var j = ligne && ligne.conseils_json;
+    if (typeof j === 'string') { try { j = JSON.parse(j); } catch (e) { j = null; } }
+    var liste = j && j.plats_macro;
+    if (!Array.isArray(liste) || !liste.length) return REPLI.slice();
+    // Le serveur range déjà p/g/l, mais le placement s'y FIE : on ne suppose
+    // pas, on remet dans l'ordre, et un trou est comblé par le repli plutôt que
+    // de décaler les deux autres macros d'un cran.
+    return ['p', 'g', 'l'].map(function (m, k) {
+      var t = liste.filter(function (x) { return x && x.macro === m; })[0];
+      if (!t || !t.nom) return REPLI[k];
+      return {
+        macro: m, nom: t.nom, em: t.em || MACROS[m].em, pourquoi: t.pourquoi || '',
+        p: +t.p || 0, g: +t.g || 0, l: +t.l || 0, kcal: +t.kcal || 0,
+        ingredients: Array.isArray(t.ingredients) ? t.ingredients : []
+      };
+    });
   }
 
   /* ═══ 5. Style ═══════════════════════════════════════════
@@ -1000,16 +974,37 @@ window.NattyPlanning = (function () {
     b.textContent = n === 0 ? 'Choisissez au moins un repas' : 'Planifier';
   }
 
-  /* Scène 5 — la planification. Le texte nomme l'étape réellement en cours ;
-     la barre suit le temps, mais n'atteint 100 % que quand le plan existe. */
+  /* Scène 5 — la planification.
+     ⚠️ Les durées ont été divisées par trois : depuis que les plats macro
+     viennent de la génération, il n'y a plus d'appel à l'IA ici. Tout est de la
+     lecture et du calcul local — quelques centaines de millisecondes. Garder un
+     compte à rebours de quinze secondes serait une attente inventée, et ça se
+     voit. On garde une mise en scène courte, parce qu'un écran qui change trois
+     fois de texte en 200 ms ne se lit pas non plus. */
   var ETAPES = [
     { t: 0,    em: '🍽️', txt: 'Relecture de vos quatre dernières semaines' },
-    { t: 2600, em: '📊', txt: 'Repérage de vos creux, jour par jour' },
-    { t: 6000, em: '🥩', txt: 'Composition de vos trois repas macro' },
-    { t: 11000, em: '📅', txt: 'Placement dans votre semaine' }
+    { t: 1100, em: '📊', txt: 'Repérage de vos creux, jour par jour' },
+    { t: 2300, em: '📅', txt: 'Placement dans votre semaine' }
   ];
+  var DUREE_MISE_EN_SCENE = 3600;
 
   async function lancerPlanification() {
+    /* ── D'abord la génération de la semaine, s'il le faut ──
+       Elle a son propre plein écran et prend ~1 min. La lancer PENDANT
+       l'animation de planification obligeait à masquer celle-ci puis à la
+       rallumer : deux attentes empilées, dont une qui mentait sur ce qui se
+       passait. Maintenant : on génère, on stocke, ET SEULEMENT ENSUITE on
+       anime. */
+    if (!etat.conseils && window.NattyGeneration) {
+      fermer();                       // on rend l'écran à NattyGeneration
+      try { etat.conseils = await NattyGeneration.lancer(); }
+      catch (e) { etat.conseils = null; }
+      monter();                       // et on le reprend
+      ouvert = true;
+      if (!etat.conseils) { scEchecGeneration(); return; }
+    }
+    if (etat.conseils) etat.recettes = recettesDe(etat.conseils);
+
     var debut = Date.now(), fini = false, part = 0;
 
     scene({
@@ -1026,7 +1021,7 @@ window.NattyPlanning = (function () {
       if (fini) return;
       var e = Date.now() - debut, i = 0;
       for (var k = 0; k < ETAPES.length; k++) if (e >= ETAPES[k].t) i = k;
-      var v = Math.min(94, Math.round(e / 15000 * 94));
+      var v = Math.min(94, Math.round(e / DUREE_MISE_EN_SCENE * 94));
       if (v > part) {
         part = v;
         var b = document.getElementById('nplBar');
@@ -1047,22 +1042,10 @@ window.NattyPlanning = (function () {
     function stop() { clearInterval(tic); fini = true; }
 
     try {
-      /* Les conseils de la semaine sont la matière première : sans eux, il n'y
-         a ni recettes ni axes macro à placer. On les fait générer plutôt que de
-         planifier dans le vide — `NattyGeneration` a son propre écran, on
-         s'efface le temps qu'il passe. */
-      var ligne = etat.conseils;
-      if (!ligne && window.NattyGeneration) {
-        if (racine) racine.style.opacity = '0';
-        ligne = await NattyGeneration.lancer();
-        if (racine) racine.style.opacity = '';
-        etat.conseils = ligne;
-      }
-      if (ligne) etat.recettes = recettesDe(ligne);
-
       var cbl = await cibles();
       var analyse = await analyser(cbl);
-      var plats = await platsMacro(etat.conseils, cbl, analyse);
+      // Lecture, pas génération : les trois plats sont ceux de la semaine.
+      var plats = platsMacro(etat.conseils);
       var repas = placer(analyse, etat.prepare, plats, etat.recettes || []);
 
       var plan = {
@@ -1083,7 +1066,7 @@ window.NattyPlanning = (function () {
       // fait » là où l'écran Repas coche déjà des cases.
       etat.faits = await realises();
 
-      var reste = Math.max(0, 1500 - (Date.now() - debut));
+      var reste = Math.max(0, DUREE_MISE_EN_SCENE - (Date.now() - debut));
       setTimeout(function () {
         stop();
         var b = document.getElementById('nplBar');
@@ -1101,6 +1084,23 @@ window.NattyPlanning = (function () {
     var j = ligne.conseils_json;
     if (typeof j === 'string') { try { j = JSON.parse(j); } catch (e) { return []; } }
     return (j && j.recettes) || [];
+  }
+
+  /* La génération de la semaine n'a pas abouti : sans elle il n'y a ni conseils,
+     ni recettes, ni plats macro — donc rien à placer. On le dit, plutôt que de
+     planifier trois plats de repli en faisant croire que c'est personnalisé. */
+  function scEchecGeneration() {
+    scene({
+      html: '<div class="illu"><div style="font-size:54px;line-height:132px">🗓️</div></div>'
+        + titre('Vos conseils de la semaine manquent', 'h2', 0.1)
+        + '<div class="sous" data-in="glide" style="animation-delay:.5s">'
+        + 'La planification part d’eux : les trois repas macro et les deux recettes'
+        + ' sortent de cette génération. Réessayez dans un moment.</div>',
+      boutons: [
+        { txt: 'Réessayer', cls: 'b1', on: lancerPlanification },
+        { txt: 'Plus tard', cls: 'b3', on: function () { fermer(); } }
+      ]
+    });
   }
 
   function scEchec(e) {
@@ -1279,51 +1279,64 @@ window.NattyPlanning = (function () {
   }
 
   /* ═══ 10. Le calendrier dans « Ma semaine » (écran Repas) ═
-     Même plan, autre lumière : ici on est dans l'app claire, donc le
-     vocabulaire d'`assets/style.css` (métallisé clair, neumorphisme). */
+     Carte NOIRE — le même `--metal-black` que le panneau « Ma semaine » qui
+     existait déjà dans `repas.html`. Tout ce qui touche à la planification est
+     noir : la séquence, cette carte, la fiche d'un repas.
+
+     ⚠️ LES JOURS SONT EN COLONNES, les créneaux en lignes. La version d'avant
+     faisait l'inverse : sept rangées, une carte plus haute que le repas du jour
+     lui-même, alors qu'on ne vient pas sur cet écran pour lire un planning.
+     Trois lignes suffisent, et la semaine tient en ~115 px — c'est la grammaire
+     d'un calendrier Apple : petit, dense, muet tant qu'on ne le touche pas. */
   function cssFiche() {
     if (document.getElementById('nplc-css')) return;
     var s = document.createElement('style');
     s.id = 'nplc-css';
+    var COLS = 'grid-template-columns:20px repeat(7,1fr);gap:4px';
     s.textContent = [
-      '.nplc{background:var(--metal-white,#f4f5f7);border-radius:var(--r-lg,24px);',
-      'box-shadow:var(--sh-metal-light,0 6px 16px rgba(20,20,30,.1));padding:18px 16px 16px;margin-top:18px}',
-      '.nplc-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}',
-      '.nplc-head .t{font-size:15.5px;font-weight:900;color:var(--ink,#101014)}',
-      '.nplc-head .n{font-size:10.5px;font-weight:700;color:var(--muted,#9d9da8)}',
-      '.nplc-cols{display:grid;grid-template-columns:40px 1fr 1fr 1fr;gap:6px;margin-bottom:6px}',
-      '.nplc-cols div{font-size:8.5px;font-weight:800;color:var(--muted,#9d9da8);text-align:center;',
-      'text-transform:uppercase;letter-spacing:.5px}',
-      '.nplc-j{display:grid;grid-template-columns:40px 1fr 1fr 1fr;gap:6px;margin-bottom:6px;align-items:stretch}',
-      '.nplc-j .nom{font-size:10px;font-weight:800;color:var(--muted,#9d9da8);display:flex;align-items:center;',
+      '.nplc{background:var(--metal-black,#0b0c0e);border-radius:var(--r-lg,24px);',
+      'box-shadow:var(--sh-metal,0 10px 24px rgba(0,0,0,.5));padding:15px 14px 13px;margin-top:16px}',
+      '.nplc-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;',
+      'margin-bottom:12px}',
+      '.nplc-head .t{font-size:14.5px;font-weight:900;color:#fff;letter-spacing:-.2px}',
+      '.nplc-head .n{font-size:10px;font-weight:700;color:rgba(255,255,255,.42)}',
+
+      '.nplc-cols{display:grid;' + COLS + ';margin-bottom:5px}',
+      '.nplc-cols div{font-size:8px;font-weight:800;color:rgba(255,255,255,.34);text-align:center;',
       'text-transform:uppercase;letter-spacing:.4px}',
-      '.nplc-j.auj .nom{color:var(--ink,#101014)}',
-      /* Même raison que `.cc` de la séquence : la semaine entière doit se lire
-         sans faire défiler l'écran Repas jusqu'en bas. */
-      '.nplc-c{height:54px;border-radius:13px;background:var(--card,#ececef);',
-      'box-shadow:var(--nm-in,inset 3px 3px 7px rgba(163,167,176,.35));display:flex;align-items:center;',
-      'justify-content:center;overflow:hidden;font-size:19px}',
-      '.nplc-c.plein{background:#fff;box-shadow:0 5px 13px rgba(20,20,30,.13);cursor:pointer;position:relative}',
+      '.nplc-cols div.auj{color:#fff}',
+      '.nplc-r{display:grid;' + COLS + ';margin-bottom:4px;align-items:center}',
+      '.nplc-r .cre{font-size:12px;text-align:center;opacity:.5;line-height:1}',
+
+      /* La case. 30 px : assez pour un emoji lisible, assez petit pour que trois
+         lignes ne pèsent rien à côté du hero du repas du jour. */
+      '.nplc-c{height:30px;border-radius:9px;background:rgba(255,255,255,.045);',
+      'display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:14px;',
+      'position:relative}',
+      '.nplc-c.plein{background:rgba(255,255,255,.13);cursor:pointer;',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}',
       '.nplc-c img{width:100%;height:100%;object-fit:cover}',
-      /* Fait = le repas prévu a bien eu lieu. La pastille verte est le seul
-         accent coloré de la carte : c'est elle qu'on doit voir en premier. */
-      '.nplc-c.fait{box-shadow:0 0 0 2px var(--green,#34c759),0 5px 13px rgba(52,199,89,.22)}',
-      '.nplc-c .ok{position:absolute;top:3px;right:3px;width:15px;height:15px;border-radius:50%;',
-      'background:var(--green,#34c759);color:#fff;font-size:9px;font-weight:800;display:flex;',
+      /* Fait = le repas prévu a bien eu lieu. Le vert est le seul accent de la
+         carte : c'est lui qu'on doit voir en premier, et il suffit. */
+      '.nplc-c.fait{box-shadow:inset 0 0 0 1.5px var(--green,#34c759)}',
+      '.nplc-c .ok{position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;',
+      'background:var(--green,#34c759);color:#0b0c0e;font-size:7px;font-weight:900;display:flex;',
       'align-items:center;justify-content:center;line-height:1}',
-      /* Un repas enregistré hors du plan : un point, pas une pastille. Il a eu
-         lieu, mais il ne valide rien de prévu. */
-      '.nplc-c.hors::after{content:"";width:5px;height:5px;border-radius:50%;',
-      'background:var(--muted,#9d9da8);opacity:.65}',
-      '.nplc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}',
-      '.nplc-cpt{font-size:12.5px;font-weight:800;color:var(--ink,#101014)}',
-      '.nplc-cpt span{color:var(--muted,#9d9da8);font-weight:600}',
-      '.nplc-btn{background:var(--ink,#101014);color:#fff;border:none;border-radius:99px;padding:10px 16px;',
-      'font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}',
-      '.nplc-vide{text-align:center;padding:6px 4px 2px}',
-      '.nplc-vide .d{font-size:12.5px;color:var(--muted,#9d9da8);line-height:1.5;margin-bottom:14px}',
-      '.nplc-vide button{width:100%;background:var(--ink,#101014);color:#fff;border:none;border-radius:16px;',
-      'padding:14px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}'
+      /* Un repas enregistré hors du plan : un point. Il a eu lieu, mais il ne
+         valide rien de prévu. */
+      '.nplc-c.hors::after{content:"";width:4px;height:4px;border-radius:50%;',
+      'background:rgba(255,255,255,.34)}',
+
+      '.nplc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}',
+      '.nplc-cpt{font-size:11.5px;font-weight:800;color:#fff}',
+      '.nplc-cpt span{color:rgba(255,255,255,.42);font-weight:600}',
+      '.nplc-btn{background:rgba(255,255,255,.11);color:#fff;border:none;border-radius:99px;',
+      'padding:8px 14px;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer;',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}',
+      '.nplc-vide{text-align:center;padding:2px 4px 0}',
+      '.nplc-vide .d{font-size:12px;color:rgba(255,255,255,.5);line-height:1.5;margin-bottom:13px}',
+      '.nplc-vide button{width:100%;background:#f2f2f5;color:#101014;border:none;border-radius:15px;',
+      'padding:13px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -1350,24 +1363,30 @@ window.NattyPlanning = (function () {
 
     var h = '<div class="nplc"><div class="nplc-head"><div class="t">Ma semaine</div>'
       + '<div class="n">' + (nFaits
-          ? nFaits + ' repas sur ' + plan.repas.length + ' déjà faits'
+          ? nFaits + ' sur ' + plan.repas.length + ' déjà faits'
           : plan.repas.length + ' repas placés')
       + '</div></div>'
+      // En-tête : les sept jours. Aujourd'hui en blanc, c'est le seul repère
+      // dont on a besoin pour se situer dans la grille.
       + '<div class="nplc-cols"><div></div>'
-      + CRENEAUX.map(function (c) { return '<div>' + esc(c.court) + '</div>'; }).join('')
+      + JOURS3.map(function (j, i) {
+          return '<div class="' + (i === auj ? 'auj' : '') + '">' + j.charAt(0) + '</div>';
+        }).join('')
       + '</div>';
-    for (var i = 0; i < 7; i++) {
-      h += '<div class="nplc-j' + (i === auj ? ' auj' : '') + '"><div class="nom">' + JOURS3[i] + '</div>';
-      for (var j = 0; j < 3; j++) {
+    // Une ligne par créneau : trois, au lieu des sept d'une ligne par jour.
+    for (var j = 0; j < 3; j++) {
+      h += '<div class="nplc-r"><div class="cre">' + CRENEAUX[j].em + '</div>';
+      for (var i = 0; i < 7; i++) {
         var r = carte[i + '-' + j], fait = !!faits[i + '-' + j];
         h += r
           ? '<div class="nplc-c plein' + (fait ? ' fait' : '') + '" data-nplc="repas" data-j="' + i
-            + '" data-c="' + j + '" title="' + esc(r.nom) + (fait ? ' — déjà mangé' : '') + '">'
+            + '" data-c="' + j + '" title="' + esc(JOURS[i] + ' · ' + CRENEAUX[j].nom + ' — ' + r.nom)
+            + (fait ? ' (déjà mangé)' : '') + '">'
             + vignette(r) + (fait ? '<span class="ok">✓</span>' : '') + '</div>'
           // Un repas enregistré sur un créneau NON planifié se voit aussi : un
           // point discret. Sans lui, une semaine bien suivie hors du plan aurait
           // l'air d'une semaine vide.
-          : '<div class="nplc-c' + (faits[i + '-' + j] ? ' hors' : '') + '"></div>';
+          : '<div class="nplc-c' + (fait ? ' hors' : '') + '"></div>';
       }
       h += '</div>';
     }
@@ -1437,37 +1456,37 @@ window.NattyPlanning = (function () {
       '-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);',
       'transition:opacity .22s ease;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif}',
       '#nplf.on{opacity:1}',
-      '#nplf .sh{width:100%;max-width:var(--col,480px);background:var(--bg,#fff);',
+      '#nplf .sh{width:100%;max-width:var(--col,480px);background:var(--metal-black,#0b0c0e);',
       'border-radius:28px 28px 0 0;padding:10px 20px calc(26px + env(safe-area-inset-bottom,0px));',
       'transform:translateY(24px);transition:transform .28s cubic-bezier(.22,1,.36,1);',
       'max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch}',
       '#nplf.on .sh{transform:none}',
-      '#nplf .poig{width:38px;height:4px;border-radius:99px;background:var(--card,#ececef);',
+      '#nplf .poig{width:38px;height:4px;border-radius:99px;background:rgba(255,255,255,.18);',
       'margin:0 auto 18px}',
       '#nplf .tete{display:flex;align-items:center;gap:14px}',
-      '#nplf .vig{width:64px;height:64px;border-radius:20px;background:var(--card,#ececef);',
-      'box-shadow:var(--nm-in,inset 4px 4px 9px rgba(163,167,176,.4));display:flex;',
+      '#nplf .vig{width:64px;height:64px;border-radius:20px;background:rgba(255,255,255,.08);',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.13);display:flex;',
       'align-items:center;justify-content:center;font-size:31px;flex-shrink:0;overflow:hidden}',
       '#nplf .vig img{width:100%;height:100%;object-fit:cover}',
-      '#nplf .nom{font-size:18px;font-weight:900;line-height:1.2;color:var(--ink,#101014)}',
-      '#nplf .quand{font-size:12px;font-weight:700;color:var(--muted,#9d9da8);margin-top:5px}',
-      '#nplf .pq{font-size:13.5px;color:var(--muted,#9d9da8);line-height:1.6;margin-top:16px}',
+      '#nplf .nom{font-size:18px;font-weight:900;line-height:1.2;color:#fff}',
+      '#nplf .quand{font-size:12px;font-weight:700;color:rgba(255,255,255,.45);margin-top:5px}',
+      '#nplf .pq{font-size:13.5px;color:rgba(255,255,255,.6);line-height:1.6;margin-top:16px}',
       '#nplf .mac{display:flex;gap:8px;margin-top:16px}',
-      '#nplf .mac div{flex:1;background:var(--card,#ececef);border-radius:16px;padding:10px 0;',
-      'text-align:center;font-weight:800;font-size:13px;color:var(--ink,#101014);',
-      'box-shadow:var(--nm-in,inset 4px 4px 9px rgba(163,167,176,.4))}',
-      '#nplf .kcal{font-size:12px;font-weight:700;color:var(--muted,#9d9da8);',
+      '#nplf .mac div{flex:1;background:rgba(255,255,255,.07);border-radius:16px;padding:10px 0;',
+      'text-align:center;font-weight:800;font-size:13px;color:#fff;',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}',
+      '#nplf .kcal{font-size:12px;font-weight:700;color:rgba(255,255,255,.45);',
       'text-align:center;margin-top:10px}',
       '#nplf .ing{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}',
       // `> div` : sans le chevron, la règle attrapait aussi `.e`/`.n`/`.q` et
       // chaque ingrédient s'affichait en trois pastilles empilées.
-      '#nplf .ing > div{background:var(--card,#ececef);border-radius:15px;padding:12px 4px 9px;',
-      'text-align:center;box-shadow:var(--nm-in,inset 4px 4px 9px rgba(163,167,176,.4))}',
+      '#nplf .ing > div{background:rgba(255,255,255,.06);border-radius:15px;padding:12px 4px 9px;',
+      'text-align:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.09)}',
       '#nplf .ing .e{font-size:24px;line-height:1}',
-      '#nplf .ing .n{font-size:8.5px;font-weight:700;line-height:1.2;margin-top:6px;color:var(--ink,#101014)}',
-      '#nplf .ing .q{font-size:8px;color:var(--muted,#9d9da8);margin-top:2px}',
+      '#nplf .ing .n{font-size:8.5px;font-weight:700;line-height:1.2;margin-top:6px;color:#fff}',
+      '#nplf .ing .q{font-size:8px;color:rgba(255,255,255,.42);margin-top:2px}',
       '#nplf .ok{width:100%;margin-top:22px;padding:15px;border:none;border-radius:18px;',
-      'background:var(--ink,#101014);color:#fff;font-family:inherit;font-size:14.5px;',
+      'background:#f2f2f5;color:#101014;font-family:inherit;font-size:14.5px;',
       'font-weight:800;cursor:pointer}'
     ].join('');
     document.head.appendChild(s);

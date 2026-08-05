@@ -58,7 +58,12 @@ export const NB_RECETTES = 2;
    2026-08-04 sur le prompt réel : 3500 jetons → tronqué à la 2ᵉ recette ;
    8000 → JSON complet, en 52 s. Un plafond n'est pas une cible : ce qui n'est
    pas produit n'est pas facturé, donc large plutôt que juste. */
-const MAX_TOKENS = 3200 * NB_RECETTES + 1600;
+/* +1400 depuis que la génération produit AUSSI les trois plats macro de la
+   planification (voir `plats_macro` plus bas). Ils sont bien plus courts qu'une
+   recette — pas d'étapes — mais un plafond trop juste tronque le JSON entier,
+   et c'est la fin de la réponse qui saute : on perdrait précisément ce qu'on
+   vient d'ajouter. */
+const MAX_TOKENS = 3200 * NB_RECETTES + 1600 + 1400;
 
 /* ── Accès Supabase (clé service : ce module tourne côté serveur) ─────────── */
 
@@ -245,6 +250,19 @@ export function construirePrompt(profil, nb, garde) {
   p += '- "feu" vaut doux, moyen ou vif pour une cuisson à la poêle ou en casserole ; omets-le sinon.\n';
   p += '- "qte" liste les ingrédients utilisés à cette étape, avec leur quantité exacte.\n';
 
+  /* TROIS PLATS MACRO — la matière de la planification de la semaine
+     (`assets/planning.js`). Ils sont demandés ICI, dans le même appel que les
+     conseils, parce que ce sont les mêmes : un plat « protéines » n'a de sens
+     que s'il découle du conseil protéines qu'on vient d'écrire. Les demander à
+     part, c'était deux appels, deux factures, et deux avis qui pouvaient se
+     contredire sur la même semaine. */
+  p += '\nTROIS PLATS MACRO\n';
+  p += '- En plus des recettes, propose EXACTEMENT trois plats, un par macronutriment, dans cet ordre : "p" (protéines), "g" (glucides), "l" (lipides).\n';
+  p += '- Chacun corrige SA macro sans faire exploser les deux autres, se prépare en moins de 30 minutes, et reste courant en France.\n';
+  p += "- Ils prolongent les conseils ci-dessus : le plat \"p\" doit répondre au conseil protéines, et ainsi de suite.\n";
+  p += '- Ils seront PLACÉS dans la semaine là où ses apports flanchent. Ils sont donc plus simples que les recettes : pas d\'étapes détaillées.\n';
+  p += '- Ils doivent différer des ' + nb + ' recettes ci-dessus.\n';
+
   p += '\nLes conseils portent sur SES repas réels et SES préférences, jamais de généralité.\n';
   p += '\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format :\n';
   p += '{"conseils":{"conseil_prot":"phrase courte","conseil_gluc":"phrase courte",'
@@ -255,7 +273,11 @@ export function construirePrompt(profil, nb, garde) {
      + '"temps_min":25,"macros":{"p":42,"g":60,"l":18,"kcal":600},'
      + '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g","dispo":true}],'
      + '"steps":[{"illu":"couper","t":"Titre court de l\'étape","detail":"la consigne précise, avec les repères",'
-     + '"qte":[{"nom":"Poulet","qte":"150 g"}],"duree_min":5,"temp_c":0,"feu":"","tip":"astuce facultative"}]}]}';
+     + '"qte":[{"nom":"Poulet","qte":"150 g"}],"duree_min":5,"temp_c":0,"feu":"","tip":"astuce facultative"}]}],';
+  p += '"plats_macro":[{"macro":"p","nom":"Nom du plat","em":"🍗",'
+     + '"pourquoi":"une phrase, adressée à lui, qui dit ce que ce plat corrige",'
+     + '"p":45,"g":40,"l":12,"kcal":450,'
+     + '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g"}]}]}';
 
   return p;
 }
@@ -348,6 +370,30 @@ export function listeDeCourses(recettes) {
   return { recettes_ingredients: items, aliments_bonus: [] };
 }
 
+/* Les trois plats macro, remis dans l'ordre p → g → l et débarrassés de ce que
+   l'IA aurait pu inventer autour. `assets/planning.js` se fie à cet ordre : il
+   pioche `plats[0]` pour les protéines, `plats[1]` pour les glucides, etc.
+   Une réponse incomplète ne fait pas échouer la génération — la planification a
+   son propre trio de repli, et perdre six conseils et deux recettes pour un
+   plat manquant serait absurde. */
+export function normaliserPlatsMacro(liste) {
+  if (!Array.isArray(liste) || !liste.length) return [];
+  const em = { p: '🥩', g: '🌾', l: '🥑' };
+  return ['p', 'g', 'l'].map((m, k) => {
+    const t = liste.find(x => x && x.macro === m) || liste[k];
+    if (!t || !t.nom) return null;
+    return {
+      macro: m,
+      nom: String(t.nom),
+      em: t.em || em[m],
+      pourquoi: t.pourquoi || '',
+      p: Math.round(+t.p || 0), g: Math.round(+t.g || 0),
+      l: Math.round(+t.l || 0), kcal: Math.round(+t.kcal || 0),
+      ingredients: Array.isArray(t.ingredients) ? t.ingredients : []
+    };
+  }).filter(Boolean);
+}
+
 /* ── 5. La génération, de bout en bout ───────────────────────────────────── */
 
 /**
@@ -411,16 +457,18 @@ export async function processUser(user, semaine, SB_URL, SB_KEY, CLAUDE_API, CLA
 
   const recettes = (out.recettes || []).slice(0, NB_RECETTES);
   const conseils = out.conseils || {};
+  const platsMacro = normaliserPlatsMacro(out.plats_macro);
   if (!recettes.length && !conseils.conseil_amelioration && !conseils.conseil_prot) {
     throw new Error('Réponse sans conseil ni recette');
   }
 
-  // UNE écriture, QUATRE lectures possibles — c'est tout l'objet de l'opération :
-  //   • conseil_*          → overlay « Conseils personnalisés » de suivi.html
-  //   • conseils_json      → écran Repas + liste de courses de coaching.html
-  //                          (via NattyReco.lireCache, qui cherche .recettes)
-  //   • recettes_json      → overlay « Mes recettes » de suivi.html
-  //   • liste_courses_json → overlay « Liste de courses » de suivi.html
+  // UNE écriture, CINQ lectures possibles — c'est tout l'objet de l'opération :
+  //   • conseil_*                    → overlay « Conseils personnalisés » de suivi.html
+  //   • conseils_json.recettes       → écran Repas + liste de courses de coaching.html
+  //                                    (via NattyReco.lireCache, qui cherche .recettes)
+  //   • conseils_json.plats_macro    → planification de la semaine (assets/planning.js)
+  //   • recettes_json                → overlay « Mes recettes » de suivi.html
+  //   • liste_courses_json           → overlay « Liste de courses » de suivi.html
   const ligne = {
     user_id: user.user_id,
     conseil_prot: conseils.conseil_prot || null,
@@ -433,6 +481,10 @@ export async function processUser(user, semaine, SB_URL, SB_KEY, CLAUDE_API, CLA
     // reparsent (assets/reco.js tolère les deux cas).
     conseils_json: JSON.stringify({
       recettes,
+      // Les trois plats de la planification voyagent avec les recettes : même
+      // génération, même colonne, même semaine. `assets/planning.js` les lit
+      // ici et n'appelle plus l'IA du tout.
+      plats_macro: platsMacro,
       nb_repas: NB_RECETTES,
       conseils,
       genere_le: new Date().toISOString()
