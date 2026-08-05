@@ -29,6 +29,13 @@
 <body>
 
 <div class="top">
+  <!-- Retour, accueil, profil : les trois restent à l'écran pendant tout le
+       scroll (.top est en position:sticky dans assets/style.css). Le retour est
+       masqué quand il n'y a rien derrière — un bouton qui ne fait rien est pire
+       qu'un bouton absent. -->
+  <button id="btnRetour" aria-label="Retour" style="display:none">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
   <a href="https://www.natty-nutrition.com" id="lienSite" aria-label="Accueil">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
   </a>
@@ -38,7 +45,7 @@
 </div>
 
 <div class="wrap">
-  <div class="plate-banner">
+  <div class="plate-banner" id="plateBanner" style="cursor:pointer">
     <div class="plate-badge" id="formuleBadge">3 PLATS PAR SEMAINE</div>
     <div class="plate-row" id="plateRow">
       <div class="plate-circ"><img src="/assets/img/plate1.jpg" alt=""></div>
@@ -60,6 +67,20 @@
 </div>
 
 <script src="/assets/core.js"></script>
+<script>
+/* La bannière des plats mène à l'offre : c'est le seul endroit de l'app où l'on
+   choisit sa formule, et elle en montre justement le contenu. */
+(function(){
+  var b = document.getElementById('plateBanner');
+  if (b) b.addEventListener('click', function(){ Natty.goto('offre.html'); });
+  // Retour : seulement s'il y a une page avant dans l'historique.
+  var r = document.getElementById('btnRetour');
+  if (r && window.history.length > 1) {
+    r.style.display = 'flex';
+    r.addEventListener('click', function(){ window.history.back(); });
+  }
+})();
+</script>
 <script>
 async function loadFormule(){
   try{

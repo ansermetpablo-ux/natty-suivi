@@ -67,11 +67,36 @@
 
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 
+/* ── Pas de zoom, pas de rebond ─────────────────────────────
+   Deux corrections liées, toutes deux demandées après essai sur iPhone.
+
+   1. ZOOM. Le `user-scalable=no` du <meta viewport> suffit à la pincée, mais
+      pas au DOUBLE-TAP : c'est `touch-action:manipulation` qui le désarme
+      (le navigateur cesse d'attendre un éventuel second tap, ce qui rend au
+      passage les boutons plus francs — ~300 ms de moins).
+      `-webkit-text-size-adjust` empêche l'autre zoom, celui que WebKit
+      applique tout seul au texte.
+
+   2. LA BARRE D'ONGLETS QUI « SUIT LE SCROLL ». Elle est pourtant en
+      `position:fixed` depuis toujours : ce qu'on voit bouger, c'est le
+      rebond élastique d'iOS. Quand le document dépasse ses bornes, WebKit
+      translate TOUT le calque, éléments fixes compris — la barre paraît
+      alors monter et redescendre. `overscroll-behavior` supprime ce rebond
+      au niveau du document, donc la cause, et non le symptôme. */
+html{
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+  overscroll-behavior:none;
+}
+
 body{
   font-family:'Inter',sans-serif;
   background:var(--bg);
   color:var(--ink);
   min-height:100vh;
+  overscroll-behavior:none;
+  touch-action:manipulation;
+  overflow-x:hidden;
 }
 
 /* Colonne centrale — même largeur et même gouttière partout */
@@ -82,10 +107,18 @@ body{
    Dynamic Island) : sans cette marge, les icônes se retrouvent collées à
    l'heure et à la batterie. env() vaut 0 sur le web, qui reste inchangé.
    Le pendant bas est géré par assets/nav.js (safe-area-inset-bottom). */
+/* ⚠️ `sticky`, et non `fixed` : le retour, l'accueil et le profil doivent
+   rester atteignables pendant tout le scroll (demande de Pablo), mais en
+   `fixed` l'en-tête sortirait du flux et il faudrait rattraper sa hauteur
+   à la main sur chaque écran — six pages, six valeurs, une régression par
+   oubli. En `sticky`, la place est déjà réservée et rien ne bouge.
+   Le fond est opaque, sinon le contenu défile en transparence derrière. */
 .top{
+  position:sticky;top:0;z-index:400;
   max-width:var(--col);margin:0 auto;
   display:flex;align-items:center;justify-content:space-between;
   padding:calc(20px + env(safe-area-inset-top, 0px)) var(--pad) 8px;
+  background:var(--bg);
 }
 .top a,.top button,.top .hdr-ico{
   display:flex;align-items:center;justify-content:center;

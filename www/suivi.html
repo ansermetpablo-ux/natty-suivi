@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Natty · Suivi</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#000000">
@@ -19,6 +19,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+/* Pas de zoom (le double-tap se désarme avec touch-action, pas avec le
+   seul meta viewport) et pas de rebond élastique : c'est lui qui faisait
+   « suivre le scroll » à la barre d'onglets, pourtant en position:fixed —
+   iOS translate tout le calque, éléments fixes compris. */
+html { -webkit-text-size-adjust:100%; text-size-adjust:100%; overscroll-behavior:none; }
+body { overscroll-behavior:none; touch-action:manipulation; overflow-x:hidden; }
 :root {
   --bg: #f0f0f3;
   --so: 6px 6px 16px rgba(174,174,192,0.42), -6px -6px 16px rgba(255,255,255,0.88);
@@ -254,11 +260,34 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .fab-badge.visible { display:flex; }
 
 /* ── OVERLAYS ── */
-.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); backdrop-filter:blur(8px); z-index:200; align-items:flex-end; justify-content:center; }
+/* ── Les overlays sont des PAGES, pas des feuilles ──────────────
+   Demande de Pablo après essai : « quand on clique quelque part sur un
+   onglet ça doit ouvrir une page complète, pas un pop-up ». Une seule
+   règle suffit à convertir les neuf overlays de cet écran : la boîte
+   s'étire d'un bord à l'autre, perd ses coins arrondis et son fond
+   assombri, et le contenu scrolle DANS elle — ce qui est justement ce
+   qui permet au bouton retour de rester en haut (voir .sheet-sticky).
+   L'animation d'entrée reste : une page qui monte, c'est une
+   transition ; une page qui apparaît d'un coup, c'est un clignement. */
+.overlay { display:none; position:fixed; inset:0; background:var(--bg); z-index:200; align-items:stretch; justify-content:center; }
 .overlay.active { display:flex; }
-.sheet { background:var(--bg); border-radius:28px 28px 0 0; padding:0 20px 52px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; animation:slideUp .3s cubic-bezier(.32,.72,0,1); box-shadow:0 -4px 24px rgba(0,0,0,0.12); }
+.sheet { background:var(--bg); border-radius:0; width:100%; max-width:480px;
+  height:100%; max-height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  padding:calc(10px + env(safe-area-inset-top,0px)) 20px calc(72px + env(safe-area-inset-bottom,0px));
+  animation:slideUp .3s cubic-bezier(.32,.72,0,1); }
 @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
-.sheet-handle { width:36px; height:5px; background:rgba(174,174,192,0.4); border-radius:3px; margin:14px auto 20px; }
+/* La poignée ne veut plus rien dire sur une page pleine. */
+.sheet-handle, .profil-handle { display:none !important; }
+
+/* Le retour reste en haut à gauche pendant tout le scroll. `sticky` est posé
+   sur le bloc de PREMIER NIVEAU qui contient le bouton, jamais sur le bouton
+   seul : un élément collant est borné par la boîte de son parent, donc un
+   bouton collant dans une ligne d'en-tête non collante disparaît avec elle.
+   La classe est posée au chargement par rendreRetoursCollants(). */
+.sheet-sticky { position:sticky; top:calc(-10px - env(safe-area-inset-top,0px)); z-index:30;
+  background:var(--bg); padding-top:calc(10px + env(safe-area-inset-top,0px));
+  padding-bottom:10px; margin-bottom:6px; }
 
 /* ── POPUP MACRO ── */
 .mbig-ring { display:flex; flex-direction:column; align-items:center; background:var(--bg); border-radius:22px; padding:24px 20px 20px; margin-bottom:16px; box-shadow:var(--so); }
@@ -450,9 +479,9 @@ input[type="file"] { display:none; }
 .qa-spinner { width:44px; height:44px; border-radius:50%; border:3px solid rgba(174,174,192,0.3); border-top-color:var(--black); animation:spin 0.8s linear infinite; }
 
 /* ── PROFIL OVERLAY ── */
-#profilOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(8px); z-index:300; align-items:flex-end; justify-content:center; }
+#profilOverlay { display:none; position:fixed; inset:0; background:var(--bg); z-index:300; align-items:stretch; justify-content:center; }
 #profilOverlay.active { display:flex; }
-#profilSheet { background:var(--bg); border-radius:28px 28px 0 0; width:100%; max-width:480px; max-height:92vh; overflow-y:auto; animation:slideUp .3s cubic-bezier(.32,.72,0,1); padding:0 20px 52px; }
+#profilSheet { background:var(--bg); border-radius:0; width:100%; max-width:480px; height:100%; max-height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; animation:slideUp .3s cubic-bezier(.32,.72,0,1); padding:calc(10px + env(safe-area-inset-top,0px)) 20px calc(72px + env(safe-area-inset-bottom,0px)); }
 .profil-handle { width:36px; height:5px; background:rgba(174,174,192,0.4); border-radius:3px; margin:14px auto 20px; }
 .profil-score-ring { display:flex; flex-direction:column; align-items:center; background:var(--bg); border-radius:22px; padding:24px 20px; margin-bottom:14px; box-shadow:var(--so); }
 .psr-wrap { position:relative; width:150px; height:150px; margin-bottom:12px; }
@@ -745,7 +774,10 @@ html.no-scroll {
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
   overscroll-behavior: contain !important;
-  max-height: 92vh;
+  /* 100 %, pas 92vh : cette règle-ci est APRÈS la déclaration de .sheet et la
+     bornait donc à 92 % de l'écran — la page pleine gardait un liseré du fond
+     en bas, ce qui la faisait ressembler à… une feuille. */
+  max-height: 100%;
 }
 /* Les overlays — scroll uniquement dans le sheet */
 .overlay.active > .sheet, #profilOverlay > #profilSheet {
@@ -937,7 +969,7 @@ html.no-scroll {
         <div class="ring-box">
           <svg viewBox="0 0 88 88">
             <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
-            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#redGrad)" stroke-width="7" stroke-linecap="round" id="ringProt" stroke-dasharray="0 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
+            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#redGrad)" stroke-width="7" stroke-linecap="round" id="ringProt" stroke-dasharray="239 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
             <defs><linearGradient id="redGrad"><stop offset="0%" stop-color="var(--red-1)"/><stop offset="100%" stop-color="var(--red-2)"/></linearGradient></defs>
           </svg>
           <div class="center"><span id="vProt">–</span>g</div>
@@ -949,7 +981,7 @@ html.no-scroll {
         <div class="ring-box">
           <svg viewBox="0 0 88 88">
             <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
-            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#yellowGrad)" stroke-width="7" stroke-linecap="round" id="ringGluc" stroke-dasharray="0 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
+            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#yellowGrad)" stroke-width="7" stroke-linecap="round" id="ringGluc" stroke-dasharray="239 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
             <defs><linearGradient id="yellowGrad"><stop offset="0%" stop-color="var(--yellow-1)"/><stop offset="100%" stop-color="var(--yellow-2)"/></linearGradient></defs>
           </svg>
           <div class="center"><span id="vGluc">–</span>g</div>
@@ -961,7 +993,7 @@ html.no-scroll {
         <div class="ring-box">
           <svg viewBox="0 0 88 88">
             <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
-            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#greenGrad2)" stroke-width="7" stroke-linecap="round" id="ringLip" stroke-dasharray="0 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
+            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#greenGrad2)" stroke-width="7" stroke-linecap="round" id="ringLip" stroke-dasharray="239 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
             <defs><linearGradient id="greenGrad2"><stop offset="0%" stop-color="var(--green-1)"/><stop offset="100%" stop-color="var(--green-2)"/></linearGradient></defs>
           </svg>
           <div class="center"><span id="vLip">–</span>g</div>
@@ -1228,8 +1260,13 @@ html.no-scroll {
   <div class="sheet">
     <div class="sheet-handle"></div>
 
-    <!-- Bouton retour -->
-    <button onclick="closeOverlay('ovMacro')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-bottom:14px;">← Retour</button>
+    <!-- Retour + passage d'une macro à l'autre. Les trois onglets doublent le
+         glissement : le geste seul ne s'annonce pas, et rien à l'écran ne
+         dirait qu'il existe. -->
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="closeOverlay('ovMacro')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);flex-shrink:0;">←</button>
+      <div id="mbOnglets" style="display:flex;gap:6px;flex:1;"></div>
+    </div>
 
     <!-- Header macro -->
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
@@ -1370,8 +1407,8 @@ html.no-scroll {
 </div>
 
 <!-- ══ PROFIL OVERLAY ══ -->
-<div id="profilOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);z-index:300;align-items:flex-end;justify-content:center;overflow:hidden;">
-  <div id="profilSheet" style="background:var(--bg);border-radius:28px 28px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:slideUp .3s cubic-bezier(.32,.72,0,1);padding:0 20px 52px;">
+<div id="profilOverlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:300;align-items:stretch;justify-content:center;overflow:hidden;">
+  <div id="profilSheet" style="background:var(--bg);border-radius:0;width:100%;max-width:480px;height:100%;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;animation:slideUp .3s cubic-bezier(.32,.72,0,1);padding:calc(10px + env(safe-area-inset-top,0px)) 20px calc(72px + env(safe-area-inset-bottom,0px));">
     <div class="sheet-handle"></div>
     <!-- Bouton retour accueil -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -1866,6 +1903,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e){ if(e.target===this) closeOverlay(id); });
   });
+  rendreRetoursCollants();
   // Fermeture au clic fond pour profilOverlay
   var profilOvEl = document.getElementById('profilOverlay');
   if (profilOvEl) profilOvEl.addEventListener('click', function(e){ if(e.target===this) closeProfilOverlay(); });
@@ -2046,34 +2084,61 @@ function afficherMacros() {
   var moy = calcMoyenneMacros();
   var hasData = moy.jours > 0;
 
-  // Pourcentages sur objectif
-  var pp = macObj.p>0 ? Math.min(100, Math.round((moy.p/macObj.p)*100)) : 0;
-  var lp = macObj.l>0 ? Math.min(100, Math.round((moy.l/macObj.l)*100)) : 0;
-  var gp = macObj.g>0 ? Math.min(100, Math.round((moy.g/macObj.g)*100)) : 0;
-  var cp = macObj.c>0 ? Math.min(100, Math.round((moy.c/macObj.c)*100)) : 0;
+  /* ⚠️ Piège : `calcMoyenneMacros()` renvoie L'OBJECTIF quand aucun repas n'est
+     enregistré (« pas de repas → afficher objectif », un reste de l'époque où
+     le chiffre affiché était le consommé). Le prendre pour du consommé donnait
+     100 % d'atteinte sur une journée vierge — donc un anneau vide alors que
+     tout reste à manger, et un score « objectifs atteints » à 100 % sans avoir
+     mangé. On repart donc de zéro tant qu'il n'y a rien. */
+  var conso = hasData ? moy : { p:0, l:0, g:0, c:0 };
+
+  // Pourcentages sur objectif — part CONSOMMÉE (le score en dépend).
+  var pp = macObj.p>0 ? Math.min(100, Math.round((conso.p/macObj.p)*100)) : 0;
+  var lp = macObj.l>0 ? Math.min(100, Math.round((conso.l/macObj.l)*100)) : 0;
+  var gp = macObj.g>0 ? Math.min(100, Math.round((conso.g/macObj.g)*100)) : 0;
+  var cp = macObj.c>0 ? Math.min(100, Math.round((conso.c/macObj.c)*100)) : 0;
 
   // Valeurs affichées
   // Grammes affichés dans les anneaux = restants (objectif - consommé), pas consommés.
   // Sans objectif connu (onboarding sans poids ni tdee), « restant » n'a aucun
   // sens : afficher 0 se lirait « objectif atteint », soit l'inverse de la
   // réalité. On affiche un tiret jusqu'à ce que le profil soit renseigné.
-  function restantAffiche(obj, conso) {
+  function restantAffiche(obj, mange) {
     if (!obj) return '–';
-    return hasData ? Math.max(0, Math.round(obj - conso)) : obj;
+    return Math.max(0, Math.round(obj - mange));
   }
-  setText('vProt', restantAffiche(macObj.p, moy.p));
-  setText('vGluc', restantAffiche(macObj.g, moy.g));
-  setText('vLip',  restantAffiche(macObj.l, moy.l));
-  setText('vCal',  hasData ? moy.c : (macObj.c||'–'));
+  setText('vProt', restantAffiche(macObj.p, conso.p));
+  setText('vGluc', restantAffiche(macObj.g, conso.g));
+  setText('vLip',  restantAffiche(macObj.l, conso.l));
+  setText('vCal',  hasData ? conso.c : (macObj.c||'–'));
   setText('oCal',  macObj.c||'–');
 
-  // Labels objectif avec % progression
+  /* ── L'anneau se VIDE, il ne se remplit pas ────────────────────
+     Le chiffre au centre a toujours été le RESTANT (128 g à manger), mais
+     l'arc, lui, était dessiné avec la part CONSOMMÉE : on ajoutait un plat,
+     le nombre descendait de 128 à 102 pendant que l'anneau, lui, montait de
+     0 à 12 %. Les deux disaient le contraire l'un de l'autre.
+     Une jauge qui accompagne un restant part donc pleine et descend vers 0 :
+     journée sans repas = 100 %, objectif atteint = anneau vide.
+     ⚠️ `pp/gp/lp` (la part consommée) restent tels quels : c'est ce que
+     calcScoreFromAvg attend, et un score « atteinte des objectifs » calculé
+     sur du restant serait exactement à l'envers. */
+  function partRestante(obj, consommePct) {
+    // Objectif inconnu : un anneau plein voudrait dire « tout te reste »,
+    // alors qu'on ne sait rien. On n'affiche donc rien.
+    return obj > 0 ? Math.max(0, 100 - consommePct) : 0;
+  }
+  var pr = partRestante(macObj.p, pp),
+      gr = partRestante(macObj.g, gp),
+      lr = partRestante(macObj.l, lp);
+
+  // Labels : le pourcentage annoncé est celui de l'anneau, donc le restant.
   var op = document.getElementById('oProt');
-  if (op) op.textContent = hasData ? (pp+'% de l\'obj. '+macObj.p+'g') : ('Obj. '+(macObj.p||'–')+'g');
+  if (op) op.textContent = hasData ? ('Reste '+pr+'% · obj. '+macObj.p+'g') : ('Obj. '+(macObj.p||'–')+'g');
   var og = document.getElementById('oGluc');
-  if (og) og.textContent = hasData ? (gp+'% de l\'obj. '+macObj.g+'g') : ('Obj. '+(macObj.g||'–')+'g');
+  if (og) og.textContent = hasData ? ('Reste '+gr+'% · obj. '+macObj.g+'g') : ('Obj. '+(macObj.g||'–')+'g');
   var ol = document.getElementById('oLip');
-  if (ol) ol.textContent = hasData ? (lp+'% de l\'obj. '+macObj.l+'g') : ('Obj. '+(macObj.l||'–')+'g');
+  if (ol) ol.textContent = hasData ? ('Reste '+lr+'% · obj. '+macObj.l+'g') : ('Obj. '+(macObj.l||'–')+'g');
 
   // Label calories avec indicateur
   var calRow = document.querySelector('.hero-cal-left');
@@ -2081,19 +2146,19 @@ function afficherMacros() {
     ? '⚡ Moy. ' + (moy.jours > 1 ? moy.jours+'j' : 'aujourd\'hui')
     : '⚡ Calories aujourd\'hui';
 
-  // Barres de progression animées
+  // Anneaux et barres : la part RESTANTE (voir partRestante ci-dessus).
   setTimeout(function(){
-    var bp=document.getElementById('bProt'); if(bp) bp.style.width=pp+'%';
-    var bg=document.getElementById('bGluc'); if(bg) bg.style.width=gp+'%';
-    var bl=document.getElementById('bLip');  if(bl) bl.style.width=lp+'%';
+    var bp=document.getElementById('bProt'); if(bp) bp.style.width=pr+'%';
+    var bg=document.getElementById('bGluc'); if(bg) bg.style.width=gr+'%';
+    var bl=document.getElementById('bLip');  if(bl) bl.style.width=lr+'%';
     var mrC=2*Math.PI*38;
-    var rp=document.getElementById('ringProt'); if(rp) rp.style.strokeDasharray=((pp/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
-    var rg2=document.getElementById('ringGluc'); if(rg2) rg2.style.strokeDasharray=((gp/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
-    var rl=document.getElementById('ringLip');  if(rl) rl.style.strokeDasharray=((lp/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
+    var rp=document.getElementById('ringProt'); if(rp) rp.style.strokeDasharray=((pr/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
+    var rg2=document.getElementById('ringGluc'); if(rg2) rg2.style.strokeDasharray=((gr/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
+    var rl=document.getElementById('ringLip');  if(rl) rl.style.strokeDasharray=((lr/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
   }, 100);
 
   // Recalculer et afficher le score basé sur la moyenne
-  setScore(calcScoreFromAvg(moy, pp, gp, lp));
+  setScore(calcScoreFromAvg(conso, pp, gp, lp));
 }
 
 function calcScoreFromAvg(moy, pp, gp, lp) {
@@ -2241,6 +2306,63 @@ var MACRO_CFG = {
   lip:  {name:'LIPIDES',  emoji:'🥑',color:'#7b5ea7',unit:'G', key:'l', prompt:'lipides'},
 };
 
+/* Passer d'une macro à l'autre SANS repasser par l'écran d'accueil (demande de
+   Pablo). Deux chemins pour la même chose : les onglets en haut, et le
+   glissement horizontal. On réutilise openMacroPopup — c'est déjà lui qui sait
+   tout peindre — en l'encadrant d'une translation, pour que le changement se
+   voie comme un déplacement et pas comme un clignotement. */
+function macroGlisser(cible, sens) {
+  var sheet = document.querySelector('#ovMacro .sheet');
+  if (!sheet) { openMacroPopup(cible); return; }
+  sheet.style.transition = 'transform .16s ease, opacity .16s ease';
+  sheet.style.transform = 'translateX(' + (sens > 0 ? -34 : 34) + 'px)';
+  sheet.style.opacity = '0.25';
+  setTimeout(function () {
+    openMacroPopup(cible);
+    // Le scroll repart en haut : on change de sujet, pas de paragraphe.
+    sheet.scrollTop = 0;
+    sheet.style.transition = 'none';
+    sheet.style.transform = 'translateX(' + (sens > 0 ? 34 : -34) + 'px)';
+    requestAnimationFrame(function () {
+      sheet.style.transition = 'transform .2s cubic-bezier(.22,1,.36,1), opacity .2s ease';
+      sheet.style.transform = 'translateX(0)';
+      sheet.style.opacity = '1';
+    });
+  }, 160);
+}
+
+/* ⚠️ Les écouteurs sont posés une seule fois, et lisent la macro courante dans
+   un attribut plutôt que dans une closure : openMacroPopup est rappelé à chaque
+   glissement, et une closure par appel aurait empilé les écouteurs — trois
+   glissements et un seul geste en aurait déclenché trois. */
+function macroBrancherGeste(type, ordre) {
+  var sheet = document.querySelector('#ovMacro .sheet');
+  if (!sheet) return;
+  sheet.setAttribute('data-macro-courante', type);
+  if (sheet.getAttribute('data-geste') === '1') return;
+  sheet.setAttribute('data-geste', '1');
+  var x0 = null, y0 = null;
+  sheet.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1) { x0 = null; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+  }, { passive: true });
+  sheet.addEventListener('touchend', function (e) {
+    if (x0 === null) return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - x0, dy = t.clientY - y0;
+    x0 = null;
+    // Horizontal franc, et plus horizontal que vertical : sinon un scroll un
+    // peu de biais changerait de macro sans qu'on l'ait demandé.
+    if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    var cour = sheet.getAttribute('data-macro-courante');
+    var i = ordre.indexOf(cour);
+    if (i === -1) return;
+    var j = dx < 0 ? i + 1 : i - 1;
+    if (j < 0 || j >= ordre.length) return;   // pas de bouclage : on sent le bord
+    macroGlisser(ordre[j], dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+
 function openMacroPopup(type) {
   var cfg = MACRO_CFG[type];
   var conseilKey = {prot:'conseil_prot', gluc:'conseil_gluc', lip:'conseil_lip'};
@@ -2251,24 +2373,48 @@ function openMacroPopup(type) {
   };
 
   var obj=macObj[cfg.key]||0, auj=macAuj[cfg.key]||0;
-  var restant=Math.max(0,obj-auj);
+  var restant=Math.max(0,Math.round(obj-auj));   // pas de décimale : « 100,1 g » ne veut rien dire ici
   var pct=obj>0?Math.min(100,Math.round((auj/obj)*100)):0;
   var circ=2*Math.PI*22;
 
   // Update header
   setText('mbName', cfg.name);
   setText('mbUnit', cfg.unit.toLowerCase());
+  // Même règle que les anneaux de l'écran Suivi : la jauge suit le RESTANT.
+  var pctRestant = obj>0 ? Math.max(0, 100-pct) : 0;
   setText('mbVal', restant||(obj>0?obj:'–'));
-  setText('mbPct', pct+'%');
+  setText('mbPct', pctRestant+'%');
   var emojiEl = document.getElementById('mbEmojiCircle');
   if (emojiEl) emojiEl.textContent = cfg.emoji;
   var arc = document.getElementById('mbArc');
   if (arc) {
     arc.style.stroke = cfg.color;
-    setTimeout(function(){ arc.style.strokeDasharray = ((pct/100)*circ)+' '+circ; }, 50);
+    setTimeout(function(){ arc.style.strokeDasharray = ((pctRestant/100)*circ)+' '+circ; }, 50);
+  }
+
+  // Onglets : on repeint à chaque ouverture, la macro active changeant.
+  var ORDRE = ['prot','gluc','lip'];
+  var ong = document.getElementById('mbOnglets');
+  if (ong) {
+    ong.innerHTML = ORDRE.map(function(t){
+      var c = MACRO_CFG[t], actif = (t === type);
+      return '<button data-macro="'+t+'" style="flex:1;padding:8px 4px;border:none;border-radius:12px;'
+        + 'font-family:\'Inter\',sans-serif;font-size:12px;font-weight:700;cursor:pointer;'
+        + (actif ? 'background:var(--black);color:#fff;' : 'background:var(--bg);color:var(--muted);box-shadow:var(--sm);')
+        + '">'+c.emoji+' '+c.name.charAt(0)+c.name.slice(1).toLowerCase()+'</button>';
+    }).join('');
+    // data-* + addEventListener : pas d'onclick fabriqué à la chaîne (règle §9 #8).
+    var bt = ong.querySelectorAll('button');
+    for (var k = 0; k < bt.length; k++) {
+      bt[k].addEventListener('click', function(){
+        var cible = this.getAttribute('data-macro');
+        if (cible !== type) macroGlisser(cible, ORDRE.indexOf(cible) > ORDRE.indexOf(type) ? 1 : -1);
+      });
+    }
   }
 
   lockScroll(); document.getElementById('ovMacro').classList.add('active');
+  macroBrancherGeste(type, ORDRE);
 
   // Afficher depuis le cache — JAMAIS de génération Claude ici
   var cache = window._conseilsCache;
@@ -3641,6 +3787,27 @@ function forceUnlockScroll() {
   _lockCount = 0;
   document.body.style.overflow = '';
   document.documentElement.style.overflow = '';
+}
+
+/* Le retour, l'entête, la croix : ce qui permet de SORTIR d'une page doit
+   rester à l'écran pendant tout le scroll (demande de Pablo). On ne le fait
+   pas à la main sur chaque overlay — il y en a neuf, et le prochain serait
+   oublié : on cherche le bouton de fermeture, et on rend collant son bloc de
+   premier niveau. Pourquoi le bloc et pas le bouton : un élément `sticky` est
+   borné par la boîte de son parent, donc un bouton collant à l'intérieur
+   d'une ligne d'en-tête qui défile disparaît AVEC elle. */
+function rendreRetoursCollants() {
+  var pages = document.querySelectorAll('.overlay .sheet, #profilSheet');
+  for (var i = 0; i < pages.length; i++) {
+    var page = pages[i];
+    if (page.querySelector('.sheet-sticky')) continue;
+    var btn = page.querySelector('button[onclick^="close"]');
+    if (!btn) continue;
+    // Remonter jusqu'à l'enfant direct de la page.
+    var bloc = btn;
+    while (bloc.parentNode && bloc.parentNode !== page) bloc = bloc.parentNode;
+    if (bloc && bloc.parentNode === page) bloc.classList.add('sheet-sticky');
+  }
 }
 
 function closeOverlay(id) {
