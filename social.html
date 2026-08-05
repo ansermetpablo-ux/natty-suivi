@@ -129,15 +129,44 @@ body{overflow-x:hidden}
 /* Suggestions quand on ne suit encore personne */
 .sug-note{font-size:12.5px;color:var(--muted);line-height:1.5;margin:-4px 0 14px}
 
-/* ══ Détail (bottom sheet) ══ */
-.sheet{position:fixed;inset:0;z-index:700;display:none;align-items:flex-end;justify-content:center;
-  background:rgba(16,16,20,.45)}
+/* ══ Détail : une PAGE, pas une feuille ══
+   Même règle que dans suivi.html : « quand on clique quelque part ça doit
+   ouvrir une page complète, pas un pop-up ». D'un bord à l'autre, sans fond
+   assombri ni coins arrondis, et le contenu défile à l'intérieur — ce qui
+   permet au retour de rester en haut (.sheet-bar). */
+.sheet{position:fixed;inset:0;z-index:700;display:none;align-items:stretch;justify-content:center;
+  background:var(--bg)}
 .sheet.on{display:flex}
-.sheet-in{width:100%;max-width:var(--col);max-height:92vh;overflow-y:auto;background:var(--bg);
-  border-radius:var(--r-xl) var(--r-xl) 0 0;padding:10px var(--pad) calc(28px + env(safe-area-inset-bottom,0px));
+.sheet-in{width:100%;max-width:var(--col);height:100%;max-height:100%;overflow-y:auto;background:var(--bg);
+  border-radius:0;overscroll-behavior:contain;
+  padding:0 var(--pad) calc(96px + env(safe-area-inset-bottom,0px));
   -webkit-overflow-scrolling:touch;animation:sheetUp .28s cubic-bezier(.22,1,.36,1)}
 @keyframes sheetUp{from{transform:translateY(40px);opacity:.6}to{transform:translateY(0);opacity:1}}
-.sheet-grip{width:42px;height:4px;border-radius:2px;background:#dcdce2;margin:2px auto 14px}
+/* La poignée ne veut plus rien dire sur une page pleine. */
+.sheet-grip{display:none}
+/* Barre de retour, collante : elle porte le seul moyen de sortir. */
+.sheet-bar{position:sticky;top:0;z-index:5;background:var(--bg);
+  padding:calc(10px + env(safe-area-inset-top,0px)) 0 10px;
+  display:flex;align-items:center;gap:10px}
+.sheet-bar button{background:var(--card);border:none;border-radius:12px;padding:9px 13px;
+  font-family:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.sheet-bar .ttl{flex:1;min-width:0;font-weight:800;font-size:13px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ══ Profil d'un membre ══ */
+.pf-head{display:flex;align-items:center;gap:14px;margin-top:8px}
+.pf-av{width:64px;height:64px;border-radius:50%;background:var(--ink);color:#fff;flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800}
+.pf-nm{font-weight:900;font-size:22px;letter-spacing:-.3px}
+.pf-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.pf-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+.pf-stats .st{background:var(--card);border-radius:var(--r-lg);padding:13px 0;text-align:center}
+.pf-stats .st .v{font-weight:900;font-size:17px}
+.pf-stats .st .k{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.3px;margin-top:3px}
+/* Sur SA page, répéter son prénom au-dessus de chacun de ses plats n'apprend
+   rien et coûte de la hauteur à chaque carte. */
+#pfPosts .post-head{display:none}
 .sheet-photo{width:100%;aspect-ratio:4/3;border-radius:var(--r-lg);overflow:hidden;background:var(--card);
   display:flex;align-items:center;justify-content:center;font-size:76px}
 .sheet-photo img{width:100%;height:100%;object-fit:cover}
@@ -234,6 +263,10 @@ body{overflow-x:hidden}
   <div class="sheet-in" id="sheetIn"></div>
 </div>
 
+<div class="sheet" id="sheetPf">
+  <div class="sheet-in" id="pfIn"></div>
+</div>
+
 <div class="sheet" id="sheetMbr">
   <div class="sheet-in">
     <div class="sheet-grip"></div>
@@ -296,7 +329,8 @@ function coeur(p){
 
 function carte(p, avecScore){
   return '<div class="post" data-id="' + p.id + '">'
-    + '<div class="post-head"><div class="av sm">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
+    + '<div class="post-head" data-membre="' + esc(p.user_id) + '">'
+    + '<div class="av sm">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
     + '<div class="who">' + esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div></div>'
     /* Le nom est DANS la photo : la bulle est en position absolue, et un
        élément absolu se cale sur son premier ancêtre positionné — .post-img.
@@ -341,7 +375,9 @@ function ligneMembre(m){
   if (m.nbPlats) bouts.push(m.nbPlats + ' plat' + (m.nbPlats > 1 ? 's' : ''));
   if (m.jour && m.jour.c) bouts.push(m.jour.c + ' kcal/jour');
   if (m.proximite >= 0.85) bouts.push('profil proche');
-  return '<div class="mbr">'
+  // La ligne entière mène au profil ; le bouton Suivre garde son propre geste
+  // (il appelle stopPropagation, cf. le gestionnaire [data-follow]).
+  return '<div class="mbr" data-membre="' + esc(m.user_id) + '" style="cursor:pointer">'
     + '<div class="av">' + esc(initiale(m.prenom)) + '</div>'
     + '<div class="mbr-body"><div class="mbr-nm">' + esc(m.prenom) + '</div>'
     + '<div class="mbr-sub">' + esc(bouts.join(' · ')) + '</div></div>'
@@ -453,9 +489,13 @@ function rendreSheet(){
     note = 'Les macros de ce plat n\'ont pas pu être estimées : certains ingrédients ne sont pas dans notre table nutritionnelle.';
   }
 
-  $('sheetIn').innerHTML = '<div class="sheet-grip"></div>'
+  $('sheetIn').innerHTML = '<div class="sheet-bar"><button id="shBack">←</button>'
+    + '<div class="ttl">' + esc(p.nom) + '</div></div>'
     + '<div class="sheet-photo">' + visuel(p) + '</div>'
-    + '<div class="sheet-head"><div class="av">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
+    /* L'en-tête d'auteur mène à son profil : le nom et la photo sont ce sur
+       quoi on appuie naturellement pour « voir qui c'est ». */
+    + '<div class="sheet-head" data-membre="' + esc(p.user_id) + '" style="cursor:pointer">'
+    + '<div class="av">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
     + '<div class="who"><div class="nm">' + esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div>'
     + '<div class="dt">' + (d ? d.getDate() + ' ' + MOIS[d.getMonth()] : '') + (p.type ? ' · ' + esc(p.type) : '') + '</div></div>'
     + (p.score !== null ? '<span class="score ' + classeScore(p.score) + '">' + p.score + ' / 100</span>' : '')
@@ -481,6 +521,7 @@ function rendreSheet(){
     + '<button class="btn-ghost" id="shClose">Fermer</button>'
     + '</div>';
 
+  $('shBack').addEventListener('click', fermer);
   $('shLike').addEventListener('click', function(){
     NattySocial.toggleLike(p.id);
     rendreSheet();
@@ -491,6 +532,56 @@ function rendreSheet(){
     toast(suit ? 'Vous suivez ' + p.auteur.prenom : 'Vous ne suivez plus ' + p.auteur.prenom);
   });
   $('shClose').addEventListener('click', fermer);
+}
+
+/* ══ Profil d'un membre ══
+   Ouverte depuis un nom ou une photo, partout où ils apparaissent. On ne
+   retourne pas en base : NattySocial a déjà tous les plats du fil en mémoire,
+   avec leurs macros et leurs auteurs. */
+function ouvrirProfil(uid){
+  var a = NattySocial.auteurParId(uid);
+  var plats = NattySocial.platsDeMembre(uid);
+  if (!a && !plats.length) return;
+  var prenom = (a && a.prenom) || 'Membre Natty';
+  var jour = a && a.jour;
+  var ami = NattySocial.estAmi(uid);
+
+  // Moyennes de ce qu'il publie : c'est ce qui dit le plus de son alimentation,
+  // et ça ne demande aucune donnée de plus que le fil.
+  var n = plats.length;
+  var moy = plats.reduce(function(t, p){
+    var m = p.macros || {}; t.c += m.c||0; t.p += m.p||0; return t;
+  }, { c:0, p:0 });
+  var scores = plats.map(function(p){ return p.score; }).filter(function(v){ return v !== null; });
+  var scoreMoy = scores.length ? Math.round(scores.reduce(function(a2,b2){return a2+b2;},0) / scores.length) : null;
+
+  $('pfIn').innerHTML = '<div class="sheet-bar"><button id="pfBack">←</button>'
+      + '<div class="ttl">' + esc(prenom) + '</div>'
+      + '<button data-follow="' + esc(uid) + '" class="follow' + (ami?' on':'') + '">'
+      + (ami ? 'Suivi ✓' : 'Suivre') + '</button></div>'
+    + '<div class="pf-head"><div class="pf-av">' + esc(initiale(prenom)) + '</div>'
+    + '<div><div class="pf-nm">' + esc(prenom) + '</div>'
+    + '<div class="pf-sub">' + n + ' plat' + (n>1?'s':'') + ' publié' + (n>1?'s':'')
+    + (jour ? ' · besoin ' + jour.c + ' kcal / jour' : '') + '</div></div></div>'
+    + '<div class="pf-stats">'
+    +   '<div class="st"><div class="v">' + (n ? Math.round(moy.c/n) : '–') + '</div><div class="k">Kcal / plat</div></div>'
+    +   '<div class="st"><div class="v">' + (n ? Math.round(moy.p/n) + 'g' : '–') + '</div><div class="k">Prot / plat</div></div>'
+    +   '<div class="st"><div class="v">' + (scoreMoy !== null ? scoreMoy : '–') + '</div><div class="k">Score moyen</div></div>'
+    + '</div>'
+    + '<div class="sec-title">Ses plats</div>'
+    + '<div class="posts" id="pfPosts"></div>';
+
+  grille($('pfPosts'), plats, false);
+  $('pfBack').addEventListener('click', fermerProfil);
+  $('sheetPf').classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+
+function fermerProfil(){
+  $('sheetPf').classList.remove('on');
+  // Le plat d'où l'on venait peut être encore ouvert derrière : on ne rend la
+  // main au fil que si plus aucune page n'est ouverte.
+  if (!$('sheet').classList.contains('on')) document.body.style.overflow = '';
 }
 
 /* ══ Interactions ══ */
@@ -524,6 +615,14 @@ document.addEventListener('click', function(e){
     majAmisPlusTard();
     return;
   }
+  /* ⚠️ AVANT [data-id] : l'en-tête d'auteur est DANS la carte du plat. Testé
+     après, le plat s'ouvrirait toujours et le profil jamais. */
+  var mbr = e.target.closest && e.target.closest('[data-membre]');
+  if (mbr){
+    e.stopPropagation();
+    ouvrirProfil(mbr.dataset.membre);
+    return;
+  }
   var cible = e.target.closest && e.target.closest('[data-id]');
   if (cible) ouvrir(cible.dataset.id);
 });
@@ -540,7 +639,8 @@ function majAmisPlusTard(){
   }, 400);
 }
 
-$('sheet').addEventListener('click', function(e){ if (e.target === this) fermer(); });
+/* Plus de clic sur le fond : une page pleine n'a pas de fond. Le retour est
+   dans la barre collante en haut. */
 
 $('btnMembres').addEventListener('click', function(){
   rendreMembres();

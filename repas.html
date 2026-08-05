@@ -95,6 +95,18 @@ body{overflow-x:hidden}
   justify-content:center;font-weight:800}
 .ingr.off{opacity:.4}
 .ingr.off .tick{background:#d3d3d8}
+/* ══ Détails : ingrédients + préparation, replies ══ */
+.det-h{width:100%;background:none;border:none;color:var(--muted);font-family:inherit;
+  font-size:12.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:7px;padding:18px 0 6px}
+.det-c{font-size:14px;transition:transform .2s ease}
+/* `display:none` plutôt qu'une hauteur animée : la préparation contient des SVG
+   et des minuteurs, une transition sur `height` obligerait à mesurer un contenu
+   qui bouge — pour un gain que personne ne remarque. */
+.det-body{display:none}
+.det-body.on{display:block;animation:detIn .24s cubic-bezier(.22,1,.36,1)}
+@keyframes detIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
 /* ══ Découvrir ══ */
 .discover-row{display:flex;gap:12px}
 .discover-card{flex:1;background:var(--metal-white);box-shadow:var(--sh-metal-light);border-radius:var(--r-lg);
@@ -206,6 +218,11 @@ var actif = 0;         // index du plat au hero
 var suivies = {};      // recettes que l'utilisateur a choisi de suivre
 var ingrOff = {};      // ingrédients décochés du plat courant
 var SEMAINE = [];      // recettes de la semaine, telles que reco.js les rend
+/* Ingrédients et préparation sont replies par défaut : le hero, les macros
+   et « Démarrer » suffisent à décider. On garde le choix pendant la session
+   — refermer le bloc à chaque changement de recette forcerait à le rouvrir
+   à chaque comparaison. */
+var detailsOuverts = false;
 
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -422,6 +439,8 @@ function render(){
          +  '</div>';
   }
 
+  // Tout ce qui suit va dans le dépliant « Détails ».
+  var detail = '';
   if (d.ingr.length){
     var actifs = d.ingr.length - Object.keys(ingrOff).length;
     // Quand le garde-manger est rempli, on distingue ce qu'il faut acheter.
@@ -430,7 +449,7 @@ function render(){
     var gmOn = typeof NattyGardeManger !== 'undefined' && NattyGardeManger.nbItems() > 0;
     var manque = d.ingr.map(function(x){ return gmOn && !NattyGardeManger.contient(x.nm); });
     var nbAchat = manque.filter(Boolean).length;
-    html += '<div class="panel">'
+    detail += '<div class="panel">'
       + '<div class="panel-head"><div class="panel-title">Ingrédients <span>('+actifs+'/'+d.ingr.length
       + (nbAchat ? ' · '+nbAchat+' à acheter' : '')+')</span></div>'
       + '<div class="panel-link" id="ingrEdit">Modifier</div></div>'
@@ -445,7 +464,14 @@ function render(){
 
   // Préparation détaillée : rendue seulement s'il y a des étapes (un repas
   // venu de `meals` n'en a pas, la fonction renvoie alors une chaîne vide).
-  if (d.src && window.NattyRecette) html += NattyRecette.fiche(d.src, { bouton:false });
+  if (d.src && window.NattyRecette) detail += NattyRecette.fiche(d.src, { bouton:false });
+
+  if (detail){
+    html += '<button class="det-h" id="detH" aria-expanded="' + (detailsOuverts?'true':'false') + '">'
+         +   'Détails <span class="det-c">' + (detailsOuverts?'▴':'▾') + '</span>'
+         + '</button>'
+         + '<div class="det-body' + (detailsOuverts?' on':'') + '" id="detB">' + detail + '</div>';
+  }
 
   html += blocDecouvrir();
   document.getElementById('content').innerHTML = html;
@@ -492,6 +518,15 @@ window.NattyOnRecetteSuivie = async function(r){
 };
 
 function brancher(){
+  var dh = document.getElementById('detH');
+  if (dh) dh.addEventListener('click', function(){
+    detailsOuverts = !detailsOuverts;
+    var b = document.getElementById('detB'), c = dh.querySelector('.det-c');
+    if (b) b.classList.toggle('on', detailsOuverts);
+    if (c) c.textContent = detailsOuverts ? '▴' : '▾';
+    dh.setAttribute('aria-expanded', detailsOuverts ? 'true' : 'false');
+  });
+
   /* « Suivre cette recette » ouvre la cinématique des étapes. C'est le geste
      qui déclenche la cuisine, donc l'écran qui doit suivre est celui qui
      guide — pas un toast. Le retrait, lui, part sur son propre bouton : il

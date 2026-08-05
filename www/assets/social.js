@@ -446,6 +446,16 @@ var NattySocial = (function () {
 
   /* Annuaire des membres visibles dans le fil : ceux qu'on suit d'abord,
      puis les profils les plus proches du nôtre. */
+  /* Les plats d'UN membre, du plus récent au plus ancien. Sert à la page de
+     profil ouverte depuis un nom ou une photo dans le fil : `PLATS` contient
+     déjà tout ce qu'il faut (macros recalculées, score, auteur), inutile de
+     retourner en base. */
+  function platsDeMembre(userId) {
+    if (!userId) return [];
+    return PLATS.filter(function (p) { return p.user_id === userId; })
+      .sort(function (a, b) { return new Date(b.cree || 0) - new Date(a.cree || 0); });
+  }
+
   function membres() {
     return Object.keys(AUTEURS)
       .filter(function (u) { return u !== Natty.USER_ID && AUTEURS[u].nbPlats > 0; })
@@ -577,6 +587,7 @@ var NattySocial = (function () {
     charger: charger,
     vues: vues,
     membres: membres,
+    platsDeMembre: platsDeMembre,
     chercher: chercher,
     platParId: platParId,
     auteurParId: function (u) { return AUTEURS[u] || null; },
