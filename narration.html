@@ -41,8 +41,14 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .top-menu svg{width:18px;height:18px}
 .segs{flex:1;display:flex;gap:4px}
 .seg{flex:1;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.seg{position:relative}
 .seg .fill{height:100%;width:0%;background:var(--ink);border-radius:2px;transition:width .5s ease}
+/* « Vous êtes ici » : la barre dit ce qui est acquis, ce trait dit où on lit. */
+.seg .cur{position:absolute;top:-2px;width:2px;height:8px;border-radius:1px;background:var(--accent,#0a6ebd);transform:translateX(-1px);transition:left .5s ease;opacity:.9}
 .top-map{width:34px;height:34px;border-radius:50%;background:var(--bg);box-shadow:var(--so);border:none;font-size:15px;cursor:pointer;flex-shrink:0}
+.top-pal{height:34px;padding:0 12px;border-radius:99px;background:var(--bg);box-shadow:var(--so);border:none;font-family:'Inter',sans-serif;cursor:pointer;flex-shrink:0;display:flex;align-items:baseline;gap:1px}
+.top-pal .tp-n{font-size:15px;font-weight:900;color:var(--ink)}
+.top-pal .tp-s{font-size:11px;font-weight:800;color:var(--muted)}
 
 /* ── scène ── */
 .stage{position:absolute;inset:0;overflow:hidden;z-index:10}
@@ -377,13 +383,20 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 /* Même raison que `.top` : « Toutes les épreuves » et ses deux boutons
    collaient à la barre d'état. Le bas aussi, sinon le dernier palier finit
    sous la barre d'accueil. */
-.map-screen{position:absolute;inset:0;background:var(--bg);z-index:10001;transform:translateY(100%);transition:transform .45s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding:calc(58px + env(safe-area-inset-top, 0px)) 0 calc(40px + env(safe-area-inset-bottom, 0px))}
+.map-screen{position:absolute;inset:0;background:var(--bg);z-index:10001;transform:translateY(100%);transition:transform .45s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding:calc(58px + env(safe-area-inset-top, 0px)) 0 calc(104px + env(safe-area-inset-bottom, 0px))}
 .map-screen.on{transform:translateY(0)}
 /* La barre du haut (retour menu + progression) reste au-dessus de la carte et
    ne défile pas : plus besoin de remonter en haut pour revenir au menu. */
 body.map-on .top{background:var(--bg)}
 /* z-index au-dessus des sections de palier (2) : elles créent leur propre
    contexte d'empilement et passeraient sinon par-dessus le titre collant. */
+/* Barre du bas, hors du flux : elle reste au même endroit pendant tout le
+   scroll, comme la barre d'onglets de l'app. */
+.map-foot{position:absolute;left:0;right:0;bottom:0;z-index:7;padding:14px 22px calc(16px + env(safe-area-inset-bottom, 0px));
+  background:linear-gradient(to top,var(--bg) 62%,transparent)}
+.map-go{width:100%;padding:17px;border:none;border-radius:22px;background:var(--ink);color:var(--bg);
+  font-family:'Inter',sans-serif;font-size:16px;font-weight:800;letter-spacing:-.2px;cursor:pointer}
+.map-go:active{transform:scale(.985)}
 .map-hd{position:sticky;top:0;z-index:6;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:4px 22px 18px}
 .map-hd h2{font-size:20px;font-weight:900}
 .map-close{width:34px;height:34px;border-radius:50%;background:var(--bg);box-shadow:var(--so);border:none;font-size:15px;cursor:pointer}
@@ -392,36 +405,31 @@ body.map-on .top{background:var(--bg)}
    blocage variables en WebView Capacitor, cf. portage mobile). */
 .map-reset{height:34px;padding:0 12px;border-radius:99px;background:var(--bg);box-shadow:var(--so);border:none;font-family:'Inter',sans-serif;font-size:13px;font-weight:800;color:var(--muted);cursor:pointer}
 .map-reset.arme{background:var(--red);color:#fff;box-shadow:none}
-.mrail{position:relative;display:flex;flex-direction:column-reverse;align-items:center;padding:16px 0}
-.mrail::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:4px;transform:translateX(-50%);background:var(--line);border-radius:2px}
-.mnode{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;margin:11px 0}
-.mdot{width:56px;height:56px;border-radius:18px;background:var(--bg);box-shadow:var(--so);display:flex;align-items:center;justify-content:center;font-size:24px;border:none}
-.mdot.done{border:2px solid var(--green)}
+/* `column`, et plus `column-reverse` : le rail montait parce qu'on grimpait des
+   épreuves une par une. Il n'y en a plus — on lit donc les paliers de 1 à 3, de
+   haut en bas. Et le trait vertical qui reliait les vignettes n'a plus rien à
+   relier. */
+.mrail{position:relative;display:flex;flex-direction:column;align-items:center;padding:8px 0}
 /* beat pas encore atteint : visible pour donner envie, mais pas cliquable */
-.mdot.futur{opacity:.4;cursor:default;box-shadow:var(--si)}
-.mdot.cur{width:66px;height:66px;font-size:29px;background:var(--ink);color:#fff}
 .mlbl{font-size:10px;font-weight:700;color:var(--muted);margin-top:5px}
-.mbelt{position:relative;z-index:2;background:var(--ink);color:#fff;border-radius:99px;padding:8px 18px;font-size:13px;font-weight:800;margin:18px 0}
 
 /* ── sections de PALIER dans la carte ──
    Le rail est en column-reverse (le parcours monte) : la section du palier 1 est
    donc en bas, et l'en-tête d'un palier — premier enfant dans le DOM — se pose
    sous ses épreuves, comme un portique qu'on franchit en grimpant. */
-.mpal{position:relative;z-index:2;width:100%;display:flex;flex-direction:column-reverse}
-.mpal-hd{display:flex;align-items:center;gap:12px;width:calc(100% - 32px);margin:26px 16px 12px;padding:13px 15px;border:none;border-radius:20px;background:var(--bg);box-shadow:var(--so);font-family:'Inter',sans-serif;text-align:left;cursor:pointer;color:var(--ink)}
+/* Plus de liste d'épreuves à faire grimper : les paliers se lisent dans
+   l'ordre, de 1 à 3, de haut en bas. */
+.mpal{position:relative;z-index:2;width:100%;display:flex;flex-direction:column}
+.mpal-hd{display:flex;align-items:center;gap:12px;width:calc(100% - 32px);margin:14px 16px;padding:13px 15px;border:none;border-radius:20px;background:var(--bg);box-shadow:var(--so);font-family:'Inter',sans-serif;text-align:left;color:var(--ink)}
 .mpal-em{width:44px;height:44px;flex-shrink:0;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:23px;background:var(--line)}
 .mpal-txt{flex:1;min-width:0}
 .mpal-n{font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .mpal-t{font-size:15px;font-weight:800;line-height:1.25;margin-top:1px}
 .mpal-meta{font-size:11px;font-weight:700;color:var(--muted);margin-top:3px}
-.mpal-chev{flex-shrink:0;font-size:12px;color:var(--muted);transition:transform .3s}
-.mpal.open>.mpal-hd .mpal-chev{transform:rotate(180deg)}
-.mpal-body{display:none;flex-direction:column-reverse;align-items:center;width:100%}
-.mpal.open>.mpal-body{display:flex}
 /* palier en cours : en négatif, comme le nœud courant du rail */
 .mpal.cur>.mpal-hd{background:var(--ink);color:#fff}
 .mpal.cur .mpal-em{background:rgba(255,255,255,.14)}
-.mpal.cur .mpal-n,.mpal.cur .mpal-meta,.mpal.cur .mpal-chev{color:rgba(255,255,255,.62)}
+.mpal.cur .mpal-n,.mpal.cur .mpal-meta{color:rgba(255,255,255,.62)}
 .mpal.done>.mpal-hd{border:2px solid var(--green);padding:11px 13px}
 .mpal.todo>.mpal-hd{opacity:.62}
 .mpal.lock>.mpal-hd{opacity:.45;cursor:default}
@@ -756,18 +764,28 @@ body[data-u="jeu"] #klayer .hl{color:#0d0d0f}
   <button class="top-menu" id="menuBtn" aria-label="Retour au menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg></button>
   <button class="top-back" id="back">←</button>
   <div class="segs" id="segs"></div>
-  <button class="top-map" id="mapBtn">🗺️</button>
+  <!-- La progression du palier remplace le bouton carte : elle est visible en
+       permanence, dans une barre qui ne défile pas — au lieu d'être cachée
+       derrière un écran qu'il fallait penser à ouvrir. -->
+  <button class="top-pal" id="palBtn" aria-label="Ma progression">
+    <span class="tp-n" id="palN">1</span><span class="tp-s">/3</span>
+  </button>
 </div>
 
 <div class="stage" id="stage"></div>
 
 <div class="defi-announce" id="defiAnnounce"></div>
 
+<!-- Écran de progression. Il ne liste PLUS les épreuves une par une (demande de
+     Pablo : « retirer le module toutes les épreuves avec la flèche etc. ») —
+     seulement où on en est, palier par palier. Le seul geste qui compte est en
+     bas, fixe : reprendre là où on s'était arrêté. -->
 <div class="map-screen" id="mapScreen">
-  <div class="map-hd"><h2>Toutes les épreuves</h2>
-    <div class="map-act"><button class="map-reset" id="mapReset">↺</button><button class="map-close" id="mapClose">✕</button></div>
+  <div class="map-hd"><h2>Ta progression</h2>
+    <div class="map-act"><button class="map-reset" id="mapReset">↺</button></div>
   </div>
   <div class="mrail" id="mrail"></div>
+  <div class="map-foot"><button class="map-go" id="mapGo">Commencer</button></div>
 </div>
 
 <script>
@@ -1384,8 +1402,21 @@ function auBordDuPalier(){var s=idx+1;return s<STORY.length&&palierDe(s)>palierD
 function xpGagnes(){var s=0;for(var i=0;i<maxIdx&&i<STORY.length;i++){var b=STORY[i];if(b.type==='reward'&&b.xp)s+=b.xp}return s}
 
 /* barre du haut : progression globale fluide (robuste quel que soit le nb de chapitres) */
-function buildSegs(){document.getElementById('segs').innerHTML='<div class="seg" style="flex:1"><div class="fill" id="globalFill"></div></div>'}
-function markSegs(){var f=document.getElementById('globalFill');if(f)f.style.width=Math.round((idx)/(STORY.length-1)*100)+'%'}
+function buildSegs(){document.getElementById('segs').innerHTML='<div class="seg" style="flex:1"><div class="fill" id="globalFill"></div><i class="cur" id="globalCur"></i></div>'}
+/* ⚠️ La barre suivait `idx` : revenir en arrière la vidait, donc « le retour
+   retirait la progression » (constaté par Pablo). Une progression, par
+   définition, ne se perd pas parce qu'on relit une notion. Elle suit donc
+   `maxIdx` — le point le plus loin atteint — et la position courante n'est plus
+   qu'un repère par-dessus. */
+function markSegs(){
+  var n=Math.max(1,STORY.length-1);
+  var f=document.getElementById('globalFill');
+  if(f)f.style.width=Math.round(Math.max(maxIdx,idx)/n*100)+'%';
+  var c=document.getElementById('globalCur');
+  if(c)c.style.left=Math.round(idx/n*100)+'%';
+  var pn=document.getElementById('palN');
+  if(pn)pn.textContent=palierDe(idx);
+}
 
 var ANIM={slide:['enter-slide','exit-slide'],zoom:['enter-zoom','exit-zoom'],up:['enter-up','exit-up']};
 
@@ -2750,7 +2781,7 @@ var BEAT_LBL={say:'Narration',choice:'Question',chapter:'Chapitre',macros:'Les 3
 
 /* sections dépliées : mémorisé d'une ouverture de carte à l'autre, sinon replier
    le palier qu'on vient d'ouvrir à chaque aller-retour serait exaspérant. */
-var mapOuverts={};
+
 
 function buildMap(){
   var r=document.getElementById('mrail');
@@ -2775,93 +2806,64 @@ function buildMap(){
        s'ouvre le lendemain du jour où le précédent a été bouclé (cf. progRollover). */
     var dispo=P.n<=palierOuvert;
     var etat=!dispo?'lock':(P.n===pCur&&!fini?'cur':(fini?'done':'todo'));
-    var ouvert=etat==='lock'?false:((mapOuverts[P.n]===undefined)?(etat==='cur'):mapOuverts[P.n]);
     var meta=etat==='lock'
         ?(P.n===palierOuvert+1&&palierFinLe?'Disponible demain ☀️':'Termine le palier '+(P.n-1)+' pour l\'ouvrir')
       :fini?('Terminé ✓ · '+o.xp+' XP')
       :o.faits?(o.faits+'/'+o.total+' épreuves · '+o.xpFaits+' XP')
       :(o.total+' épreuves · '+o.xp+' XP à gagner');
     var pct=o.total?Math.round(o.faits/o.total*100):0;
-    var corps='';
-    for(var i=o.premier;i<=o.dernier;i++){
-      var b=STORY[i];
-      if(b.type==='chapter'){corps+='<div class="mbelt">'+b.label+'</div>';continue}
-      var st=i<borne?'done':i===idx?'cur':'';
-      var lbl=(b.type==='flash')?(b.name||'Flash'):(b.type==='say'?(b.title||'').slice(0,18):BEAT_LBL[b.type]||b.type);
-      /* On ne peut sauter QUE sur un beat déjà atteint : revoir une notion reste
-         libre, prendre de l'avance non — sinon la carte contournerait d'un clic
-         le blocage journalier qu'on vient de poser dans nextBeat(). */
-      var futur=i>maxIdx;
-      corps+='<div class="mnode"><button class="mdot '+st+(futur?' futur':'')+'"'
-        +(futur?'':' data-goto="'+i+'"')+'>'+(BEAT_ICON[b.type]||'•')+'</button><div class="mlbl">'+lbl+'</div></div>';
-    }
-    html+='<div class="mpal '+etat+(ouvert?' open':'')+'" data-palier="'+P.n+'">'
-      +'<button class="mpal-hd" data-toggle="'+P.n+'">'
+    /* Plus de liste d'épreuves : une carte par palier, et sa jauge. Ce que
+       l'utilisateur veut savoir en ouvrant cet écran, c'est « où j'en suis »
+       et « je reprends » — pas naviguer entre 121 vignettes. Le saut libre
+       vers une épreuve précise disparaît donc avec la liste ; le retour (←)
+       reste là pour revoir les étapes précédentes, sans perdre la progression. */
+    html+='<div class="mpal '+etat+' open" data-palier="'+P.n+'">'
+      +'<div class="mpal-hd">'
         +'<div class="mpal-em">'+(etat==='lock'?'🔒':P.em)+'</div>'
         +'<div class="mpal-txt"><div class="mpal-n">Palier '+P.n+'</div>'
           +'<div class="mpal-t">'+P.titre+'</div>'
           +'<div class="mpal-meta">'+meta+'</div>'
           +'<div class="mpal-jauge"><i style="width:'+pct+'%"></i></div></div>'
-        +'<div class="mpal-chev">'+(etat==='lock'?'':'▾')+'</div>'
-      +'</button>'
-      +'<div class="mpal-body">'+corps+'</div>'
+      +'</div>'
     +'</div>';
   });
   r.innerHTML=html;
-  r.querySelectorAll('.mpal-hd[data-toggle]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var sec=btn.parentNode,n=+btn.dataset.toggle;
-      /* verrouillé : on ne déplie pas, on secoue pour dire non */
-      if(sec.classList.contains('lock')){
-        sec.classList.remove('nope');void sec.offsetWidth;sec.classList.add('nope');
-        vib(24);return;
-      }
-      sec.classList.toggle('open');
-      mapOuverts[n]=sec.classList.contains('open');
-      sTap();vib(10);
-    });
-  });
-  r.querySelectorAll('.mdot[data-goto]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var target=+btn.dataset.goto;
-      closeMap();
-      // saut libre : on nettoie la scène courante ET la couche kinetic (sinon elle
-      // reste affichée par-dessus le beat cible, qui se rend invisible en dessous)
-      clearTimeout(k_timer);k_playing=false;
-      var klayer=document.getElementById('klayer');
-      klayer.classList.remove('on');k_stage.innerHTML='';k_currentEl=null;
-      var kcta=document.getElementById('k_cta');if(kcta){kcta.classList.remove('on');kcta.innerHTML='';}
-      if(current&&current.parentNode)current.remove();
-      current=null;
-      document.body.classList.remove('bw');
-      idx=target;
-      go();
-    });
-  });
 }
-function openMap(){buildMap();var ms=document.getElementById('mapScreen');ms.classList.add('on');document.body.classList.add('map-on');
-  // Scroll jusqu'au beat courant DANS la carte uniquement.
-  // scrollIntoView() faisait défiler le <body> (qui est le conteneur de
-  // positionnement de .map-screen, en position:absolute) : la carte partait
-  // alors hors écran vers le haut et paraissait ne pas s'ouvrir.
-  setTimeout(function(){
-    var cur=document.querySelector('#mrail .mdot.cur');
-    /* offsetParent nul = le palier courant est replié : son nœud n'a pas de
-       position mesurable, le recentrage n'aurait aucun sens. */
-    if(cur&&cur.offsetParent){
-      var r=cur.getBoundingClientRect(),mr=ms.getBoundingClientRect();
-      ms.scrollTop += (r.top-mr.top)-ms.clientHeight/2+r.height/2;
-    }
-    document.body.scrollTop=0;document.documentElement.scrollTop=0;
-  },50);}
+function openMap(){
+  buildMap();
+  var ms=document.getElementById('mapScreen');
+  ms.classList.add('on');
+  document.body.classList.add('map-on');
+  ms.scrollTop=0;
+  document.body.scrollTop=0;document.documentElement.scrollTop=0;
+}
 function closeMap(){document.getElementById('mapScreen').classList.remove('on');document.body.classList.remove('map-on')}
-// Le bouton carte devient un va-et-vient : la barre du haut restant visible
-// par-dessus la carte, il servait sinon uniquement à ouvrir.
-document.getElementById('mapBtn').addEventListener('click',function(){
+/* La pastille « palier » ouvre et referme l'écran de progression : la barre du
+   haut restant visible par-dessus, un bouton qui n'ouvrirait que dans un sens
+   piégerait l'utilisateur. */
+document.getElementById('palBtn').addEventListener('click',function(){
   if(document.getElementById('mapScreen').classList.contains('on'))closeMap();else openMap();
 });
+
+/* « Commencer » : reprendre à l'épreuve où l'on s'était arrêté — donc au point
+   le plus loin atteint (`maxIdx`), pas à `idx`, qui a pu reculer si on est
+   revenu relire une notion. C'est ce bouton qui remplace le saut libre de
+   l'ancienne carte, et il ne peut mener qu'à du déjà atteint : le blocage d'un
+   palier par jour reste donc intact. */
+document.getElementById('mapGo').addEventListener('click',function(){
+  closeMap();
+  clearTimeout(k_timer);k_playing=false;
+  var klayer=document.getElementById('klayer');
+  klayer.classList.remove('on');k_stage.innerHTML='';k_currentEl=null;
+  var kcta=document.getElementById('k_cta');if(kcta){kcta.classList.remove('on');kcta.innerHTML='';}
+  if(current&&current.parentNode)current.remove();
+  current=null;
+  document.body.classList.remove('bw');
+  idx=Math.min(Math.max(maxIdx,0),STORY.length-1);
+  go();
+});
 document.getElementById('menuBtn').addEventListener('click',function(){ window.location.href='menu.html'; });
-document.getElementById('mapClose').addEventListener('click',closeMap);
+/* Le ✕ a disparu avec le module : c'est « Commencer » qui referme. */
 /* recommencer : deux clics, le second dans les 3 s. Efface la progression ET le
    drapeau d'intro, puis recharge — plus simple et plus sûr que de remettre à zéro
    à la main les drapeaux `_seen`/`_kdone`/`_modeAnn` semés sur les beats. */
