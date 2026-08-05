@@ -1,11 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<!-- Capability « Push Notifications ». `development` vaut aussi en production :
-	     Xcode bascule l'entitlement sur `production` à l'archivage. Le serveur, lui,
-	     choisit son hôte APNs (sandbox ou prod) via APNS_ENV — voir api/_apns.js. -->
-	<key>aps-environment</key>
-	<string>development</string>
-</dict>
+<dict/>
 </plist>
