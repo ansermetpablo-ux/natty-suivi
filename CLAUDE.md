@@ -459,6 +459,77 @@ avec un vrai clic souris, sinon on conclut à tort à un bug.
 > `courses_et_recettes` d'`api/send-email.js` n'est **appelé par aucun écran** — code mort à
 > retirer un jour ; les autres types (récap admin, notification de message) servent toujours.
 
+### `assets/planning.js` — la planification de la semaine
+Séquence plein écran **noire**, une fois par semaine, à la première ouverture de l'app :
+« Bonjour Prénom » → « Planifions ensemble votre semaine » → deux questions → placement →
+calendrier → proposition de livraison → validation. Ensuite le calendrier vit dans
+« Ma semaine », en haut de `repas.html`. Chargé par `menu.html`/`www/index.html` (le
+déclencheur) et par `repas.html` (le panneau). Dépend d'`assets/core.js` ; utilise
+`assets/generation.js` s'il est là.
+
+**Un module, pas une page** — la proposition arrive **cinq secondes** après l'arrivée dans
+l'app, par-dessus l'écran courant. Une page aurait volé la navigation à quelqu'un qui venait
+faire autre chose. Même parti pris qu'`assets/ajout.js` et `assets/generation.js`.
+
+**Le déclencheur ne s'arme que sur l'écran d'arrivée** (`menu.html`) : c'est le seul endroit où
+« à la première ouverture de la semaine » veut dire quelque chose. Il se tait tout seul si la
+semaine est déjà planifiée, si elle a été ignorée (`natty_plan_vu_<uid>` = le lundi courant),
+si une génération occupe déjà le plein écran, ou si un plat est en cours d'ajout — deux plein
+écran l'un sur l'autre ne se discutent pas.
+
+**Ce qui est calculé ici, et ce qui ne l'est pas.**
+- Le **placement** est déterministe et local : les repas des 28 derniers jours sont rangés en
+  21 cases (7 jours × 3 créneaux), chaque case comparée à la cible du créneau. Le repas
+  « protéines » va là où il manque le plus de protéines. Aucune IA, donc aucune latence et un
+  résultat explicable ligne à ligne.
+  - ⚠️ Le créneau vient de `created_at` (horodaté), **jamais** de `meal_date` (une date sèche
+    n'a pas d'heure, donc pas de créneau, et tout le calcul tombe).
+  - ⚠️ Une case **jamais renseignée** n'est pas une case sans manque, c'est une case sans
+    information. La compter 0 exclurait d'office les créneaux que l'utilisateur ne journalise
+    pas — souvent ceux qu'il expédie. Elle vaut `0,55`.
+  - Une case porte la **moyenne** par repas, pas le cumul : quatre lundis midis enregistrés ne
+    doivent pas passer pour un excédent.
+- Les **3 plats macro** sont demandés à `/api/claude` à partir des conseils **déjà écrits en
+  base** (jamais une régénération de la semaine). Appel court, **fail-open** : au moindre
+  accroc un trio de repli local prend la place et la séquence continue.
+- Les **2 recettes** sont celles de la semaine, lues dans `profil_conseils.conseils_json` —
+  exactement celles qu'affiche `repas.html`.
+
+**Total : 5 repas sur 21**, et c'est ce que dit le compteur.
+
+⚠️ **Dépendance** : sans la génération de la semaine il n'y a ni recettes ni axes macro à
+placer. Si elle manque, la séquence la déclenche (`NattyGeneration.lancer()`) et s'efface le
+temps que l'autre écran passe.
+
+**Persistance** : table `planning_semaine` (`natty_planning.sql`, §4). Tant qu'elle n'existe
+pas le plan vit dans le `localStorage` de l'appareil — et l'écran **le dit** plutôt que de
+laisser croire à une synchronisation qui n'a pas lieu. Le plan est enregistré **avant**
+d'afficher le calendrier : « Commander » quitte l'app, et un plan composé puis perdu dans ce
+trajet serait le pire des deux mondes.
+
+**Pièges retenus de `narration.html`, et deux trouvés ici** (tout vérifié en navigateur) :
+- Bouton d'action **toujours** dans la barre fixe `#nplCta`, jamais dans le plan animé : dans
+  le plan, l'animation de sortie l'emporte et il disparaît sous le doigt.
+- Auto-avance sur les scènes **sans** bouton ; une scène à bouton attend le clic.
+- ⚠️ **`animation` est une propriété unique.** La règle `.respire` (plus tardive) écrasait
+  `.trace` au lieu de s'y ajouter : le trait restait à `stroke-dashoffset:520`, donc
+  **invisible**. Le disque du soleil, le bord de l'assiette et la vapeur de la cloche n'ont
+  jamais été dessinés jusqu'à ce qu'on les déclare ensemble.
+- ⚠️ **Pas d'`aspect-ratio:1/1` sur une case de calendrier.** Une case carrée fait ici ~124 px
+  de large : sept rangées poussaient « 5 repas planifiés sur 21 » — la phrase qui donne son
+  sens à l'écran — à deux écrans de défilement. Hauteur fixe (55 px dans la séquence, 54 px
+  dans le panneau clair), mesurée à l'écran.
+- Une photo qui n'arrive pas laisse l'icône cassée du navigateur **au milieu du calendrier** :
+  `vignette()`/`brancherVignettes()` reposent l'emoji à la place. Le test `complete &&
+  !naturalWidth` couvre l'échec survenu **avant** qu'on écoute l'événement `error`.
+
+**Dans `repas.html`** : `#planWrap` vit **hors** de `#content`, que `render()` remplace en
+entier — à l'intérieur, le calendrier disparaîtrait au premier tap sur une vignette. Taper une
+case pleine ouvre la recette dans le hero si c'en est une, sinon la fiche `detail()` du module
+(un plat macro n'existe nulle part ailleurs dans l'app, il est né de la planification). Le
+panneau qui listait les recettes s'appelle désormais **« Recettes conseillées »** : deux titres
+« Ma semaine » pour deux contenus différents faisaient passer l'un pour l'autre.
+
 ### `assets/notifs.js` — le rappel quotidien (notifications **locales**)
 Chargé par les cinq écrans porteurs de la nav (`suivi`, `repas`, `menu`/`www/index`, `social`,
 `coaching`, `profil`) juste avant `assets/nav.js`. Hors application native, le module se charge
@@ -1036,6 +1107,22 @@ Colonnes **relevées en base** (`select=*`, juillet 2026) :
 | statut | text | en_attente/confirmee/livree/annulee |
 | skip | boolean | |
 
+#### `planning_semaine` — 🔄 **n'existe pas encore** (`natty_planning.sql`)
+| Colonne | Type | Notes |
+|---|---|---|
+| user_id | text | PK avec `semaine` |
+| semaine | date | Lundi |
+| plan | jsonb | tout le plan : les 21 cases « je prépare/j'achète », les 5 repas placés, les cibles |
+| updated_at | timestamptz | |
+
+> La clé primaire `(user_id, semaine)` est **ce que vise** le `?on_conflict=user_id,semaine`
+> d'`assets/planning.js` : sans elle, une replanification repart en **409** au lieu d'écraser
+> (même piège que `meal_likes`/`membre_amis`, §3).
+> `plan` est du jsonb parce que sa forme appartient au module qui le compose — une colonne par
+> champ imposerait une migration à chaque évolution de la séquence, pour une donnée que
+> personne n'interroge par morceaux.
+> Tant que la table manque, le plan reste dans le `localStorage` de l'appareil et l'écran le dit.
+
 ### RLS — état actuel
 - `recettes`, `recettes_ingredients`, `recettes_etapes` : **RLS désactivé** (`DISABLE ROW LEVEL SECURITY`)
 - `profil_conseils` : **RLS désactivé**
@@ -1462,6 +1549,25 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - 🔄 Les scores plafonnent bas (~57/100 sur les données actuelles) parce que beaucoup
   d'ingrédients manquent à la table de `core.js` et que `nb_repas='1_2'` gonfle la cible par
   repas. Le classement reste juste (même biais pour tous), pas les valeurs absolues.
+
+**Planification de la semaine**
+- ✅ **Séquence complète livrée** (août 2026) — `assets/planning.js`, détail en §3. Bonjour →
+  invitation → deux questions → placement → calendrier → livraison → validation, puis le
+  calendrier dans « Ma semaine » en haut de `repas.html`. Branchée sur `menu.html`/
+  `www/index.html` (déclencheur à 5 s) et `repas.html` (panneau), copies `www/` faites.
+- ✅ Vérifié en navigateur (colonne mobile 375 px), avec un `Natty` factice et 28 jours de
+  repas volontairement pauvres en protéines le midi : les 3 plats macro et les 2 recettes se
+  placent aux bons créneaux (le plat protéines atterrit bien sur un midi), le compteur affiche
+  « 5 repas planifiés sur 21 », le repli local s'annonce quand l'écriture en base échoue,
+  la validation affiche bien la coche verte `#34c759`, et le panneau « Ma semaine » rend les
+  7 jours sans défilement.
+- 🔴 🔄 **`natty_planning.sql` à exécuter** — sans lui le plan ne suit pas l'utilisateur d'un
+  appareil à l'autre. SQL en §4.
+- 🔄 **Non vérifié avec une vraie session** : les lectures `meals`/`onboarding`/
+  `questionnaire_alim` et l'appel `/api/claude` des 3 plats macro n'ont tourné que contre des
+  doublures. Il faut un compte pour aller plus loin.
+- 🔄 Le plan ne se **consomme** pas : enregistrer le repas prévu ne coche rien dans le
+  calendrier. Prochaine étape naturelle.
 
 **Notifications**
 - ✅ **Rappel quotidien livré** — `assets/notifs.js` + interrupteur dans `profil.html`
@@ -2051,3 +2157,30 @@ session « fil social » :*
   cinq sections, disparu de l'annuaire ; restauré ensuite).
 - **Toutes les lignes de test ont été supprimées** : les 4 tables sont vides, les 65 `meals`
   intacts, aucun `meals.partage` à `false`.
+
+---
+
+*Contribution session « planification de la semaine » (Claude Opus, 5 août 2026) :*
+- **Branché** `assets/planning.js`, qui existait dans l'arborescence mais **n'était chargé par
+  aucune page** : ni script tag, ni copie `www/`, ni table, ni déclencheur, ni panneau. Le
+  module était écrit, la fonctionnalité n'existait pas.
+- `menu.html` + `www/index.html` : chargement + `NattyPlanning.proposerSiNecessaire()`
+  (déclencheur à 5 s, sur l'écran d'arrivée **seulement**).
+- `repas.html` + `www/repas.html` : `#planWrap` **au-dessus** du repas du jour et hors de
+  `#content` (que `render()` remplace en entier), montage du calendrier, geste sur une case
+  planifiée, écoute de `natty:planning-pret`. Le panneau des recettes devient
+  « Recettes conseillées » pour ne plus porter le même titre que le calendrier.
+- **Nouveau** `natty_planning.sql` : table `planning_semaine`, RLS activée, policy « soi
+  seulement ». Un plan de repas dit quand la personne est chez elle et ce qu'elle mange.
+- **Ajouté au module** : `detail()`, la fiche d'un repas placé (feuille du bas, style clair de
+  l'app) — sans elle, taper un plat macro ne montrait rien, ces plats n'existant nulle part
+  ailleurs dans l'app. Plus `vignette()`/`brancherVignettes()` (repli emoji quand une photo
+  n'arrive pas).
+- **Quatre défauts visuels trouvés en navigateur, aucun détectable par `node --check`** :
+  le raccourci `animation` de `.respire` écrasait celui de `.trace` (illustrations
+  partiellement **jamais dessinées**) ; `aspect-ratio:1/1` sur les cases rendait le compteur
+  « 5 repas sur 21 » invisible sans défiler ; `#nplf .ing div` attrapait les enfants et
+  découpait chaque ingrédient en trois pastilles ; les boutons de la barre d'action
+  apparaissaient d'un coup par-dessus la scène sortante.
+- **Pas touché** : `suivi.html` / `www/suivi.html`, modifiés par une session parallèle et
+  laissés tels quels (règle « jamais de `git add -A` sur ce dépôt »).

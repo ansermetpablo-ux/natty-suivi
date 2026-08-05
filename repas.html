@@ -168,6 +168,13 @@ body{overflow-x:hidden}
      ⚠️ `assets/garde-manger.js` reste chargé : render() s'en sert pour
      marquer « à acheter » les ingrédients qu'on n'a pas. -->
 
+<!-- « Ma semaine » — le calendrier issu de la planification. Il vit hors de
+     `#content`, que render() remplace entièrement à chaque changement de
+     recette : à l'intérieur, il disparaîtrait au premier tap sur une vignette.
+     Et il est AU-DESSUS du repas du jour, comme demandé — on lit d'abord sa
+     semaine, ensuite le plat qu'on va faire. -->
+<div class="wrap" id="planWrap"></div>
+
 <div class="wrap" id="content">
   <div class="empty">Chargement…</div>
 </div>
@@ -181,6 +188,9 @@ body{overflow-x:hidden}
      l'attente et la reprend d'un écran à l'autre. Chargé AVANT garde-manger.js
      n'aurait pas suffi : il va le chercher au moment de l'envoi. -->
 <script src="/assets/generation.js"></script>
+<!-- Le calendrier de « Ma semaine » et, au besoin, la séquence de
+     replanification (bouton « Replanifier » du panneau). -->
+<script src="/assets/planning.js"></script>
 <script src="/assets/garde-manger.js"></script>
 <script src="/assets/minijeux.js"></script>
 <!-- Suivre une recette retire ses ingrédients du garde-manger (voir brancher()). -->
@@ -398,8 +408,12 @@ function render(){
 
   if (PLATS.length > 1){
     html += '<div class="week-panel">'
-         +  '<div class="sec-head"><span class="sec-title">Ma semaine</span>'
-         +  '<span class="sec-note">'+PLATS.length+' recettes conseillées</span></div>'
+         /* « Ma semaine » nomme désormais le CALENDRIER, en haut de l'écran.
+            Ce panneau-ci n'a jamais montré une semaine : il montre les
+            recettes conseillées. Deux titres identiques pour deux contenus
+            différents auraient fait passer l'un pour l'autre. */
+         +  '<div class="sec-head"><span class="sec-title">Recettes conseillées</span>'
+         +  '<span class="sec-note">'+PLATS.length+' cette semaine</span></div>'
          +  '<div class="week-row">' + PLATS.map(function(x,i){
               var weekImg = x.photoWeek || x.photo;
               var vis = weekImg ? '<img src="'+esc(weekImg)+'" alt="">' : x.emoji;
@@ -586,12 +600,47 @@ function brancher(){
    « à acheter » les ingrédients d'une recette (voir render()). */
 
 
+/* ═══ « Ma semaine » ═══
+   Le calendrier de la planification, au-dessus du repas du jour.
+
+   Taper une case pleine ouvre le repas qui y est placé. Deux cas, et un seul
+   comportement juste pour chacun : une RECETTE de la semaine est déjà dans
+   `PLATS`, on la remonte donc au hero (c'est l'écran qui sait la cuisiner) ;
+   un plat MACRO n'existe nulle part ailleurs — il est né de la planification —
+   donc c'est la fiche du module qui le montre. Renvoyer les deux vers le hero
+   aurait affiché une recette au hasard à la place du plat demandé. */
+async function monterMaSemaine(){
+  var el = document.getElementById('planWrap');
+  if (!el || !window.NattyPlanning) return;
+  await NattyPlanning.monterFiche(el, function(repas){
+    if (repas.type === 'recette'){
+      var i = -1;
+      PLATS.forEach(function(p, k){ if (i < 0 && p.nom === repas.nom) i = k; });
+      if (i >= 0){
+        actif = i; ingrOff = {}; render();
+        window.scrollTo({ top:0, behavior:'smooth' });
+        return;
+      }
+    }
+    NattyPlanning.detail(repas);
+  });
+}
+
+/* La séquence vient de se terminer sur un autre écran, ou ici même via
+   « Replanifier » : le calendrier se repeint sans recharger la page. */
+document.addEventListener('natty:planning-pret', function(){ monterMaSemaine(); });
+
 (async function(){
   if (!Natty.requireAuth()) return;
 
   // Chargé pour une seule chose désormais : marquer les ingrédients « à
   // acheter » dans les recettes affichées.
   await NattyGardeManger.charger();
+
+  // Sans `await` : le calendrier fait sa propre lecture, et les recettes ne
+  // doivent pas attendre après elle pour s'afficher.
+  monterMaSemaine();
+
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
 

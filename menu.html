@@ -100,6 +100,15 @@ async function loadFormule(){
 <!-- Reprend l’écran d’attente si une génération de la semaine est en cours
      (elle tourne sur le serveur : elle survit au changement d’écran). -->
 <script src="/assets/generation.js"></script>
+<!-- La planification de la semaine s'invite ICI, et nulle part ailleurs :
+     c'est l'écran d'arrivée de l'app, donc le seul endroit où « à la première
+     ouverture de la semaine » veut dire quelque chose. Le module se tait de
+     lui-même si la semaine est déjà planifiée, déjà ignorée, ou si une
+     génération occupe déjà le plein écran. -->
+<script src="/assets/planning.js"></script>
+<script>
+  if (window.NattyPlanning) NattyPlanning.proposerSiNecessaire();
+</script>
 <script src="/assets/ajout.js"></script>
 <script src="/assets/notifs.js"></script>
 <script src="/assets/push.js"></script>
