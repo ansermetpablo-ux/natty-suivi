@@ -659,6 +659,24 @@ input[type="file"] { display:none; }
 .mc-recette-chip { background:var(--bg); border-radius:99px; padding:6px 14px; font-size:12px; font-weight:500; color:var(--black); box-shadow:var(--sm); }
 .mc-ing-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
 .mc-ing-chip { background:#e8f9ee; color:#1e5c30; border-radius:99px; padding:5px 12px; font-size:12px; font-weight:500; }
+/* Aliments à privilégier — chaque ligne est un bouton : la toucher met
+   l'aliment dans la liste de courses, la retoucher l'en retire. */
+.mc-alim-list { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.mc-alim { display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+  background:var(--bg); border:none; border-radius:16px; padding:11px 13px;
+  font-family:'Inter',sans-serif; cursor:pointer; box-shadow:var(--sm);
+  transition:box-shadow .18s ease, transform .16s ease; }
+.mc-alim:active { transform:scale(.985); }
+.mc-alim.on { box-shadow:var(--sm), inset 0 0 0 1.5px var(--green); }
+.mc-alim-em { font-size:20px; line-height:1; flex-shrink:0; }
+.mc-alim-txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.mc-alim-txt b { font-size:13px; font-weight:700; color:var(--black); }
+.mc-alim-txt i { font-size:11px; font-style:normal; color:var(--muted); }
+.mc-alim-plus { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:var(--black);
+  color:#fff; font-size:14px; font-weight:700; display:flex; align-items:center;
+  justify-content:center; line-height:1; }
+.mc-alim.on .mc-alim-plus { background:var(--green); }
+.mc-alim-note { font-size:11px; color:var(--muted); margin-top:9px; }
 .mc-no-conseil { text-align:center; padding:24px; color:var(--muted); font-size:13px; }
 .mc-no-conseil-em { font-size:36px; display:block; margin-bottom:8px; }
 
@@ -2423,6 +2441,7 @@ function openMacroPopup(type) {
 
   if (cache && cache[key]) {
     cont.innerHTML = renderMacroConseilCard(cache[key], cfg, PLATS_DEMO_MACRO[type]||[]);
+    brancherAjoutCourses(cont);
   } else {
     // Essayer de charger depuis Supabase
     cont.innerHTML = '<div class="sug-load"><div class="spinner"></div>Chargement des conseils...</div>';
@@ -2432,17 +2451,16 @@ function openMacroPopup(type) {
         if (r && r.length && r[0][key]) {
           window._conseilsCache = Object.assign(window._conseilsCache||{}, r[0]);
           cont.innerHTML = renderMacroConseilCard(r[0][key], cfg, PLATS_DEMO_MACRO[type]||[]);
+          brancherAjoutCourses(cont);
         } else {
+          /* ⚠️ Ici, on lançait une génération. Ouvrir le détail d'une macro
+             suffisait donc à repayer un appel à Claude et à couvrir l'écran de
+             l'attente plein cadre — alors que l'utilisateur voulait juste
+             regarder. Un écran de consultation ne génère rien : il renvoie vers
+             le seul endroit où la génération se demande. */
           cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>'
-            + '<div style="font-size:14px;font-weight:600;color:var(--black);margin-bottom:6px;">Génération en cours...</div>'
-            + '<div style="font-size:13px;color:var(--muted);">Vos conseils personnalisés arrivent.</div></div>';
-          // Générer si pas encore fait
-          conseilsGenererEtSauvegarder(false).then(function(){
-            var cache2 = window._conseilsCache;
-            if (cache2 && cache2[key]) {
-              cont.innerHTML = renderMacroConseilCard(cache2[key], cfg, PLATS_DEMO_MACRO[type]||[]);
-            }
-          }).catch(function(){});
+            + '<div style="font-size:14px;font-weight:600;color:var(--black);margin-bottom:6px;">Pas encore de conseil sur ce point</div>'
+            + '<div style="font-size:13px;color:var(--muted);">Il arrive avec vos conseils de la semaine, depuis l’accueil.</div></div>';
         }
       })
       .catch(function() {
@@ -2451,41 +2469,97 @@ function openMacroPopup(type) {
   }
 }
 
+/* Échappement — nécessaire dès qu'un nom vient de l'IA et finit dans un
+   attribut `data-*` : une apostrophe suffirait à casser le HTML. */
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/* ── Le plat de la macro : celui que la génération a produit ──
+   `conseils_json.plats_macro` porte trois plats, un par macro, écrits dans le
+   MÊME appel que les conseils (voir api/_generation.js). C'est ce qu'il fallait
+   afficher ici : avant, on prenait la recette de la semaine « la plus riche
+   dans cette macro », ce qui n'est pas la même chose — une recette est faite
+   pour être cuisinée, ce plat-ci est fait pour corriger un manque. Et à défaut,
+   on tombait sur PLATS_DEMO_MACRO, trois plats codés en dur identiques pour
+   tout le monde. */
+function platMacroGenere(cle) {
+  try {
+    var c = window._conseilsCache;
+    var j = c && c.conseils_json;
+    if (typeof j === 'string') j = JSON.parse(j);
+    var liste = j && j.plats_macro;
+    if (!Array.isArray(liste)) return null;
+    return liste.filter(function(x){ return x && x.macro === cle; })[0] || null;
+  } catch(e) { return null; }
+}
+
 function renderMacroConseilCard(conseilTexte, cfg, plats) {
   // Parse conseil texte en 3 sections : explication, recettes, ingrédients
   var lines = (conseilTexte || '').replace(/\n/g,' ').split('.').map(function(l){ return l.trim(); }).filter(Boolean);
 
   var explication = lines.slice(0,2).join('. ');
 
-  // ── Prioriser les recettes personnalisées générées par l'IA ──
-  var plat = null;
+  var plat = null, aliments = [];
+  var gen = platMacroGenere(cfg.key);
+  if (gen) {
+    plat = {
+      nom: gen.nom, kcal: gen.kcal || 0, prot: gen.p || 0, gluc: gen.g || 0, lip: gen.l || 0,
+      photo: gen.em || '🍽️',
+      recettes: [],
+      ings: (gen.ingredients || []).map(function(x){
+        return (x && (x.nom || x.name) || '') + (x && x.qte ? ' ' + x.qte : '');
+      }).filter(Boolean)
+    };
+    aliments = gen.aliments || [];
+  }
+
+  // Les recettes de la semaine restent affichées à côté : ce sont deux choses
+  // différentes, un plat qui corrige et des recettes à cuisiner.
   try {
-    var c = window._conseilsCache;
-    if (c && c.recettes_json) {
-      var rj = typeof c.recettes_json === 'string' ? JSON.parse(c.recettes_json) : c.recettes_json;
+    var c2 = window._conseilsCache;
+    if (c2 && c2.recettes_json) {
+      var rj = typeof c2.recettes_json === 'string' ? JSON.parse(c2.recettes_json) : c2.recettes_json;
       if (rj && rj.length) {
-        // Choisir la recette la plus riche dans la macro concernée
-        var macKey = {p:'prot', g:'gluc', l:'lip'}[cfg.key] || 'prot';
-        var best = rj.slice().sort(function(a,b){ return ((b.macros||{})[macKey]||0) - ((a.macros||{})[macKey]||0); })[0];
-        var bm = best.macros || {};
-        plat = {
-          nom: best.nom || 'Recette personnalisée',
-          kcal: bm.cal || 0, prot: bm.prot || 0, gluc: bm.gluc || 0, lip: bm.lip || 0,
-          photo: best.emoji || '🍽️',
-          recettes: rj.map(function(r){ return (r.emoji||'') + ' ' + r.nom; }),
-          ings: (best.ingredients || []).slice(0, 4)
-        };
+        if (!plat) {
+          var macKey = {p:'prot', g:'gluc', l:'lip'}[cfg.key] || 'prot';
+          var best = rj.slice().sort(function(a,b){ return ((b.macros||{})[macKey]||0) - ((a.macros||{})[macKey]||0); })[0];
+          var bm = best.macros || {};
+          plat = {
+            nom: best.nom || 'Recette personnalisée',
+            kcal: bm.cal || 0, prot: bm.prot || 0, gluc: bm.gluc || 0, lip: bm.lip || 0,
+            photo: best.emoji || '🍽️', recettes: [],
+            ings: (best.ingredients || []).slice(0, 4)
+          };
+        }
+        plat.recettes = rj.map(function(r){ return (r.emoji||'') + ' ' + r.nom; });
       }
     }
   } catch(e) {}
-  if (!plat) plat = plats[0] || {nom:'Plat équilibré', kcal:400, prot:35, gluc:40, lip:14, photo:'🍽️', recettes:['Recette 1','Recette 2','Recette 3'], ings:['Ingredient 1','Ingredient 2','Ingredient 3']};
+  if (!plat) plat = plats[0] || {nom:'Plat équilibré', kcal:400, prot:35, gluc:40, lip:14, photo:'🍽️', recettes:[], ings:[]};
 
   var recettesHtml = (plat.recettes||[]).map(function(r){
     return '<div class="mc-recette-chip">🍽️ '+r+'</div>';
   }).join('');
 
   var ingsHtml = (plat.ings||[]).map(function(i){
-    return '<div class="mc-ing-chip">✓ '+i+'</div>';
+    return '<div class="mc-ing-chip">✓ '+esc(i)+'</div>';
+  }).join('');
+
+  /* Les aliments à privilégier, avec un « + » qui les met dans la liste de
+     courses. C'est le geste qui manquait : voir « mange plus d'œufs » sans
+     pouvoir l'inscrire nulle part ne fait rien avancer.
+     ⚠️ `data-*` + addEventListener (règle §9 #8), branché par
+     `brancherAjoutCourses()` juste après l'insertion du HTML. */
+  var alimentsHtml = aliments.map(function(a){
+    var nom = a.nom || '';
+    return '<button type="button" class="mc-alim" data-alim="'+esc(nom)+'" data-em="'+esc(a.em||'🛒')+'">'
+      + '<span class="mc-alim-em">'+esc(a.em||'🛒')+'</span>'
+      + '<span class="mc-alim-txt"><b>'+esc(nom)+'</b>'
+      + (a.apport ? '<i>'+esc(a.apport)+'</i>' : '') + '</span>'
+      + '<span class="mc-alim-plus">'+(courseContient(nom) ? '✓' : '+')+'</span></button>';
   }).join('');
 
   return '<div class="mc-card-visual">'
@@ -2511,11 +2585,78 @@ function renderMacroConseilCard(conseilTexte, cfg, plats) {
     + '<div class="mc-conseil-label">🍳 Recettes suggérées</div>'
     + '<div class="mc-recette-row">'+recettesHtml+'</div>'
     + '</div>'
-    // Ingrédients
-    + '<div class="mc-conseil-section">'
-    + '<div class="mc-conseil-label">🛒 Ingrédients clés</div>'
-    + '<div class="mc-ing-row">'+ingsHtml+'</div>'
-    + '</div>';
+    // Ingrédients du plat
+    + (ingsHtml ? '<div class="mc-conseil-section">'
+        + '<div class="mc-conseil-label">🛒 Ingrédients clés</div>'
+        + '<div class="mc-ing-row">'+ingsHtml+'</div>'
+        + '</div>' : '')
+    // Aliments à privilégier — avec le « + » vers la liste de courses
+    + (alimentsHtml ? '<div class="mc-conseil-section">'
+        + '<div class="mc-conseil-label">✨ À privilégier pour ' + esc((cfg.name||'').toLowerCase()) + '</div>'
+        + '<div class="mc-alim-list">'+alimentsHtml+'</div>'
+        + '<div class="mc-alim-note">Touchez un aliment pour l’ajouter à votre liste de courses.</div>'
+        + '</div>' : '');
+}
+
+/* ═══ Aliments ajoutés à la main à la liste de courses ═══
+   ⚠️ Volontairement en localStorage, et par semaine. `liste_courses_json` est
+   DÉRIVÉE des recettes côté serveur (voir api/_generation.js) : y réinjecter
+   des ajouts manuels se ferait écraser à la génération suivante, et personne
+   ne comprendrait pourquoi sa liste a maigri. Ici, ce sont des annotations
+   personnelles posées sur une liste calculée — elles vivent à côté, et la
+   semaine les remet à zéro en même temps que la liste qu'elles complètent. */
+function cleCourses() { return 'natty_courses_extra_' + USER_ID + '_' + getLundiSemaine(); }
+
+function coursesExtra() {
+  try { return JSON.parse(localStorage.getItem(cleCourses()) || '[]'); } catch(e) { return []; }
+}
+
+function courseContient(nom) {
+  var n = (nom || '').toLowerCase().trim();
+  return coursesExtra().some(function(x){ return (x.nom||'').toLowerCase().trim() === n; });
+}
+
+function basculerCourse(nom, em) {
+  var l = coursesExtra(), n = (nom||'').toLowerCase().trim();
+  var i = l.findIndex(function(x){ return (x.nom||'').toLowerCase().trim() === n; });
+  if (i >= 0) l.splice(i, 1); else l.push({ nom: nom, emoji: em || '🛒' });
+  try { localStorage.setItem(cleCourses(), JSON.stringify(l)); } catch(e) {}
+  return i < 0;   // true = ajouté
+}
+
+/** Branche les « + » des aliments à privilégier, dans le conteneur donné. */
+function brancherAjoutCourses(cont) {
+  if (!cont) return;
+  cont.querySelectorAll('[data-alim]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var ajoute = basculerCourse(b.dataset.alim, b.dataset.em);
+      var p = b.querySelector('.mc-alim-plus');
+      if (p) p.textContent = ajoute ? '✓' : '+';
+      b.classList.toggle('on', ajoute);
+      _listeCourseCache = null;
+      toastMacro(ajoute ? '🛒 ' + b.dataset.alim + ' ajouté à vos courses'
+                        : b.dataset.alim + ' retiré');
+    });
+  });
+}
+
+/* Un mot bref, sans dialogue : l'ajout doit se sentir, pas s'interrompre. */
+function toastMacro(msg) {
+  var t = document.getElementById('mcToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'mcToast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:96px;transform:translate(-50%,14px);'
+      + 'background:#1a1a2e;color:#fff;border-radius:18px;padding:11px 18px;font-size:12.5px;'
+      + 'font-weight:700;opacity:0;transition:all .3s cubic-bezier(.22,1,.36,1);'
+      + 'pointer-events:none;z-index:100002;white-space:nowrap;max-width:88vw;overflow:hidden;'
+      + 'text-overflow:ellipsis';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  requestAnimationFrame(function(){ t.style.opacity = '1'; t.style.transform = 'translate(-50%,0)'; });
+  clearTimeout(t._tm);
+  t._tm = setTimeout(function(){ t.style.opacity = '0'; t.style.transform = 'translate(-50%,14px)'; }, 2200);
 }
 
 // fetchMacroSuggestions removed — conseils depuis DB
@@ -2541,13 +2682,9 @@ function openAnalyseOverlay(type) {
           window._conseilsCache = Object.assign(window._conseilsCache||{}, r[0]);
           cont.innerHTML = renderConseilAnalyse(r[0][key], isForts);
         } else {
-          // Générer si pas encore fait
-        cont.innerHTML = '<div class="mc-no-conseil"><div class="profil-spinner" style="margin:0 auto 10px;"></div><div style="font-size:13px;color:var(--muted);">Génération en cours...</div></div>';
-        conseilsGenererEtSauvegarder(false).then(function(){
-          var cache2 = window._conseilsCache;
-          if (cache2 && cache2[key]) cont.innerHTML = renderConseilAnalyse(cache2[key], isForts);
-          else cont.innerHTML = '<div class="mc-no-conseil">Analyse non disponible.</div>';
-        }).catch(function(){ cont.innerHTML = '<div class="mc-no-conseil">Erreur. Réessayez.</div>'; });
+          /* Même règle que le détail d'une macro : consulter ne génère pas. */
+          cont.innerHTML = '<div class="mc-no-conseil"><span class="mc-no-conseil-em">📅</span>'
+            + '<div style="font-size:13px;color:var(--muted);line-height:1.6;">Cette analyse arrive avec vos conseils de la semaine, depuis l’accueil.</div></div>';
         }
       })
       .catch(function() {
@@ -4266,6 +4403,40 @@ function getLundiSemaine() {
   return d.toISOString().split('T')[0];
 }
 
+/* ── « La semaine est-elle déjà générée ? » — UNE seule réponse ──
+   Le bouton d'accueil et l'overlay ne posaient pas la même question : le bouton
+   se contentait d'un `generated_at` (donc « ✨ Voir mes conseils »), l'overlay
+   exigeait `conseil_prot` (donc « ✨ Générer mes conseils » juste en dessous).
+   Une ligne où l'IA a rendu les recettes sans le texte des conseils suffisait à
+   faire dire aux deux écrans le contraire l'un de l'autre, et à reproposer une
+   génération déjà payée. Même test partout, y compris côté module d'attente
+   (`pleine()` d'assets/generation.js) : une semaine compte pour faite dès
+   qu'elle a un conseil OU des recettes.
+   ─────────────────────────────────────────────────────────── */
+function conseilsPresents(row) {
+  if (!row) return false;
+  if (row.conseil_prot || row.conseil_gluc || row.conseil_lip || row.conseil_cal
+      || row.conseil_amelioration || row.conseil_points_forts) return true;
+  try {
+    var j = row.conseils_json;
+    if (typeof j === 'string') j = JSON.parse(j);
+    if (j && j.recettes && j.recettes.length) return true;
+  } catch (e) {}
+  return false;
+}
+
+/* Fraîche = présente ET de cette semaine. La semaine compte : sans elle, on
+   afficherait celle d'avant en croyant afficher celle-ci. */
+function conseilsFrais(row) {
+  return conseilsPresents(row) && row.semaine === getLundiSemaine();
+}
+
+/* Le libellé et l'état affichés sous le bouton. `SELECT` complet : le test de
+   présence a besoin des colonnes, pas seulement de `generated_at`. */
+var CONSEILS_COLS = 'conseil_prot,conseil_gluc,conseil_lip,conseil_cal,'
+  + 'conseil_amelioration,conseil_points_forts,conseils_json,recettes_json,'
+  + 'liste_courses_json,semaine,generated_at';
+
 /* ── Bouton « Générer mes conseils » ─────────────────────────
    Une génération, puis affichage. Le bouton se relit en base plutôt que de
    se fier au seul localStorage : sinon il repropose de générer sur un
@@ -4281,13 +4452,16 @@ async function majBoutonConseils() {
   if (!btn || !USER_ID) return;
   try {
     var r = await Natty.sbFetch('profil_conseils?user_id=eq.' + USER_ID
-      + '&select=semaine,generated_at&limit=1');
+      + '&select=' + CONSEILS_COLS + '&limit=1');
     var row = r && r[0];
-    if (row && row.generated_at) {
+    if (row) window._conseilsCache = Object.assign(window._conseilsCache || {}, row);
+    if (conseilsPresents(row)) {
       btn.textContent = '📋 Voir mes conseils';
-      var d = new Date(row.generated_at);
-      etat.textContent = 'Générés le ' + d.toLocaleDateString('fr-FR', {day:'numeric', month:'long'})
-        + (row.semaine === getLundiSemaine() ? '' : ' — la semaine prochaine, ils se renouvellent');
+      var quand = row.generated_at
+        ? 'Générés le ' + new Date(row.generated_at).toLocaleDateString('fr-FR', {day:'numeric', month:'long'})
+        : 'Vos conseils de la semaine';
+      etat.textContent = quand
+        + (conseilsFrais(row) ? '' : ' — la semaine prochaine, ils se renouvellent');
       btn.dataset.mode = 'voir';
     } else {
       btn.textContent = '✨ Générer mes conseils';
@@ -4354,6 +4528,19 @@ function conseilsRenderColonnes(row) {
   ];
   var hasAny = sections.some(function(s){ return row[s.key]; });
   if (!hasAny) {
+    /* Cas mesurable et déroutant : la génération a produit les recettes mais
+       pas le texte des conseils. Dire « ajoutez 3 repas » serait faux — la
+       semaine EST générée — et reproposer de générer ferait repayer un appel
+       pour le même contenu. On dit ce qui existe, et où le voir. */
+    if (conseilsPresents(row)) {
+      cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:24px;text-align:center;line-height:1.6;">'
+        + '<div style="font-size:36px;margin-bottom:10px;">👨‍🍳</div>'
+        + 'Vos recettes et votre liste de courses de la semaine sont prêtes.<br>'
+        + 'Le texte des conseils, lui, n’a pas été produit cette fois.'
+        + '</div>';
+      profilConseillsLoaded = true;
+      return;
+    }
     cont.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:24px;text-align:center;"><div style="font-size:36px;margin-bottom:10px;">📅</div>Ajoutez 3 repas pour recevoir vos conseils personnalisés.</div>';
     return;
   }
@@ -4414,7 +4601,7 @@ async function fetchProfilConseils() {
   var cont = document.getElementById('profilConseilsCont');
 
   // Si cache déjà rempli (ex: après génération popup) → afficher directement sans fetch
-  if (window._conseilsCache && window._conseilsCache.conseil_prot) {
+  if (conseilsPresents(window._conseilsCache)) {
     conseilsRenderColonnes(window._conseilsCache);
     profilConseillsLoaded = true;
     return;
@@ -4431,7 +4618,7 @@ async function fetchProfilConseils() {
 
   try {
     var cached = await sbFetch('profil_conseils?user_id=eq.' + USER_ID
-      + '&select=conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,conseils_json,liste_courses_json,recettes_json,semaine,generated_at&limit=1');
+      + '&select=' + CONSEILS_COLS + '&limit=1');
 
     var lundi = getLundiSemaine();
 
@@ -4450,7 +4637,7 @@ async function fetchProfilConseils() {
         } catch(e) {}
       }
 
-      if (row.conseil_prot) {
+      if (conseilsPresents(row)) {
         var semOK = row.semaine === lundi;
         var ageOK = row.generated_at && (Date.now() - new Date(row.generated_at).getTime()) < 7*24*3600*1000;
 
@@ -4504,9 +4691,11 @@ function montrerCTAConseils(cont, apres) {
   else cont.innerHTML = bloc;
   // data-* + addEventListener : pas d'onclick inline (règle §9 #8).
   var b = document.getElementById('profilConseilsGen');
+  // `apres` = « ↻ Renouveler » sur une semaine périmée : demande explicite,
+  // donc on force. Sinon il n'y a rien en base et il n'y a rien à forcer.
   if (b) b.addEventListener('click', function () {
     b.disabled = true;
-    conseilsGenererEtSauvegarder(false).catch(function () {
+    conseilsGenererEtSauvegarder(false, !!apres).catch(function () {
       b.disabled = false;
     });
   });
@@ -4533,31 +4722,47 @@ function montrerCTAConseils(cont, apres) {
           lui impose pas un plein écran.
    @returns {Promise<object>} la ligne fraîche. Lève si elle n'a pas abouti —
           les appelants (pcActionClick, actionBoutonConseils…) le catchent déjà. */
-async function conseilsGenererEtSauvegarder(silentRefresh) {
+async function conseilsGenererEtSauvegarder(silentRefresh, forcer) {
   if (!window.NattyGeneration) throw new Error('assets/generation.js requis');
 
-  var row = await NattyGeneration.lancer({ discret: !!silentRefresh });
+  var row = await NattyGeneration.lancer({ discret: !!silentRefresh, forcer: !!forcer });
   if (!row) throw new Error('Génération non aboutie');
 
+  conseilsPrisEnCompte(row);
+  return row;
+}
+
+/* Ce qu'on fait d'une ligne fraîche, quelle que soit sa provenance : affichage,
+   caches, et **les deux gardes du popup de démarrage**. Ces gardes n'étaient
+   posées que par `verifierEtMontrerPopupConseils` : après une génération faite à
+   la main, la semaine était donc « inconnue » du popup, qui repartait au
+   chargement suivant proposer « Generer mes conseils » — juste après qu'on
+   venait de générer. */
+function conseilsPrisEnCompte(row) {
+  if (!row) return;
   profilConseillsLoaded = false;
   conseilsRenderColonnes(row);      // pose aussi window._conseilsCache
   profilConseillsLoaded = true;
   _listeCourseCache = null;         // la liste de courses a changé avec les recettes
-  try { sessionStorage.setItem('natty_conseils_ok_' + USER_ID, '1'); } catch(e) {}
-  return row;
+  try {
+    sessionStorage.setItem('natty_conseils_ok_' + USER_ID, '1');
+    sessionStorage.setItem('natty_popup_session_' + USER_ID, '1');
+    localStorage.setItem('natty_conseils_semaine_' + USER_ID, row.semaine || getLundiSemaine());
+  } catch (e) {}
 }
 
 /* Terminé pendant qu'on regardait ailleurs (autre écran, ou « continuer en
    arrière-plan ») : l'affichage se met à jour tout seul, sans rien recharger. */
 document.addEventListener('natty:conseils-prets', function (e) {
   if (!e.detail) return;
-  profilConseillsLoaded = false;
-  conseilsRenderColonnes(e.detail);
-  profilConseillsLoaded = true;
-  _listeCourseCache = null;
+  conseilsPrisEnCompte(e.detail);
   if (typeof majBoutonConseils === 'function') majBoutonConseils();
 });
 
+/* Le ↻ de l'overlay : le SEUL geste qui régénère une semaine déjà faite, parce
+   que c'est le seul que l'utilisateur pose en connaissance de cause. D'où
+   `forcer` — sans lui, le module rendrait la ligne existante sans rien
+   régénérer, ce qui est le comportement voulu partout ailleurs. */
 async function conseilsForceRefresh() {
   profilConseillsLoaded = false;
   var btn = document.getElementById('conseilsRefreshBtn');
@@ -4570,7 +4775,7 @@ async function conseilsForceRefresh() {
       body: JSON.stringify({ semaine: '2000-01-01' })
     });
   } catch(e) {}
-  await conseilsGenererEtSauvegarder(false);
+  try { await conseilsGenererEtSauvegarder(false, true); } catch(e) {}
   if (btn) { btn.textContent = '↻'; btn.disabled = false; }
 }
 
@@ -4796,14 +5001,14 @@ async function verifierEtMontrerPopupConseils() {
   var conseilsEnBase = false;
   console.log('[Popup] Lundi semaine en cours:', lundi);
   try {
-    var r = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=conseil_prot,semaine,generated_at&limit=1');
+    var r = await sbFetch('profil_conseils?user_id=eq.'+USER_ID+'&select=' + CONSEILS_COLS + '&limit=1');
     console.log('[Popup] profil_conseils result:', r);
     if (r && r.length) {
       var row = r[0];
-      console.log('[Popup] conseil_prot:', row.conseil_prot ? 'existe' : 'vide');
+      console.log('[Popup] conseils présents:', conseilsPresents(row) ? 'oui' : 'non');
       console.log('[Popup] semaine en base:', row.semaine, '| semaine courante:', lundi);
       console.log('[Popup] generated_at:', row.generated_at);
-      if (row.conseil_prot) {
+      if (conseilsPresents(row)) {
         var semOK = row.semaine === lundi;
         var ageMS = row.generated_at ? Date.now() - new Date(row.generated_at).getTime() : Infinity;
         var ageOK = ageMS < 7*24*3600*1000;
@@ -4817,15 +5022,19 @@ async function verifierEtMontrerPopupConseils() {
           console.log('[Popup] → Conseils frais en base → pas de popup');
           return;
         } else {
-          // Conseils périmés → régénérer silencieusement, pas de popup
+          /* Conseils de plus d'une semaine. On les garde à l'écran et on ne
+             régénère PAS de nous-mêmes : c'était le dernier endroit d'où une
+             génération partait sans que personne ne l'ait demandée — donc un
+             appel à Claude payé à l'ouverture de l'app. Le cron du lundi
+             renouvelle pour tout le monde, et « ↻ Renouveler pour cette
+             semaine » est là pour qui ne veut pas attendre lundi. */
           window._conseilsCache = Object.assign(window._conseilsCache || {}, row);
           sessionStorage.setItem(sessionKey, '1');
-          console.log('[Popup] → Conseils périmés → régénération silencieuse');
-          setTimeout(function(){ conseilsGenererEtSauvegarder(true); }, 1000);
+          console.log('[Popup] → Conseils périmés → affichés tels quels, aucune régénération');
           return;
         }
       } else {
-        console.log('[Popup] → Ligne existe mais conseil_prot vide');
+        console.log('[Popup] → Ligne existe mais aucun conseil ni recette');
       }
     } else {
       console.log('[Popup] → Aucune ligne dans profil_conseils pour cet user');
@@ -4919,8 +5128,10 @@ async function conseilsGetJsonData() {
   var c = window._conseilsCache;
   if (c && (c.liste_courses_json || c.recettes_json)) return c;
   try {
+    // `conseils_json` porte aussi `plats_macro` : le plat et les aliments à
+    // privilégier de chaque macro viennent de là depuis août 2026.
     var r = await sbFetch('profil_conseils?user_id=eq.' + USER_ID
-      + '&select=liste_courses_json,recettes_json,conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,semaine,generated_at&limit=1');
+      + '&select=liste_courses_json,recettes_json,conseils_json,conseil_prot,conseil_gluc,conseil_lip,conseil_cal,conseil_amelioration,conseil_points_forts,semaine,generated_at&limit=1');
     if (r && r.length) {
       window._conseilsCache = Object.assign(window._conseilsCache || {}, r[0]);
       return window._conseilsCache;
@@ -4939,6 +5150,14 @@ function ouvrirListeCourses() {
   conseilsGetJsonData().then(function(row) {
     var lc = null;
     try { lc = row && row.liste_courses_json ? JSON.parse(row.liste_courses_json) : null; } catch(e) {}
+    var extra = coursesExtra();
+    // Une liste vide mais des ajouts manuels : on montre les ajouts. Sinon le
+    // « + » des aliments à privilégier n'aurait mené nulle part.
+    if ((!lc || (!lc.recettes_ingredients && !lc.aliments_bonus)) && extra.length) {
+      cont.innerHTML = renderCoursesExtra(extra);
+      brancherRetraitCourses(cont);
+      return;
+    }
     if (!lc || (!lc.recettes_ingredients && !lc.aliments_bonus)) {
       cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">'
         + '<div style="font-size:32px;margin-bottom:8px;">🛒</div>'
@@ -4966,7 +5185,34 @@ function ouvrirListeCourses() {
           + '</div><span class="lc-item-qty">' + (i.quantite || '') + '</span></div>';
       }).join('');
     }
+    if (extra.length) html += renderCoursesExtra(extra);
     cont.innerHTML = html || '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Liste vide.</div>';
+    brancherRetraitCourses(cont);
+  });
+}
+
+/* Les aliments ajoutés depuis le détail d'une macro, dans leur propre section :
+   ils ne viennent pas des recettes, les mélanger laisserait croire qu'une
+   recette les réclame. */
+function renderCoursesExtra(extra) {
+  return '<div class="lc-section-title" style="margin-top:18px;">✨ Ajoutés pour vos macros</div>'
+    + extra.map(function(i) {
+        return '<div class="lc-item"><span class="lc-item-em">' + (i.emoji || '🛒') + '</span>'
+          + '<div style="flex:1;"><div class="lc-item-name">' + esc(i.nom || '') + '</div></div>'
+          + '<button type="button" data-retirer="' + esc(i.nom || '') + '" '
+          + 'style="background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:4px 6px;" '
+          + 'aria-label="Retirer">✕</button></div>';
+      }).join('');
+}
+
+function brancherRetraitCourses(cont) {
+  if (!cont) return;
+  cont.querySelectorAll('[data-retirer]').forEach(function(b){
+    b.addEventListener('click', function(){
+      basculerCourse(b.dataset.retirer, '🛒');
+      _listeCourseCache = null;
+      ouvrirListeCourses();     // relit et repeint, sans dupliquer la logique
+    });
   });
 }
 

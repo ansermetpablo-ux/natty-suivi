@@ -374,6 +374,40 @@ de `calcMacros()`, puis divise par le nombre de repas par jour issu de
 30-50-20 si l'onboarding n'est pas exploitable. **Ne jamais demander `nb_repas` ni les macros
 à `onboarding` : ces colonnes n'existent pas** (voir §4).
 
+**Les macros sont ÉCRITES, pas redevinées** (août 2026 — c'était le défaut le plus visible :
+du saucisson comptait pour **0 protéine et 0 kcal**).
+- L'analyse photo ne rend plus un total de plat mais, **par ingrédient, ses valeurs pour 100 g**.
+  Trois raisons : un total demandé à part peut contredire la somme de ses parties ; « pour
+  100 g » est une donnée de table que le modèle connaît, alors qu'un total dépend en plus d'une
+  estimation de quantité ; et surtout **corriger une quantité à la main recalcule tout**.
+- `macroDe()` tranche entre trois sources, dans l'ordre : macros d'une suggestion IA →
+  `pour100` **si elle est crédible** → table de `core.js`.
+- ⚠️ **`credible()` a une tolérance ASYMÉTRIQUE.** La règle 4/4/9 surestime systématiquement les
+  aliments riches en fibres (comptées comme glucides, mais ~2 kcal/g). Mesuré sur le vrai
+  modèle : un citron rendu à 29 kcal / 1,1 p / 9 g calcule 43 kcal — juste, et pourtant rejeté
+  par une tolérance symétrique. On tolère donc largement le dépassement (fibres, alcool) et on
+  reste sévère dans l'autre sens, où des kcal plus hautes que ce que les macros expliquent
+  signalent une invention. En dessous de 20 kcal/100 g, l'écart relatif ne veut plus rien dire.
+- À l'INSERT, `meal_ingredients` reçoit `calories`, `proteins_g`, `carbs_g`, `fats_g`
+  (colonnes **vérifiées présentes** en base) — repli sans elles si l'instance ne les a pas.
+- Un aliment que ni l'analyse ni la table ne savent chiffrer prend un **liseré ambre et un
+  « ? »** : il compte pour zéro, et un total silencieusement faux est pire qu'un manque visible.
+  Renommer suffit presque toujours ; les valeurs héritées de l'ancien nom sont alors jetées,
+  mais **seulement si le nom a vraiment changé** (comparé sans accent ni casse, pour qu'une
+  faute de frappe ne coûte rien).
+
+**Après « Terminer », trois temps, dans cet ordre** : « Repas enregistré » (1,1 s) → analyse
+critique → suggestion du prochain repas → **et seulement ensuite** le choix de publication.
+> ⚠️ Le choix s'affichait au bout de **900 ms** alors que l'analyse demande une dizaine de
+> secondes : on appuyait sur « Garder pour moi », l'écran se fermait, et l'analyse — calculée
+> et payée — n'était jamais vue. C'est ce que Pablo a constaté (« il n'y a pas l'analyse
+> critique du plat »). Le choix arrive quand même si l'analyse échoue : une panne d'IA ne doit
+> pas bloquer la publication.
+
+⚠️ **Le cadre photo est en `object-fit:contain`, en portrait.** En `cover` dans un cadre 4/3, un
+cliché de téléphone (3/4) était rogné des deux tiers : on cadrait son assiette sur une vue
+tronquée, et la photo réellement analysée ne ressemblait pas à ce qu'on avait vu.
+
 **Suggestions** : `optionsIA()` interroge `/api/claude` (texte seul) ; `optionsLocales()` les
 compose depuis la table nutritionnelle de `core.js`. Une suggestion dont les macros sont nulles
 (ingrédient non reconnu) est écartée et remplacée par des options locales, sinon elle ne ferait
@@ -951,6 +985,17 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 | meal_id | uuid | FK → meals |
 | name | text | |
 | quantity_g | numeric | |
+| calories | numeric | ← **renseignées depuis août 2026** par `assets/ajout.js` |
+| proteins_g | numeric | |
+| carbs_g | numeric | |
+| fats_g | numeric | ⚠️ `fats_g`, **pas** `fat_g` |
+
+> Les quatre colonnes de macros **existent depuis toujours** et sont restées **à 0 sur les
+> 227 premières lignes** : chaque écran redevinait les macros avec la table locale de
+> `core.js`, d'où « saucisson = 0 protéine, 0 kcal ». Depuis août 2026 elles sont écrites à
+> l'enregistrement, et `Natty.calcMac` les préfère toujours à la table.
+> (Vérifié à la clé anon : un `select` sur une colonne absente répond `42703`, sur une colonne
+> présente sous RLS répond `[]` — c'est comme ça que `fat_g` s'est révélé être `fats_g`.)
 
 #### `nutrition_scores`
 | Colonne | Type | Notes |
@@ -1889,7 +1934,11 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 9. **Colonnes `profil_conseils`** : `conseils_json`, `recettes_json` et `liste_courses_json` existent et sont utilisables. En écriture, passer par `api/save-conseils.js`, qui n'écrit **que** les champs transmis (un appel partiel n'écrase plus le reste).
 10. **Guard conseils = localStorage** (pas sessionStorage) pour persister entre rechargements
 11. **Calcul stocks = par ingrédient** via `plans_repas → recettes → recettes_ingredients` — jamais par `plat_nom`
-12. **`ingredients_base` colonnes macros** : `cal_per_100g`, `prot_per_100g`, `gluc_per_100g`, `lip_per_100g`
+12. **Les macros d'un repas ne se redevinent pas** : elles sont sur la ligne
+    `meal_ingredients` (`calories`, `proteins_g`, `carbs_g`, `fats_g`). La table `NT` de
+    `core.js` est le **filet**, pas la source — tout écran qui recalcule doit passer par
+    `Natty.calcMac`, qui applique cet ordre et signale les ingrédients inconnus (`.inconnus`).
+13. **`ingredients_base` colonnes macros** : `cal_per_100g`, `prot_per_100g`, `gluc_per_100g`, `lip_per_100g`
 13. **RLS** : `recettes`, `recettes_ingredients`, `recettes_etapes`, `profil_conseils` → RLS désactivé. Ne pas réactiver sans test.
 14. **Demander confirmation** avant de modifier `vercel.json` ou `masterPage.js`
 15. **SQL sans commentaires** dans Supabase SQL Editor — erreur de syntaxe garantie
@@ -2279,3 +2328,26 @@ session « fil social » :*
 - La mise en scène de la planification passe de 15 s à **3,6 s** : il n'y a plus d'appel à
   attendre, et une attente inventée se voit.
 - **Carte « Ma semaine » : noire, jours en colonnes, trois lignes.** La fiche d'un repas suit.
+
+*Quatrième passe de la même session (5 août 2026) — les macros, l'ordre du bilan, et les aliments :*
+- **`assets/core.js`** : table nutritionnelle passée de ~60 à ~200 aliments (charcuterie,
+  fromages, plats courants, boissons), et surtout **rapprochement mot à mot, plus long libellé
+  gagnant**. Avant, `find()` prenait le premier venu : « pomme de terre » tombait sur « pomme »,
+  « huile olive » sur « huile », et « ail » se trouvait dans « volaille ». `calcMac` préfère
+  désormais les macros écrites sur la ligne et signale les ingrédients qu'il n'a pas su chiffrer.
+- **`assets/ajout.js`** : analyse photo par ingrédient (valeurs pour 100 g), écriture des macros
+  en base, contrôle de crédibilité asymétrique, liseré ambre sur un aliment non reconnu, cadre
+  photo en `contain`, et le bilan remis dans l'ordre (enregistré → analyse → prochain repas →
+  publier). **Vérifié sur trois vraies photos** via l'API : 6 ingrédients identifiés séparément
+  par photo, valeurs pour 100 g cohérentes, totaux 497 / 782 / 456 kcal.
+- **`api/_generation.js`** : chaque plat macro porte maintenant 4 à 6 **aliments à privilégier**.
+  Vérifié : thon, crevettes, cabillaud, skyr, edamame pour les protéines — avec leur teneur.
+- **`suivi.html`** : le détail d'une macro affiche le plat **généré** (au lieu de
+  `PLATS_DEMO_MACRO`, trois plats codés en dur identiques pour tout le monde) et ses aliments à
+  privilégier, chacun ajoutable à la liste de courses d'un tap. Les ajouts vivent en
+  `localStorage` par semaine — `liste_courses_json` est dérivée côté serveur, y réinjecter des
+  ajouts manuels les ferait écraser à la génération suivante.
+  ⚠️ Ce commit emporte aussi le travail **non commité d'une session parallèle** sur `suivi.html`
+  (`conseilsPresents`/`conseilsFrais`/`CONSEILS_COLS`, retrait des générations déclenchées par
+  une simple consultation). Impossible de l'en séparer sans réécrire son travail ; c'est noté
+  ici, comme pour `e01e20b`.

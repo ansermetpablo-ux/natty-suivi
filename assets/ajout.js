@@ -65,14 +65,21 @@
     + '#nattyAjout .na-screen.on{display:flex;animation:naIn .32s cubic-bezier(.22,1,.36,1)}'
     + '@keyframes naIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'
 
-    /* — photo du plat — */
-    + '#nattyAjout .na-hero{margin:30px 0 4px;border-radius:26px;border:2px solid rgba(255,255,255,.9);'
-      + 'overflow:hidden;aspect-ratio:4/3;background:#111;display:flex;align-items:center;justify-content:center}'
-    + '#nattyAjout .na-hero img{width:100%;height:100%;object-fit:cover;display:block}'
+    /* — photo du plat —
+       ⚠️ `object-fit:contain`, et un cadre PORTRAIT. En `cover` dans un cadre
+       4/3, un cliché de téléphone (3/4) était rogné des deux tiers : on cadrait
+       son assiette sur une vue tronquée, et la photo réellement analysée ne
+       ressemblait pas à ce qu'on avait vu. Le viseur montre maintenant
+       exactement ce que la capture enverra. Le fond noir rend les bandes
+       invisibles sur cet écran, lui aussi noir. */
+    + '#nattyAjout .na-hero{margin:22px 0 4px;border-radius:26px;border:2px solid rgba(255,255,255,.9);'
+      + 'overflow:hidden;aspect-ratio:3/4;max-height:44vh;background:#0c0c0e;'
+      + 'display:flex;align-items:center;justify-content:center}'
+    + '#nattyAjout .na-hero img{width:100%;height:100%;object-fit:contain;display:block}'
     + '#nattyAjout .na-hero .na-hero-em{font-size:58px}'
     /* — prise de vue DANS le cadre (voir camDemarrer) — */
     + '#nattyAjout .na-hero{position:relative}'
-    + '#nattyAjout .na-hero video{width:100%;height:100%;object-fit:cover;display:block}'
+    + '#nattyAjout .na-hero video{width:100%;height:100%;object-fit:contain;display:block}'
     + '#nattyAjout .na-shutter{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);'
       + 'width:58px;height:58px;border-radius:50%;border:4px solid rgba(255,255,255,.95);'
       + 'background:rgba(255,255,255,.3);cursor:pointer;padding:0}'
@@ -121,6 +128,12 @@
       + 'letter-spacing:.4px;margin:12px 0 6px}'
     + '#nattyAjout .na-item{display:flex;align-items:center;gap:10px;background:#141418;border-radius:16px;'
       + 'padding:10px 12px;margin-bottom:7px}'
+    /* Aliment que ni l'analyse ni la table ne savent chiffrer : il compte pour
+       zéro, et ça doit se voir. Un liseré ambre, pas une alerte — le repas est
+       valable, c'est une ligne à préciser. */
+    + '#nattyAjout .na-item.na-inconnu{box-shadow:inset 0 0 0 1px rgba(255,159,10,.55)}'
+    + '#nattyAjout .na-item.na-inconnu .em::after{content:"?";font-size:11px;font-weight:800;'
+      + 'color:#ff9f0a;vertical-align:super;margin-left:1px}'
     + '#nattyAjout .na-item .em{font-size:19px}'
     + '#nattyAjout .na-item .nm{flex:1;font-size:13.5px;font-weight:600;color:#eaeaef;min-width:0;'
       + 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
@@ -164,6 +177,11 @@
     + '#nattyAjout .na-bcorps{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;'
       + 'overscroll-behavior:contain;margin-top:20px;opacity:0;transition:opacity .5s ease}'
     + '#nattyAjout .na-bcorps.on{opacity:1}'
+    /* La suggestion du prochain repas arrive APRÈS l'analyse, et se révèle de
+       la même façon — mais séparément, sinon les deux se lisent comme un bloc. */
+    + '#nattyAjout .na-brev{opacity:0;transform:translateY(12px);'
+      + 'transition:opacity .5s ease,transform .5s cubic-bezier(.22,1,.36,1)}'
+    + '#nattyAjout .na-brev.on{opacity:1;transform:none}'
     + '#nattyAjout .na-bsec{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;'
       + 'color:#6e6e78;margin:16px 0 8px}'
     + '#nattyAjout .na-bcard{background:#141418;border-radius:16px;padding:12px 14px;margin-bottom:7px;'
@@ -318,16 +336,76 @@
   }
 
   /* ═══════════════════ Macros de la session ═══════════════════ */
+  /* ── Les macros d'UN ingrédient ──────────────────────────────
+     Trois sources, dans cet ordre, et c'est ce qui rend le compte fiable :
+       1. `macros` — une suggestion de l'IA, déjà exprimée en absolu (portion
+          figée, la quantité n'est pas modifiable) ;
+       2. `pour100` — les valeurs pour 100 g renvoyées par l'analyse photo. On
+          multiplie par la quantité, donc **corriger la quantité corrige les
+          macros**, sans redemander quoi que ce soit ;
+       3. la table locale de `core.js`, en dernier recours.
+
+     ⚠️ `pour100` n'est retenu que s'il est CRÉDIBLE. Un aliment solide à 0 kcal
+     n'existe pas, et une réponse où les kcal ne collent pas aux macros
+     (4/4/9) est une réponse inventée : dans les deux cas on retombe sur la
+     table plutôt que d'enregistrer un chiffre faux. C'est exactement le défaut
+     signalé — du saucisson à 0 protéine et 0 kcal. */
+  /** Nom réduit à son squelette : sans accent, sans casse, sans ponctuation. */
+  function aplati(s) {
+    return String(s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  /* ⚠️ TOLÉRANCE ASYMÉTRIQUE, et ce n'est pas un détail. La règle 4/4/9
+     SURESTIME systématiquement les aliments riches en fibres — les fibres sont
+     comptées dans les glucides mais n'apportent que ~2 kcal/g. Mesuré sur le
+     vrai modèle : un citron rendu à 29 kcal / 1,1 p / 9 g calcule 43 kcal, soit
+     +49 % — parfaitement juste, et pourtant rejeté par une tolérance
+     symétrique à 45 %.
+     L'autre sens est le vrai signal d'alarme : des kcal PLUS HAUTES que ce que
+     les macros expliquent, c'est de l'énergie qui sort de nulle part. On y
+     reste sévère. */
+  function credible(p) {
+    if (!p) return false;
+    var k = +p.kcal || 0, pr = +p.prot || 0, gl = +p.gluc || 0, li = +p.lip || 0;
+    if (k <= 0) return false;                          // un solide à 0 kcal, jamais
+    var calcule = 4 * pr + 4 * gl + 9 * li;
+    if (calcule === 0) return k < 60;                  // eau, thé, bouillon
+    // En dessous de 20 kcal/100 g, l'écart relatif ne veut plus rien dire :
+    // un café à 2 kcal « rate » le test de 80 % pour 1,6 kcal d'écart.
+    if (k < 20) return true;
+    if (calcule >= k) return calcule <= k * (k < 120 ? 2.2 : 1.5);   // fibres, alcool
+    return (k - calcule) / k <= 0.35;                  // énergie inexpliquée
+  }
+
+  function macroDe(i) {
+    if (!i) return { p: 0, l: 0, g: 0, c: 0 };
+    if (i.macros) {
+      return { p: +i.macros.prot || 0, l: +i.macros.lip || 0,
+               g: +i.macros.gluc || 0, c: +i.macros.cal || 0 };
+    }
+    var q = parseFloat(i.quantite_g) || 0;
+    if (credible(i.pour100)) {
+      var f = q / 100, p1 = i.pour100;
+      return { p: r1((+p1.prot || 0) * f), l: r1((+p1.lip || 0) * f),
+               g: r1((+p1.gluc || 0) * f), c: Math.round((+p1.kcal || 0) * f) };
+    }
+    var n = Natty.getNutri(i.nom, q);
+    return n ? { p: n.p, l: n.l, g: n.g, c: n.c } : { p: 0, l: 0, g: 0, c: 0 };
+  }
+
+  /** Un ingrédient qu'aucune des trois sources ne sait chiffrer. */
+  function inconnu(i) {
+    return !!(i && (i.nom || '').trim()) && !i.macros && !credible(i.pour100)
+      && !Natty.getNutri(i.nom, 100);
+  }
+
   function macrosIngs(ings) {
     var t = { p: 0, l: 0, g: 0, c: 0 };
     (ings || []).forEach(function (i) {
-      if (i.macros) {                       // suggestion IA : macros fournies
-        t.p += i.macros.prot || 0; t.l += i.macros.lip || 0;
-        t.g += i.macros.gluc || 0; t.c += i.macros.cal || 0;
-        return;
-      }
-      var n = Natty.getNutri(i.nom, i.quantite_g || 0);
-      if (n) { t.p += n.p; t.l += n.l; t.g += n.g; t.c += n.c; }
+      var m = macroDe(i);
+      t.p += m.p; t.l += m.l; t.g += m.g; t.c += m.c;
     });
     return { p: r1(t.p), l: r1(t.l), g: r1(t.g), c: Math.round(t.c) };
   }
@@ -648,18 +726,42 @@
     });
     var b64 = S.photoDataUrl.split(',')[1];
 
-    var prompt = 'Analyse cette photo de plat avec precision. '
-      + 'Observe la couleur, la texture, la forme et le contexte de chaque aliment visible. '
-      + 'Distingue les proteines (poisson = texture feuilletee rosee/blanche, poulet = fibreuse doree, boeuf = rouge/brun). '
-      + 'Identifie tous les aliments, estime les quantites en grammes selon la taille de l assiette, '
-      + 'et calcule les macronutriments. '
-      + 'Reponds UNIQUEMENT en JSON sans backticks: '
-      + '{"nom":"...","ingredients":[{"emoji":"...","nom":"...","quantite_g":0}],"macros":{"prot":0,"lip":0,"gluc":0,"cal":0}}';
+    /* ⚠️ Ce prompt demande les valeurs POUR 100 g, et non les macros du plat.
+       Trois raisons, toutes vérifiées à l'usage :
+       • un total demandé à part peut contredire la somme de ses ingrédients —
+         ici c'est nous qui additionnons, donc les anneaux, ce qui est enregistré
+         et ce que lit le suivi disent forcément la même chose ;
+       • pour 100 g, c'est une donnée de table que le modèle connaît bien,
+         alors qu'un total dépend d'une estimation de quantité, bien plus
+         fragile — on ne mélange plus les deux erreurs ;
+       • et surtout : corriger la quantité à la main recalcule tout, au lieu de
+         laisser des macros figées sur une quantité qu'on vient de changer. */
+    var prompt = 'Tu es un nutritionniste qui lit une photo de repas.\n\n'
+      + '1. IDENTIFIE chaque aliment visible SÉPARÉMENT. Ne réponds jamais "assiette composée" '
+      + 'ou "plat" : nomme les aliments un par un, avec leur préparation (riz cuit, poulet grillé, '
+      + 'saucisson sec…).\n'
+      + '2. Sers-toi de la couleur, de la texture et du grain pour trancher : poisson = chair '
+      + 'feuilletée rosée ou blanche, poulet = fibres dorées, bœuf = rouge/brun, charcuterie = '
+      + 'grain gras et marbré.\n'
+      + '3. ESTIME la quantité de chacun en grammes, en te servant de l’assiette et des couverts '
+      + 'comme repère d’échelle.\n'
+      + '4. Donne pour chaque aliment ses valeurs POUR 100 g (référence Ciqual/USDA).\n\n'
+      + 'RÈGLES ABSOLUES\n'
+      + '- Aucun aliment solide ne peut valoir 0 kcal. Si tu n’es pas sûr, donne la valeur de '
+      + 'l’aliment courant le plus proche — jamais zéro.\n'
+      + '- Les kcal doivent coller aux macros : kcal ≈ 4×protéines + 4×glucides + 9×lipides.\n'
+      + '- Tiens compte de la cuisson : riz cuit ≈ 130 kcal/100 g, riz cru ≈ 360. Pâtes cuites '
+      + '≈ 131, crues ≈ 371.\n'
+      + '- N’oublie pas ce qui ne se voit qu’à peine mais pèse : huile de cuisson, sauce, beurre, '
+      + 'fromage râpé.\n\n'
+      + 'Réponds UNIQUEMENT en JSON, sans backticks :\n'
+      + '{"nom":"nom du plat","ingredients":[{"emoji":"🍗","nom":"Poulet grillé","quantite_g":150,'
+      + '"pour100":{"kcal":165,"prot":31,"gluc":0,"lip":3.6}}]}';
 
     try {
       var res = await fetch(CLAUDE_API, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: prompt, max_tokens: 700, image: b64, media_type: file.type })
+        body: JSON.stringify({ prompt: prompt, max_tokens: 1200, image: b64, media_type: file.type })
       });
       var d = await res.json();
       if (!res.ok) throw new Error(d.error || ('Erreur ' + res.status));
@@ -675,7 +777,17 @@
         photo: S.photoDataUrl,
         file: file,
         ingredients: data.ingredients.map(function (i) {
-          return { emoji: i.emoji || '🍽️', nom: i.nom, quantite_g: parseFloat(i.quantite_g) || 0 };
+          var p1 = i.pour100 || null;
+          return {
+            emoji: i.emoji || '🍽️', nom: i.nom,
+            nomIA: i.nom,                       // repère pour détecter un vrai renommage
+            quantite_g: parseFloat(i.quantite_g) || 0,
+            // Gardé même si peu crédible : `macroDe()` tranche, et une valeur
+            // douteuse conservée se corrige en changeant la quantité, alors
+            // qu'une valeur jetée ici serait perdue pour de bon.
+            pour100: p1 ? { kcal: +p1.kcal || 0, prot: +p1.prot || 0,
+                            gluc: +p1.gluc || 0, lip: +p1.lip || 0 } : null
+          };
         })
       });
       S.cur = S.plats.length - 1;
@@ -784,7 +896,11 @@
 
       pl.ingredients.forEach(function (ing, ii) {
         var row = document.createElement('div');
-        row.className = 'na-item';
+        row.className = 'na-item' + (inconnu(ing) ? ' na-inconnu' : '');
+        // Un ingrédient que personne ne sait chiffrer compte pour zéro. Il faut
+        // que ça se VOIE : un total silencieusement faux est pire qu'un total
+        // qui manque, et renommer suffit presque toujours à le résoudre.
+        if (inconnu(ing)) row.title = 'Non reconnu — précisez le nom pour qu’il compte';
 
         var em = document.createElement('span');
         em.className = 'em';
@@ -795,7 +911,21 @@
         nm.style.cssText = 'width:auto;flex:1;text-align:left;background:none;border:none;padding:0';
         nm.type = 'text';
         nm.value = ing.nom;
-        nm.addEventListener('input', function () { ing.nom = this.value; majAnneaux(); });
+        nm.addEventListener('input', function () {
+          ing.nom = this.value;
+          /* ⚠️ On corrige un nom pour DEUX raisons opposées : une faute de
+             frappe, ou un aliment mal reconnu. Dans le second cas, garder les
+             valeurs de l'aliment d'avant enregistrerait sciemment un chiffre
+             faux. On ne les jette donc que si le nom a réellement changé —
+             comparé sans accents ni casse, pour qu'« poulet grille » →
+             « poulet grillé » ne coûte rien. */
+          if (ing.pour100 && !ing.macros && ing.nomIA
+              && aplati(this.value) !== aplati(ing.nomIA)) {
+            ing.pour100 = null;
+          }
+          row.classList.toggle('na-inconnu', inconnu(ing));
+          majAnneaux();
+        });
 
         var qty = document.createElement('input');
         qty.type = 'number';
@@ -1119,9 +1249,27 @@
         var meal = saved && saved[0];
         if (!meal) continue;
         ids.push(meal.id);
+        /* ⚠️ LES MACROS SONT ÉCRITES, ingrédient par ingrédient. Avant, seuls
+           `name` et `quantity_g` partaient en base, et chaque écran redevinait
+           les macros avec la table locale de `core.js` — d'où « saucisson =
+           0 protéine, 0 kcal » : un aliment absent de la table comptait pour
+           rien, en silence, dans le suivi comme dans le fil social.
+           Ce qu'on enregistre ici, c'est ce que l'écran vient d'afficher :
+           `macroDe()` est la même fonction que celle des anneaux. */
         await Natty.sbPost('meal_ingredients', ings.map(function (g) {
-          return { meal_id: meal.id, name: g.nom, quantity_g: g.quantite_g || 0 };
-        }));
+          var m = macroDe(g);
+          return {
+            meal_id: meal.id, name: g.nom, quantity_g: g.quantite_g || 0,
+            calories: Math.round(m.c), proteins_g: m.p, carbs_g: m.g, fats_g: m.l
+          };
+        })).catch(function (e) {
+          // Instance sans ces colonnes : on réenregistre le minimum plutôt que
+          // de perdre le repas. `calcMac` retombera sur la table locale.
+          if (!/calories|proteins_g|carbs_g|fats_g/.test(String(e && e.message || e))) throw e;
+          return Natty.sbPost('meal_ingredients', ings.map(function (g) {
+            return { meal_id: meal.id, name: g.nom, quantity_g: g.quantite_g || 0 };
+          }));
+        });
       }
 
       /* Les écrans hôtes rafraîchissent leurs macros sur cet événement, et on
@@ -1156,6 +1304,14 @@
      • L'analyse est écrite dans `meals.analyse_json` et dans le localStorage,
        avec la MÊME clé que `suivi.html` : rouvrir le plat depuis l'historique
        affichera ce texte-ci, sans le régénérer ni en produire un autre. */
+  /* ⚠️ L'ORDRE EST LE SUJET. Le choix « Poster / Garder » s'affichait au bout
+     de 900 ms, alors que l'analyse demande une dizaine de secondes : on
+     appuyait sur « Garder pour moi », l'écran se fermait, et l'analyse critique
+     — pourtant calculée et payée — n'était jamais vue. C'est exactement ce que
+     Pablo a constaté (« il n'y a pas l'analyse critique du plat »).
+     Désormais, trois temps : enregistré → analyse → prochain repas ; et le
+     choix de publication n'arrive qu'ensuite. Il arrive quand même si
+     l'analyse échoue, sinon on bloquerait la publication sur une panne d'IA. */
   async function bilan(ids) {
     montrer('naScBilan');
     var corps = q('#naBCorps'), choix = q('#naBChoix');
@@ -1163,34 +1319,65 @@
     corps.innerHTML = '';
     choix.innerHTML = '';
     q('#naBTitre').textContent = 'Repas enregistré';
-    q('#naBSub').textContent = 'Analyse de votre plat…';
+    q('#naBSub').textContent = '';
 
-    // Le choix de publication s'affiche vite : il ne dépend pas de l'analyse,
-    // et attendre l'IA pour proposer « garder pour moi » serait absurde.
-    setTimeout(function () { montrerChoix(ids); }, 900);
+    // 1. La validation respire une seconde : c'est le moment où l'on comprend
+    //    que c'est fait. Puis on annonce ce qui arrive, pour que l'attente
+    //    suivante ait un nom.
+    await pause(1100);
+    q('#naBSub').textContent = 'Analyse de votre plat…';
 
     var data = null;
     try { data = await analyseCritique(); } catch (e) { data = null; }
 
     if (!data) {
       q('#naBSub').textContent = 'Analyse indisponible — votre repas est bien enregistré.';
+      montrerChoix(ids);
       return;
     }
+
+    // 2. L'analyse critique, seule. On ne peint pas la suggestion en même
+    //    temps : deux blocs qui arrivent ensemble se lisent comme un seul.
+    q('#naBTitre').textContent = 'Votre plat, analysé';
     q('#naBSub').textContent = data.note ? ('Verdict : ' + data.note) : '';
-    corps.innerHTML = peindreBilan(data);
-    requestAnimationFrame(function () { corps.classList.add('on'); });
-    setTimeout(function () { corps.classList.add('on'); }, 60);
+    corps.innerHTML = peindreAnalyse(data);
+    reveler(corps);
 
     // Cache : même clé que suivi.html, pour que la réouverture du plat montre
-    // ce texte-là et n'appelle plus rien.
+    // ce texte-là et n'appelle plus rien. Écrit dès maintenant — l'utilisateur
+    // peut fermer l'app pendant qu'il lit.
     try { localStorage.setItem('natty_analyse_plat_' + ids[0], JSON.stringify(data)); } catch (e) {}
-    try {
-      await fetch(Natty.SB_URL + '/rest/v1/meals?id=eq.' + ids[0], {
-        method: 'PATCH',
-        headers: await Natty.entetes({ Prefer: 'return=minimal' }),
-        body: JSON.stringify({ analyse_json: data })
-      });
-    } catch (e) { /* colonne absente : le cache local suffit */ }
+    fetch(Natty.SB_URL + '/rest/v1/meals?id=eq.' + ids[0], {
+      method: 'PATCH',
+      headers: await Natty.entetes({ Prefer: 'return=minimal' }),
+      body: JSON.stringify({ analyse_json: data })
+    }).catch(function () { /* colonne absente : le cache local suffit */ });
+
+    // 3. Puis la suggestion du prochain repas, ajoutée en dessous.
+    if (data.prochain && data.prochain.titre) {
+      await pause(1600);
+      var suite = document.createElement('div');
+      suite.className = 'na-brev';
+      suite.innerHTML = peindreProchain(data.prochain);
+      corps.appendChild(suite);
+      reveler(suite);
+      suite.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // 4. Et seulement là, le choix de publication.
+    await pause(900);
+    montrerChoix(ids);
+  }
+
+  function pause(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  /* Une classe posée par la seule rAF ne se pose pas si la page ne peint pas
+     (app en arrière-plan) : le bloc resterait à `opacity:0`. Même précaution
+     que `Natty.confirmer` et `assets/generation.js`. */
+  function reveler(el) {
+    if (!el) return;
+    requestAnimationFrame(function () { el.classList.add('on'); });
+    setTimeout(function () { el.classList.add('on'); }, 60);
   }
 
   /* Poster, ou garder pour soi. ⚠️ Rien n'est publié par défaut : c'était le
@@ -1318,7 +1505,8 @@
     };
   }
 
-  function peindreBilan(d) {
+  /** L'analyse seule — la suggestion du prochain repas arrive après (voir `bilan`). */
+  function peindreAnalyse(d) {
     var h = '';
     if (d.note) h += '<div class="na-bnote">' + esc(d.note) + '</div>';
     if (d.points_positifs && d.points_positifs.length) {
@@ -1339,24 +1527,24 @@
             return '<div class="na-bcard">' + esc(t) + '</div>';
           }).join('');
     }
-    var n = d.prochain;
-    if (n && n.titre) {
-      var m = n.macros || {};
-      h += '<div class="na-bsec">Votre prochain repas</div>'
-        + '<div class="na-next"><div class="t">' + esc(n.titre) + '</div>'
-        + (n.pourquoi ? '<div class="w">' + esc(n.pourquoi) + '</div>' : '')
-        + '<div class="mm"><span>🥩 ' + Math.round(m.prot || 0) + 'g</span>'
-        + '<span>🌾 ' + Math.round(m.gluc || 0) + 'g</span>'
-        + '<span>🥑 ' + Math.round(m.lip || 0) + 'g</span>'
-        + '<span>' + Math.round(m.cal || 0) + ' kcal</span></div>'
-        + ((n.ingredients && n.ingredients.length)
-            ? '<div class="ii">' + n.ingredients.slice(0, 10).map(function (x) {
-                return '<i>' + esc(x) + '</i>';
-              }).join('') + '</div>'
-            : '')
-        + '</div>';
-    }
     return h;
+  }
+
+  function peindreProchain(n) {
+    var m = n.macros || {};
+    return '<div class="na-bsec">Votre prochain repas</div>'
+      + '<div class="na-next"><div class="t">' + esc(n.titre) + '</div>'
+      + (n.pourquoi ? '<div class="w">' + esc(n.pourquoi) + '</div>' : '')
+      + '<div class="mm"><span>🥩 ' + Math.round(m.prot || 0) + 'g</span>'
+      + '<span>🌾 ' + Math.round(m.gluc || 0) + 'g</span>'
+      + '<span>🥑 ' + Math.round(m.lip || 0) + 'g</span>'
+      + '<span>' + Math.round(m.cal || 0) + ' kcal</span></div>'
+      + ((n.ingredients && n.ingredients.length)
+          ? '<div class="ii">' + n.ingredients.slice(0, 10).map(function (x) {
+              return '<i>' + esc(x) + '</i>';
+            }).join('') + '</div>'
+          : '')
+      + '</div>';
   }
 
   /* ═══════════════════ Point d'entrée ═══════════════════ */

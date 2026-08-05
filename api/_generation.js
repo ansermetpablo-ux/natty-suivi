@@ -262,6 +262,9 @@ export function construirePrompt(profil, nb, garde) {
   p += "- Ils prolongent les conseils ci-dessus : le plat \"p\" doit répondre au conseil protéines, et ainsi de suite.\n";
   p += '- Ils seront PLACÉS dans la semaine là où ses apports flanchent. Ils sont donc plus simples que les recettes : pas d\'étapes détaillées.\n';
   p += '- Ils doivent différer des ' + nb + ' recettes ci-dessus.\n';
+  p += '- Joins à chaque plat 4 à 6 ALIMENTS À PRIVILÉGIER pour cette macro : des aliments simples, '
+     + 'achetables tels quels, compatibles avec son régime et ses goûts, avec pour chacun sa teneur '
+     + 'pour 100 g dans la macro concernée. Ce sont eux qu\'il ajoutera à sa liste de courses.\n';
 
   p += '\nLes conseils portent sur SES repas réels et SES préférences, jamais de généralité.\n';
   p += '\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format :\n';
@@ -277,7 +280,8 @@ export function construirePrompt(profil, nb, garde) {
   p += '"plats_macro":[{"macro":"p","nom":"Nom du plat","em":"🍗",'
      + '"pourquoi":"une phrase, adressée à lui, qui dit ce que ce plat corrige",'
      + '"p":45,"g":40,"l":12,"kcal":450,'
-     + '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g"}]}]}';
+     + '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g"}],'
+     + '"aliments":[{"em":"🥚","nom":"Œufs","apport":"13 g de protéines / 100 g"}]}]}';
 
   return p;
 }
@@ -389,7 +393,13 @@ export function normaliserPlatsMacro(liste) {
       pourquoi: t.pourquoi || '',
       p: Math.round(+t.p || 0), g: Math.round(+t.g || 0),
       l: Math.round(+t.l || 0), kcal: Math.round(+t.kcal || 0),
-      ingredients: Array.isArray(t.ingredients) ? t.ingredients : []
+      ingredients: Array.isArray(t.ingredients) ? t.ingredients : [],
+      // Les aliments à privilégier pour CETTE macro — ce que l'écran Suivi
+      // affiche sous le plat, et que l'utilisateur ajoute à sa liste de courses.
+      aliments: (Array.isArray(t.aliments) ? t.aliments : [])
+        .filter(x => x && (x.nom || x.name))
+        .slice(0, 6)
+        .map(x => ({ em: x.em || '🛒', nom: String(x.nom || x.name), apport: x.apport || '' }))
     };
   }).filter(Boolean);
 }

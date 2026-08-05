@@ -240,45 +240,167 @@ var Natty = (function () {
     });
   }
 
-  // Table nutritionnelle (~100g), identique à celle d'index.html — même calcul partout.
+  /* ── Table nutritionnelle, pour 100 g ────────────────────────
+     ⚠️ CE N'EST PLUS LA SOURCE PRINCIPALE, c'est le FILET. Les macros d'un
+     repas sont désormais écrites par ingrédient dans `meal_ingredients`
+     (`calories`, `proteins_g`, `carbs_g`, `fats_g`) au moment de
+     l'enregistrement, à partir de ce que l'analyse a reconnu — voir
+     `assets/ajout.js`. `calcMac()` les préfère toujours à cette table.
+
+     Pourquoi le filet reste : les 227 lignes déjà en base n'ont pas ces
+     valeurs, et une saisie à la main n'en a pas non plus.
+     Pourquoi il a triplé : un aliment absent comptait pour **zéro**. Du
+     saucisson valait 0 kcal et 0 g de protéines — donc un repas entier pouvait
+     ne rien peser, et les anneaux mentaient sans le dire. */
   var NT = {
+    // Viandes, volailles, charcuterie
     'poulet':{c:165,p:31,l:3.6,g:0},'dinde':{c:135,p:29,l:1,g:0},'boeuf':{c:250,p:26,l:15,g:0},
-    'saumon':{c:208,p:20,l:13,g:0},'thon':{c:132,p:28,l:1,g:0},'cabillaud':{c:82,p:18,l:0.7,g:0},
-    'crevettes':{c:99,p:21,l:1.1,g:0},'sardines':{c:208,p:25,l:11,g:0},
-    'oeuf':{c:155,p:13,l:11,g:1.1},'oeufs':{c:155,p:13,l:11,g:1.1},
+    'steak':{c:250,p:26,l:15,g:0},'veau':{c:172,p:31,l:4.6,g:0},'canard':{c:337,p:19,l:28,g:0},
     'agneau':{c:282,p:25,l:20,g:0},'porc':{c:242,p:27,l:14,g:0},'lardons':{c:337,p:18,l:29,g:0},
-    'tofu':{c:76,p:8,l:4.2,g:1.9},'tempeh':{c:195,p:19,l:11,g:9.4},
-    'lentilles':{c:116,p:9,l:0.4,g:20},'pois chiches':{c:164,p:9,l:2.6,g:27},'haricots':{c:127,p:9,l:0.5,g:23},
-    'edamame':{c:122,p:11,l:5.2,g:9.9},
-    'riz':{c:130,p:2.7,l:0.3,g:28},'pates':{c:131,p:5,l:1.1,g:25},'quinoa':{c:120,p:4.4,l:1.9,g:22},
-    'pain':{c:265,p:9,l:3.2,g:49},'pomme de terre':{c:77,p:2,l:0.1,g:17},
-    'patate douce':{c:86,p:1.6,l:0.1,g:20},'avoine':{c:389,p:17,l:7,g:66},
-    'polenta':{c:83,p:2,l:0.5,g:18},'boulgour':{c:83,p:3,l:0.2,g:18},'sarrasin':{c:92,p:3.4,l:0.6,g:20},
+    'jambon':{c:145,p:21,l:6,g:1},'jambon cru':{c:241,p:27,l:15,g:0.5},
+    'saucisson':{c:410,p:24,l:35,g:2},'chorizo':{c:455,p:24,l:38,g:2},
+    'saucisse':{c:300,p:15,l:26,g:2},'merguez':{c:310,p:16,l:27,g:1},
+    'bacon':{c:541,p:37,l:42,g:1.4},'rillettes':{c:400,p:16,l:37,g:0},
+    'pate':{c:320,p:14,l:28,g:2},'boudin':{c:379,p:15,l:35,g:1},
+    'viande hachee':{c:250,p:26,l:15,g:0},'escalope':{c:135,p:29,l:1,g:0},
+    'nuggets':{c:296,p:15,l:19,g:16},'cordon bleu':{c:250,p:16,l:14,g:15},
+    // Poissons et fruits de mer
+    'saumon':{c:208,p:20,l:13,g:0},'thon':{c:132,p:28,l:1,g:0},'cabillaud':{c:82,p:18,l:0.7,g:0},
+    'colin':{c:82,p:18,l:0.7,g:0},'lieu':{c:82,p:18,l:0.7,g:0},'merlu':{c:82,p:18,l:0.7,g:0},
+    'truite':{c:148,p:21,l:7,g:0},'maquereau':{c:205,p:19,l:14,g:0},'sardines':{c:208,p:25,l:11,g:0},
+    'anchois':{c:210,p:29,l:10,g:0},'hareng':{c:158,p:18,l:9,g:0},'dorade':{c:96,p:20,l:1.5,g:0},
+    'crevettes':{c:99,p:21,l:1.1,g:0},'moules':{c:86,p:12,l:2.2,g:3.7},'calamar':{c:92,p:16,l:1.4,g:3},
+    'surimi':{c:99,p:8,l:1,g:14},'saumon fume':{c:180,p:23,l:9,g:0},
+    // Oeufs, tofu, legumineuses
+    'oeuf':{c:155,p:13,l:11,g:1.1},'oeufs':{c:155,p:13,l:11,g:1.1},'omelette':{c:154,p:11,l:12,g:1},
+    'tofu':{c:76,p:8,l:4.2,g:1.9},'tempeh':{c:195,p:19,l:11,g:9.4},'seitan':{c:141,p:25,l:2,g:4},
+    'lentilles':{c:116,p:9,l:0.4,g:20},'pois chiches':{c:164,p:9,l:2.6,g:27},
+    'haricots':{c:127,p:9,l:0.5,g:23},'haricots rouges':{c:127,p:9,l:0.5,g:23},
+    'flageolets':{c:120,p:8,l:0.5,g:21},'edamame':{c:122,p:11,l:5.2,g:9.9},
+    'houmous':{c:166,p:8,l:10,g:14},'falafel':{c:333,p:13,l:18,g:32},
+    // Feculents, cereales, pains
+    'riz':{c:130,p:2.7,l:0.3,g:28},'riz complet':{c:123,p:2.7,l:1,g:26},
+    'pates':{c:131,p:5,l:1.1,g:25},'spaghetti':{c:131,p:5,l:1.1,g:25},'lasagne':{c:135,p:6,l:5,g:16},
+    'quinoa':{c:120,p:4.4,l:1.9,g:22},'semoule':{c:112,p:4,l:0.2,g:23},'couscous':{c:112,p:4,l:0.2,g:23},
+    'boulgour':{c:83,p:3,l:0.2,g:18},'sarrasin':{c:92,p:3.4,l:0.6,g:20},'polenta':{c:83,p:2,l:0.5,g:18},
+    'pain':{c:265,p:9,l:3.2,g:49},'pain complet':{c:247,p:10,l:3.4,g:41},
+    'pain de mie':{c:265,p:8,l:4,g:48},'baguette':{c:274,p:9,l:1.3,g:56},
+    'biscotte':{c:390,p:12,l:5,g:73},'tortilla':{c:310,p:8,l:8,g:51},'wrap':{c:310,p:8,l:8,g:51},
+    'pomme de terre':{c:77,p:2,l:0.1,g:17},'patate douce':{c:86,p:1.6,l:0.1,g:20},
+    'frites':{c:312,p:3.4,l:15,g:41},'puree':{c:83,p:2,l:2.5,g:13},'gnocchi':{c:160,p:4,l:1,g:33},
+    'avoine':{c:389,p:17,l:7,g:66},'flocons avoine':{c:389,p:17,l:7,g:66},
+    'muesli':{c:375,p:10,l:9,g:62},'cereales':{c:380,p:8,l:4,g:78},
+    'mais':{c:96,p:3.4,l:1.5,g:21},'petits pois':{c:81,p:5,l:0.4,g:14},
+    // Plats et snacks courants
+    'pizza':{c:266,p:11,l:10,g:33},'burger':{c:250,p:13,l:12,g:22},'kebab':{c:215,p:16,l:11,g:14},
+    'quiche':{c:270,p:9,l:18,g:18},'sandwich':{c:230,p:10,l:9,g:27},'croque':{c:280,p:15,l:16,g:20},
+    'sushi':{c:150,p:6,l:2,g:28},'soupe':{c:40,p:1.5,l:1.5,g:6},'ratatouille':{c:60,p:1.3,l:3.5,g:6},
+    'chips':{c:536,p:6,l:34,g:53},'biscuit':{c:450,p:6,l:18,g:66},'chocolat':{c:546,p:5,l:31,g:61},
+    'barre cereale':{c:400,p:7,l:13,g:64},'cookie':{c:470,p:5,l:22,g:63},
+    // Legumes
     'brocoli':{c:34,p:2.8,l:0.4,g:7},'epinards':{c:23,p:2.9,l:0.4,g:3.6},'courgette':{c:17,p:1.2,l:0.3,g:3.1},
     'tomate':{c:18,p:0.9,l:0.2,g:3.9},'carotte':{c:41,p:0.9,l:0.2,g:10},'poivron':{c:31,p:1,l:0.3,g:6},
-    'salade':{c:15,p:1.4,l:0.2,g:2.9},'avocat':{c:160,p:2,l:15,g:9},'champignons':{c:22,p:3.1,l:0.3,g:3.3},
-    'oignon':{c:40,p:1.1,l:0.1,g:9},'ail':{c:149,p:6.4,l:0.5,g:33},'aubergine':{c:25,p:1,l:0.2,g:6},
+    'salade':{c:15,p:1.4,l:0.2,g:2.9},'laitue':{c:15,p:1.4,l:0.2,g:2.9},'roquette':{c:25,p:2.6,l:0.7,g:3.7},
+    'concombre':{c:15,p:0.7,l:0.1,g:3.6},'haricots verts':{c:31,p:1.8,l:0.2,g:7},
+    'chou':{c:25,p:1.3,l:0.1,g:6},'chou fleur':{c:25,p:1.9,l:0.3,g:5},'poireau':{c:61,p:1.5,l:0.3,g:14},
+    'aubergine':{c:25,p:1,l:0.2,g:6},'champignons':{c:22,p:3.1,l:0.3,g:3.3},
+    'oignon':{c:40,p:1.1,l:0.1,g:9},'ail':{c:149,p:6.4,l:0.5,g:33},'betterave':{c:43,p:1.6,l:0.2,g:10},
+    'potiron':{c:26,p:1,l:0.1,g:7},'asperge':{c:20,p:2.2,l:0.1,g:3.9},'endive':{c:17,p:0.9,l:0.1,g:3.4},
+    'avocat':{c:160,p:2,l:15,g:9},'olive':{c:145,p:1,l:15,g:4},
+    // Fruits
     'pomme':{c:52,p:0.3,l:0.2,g:14},'banane':{c:89,p:1.1,l:0.3,g:23},'fraise':{c:32,p:0.7,l:0.3,g:7.7},
     'orange':{c:47,p:0.9,l:0.1,g:12},'mangue':{c:60,p:0.8,l:0.4,g:15},'kiwi':{c:61,p:1.1,l:0.5,g:15},
-    'yaourt':{c:59,p:3.5,l:3.3,g:4.7},'fromage blanc':{c:79,p:8,l:4,g:3.5},'feta':{c:264,p:14,l:21,g:4},
-    'mozzarella':{c:280,p:18,l:22,g:2.2},'parmesan':{c:431,p:38,l:29,g:4},'lait':{c:61,p:3.2,l:3.3,g:4.8},
-    'huile olive':{c:884,p:0,l:100,g:0},'huile':{c:884,p:0,l:100,g:0},'beurre':{c:717,p:0.9,l:81,g:0.1},
-    'noix':{c:654,p:15,l:65,g:14},'amandes':{c:579,p:21,l:50,g:22},'tahini':{c:595,p:17,l:54,g:21}
+    'raisin':{c:69,p:0.7,l:0.2,g:18},'poire':{c:57,p:0.4,l:0.1,g:15},'peche':{c:39,p:0.9,l:0.3,g:10},
+    'ananas':{c:50,p:0.5,l:0.1,g:13},'myrtille':{c:57,p:0.7,l:0.3,g:14},'framboise':{c:52,p:1.2,l:0.7,g:12},
+    'citron':{c:29,p:1.1,l:0.3,g:9},'pasteque':{c:30,p:0.6,l:0.2,g:8},'melon':{c:34,p:0.8,l:0.2,g:8},
+    'datte':{c:282,p:2.5,l:0.4,g:75},'abricot sec':{c:241,p:3.4,l:0.5,g:63},
+    // Produits laitiers
+    'yaourt':{c:59,p:3.5,l:3.3,g:4.7},'skyr':{c:63,p:11,l:0.2,g:4},'fromage blanc':{c:79,p:8,l:4,g:3.5},
+    'petit suisse':{c:97,p:9,l:5,g:3},'cottage':{c:98,p:11,l:4.3,g:3.4},
+    'feta':{c:264,p:14,l:21,g:4},'mozzarella':{c:280,p:18,l:22,g:2.2},'parmesan':{c:431,p:38,l:29,g:4},
+    'comte':{c:417,p:27,l:34,g:1.5},'emmental':{c:380,p:28,l:29,g:1},'gruyere':{c:413,p:30,l:32,g:0.4},
+    'chevre':{c:364,p:22,l:30,g:2.5},'camembert':{c:300,p:20,l:24,g:0.5},'roquefort':{c:369,p:22,l:31,g:2},
+    'raclette':{c:357,p:23,l:29,g:1},'creme fraiche':{c:292,p:2.4,l:30,g:3},
+    'lait':{c:61,p:3.2,l:3.3,g:4.8},'lait vegetal':{c:35,p:1,l:1.5,g:3.5},
+    'beurre':{c:717,p:0.9,l:81,g:0.1},'mascarpone':{c:429,p:4.8,l:44,g:4},
+    // Matieres grasses, oleagineux, condiments
+    'huile olive':{c:884,p:0,l:100,g:0},'huile':{c:884,p:0,l:100,g:0},
+    'noix':{c:654,p:15,l:65,g:14},'amandes':{c:579,p:21,l:50,g:22},'noisette':{c:628,p:15,l:61,g:17},
+    'cajou':{c:553,p:18,l:44,g:30},'pistache':{c:560,p:20,l:45,g:28},'cacahuete':{c:567,p:26,l:49,g:16},
+    'graines':{c:559,p:19,l:49,g:20},'graines courge':{c:559,p:30,l:49,g:11},'chia':{c:486,p:17,l:31,g:42},
+    'tahini':{c:595,p:17,l:54,g:21},'beurre cacahuete':{c:588,p:25,l:50,g:20},
+    'mayonnaise':{c:680,p:1,l:75,g:1.5},'ketchup':{c:112,p:1.2,l:0.1,g:26},'moutarde':{c:66,p:4,l:3.3,g:5},
+    'vinaigrette':{c:450,p:0.5,l:48,g:3},'sauce tomate':{c:32,p:1.3,l:0.4,g:6},
+    'miel':{c:304,p:0.3,l:0,g:82},'sucre':{c:400,p:0,l:0,g:100},'confiture':{c:278,p:0.4,l:0.1,g:69},
+    // Boissons
+    'jus orange':{c:45,p:0.7,l:0.2,g:10},'soda':{c:42,p:0,l:0,g:10.6},'biere':{c:43,p:0.5,l:0,g:3.6},
+    'vin':{c:83,p:0.1,l:0,g:2.6},'cafe':{c:2,p:0.1,l:0,g:0},'the':{c:1,p:0,l:0,g:0}
   };
-  function getNutri(name, qty) {
-    var n = (name || '').toLowerCase();
-    var key = Object.keys(NT).find(function (k) { return n.indexOf(k) > -1 || k.split(' ').every(function (w) { return n.indexOf(w) > -1; }); });
-    if (!key) return null;
-    var f = qty / 100, b = NT[key];
-    return { c: Math.round(b.c * f), p: Math.round(b.p * f * 10) / 10, l: Math.round(b.l * f * 10) / 10, g: Math.round(b.g * f * 10) / 10 };
+
+  /* ⚠️ Le plus LONG libellé qui correspond gagne, et la correspondance se fait
+     MOT À MOT. Avant, `Object.keys(NT).find(...)` prenait le premier venu dans
+     l'ordre de déclaration : « pomme de terre » tombait sur « pomme » (52 kcal
+     au lieu de 77 et zéro féculent), « huile olive » sur « huile », et « ail »
+     se trouvait dans « volaille ». C'est le même piège que le rapprochement du
+     garde-manger, résolu de la même façon. */
+  function normNom(s) {
+    return ' ' + String(s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // accents
+      .replace(/[^a-z0-9]+/g, ' ').trim() + ' ';
   }
+
+  var NT_CLES = Object.keys(NT)
+    .map(function (k) { return { k: k, n: normNom(k), mots: normNom(k).trim().split(' ') }; })
+    .sort(function (a, b) { return b.mots.length - a.mots.length || b.k.length - a.k.length; });
+
+  function getNutri(name, qty) {
+    var n = normNom(name);
+    var t = null;
+    for (var i = 0; i < NT_CLES.length; i++) {
+      var e = NT_CLES[i];
+      var tous = e.mots.every(function (m) { return n.indexOf(' ' + m + ' ') > -1; });
+      if (tous) { t = NT[e.k]; break; }
+    }
+    if (!t) return null;
+    var f = (parseFloat(qty) || 0) / 100;
+    return { c: Math.round(t.c * f), p: r1(t.p * f), l: r1(t.l * f), g: r1(t.g * f) };
+  }
+
+  function r1(v) { return Math.round(v * 10) / 10; }
+
+  /**
+   * Macros d'une liste d'ingrédients.
+   *
+   * ⚠️ ORDRE DE CONFIANCE, et c'est tout le sujet : on prend d'abord les macros
+   * ÉCRITES sur la ligne (`calories`, `proteins_g`, `carbs_g`, `fats_g`), que
+   * `assets/ajout.js` renseigne à l'enregistrement depuis ce que l'analyse a
+   * reconnu. La table locale n'est utilisée que si la ligne n'a rien — vieilles
+   * lignes, saisie manuelle, import.
+   *
+   * Un ingrédient inconnu des deux compte pour zéro, comme avant : mais il est
+   * maintenant l'exception et non la règle, et `calcMac` le signale
+   * (`.inconnus`) pour que les écrans puissent le dire au lieu d'afficher un
+   * total faux sans prévenir.
+   */
   function calcMac(ings) {
-    var t = { c: 0, p: 0, l: 0, g: 0 };
+    var t = { c: 0, p: 0, l: 0, g: 0 }, inconnus = [];
     (ings || []).forEach(function (i) {
-      var r = getNutri(i.name, i.quantity_g || 0);
+      if (!i) return;
+      var cal = parseFloat(i.calories), pr = parseFloat(i.proteins_g),
+          gl = parseFloat(i.carbs_g), li = parseFloat(i.fats_g);
+      // « Écrit » = au moins une valeur non nulle. Quatre zéros, c'est le défaut
+      // de la base, pas une mesure : on retombe alors sur la table.
+      if ((cal || pr || gl || li)) {
+        t.c += cal || 0; t.p += pr || 0; t.g += gl || 0; t.l += li || 0;
+        return;
+      }
+      var r = getNutri(i.name || i.nom, i.quantity_g || i.quantite_g || 0);
       if (r) { t.c += r.c; t.p += r.p; t.l += r.l; t.g += r.g; }
+      else if (i.name || i.nom) inconnus.push(i.name || i.nom);
     });
-    return { c: Math.round(t.c), p: Math.round(t.p * 10) / 10, l: Math.round(t.l * 10) / 10, g: Math.round(t.g * 10) / 10 };
+    var out = { c: Math.round(t.c), p: r1(t.p), l: r1(t.l), g: r1(t.g) };
+    out.inconnus = inconnus;
+    return out;
   }
 
   function goto(page) {
