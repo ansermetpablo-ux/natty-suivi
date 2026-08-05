@@ -1024,6 +1024,11 @@ html.no-scroll {
 
   </div>
 
+  <!-- CALENDRIER HEBDO DES MACROS (assets/macros-cal.js) —
+       7 jours × 3 repas, l'intensité disant ce qui a été tenu. Quatre pages
+       qui se font glisser : tout confondu, protéines, glucides, lipides. -->
+  <div id="calMacros"></div>
+
   <!-- OFFRES / NUTRI -->
   <div class="offres-banner natty-hidden" id="offresBanner" onclick="goToOffre()">
     <div><div class="ob-title">Offres / Nutritionniste</div><div class="ob-sub">Découvrez nos formules personnalisées</div></div>
@@ -1796,6 +1801,10 @@ html.no-scroll {
      charger — d'où des conseils qui ne se généraient jamais, la fonction levant
      « assets/reco.js requis » avant le moindre appel. -->
 <script src="/assets/generation.js"></script>
+<!-- Le calendrier hebdomadaire des macros. Il ne va rien chercher en base :
+     cette page a déjà ses repas (`allMeals`) et ses objectifs (`macObj`), il
+     les reçoit par majCalendrierMacros(). -->
+<script src="/assets/macros-cal.js"></script>
 <script>
 // ═══ CONFIG ═══
 const SB_URL  = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
@@ -1965,7 +1974,7 @@ document.addEventListener('DOMContentLoaded', function() {
 async function init() {
   if (urlP.p||urlP.c) { macObj.p=urlP.p; macObj.l=urlP.l; macObj.g=urlP.g; macObj.c=urlP.c; }
   await Promise.all([loadOnboarding(), loadMeals(), loadScore(), loadDailyHistory(), verifierAbonnement(), chargerActionSemaine()]);
-  afficherMacros(); chargerRdv(); chargerDiagnostics();
+  afficherMacros(); chargerRdv(); chargerDiagnostics(); majCalendrierMacros();
   resetIfNewDay();
   if (document.getElementById('pageProg').classList.contains('active')) dessinerProgression();
 }
@@ -3896,6 +3905,18 @@ function updateMacroCards() {
   afficherMacros();
 }
 
+/* Le calendrier hebdomadaire des macros (assets/macros-cal.js).
+   Il reçoit les repas et les objectifs déjà chargés par cette page — c'est le
+   même `allMeals` que l'historique et le même `macObj` que les anneaux, donc
+   aucun risque que deux endroits de l'écran affichent deux chiffres. */
+function majCalendrierMacros() {
+  if (!window.NattyMacrosCal) return;
+  var el = document.getElementById('calMacros');
+  if (!el) return;
+  if (el.getAttribute('data-monte') === '1') NattyMacrosCal.majDonnees(allMeals, macObj);
+  else { el.setAttribute('data-monte', '1'); NattyMacrosCal.monter(el, allMeals, macObj); }
+}
+
 function openMealDetail(mealId) {
   var meal = allMeals.find(function(m){ return m.id === mealId; });
   if (meal) ouvrirAnalysePlat(meal);
@@ -5269,6 +5290,7 @@ window.addEventListener('natty:repas-ajoute', function(){
     loadMeals().then(function(){
       if (typeof afficherMacros === 'function') afficherMacros();
       if (typeof chargerDiagnostics === 'function') chargerDiagnostics();
+      if (typeof majCalendrierMacros === 'function') majCalendrierMacros();
     });
   }
 });

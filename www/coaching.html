@@ -50,6 +50,29 @@
 /* Liste de courses — déduite des repas de la semaine, pas générée à part :
    elle reste ainsi toujours cohérente avec ce qu'affiche repas.html. */
 .crs-note{font-size:11px;color:var(--muted);margin:-4px 0 12px}
+
+/* Aliments à privilégier — une rangée qui défile, pas une grille : ils sont 12
+   à 18 selon la génération, et empilés ils repousseraient la liste de courses
+   (le seul contenu de cet écran qu'on vient vraiment chercher) hors de vue. */
+.alim-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 14px;margin:0 -20px;
+  padding-left:20px;padding-right:20px;-webkit-overflow-scrolling:touch}
+.alim-row::-webkit-scrollbar{display:none}
+.alim-chip{flex:none;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #ececf0;
+  border-radius:16px;padding:10px 13px;cursor:pointer;font-family:inherit;text-align:left;
+  transition:background .22s cubic-bezier(.22,1,.36,1),border-color .22s,transform .22s}
+.alim-chip:active{transform:scale(.97)}
+.alim-chip .ac-em{font-size:21px;line-height:1;flex:none}
+.alim-chip .ac-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.alim-chip .ac-nom{font-size:12.5px;font-weight:800;color:var(--ink);white-space:nowrap}
+.alim-chip .ac-ap{font-size:10px;color:var(--muted);white-space:nowrap}
+.alim-chip .ac-plus{flex:none;width:22px;height:22px;border-radius:50%;background:#f2f2f5;color:var(--ink);
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;margin-left:2px}
+/* Ajouté : la pastille se remplit d'encre. C'est le seul état à distinguer —
+   « dans mes courses » ou pas. */
+.alim-chip.on{background:var(--ink);border-color:var(--ink)}
+.alim-chip.on .ac-nom{color:#fff}
+.alim-chip.on .ac-ap{color:rgba(255,255,255,.62)}
+.alim-chip.on .ac-plus{background:rgba(255,255,255,.2);color:#fff}
 </style>
 </head>
 <body>
@@ -85,6 +108,12 @@
   <div class="sec-title">Conseils de la semaine</div>
   <div class="adv-week" id="advWeek"></div>
   <div class="adv-grid" id="advList"><div class="empty">Chargement…</div></div>
+
+  <div id="alimBlock" style="display:none">
+    <div class="sec-title">Aliments à privilégier</div>
+    <div class="crs-note" id="alimNote"></div>
+    <div class="alim-row" id="alimRow"></div>
+  </div>
 
   <div class="sec-title">Liste de courses</div>
   <div class="crs-note" id="crsNote"></div>
@@ -302,47 +331,101 @@ function crsCle(){
   return 'natty_courses_' + Natty.USER_ID + '_' + NattyReco.lundiCourant();
 }
 
-async function loadCourses(){
+/* ═══ Aliments à privilégier ═══
+   Ils sortent de la MÊME génération que les conseils et les recettes
+   (`conseils_json.plats_macro[].aliments`, voir api/_generation.js) : un aliment
+   « protéines » n'a de sens que s'il découle du conseil protéines écrit le même
+   jour. Aucun appel supplémentaire à l'IA, une lecture.
+
+   ⚠️ ET ILS MÈNENT QUELQUE PART. Un aliment touché entre dans la liste de
+   courses juste en dessous — même clé localStorage que le détail d'une macro
+   dans suivi.html (`NattyListe.basculerExtra`). Sans ça, la rangée serait un
+   affichage de plus : on lit « privilégiez le thon », on touche, et il ne se
+   passe rien. */
+
+var _crsItems = null;        // les ingrédients déduits des recettes, gardés pour
+                             // remonter la liste sans la recharger depuis la base
+var _crsRecettes = 0;
+
+function alimAjoute(nom){
+  return window.NattyListe && NattyListe.contientExtra
+    ? NattyListe.contientExtra(Natty.USER_ID, nom) : false;
+}
+
+async function loadAliments(){
+  var bloc = document.getElementById('alimBlock');
+  var row  = document.getElementById('alimRow');
+  var note = document.getElementById('alimNote');
+  var alims = [];
+  try { alims = await NattyReco.alimentsSemaine(); } catch(e){}
+
+  // Rien à privilégier : on masque le titre AUSSI. Une section vide avec son
+  // en-tête laisse croire qu'un contenu n'a pas chargé.
+  if (!alims.length){ bloc.style.display = 'none'; return; }
+
+  bloc.style.display = '';
+  note.textContent = 'Touchez-en un pour l’ajouter à votre liste de courses.';
+  row.innerHTML = alims.map(function(a, i){
+    return '<button class="alim-chip' + (alimAjoute(a.nom) ? ' on' : '') + '" type="button" data-i="' + i + '">'
+      + '<span class="ac-em">' + crsEsc(a.em) + '</span>'
+      + '<span class="ac-txt"><span class="ac-nom">' + crsEsc(a.nom) + '</span>'
+      + (a.apport ? '<span class="ac-ap">' + crsEsc(a.apport) + '</span>' : '') + '</span>'
+      + '<span class="ac-plus">' + (alimAjoute(a.nom) ? '✓' : '+') + '</span>'
+      + '</button>';
+  }).join('');
+
+  // data-* + addEventListener : un onclick inline avec un nom d'aliment
+  // apostrophé casse la syntaxe (règle §9 #8 de CLAUDE.md).
+  [].slice.call(row.querySelectorAll('.alim-chip')).forEach(function(b){
+    b.addEventListener('click', function(){
+      var a = alims[+b.dataset.i];
+      var ajoute = NattyListe.basculerExtra(Natty.USER_ID, a.nom, a.em);
+      b.classList.toggle('on', ajoute);
+      b.querySelector('.ac-plus').textContent = ajoute ? '✓' : '+';
+      NattyListe.toast(ajoute ? '🛒 ' + a.nom + ' ajouté à vos courses'
+                              : a.nom + ' retiré de vos courses');
+      peindreCourses();     // la liste juste en dessous doit bouger tout de suite
+    });
+  });
+}
+
+function crsEsc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* Les ingrédients des recettes, plus les aliments ajoutés à la main, en UNE
+   liste. Deux listes séparées auraient obligé à lire deux fois et à copier deux
+   fois — or on fait ses courses une seule fois. Un ajout qui figure déjà dans
+   une recette n'est pas répété. */
+function crsAvecExtras(items){
+  var ex = (window.NattyListe && NattyListe.extras) ? NattyListe.extras(Natty.USER_ID) : [];
+  var out = (items || []).slice();
+  ex.forEach(function(x){
+    var n = String(x.nom || '').toLowerCase().trim();
+    if (!n) return;
+    if (out.some(function(i){ return String(i.nom||'').toLowerCase().trim() === n; })) return;
+    out.push({ em: x.emoji || '🛒', nom: x.nom, qte: '' });
+  });
+  return out.sort(function(a,b){ return a.nom.localeCompare(b.nom,'fr'); });
+}
+
+/* Remonte la liste depuis ce qu'on a déjà en mémoire, sans requête. Appelé à
+   chaque bascule d'un aliment : recharger la base pour un geste local ferait
+   clignoter la liste et perdrait les cases cochées le temps de l'aller-retour. */
+function peindreCourses(){
   var list = document.getElementById('crsList');
   var note = document.getElementById('crsNote');
-  var recettes = [];
-  try {
-    await NattyReco.chargerNbRepas();   // même préférence que repas.html
-    recettes = await NattyReco.recettesDeLaSemaine(NattyReco.nbRepas());
-  } catch(e){}
+  var items = crsAvecExtras(_crsItems || []);
 
-  if (!recettes || !recettes.length){
-    note.textContent = '';
-    // Un écran vide qui ne dit pas comment le remplir laisse l'utilisateur
-    // attendre quelque chose qui ne viendra jamais tout seul.
-    list.innerHTML = '<div class="empty" style="text-align:center">'
-      + 'Ta liste se déduit de tes recettes de la semaine.<br>'
-      + '<button id="crsGen" style="margin-top:14px;padding:13px 22px;background:var(--ink,#1a1a2e);'
-      + 'color:#fff;border:none;border-radius:14px;font-family:Inter,sans-serif;font-size:14px;'
-      + 'font-weight:700;cursor:pointer;">✨ Générer ma semaine</button></div>';
-    var b = document.getElementById('crsGen');
-    if (b) b.addEventListener('click', function(){
-      if (!window.NattyGeneration) return;
-      b.disabled = true;
-      NattyGeneration.lancer().then(function(row){
-        if (row) loadCourses(); else b.disabled = false;
-      });
-    });
-    return;
-  }
+  if (!items.length){ afficherCoursesVides(list, note); return; }
 
-  var items = crsAgreger(recettes);
-  if (!items.length){
-    note.textContent = '';
-    list.innerHTML = '<div class="empty">Aucun ingrédient à afficher.</div>';
-    return;
-  }
+  var nEx = items.length - (_crsItems || []).length;
+  note.textContent = (_crsRecettes
+      ? 'Pour ' + (_crsRecettes === 1 ? 'ton repas' : 'tes ' + _crsRecettes + ' repas') + ' de la semaine'
+      : 'Vos aliments à privilégier')
+    + (nEx > 0 ? ' · ' + nEx + ' ajouté' + (nEx > 1 ? 's' : '') + ' à la main' : '');
 
-  note.textContent = 'Pour ' + (recettes.length === 1 ? 'ton repas' : 'tes ' + recettes.length + ' repas')
-    + ' de la semaine';
-
-  /* Le rendu, le masquage et la copie sont dans NattyListe. La clé passée est
-     celle d'avant : les cases déjà cochées cette semaine sont conservées. */
   var lu = new Date(NattyReco.lundiCourant() + 'T00:00:00');
   var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août',
               'septembre','octobre','novembre','décembre'];
@@ -354,14 +437,54 @@ async function loadCourses(){
   });
 }
 
-/* Génération terminée ailleurs : conseils et liste se remplissent d'eux-mêmes. */
+function afficherCoursesVides(list, note){
+  note.textContent = '';
+  // Un écran vide qui ne dit pas comment le remplir laisse l'utilisateur
+  // attendre quelque chose qui ne viendra jamais tout seul.
+  list.innerHTML = '<div class="empty" style="text-align:center">'
+    + 'Ta liste se déduit de tes recettes de la semaine.<br>'
+    + '<button id="crsGen" style="margin-top:14px;padding:13px 22px;background:var(--ink,#1a1a2e);'
+    + 'color:#fff;border:none;border-radius:14px;font-family:Inter,sans-serif;font-size:14px;'
+    + 'font-weight:700;cursor:pointer;">✨ Générer ma semaine</button></div>';
+  var b = document.getElementById('crsGen');
+  if (b) b.addEventListener('click', function(){
+    if (!window.NattyGeneration) return;
+    b.disabled = true;
+    NattyGeneration.lancer().then(function(row){
+      if (row) loadCourses(); else b.disabled = false;
+    });
+  });
+}
+
+async function loadCourses(){
+  var list = document.getElementById('crsList');
+  var note = document.getElementById('crsNote');
+  var recettes = [];
+  try {
+    await NattyReco.chargerNbRepas();   // même préférence que repas.html
+    recettes = await NattyReco.recettesDeLaSemaine(NattyReco.nbRepas());
+  } catch(e){}
+
+  /* ⚠️ PAS DE SORTIE ANTICIPÉE ICI. Avant, l'absence de recettes affichait
+     l'invitation à générer et rendait la main : les aliments ajoutés à la main
+     n'étaient alors visibles nulle part, et le « + » de la rangée du dessus ne
+     menait à rien. `peindreCourses()` tranche à partir de la liste RÉELLE —
+     recettes plus ajouts — et ne montre l'invitation que si les deux sont vides.
+     Même correctif que dans l'overlay de suivi.html. */
+  _crsRecettes = (recettes && recettes.length) || 0;
+  _crsItems = _crsRecettes ? crsAgreger(recettes) : [];
+  peindreCourses();
+}
+
+/* Génération terminée ailleurs : conseils, aliments et liste se remplissent
+   d'eux-mêmes — la rangée d'aliments n'existe qu'après une génération. */
 document.addEventListener('natty:conseils-prets', function(){
-  loadConseils(); loadCourses();
+  loadConseils(); loadCourses(); loadAliments();
 });
 
 (async function(){
   if (!Natty.requireAuth()) return;
-  await Promise.all([loadRdv(), loadMessages(), loadConseils(), loadCourses()]);
+  await Promise.all([loadRdv(), loadMessages(), loadConseils(), loadCourses(), loadAliments()]);
 })();
 </script>
 <script src="/assets/ajout.js"></script>

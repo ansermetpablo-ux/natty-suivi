@@ -311,7 +311,16 @@ var NattyReco = (function () {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
 
-  async function lireCache() {
+  /**
+   * Le `conseils_json` de la semaine, entier, ou null s'il manque ou est périmé.
+   *
+   * ⚠️ `conseils_json` est une colonne TEXTE : PostgREST la rend en `string`, il
+   * faut reparser (voir CLAUDE.md §7). Une seule génération écrit tout — les
+   * recettes, les trois `plats_macro` et leurs « aliments à privilégier » — donc
+   * tout écran qui veut autre chose que les recettes passe par ici plutôt que de
+   * refaire sa propre requête et son propre parse.
+   */
+  async function jsonSemaine() {
     try {
       var rows = await Natty.sbFetch('profil_conseils?user_id=eq.' + Natty.USER_ID
         + '&order=generated_at.desc&limit=1&select=conseils_json,semaine');
@@ -320,8 +329,37 @@ var NattyReco = (function () {
       if (row.semaine !== lundiCourant()) return null;      // périmé
       var j = row.conseils_json;
       if (typeof j === 'string') { try { j = JSON.parse(j); } catch (e) { return null; } }
-      return (j && j.recettes && j.recettes.length) ? j.recettes : null;
+      return j || null;
     } catch (e) { return null; }
+  }
+
+  async function lireCache() {
+    var j = await jsonSemaine();
+    return (j && j.recettes && j.recettes.length) ? j.recettes : null;
+  }
+
+  /**
+   * Les aliments à privilégier de la semaine, aplatis et dédoublonnés.
+   * Chaque `plats_macro[]` en porte 4 à 6 (voir api/_generation.js) ; l'écran
+   * Coaching les montre tous ensemble, puisqu'il s'agit de faire ses courses et
+   * non de lire une macro en particulier.
+   * @returns {Array} [{em, nom, apport, macro}]
+   */
+  async function alimentsSemaine() {
+    var j = await jsonSemaine();
+    var plats = (j && Array.isArray(j.plats_macro)) ? j.plats_macro : [];
+    var out = [];
+    plats.forEach(function (p) {
+      (Array.isArray(p && p.aliments) ? p.aliments : []).forEach(function (a) {
+        if (!a || !a.nom) return;
+        var n = String(a.nom).toLowerCase().trim();
+        // Un même aliment peut servir deux macros (les œufs, le skyr) : on le
+        // montre une fois, sinon la rangée se répète sans rien dire de plus.
+        if (out.some(function (x) { return x.nom.toLowerCase().trim() === n; })) return;
+        out.push({ em: a.em || '🛒', nom: String(a.nom), apport: a.apport || '', macro: p.macro || '' });
+      });
+    });
+    return out;
   }
 
   /* ── 5 bis. La génération de la semaine a DÉMÉNAGÉ ────────
@@ -449,6 +487,8 @@ var NattyReco = (function () {
     setNbRepas: setNbRepas,
     NB_MIN: NB_MIN,
     NB_MAX: NB_MAX,
-    lundiCourant: lundiCourant
+    lundiCourant: lundiCourant,
+    jsonSemaine: jsonSemaine,
+    alimentsSemaine: alimentsSemaine
   };
 })();

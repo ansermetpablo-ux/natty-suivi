@@ -125,14 +125,18 @@ async function messagePour(uid, jour) {
   };
 }
 
-/* Les macros ne sont stockées nulle part : `meal_ingredients` ne garde que le
-   nom et les grammes (ses colonnes de macros sont à 0 sur toutes les lignes).
-   On refait donc le calcul de l'app, avec sa table — voir api/_nutrition.js. */
+/* ⚠️ DEMANDER LES QUATRE COLONNES DE MACROS, pas seulement le nom et les
+   grammes. Depuis août 2026 `assets/ajout.js` les renseigne à l'enregistrement,
+   et `calcMac` les préfère à la table — mais une colonne qu'on n'a pas demandée
+   arrive `undefined`, donc « rien d'écrit », donc on retombait en silence sur le
+   filet pour des lignes qui portaient la vraie mesure. Le filet reste utile pour
+   les lignes anciennes et la saisie à la main. Voir api/_nutrition.js. */
 async function macrosDesRepas(ids) {
   const total = { c: 0, p: 0, l: 0, g: 0 };
   for (let i = 0; i < ids.length; i += 40) {
     const lot = ids.slice(i, i + 40).map(x => '"' + x + '"').join(',');
-    const ings = await sbGet(`meal_ingredients?meal_id=in.(${encodeURIComponent(lot)})&select=name,quantity_g`);
+    const ings = await sbGet(`meal_ingredients?meal_id=in.(${encodeURIComponent(lot)})`
+      + '&select=name,quantity_g,calories,proteins_g,carbs_g,fats_g');
     const m = calcMac(ings);
     total.c += m.c; total.p += m.p; total.l += m.l; total.g += m.g;
   }

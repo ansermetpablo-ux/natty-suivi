@@ -267,5 +267,85 @@ window.NattyListe = (function () {
     return { rafraichir: peindre, texte: texte, coches: lus };
   }
 
-  return { monter: monter, copier: copier, toast: toast };
+  /* ── 4. Aliments ajoutés à la main ────────────────────────
+     Les « aliments à privilégier » d'une macro, qu'on touche pour les mettre
+     dans ses courses. Ils vivent À CÔTÉ de la liste calculée, en localStorage
+     et par semaine : `liste_courses_json` est DÉRIVÉE des recettes côté serveur
+     (voir api/_generation.js), donc y réinjecter des ajouts manuels les ferait
+     écraser à la génération suivante — et personne ne comprendrait pourquoi sa
+     liste a maigri. Ce sont des annotations personnelles posées sur un calcul,
+     et la semaine les remet à zéro en même temps que la liste qu'elles
+     complètent.
+
+     ⚠️ LA CLÉ EST PARTAGÉE AVEC `suivi.html`, au caractère près
+     (`natty_courses_extra_<uid>_<lundi>`, éléments `{nom, emoji}`). C'est tout
+     l'intérêt : on touche un aliment dans le détail d'une macro, on le retrouve
+     dans sa liste de courses. Deux clés auraient donné deux listes, et le geste
+     n'aurait mené nulle part.
+
+     ⚠️ ET LES DEUX ÉCRANS NE CALCULENT PAS LE MÊME LUNDI. `getLundiSemaine()`
+     de suivi.html finit par `toISOString()`, donc en UTC : un lundi entre 00 h
+     et 02 h à Paris, il rend le DIMANCHE. Même piège que `semaine` côté serveur
+     (voir CLAUDE.md §3). On ne peut pas le corriger là-bas — une session
+     parallèle y travaille — alors on lit l'UNION des deux clés possibles et on
+     réécrit dans la locale, en effaçant l'autre : la divergence se répare d'
+     elle-même au premier geste, au lieu de faire disparaître un aliment ajouté
+     la nuit du dimanche au lundi. */
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  /* Les clés candidates de la semaine, la CANONIQUE en premier. */
+  function clesExtras(userId) {
+    var d = new Date(), j = d.getDay();
+    d.setDate(d.getDate() - j + (j === 0 ? -6 : 1));
+    var local = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    var utc = d.toISOString().split('T')[0];
+    var base = 'natty_courses_extra_' + userId + '_';
+    return utc === local ? [base + local] : [base + local, base + utc];
+  }
+
+  function memeNom(a, b) {
+    return String(a || '').toLowerCase().trim() === String(b || '').toLowerCase().trim();
+  }
+
+  /** Les aliments ajoutés à la main cette semaine : [{nom, emoji}]. */
+  function extras(userId) {
+    var vus = [];
+    clesExtras(userId).forEach(function (k) {
+      var l;
+      try { l = JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { l = []; }
+      (Array.isArray(l) ? l : []).forEach(function (x) {
+        if (!x || !x.nom) return;
+        if (!vus.some(function (v) { return memeNom(v.nom, x.nom); })) vus.push(x);
+      });
+    });
+    return vus;
+  }
+
+  function ecrireExtras(userId, liste) {
+    var cles = clesExtras(userId);
+    try {
+      localStorage.setItem(cles[0], JSON.stringify(liste));
+      // Consolidation : la variante UTC ne doit pas ressusciter un aliment retiré.
+      for (var i = 1; i < cles.length; i++) localStorage.removeItem(cles[i]);
+    } catch (e) {}
+  }
+
+  function contientExtra(userId, nom) {
+    return extras(userId).some(function (x) { return memeNom(x.nom, nom); });
+  }
+
+  /** Ajoute ou retire. @returns {boolean} true si l'aliment vient d'être ajouté. */
+  function basculerExtra(userId, nom, em) {
+    var l = extras(userId);
+    var i = l.findIndex(function (x) { return memeNom(x.nom, nom); });
+    if (i >= 0) l.splice(i, 1); else l.push({ nom: nom, emoji: em || '🛒' });
+    ecrireExtras(userId, l);
+    return i < 0;
+  }
+
+  return {
+    monter: monter, copier: copier, toast: toast,
+    extras: extras, contientExtra: contientExtra, basculerExtra: basculerExtra
+  };
 })();

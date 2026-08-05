@@ -1,3 +1,9 @@
 .DS_Store
 **/.DS_Store
-node_modules/ 
+node_modules/
+
+# Doublures de test servies depuis la racine (ex. _test-macros-cal.html).
+# Tout .html à la racine est publiquement accessible une fois déployé : un
+# `git add -A` malheureux — celui-là même qui a emporté deux sessions dans
+# e01e20b — mettrait une page de démo en ligne sur natty-suivi.vercel.app.
+_test-*.html
