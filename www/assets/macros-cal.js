@@ -165,15 +165,16 @@ window.NattyMacrosCal = (function () {
     s.textContent = [
       /* La carte reprend le noir métallisé des cartes Calories/Objectif de
          Suivi : trois cartes noires à la suite, une seule matière. */
-      '.nmc{position:relative;border-radius:26px;padding:18px 16px 14px;color:#fff;',
+      '.nmc{--nmc-c:20px;--nmc-g:4px;',
+      'position:relative;border-radius:22px;padding:13px 14px 11px;color:#fff;',
       'background:radial-gradient(130% 65% at 12% -10%,rgba(255,255,255,.11) 0%,rgba(255,255,255,0) 42%),',
       'linear-gradient(135deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 28%),',
       'linear-gradient(165deg,#0c0d0f 0%,#050506 55%,#000 100%);',
       'box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -1px 0 rgba(0,0,0,.6),0 10px 24px rgba(0,0,0,.5)}',
 
-      '.nmc-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px}',
-      '.nmc-head .t{font-size:16px;font-weight:800;letter-spacing:-.02em}',
-      '.nmc-head .d{font-size:11px;font-weight:600;color:rgba(255,255,255,.42)}',
+      '.nmc-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px}',
+      '.nmc-head .t{font-size:13px;font-weight:800;letter-spacing:-.02em}',
+      '.nmc-head .d{font-size:10px;font-weight:600;color:rgba(255,255,255,.42)}',
 
       /* Les quatre pages. Le glissement natif (scroll-snap) plutôt qu'un
          carrousel maison : l'inertie est celle du système, donc juste.
@@ -187,34 +188,48 @@ window.NattyMacrosCal = (function () {
       '.nmc-pages::-webkit-scrollbar{display:none}',
       '.nmc-page{min-width:100%;scroll-snap-align:center;flex:0 0 100%;cursor:pointer}',
 
-      '.nmc-sub{display:flex;align-items:center;gap:8px;margin-bottom:11px}',
-      '.nmc-sub .em{font-size:15px}',
-      '.nmc-sub .n{font-size:12.5px;font-weight:800;letter-spacing:.01em}',
-      '.nmc-sub .v{margin-left:auto;font-size:11px;font-weight:700;color:rgba(255,255,255,.55)}',
-      '.nmc-sub .v b{color:#fff;font-weight:800}',
+      /* Le relevé est à DROITE de la grille, pas au-dessus. Sept colonnes de
+         cases fixes ne font que 180 px : posé sur sa propre ligne, il laissait
+         150 px de vide à côté du damier tout en coûtant une rangée de hauteur.
+         À droite, il comble ce vide et rend la carte plus courte. */
+      '.nmc-body{display:flex;align-items:center;gap:12px}',
+      '.nmc-side{flex:1;min-width:0;text-align:right}',
+      '.nmc-side .sn{font-size:11px;font-weight:800;letter-spacing:-.01em;',
+      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.nmc-side .sv{font-size:19px;font-weight:800;letter-spacing:-.03em;margin-top:3px;line-height:1}',
+      '.nmc-side .sv span{font-size:10px;font-weight:700;color:rgba(255,255,255,.45);margin-left:2px}',
+      '.nmc-side .so{font-size:9.5px;font-weight:600;color:rgba(255,255,255,.38);margin-top:3px}',
 
-      '.nmc-cols,.nmc-r{display:grid;grid-template-columns:15px repeat(7,1fr);gap:5px;align-items:center}',
-      '.nmc-cols{margin-bottom:6px}',
-      '.nmc-cols div{text-align:center;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.32)}',
-      '.nmc-cols div.auj{color:#fff}',
-      '.nmc-r{margin-bottom:5px}',
-      '.nmc-r .cre{font-size:9px;text-align:center;opacity:.5}',
+      /* ⚠️ UNE seule grille pour les libellés ET les trois lignes, et des cases
+         de taille FIXE — pas `1fr` avec `aspect-ratio:1/1`. Étalées sur toute
+         la largeur de la carte, sept colonnes donnaient des cases de 38 px :
+         le damier faisait à lui seul 114 px de haut et la carte 270, soit deux
+         fois les autres modules de l'écran. La taille est ici la même quelle
+         que soit la largeur, et c'est elle qui commande la hauteur du bloc.
+         Même raison que le calendrier de `assets/planning.js`, qui a renoncé
+         à `aspect-ratio:1/1` pour la même raison. */
+      '.nmc-grid{display:inline-grid;grid-template-columns:12px repeat(7,var(--nmc-c));',
+      'gap:var(--nmc-g);align-items:center;justify-items:center}',
+      '.nmc-grid .dj{font-size:8.5px;font-weight:700;color:rgba(255,255,255,.32);line-height:1}',
+      '.nmc-grid .dj.auj{color:#fff}',
+      '.nmc-grid .cre{font-size:8.5px;opacity:.5;line-height:1}',
       /* Une case : carrée, vide par défaut. Le remplissage est posé en style
          inline (couleur + opacité), c'est la seule chose qui varie. */
-      '.nmc-c{aspect-ratio:1/1;border-radius:6px;background:rgba(255,255,255,.055);',
+      '.nmc-c{width:var(--nmc-c);height:var(--nmc-c);border-radius:4px;',
+      'background:rgba(255,255,255,.055);',
       'box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);position:relative}',
       /* Au-delà de la cible, un liseré : « tenu » et « dépassé » ne doivent pas
          se ressembler, alors que l'intensité, elle, plafonne. */
       '.nmc-c.over{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}',
       '.nmc-c.auj{box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}',
 
-      '.nmc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}',
-      '.nmc-leg{display:flex;align-items:center;gap:4px;font-size:9px;font-weight:600;color:rgba(255,255,255,.32)}',
-      '.nmc-leg i{width:9px;height:9px;border-radius:3px;display:block}',
-      '.nmc-dots{display:flex;gap:5px}',
-      '.nmc-dots b{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.22);transition:all .2s}',
-      '.nmc-dots b.on{background:#fff;width:14px;border-radius:99px}',
-      '.nmc-tap{font-size:10px;font-weight:700;color:rgba(255,255,255,.45)}',
+      '.nmc-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}',
+      '.nmc-leg{display:flex;align-items:center;gap:3px;font-size:8px;font-weight:600;color:rgba(255,255,255,.32)}',
+      '.nmc-leg i{width:7px;height:7px;border-radius:2px;display:block}',
+      '.nmc-dots{display:flex;gap:4px}',
+      '.nmc-dots b{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.22);transition:all .2s}',
+      '.nmc-dots b.on{background:#fff;width:12px;border-radius:99px}',
+      '.nmc-tap{font-size:9px;font-weight:700;color:rgba(255,255,255,.45)}',
       '.nmc-vide{font-size:11px;color:rgba(255,255,255,.4);text-align:center;padding:6px 0 2px}'
     ].join('');
     document.head.appendChild(s);
@@ -230,13 +245,15 @@ window.NattyMacrosCal = (function () {
   function grille(vue, sem) {
     var cible = cibleDe(vue), parCase = cible / 3;
     var auj = jourIndex(new Date()), estSemaineCourante = offsetSemaine === 0;
-    var h = '<div class="nmc-cols"><div></div>'
+    // Une grille unique de 4 rangées × 8 colonnes : les libellés de jours
+    // partagent alors le même gabarit que les cases, donc ils restent alignés
+    // sans qu'on ait à répéter `grid-template-columns` à trois endroits.
+    var h = '<div class="nmc-grid"><div></div>'
       + JOURS1.map(function (j, i) {
-          return '<div class="' + (estSemaineCourante && i === auj ? 'auj' : '') + '">' + j + '</div>';
-        }).join('')
-      + '</div>';
+          return '<div class="dj' + (estSemaineCourante && i === auj ? ' auj' : '') + '">' + j + '</div>';
+        }).join('');
     for (var c = 0; c < 3; c++) {
-      h += '<div class="nmc-r"><div class="cre">' + CRENEAUX[c].em + '</div>';
+      h += '<div class="cre">' + CRENEAUX[c].em + '</div>';
       for (var i = 0; i < 7; i++) {
         var v = sem.jours[i].cases[c].mac[vue.k] || 0;
         var part = parCase > 0 ? v / parCase : 0;
@@ -248,9 +265,8 @@ window.NattyMacrosCal = (function () {
         h += '<div class="' + cls + '"' + style + ' title="' + esc(JOURS[i] + ' · ' + CRENEAUX[c].nom
           + ' — ' + arrondi(v) + ' ' + vue.unite) + '"></div>';
       }
-      h += '</div>';
     }
-    return h;
+    return h + '</div>';
   }
 
   function pagePanneau(vue, sem) {
@@ -261,15 +277,16 @@ window.NattyMacrosCal = (function () {
       if (j.repas.length) joursRemplis++;
     });
     var moy = joursRemplis ? total / joursRemplis : 0;
-    return '<div class="nmc-page" data-nmc="ouvrir">'
-      + '<div class="nmc-sub"><span class="em">' + vue.em + '</span>'
-      + '<span class="n">' + esc(vue.nom) + '</span>'
-      + '<span class="v">' + (joursRemplis
-          ? '<b>' + arrondi(moy) + '</b> ' + vue.unite + '/j'
-            + (cible ? ' · obj. ' + arrondi(cible) : '')
-          : 'Aucun repas') + '</span></div>'
+    return '<div class="nmc-page" data-nmc="ouvrir"><div class="nmc-body">'
       + grille(vue, sem)
-      + '</div>';
+      + '<div class="nmc-side">'
+      + '<div class="sn">' + vue.em + ' ' + esc(vue.nom) + '</div>'
+      + (joursRemplis
+          ? '<div class="sv">' + arrondi(moy) + '<span>' + vue.unite + '/j</span></div>'
+          : '<div class="sv">–</div>')
+      + '<div class="so">' + (cible ? 'objectif ' + arrondi(cible) + ' ' + vue.unite
+                                    : 'objectif inconnu') + '</div>'
+      + '</div></div></div>';
   }
 
   function peindrePanneau() {
@@ -396,19 +413,35 @@ window.NattyMacrosCal = (function () {
 
       '#nmcf .plot{position:relative;height:172px;margin-bottom:6px}',
       '#nmcf .plot .ln{position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,.06)}',
-      /* La ligne d'objectif : c'est elle qui fait du graphique une comparaison
-         et pas un simple relevé. */
-      '#nmcf .plot .obj{position:absolute;left:0;right:0;height:0;',
-      'border-top:1px dashed rgba(255,255,255,.42)}',
-      '#nmcf .plot .obj b{position:absolute;right:0;top:-9px;font-size:9px;font-weight:800;',
-      'background:#15161a;border-radius:99px;padding:2px 7px;color:rgba(255,255,255,.72);',
-      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}',
-      '#nmcf .bars{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end}',
-      '#nmcf .col{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer}',
-      '#nmcf .col .b{width:100%;border-radius:7px 7px 3px 3px;height:0;transition:height .7s cubic-bezier(.22,1,.36,1)}',
-      '#nmcf .col .n{position:absolute;left:0;right:0;text-align:center;font-size:9px;font-weight:800;',
+      '#nmcf .bars{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr);gap:5px;align-items:end}',
+      '#nmcf .col{position:relative;height:100%;cursor:pointer}',
+      /* DEUX barres par jour : le réalisé à gauche, l'objectif à droite.
+         Avant, une barre unique devait « atteindre » une ligne pointillée —
+         il fallait suivre la ligne des yeux jusqu'au bord pour savoir de
+         combien on était loin. Deux barres côte à côte se comparent sur place,
+         sans rien à parcourir du regard. */
+      '#nmcf .duo{position:absolute;inset:0;display:flex;align-items:flex-end;gap:3px}',
+      '#nmcf .duo .b{flex:1;height:0;border-radius:6px 6px 2px 2px;',
+      'transition:height .7s cubic-bezier(.22,1,.36,1)}',
+      /* L'objectif est creux : c'est le repère, pas le résultat. Plein, les
+         deux barres se seraient disputé le regard. */
+      '#nmcf .duo .bo{background:rgba(255,255,255,.10);',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.11)}',
+      /* Le chiffre est cadré sur la MOITIÉ GAUCHE, au-dessus de la seule barre
+         du réalisé, et à SA hauteur. Centré sur la colonne et calé sur la plus
+         haute des deux barres, il s'alignait avec l'objectif : les trois
+         valeurs se retrouvaient à la même hauteur, en rang d'oignons, et
+         « 19 » flottait très au-dessus de la petite barre qu'il décrivait. */
+      '#nmcf .col .n{position:absolute;left:0;right:50%;text-align:center;font-size:9px;font-weight:800;',
       'color:rgba(255,255,255,.75);transition:bottom .7s cubic-bezier(.22,1,.36,1)}',
-      '#nmcf .col .z{width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,.09)}',
+      '#nmcf .col .z{position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:2px;',
+      'background:rgba(255,255,255,.09)}',
+      /* Sans légende, rien ne dit laquelle des deux barres est laquelle. */
+      '#nmcf .lg{display:flex;justify-content:center;gap:14px;margin:2px 0 0}',
+      '#nmcf .lg span{display:flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;',
+      'color:rgba(255,255,255,.45)}',
+      '#nmcf .lg i{width:9px;height:9px;border-radius:3px;display:block}',
+      '#nmcf .lg i.io{background:rgba(255,255,255,.10);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}',
       '#nmcf .days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}',
       '#nmcf .days div{text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.35)}',
       '#nmcf .days div.auj{color:#fff}',
@@ -555,9 +588,10 @@ window.NattyMacrosCal = (function () {
     var somme = totaux.reduce(function (a, b) { return a + b; }, 0);
     var moy = joursRemplis ? somme / joursRemplis : 0;
     var atteints = cible ? totaux.filter(function (v) { return v >= cible * 0.9; }).length : 0;
-    // L'échelle laisse toujours voir la ligne d'objectif, même une semaine où
-    // rien n'a été mangé — sinon la comparaison sort du cadre.
-    var haut = Math.max(cible * 1.25, Math.max.apply(null, totaux) * 1.12, 1);
+    // L'échelle tient compte de la CIBLE autant que du réalisé : la barre
+    // d'objectif est dessinée à sa hauteur pleine, donc une échelle calée sur
+    // le seul réalisé la ferait sortir du cadre les semaines creuses.
+    var haut = Math.max(cible, Math.max.apply(null, totaux), 1) * 1.15;
     var auj = jourIndex(new Date()), estCourante = offsetSemaine === 0;
 
     var h = '<div class="wk">'
@@ -571,22 +605,22 @@ window.NattyMacrosCal = (function () {
       + '<div class="o">' + (cible ? 'Objectif ' + arrondi(cible) + ' ' + vue.unite : 'Objectif inconnu')
       + '<br>' + (joursRemplis ? joursRemplis + ' jour' + (joursRemplis > 1 ? 's' : '') + ' renseigné' + (joursRemplis > 1 ? 's' : '') : 'aucun repas') + '</div></div>';
 
+    var pctCible = cible ? Math.min(100, cible / haut * 100) : 0;
     h += '<div class="plot">'
       + '<div class="ln" style="top:0"></div><div class="ln" style="top:50%"></div><div class="ln" style="bottom:0"></div>'
-      + (cible ? '<div class="obj" style="bottom:' + (cible / haut * 100).toFixed(1) + '%">'
-          + '<b>obj. ' + arrondi(cible) + '</b></div>' : '')
       + '<div class="bars">'
       + totaux.map(function (v, i) {
           var pct = Math.min(100, v / haut * 100);
-          var plein100 = cible && v >= cible * 0.9;
+          var atteint = cible && v >= cible * 0.9;
           return '<div class="col" data-nmcf="jour" data-j="' + i + '">'
-            + (v > 0
-              ? '<div class="n" data-h="' + pct.toFixed(1) + '">' + arrondi(v) + '</div>'
-                + '<div class="b" data-h="' + pct.toFixed(1) + '" style="background:linear-gradient(180deg,'
-                + vue.c1 + ' 0%,' + vue.c2 + ' 62%,rgba(' + vue.rgb + ',.18) 100%);'
-                + (plein100 ? 'box-shadow:0 0 14px rgba(' + vue.rgb + ',.35);' : '') + '"></div>'
-              : '<div class="z"></div>')
-            + '</div>';
+            + (v > 0 || cible ? '' : '<div class="z"></div>')
+            + (v > 0 ? '<div class="n" data-h="' + pct.toFixed(1) + '">' + arrondi(v) + '</div>' : '')
+            + '<div class="duo">'
+            + '<div class="b br" data-h="' + pct.toFixed(1) + '" style="background:linear-gradient(180deg,'
+            + vue.c1 + ' 0%,' + vue.c2 + ' 62%,rgba(' + vue.rgb + ',.18) 100%);'
+            + (atteint ? 'box-shadow:0 0 14px rgba(' + vue.rgb + ',.35);' : '') + '"></div>'
+            + (cible ? '<div class="b bo" data-h="' + pctCible.toFixed(1) + '"></div>' : '')
+            + '</div></div>';
         }).join('')
       + '</div></div>';
 
@@ -594,6 +628,11 @@ window.NattyMacrosCal = (function () {
       + JOURS1.map(function (j, i) {
           return '<div class="' + (estCourante && i === auj ? 'auj' : '') + '">' + j + '</div>';
         }).join('')
+      + '</div>';
+
+    h += '<div class="lg">'
+      + '<span><i style="background:' + vue.c1 + '"></i>Réalisé</span>'
+      + (cible ? '<span><i class="io"></i>Objectif</span>' : '')
       + '</div>';
 
     h += '<div class="sum">'
@@ -641,11 +680,15 @@ window.NattyMacrosCal = (function () {
     // ⚠️ Doublé d'un `setTimeout` : `.b` part de `height:0`, donc une rAF qui
     // ne s'exécute pas laisse un graphique **vide** — le pire des échecs
     // possibles ici, et le plus silencieux.
+    // ⚠️ `classList.contains`, pas `className === 'b'` : les barres portent
+    // désormais deux classes (`b br` pour le réalisé, `b bo` pour l'objectif)
+    // et l'égalité stricte ne reconnaissait plus aucune des deux — le
+    // graphique serait resté vide.
     var pousser = function () {
       var bars = plein.querySelectorAll('#nmcfGlisse .b, #nmcfGlisse .n');
       for (var i = 0; i < bars.length; i++) {
         var p = bars[i].getAttribute('data-h');
-        if (bars[i].className === 'b') bars[i].style.height = p + '%';
+        if (bars[i].classList.contains('b')) bars[i].style.height = p + '%';
         else bars[i].style.bottom = 'calc(' + p + '% + 4px)';
       }
     };
