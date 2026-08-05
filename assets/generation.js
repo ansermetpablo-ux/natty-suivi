@@ -111,6 +111,43 @@ window.NattyGeneration = (function () {
       '#ngen .fond{background:#f0f0f3;color:#6a6a78}',
       '#ngen .plein{background:#1a1a2e;color:#fff;display:none}',
 
+      /* ── La question du garde-manger ────────────────────────────────
+         Elle vient AVANT l'attente, et elle est le seul endroit où l'on
+         renseigne ce qu'on a chez soi (le panneau de l'écran Repas s'en va).
+         Même mise en scène que l'attente : plein écran, une question, deux
+         réponses — parce que c'est une décision, pas un formulaire. */
+      '#ngenQ{position:fixed;inset:0;z-index:100000;background:#fff;display:flex;',
+      'flex-direction:column;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;',
+      'padding:26px 24px calc(24px + env(safe-area-inset-bottom,0px));opacity:0;',
+      'padding-top:calc(30px + env(safe-area-inset-top,0px));transition:opacity .4s ease;',
+      'overflow-y:auto;-webkit-overflow-scrolling:touch}',
+      '#ngenQ.on{opacity:1}',
+      '#ngenQ .qem{font-size:52px;text-align:center;margin-bottom:16px;',
+      'animation:ngenPulse 3s ease-in-out infinite}',
+      '#ngenQ h2{font-size:25px;font-weight:900;color:#1a1a2e;text-align:center;',
+      'letter-spacing:-.6px;line-height:1.2}',
+      '#ngenQ .qsub{font-size:13.5px;color:#9a9aaa;text-align:center;margin-top:10px;',
+      'line-height:1.55;max-width:320px;margin-left:auto;margin-right:auto}',
+      '#ngenQ .qchips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin:22px 0 4px}',
+      '#ngenQ .qchip{display:inline-flex;align-items:center;gap:5px;background:#f2f2f7;',
+      'border-radius:99px;padding:8px 13px;font-size:12.5px;font-weight:700;color:#3a3a48}',
+      '#ngenQ .qchip b{font-weight:600;color:#9a9aaa}',
+      '#ngenQ .qacts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:20px}',
+      '#ngenQ .qact{background:#f7f7fa;border:none;border-radius:16px;padding:13px 2px 10px;',
+      'font-family:inherit;font-size:10px;font-weight:700;color:#3a3a48;cursor:pointer;',
+      'display:flex;flex-direction:column;align-items:center;gap:6px;line-height:1.2}',
+      '#ngenQ .qact .e{font-size:20px}',
+      '#ngenQ .qsaisie{display:none;margin-top:12px}',
+      '#ngenQ .qsaisie.on{display:block}',
+      '#ngenQ textarea{width:100%;min-height:88px;border:1px solid #e2e2e8;border-radius:16px;',
+      'padding:12px 14px;font-family:inherit;font-size:13.5px;color:#1a1a2e;resize:none;outline:none}',
+      '#ngenQ .qetat{font-size:12px;color:#9a9aaa;text-align:center;margin-top:12px;min-height:18px}',
+      '#ngenQ .qbtns{margin-top:auto;padding-top:26px;display:flex;flex-direction:column;gap:10px}',
+      '#ngenQ button.qgo{padding:17px;border:none;border-radius:16px;background:#1a1a2e;color:#fff;',
+      'font-family:inherit;font-size:16px;font-weight:800;cursor:pointer}',
+      '#ngenQ button.qno{padding:14px;border:none;border-radius:16px;background:#f0f0f3;color:#6a6a78;',
+      'font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}',
+
       /* Mode discret : l'utilisateur a demandé à continuer sans regarder. La
          pastille reste, sinon plus rien ne dirait que ça travaille — et il
          relancerait une génération par-dessus. */
@@ -353,21 +390,191 @@ window.NattyGeneration = (function () {
     }, PERIODE);
   }
 
+  /* ═══ La question du garde-manger ═══════════════════════════
+     « Est-ce qu'on génère les plats en fonction du garde-manger ? » — et si
+     oui, l'occasion de le remplir, puisque c'est maintenant le seul endroit
+     où on le fait (le panneau de l'écran Repas laisse la place à « Ma
+     semaine »).
+
+     Elle ne s'affiche qu'AVANT une génération neuve : la reprise d'une
+     attente en cours ne repose pas la question, et un rafraîchissement
+     discret ne pose aucune question du tout — personne ne l'a demandé.
+
+     @returns {Promise<string>} le garde-manger pour le prompt, ou '' si on
+              génère sans lui. Jamais de rejet : refuser, c'est répondre. */
+  function demanderGardeManger() {
+    return new Promise(function (repondre) {
+      // Module absent (écran qui ne le charge pas) : rien à demander.
+      if (!window.NattyGardeManger) return repondre('');
+      css();
+
+      var d = document.createElement('div');
+      d.id = 'ngenQ';
+      document.body.appendChild(d);
+      requestAnimationFrame(function () { d.classList.add('on'); });
+      setTimeout(function () { d.classList.add('on'); }, 60);   // cf. Natty.confirmer
+
+      var camIn = null, galIn = null, typeScan = 'courses';
+
+      function fermerQ(reponse) {
+        d.classList.remove('on');
+        setTimeout(function () {
+          if (d.parentNode) d.parentNode.removeChild(d);
+          [camIn, galIn].forEach(function (i) { if (i && i.parentNode) i.parentNode.removeChild(i); });
+        }, 380);
+        repondre(reponse);
+      }
+
+      function etat(msg) {
+        var e = d.querySelector('.qetat');
+        if (e) e.textContent = msg || '';
+      }
+
+      function peindre() {
+        var items = NattyGardeManger.liste();
+        var n = items.length;
+        d.innerHTML =
+            '<div class="qem">' + (n ? '🧺' : '🛒') + '</div>'
+          + '<h2>' + (n ? 'On part de ton garde-manger ?' : 'Qu’as-tu déjà chez toi ?') + '</h2>'
+          + '<div class="qsub">' + (n
+              ? 'Tes recettes de la semaine seront composées autour de ces ' + n
+                + ' ingrédient' + (n > 1 ? 's' : '') + ', et la liste de courses ne portera que le reste.'
+              : 'Scanne tes courses, ton ticket de caisse, ou saisis-les : les recettes partiront de ce que tu as, et la liste de courses sera d’autant plus courte.')
+            + '</div>'
+          + (n ? '<div class="qchips">' + items.slice(0, 24).map(function (it) {
+                return '<span class="qchip">' + (it.em || '🥄') + ' ' + esc(it.nom)
+                     + (it.qte ? ' <b>' + esc(it.qte) + '</b>' : '') + '</span>';
+              }).join('') + (n > 24 ? '<span class="qchip">+ ' + (n - 24) + '</span>' : '') + '</div>' : '')
+          + '<div class="qacts">'
+          +   '<button class="qact" data-a="courses"><span class="e">🛒</span>Mes courses</button>'
+          +   '<button class="qact" data-a="ticket"><span class="e">🧾</span>Ticket</button>'
+          +   '<button class="qact" data-a="photo"><span class="e">🖼️</span>Une photo</button>'
+          +   '<button class="qact" data-a="saisir"><span class="e">✏️</span>Saisir</button>'
+          + '</div>'
+          + '<div class="qsaisie" id="ngenQSaisie">'
+          +   '<textarea id="ngenQTxt" placeholder="poulet 600 g, riz basmati 1 kg, 6 oeufs"></textarea>'
+          +   '<button class="qno" id="ngenQAdd" style="margin-top:8px;width:100%">Ajouter à mon garde-manger</button>'
+          + '</div>'
+          + '<div class="qetat"></div>'
+          + '<div class="qbtns">'
+          +   '<button class="qgo">' + (n ? 'Oui, pars de ça' : 'Générer sans garde-manger') + '</button>'
+          +   (n ? '<button class="qno">Non, surprends-moi</button>' : '')
+          + '</div>';
+
+        d.querySelector('.qgo').addEventListener('click', function () {
+          fermerQ(n ? (NattyGardeManger.pourPrompt() || '') : '');
+        });
+        var no = d.querySelector('.qbtns .qno');
+        if (no) no.addEventListener('click', function () { fermerQ(''); });
+
+        d.querySelectorAll('.qact').forEach(function (b2) {
+          b2.addEventListener('click', function () {
+            var a2 = b2.getAttribute('data-a');
+            if (a2 === 'saisir') {
+              d.querySelector('#ngenQSaisie').classList.add('on');
+              d.querySelector('#ngenQTxt').focus();
+              return;
+            }
+            // ⚠️ `input.click()` doit rester SYNCHRONE dans le geste : iOS
+            // refuse d'ouvrir la caméra depuis un appel différé.
+            typeScan = (a2 === 'ticket') ? 'ticket' : (a2 === 'photo' ? 'auto' : 'courses');
+            var inp = (a2 === 'photo') ? galIn : camIn;
+            inp.value = '';
+            inp.click();
+          });
+        });
+
+        var add = d.querySelector('#ngenQAdd');
+        if (add) add.addEventListener('click', async function () {
+          var txt = d.querySelector('#ngenQTxt').value;
+          var trouves = NattyGardeManger.depuisTexte(txt);
+          if (!trouves.length) { etat('Rien à ajouter — sépare les aliments par une virgule.'); return; }
+          await NattyGardeManger.ajouter(trouves);
+          peindre();   // la liste a changé : la question aussi
+          etat(trouves.length + (trouves.length > 1 ? ' ingrédients ajoutés' : ' ingrédient ajouté'));
+        });
+      }
+
+      function champ(capture) {
+        var i = document.createElement('input');
+        i.type = 'file'; i.accept = 'image/*';
+        if (capture) i.setAttribute('capture', 'environment');
+        i.style.display = 'none';
+        i.addEventListener('change', async function () {
+          var f = this.files && this.files[0];
+          if (!f) return;
+          etat(typeScan === 'ticket' ? 'Lecture du ticket…' : 'Lecture de la photo…');
+          try {
+            var trouves = await NattyGardeManger.scanner(f, typeScan);
+            if (!trouves.length) { etat('Aucun aliment reconnu. Reprends la photo, ou saisis-les.'); return; }
+            await NattyGardeManger.ajouter(trouves);
+            peindre();
+            etat(trouves.length + (trouves.length > 1 ? ' ingrédients ajoutés' : ' ingrédient ajouté'));
+          } catch (e) {
+            etat('Lecture impossible. Réessaie, ou saisis les ingrédients.');
+          }
+        });
+        document.body.appendChild(i);
+        return i;
+      }
+      camIn = champ(true);
+      galIn = champ(false);
+
+      // La liste vit sur l'appareil (ou en base si la table existe) : on la
+      // charge avant de peindre, sinon la question s'ouvre en disant « rien ».
+      NattyGardeManger.charger().then(peindre, peindre);
+    });
+  }
+
+  function esc(t) {
+    return String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   /* ── Lancer ────────────────────────────────────────────────
      @param {object} opts  {discret:true} = pas d'écran d'attente (rafraîchissement
                            silencieux d'une semaine périmée, par exemple).
+                           {forcer:true} = régénérer MÊME si la semaine est déjà
+                           faite (le seul cas légitime : « ↻ Renouveler », que
+                           l'utilisateur a demandé explicitement).
      @returns {Promise<object|null>} la ligne prête, ou null si l'attente a
                            échoué / a été laissée en arrière-plan. Les écrans
-                           peuvent donc `await` sans avoir à écouter l'événement. */
-  function lancer(opts) {
+                           peuvent donc `await` sans avoir à écouter l'événement.
+
+     ⚠️ **Une semaine déjà générée ne se régénère pas.** C'est ici que ça se
+     joue, et nulle part ailleurs : la fonction lançait le travail à l'aveugle,
+     donc n'importe quel appelant — un bouton, l'ouverture d'un détail de macro,
+     un écran qui trouve son cache vide pour une autre raison — rouvrait l'écran
+     « Lecture de votre profil… » et repayait un appel à Claude pour un texte
+     déjà en base. Le contrôle appartient au module, pas aux six écrans qui
+     l'appellent : un garde par appelant, c'est un appelant qui l'oubliera. */
+  async function lancer(opts) {
     opts = opts || {};
     var m = marqueur();
     var enCoursDeja = m && (Date.now() - m.debut) < DUREE_MAX;
 
+    if (!enCoursDeja && !opts.forcer) {
+      var deja = await dejaPrete();
+      if (deja) {
+        // Rien à attendre : on rend la ligne et on préviens les écrans, qui
+        // repeignent comme si la génération venait d'aboutir — sans écran
+        // d'attente, sans appel, sans une seconde de latence.
+        document.dispatchEvent(new CustomEvent('natty:conseils-prets', { detail: deja }));
+        return deja;
+      }
+    }
+
     if (!enCoursDeja) {
+      /* La question du garde-manger, avant tout le reste — et seulement pour
+         une génération neuve et demandée : un rafraîchissement discret ne
+         doit rien demander à personne. Le garde-manger retenu est passé à
+         `envoyer`, qui le transmet au serveur (il ne peut pas lire un
+         localStorage). */
+      var garde = '';
+      if (!opts.discret && window.NattyGardeManger) garde = await demanderGardeManger();
       m = { debut: Date.now(), discret: !!opts.discret, semaine: lundi() };
       poserMarqueur(m);
-      envoyer(m.semaine);
+      envoyer(m.semaine, garde);
     } else if (!opts.discret) {
       m.discret = false; poserMarqueur(m);   // on remonte l'attente à l'écran
     }
@@ -400,17 +607,27 @@ window.NattyGeneration = (function () {
      elle arrive une minute plus tard, la WebView l'aura peut-être coupée, et si
      la page a été quittée entre-temps ce `then` n'existe plus. C'est la
      surveillance qui fait foi — elle, elle repart toute seule au prochain écran. */
-  async function envoyer(semaine) {
+  async function envoyer(semaine, garde) {
     var corps = { semaine: semaine };
-    // Le garde-manger ne vit que sur l'appareil (la table `garde_manger`
-    // n'existe pas encore) : si le module est chargé, on le transmet, sinon les
-    // recettes sont composées comme avant.
-    try {
-      if (window.NattyGardeManger) {
-        await NattyGardeManger.charger();
-        corps.garde = NattyGardeManger.pourPrompt() || '';
-      }
-    } catch (e) {}
+    // Choix explicite de l'utilisateur (voir demanderGardeManger) : il fait
+    // foi, y compris quand il vaut '' — « non, surprends-moi » est une réponse.
+    if (typeof garde === 'string') {
+      corps.garde = garde;
+    } else {
+      /* Aucune réponse recueillie — c'est le cas du rafraîchissement discret,
+         qui ne pose pas de question : on prend le garde-manger tel qu'il est.
+         ⚠️ Ce repli NE DOIT PAS écraser un choix explicite : c'est ce qu'il
+         faisait quand il tournait dans tous les cas, et « non, surprends-moi »
+         repartait quand même avec la liste complète.
+         Le garde-manger ne vit que sur l'appareil (la table `garde_manger`
+         n'existe pas encore) : le serveur ne peut pas le lire. */
+      try {
+        if (window.NattyGardeManger) {
+          await NattyGardeManger.charger();
+          corps.garde = NattyGardeManger.pourPrompt() || '';
+        }
+      } catch (e) {}
+    }
 
     var jeton = null;
     try { jeton = await Natty.jeton(); } catch (e) {}
