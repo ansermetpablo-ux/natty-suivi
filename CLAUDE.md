@@ -2257,8 +2257,26 @@ Ce tableau est la réparation.
 
 ### Structure
 - **`www/`** est le bundle de l'app : copie sélective des fichiers web. `menu.html` y devient `index.html` (point d'entrée). `admin.html`, `accueil.html`, l'ancien `index.html` et `api/` en sont volontairement exclus.
-- **`ios/`** et **`android/`** sont commités. Capacitor 8 utilise **Swift Package Manager, pas CocoaPods** — il n'y a rien à installer côté Ruby. `Package.resolved` est figé dans le repo.
+- **`ios/`** et **`android/`** sont commités (28 et 77 fichiers). Capacitor 8 utilise **Swift Package Manager, pas CocoaPods** — il n'y a rien à installer côté Ruby. `Package.resolved` est figé dans le repo.
 - ⚠️ **Toute modification d'un fichier web doit être répercutée dans `www/`**, puis `npx cap sync`. Les deux arborescences ne sont pas liées automatiquement.
+- **En revanche `ios/App/App/public` et `android/app/src/main/assets/public` sont GITIGNORÉS**
+  (`ios/.gitignore:4`, `android/.gitignore:96`) : ce sont des sorties de `cap sync`, régénérées
+  à chaque fois depuis `www/`. Il n'y a donc jamais rien à committer pour ces bundles, et **un
+  `git show HEAD:<un de ces chemins>` échoue** — ne pas en conclure à une divergence
+  historique, c'est simplement un fichier absent de l'index (l'erreur a été faite le
+  2026-08-05). Ce qui compte, c'est `www/`.
+
+> ⚠️ **`npx cap sync` n'avait jamais tourné pour ANDROID** (constaté le 2026-08-05, en le
+> lançant). `android/app/capacitor.build.gradle` et `android/capacitor.settings.gradle` ne
+> connaissaient que `@capacitor/app` et `@capacitor/browser` : **`local-notifications` et
+> `push-notifications` en étaient absents**, alors qu'ils sont installés depuis août 2026 et
+> déclarés côté iOS. Un build Android aurait compilé sans eux — `assets/notifs.js` et
+> `assets/push.js` auraient trouvé le plugin manquant et se seraient tus, silencieusement,
+> exactement là où on aurait cherché un bug de notification. Corrigé : les deux fichiers gradle
+> déclarent maintenant les 4 plugins.
+> Bon à savoir : `cap sync` **ne demande pas de JDK** (mesuré — il ne fait que copier et
+> réécrire ces fichiers). C'est le *build* Android qui en a besoin, pas le sync : lancer
+> `npx cap sync` reste donc possible et utile ici même sans Android Studio.
 
 ### Build iOS
 ```
