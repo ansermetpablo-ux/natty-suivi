@@ -1588,7 +1588,18 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   `stocks_mp`, `recettes*`, `ingredients_base`, `offres_clients` → **0 ligne**.
   `staff_configure()` renvoie `true` (les mots de passe partagés sont donc refusés) et
   `nutritionnistes.mdp_hash` a bien été supprimée.
-  > ✅ **Déployé le 2026-08-04** : `main` sert le code d'app-native (vérifié en prod —
+  > ✅ **REFERMÉE — étape 5 exécutée par Pablo le 2026-08-05.** Relevé refait le jour même
+  > avec la seule clé anon publique : `abonnements` **0**, `commandes` **0**, `plats_menu`
+  > **0**, `nutritionnistes` **0**, et `membre_public` répond `42501 permission denied for
+  > view` (le `revoke` a porté). Plus rien de personnel ne sort de la base sans compte.
+  > Vérifié aussi, par la même méthode : `meals.partage` et `meals.analyse_json` **existent**
+  > (une colonne absente répond `42703`, une colonne présente sous RLS répond `[]` — le test
+  > de contrôle sur une colonne inventée confirme la lecture). Donc « Garder pour moi » et le
+  > cache d'analyse d'un plat fonctionnent réellement, sans repli silencieux.
+  > 🔄 **`garde_manger` n'existe toujours pas** (`PGRST205`) : le garde-manger reste propre à
+  > l'appareil. SQL au § 3 de `natty_avant_publication.sql`.
+  >
+  > **Déployé le 2026-08-04** : `main` sert le code d'app-native (vérifié en prod —
   > `POST /api/generer-conseils` répond « Session requise », ce qui n'existe que sur cette
   > branche). Il reste **l'étape 5** à coller : mesuré le même jour, `abonnements` (2),
   > `commandes` (3), `plats_menu` (3), `nutritionnistes` (3) et la vue `membre_public` (26
@@ -1920,11 +1931,10 @@ reste l'ancien `phx_join` — voir §7.
   `ANDROID_HOME`. C'est Android Studio à installer, donc une décision de Pablo. Tant que
   ce n'est pas fait, **le Play Store est hors d'atteinte** (le push Android l'est aussi : le
   plugin exige un `google-services.json`, donc un projet Firebase).
-- **Emoji affichés en `?` dans le simulateur** — visible sur toutes les captures. Le même HTML
-  rend les emoji correctement dans WebKit sur macOS : c'est donc très probablement le runtime
-  du simulateur qui n'a pas la police, pas l'app. **À confirmer sur un iPhone réel avant de
-  toucher au code** — les emoji servent d'icônes dans presque tous les écrans, donc si le
-  défaut est réel il est bloquant, et s'il ne l'est pas, y toucher serait une régression
+- ✅ **Emoji en `?` : artefact du simulateur, rien à corriger.** Pablo a vérifié sur son
+  iPhone le 2026-08-05 — les emoji s'affichent normalement. C'est le runtime du simulateur qui
+  n'a pas la police. **Ne pas « corriger » ce qui se voit sur les captures du simulateur** :
+  les emoji servent d'icônes dans presque tous les écrans, y toucher serait une régression
   gratuite.
 - **`challenges.html` est orphelin dans le bundle** : plus aucun lien n'y mène (l'onglet
   « Défis » ouvre `narration.html`). Le fichier reste embarqué. À supprimer de `www/` ou à

@@ -6,7 +6,23 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { font-family: "DM Sans", sans-serif; background: #f0f0f3; min-height: 100vh; padding: 24px 16px 120px; }
+body { font-family: "DM Sans", sans-serif; background: #f0f0f3; min-height: 100vh; padding: 0 16px 120px; }
+/* ══ Sortie permanente ══
+   Constaté sur iPhone 17 Pro : le fil des six étapes passait SOUS la barre
+   d'état, et rien ne permettait de quitter le tunnel de souscription autrement
+   qu'en le terminant. Retour, accueil et profil restent donc à l'écran pendant
+   tout le scroll (`sticky`, comme le `.top` des autres écrans), et la marge
+   haute inclut la safe-area. */
+.ofr-top { position: sticky; top: 0; z-index: 40; max-width: 480px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 0 10px; background: #f0f0f3; }
+.ofr-top button, .ofr-top a { display: flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 50%; background: #f0f0f3; border: none; cursor: pointer;
+  color: #8e8e93; text-decoration: none;
+  box-shadow: 4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85); }
+.ofr-top svg { width: 20px; height: 20px; }
+.ofr-top .ofr-titre { flex: 1; min-width: 0; font-size: 12px; font-weight: 700; color: #8e8e93;
+  text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bg-pattern { position: fixed; inset: 0; background-color: #f0f0f3; background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0); background-size: 26px 26px; z-index: 0; }
 .wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
@@ -181,6 +197,21 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 </head>
 <body>
 <div class="bg-pattern"></div>
+<div class="ofr-top">
+  <!-- Retour : l'étape précédente s'il y en a une, sinon le menu. Un tunnel de
+       six étapes sans marche arrière fait abandonner. -->
+  <button id="ofrBack" aria-label="Retour">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <div class="ofr-titre" id="ofrTitre">Souscription</div>
+  <a href="menu.html" aria-label="Accueil">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+  </a>
+  <a href="profil.html" aria-label="Profil">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+  </a>
+</div>
+
 <div class="wrapper">
 
   <div class="etapes-row">
@@ -416,8 +447,19 @@ const NUTRI_DEMO = [
 ];
 
 // NAV
+/* Le retour suit les étapes : reculer d'une case tant qu'il y en a une derrière,
+   et seulement au bout revenir au menu. Sortir du tunnel dès le premier tap
+   ferait perdre les réponses déjà données. */
+var ETAPES_NOMS = ['Formule', 'Objectif', 'Durée', 'Nutritionniste', 'Livraison', 'Récapitulatif'];
+document.getElementById('ofrBack').addEventListener('click', function(){
+  if (currentStep > 1) { setStep(currentStep - 1); window.scrollTo({ top:0, behavior:'smooth' }); return; }
+  Natty.goto('menu.html');
+});
+
 function setStep(n) {
   currentStep = n;
+  var t = document.getElementById('ofrTitre');
+  if (t) t.textContent = 'Étape ' + n + ' · ' + (ETAPES_NOMS[n-1] || '');
   document.querySelectorAll(".step").forEach((s,i) => s.classList.toggle("active", i+1===n));
   [1,2,3,4,5,6].forEach(i => {
     const dot=document.getElementById("dot"+i), lbl=document.getElementById("lbl"+i);
