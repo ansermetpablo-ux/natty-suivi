@@ -334,7 +334,51 @@ var Natty = (function () {
     'miel':{c:304,p:0.3,l:0,g:82},'sucre':{c:400,p:0,l:0,g:100},'confiture':{c:278,p:0.4,l:0.1,g:69},
     // Boissons
     'jus orange':{c:45,p:0.7,l:0.2,g:10},'soda':{c:42,p:0,l:0,g:10.6},'biere':{c:43,p:0.5,l:0,g:3.6},
-    'vin':{c:83,p:0.1,l:0,g:2.6},'cafe':{c:2,p:0.1,l:0,g:0},'the':{c:1,p:0,l:0,g:0}
+    'vin':{c:83,p:0.1,l:0,g:2.6},'cafe':{c:2,p:0.1,l:0,g:0},'the':{c:1,p:0,l:0,g:0},
+    'jus':{c:45,p:0.5,l:0.1,g:11},'eau':{c:0,p:0,l:0,g:0},
+    'ricore':{c:60,p:2.5,l:1.5,g:9},   // tel qu'on le boit, au lait demi-écrémé
+    /* ── Ajouts du relevé du 2026-08-05 ─────────────────────────────
+       Les 89 lignes que la table ne savait pas chiffrer, sur 256 réelles. Ce
+       bloc et les deux passes de `getNutri` viennent de là — ce ne sont pas des
+       aliments choisis au hasard, ce sont ceux réellement saisis. */
+    // Herbes et aromates. Presque rien au gramme, mais ils sont TOUJOURS saisis
+    // en petite quantité : les compter juste vaut mieux que de ne pas les
+    // compter, et surtout mieux que de rendre tout le repas non chiffrable.
+    'persil':{c:36,p:3,l:0.8,g:6},'basilic':{c:23,p:3.2,l:0.6,g:2.7},
+    'coriandre':{c:23,p:2.1,l:0.5,g:3.7},'ciboulette':{c:30,p:3.3,l:0.7,g:4.4},
+    'aneth':{c:43,p:3.5,l:1.1,g:7},'menthe':{c:44,p:3.8,l:0.7,g:8},
+    'gingembre':{c:80,p:1.8,l:0.8,g:18},'curry':{c:325,p:14,l:14,g:58},
+    'epices':{c:300,p:11,l:10,g:50},'poivre':{c:251,p:10,l:3.3,g:64},
+    'sel':{c:0,p:0,l:0,g:0},'assaisonnement':{c:0,p:0,l:0,g:0},
+    // Légumes qui manquaient
+    'patate':{c:77,p:2,l:0.1,g:17},'mange tout':{c:42,p:2.8,l:0.2,g:7.5},
+    'pois gourmands':{c:42,p:2.8,l:0.2,g:7.5},'daurade':{c:96,p:20,l:1.5,g:0},
+    // Sauces, plats et desserts nommés sans plus de précision
+    'sauce soja':{c:53,p:8,l:0.1,g:5},'teriyaki':{c:89,p:1.5,l:0,g:20},
+    'bolognaise':{c:130,p:8,l:7,g:8},'bouillon':{c:8,p:1,l:0.3,g:0.5},
+    'potage':{c:40,p:1.5,l:1.5,g:6},'nouilles':{c:138,p:4.5,l:0.7,g:25},
+    'ramen':{c:138,p:4.5,l:0.7,g:25},'crepe':{c:190,p:6,l:8,g:23},
+    'crumble':{c:350,p:4,l:16,g:48},'gateau':{c:380,p:5,l:18,g:50},
+    'creme patissiere':{c:160,p:4,l:6,g:22},'glace':{c:207,p:3.5,l:11,g:24},
+    'bifteck':{c:250,p:26,l:15,g:0},
+    /* Libellés VOLONTAIREMENT génériques (« Fromage », « Légumes », « Viande »,
+       « Sauce », « 1 fruit »). Ce sont des moyennes, et une moyenne est
+       critiquable — mais l'alternative n'est pas « mieux », c'est **zéro**, ce
+       qui est faux à coup sûr. Un libellé plus précis gagne toujours, la
+       correspondance prenant le plus long : « fromage blanc » (2 mots) passe
+       avant « fromage », « viande blanche » avant « viande ». */
+    'fromage':{c:350,p:23,l:28,g:1.5},'legumes':{c:35,p:2,l:0.4,g:6},
+    'viande':{c:230,p:25,l:14,g:0},'viande blanche':{c:135,p:29,l:1,g:0},
+    'poisson':{c:120,p:22,l:3,g:0},'sauce':{c:90,p:1.5,l:6,g:6},
+    'fruit':{c:60,p:0.8,l:0.3,g:14},
+    /* Fautes de frappe relevées en base. Ce ne sont pas des devinettes : chacune
+       est phonétiquement sans ambiguïté dans un contexte alimentaire. Les noms
+       vraiment indéchiffrables (« Marcos en boîte », « a ») restent NON
+       reconnus — mieux vaut un manque visible qu'un chiffre inventé. */
+    'steack':{c:250,p:26,l:15,g:0},'amendes':{c:579,p:21,l:50,g:22},
+    'basilique':{c:23,p:3.2,l:0.6,g:2.7},'pouivron':{c:31,p:1,l:0.3,g:6},
+    'teriaki':{c:89,p:1.5,l:0,g:20},
+    'petits poids':{c:81,p:5,l:0.4,g:14},'poids chiche':{c:164,p:9,l:2.6,g:27}
   };
 
   /* ⚠️ Le plus LONG libellé qui correspond gagne, et la correspondance se fait
@@ -343,23 +387,62 @@ var Natty = (function () {
      au lieu de 77 et zéro féculent), « huile olive » sur « huile », et « ail »
      se trouvait dans « volaille ». C'est le même piège que le rapprochement du
      garde-manger, résolu de la même façon. */
+  /* \u26a0\ufe0f LES LIGATURES \u0153 ET \u00e6 NE SONT PAS DES ACCENTS. `normalize('NFD')` ne les
+     d\u00e9compose pas \u2014 ce sont des lettres \u00e0 part enti\u00e8re en Unicode \u2014 donc
+     `[^a-z0-9]` les rempla\u00e7ait par une espace : \u00ab b\u0153uf \u00bb devenait \u00ab b uf \u00bb et
+     \u00ab \u0152ufs \u00bb devenait \u00ab ufs \u00bb. Autrement dit **aucun \u0153uf et aucun b\u0153uf n'a
+     jamais \u00e9t\u00e9 reconnu**, et c'est mesur\u00e9 : sur les 256 lignes r\u00e9elles de la
+     base, 7 \u00e9chouaient pour cette seule raison (\u00ab B\u0153uf brais\u00e9 \u00bb, \u00ab \u0152uf dur \u00bb,
+     \u00ab \u0152uf poch\u00e9 \u00bb, \u00ab Sauce cr\u00e9meuse (\u0153ufs, cr\u00e8me) \u00bb\u2026). \u00c0 traduire avant de
+     retirer la ponctuation. */
   function normNom(s) {
     return ' ' + String(s || '').toLowerCase()
+      .replace(/\u0153/g, 'oe').replace(/\u00e6/g, 'ae')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // accents
       .replace(/[^a-z0-9]+/g, ' ').trim() + ' ';
   }
 
+  /* Singulier approch\u00e9 : on retire un `s` ou un `x` final. Appliqu\u00e9 DES DEUX
+     C\u00d4T\u00c9S, donc \u00ab ananas \u00bb \u2192 \u00ab anana \u00bb de part et d'autre : le mot compte moins
+     que la sym\u00e9trie. Pas en dessous de 4 lettres, pour ne pas manger \u00ab riz \u00bb,
+     \u00ab jus \u00bb ou \u00ab the \u00bb. */
+  function sing(m) {
+    return (m.length > 3 && (m.slice(-1) === 's' || m.slice(-1) === 'x')) ? m.slice(0, -1) : m;
+  }
+
   var NT_CLES = Object.keys(NT)
-    .map(function (k) { return { k: k, n: normNom(k), mots: normNom(k).trim().split(' ') }; })
+    .map(function (k) {
+      var mots = normNom(k).trim().split(' ');
+      return { k: k, mots: mots, motsS: mots.map(sing) };
+    })
     .sort(function (a, b) { return b.mots.length - a.mots.length || b.k.length - a.k.length; });
 
+  function tousPresents(mots, n) {
+    return mots.every(function (m) { return n.indexOf(' ' + m + ' ') > -1; });
+  }
+
+  /* \u26a0\ufe0f DEUX PASSES, ET L'ORDRE EST TOUT L'INT\u00c9R\u00caT. La premi\u00e8re est l'ancienne,
+     mot \u00e0 mot exact : rien de ce qui correspondait avant ne peut donc changer de
+     valeur. La seconde ne s'ex\u00e9cute que si la premi\u00e8re n'a rien trouv\u00e9, et
+     rattrape les singuliers/pluriels \u2014 \u00ab Courgettes \u00bb, \u00ab carottes \u00bb,
+     \u00ab Pommes de terre rissol\u00e9es \u00bb, \u00ab Epinard \u00bb (la table, elle, dit
+     \u00ab epinards \u00bb).
+
+     Faire la collapse en une seule passe aurait \u00e9t\u00e9 une r\u00e9gression : \u00ab pates \u00bb
+     et \u00ab pate \u00bb (le p\u00e2t\u00e9, 320 kcal) se r\u00e9duisent au m\u00eame mot, et le plus long
+     libell\u00e9 gagnant, un p\u00e2t\u00e9 de campagne aurait \u00e9t\u00e9 compt\u00e9 comme des p\u00e2tes \u00e0
+     131 kcal. En deuxi\u00e8me passe seulement, \u00ab Pate de campagne \u00bb est d\u00e9j\u00e0
+     r\u00e9solu par la passe exacte et n'y arrive jamais. */
   function getNutri(name, qty) {
-    var n = normNom(name);
-    var t = null;
-    for (var i = 0; i < NT_CLES.length; i++) {
-      var e = NT_CLES[i];
-      var tous = e.mots.every(function (m) { return n.indexOf(' ' + m + ' ') > -1; });
-      if (tous) { t = NT[e.k]; break; }
+    var n = normNom(name), i, t = null;
+    for (i = 0; i < NT_CLES.length && !t; i++) {
+      if (tousPresents(NT_CLES[i].mots, n)) t = NT[NT_CLES[i].k];
+    }
+    if (!t) {
+      var nS = ' ' + n.trim().split(' ').map(sing).join(' ') + ' ';
+      for (i = 0; i < NT_CLES.length && !t; i++) {
+        if (tousPresents(NT_CLES[i].motsS, nS)) t = NT[NT_CLES[i].k];
+      }
     }
     if (!t) return null;
     var f = (parseFloat(qty) || 0) / 100;

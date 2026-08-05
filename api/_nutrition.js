@@ -1,23 +1,24 @@
 // ═══════════════════════════════════════════════════════════
 // Natty — Table nutritionnelle côté serveur
 // ───────────────────────────────────────────────────────────
-// ⚠️ COPIE MÉCANIQUE de la table `NT` d'assets/core.js. Le serveur ne peut pas
-// importer core.js (script navigateur, IIFE globale).
+// ⚠️ COPIE MÉCANIQUE de la table `NT` d'assets/core.js, ET de son appariement.
+// Le serveur ne peut pas importer core.js (script navigateur, IIFE globale).
 //
-// SI LA TABLE DE core.js CHANGE, régénérer ce fichier :
+// SI core.js CHANGE, régénérer ce fichier — la table ET `getNutri` :
 //   python3 - <<'EOF'
 //   src=open('assets/core.js').read(); i=src.index('  var NT = {')
 //   j=src.index('\n  };', i)+4; print(src[i:j])
 //   EOF
 // puis recoller le littéral ci-dessous (dédenté d'un niveau).
 //
-// ⚠️ CE FICHIER A DIVERGÉ ET C'ÉTAIT UN BUG (corrigé août 2026). Il portait
-// encore la table de ~60 aliments ET l'ancien appariement par sous-chaîne,
-// premier-déclaré-gagnant : « pomme de terre » y tombait sur « pomme » (52 kcal
-// au lieu de 77, zéro féculent), « huile olive » sur « huile », et « ail » se
-// trouvait dans « volaille ». Le rappel du soir annonçait donc d'autres
-// grammes que l'écran — et c'est l'app qui avait l'air d'avoir tort.
-// Aligné : 185 aliments, appariement MOT À MOT, plus long libellé gagnant.
+// ⚠️ CETTE COPIE A DÉJÀ DIVERGÉ, ET C'ÉTAIT UN BUG EN PRODUCTION. Elle portait
+// la table de ~60 aliments et l'ancien appariement par sous-chaîne
+// premier-déclaré-gagnant, alors que core.js était passé à 230 aliments et au
+// rapprochement mot à mot plus-long-libellé-gagnant : « pomme de terre »
+// tombait sur « pomme » (52 kcal au lieu de 77), « ail » se trouvait dans
+// « volaille », le saucisson n'existait pas. **Le rappel du soir annonçait
+// d'autres grammes que l'écran** — et c'est l'app qui avait l'air d'avoir tort.
+// Une copie mécanique ne se signale jamais elle-même quand la source bouge.
 //
 // `daily_macros` ne peut pas servir de source : suivi.html n'y écrit QUE la
 // journée de la veille, au premier lancement du lendemain (`resetIfNewDay`).
@@ -106,38 +107,110 @@ const NT = {
   'miel':{c:304,p:0.3,l:0,g:82},'sucre':{c:400,p:0,l:0,g:100},'confiture':{c:278,p:0.4,l:0.1,g:69},
   // Boissons
   'jus orange':{c:45,p:0.7,l:0.2,g:10},'soda':{c:42,p:0,l:0,g:10.6},'biere':{c:43,p:0.5,l:0,g:3.6},
-  'vin':{c:83,p:0.1,l:0,g:2.6},'cafe':{c:2,p:0.1,l:0,g:0},'the':{c:1,p:0,l:0,g:0}
+  'vin':{c:83,p:0.1,l:0,g:2.6},'cafe':{c:2,p:0.1,l:0,g:0},'the':{c:1,p:0,l:0,g:0},
+  'jus':{c:45,p:0.5,l:0.1,g:11},'eau':{c:0,p:0,l:0,g:0},
+  'ricore':{c:60,p:2.5,l:1.5,g:9},   // tel qu'on le boit, au lait demi-écrémé
+  /* ── Ajouts du relevé du 2026-08-05 ─────────────────────────────
+     Les 89 lignes que la table ne savait pas chiffrer, sur 256 réelles. Ce
+     bloc et les deux passes de `getNutri` viennent de là — ce ne sont pas des
+     aliments choisis au hasard, ce sont ceux réellement saisis. */
+  // Herbes et aromates. Presque rien au gramme, mais ils sont TOUJOURS saisis
+  // en petite quantité : les compter juste vaut mieux que de ne pas les
+  // compter, et surtout mieux que de rendre tout le repas non chiffrable.
+  'persil':{c:36,p:3,l:0.8,g:6},'basilic':{c:23,p:3.2,l:0.6,g:2.7},
+  'coriandre':{c:23,p:2.1,l:0.5,g:3.7},'ciboulette':{c:30,p:3.3,l:0.7,g:4.4},
+  'aneth':{c:43,p:3.5,l:1.1,g:7},'menthe':{c:44,p:3.8,l:0.7,g:8},
+  'gingembre':{c:80,p:1.8,l:0.8,g:18},'curry':{c:325,p:14,l:14,g:58},
+  'epices':{c:300,p:11,l:10,g:50},'poivre':{c:251,p:10,l:3.3,g:64},
+  'sel':{c:0,p:0,l:0,g:0},'assaisonnement':{c:0,p:0,l:0,g:0},
+  // Légumes qui manquaient
+  'patate':{c:77,p:2,l:0.1,g:17},'mange tout':{c:42,p:2.8,l:0.2,g:7.5},
+  'pois gourmands':{c:42,p:2.8,l:0.2,g:7.5},'daurade':{c:96,p:20,l:1.5,g:0},
+  // Sauces, plats et desserts nommés sans plus de précision
+  'sauce soja':{c:53,p:8,l:0.1,g:5},'teriyaki':{c:89,p:1.5,l:0,g:20},
+  'bolognaise':{c:130,p:8,l:7,g:8},'bouillon':{c:8,p:1,l:0.3,g:0.5},
+  'potage':{c:40,p:1.5,l:1.5,g:6},'nouilles':{c:138,p:4.5,l:0.7,g:25},
+  'ramen':{c:138,p:4.5,l:0.7,g:25},'crepe':{c:190,p:6,l:8,g:23},
+  'crumble':{c:350,p:4,l:16,g:48},'gateau':{c:380,p:5,l:18,g:50},
+  'creme patissiere':{c:160,p:4,l:6,g:22},'glace':{c:207,p:3.5,l:11,g:24},
+  'bifteck':{c:250,p:26,l:15,g:0},
+  /* Libellés VOLONTAIREMENT génériques (« Fromage », « Légumes », « Viande »,
+     « Sauce », « 1 fruit »). Ce sont des moyennes, et une moyenne est
+     critiquable — mais l'alternative n'est pas « mieux », c'est **zéro**, ce
+     qui est faux à coup sûr. Un libellé plus précis gagne toujours, la
+     correspondance prenant le plus long : « fromage blanc » (2 mots) passe
+     avant « fromage », « viande blanche » avant « viande ». */
+  'fromage':{c:350,p:23,l:28,g:1.5},'legumes':{c:35,p:2,l:0.4,g:6},
+  'viande':{c:230,p:25,l:14,g:0},'viande blanche':{c:135,p:29,l:1,g:0},
+  'poisson':{c:120,p:22,l:3,g:0},'sauce':{c:90,p:1.5,l:6,g:6},
+  'fruit':{c:60,p:0.8,l:0.3,g:14},
+  /* Fautes de frappe relevées en base. Ce ne sont pas des devinettes : chacune
+     est phonétiquement sans ambiguïté dans un contexte alimentaire. Les noms
+     vraiment indéchiffrables (« Marcos en boîte », « a ») restent NON
+     reconnus — mieux vaut un manque visible qu'un chiffre inventé. */
+  'steack':{c:250,p:26,l:15,g:0},'amendes':{c:579,p:21,l:50,g:22},
+  'basilique':{c:23,p:3.2,l:0.6,g:2.7},'pouivron':{c:31,p:1,l:0.3,g:6},
+  'teriaki':{c:89,p:1.5,l:0,g:20},
+  'petits poids':{c:81,p:5,l:0.4,g:14},'poids chiche':{c:164,p:9,l:2.6,g:27}
 };
-/* ⚠️ MÊME APPARIEMENT QUE core.js, au caractère près. Le plus LONG libellé qui
-   correspond gagne, et la correspondance se fait MOT À MOT sur un nom
-   normalisé (sans accents, sans ponctuation, encadré d'espaces) — sinon
-   « ail » se trouverait dans « volaille ». Un appariement différent d'un côté
-   ou de l'autre donnerait des grammes différents de ceux affichés à l'écran. */
+/* ⚠️ APPARIEMENT IDENTIQUE À core.js, au caractère près. Un appariement
+   différent d'un côté ou de l'autre donnerait des grammes différents de ceux
+   affichés à l'écran.
+
+   Deux points qui ont chacun coûté des lignes non chiffrées, mesurés sur les
+   256 lignes réelles de la base le 2026-08-05 :
+   • les ligatures `œ`/`æ` ne sont PAS des accents — `normalize('NFD')` ne les
+     décompose pas — donc « bœuf » devenait « b uf » et « Œufs » « ufs » :
+     aucun œuf, aucun bœuf n'avait jamais été reconnu (7 lignes) ;
+   • singulier/pluriel : la table dit « courgette », la base dit
+     « Courgettes ». D'où une SECONDE passe, et seulement une seconde — voir
+     `getNutri`. */
 
 function normNom(s) {
   return ' ' + String(s || '').toLowerCase()
+    .replace(/œ/g, 'oe').replace(/æ/g, 'ae')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, ' ').trim() + ' ';
 }
 
+/* Singulier approché, appliqué DES DEUX CÔTÉS : « ananas » → « anana » de part
+   et d'autre, le mot compte moins que la symétrie. Pas sous 4 lettres, pour ne
+   pas manger « riz », « jus » ou « the ». */
+function sing(m) {
+  return (m.length > 3 && (m.slice(-1) === 's' || m.slice(-1) === 'x')) ? m.slice(0, -1) : m;
+}
+
 const NT_CLES = Object.keys(NT)
-  .map(k => ({ k, mots: normNom(k).trim().split(' ') }))
+  .map(k => { const mots = normNom(k).trim().split(' '); return { k, mots, motsS: mots.map(sing) }; })
   .sort((a, b) => b.mots.length - a.mots.length || b.k.length - a.k.length);
+
+function tousPresents(mots, n) {
+  return mots.every(m => n.indexOf(' ' + m + ' ') > -1);
+}
 
 function r1(v) { return Math.round(v * 10) / 10; }
 
+/* ⚠️ DEUX PASSES, ET L'ORDRE EST TOUT L'INTÉRÊT. La première est l'ancienne,
+   mot à mot exact : rien de ce qui correspondait avant ne peut changer de
+   valeur. La seconde ne tourne que si la première n'a rien trouvé.
+
+   Collapser en UNE passe aurait été une régression : « pates » et « pate » (le
+   pâté, 320 kcal) se réduisent au même mot, et le plus long libellé gagnant, un
+   pâté de campagne serait compté comme des pâtes à 131 kcal. */
 export function getNutri(name, qty) {
   const n = normNom(name);
   let t = null;
-  for (const e of NT_CLES) {
-    if (e.mots.every(m => n.indexOf(' ' + m + ' ') > -1)) { t = NT[e.k]; break; }
+  for (const e of NT_CLES) { if (tousPresents(e.mots, n)) { t = NT[e.k]; break; } }
+  if (!t) {
+    const nS = ' ' + n.trim().split(' ').map(sing).join(' ') + ' ';
+    for (const e of NT_CLES) { if (tousPresents(e.motsS, nS)) { t = NT[e.k]; break; } }
   }
   if (!t) return null;
   const f = (parseFloat(qty) || 0) / 100;
-  // Arrondi PAR INGRÉDIENT, comme core.js. Sommer les valeurs brutes puis
-  // arrondir une seule fois serait plus juste, mais donnerait un gramme
-  // d'écart avec le chiffre affiché à l'écran (mesuré sur les repas réels) —
-  // et un rappel qui contredit l'app d'un gramme, c'est l'app qui a tort.
+  // Arrondi PAR INGRÉDIENT, comme core.js : sommer les valeurs brutes puis
+  // arrondir une seule fois serait plus juste, mais donnerait un gramme d'écart
+  // avec le chiffre affiché à l'écran — et un rappel qui contredit l'app d'un
+  // gramme, c'est l'app qui a tort.
   return { c: Math.round(t.c * f), p: r1(t.p * f), l: r1(t.l * f), g: r1(t.g * f) };
 }
 
@@ -145,9 +218,9 @@ export function getNutri(name, qty) {
  *  pouvoir dire CE QU'IL a reconnu et non seulement combien il a compté. */
 export function cleNutri(name) {
   const n = normNom(name);
-  for (const e of NT_CLES) {
-    if (e.mots.every(m => n.indexOf(' ' + m + ' ') > -1)) return e.k;
-  }
+  for (const e of NT_CLES) { if (tousPresents(e.mots, n)) return e.k; }
+  const nS = ' ' + n.trim().split(' ').map(sing).join(' ') + ' ';
+  for (const e of NT_CLES) { if (tousPresents(e.motsS, nS)) return e.k; }
   return null;
 }
 
@@ -158,8 +231,8 @@ export function cleNutri(name) {
  * n'est que le filet, pour les vieilles lignes et la saisie manuelle.
  *
  * Quatre zéros valent « rien d'écrit » : c'est le défaut de la base, pas une
- * mesure. Les appelants doivent donc demander ces colonnes dans leur `select`,
- * sinon ils retombent silencieusement sur le filet.
+ * mesure. Les appelants doivent donc DEMANDER ces colonnes dans leur `select`,
+ * sinon elles arrivent `undefined` et on retombe en silence sur le filet.
  */
 export function calcMac(ings) {
   const t = { c: 0, p: 0, l: 0, g: 0 };

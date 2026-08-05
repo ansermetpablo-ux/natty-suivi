@@ -738,7 +738,7 @@ gramme d'écart avec l'écran. Commande de régénération dans l'en-tête du fi
 
 > ⚠️ **CETTE COPIE AVAIT DIVERGÉ, ET C'ÉTAIT UN BUG EN PRODUCTION** (corrigé août 2026). Elle
 > portait encore la table de ~60 aliments **et** l'ancien appariement par sous-chaîne
-> premier-déclaré-gagnant, alors que `core.js` était passé à 185 aliments et au rapprochement
+> premier-déclaré-gagnant, alors que `core.js` était passé à 230 aliments et au rapprochement
 > mot à mot plus-long-libellé-gagnant. Conséquence : « pomme de terre » tombait sur « pomme »
 > (52 kcal au lieu de 77, zéro féculent), « huile olive » sur « huile », « ail » se trouvait
 > dans « volaille », et le saucisson n'existait pas. **Le rappel du soir annonçait donc d'autres
@@ -817,6 +817,49 @@ régénère `api/_nutrition.js`, on relance.
 Vérifié contre une fausse base, un cas par garde-fou : le chorizo déjà mesuré reste intact, la
 « tarte flambée » inconnue reste à zéro et ressort dans `non_reconnus`, la ligne sans grammes est
 ignorée, et un **second passage envoie 0 PATCH**.
+
+#### Le premier relevé réel (2026-08-05) — 256 lignes, 65 % de couverture
+Pablo a lancé le relevé. **0 ligne déjà chiffrée** (donc tout l'historique sous-comptait),
+167 chiffrables, **89 non reconnues** sur 77 noms distincts. Ces 77 noms ont dicté la passe
+suivante sur `assets/core.js` — ce ne sont pas des aliments choisis en imaginant ce que les gens
+saisissent, ce sont ceux qu'ils ont réellement saisis. Trois causes, dans cet ordre d'importance :
+
+1. ⚠️ **LES LIGATURES `œ` / `æ` NE SONT PAS DES ACCENTS.** `normalize('NFD')` ne les décompose
+   pas (ce sont des lettres à part entière en Unicode), donc `[^a-z0-9]` les remplaçait par une
+   espace : « bœuf » devenait `b uf`, « Œufs » devenait `ufs`. **Aucun œuf et aucun bœuf n'avait
+   donc jamais été reconnu, dans toute l'app** — 7 lignes ici, mais le défaut vivait dans
+   `getNutri` depuis le début. Corrigé en traduisant `œ`→`oe` **avant** de retirer la ponctuation.
+2. **Singulier / pluriel** : la table dit « courgette », la base dit « Courgettes » ; la table dit
+   « epinards », la base dit « Epinard ». 43 des 77 noms.
+3. **Aliments réellement absents** : herbes et aromates (persil, basilic, coriandre, ciboulette,
+   aneth, gingembre, curry, épices, sel, poivre), légumes manquants, sauces et plats nommés
+   (bolognaise, teriyaki, sauce soja, bouillon, potage, nouilles, crêpe, crumble, glace, crème
+   pâtissière), et des libellés **volontairement génériques**.
+
+> ⚠️ **DEUX PASSES DANS `getNutri`, ET L'ORDRE EST TOUT L'INTÉRÊT.** La première est l'ancienne,
+> mot à mot exact : rien de ce qui correspondait avant ne peut changer de valeur. La seconde ne
+> tourne que si la première n'a rien trouvé, et collapse les pluriels des **deux** côtés.
+> Collapser en UNE passe aurait été une régression : « pates » et « pate » (le pâté, 320 kcal)
+> se réduisent au même mot, et le plus long libellé gagnant, **un pâté de campagne aurait été
+> compté comme des pâtes à 131 kcal**. Vérifié en navigateur : « Pate de campagne » → `pate`,
+> « Pates » → `pates`.
+
+> **Les libellés génériques sont un choix, pas une négligence.** « Fromage », « Légumes »,
+> « Viande », « Sauce », « 1 fruit » reçoivent une moyenne. Une moyenne est critiquable — mais
+> l'alternative n'est pas « mieux », c'est **zéro**, qui est faux à coup sûr. Un libellé plus
+> précis gagne toujours, la correspondance prenant le plus long : « fromage blanc » passe avant
+> « fromage », « viande blanche » avant « viande ».
+> Les **fautes de frappe** relevées en base (`steack`, `amendes`, `basilique`, `pouivron`,
+> `petits poids`, `poids chiche`, `teriaki`) sont ajoutées comme alias : chacune est
+> phonétiquement sans ambiguïté. Les noms vraiment indéchiffrables — **« Marcos en boîte »** et
+> **« a »** — restent NON reconnus, et c'est voulu : un manque visible vaut mieux qu'un chiffre
+> inventé.
+
+**Mesuré** : 230 aliments (185 avant), **74/77 noms réparés**, et surtout **0 régression** sur
+les 30 cas qui fonctionnaient déjà (les 25 exemples du relevé plus les pièges connus). A/B
+`core.js` vs `api/_nutrition.js` sur 83 cas × 2 quantités : **0 écart**. Vérifié aussi en
+navigateur, `core.js` chargé pour de vrai.
+🔄 **Le relevé est donc à relancer** : la couverture doit passer de 65 % à ~97 %.
 
 ### `social.html` + `assets/social.js` — le fil social
 Onglet « Social » de la nav, **à la place de Coaching** (qui n'est pas supprimé : `coaching.html`
