@@ -128,6 +128,32 @@ window.NattyPlanning = (function () {
     return plan;
   }
 
+  /* ═══ 2 bis. Ce qui a déjà été mangé cette semaine ═══════
+     Un créneau planifié qui a reçu son repas est « fait ».
+
+     ⚠️ On ne stocke PAS de drapeau `fait` dans le plan. Un drapeau se pose
+     depuis un écran, à un instant : il rate tout ce qui est enregistré ailleurs
+     (l'ancien parcours de `suivi.html`, un autre appareil, l'admin) et il dérive
+     dès qu'un repas est supprimé. La question « ce créneau a-t-il eu un
+     repas ? » a déjà sa réponse en base, et cette réponse-là ne ment jamais.
+     Coût : une requête d'une colonne, au montage du panneau. */
+  async function realises() {
+    var faits = {};
+    if (!Natty.USER_ID) return faits;
+    try {
+      // `lundi()` rend une date locale ; minuit local, converti en UTC pour
+      // PostgREST — sinon on rate les repas du lundi matin (ou on prend ceux
+      // du dimanche soir), selon le sens du décalage.
+      var debut = new Date(lundi() + 'T00:00:00').toISOString();
+      var r = await Natty.sbFetch('meals?user_id=eq.' + Natty.USER_ID
+        + '&created_at=gte.' + debut + '&select=created_at&limit=200') || [];
+      r.forEach(function (m) {
+        faits[jourIndex(m.created_at) + '-' + creneauIndex(m.created_at)] = 1;
+      });
+    } catch (e) {}
+    return faits;
+  }
+
   /* ═══ 3. L'analyse — où manque quoi, et quand ════════════ */
 
   var REPAS_PAR_JOUR = { '1_2': 2, '3': 3, '3_collations': 4, 'grignotage': 4 };
@@ -497,6 +523,36 @@ window.NattyPlanning = (function () {
       '#nplan .sw.on{background:#f2f2f5}',
       '#nplan .sw.on i{left:25px;background:#101014}',
 
+      /* Un jour à la fois — chevron, traits de progression, carte du jour. */
+      '#nplan .jbar{display:flex;align-items:center;gap:12px;width:100%;max-width:400px;',
+      'margin-bottom:26px}',
+      '#nplan .jback{width:38px;height:38px;border-radius:50%;background:#f2f2f5;color:#101014;',
+      'font-size:21px;font-weight:700;line-height:1;flex-shrink:0;display:flex;align-items:center;',
+      'justify-content:center;padding-bottom:3px}',
+      '#nplan .jdots{display:flex;gap:6px;flex:1}',
+      '#nplan .jdots i{flex:1;height:6px;border-radius:99px;background:#26272d;',
+      'transition:background .3s cubic-bezier(.22,1,.36,1)}',
+      '#nplan .jdots i.on{background:#f2f2f5}',
+      '#nplan .jcarte{animation:nplPara .42s cubic-bezier(.22,1,.36,1) backwards}',
+      '#nplan .jcarte.jsort{position:absolute;left:0;right:0;top:0;',
+      'animation:nplOut .3s cubic-bezier(.4,0,1,1) forwards;pointer-events:none}',
+      '#nplan .jnom{font-size:23px;font-weight:900;letter-spacing:-.6px;margin-bottom:20px}',
+      '#nplan .jbloc + .jbloc{margin-top:16px}',
+      '#nplan .jlbl{font-size:13px;font-weight:700;color:#8b8b95;text-align:left;margin-bottom:8px}',
+      /* Interrupteur à deux positions : « je prépare » / « j'achète ». Un
+         segment, pas deux boutons — les deux réponses s'excluent, et il faut
+         qu'on voie celle qu'on n'a pas choisie. */
+      '#nplan .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;',
+      'border-radius:20px;background:#0a0b0d;',
+      'box-shadow:inset 2px 2px 7px rgba(0,0,0,.9),inset -1px -1px 3px rgba(255,255,255,.05)}',
+      '#nplan .seg button{border-radius:16px;padding:14px 6px;font-size:13.5px;font-weight:700;',
+      'background:none;color:#7c7c86;transition:background .22s cubic-bezier(.22,1,.36,1),',
+      'color .22s ease,box-shadow .22s ease}',
+      '#nplan .seg button.on{background:#f2f2f5;color:#101014;',
+      'box-shadow:0 5px 14px rgba(0,0,0,.55)}',
+      '#nplan .lien{background:none;color:#7c7c86;font-size:13.5px;font-weight:700;',
+      'text-decoration:underline;text-underline-offset:3px;padding:22px 10px 0}',
+
       /* La grille 7 × 3 (mise au point fine). */
       '#nplan .grille{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;width:100%;',
       'max-width:400px;margin-top:6px}',
@@ -536,6 +592,11 @@ window.NattyPlanning = (function () {
       '#nplan .cc.vide{opacity:.5}',
       '#nplan .cc.vide::after{content:"";width:4px;height:4px;border-radius:50%;background:#2e2f36}',
       '#nplan .cc.plein{background:#141519;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}',
+      /* Déjà mangé — même signe que dans « Ma semaine » de l'écran Repas. */
+      '#nplan .cc.fait{box-shadow:inset 0 0 0 1.5px #34c759}',
+      '#nplan .cc .ok{position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:50%;',
+      'background:#34c759;color:#fff;font-size:8.5px;font-weight:800;display:flex;',
+      'align-items:center;justify-content:center;line-height:1}',
       '#nplan .cc .em{font-size:22px}',
       '#nplan .cc img{width:100%;height:100%;object-fit:cover}',
       '#nplan .cc.arrive{animation:nplPop .5s cubic-bezier(.22,1,.36,1) backwards}',
@@ -789,17 +850,108 @@ window.NattyPlanning = (function () {
             for (var i = 0; i < 7; i++) etat.prepare.push(etat.global.map(function (v) { return v ? 1 : 0; }));
             lancerPlanification();
           } },
-        { txt: 'Personnaliser jour par jour', cls: 'b2', on: scGrille }
+        { txt: 'Personnaliser jour par jour', cls: 'b2', on: scJours }
       ]
     });
   }
 
-  /* Scène 4 — la grille fine, 7 jours × 3 créneaux. */
-  function scGrille() {
-    if (!etat.prepare) {
-      etat.prepare = [];
-      for (var i = 0; i < 7; i++) etat.prepare.push(etat.global.map(function (v) { return v ? 1 : 0; }));
+  function initPrepare() {
+    if (etat.prepare) return;
+    etat.prepare = [];
+    for (var i = 0; i < 7; i++) etat.prepare.push(etat.global.map(function (v) { return v ? 1 : 0; }));
+  }
+
+  /* ── Scène 4a — un jour à la fois ────────────────────────
+     La maquette de Pablo : un chevron de retour, sept traits de progression, et
+     la carte du jour avec ses trois « Je prépare / J'achète ».
+
+     ⚠️ UNE scène pour les sept jours, pas sept scènes. Passer par `scene()` à
+     chaque jour rejouerait aussi l'entrée de la barre d'action : le bouton
+     « Valider » clignoterait sept fois de suite pour un réglage qui, lui, ne
+     bouge pas. Seule la carte est repeinte, et elle glisse. */
+  function scJours() {
+    initPrepare();
+    var jour = 0;
+
+    scene({
+      haut: true,
+      html: '<div class="jbar" data-in="glide">'
+        + '<button class="jback" id="nplJBack" type="button" aria-label="Précédent">‹</button>'
+        + '<div class="jdots" id="nplJDots">'
+        + JOURS.map(function () { return '<i></i>'; }).join('') + '</div></div>'
+        // `position:relative` : la carte sortante se met en absolu pour croiser
+        // l'entrante sans faire sauter la hauteur du bloc.
+        + '<div id="nplJCarte" style="position:relative;width:100%;max-width:400px;'
+        + 'display:flex;justify-content:center"></div>'
+        + '<button class="lien" id="nplJTout" type="button">Tout voir d’un coup</button>',
+      pret: function (d) {
+        d.querySelector('#nplJBack').addEventListener('click', function () {
+          if (jour === 0) { scQuestion(); return; }   // avant lundi, il y a la question
+          jour--; peindreJour();
+        });
+        d.querySelector('#nplJTout').addEventListener('click', scGrille);
+        peindreJour();
+      },
+      boutons: [{ txt: 'Valider', cls: 'b1', id: 'nplJGo', on: function () {
+        if (jour < 6) { jour++; peindreJour(); return; }
+        lancerPlanification();
+      } }]
+    });
+
+    function peindreJour() {
+      var hote = document.getElementById('nplJCarte');
+      if (!hote) return;
+
+      var dots = document.getElementById('nplJDots');
+      if (dots) dots.querySelectorAll('i').forEach(function (p, i) {
+        p.classList.toggle('on', i <= jour);
+      });
+
+      var carte = document.createElement('div');
+      carte.className = 'panneau jcarte';
+      carte.innerHTML = '<div class="jnom">' + esc(JOURS[jour]) + '</div>'
+        + CRENEAUX.map(function (c, ci) {
+            var prep = !!etat.prepare[jour][ci];
+            return '<div class="jbloc"><div class="jlbl">' + esc(c.nom) + '</div>'
+              + '<div class="seg" role="radiogroup" aria-label="' + esc(JOURS[jour] + ' — ' + c.nom) + '">'
+              + '<button type="button" class="' + (prep ? 'on' : '') + '" data-c="' + ci + '" data-v="1"'
+              + ' role="radio" aria-checked="' + (prep ? 'true' : 'false') + '">Je prépare ' + c.em + '</button>'
+              + '<button type="button" class="' + (prep ? '' : 'on') + '" data-c="' + ci + '" data-v="0"'
+              + ' role="radio" aria-checked="' + (prep ? 'false' : 'true') + '">J’achète 🛒</button>'
+              + '</div></div>';
+          }).join('');
+
+      carte.querySelectorAll('.seg button').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var ci = +b.dataset.c;
+          etat.prepare[jour][ci] = +b.dataset.v;
+          b.parentNode.querySelectorAll('button').forEach(function (x) {
+            var on = +x.dataset.v === etat.prepare[jour][ci];
+            x.classList.toggle('on', on);
+            x.setAttribute('aria-checked', on ? 'true' : 'false');
+          });
+        });
+      });
+
+      // Le plan sortant s'en va, le nouveau glisse : c'est la même grammaire
+      // que les scènes, à l'échelle de la carte.
+      var vieux = hote.firstElementChild;
+      if (vieux) {
+        vieux.classList.add('jsort');
+        setTimeout(function () { if (vieux.parentNode) vieux.parentNode.removeChild(vieux); }, 300);
+      }
+      hote.appendChild(carte);
+
+      var b = document.getElementById('nplJGo');
+      if (b) b.textContent = jour < 6 ? 'Valider · ' + JOURS[jour + 1] : 'Planifier ma semaine';
+      var back = document.getElementById('nplJBack');
+      if (back) back.setAttribute('aria-label', jour === 0 ? 'Revenir aux réglages' : 'Jour précédent');
     }
+  }
+
+  /* Scène 4b — la grille fine, 7 jours × 3 créneaux. */
+  function scGrille() {
+    initPrepare();
     var html = '<div class="kicker" data-in="glide">Étape 2 sur 2</div>'
       + titre('Touchez les repas que vous préparez', 'h2', 0.1)
       + '<div class="sous" data-in="glide" style="animation-delay:.55s">'
@@ -926,6 +1078,10 @@ window.NattyPlanning = (function () {
       // deux mondes.
       await enregistrer(plan);
       etat.plan = plan;
+      // Replanifier en milieu de semaine est un cas réel (bouton « Replanifier »
+      // du panneau) : sans ça, le calendrier de la séquence dirait « rien de
+      // fait » là où l'écran Repas coche déjà des cases.
+      etat.faits = await realises();
 
       var reste = Math.max(0, 1500 - (Date.now() - debut));
       setTimeout(function () {
@@ -962,7 +1118,7 @@ window.NattyPlanning = (function () {
 
   /* Scène 6 — le calendrier. Les cases pleines arrivent une à une. */
   function scCalendrier() {
-    var plan = etat.plan, n = plan.repas.length;
+    var plan = etat.plan, n = plan.repas.length, faits = etat.faits || {};
     var carte = {};
     plan.repas.forEach(function (r) { carte[r.jour + '-' + r.creneau] = r; });
     var auj = jourIndex(new Date());
@@ -984,8 +1140,9 @@ window.NattyPlanning = (function () {
         var r = carte[i + '-' + j];
         if (r) {
           k++;
-          html += '<div class="cc plein arrive" style="animation-delay:' + (0.45 + k * 0.13) + 's">'
-            + vignette(r) + '</div>';
+          html += '<div class="cc plein arrive' + (faits[i + '-' + j] ? ' fait' : '')
+            + '" style="animation-delay:' + (0.45 + k * 0.13) + 's">'
+            + vignette(r) + (faits[i + '-' + j] ? '<span class="ok">✓</span>' : '') + '</div>';
         } else {
           html += '<div class="cc vide"></div>';
         }
@@ -1146,8 +1303,18 @@ window.NattyPlanning = (function () {
       '.nplc-c{height:54px;border-radius:13px;background:var(--card,#ececef);',
       'box-shadow:var(--nm-in,inset 3px 3px 7px rgba(163,167,176,.35));display:flex;align-items:center;',
       'justify-content:center;overflow:hidden;font-size:19px}',
-      '.nplc-c.plein{background:#fff;box-shadow:0 5px 13px rgba(20,20,30,.13);cursor:pointer}',
+      '.nplc-c.plein{background:#fff;box-shadow:0 5px 13px rgba(20,20,30,.13);cursor:pointer;position:relative}',
       '.nplc-c img{width:100%;height:100%;object-fit:cover}',
+      /* Fait = le repas prévu a bien eu lieu. La pastille verte est le seul
+         accent coloré de la carte : c'est elle qu'on doit voir en premier. */
+      '.nplc-c.fait{box-shadow:0 0 0 2px var(--green,#34c759),0 5px 13px rgba(52,199,89,.22)}',
+      '.nplc-c .ok{position:absolute;top:3px;right:3px;width:15px;height:15px;border-radius:50%;',
+      'background:var(--green,#34c759);color:#fff;font-size:9px;font-weight:800;display:flex;',
+      'align-items:center;justify-content:center;line-height:1}',
+      /* Un repas enregistré hors du plan : un point, pas une pastille. Il a eu
+         lieu, mais il ne valide rien de prévu. */
+      '.nplc-c.hors::after{content:"";width:5px;height:5px;border-radius:50%;',
+      'background:var(--muted,#9d9da8);opacity:.65}',
       '.nplc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}',
       '.nplc-cpt{font-size:12.5px;font-weight:800;color:var(--ink,#101014)}',
       '.nplc-cpt span{color:var(--muted,#9d9da8);font-weight:600}',
@@ -1161,31 +1328,46 @@ window.NattyPlanning = (function () {
     document.head.appendChild(s);
   }
 
-  /** HTML du panneau « Ma semaine ». `plan` peut être null : on propose alors. */
-  function fiche(plan) {
+  /**
+   * HTML du panneau « Ma semaine ».
+   * @param {object} plan  peut être null : on propose alors la planification.
+   * @param {object} faits map `jour-creneau` → 1, des créneaux déjà mangés.
+   */
+  function fiche(plan, faits) {
     cssFiche();
+    faits = faits || {};
     if (!plan || !plan.repas || !plan.repas.length) {
       return '<div class="nplc"><div class="nplc-head"><div class="t">Ma semaine</div></div>'
         + '<div class="nplc-vide"><div class="d">Vos repas ne sont pas encore placés dans la semaine.'
         + ' La planification les répartit là où vos apports flanchent.</div>'
         + '<button data-nplc="ouvrir">📅 Planifier ma semaine</button></div></div>';
     }
-    var carte = {}, auj = jourIndex(new Date());
-    plan.repas.forEach(function (r) { carte[r.jour + '-' + r.creneau] = r; });
+    var carte = {}, auj = jourIndex(new Date()), nFaits = 0;
+    plan.repas.forEach(function (r) {
+      carte[r.jour + '-' + r.creneau] = r;
+      if (faits[r.jour + '-' + r.creneau]) nFaits++;
+    });
 
     var h = '<div class="nplc"><div class="nplc-head"><div class="t">Ma semaine</div>'
-      + '<div class="n">' + plan.repas.length + ' repas placés</div></div>'
+      + '<div class="n">' + (nFaits
+          ? nFaits + ' repas sur ' + plan.repas.length + ' déjà faits'
+          : plan.repas.length + ' repas placés')
+      + '</div></div>'
       + '<div class="nplc-cols"><div></div>'
       + CRENEAUX.map(function (c) { return '<div>' + esc(c.court) + '</div>'; }).join('')
       + '</div>';
     for (var i = 0; i < 7; i++) {
       h += '<div class="nplc-j' + (i === auj ? ' auj' : '') + '"><div class="nom">' + JOURS3[i] + '</div>';
       for (var j = 0; j < 3; j++) {
-        var r = carte[i + '-' + j];
+        var r = carte[i + '-' + j], fait = !!faits[i + '-' + j];
         h += r
-          ? '<div class="nplc-c plein" data-nplc="repas" data-j="' + i + '" data-c="' + j + '" title="'
-            + esc(r.nom) + '">' + vignette(r) + '</div>'
-          : '<div class="nplc-c"></div>';
+          ? '<div class="nplc-c plein' + (fait ? ' fait' : '') + '" data-nplc="repas" data-j="' + i
+            + '" data-c="' + j + '" title="' + esc(r.nom) + (fait ? ' — déjà mangé' : '') + '">'
+            + vignette(r) + (fait ? '<span class="ok">✓</span>' : '') + '</div>'
+          // Un repas enregistré sur un créneau NON planifié se voit aussi : un
+          // point discret. Sans lui, une semaine bien suivie hors du plan aurait
+          // l'air d'une semaine vide.
+          : '<div class="nplc-c' + (faits[i + '-' + j] ? ' hors' : '') + '"></div>';
       }
       h += '</div>';
     }
@@ -1195,6 +1377,17 @@ window.NattyPlanning = (function () {
     return h;
   }
 
+  var ficheEl = null, ficheCb = null;
+
+  /* Un plat vient d'être enregistré (bouton `+` d'assets/ajout.js) : la case du
+     créneau se coche. L'événement ne porte rien — c'est `realises()` qui relit,
+     donc le résultat est le même que si l'on rechargeait la page.
+     ⚠️ `natty:repas-ajoute` est émis sur `window`, pas sur `document` (contrairement
+     à `natty:conseils-prets` / `natty:planning-pret`). */
+  window.addEventListener('natty:repas-ajoute', function () {
+    if (ficheEl && ficheEl.isConnected) monterFiche(ficheEl, ficheCb);
+  });
+
   /**
    * Rend le panneau dans un élément et branche ses gestes.
    * @param {HTMLElement} el
@@ -1203,11 +1396,17 @@ window.NattyPlanning = (function () {
   async function monterFiche(el, onRepas) {
     if (!el) return null;
     var plan = await lire();
-    el.innerHTML = fiche(plan);
+    // Seulement s'il y a un plan : sans plan il n'y a rien à cocher, et ce
+    // serait une requête payée par tous ceux qui n'ont pas encore planifié.
+    var faits = plan ? await realises() : {};
+    el.innerHTML = fiche(plan, faits);
     brancherVignettes(el);
     el.querySelectorAll('[data-nplc="ouvrir"]').forEach(function (b) {
       b.addEventListener('click', function () { ouvrir({ forcer: true }); });
     });
+    // On retient où l'on est monté : un plat enregistré doit cocher sa case
+    // tout de suite, sans que l'écran hôte ait à s'en occuper.
+    ficheEl = el; ficheCb = onRepas;
     if (onRepas && plan) {
       el.querySelectorAll('[data-nplc="repas"]').forEach(function (c) {
         c.addEventListener('click', function () {

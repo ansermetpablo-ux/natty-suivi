@@ -523,6 +523,29 @@ trajet serait le pire des deux mondes.
   `vignette()`/`brancherVignettes()` reposent l'emoji à la place. Le test `complete &&
   !naturalWidth` couvre l'échec survenu **avant** qu'on écoute l'événement `error`.
 
+**Deux chemins pour régler la semaine**, tous deux dessinés par Pablo : les trois
+interrupteurs globaux (« Valider »), ou **jour par jour** (`scJours`) — chevron de retour, sept
+traits de progression, carte du jour avec ses trois segments « Je prépare / J'achète », et
+« Tout voir d'un coup » qui bascule sur la grille 7 × 3 (`scGrille`). Les trois vues écrivent
+le même tableau `etat.prepare`.
+> ⚠️ **UNE scène pour les sept jours, pas sept scènes.** Repasser par `scene()` à chaque jour
+> rejouerait aussi l'entrée de la barre d'action : « Valider » clignoterait sept fois pour un
+> bouton qui, lui, ne bouge pas. Seule la carte est repeinte, et la sortante passe en
+> `position:absolute` le temps de croiser l'entrante — sinon la hauteur du bloc saute.
+
+**La semaine se coche toute seule.** Un créneau planifié qui a reçu son repas passe au vert
+(anneau + pastille) dans les deux calendriers, et l'en-tête du panneau dit « 3 repas sur 5 déjà
+faits ». Un repas enregistré **hors** du plan laisse un point discret : il a eu lieu, mais il ne
+valide rien de prévu — sans lui, une semaine bien suivie hors plan aurait l'air d'une semaine
+vide.
+> ⚠️ **Aucun drapeau `fait` n'est stocké.** Un drapeau se pose depuis un écran, à un instant :
+> il rate ce qui est enregistré ailleurs (ancien parcours de `suivi.html`, autre appareil,
+> admin) et il dérive dès qu'un repas est supprimé. `realises()` relit `meals` depuis le lundi
+> et range par (jour × créneau) — la question a déjà sa réponse en base, et cette réponse ne
+> ment pas. Le module écoute `natty:repas-ajoute` (émis sur **`window`**, contrairement à
+> `natty:conseils-prets` / `natty:planning-pret` qui passent par `document`) et se recalcule ;
+> l'écran hôte n'a rien à faire.
+
 **Dans `repas.html`** : `#planWrap` vit **hors** de `#content`, que `render()` remplace en
 entier — à l'intérieur, le calendrier disparaîtrait au premier tap sur une vignette. Taper une
 case pleine ouvre la recette dans le hero si c'en est une, sinon la fiche `detail()` du module
@@ -1566,8 +1589,19 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - 🔄 **Non vérifié avec une vraie session** : les lectures `meals`/`onboarding`/
   `questionnaire_alim` et l'appel `/api/claude` des 3 plats macro n'ont tourné que contre des
   doublures. Il faut un compte pour aller plus loin.
-- 🔄 Le plan ne se **consomme** pas : enregistrer le repas prévu ne coche rien dans le
-  calendrier. Prochaine étape naturelle.
+- ✅ **Le plan se consomme** (août 2026) : un créneau planifié qui a reçu son repas passe au
+  vert dans les deux calendriers, l'en-tête dit « N repas sur 5 déjà faits », et un repas
+  enregistré hors du plan laisse un point. Relu en base, jamais coché à la main — détail et
+  raison en §3. Vérifié : 3 créneaux cochés sur des données de test, et un plat ajouté en
+  cours de session marque son créneau **sans recharger la page**.
+- ✅ **Réglage jour par jour livré** (la maquette 13 de Pablo) : chevron, sept traits, segments
+  « Je prépare / J'achète », et « Tout voir d'un coup » vers la grille. Vérifié : les choix
+  tiennent en revenant en arrière, une seule carte dans le DOM après sept passages (pas
+  d'empilement, cf. le bug connu de `narration.html`).
+- 🔄 **Les 3 plats macro n'ont pas de photo** — seulement leur emoji. Les deux seules photos de
+  plats du dépôt (`plat-demo1/2-week.png`) sont des plats précis : les coller sur « Poulet
+  rôti » serait un mensonge à l'écran. Il faut de vraies photos, fournies par Pablo (règle §9
+  #24 : on ne va pas en chercher sur le web).
 
 **Notifications**
 - ✅ **Rappel quotidien livré** — `assets/notifs.js` + interrupteur dans `profil.html`
@@ -2184,3 +2218,13 @@ session « fil social » :*
   apparaissaient d'un coup par-dessus la scène sortante.
 - **Pas touché** : `suivi.html` / `www/suivi.html`, modifiés par une session parallèle et
   laissés tels quels (règle « jamais de `git add -A` sur ce dépôt »).
+
+*Suite de la même session (5 août 2026) — la semaine se coche, et se règle jour par jour :*
+- **Consommation du plan** : `realises()` relit `meals` depuis le lundi et range par
+  (jour × créneau) ; les deux calendriers passent le créneau au vert, l'en-tête compte les
+  repas faits, un repas hors plan laisse un point. **Aucun drapeau stocké** — un drapeau rate
+  ce qui est enregistré ailleurs et dérive dès qu'un repas est supprimé.
+- **`scJours()`** : le réglage jour par jour de la maquette 13, en UNE scène pour les sept
+  jours (sept scènes auraient fait clignoter le bouton d'action sept fois), avec bascule vers
+  la grille par « Tout voir d'un coup ».
+- Le module écoute lui-même `natty:repas-ajoute` : l'écran hôte n'a rien à brancher.
