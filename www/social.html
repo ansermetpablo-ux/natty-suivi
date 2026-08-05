@@ -46,12 +46,17 @@ body{overflow-x:hidden}
 .av.sm{width:28px;height:28px;font-size:11px}
 
 /* ══ Grille de posts ══ */
-.posts{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}
+/* Gouttières réduites de 60 % et photos allongées de 30 % (demande de
+   Pablo) : la grille respire moins et montre plus. 14/12 px → 6/5 px,
+   et le carré 1/1 devient 1/1.3.
+   ⚠️ « Tendances » garde sa présentation : le rail et la vedette ont leurs
+   propres règles (.rail, .hero-*), aucune n'est touchée ici. */
+.posts{display:grid;grid-template-columns:1fr 1fr;gap:6px 5px}
 .post{cursor:pointer;min-width:0}
 .post-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
 .post-head .who{font-weight:900;font-size:12px;letter-spacing:-.1px;text-transform:uppercase;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.post-img{position:relative;aspect-ratio:1/1;border-radius:var(--r-lg);overflow:hidden;
+.post-img{position:relative;aspect-ratio:1/1.3;border-radius:var(--r-lg);overflow:hidden;
   background:var(--card);box-shadow:var(--nm-soft)}
 .post-img img{width:100%;height:100%;object-fit:cover;display:block}
 .post-img .fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
@@ -65,10 +70,17 @@ body{overflow-x:hidden}
 .like .n{position:absolute;bottom:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;
   background:var(--ink);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;
   justify-content:center;padding:0 4px}
-.post-name{display:flex;align-items:baseline;gap:6px;margin-top:9px}
-.post-name .nm{flex:1;min-width:0;font-weight:800;font-size:12.5px;line-height:1.25;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.post-name .kc{flex:none;font-size:10.5px;font-weight:700;color:var(--muted)}
+/* Le nom du plat en bulle de verre dépoli, texte gris : posé SUR la photo, il
+   ne coûte plus de hauteur à la grille — ce qui est justement ce qui permet
+   d'allonger les images sans allonger la page. */
+.post-name{position:absolute;left:6px;right:6px;bottom:6px;z-index:2;
+  display:flex;align-items:baseline;gap:6px;
+  background:rgba(232,232,238,.42);-webkit-backdrop-filter:blur(9px) saturate(1.1);
+  backdrop-filter:blur(9px) saturate(1.1);border:1px solid rgba(255,255,255,.28);
+  border-radius:12px;padding:5px 8px}
+.post-name .nm{flex:1;min-width:0;font-weight:700;font-size:11.5px;line-height:1.25;
+  color:#5b5b66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.post-name .kc{flex:none;font-size:10px;font-weight:700;color:#7b7b86}
 /* Une colonne fait ~162 px : « Prot 13g 🥩 » trois fois n'y tient pas.
    L'emoji porte le nom de la macro, il ne reste que la valeur. */
 .post-macros{display:flex;justify-content:space-between;gap:4px;margin-top:5px;font-size:11px;
@@ -286,11 +298,14 @@ function carte(p, avecScore){
   return '<div class="post" data-id="' + p.id + '">'
     + '<div class="post-head"><div class="av sm">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
     + '<div class="who">' + esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div></div>'
+    /* Le nom est DANS la photo : la bulle est en position absolue, et un
+       élément absolu se cale sur son premier ancêtre positionné — .post-img.
+       Laissé en frère, il se serait accroché à la page entière. */
     + '<div class="post-img">' + visuel(p) + coeur(p)
-    + (avecScore ? pastilleScore(p) : '') + '</div>'
+    + (avecScore ? pastilleScore(p) : '')
     + '<div class="post-name"><span class="nm">' + esc(p.nom) + '</span>'
     + (p.macros && p.macros.c ? '<span class="kc">' + Math.round(p.macros.c) + ' kcal</span>' : '')
-    + '</div>'
+    + '</div></div>'
     + ligneMacros(p)
     + '</div>';
 }

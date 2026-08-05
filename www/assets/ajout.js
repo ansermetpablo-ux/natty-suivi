@@ -42,10 +42,18 @@
 
   /* ═══════════════════ Styles ═══════════════════ */
   var CSS = ''
+    /* ⚠️ `overflow:hidden`, et non `auto` : la page du bouton + est FIXE
+       (demande de Pablo). Anneaux, nom du plat et boutons restent en place ;
+       c'est la liste des ingrédients, et elle seule, qui défile — voir
+       .na-detail-body plus bas. La chaîne `min-height:0` sur chaque
+       conteneur flex est indispensable : sans elle, un enfant scrollable
+       refuse de rétrécir sous sa hauteur de contenu et c'est la page
+       entière qui repart en débordement. */
     + '#nattyAjout{position:fixed;inset:0;z-index:900;background:#000;color:#fff;display:none;'
-      + 'flex-direction:column;font-family:\'Inter\',sans-serif;overflow-y:auto;-webkit-overflow-scrolling:touch}'
+      + 'flex-direction:column;font-family:\'Inter\',sans-serif;overflow:hidden}'
     + '#nattyAjout.on{display:flex}'
-    + '#nattyAjout .na-col{width:100%;max-width:480px;margin:0 auto;padding:0 22px 40px;flex:1;display:flex;flex-direction:column}'
+    + '#nattyAjout .na-col{width:100%;max-width:480px;margin:0 auto;padding:0 22px calc(20px + env(safe-area-inset-bottom,0px));'
+      + 'flex:1;min-height:0;display:flex;flex-direction:column}'
     + '#nattyAjout .na-top{display:flex;align-items:center;justify-content:space-between;'
       + 'padding:calc(18px + env(safe-area-inset-top,0px)) 0 6px}'
     + '#nattyAjout .na-top button{background:none;border:none;padding:0;cursor:pointer;display:flex;'
@@ -53,7 +61,7 @@
     + '#nattyAjout .na-top svg{width:26px;height:26px;stroke:#8a8a92;fill:none}'
     + '#nattyAjout h1{font-size:38px;line-height:1.06;font-weight:900;letter-spacing:-1.2px;'
       + 'text-align:center;margin:10px 0 0}'
-    + '#nattyAjout .na-screen{display:none;flex:1;flex-direction:column}'
+    + '#nattyAjout .na-screen{display:none;flex:1;min-height:0;flex-direction:column}'
     + '#nattyAjout .na-screen.on{display:flex;animation:naIn .32s cubic-bezier(.22,1,.36,1)}'
     + '@keyframes naIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'
 
@@ -77,6 +85,13 @@
     + '#nattyAjout .na-plat-nom{display:block;width:100%;text-align:center;font-family:inherit;font-size:15px;'
       + 'font-weight:700;color:#d8d8de;margin-top:14px;background:none;border:none;outline:none;padding:2px}'
     + '#nattyAjout .na-plat-plus{text-align:center;font-size:12.5px;color:#6e6e78;margin-top:2px}'
+    + '#nattyAjout .na-vigns{display:flex;gap:8px;justify-content:center;margin-top:10px;'
+      + 'flex-wrap:wrap;min-height:0}'
+    + '#nattyAjout .na-vign{position:relative;width:46px;height:46px;border-radius:14px;'
+      + 'overflow:hidden;border:1px solid #2b2b30;background:#111;padding:0;cursor:pointer}'
+    + '#nattyAjout .na-vign img{width:100%;height:100%;object-fit:cover;display:block}'
+    + '#nattyAjout .na-vign .x{position:absolute;top:0;right:0;background:rgba(0,0,0,.6);'
+      + 'color:#fff;font-size:10px;line-height:1;padding:3px 4px;border-bottom-left-radius:8px}'
 
     /* — anneaux de macros restantes — */
     + '#nattyAjout .na-rings{display:flex;justify-content:space-between;gap:8px;margin:26px 0 0}'
@@ -94,12 +109,14 @@
     + '#nattyAjout .na-kcal-line{text-align:center;font-size:12.5px;color:#6e6e78}'
 
     /* — détail du repas en cours — */
-    + '#nattyAjout .na-detail{margin:20px 0 0}'
+    + '#nattyAjout .na-detail{margin:20px 0 0;display:flex;flex-direction:column;min-height:0}'
     + '#nattyAjout .na-detail-h{width:100%;background:none;border:none;color:#8a8a92;font-family:inherit;'
       + 'font-size:12.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;cursor:pointer;'
       + 'display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0}'
     + '#nattyAjout .na-detail-body{display:none;margin-top:6px}'
-    + '#nattyAjout .na-detail-body.on{display:block}'
+    + '#nattyAjout .na-detail-body.on{display:block;overflow-y:auto;-webkit-overflow-scrolling:touch;'
+      + 'overscroll-behavior:contain;flex:1;min-height:0;padding-right:2px}'
+    + '#nattyAjout .na-detail.ouvert{flex:1}'
     + '#nattyAjout .na-grp{font-size:11px;font-weight:800;color:#6e6e78;text-transform:uppercase;'
       + 'letter-spacing:.4px;margin:12px 0 6px}'
     + '#nattyAjout .na-item{display:flex;align-items:center;gap:10px;background:#141418;border-radius:16px;'
@@ -122,6 +139,17 @@
     + '#nattyAjout .na-btn:active{transform:scale(.975)}'
     + '#nattyAjout .na-btn.primary{background:#f2f2f7;color:#0a0a0c}'
     + '#nattyAjout .na-btn.ghost{background:none;color:#8a8a92;font-size:15px;font-weight:700;padding:12px}'
+    /* « Terminer et enregistrer » était un simple texte gris : personne ne
+       voyait que c'était LUI qui enregistrait le repas. Bouton noir en
+       relief — le fond de cet écran étant noir, le neumorphisme se fait
+       avec une ombre portée sombre ET un liseré clair, sinon il n'y a
+       rien à voir. Plus petit que « Enrichir », comme demandé. */
+    + '#nattyAjout .na-btn.sombre{background:#16161b;color:#f2f2f7;font-size:16px;font-weight:800;'
+      + 'padding:15px 22px;width:auto;min-width:64%;margin:0 auto;'
+      + 'box-shadow:7px 8px 18px rgba(0,0,0,.75),-4px -5px 14px rgba(255,255,255,.07),'
+      + 'inset 0 1px 0 rgba(255,255,255,.06)}'
+    + '#nattyAjout .na-btn.sombre:active{box-shadow:inset 5px 6px 14px rgba(0,0,0,.8),'
+      + 'inset -3px -3px 10px rgba(255,255,255,.05)}'
     + '#nattyAjout .na-btn[disabled]{opacity:.5;pointer-events:none}'
     + '#nattyAjout .na-opts{display:flex;flex-direction:column;gap:18px;margin:44px 0 0}'
     + '#nattyAjout .na-opt{width:100%;background:#ececf3;color:#0a0a0c;border:none;border-radius:26px;'
@@ -340,6 +368,7 @@
       + '    <div class="na-hero" id="naHero"><span class="na-hero-em">🍽️</span></div>'
       + '    <input class="na-plat-nom" id="naPlatNom" type="text" aria-label="Nom du plat">'
       + '    <div class="na-plat-plus" id="naPlatPlus"></div>'
+      + '    <div class="na-vigns" id="naVign"></div>'
       + '    <div class="na-rings">'
       +        ringHTML('p', 'Protéines') + ringHTML('l', 'Lipides') + ringHTML('g', 'Glucides')
       + '    </div>'
@@ -354,7 +383,7 @@
       + '        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
       + '          <path d="M12 2c.9 5.5 4.5 9.1 10 10-5.5.9-9.1 4.5-10 10-.9-5.5-4.5-9.1-10-10 5.5-.9 9.1-4.5 10-10z"/></svg>'
       + '      </button>'
-      + '      <button class="na-btn ghost" id="naTerminer">Terminer et enregistrer</button>'
+      + '      <button class="na-btn sombre" id="naTerminer">Terminer et enregistrer</button>'
       + '    </div>'
       + '  </div>'
 
@@ -583,15 +612,21 @@
       var data = JSON.parse((d.text || '{}').replace(/```[a-z]*|```/g, '').trim());
       if (!data.ingredients || !data.ingredients.length) throw new Error('Aucun aliment reconnu');
 
-      S.plats = [{
+      /* ⚠️ Ceci ÉCRASAIT S.plats. Une seconde photo effaçait donc la
+         première — « pas une seule photo par repas », dit la demande de
+         Pablo, et c'était pourtant exactement ce que faisait le code. On
+         ajoute désormais un plat par photo, chacun avec la sienne. */
+      S.plats.push({
         nom: data.nom || 'Plat',
         photo: S.photoDataUrl,
+        file: file,
         ingredients: data.ingredients.map(function (i) {
           return { emoji: i.emoji || '🍽️', nom: i.nom, quantite_g: parseFloat(i.quantite_g) || 0 };
         })
-      }];
-      S.cur = 0;
+      });
+      S.cur = S.plats.length - 1;
       rendreRepas();
+      if (S.plats.length > 1) toast((data.nom || 'Plat') + ' ajouté');
     } catch (e) {
       etatAttente('Plat non reconnu', 'La photo n\'a pas pu être analysée. Reprenez-la, ou saisissez le plat à la main.', true);
     }
@@ -600,8 +635,8 @@
   /* Saisie manuelle — filet de sécurité quand l'IA n'est pas joignable
      (hors-ligne, backend indisponible) : le parcours reste utilisable. */
   function saisieManuelle() {
-    S.plats = [{ nom: 'Mon plat', photo: S.photoDataUrl, ingredients: [] }];
-    S.cur = 0;
+    S.plats.push({ nom: 'Mon plat', photo: S.photoDataUrl, file: S.file, ingredients: [] });
+    S.cur = S.plats.length - 1;
     rendreRepas();
     q('#naDetailB').classList.add('on');
     q('#naDetailC').textContent = '▴';
@@ -610,15 +645,41 @@
 
   /* ═══════════════════ Écran « repas » ═══════════════════ */
   function rendreRepas() {
-    var base = S.plats[0];
-    var hero = q('#naHero');
-    hero.innerHTML = base.photo
-      ? '<img src="' + esc(base.photo) + '" alt="">'
-      : '<span class="na-hero-em">🍽️</span>';
+    /* La photo laisse la place à l'appareil : « une fois que le plat est pris en
+       photo, les ingrédients sont ajoutés, la photo disparaît et on peut en
+       reprendre une pour ajouter des aliments tout de suite après ». Les prises
+       de vue restent visibles en vignettes juste en dessous — sinon rien ne
+       dirait ce qui a déjà été compté. */
     majNoms();
+    rendreVignettes();
+    if (!flux) camDemarrer();   // remet le flux dans le cadre, sans le relancer pour rien
     rendreDetail();
     majAnneaux();
     montrer('naScRepas');
+  }
+
+  /* Les photos de la session, en petit, sous le nom du plat. Un appui retire la
+     prise de vue ET le plat qu'elle a apporté : c'est la seule façon de défaire
+     une photo de trop sans tout recommencer. */
+  function rendreVignettes() {
+    var z = q('#naVign');
+    if (!z) return;
+    z.innerHTML = '';
+    S.plats.forEach(function (pl, i) {
+      if (!pl.photo) return;
+      var b = document.createElement('button');
+      b.className = 'na-vign';
+      b.setAttribute('aria-label', 'Retirer ' + (pl.nom || 'ce plat'));
+      b.innerHTML = '<img src="' + esc(pl.photo) + '" alt=""><span class="x">✕</span>';
+      b.addEventListener('click', function () {
+        S.plats.splice(i, 1);
+        if (!S.plats.length) { S.cur = -1; }
+        else if (S.cur >= S.plats.length) S.cur = S.plats.length - 1;
+        rendreRepas();
+        toast('Retiré');
+      });
+      z.appendChild(b);
+    });
   }
 
   /* Le nom du plat photographié reste modifiable — l'IA se trompe parfois,
@@ -651,7 +712,10 @@
     // « Enrichir » n'a de sens que s'il reste de la marge sur ce repas.
     var marge = r.c > c.c * 0.08 || r.p > c.p * 0.12;
     enr.style.display = marge ? 'flex' : 'none';
-    q('#naTerminer').className = 'na-btn ' + (marge ? 'ghost' : 'primary');
+    // Sans marge restante, terminer devient LE geste attendu : le bouton passe
+    // en clair. Avec de la marge il reste noir en relief, mais visible —
+    // jamais un simple texte, c'est l'enregistrement du repas.
+    q('#naTerminer').className = 'na-btn ' + (marge ? 'sombre' : 'primary');
   }
 
   function rendreDetail() {
@@ -956,26 +1020,32 @@
     var libelle = btn.textContent;
     btn.textContent = 'Enregistrement…';
 
-    try {
-      var photoUrl = null;
-      if (S.file) {
-        try {
-          var fd = new FormData();
-          fd.append('file', S.file);
-          fd.append('upload_preset', Natty.CLD_PRE);
-          var up = await (await fetch('https://api.cloudinary.com/v1_1/' + Natty.CLD_CLD + '/image/upload',
-            { method: 'POST', body: fd })).json();
-          photoUrl = up.secure_url || null;
-        } catch (e) { /* la photo n'est pas bloquante : on enregistre le repas quand même */ }
-      }
+    /* Une photo par plat, et chacune sur SON plat. Avant, une seule photo était
+       envoyée (`S.file`) et collée au premier repas : depuis qu'on peut
+       photographier plusieurs aliments à la suite, les suivants arrivaient sans
+       image. L'échec d'un envoi ne bloque rien — le repas compte plus que sa
+       photo. */
+    async function televerser(file) {
+      if (!file) return null;
+      try {
+        var fd = new FormData();
+        fd.append('file', file);
+        fd.append('upload_preset', Natty.CLD_PRE);
+        var up = await (await fetch('https://api.cloudinary.com/v1_1/' + Natty.CLD_CLD + '/image/upload',
+          { method: 'POST', body: fd })).json();
+        return up.secure_url || null;
+      } catch (e) { return null; }
+    }
 
+    try {
       for (var i = 0; i < S.plats.length; i++) {
         var pl = S.plats[i];
         var ings = pl.ingredients.filter(function (g) { return (g.nom || '').trim(); });
         if (!ings.length) continue;
+        var photoUrl = await televerser(pl.file);
         var saved = await Natty.sbPost('meals', {
           user_id: Natty.USER_ID, name: pl.nom || 'Repas',
-          photo_url: i === 0 ? photoUrl : null, meal_date: today()
+          photo_url: photoUrl, meal_date: today()
         });
         var meal = saved && saved[0];
         if (!meal) continue;
