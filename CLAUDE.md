@@ -767,13 +767,39 @@ social continuent de sous-compter. Cette route le relit, l'apparie à la table �
 **Côté serveur, et c'était obligé** : depuis l'activation de la RLS, la clé anon ne voit plus une
 seule ligne de `meal_ingredients`. Sans `SUPABASE_SERVICE_KEY` la route répondrait « 0 ligne à
 corriger » **en ayant l'air d'avoir réussi** — elle refuse donc de tourner si la clé manque.
-Garde `autorise()` d'`_apns.js` (les trois formes du secret, voir l'encadré des crons).
+
+**DEUX FAÇONS D'AUTORISER L'APPEL**, et la seconde existe parce que **Pablo n'a pas accès à
+`CRON_SECRET`** (dit le 2026-08-05) :
+1. le secret, via `autorise()` d'`_apns.js` — les trois formes, voir l'encadré des crons ;
+2. un **JWT d'équipe de rôle `admin`** dans l'en-tête `x-staff-jwt`, celui que `admin.html`
+   détient déjà après connexion Supabase Auth. C'est la voie du bouton, et la seule praticable
+   sans le secret.
+
+> ⚠️ **Le rôle est relu dans `staff` AVEC LA CLÉ SERVICE**, pas avec le jeton de l'appelant.
+> GoTrue (`/auth/v1/user`) dit *qui* présente le jeton et qu'il n'est pas périmé — il ne dit
+> rien du rôle. Lire `staff` avec le jeton de l'appelant laisserait la policy décider de ce
+> qu'il voit de sa propre ligne, donc l'appelant décider de son rôle. Réservé à `admin` :
+> le recalcul touche les repas de **tous** les membres, ni le chef ni la logistique n'y touchent.
 
 ```
 GET /api/recalc-macros?secret=<CRON_SECRET>&dry=1      relevé, AUCUNE écriture
 GET /api/recalc-macros?secret=<CRON_SECRET>            écrit
 GET /api/recalc-macros?secret=<CRON_SECRET>&user_id=…  un seul membre, pour un essai
+en-tête x-staff-jwt: <access_token d'un admin>         même chose, sans le secret
 ```
+
+**Le bouton — `admin.html`, onglet Équipe → « Maintenance › Macros de l'historique ».** Deux
+boutons et un rapport lisible (bilan, aliments non reconnus, exemples de ce qui serait écrit).
+- **« Écrire » reste verrouillé jusqu'à ce qu'un relevé ait été lu.** La règle « dry-run
+  d'abord » ne sert à rien dans un commentaire : le relevé est le seul endroit où l'on voit les
+  aliments que la table ne sait pas chiffrer, donc la seule occasion de compléter la table
+  **avant** d'écrire des lignes qu'on croirait ensuite traitées. Après écriture il se
+  reverrouille — il n'y a plus rien à écrire.
+- ⚠️ `appelRecalc()` **lève** au lieu de renvoyer `null` quand la session manque. Un `return
+  null` faisait appeler `peindreRecalc(null)`, qui explosait sur `d.bilan` : l'écran affichait
+  « Cannot read properties of null » là où le problème était une session expirée. Défaut
+  attrapé en navigateur, pas par `node --check`.
+- L'onglet Équipe est le seul réservé au rôle admin : c'est pourquoi la carte est là.
 
 **Trois garde-fous, et ce sont eux qui la rendent rejouable** :
 1. une ligne qui porte **déjà** une valeur n'est jamais touchée — les mesures venues de
@@ -1691,11 +1717,16 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ **Les macros sont stockées par ingrédient** depuis août 2026 (`meal_ingredients.calories`,
   `proteins_g`, `carbs_g`, `fats_g`), et `Natty.calcMac` les préfère à la table. Cette entrée
   disait le contraire : c'était vrai avant `65c8a4e`.
-- 🔴 🔄 **`/api/recalc-macros` à déclencher UNE fois** pour les ~227 lignes antérieures, qui
-  sont encore à 0 et font sous-compter tout l'historique (totaux, graphiques, scores du fil).
-  `?dry=1` d'abord, lire `non_reconnus`, compléter la table de `core.js` si besoin, puis relancer
-  sans `dry`. Détail et garde-fous en §3. **Je ne peux pas le faire moi-même** : il faut
-  `SUPABASE_SERVICE_KEY`, qui n'existe que sur Vercel — la clé anon ne voit plus rien sous RLS.
+- 🔴 🔄 **Le recalcul est à déclencher UNE fois** pour les ~227 lignes antérieures, encore à 0,
+  qui font sous-compter tout l'historique (totaux, graphiques, scores du fil). **Par le bouton**
+  de `admin.html` → onglet Équipe → « Maintenance › Macros de l'historique » : « Relevé »,
+  puis « Écrire ». Détail et garde-fous en §3.
+  **Je ne peux pas le faire moi-même** : il faut `SUPABASE_SERVICE_KEY`, qui n'existe que sur
+  Vercel — la clé anon ne voit plus rien sous RLS. Et **Pablo n'a pas accès à `CRON_SECRET`**
+  (2026-08-05), d'où le bouton plutôt qu'un `curl`.
+  🔄 Après le relevé : me transmettre `non_reconnus` pour compléter la table de `core.js`,
+  régénérer `api/_nutrition.js`, puis relancer — c'est le seul moyen de connaître la couverture
+  réelle, les noms en base n'étant plus lisibles autrement.
 
 **Garde-manger & génération de recettes**
 - ✅ Panneau « Mon garde-manger » dans `repas.html` : scan des courses, du ticket de caisse ou

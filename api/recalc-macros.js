@@ -24,7 +24,18 @@
 //      il n'y a rien à calculer.
 // Donc : relancer la route ne double rien et ne dégrade rien.
 //
-// USAGE (le secret est celui d'`api/conseils-hebdo` et des routes push) :
+// DEUX FAÇONS D'AUTORISER L'APPEL, et la seconde existe parce que Pablo n'a pas
+// accès à `CRON_SECRET` :
+//   • le secret, comme les routes push (`?secret=`, `x-cron-secret`, Bearer) —
+//     pour un appel en ligne de commande ou un cron ;
+//   • un JWT d'ÉQUIPE de rôle `admin` (`x-staff-jwt`), celui que `admin.html`
+//     détient déjà après connexion Supabase Auth. C'est cette voie que l'outil
+//     « Macros de l'historique » de l'onglet Équipe emprunte. Le jeton est
+//     vérifié auprès de GoTrue, puis le rôle est relu dans `staff` AVEC LA CLÉ
+//     SERVICE : lire `staff` avec le jeton de l'appelant lui laisserait décider
+//     de ce que la policy lui montre.
+//
+// USAGE :
 //   GET /api/recalc-macros?secret=…&dry=1      → relevé, AUCUNE écriture
 //   GET /api/recalc-macros?secret=…            → écrit
 //   GET /api/recalc-macros?secret=…&user_id=…  → un seul membre, pour un essai
@@ -94,14 +105,55 @@ async function ecrireToutes(travaux) {
   return echecs;
 }
 
+/**
+ * Le jeton d'équipe est-il celui d'un admin en activité ?
+ *
+ * ⚠️ DEUX LECTURES, ET PAS UNE. GoTrue dit QUI présente le jeton (et qu'il n'est
+ * pas périmé) ; il ne dit rien du rôle. Le rôle est relu dans `staff` avec la
+ * clé SERVICE — avec le jeton de l'appelant, c'est la policy qui déciderait de
+ * ce qu'il voit de sa propre ligne, donc l'appelant qui déciderait de son rôle.
+ */
+async function staffAdmin(jwt) {
+  if (!jwt) return null;
+  try {
+    const u = await fetch(`${SB_URL}/auth/v1/user`, {
+      headers: { apikey: process.env.SUPABASE_SERVICE_KEY, Authorization: 'Bearer ' + jwt }
+    });
+    if (!u.ok) return null;
+    const moi = await u.json();
+    if (!moi || !moi.id) return null;
+
+    const s = await fetch(`${SB_URL}/rest/v1/staff?user_id=eq.${encodeURIComponent(moi.id)}`
+      + '&select=role,actif,nom&limit=1', { headers: sbHeaders() });
+    if (!s.ok) return null;
+    const ligne = (await s.json())[0];
+    // Le recalcul touche les repas de TOUS les membres : réservé au rôle admin,
+    // pas ouvert au chef ni à la logistique.
+    if (!ligne || ligne.actif === false || ligne.role !== 'admin') return null;
+    return { id: moi.id, nom: ligne.nom || 'admin' };
+  } catch (e) { return null; }
+}
+
 export default async function handler(req, res) {
-  if (!autorise(req)) {
-    return res.status(401).json({ error: 'CRON_SECRET requis (?secret=, x-cron-secret ou Bearer)' });
-  }
+  // La clé service est vérifiée AVANT l'autorisation par jeton d'équipe : cette
+  // vérification en a besoin, et sans elle la route ne peut de toute façon rien
+  // faire d'utile.
   if (!process.env.SUPABASE_SERVICE_KEY) {
     // La clé anon ne suffit pas : sous RLS elle ne voit aucune ligne, donc la
     // route répondrait « 0 ligne à corriger » en ayant l'air d'avoir réussi.
     return res.status(500).json({ error: 'SUPABASE_SERVICE_KEY non configurée' });
+  }
+
+  let par = 'secret';
+  if (!autorise(req)) {
+    const admin = await staffAdmin(req.headers?.['x-staff-jwt']);
+    if (!admin) {
+      return res.status(401).json({
+        error: 'Autorisation requise : CRON_SECRET (?secret=, x-cron-secret, Bearer) '
+             + 'ou un jeton d’équipe de rôle admin dans l’en-tête x-staff-jwt.'
+      });
+    }
+    par = 'équipe · ' + admin.nom;
   }
 
   const dry = req.query?.dry === '1' || req.query?.dry === 'true';
@@ -186,6 +238,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     ok: true,
     dry,
+    autorise_par: par,
     ...(uid ? { user_id: uid } : {}),
     bilan,
     couverture: bilan.lues

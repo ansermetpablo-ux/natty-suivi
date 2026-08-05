@@ -929,6 +929,25 @@ input[type="file"] { display: none; }
           </div>
           <div id="nutriApres" style="display:none"></div>
           <div class="nutri-admin-list" id="nutriAdminList"><div class="loading">Chargement...</div></div>
+
+          <!-- Maintenance. Ici plutôt qu'ailleurs : l'onglet Équipe est le seul
+               réservé au rôle admin, et le recalcul touche les repas de tous les
+               membres. -->
+          <div class="equipe-header" style="margin-top:30px"><div class="equipe-title">Maintenance</div></div>
+          <div style="background:var(--bg);border-radius:20px;padding:20px 18px;box-shadow:var(--so)">
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px">Macros de l'historique</div>
+            <div style="font-size:12px;line-height:1.55;color:var(--muted);margin-bottom:14px">
+              Les premières lignes enregistrées n'ont pas leurs macros en base : chaque écran les
+              redevinait avec une table de 60 aliments, d'où « saucisson = 0 kcal ». Le relevé
+              n'écrit rien et dit ce que la table sait chiffrer. À lancer <b>une fois</b> —
+              relancer ensuite ne double rien, les lignes déjà chiffrées sont ignorées.
+            </div>
+            <div class="form-actions">
+              <button class="btn-cancel-form" id="btnRecalcDry">Relevé (n'écrit rien)</button>
+              <button class="btn-submit" id="btnRecalcGo" disabled>Écrire les macros</button>
+            </div>
+            <div id="recalcOut" style="display:none;margin-top:14px;font-size:12px;line-height:1.6"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1088,6 +1107,9 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('navMenu').addEventListener('click', () => switchNav('menu'));
   document.getElementById('navCommandes').addEventListener('click', () => switchNav('commandes'));
   document.getElementById('navEquipe').addEventListener('click', () => switchNav('equipe'));
+  // data-* + addEventListener, jamais d'onclick inline (règle §9 #8).
+  document.getElementById('btnRecalcDry').addEventListener('click', function(){ lancerRecalc(true); });
+  document.getElementById('btnRecalcGo').addEventListener('click', function(){ lancerRecalc(false); });
   document.getElementById('navRepasAProg').addEventListener('click', () => switchNav('repasAProg'));
   document.getElementById('navChef').addEventListener('click', () => switchNav('chef'));
   document.getElementById('navStocks').addEventListener('click', () => switchNav('stocks'));
@@ -2366,6 +2388,97 @@ async function supprimerPlat(id) {
   if(!confirm('Supprimer ?'))return;
   try{await sb('plats_menu?id=eq.'+id,{method:'DELETE'});toast('Supprimé','ok');await chargerPlats();}
   catch(e){toast('Erreur','err');}
+}
+
+/* ── MAINTENANCE : macros de l'historique ──────────────────────────────────
+   Pourquoi un bouton ici plutôt qu'un appel en ligne de commande : la route
+   `/api/recalc-macros` s'autorise soit par `CRON_SECRET`, soit par un jeton
+   d'équipe de rôle admin — et Pablo n'a pas accès au secret. Cette page a déjà
+   le jeton (`STAFF_SESSION.access_token`), elle est donc la seule voie
+   praticable.
+
+   ⚠️ « Écrire » reste DÉSACTIVÉ jusqu'à ce qu'un relevé ait été lu. La règle
+   « faire le dry-run d'abord » ne sert à rien si elle vit dans un commentaire :
+   le relevé est le seul endroit où l'on voit les aliments que la table ne sait
+   pas chiffrer, et donc la seule occasion de compléter la table AVANT d'écrire
+   des lignes qu'on croirait ensuite traitées. */
+async function appelRecalc(dry) {
+  const jwt = STAFF_SESSION && STAFF_SESSION.access_token;
+  // ⚠️ LEVER, ne pas renvoyer `null`. Un `return null` ici faisait appeler
+  // `peindreRecalc(null)` par l'appelant, qui explosait sur `d.bilan` : l'écran
+  // affichait « Cannot read properties of null » là où le problème était une
+  // session absente. Un chemin d'erreur qui ment sur sa cause coûte plus cher
+  // que l'erreur elle-même.
+  if (!jwt) throw new Error('Session d’équipe expirée — reconnectez-vous.');
+  const r = await fetch('/api/recalc-macros' + (dry ? '?dry=1' : ''), {
+    headers: { 'x-staff-jwt': jwt }
+  });
+  const d = await r.json().catch(function(){ return null; });
+  if (!r.ok || !d || d.error) {
+    throw new Error((d && d.error) || ('HTTP ' + r.status));
+  }
+  return d;
+}
+
+function peindreRecalc(d) {
+  const out = document.getElementById('recalcOut');
+  const b = d.bilan;
+  let h = '<div style="font-weight:600;margin-bottom:8px">'
+    + (d.dry ? 'Relevé — rien n’a été écrit' : 'Terminé — ' + b.ecrites + ' ligne'
+        + (b.ecrites > 1 ? 's' : '') + ' mise' + (b.ecrites > 1 ? 's' : '') + ' à jour')
+    + '</div>';
+  h += '<div style="color:var(--muted)">'
+    + b.lues + ' lignes lues · ' + b.deja_chiffrees + ' déjà chiffrées · '
+    + b.a_ecrire + ' à écrire · ' + b.non_reconnues + ' non reconnues · '
+    + b.sans_quantite + ' sans quantité<br>couverture ' + d.couverture + '</div>';
+
+  if (d.non_reconnus && d.non_reconnus.length) {
+    // Ce que la table ne sait pas chiffrer reste à zéro : le dire, plutôt que
+    // d'écrire des zéros et rendre le manque indiscernable d'une vraie mesure.
+    h += '<div style="margin-top:12px;font-weight:600">Aliments que la table ne connaît pas</div>'
+      + '<div style="color:var(--muted);margin-top:4px">Ils restent à zéro. À me transmettre'
+      + ' pour compléter la table, puis relancer.</div>'
+      + '<div style="margin-top:6px">' + d.non_reconnus.map(function(x){
+          return '• ' + escHtml(x.nom) + ' <span style="color:var(--muted)">('
+            + x.lignes + ' ligne' + (x.lignes > 1 ? 's' : '') + ')</span>';
+        }).join('<br>') + '</div>';
+  }
+  if (d.exemples && d.exemples.length) {
+    h += '<div style="margin-top:12px;font-weight:600">Exemples de ce qui '
+      + (d.dry ? 'serait écrit' : 'a été écrit') + '</div><div style="margin-top:6px">'
+      + d.exemples.map(function(e){
+          return '• ' + escHtml(e.nom) + ' ' + e.grammes + ' g → ' + e.kcal + ' kcal, '
+            + e.p + ' g prot <span style="color:var(--muted)">(reconnu : '
+            + escHtml(e.reconnu_comme || '—') + ')</span>';
+        }).join('<br>') + '</div>';
+  }
+  if (d.echecs && d.echecs.length) {
+    h += '<div style="margin-top:12px;color:#ff6b35;font-weight:600">'
+      + d.echecs.length + ' ligne(s) en échec — relancer les reprendra</div>';
+  }
+  out.innerHTML = h;
+  out.style.display = 'block';
+}
+
+async function lancerRecalc(dry) {
+  const bDry = document.getElementById('btnRecalcDry');
+  const bGo = document.getElementById('btnRecalcGo');
+  const out = document.getElementById('recalcOut');
+  bDry.disabled = true; bGo.disabled = true;
+  out.style.display = 'block';
+  out.innerHTML = '<span style="color:var(--muted)">'
+    + (dry ? 'Lecture de l’historique…' : 'Écriture en cours…') + '</span>';
+  try {
+    const d = await appelRecalc(dry);
+    peindreRecalc(d);
+    // Après une écriture, plus rien à écrire : on ne repropose que le relevé.
+    bGo.disabled = !dry || !d.bilan.a_ecrire;
+    if (!dry) toast(d.bilan.ecrites + ' lignes mises à jour', 'ok');
+  } catch (e) {
+    out.innerHTML = '<span style="color:#ff6b35">Échec : ' + escHtml(String(e.message || e)) + '</span>';
+    toast('Échec du recalcul', 'err');
+  }
+  bDry.disabled = false;
 }
 
 // ── ÉQUIPE ──
