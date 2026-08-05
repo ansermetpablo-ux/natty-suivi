@@ -493,6 +493,43 @@ avec un vrai clic souris, sinon on conclut à tort à un bug.
 > `courses_et_recettes` d'`api/send-email.js` n'est **appelé par aucun écran** — code mort à
 > retirer un jour ; les autres types (récap admin, notification de message) servent toujours.
 
+**Les aliments ajoutés à la main** (août 2026) : `extras(userId)`, `contientExtra`,
+`basculerExtra` — les « aliments à privilégier » d'une macro qu'on touche pour les mettre dans
+ses courses. Ils vivent **à côté** de la liste calculée, en `localStorage` et par semaine :
+`liste_courses_json` est DÉRIVÉE des recettes côté serveur, donc y réinjecter des ajouts
+manuels les ferait écraser à la génération suivante, et personne ne comprendrait pourquoi sa
+liste a maigri.
+- ⚠️ **La clé est partagée avec `suivi.html`**, au caractère près
+  (`natty_courses_extra_<uid>_<lundi>`, éléments `{nom, emoji}`). C'est tout l'intérêt : on
+  touche un aliment dans le détail d'une macro, on le retrouve dans sa liste de courses. Deux
+  clés auraient donné deux listes, et le geste n'aurait mené nulle part.
+- ⚠️ **Et les deux écrans ne calculent pas le même lundi.** `getLundiSemaine()` de `suivi.html`
+  finit par `toISOString()`, donc en **UTC** : un lundi entre 00 h et 02 h à Paris, il rend le
+  **dimanche** — même piège que `semaine` côté serveur. Non corrigeable là-bas (session
+  parallèle), alors `liste.js` lit l'**union** des deux clés possibles et réécrit dans la locale
+  en effaçant l'autre : la divergence se répare au premier geste, au lieu de faire disparaître
+  un aliment ajouté la nuit du dimanche au lundi.
+
+### `coaching.html` — les aliments à privilégier, et où ils mènent
+Rangée qui défile au-dessus de la liste de courses, alimentée par
+`NattyReco.alimentsSemaine()` → `conseils_json.plats_macro[].aliments` : **la même génération**
+que les conseils, donc aucun appel IA de plus. Un tap l'ajoute à la liste juste en dessous
+(`NattyListe.basculerExtra`), et `peindreCourses()` remonte la liste **sans requête** — recharger
+la base pour un geste local ferait clignoter la liste et perdrait les cases cochées.
+- Une rangée horizontale, pas une grille : ils sont 12 à 18, et empilés ils repousseraient la
+  liste de courses — le seul contenu qu'on vient vraiment chercher ici — hors de vue. Vérifié à
+  375 px : rangée de 66 px, 1383 px de contenu qui défile **en interne**, la page elle-même ne
+  défile pas horizontalement.
+- **Une seule liste, pas deux** : on fait ses courses une fois. Un ajout déjà présent dans une
+  recette n'est pas répété, et un aliment servant deux macros n'apparaît qu'une fois.
+- ⚠️ **Plus de sortie anticipée quand la semaine n'a pas de recettes.** `loadCourses()` affichait
+  l'invitation à générer et rendait la main : les ajouts manuels n'étaient alors visibles nulle
+  part et le « + » ne menait à rien. `peindreCourses()` tranche sur la liste **réelle** —
+  recettes plus ajouts — et ne montre l'invitation que si les deux sont vides. Même correctif que
+  dans l'overlay de `suivi.html`.
+- Section entière masquée (titre compris) s'il n'y a aucun aliment : un en-tête au-dessus du vide
+  laisse croire qu'un contenu n'a pas chargé.
+
 ### `assets/planning.js` — la planification de la semaine
 Séquence plein écran **noire**, une fois par semaine, à la première ouverture de l'app :
 « Bonjour Prénom » → « Planifions ensemble votre semaine » → deux questions → placement →
@@ -693,17 +730,67 @@ préfixés `_`) :
 > déclenche aussi à l'ouverture de `suivi.html`.
 
 **`api/_nutrition.js` — copie assumée de la table `NT` d'`assets/core.js`.** Le serveur ne peut
-pas importer core.js (IIFE navigateur), et les macros ne sont stockées **nulle part** :
-`meal_ingredients` n'a que `name` et `quantity_g`. `daily_macros` ne peut pas servir non plus —
+pas importer core.js (IIFE navigateur). `daily_macros` ne peut pas servir non plus —
 `suivi.html` (`resetIfNewDay`) n'y écrit **que la veille**, au premier lancement du lendemain ;
 les totaux du jour ne vivent que dans le localStorage de l'appareil. L'arrondi est fait **par
 ingrédient**, comme core.js : sommer puis arrondir une fois serait plus juste mais donnerait un
-gramme d'écart avec l'écran. Vérifié sur 10 repas réels : **0 écart** avec `Natty.calcMac`.
-Commande de régénération dans l'en-tête du fichier.
+gramme d'écart avec l'écran. Commande de régénération dans l'en-tête du fichier.
+
+> ⚠️ **CETTE COPIE AVAIT DIVERGÉ, ET C'ÉTAIT UN BUG EN PRODUCTION** (corrigé août 2026). Elle
+> portait encore la table de ~60 aliments **et** l'ancien appariement par sous-chaîne
+> premier-déclaré-gagnant, alors que `core.js` était passé à 185 aliments et au rapprochement
+> mot à mot plus-long-libellé-gagnant. Conséquence : « pomme de terre » tombait sur « pomme »
+> (52 kcal au lieu de 77, zéro féculent), « huile olive » sur « huile », « ail » se trouvait
+> dans « volaille », et le saucisson n'existait pas. **Le rappel du soir annonçait donc d'autres
+> grammes que l'écran** — et c'est l'app qui avait l'air d'avoir tort. Réaligné et vérifié en
+> A/B sur 17 cas (dont les quatre pièges ci-dessus) : **0 écart** avec `Natty.getNutri`.
+> La leçon est dans l'en-tête du fichier : une copie mécanique ne se signale jamais elle-même
+> quand la source bouge.
+
+> ⚠️ **`calcMac` PRÉFÈRE LES MACROS ÉCRITES**, comme côté app, et il faut donc les **demander**.
+> `rappel-macros` ne sélectionnait que `name,quantity_g` : une colonne non demandée arrive
+> `undefined`, donc « rien d'écrit », donc il retombait en silence sur le filet pour des lignes
+> qui portaient la vraie mesure de l'analyse photo. Tout appelant doit sélectionner
+> `calories,proteins_g,carbs_g,fats_g`.
 
 > ⚠️ **`onboarding` contient des doublons** (constaté : deux lignes pour le même `user_id`, dont
 > une sans `poids` ni `tdee`). Un `limit=1` en attrape une au hasard : `rappel-macros` prend
 > donc la première ligne réellement exploitable. À garder en tête partout ailleurs.
+
+### `api/recalc-macros.js` — remplir les macros de l'historique, une fois
+Les ~227 premières lignes de `meal_ingredients` ont leurs quatre colonnes de macros à **0** :
+chaque écran redevinait avec la table de 60 aliments de `core.js`, d'où « saucisson = 0 kcal ».
+La table est élargie et `assets/ajout.js` écrit ces colonnes depuis août 2026, mais
+**l'historique ne se corrige pas tout seul** — ses totaux, ses graphiques et les scores du fil
+social continuent de sous-compter. Cette route le relit, l'apparie à la table élargie et écrit.
+
+**Côté serveur, et c'était obligé** : depuis l'activation de la RLS, la clé anon ne voit plus une
+seule ligne de `meal_ingredients`. Sans `SUPABASE_SERVICE_KEY` la route répondrait « 0 ligne à
+corriger » **en ayant l'air d'avoir réussi** — elle refuse donc de tourner si la clé manque.
+Garde `autorise()` d'`_apns.js` (les trois formes du secret, voir l'encadré des crons).
+
+```
+GET /api/recalc-macros?secret=<CRON_SECRET>&dry=1      relevé, AUCUNE écriture
+GET /api/recalc-macros?secret=<CRON_SECRET>            écrit
+GET /api/recalc-macros?secret=<CRON_SECRET>&user_id=…  un seul membre, pour un essai
+```
+
+**Trois garde-fous, et ce sont eux qui la rendent rejouable** :
+1. une ligne qui porte **déjà** une valeur n'est jamais touchée — les mesures venues de
+   l'analyse photo valent mieux que la table ;
+2. une ligne que la table ne sait pas chiffrer est laissée telle quelle et **remontée** dans
+   `non_reconnus`. Écrire des zéros « pour finir le travail » rendrait un manque indiscernable
+   d'une mesure à zéro ;
+3. une ligne sans grammes est comptée à part : sans quantité, il n'y a rien à calculer.
+
+⚠️ **Faire le `dry=1` d'abord et lire `non_reconnus`.** C'est le seul moyen de connaître la
+couverture réelle : la clé anon ne pouvant plus lire la table, les noms réellement présents en
+base ne sont **pas connaissables autrement**. Ce qui manque se rajoute dans `assets/core.js`, on
+régénère `api/_nutrition.js`, on relance.
+
+Vérifié contre une fausse base, un cas par garde-fou : le chorizo déjà mesuré reste intact, la
+« tarte flambée » inconnue reste à zéro et ressort dans `non_reconnus`, la ligne sans grammes est
+ignorée, et un **second passage envoie 0 PATCH**.
 
 ### `social.html` + `assets/social.js` — le fil social
 Onglet « Social » de la nav, **à la place de Coaching** (qui n'est pas supprimé : `coaching.html`
@@ -1601,9 +1688,14 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   repas / dessert) et carrousel de suggestions. Branché sur les 5 écrans porteurs de la nav.
 - 🔄 À valider sur téléphone réel : ouverture de la caméra depuis la WebView Capacitor
   (le `capture="environment"` n'a pu être testé qu'en navigateur desktop).
-- 🔄 Le suivi ne stocke toujours pas les macros par ingrédient : un aliment absent de la table
-  de `core.js` compte pour 0. C'est la limite héritée du modèle `meal_ingredients`, pas de ce
-  parcours — les suggestions non reconnues sont écartées pour ne pas l'aggraver.
+- ✅ **Les macros sont stockées par ingrédient** depuis août 2026 (`meal_ingredients.calories`,
+  `proteins_g`, `carbs_g`, `fats_g`), et `Natty.calcMac` les préfère à la table. Cette entrée
+  disait le contraire : c'était vrai avant `65c8a4e`.
+- 🔴 🔄 **`/api/recalc-macros` à déclencher UNE fois** pour les ~227 lignes antérieures, qui
+  sont encore à 0 et font sous-compter tout l'historique (totaux, graphiques, scores du fil).
+  `?dry=1` d'abord, lire `non_reconnus`, compléter la table de `core.js` si besoin, puis relancer
+  sans `dry`. Détail et garde-fous en §3. **Je ne peux pas le faire moi-même** : il faut
+  `SUPABASE_SERVICE_KEY`, qui n'existe que sur Vercel — la clé anon ne voit plus rien sous RLS.
 
 **Garde-manger & génération de recettes**
 - ✅ Panneau « Mon garde-manger » dans `repas.html` : scan des courses, du ticket de caisse ou
@@ -2053,6 +2145,37 @@ les pages légales et la suppression de compte, ce paragraphe le dit.
 
 > Règle qui en découle : **jamais de `git add -A` sur ce dépôt.** Plusieurs sessions y
 > écrivent en même temps ; n'ajouter que les chemins qu'on a soi-même modifiés.
+
+### ⚠️ `3d0a0ae` : la même chose, dans l'autre sens (2026-08-05)
+Le commit **`3d0a0ae` « La semaine des macros se lit d'un coup d'œil »** appartient à la
+session « calendrier des macros » (`assets/macros-cal.js`, et ses retouches à `suivi.html`).
+Il a emporté, par le même `git add -A`, **tout le travail d'une session parallèle** —
+celle-ci :
+
+| Fichier | Ce qu'il contient, et qui ne vient pas du calendrier |
+|---|---|
+| `api/recalc-macros.js` | recalcul unique des macros de l'historique (§3) |
+| `api/_nutrition.js` | table serveur réalignée : 185 aliments, appariement mot à mot |
+| `api/rappel-macros.js` | demande enfin les quatre colonnes de macros |
+| `assets/liste.js` (+ `www/`) | API des aliments ajoutés à la main (`basculerExtra`…) |
+| `assets/reco.js` (+ `www/`) | `jsonSemaine()`, `alimentsSemaine()` |
+| `coaching.html` (+ `www/`) | rangée « Aliments à privilégier » et sa liaison aux courses |
+
+**Ce n'est pas un accident évitable par plus de prudence de mon côté** : mes chemins étaient
+staggés nommément, et le `git commit --only` que j'allais lancer aurait épargné son index. La
+séquence a été plus rapide que ça — son `add -A` a ramassé mon arbre de travail entre mon
+`git add` et mon `commit`, et le commit était **poussé** avant que je puisse en faire un.
+
+**Décision : on ne réécrit pas**, pour les trois raisons déjà données pour `e01e20b` — commit
+poussé sur `main` qui sert la production, session active sur le dépôt, contenu intact. Vérifié
+après coup, dans `HEAD` : 185 aliments côté serveur, `normNom` présent, `basculerExtra`
+exporté, `maxDuration` sans `config.runtime` invalide, arbre de travail identique à `HEAD` —
+donc c'est bien mon **état final vérifié** qui a été capturé, pas une édition à moitié faite.
+Ce tableau est la réparation.
+
+> Leçon qui s'ajoute à la règle : sur ce dépôt, **`git commit --only <chemins>` plutôt que
+> `git add` puis `git commit`**. Le premier ne dépend pas de l'état de l'index au moment du
+> commit — donc d'une autre session — et laisse intact ce qu'elle y avait déjà mis.
 
 ## 11. Application native (Capacitor) — branche `app-native`
 
