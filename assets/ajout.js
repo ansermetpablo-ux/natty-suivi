@@ -151,6 +151,39 @@
     + '#nattyAjout .na-btn.sombre:active{box-shadow:inset 5px 6px 14px rgba(0,0,0,.8),'
       + 'inset -3px -3px 10px rgba(255,255,255,.05)}'
     + '#nattyAjout .na-btn[disabled]{opacity:.5;pointer-events:none}'
+    /* ── Bilan : ce qui suit l'enregistrement ──────────────────────
+       Une cinématique courte (la coche, puis l'analyse), et à la fin le seul
+       choix qui reste : publier ce plat, ou le garder pour soi. */
+    + '#nattyAjout .na-bilan{flex:1;min-height:0;display:flex;flex-direction:column}'
+    + '#nattyAjout .na-bcheck{margin:26px auto 0;width:88px;height:88px;border-radius:50%;'
+      + 'background:#14351f;border:2px solid #2fd36b;display:flex;align-items:center;'
+      + 'justify-content:center;font-size:40px;animation:naPop .5s cubic-bezier(.34,1.56,.64,1)}'
+    + '@keyframes naPop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}'
+    + '#nattyAjout .na-btitre{text-align:center;font-size:22px;font-weight:900;letter-spacing:-.5px;margin-top:18px}'
+    + '#nattyAjout .na-bsub{text-align:center;font-size:13px;color:#8a8a92;margin-top:8px;line-height:1.5}'
+    + '#nattyAjout .na-bcorps{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;'
+      + 'overscroll-behavior:contain;margin-top:20px;opacity:0;transition:opacity .5s ease}'
+    + '#nattyAjout .na-bcorps.on{opacity:1}'
+    + '#nattyAjout .na-bsec{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;'
+      + 'color:#6e6e78;margin:16px 0 8px}'
+    + '#nattyAjout .na-bcard{background:#141418;border-radius:16px;padding:12px 14px;margin-bottom:7px;'
+      + 'font-size:13.5px;line-height:1.5;color:#eaeaef;border-left:3px solid #2b2b30}'
+    + '#nattyAjout .na-bcard.plus{border-left-color:#2fd36b}'
+    + '#nattyAjout .na-bcard.moins{border-left-color:#f0b429}'
+    + '#nattyAjout .na-bnote{display:inline-block;background:#1d1d22;border-radius:99px;padding:6px 14px;'
+      + 'font-size:12px;font-weight:800;color:#eaeaef}'
+    /* La suggestion du prochain repas : une carte, pas une liste — c'est une
+       proposition, on doit pouvoir la lire d'un coup d'œil. */
+    + '#nattyAjout .na-next{background:#f2f2f7;color:#0a0a0c;border-radius:20px;padding:16px 16px 14px}'
+    + '#nattyAjout .na-next .t{font-size:16px;font-weight:900;letter-spacing:-.3px}'
+    + '#nattyAjout .na-next .w{font-size:12.5px;color:#5b5b66;margin-top:6px;line-height:1.5}'
+    + '#nattyAjout .na-next .mm{display:flex;gap:6px;margin-top:12px}'
+    + '#nattyAjout .na-next .mm span{flex:1;background:rgba(10,10,12,.06);border-radius:12px;'
+      + 'padding:7px 0;text-align:center;font-size:11.5px;font-weight:800}'
+    + '#nattyAjout .na-next .ii{display:flex;flex-wrap:wrap;gap:5px;margin-top:11px}'
+    + '#nattyAjout .na-next .ii i{font-style:normal;background:rgba(10,10,12,.06);border-radius:99px;'
+      + 'padding:5px 10px;font-size:11px;font-weight:700}'
+    + '#nattyAjout .na-choix{display:flex;flex-direction:column;gap:9px;padding-top:16px}'
     + '#nattyAjout .na-opts{display:flex;flex-direction:column;gap:18px;margin:44px 0 0}'
     + '#nattyAjout .na-opt{width:100%;background:#ececf3;color:#0a0a0c;border:none;border-radius:26px;'
       + 'font-family:inherit;font-size:26px;font-weight:800;letter-spacing:-.6px;line-height:1.15;'
@@ -387,6 +420,17 @@
       + '    </div>'
       + '  </div>'
 
+      /* ── écran « bilan » : après l'enregistrement ── */
+      + '  <div class="na-screen" id="naScBilan">'
+      + '    <div class="na-bilan">'
+      + '      <div class="na-bcheck" id="naBCheck">✓</div>'
+      + '      <div class="na-btitre" id="naBTitre">Repas enregistré</div>'
+      + '      <div class="na-bsub" id="naBSub">Analyse de votre plat…</div>'
+      + '      <div class="na-bcorps" id="naBCorps"></div>'
+      + '      <div class="na-choix" id="naBChoix"></div>'
+      + '    </div>'
+      + '  </div>'
+
       /* ── écran 3 : les 4 pistes d'enrichissement ── */
       + '  <div class="na-screen" id="naScChoix">'
       + '    <div class="na-opts">'
@@ -470,10 +514,15 @@
     var t = q('#naTitre'), e = ecranCourant();
     if (e === 'naScChoix' || e === 'naScCarou') t.innerHTML = 'Réussir votre objectif 🚀 :';
     else if (e === 'naScAnalyse') t.innerHTML = 'Votre plat 📸';
+    else if (e === 'naScBilan') t.innerHTML = 'C\'est noté ✓';
     else t.innerHTML = 'Votre ' + (ORD[repasDuJour] || '') + ' repas 🥗';
   }
   function retour() {
     var e = ecranCourant();
+    /* Depuis le bilan, il n'y a rien derrière : le plat est enregistré. Le
+       retour vaut donc « garder pour moi » — le choix le plus prudent, et celui
+       qui est déjà écrit en base (partage=false). */
+    if (e === 'naScBilan') { fermer(); return; }
     if (e === 'naScCarou') return montrer('naScChoix');
     if (e === 'naScChoix') return montrer('naScRepas');
     if (S && S.plats.length && S.plats[0].ingredients.length) { q('#naAsk').classList.add('on'); return; }
@@ -507,6 +556,11 @@
      un BOUTON et non sur un inputCam.click() direct : à ce stade on n'est
      plus dans un geste utilisateur, et iOS ignorerait le click(). */
   var flux = null;
+  /* `meals.partage` peut manquer sur l'instance (la colonne est récente) :
+     PostgREST refuse alors la requête entière. On le note au premier refus et
+     on cesse de l'envoyer — le plat reste enregistré, simplement visible comme
+     tous les autres. */
+  var PARTAGE_OK = true;
 
   function camArreter() {
     if (!flux) return;
@@ -1037,6 +1091,9 @@
       } catch (e) { return null; }
     }
 
+    /* Les identifiants créés : le bilan en a besoin pour attacher l'analyse au
+       plat, et pour écrire le choix de publication sur les bonnes lignes. */
+    var ids = [];
     try {
       for (var i = 0; i < S.plats.length; i++) {
         var pl = S.plats[i];
@@ -1045,25 +1102,261 @@
         var photoUrl = await televerser(pl.file);
         var saved = await Natty.sbPost('meals', {
           user_id: Natty.USER_ID, name: pl.nom || 'Repas',
-          photo_url: photoUrl, meal_date: today()
+          photo_url: photoUrl, meal_date: today(),
+          /* ⚠️ PRIVÉ par défaut, et c'est tout le point de l'étape suivante :
+             avant, tout plat enregistré partait dans le fil sans que personne
+             ne l'ait demandé. Si la colonne n'existe pas sur l'instance,
+             PostgREST refuse l'INSERT entier — d'où le repli plus bas. */
+          partage: false
+        }).catch(async function (e) {
+          if (!/partage/.test(String(e && e.message || e))) throw e;
+          PARTAGE_OK = false;
+          return Natty.sbPost('meals', {
+            user_id: Natty.USER_ID, name: pl.nom || 'Repas',
+            photo_url: photoUrl, meal_date: today()
+          });
         });
         var meal = saved && saved[0];
         if (!meal) continue;
+        ids.push(meal.id);
         await Natty.sbPost('meal_ingredients', ings.map(function (g) {
           return { meal_id: meal.id, name: g.nom, quantity_g: g.quantite_g || 0 };
         }));
       }
 
-      fermer();
-      toast('Repas enregistré !');
-      // Les écrans hôtes qui affichent des macros se rafraîchissent sur cet
-      // événement plutôt que de recharger la page (cf. suivi.html).
+      /* Les écrans hôtes rafraîchissent leurs macros sur cet événement, et on
+         l'émet MAINTENANT : le plat est en base, l'anneau de Suivi doit
+         descendre tout de suite, sans attendre que l'utilisateur ait fini de
+         lire son analyse. */
       window.dispatchEvent(new CustomEvent('natty:repas-ajoute'));
+
+      if (!ids.length) { fermer(); toast('Repas enregistré !'); return; }
+      bilan(ids);
     } catch (e) {
       toast('Enregistrement impossible');
+      btn.disabled = false;
+      btn.textContent = libelle;
+      return;
     }
     btn.disabled = false;
     btn.textContent = libelle;
+  }
+
+  /* ═══════════════════ Bilan : analyse, puis publication ═══════════════════
+     Ce que Pablo a demandé, dans cet ordre : « une fois que le client a
+     enregistré son plat → cinématique et analyse critique du plat + conseil
+     sur le prochain plat de la journée en fonction du garde-manger et des
+     conseils », puis « poster ou enregistrer ».
+
+     Deux principes tenus ici :
+     • Le plat est DÉJÀ enregistré quand cet écran s'ouvre. Rien de ce qui suit
+       ne peut le perdre : une analyse qui échoue, une connexion coupée, l'app
+       fermée en route — le repas reste, et il reste privé jusqu'à ce qu'on
+       choisisse de le publier.
+     • L'analyse est écrite dans `meals.analyse_json` et dans le localStorage,
+       avec la MÊME clé que `suivi.html` : rouvrir le plat depuis l'historique
+       affichera ce texte-ci, sans le régénérer ni en produire un autre. */
+  async function bilan(ids) {
+    montrer('naScBilan');
+    var corps = q('#naBCorps'), choix = q('#naBChoix');
+    corps.classList.remove('on');
+    corps.innerHTML = '';
+    choix.innerHTML = '';
+    q('#naBTitre').textContent = 'Repas enregistré';
+    q('#naBSub').textContent = 'Analyse de votre plat…';
+
+    // Le choix de publication s'affiche vite : il ne dépend pas de l'analyse,
+    // et attendre l'IA pour proposer « garder pour moi » serait absurde.
+    setTimeout(function () { montrerChoix(ids); }, 900);
+
+    var data = null;
+    try { data = await analyseCritique(); } catch (e) { data = null; }
+
+    if (!data) {
+      q('#naBSub').textContent = 'Analyse indisponible — votre repas est bien enregistré.';
+      return;
+    }
+    q('#naBSub').textContent = data.note ? ('Verdict : ' + data.note) : '';
+    corps.innerHTML = peindreBilan(data);
+    requestAnimationFrame(function () { corps.classList.add('on'); });
+    setTimeout(function () { corps.classList.add('on'); }, 60);
+
+    // Cache : même clé que suivi.html, pour que la réouverture du plat montre
+    // ce texte-là et n'appelle plus rien.
+    try { localStorage.setItem('natty_analyse_plat_' + ids[0], JSON.stringify(data)); } catch (e) {}
+    try {
+      await fetch(Natty.SB_URL + '/rest/v1/meals?id=eq.' + ids[0], {
+        method: 'PATCH',
+        headers: await Natty.entetes({ Prefer: 'return=minimal' }),
+        body: JSON.stringify({ analyse_json: data })
+      });
+    } catch (e) { /* colonne absente : le cache local suffit */ }
+  }
+
+  /* Poster, ou garder pour soi. ⚠️ Rien n'est publié par défaut : c'était le
+     cas avant (tout plat enregistré apparaissait dans le fil), et c'est
+     précisément ce que cette étape corrige. `partage=false` d'abord, puis
+     `true` seulement si on le demande. */
+  function montrerChoix(ids) {
+    var choix = q('#naBChoix');
+    if (!choix || choix.innerHTML) return;
+    choix.innerHTML =
+        '<button class="na-btn primary" id="naPoster" style="font-size:17px;padding:16px">Poster dans le fil 🌍</button>'
+      + '<button class="na-btn sombre" id="naGarder">Garder pour moi 🔒</button>';
+    q('#naPoster').addEventListener('click', function () { publier(ids, true); });
+    q('#naGarder').addEventListener('click', function () { publier(ids, false); });
+  }
+
+  async function publier(ids, dansLeFil) {
+    var b1 = q('#naPoster'), b2 = q('#naGarder');
+    if (b1) b1.disabled = true;
+    if (b2) b2.disabled = true;
+    try {
+      if (!PARTAGE_OK) throw new Error('colonne partage absente');
+      await fetch(Natty.SB_URL + '/rest/v1/meals?id=in.(' + ids.join(',') + ')', {
+        method: 'PATCH',
+        headers: await Natty.entetes({ Prefer: 'return=minimal' }),
+        body: JSON.stringify({ partage: !!dansLeFil })
+      });
+    } catch (e) {
+      /* Colonne `partage` absente de l'instance : le plat reste visible comme
+         tous les autres. On ne le dit pas ici — l'utilisateur n'y peut rien, et
+         son repas est enregistré. */
+    }
+    fermer();
+    toast(dansLeFil ? 'Publié dans le fil 🌍' : 'Gardé pour vous 🔒');
+  }
+
+  /* L'analyse et la suggestion, en un seul appel : les deux découlent du même
+     état (ce plat, ce qu'il reste de la journée, les conseils de la semaine, le
+     garde-manger), et deux appels séparés pourraient se contredire. */
+  async function analyseCritique() {
+    var mac = totalSession();
+    var cible = cibleRepas();
+    var plats = S.plats.map(function (pl) {
+      return (pl.nom || 'Plat') + ' [' + pl.ingredients.map(function (i) {
+        return i.nom + ' ' + Math.round(i.quantite_g || 0) + 'g';
+      }).join(', ') + ']';
+    }).join(' + ');
+
+    // Ce qu'il reste pour la JOURNÉE, pas pour ce repas : la suggestion porte
+    // sur le prochain repas, elle a besoin du reste du jour.
+    var resteJour = await resteDeLaJournee(mac);
+
+    // Les conseils de la semaine et le garde-manger : c'est ce qui rend la
+    // suggestion personnelle plutôt que générique.
+    var conseils = '', garde = '';
+    try {
+      var r = await Natty.sbFetch('profil_conseils?user_id=eq.' + Natty.USER_ID
+        + '&order=generated_at.desc&limit=1&select=conseil_amelioration,conseil_prot,conseil_points_forts');
+      var c = r && r[0];
+      if (c) conseils = [c.conseil_amelioration, c.conseil_prot, c.conseil_points_forts]
+        .filter(Boolean).join(' ');
+    } catch (e) {}
+    try {
+      if (window.NattyGardeManger) {
+        await NattyGardeManger.charger();
+        garde = NattyGardeManger.pourPrompt() || '';
+      }
+    } catch (e) {}
+
+    var prompt = 'Tu es le nutritionniste de cette personne. Analyse ce repas qu\'elle vient '
+      + 'd\'enregistrer, puis propose-lui son PROCHAIN repas de la journée.\n'
+      + 'Repas : ' + plats + '.\n'
+      + 'Macros de ce repas : ' + mac.p + ' g de protéines, ' + mac.g + ' g de glucides, '
+      + mac.l + ' g de lipides, ' + mac.c + ' kcal.\n'
+      + 'Cible pour un repas : ' + cible.p + 'g / ' + cible.g + 'g / ' + cible.l + 'g / ' + cible.c + ' kcal.\n'
+      + 'Reste pour la journée après ce repas : ' + resteJour.p + ' g de protéines, '
+      + resteJour.g + ' g de glucides, ' + resteJour.l + ' g de lipides, ' + resteJour.c + ' kcal.\n'
+      + (conseils ? 'Ses conseils de la semaine : ' + conseils + '\n' : '')
+      + (garde ? 'Ce qu\'elle a chez elle : ' + garde + '\n' : '')
+      + 'Le prochain repas doit tenir dans le reste de la journée, servir ses conseils, et '
+      + (garde ? 'partir en priorité de ce qu\'elle a chez elle.\n' : 'rester simple à faire.\n')
+      + 'Tutoiement, ton direct, aucune généralité. Réponds UNIQUEMENT en JSON sans backticks : '
+      + '{"note":"Bon/Correct/À améliorer","points_positifs":["..."],"points_negatifs":["..."],'
+      + '"conseils":["...","...","..."],'
+      + '"prochain":{"titre":"...","pourquoi":"une phrase","ingredients":["..."],'
+      + '"macros":{"prot":0,"gluc":0,"lip":0,"cal":0}}}';
+
+    var res = await fetch(CLAUDE_API, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt, max_tokens: 900 })
+    });
+    var d = await res.json();
+    if (!res.ok) throw new Error(d.error || ('Erreur ' + res.status));
+    var txt = (d.text || '{}').replace(/```[a-z]*|```/g, '').trim();
+    var i = txt.indexOf('{'), j = txt.lastIndexOf('}');
+    if (i === -1 || j <= i) throw new Error('réponse illisible');
+    return JSON.parse(txt.slice(i, j + 1));
+  }
+
+  /* Ce qu'il reste sur la JOURNÉE : la cible quotidienne moins les repas déjà
+     enregistrés aujourd'hui, moins celui qu'on vient d'ajouter. Les repas du
+     jour sont relus ici plutôt que gardés en mémoire — entre l'ouverture du
+     bouton + et l'enregistrement, un autre appareil a pu en ajouter un. */
+  async function resteDeLaJournee(macSession) {
+    var deja = { p: 0, l: 0, g: 0, c: 0 };
+    try {
+      var ms = await Natty.sbFetch('meals?user_id=eq.' + Natty.USER_ID
+        + '&meal_date=eq.' + today() + '&select=id');
+      var ids = (ms || []).map(function (m) { return m.id; });
+      if (ids.length) {
+        var ings = await Natty.sbFetch('meal_ingredients?meal_id=in.(' + ids.join(',') + ')'
+          + '&select=name,quantity_g&limit=400');
+        var t = Natty.calcMac(ings);
+        deja = { p: t.p, l: t.l, g: t.g, c: t.c };
+      }
+    } catch (e) { /* hors ligne : on retombe sur la seule session */ }
+    // `deja` inclut déjà le repas qu'on vient d'écrire : on ne le retire pas
+    // deux fois. Si la relecture a échoué, on se rabat sur la session seule.
+    var base = (deja.c ? deja : macSession);
+    return {
+      p: Math.max(0, Math.round((cibleJour.p || 0) - base.p)),
+      l: Math.max(0, Math.round((cibleJour.l || 0) - base.l)),
+      g: Math.max(0, Math.round((cibleJour.g || 0) - base.g)),
+      c: Math.max(0, Math.round((cibleJour.c || 0) - base.c))
+    };
+  }
+
+  function peindreBilan(d) {
+    var h = '';
+    if (d.note) h += '<div class="na-bnote">' + esc(d.note) + '</div>';
+    if (d.points_positifs && d.points_positifs.length) {
+      h += '<div class="na-bsec">Ce qui va</div>'
+        + d.points_positifs.map(function (t) {
+            return '<div class="na-bcard plus">' + esc(t) + '</div>';
+          }).join('');
+    }
+    if (d.points_negatifs && d.points_negatifs.length) {
+      h += '<div class="na-bsec">À surveiller</div>'
+        + d.points_negatifs.map(function (t) {
+            return '<div class="na-bcard moins">' + esc(t) + '</div>';
+          }).join('');
+    }
+    if (d.conseils && d.conseils.length) {
+      h += '<div class="na-bsec">Conseils</div>'
+        + d.conseils.map(function (t) {
+            return '<div class="na-bcard">' + esc(t) + '</div>';
+          }).join('');
+    }
+    var n = d.prochain;
+    if (n && n.titre) {
+      var m = n.macros || {};
+      h += '<div class="na-bsec">Votre prochain repas</div>'
+        + '<div class="na-next"><div class="t">' + esc(n.titre) + '</div>'
+        + (n.pourquoi ? '<div class="w">' + esc(n.pourquoi) + '</div>' : '')
+        + '<div class="mm"><span>🥩 ' + Math.round(m.prot || 0) + 'g</span>'
+        + '<span>🌾 ' + Math.round(m.gluc || 0) + 'g</span>'
+        + '<span>🥑 ' + Math.round(m.lip || 0) + 'g</span>'
+        + '<span>' + Math.round(m.cal || 0) + ' kcal</span></div>'
+        + ((n.ingredients && n.ingredients.length)
+            ? '<div class="ii">' + n.ingredients.slice(0, 10).map(function (x) {
+                return '<i>' + esc(x) + '</i>';
+              }).join('') + '</div>'
+            : '')
+        + '</div>';
+    }
+    return h;
   }
 
   /* ═══════════════════ Point d'entrée ═══════════════════ */

@@ -381,6 +381,22 @@ bouger ni les anneaux ni le suivi une fois enregistrée. `classer()` trie par ad
 restant, en pénalisant ce qui dépasse nettement. « Me resservir » n'appelle pas l'IA : c'est
 l'assiette courante en ½ / 1 / 1½ portion.
 
+**Après « Terminer » — le bilan, puis le choix de publier.** Le plat est enregistré, PUIS un
+écran de bilan s'ouvre : coche animée, analyse critique du repas (ce qui va / à surveiller /
+conseils) et **suggestion du prochain repas de la journée**, calculée sur ce qu'il reste du jour,
+les conseils de la semaine et le garde-manger — un seul appel à `/api/claude`, les deux découlant
+du même état.
+- ⚠️ **`partage: false` à l'INSERT** : avant, tout plat enregistré partait dans le fil sans que
+  personne ne l'ait demandé. Le choix se fait à la fin du bilan — « Poster dans le fil » ou
+  « Garder pour moi » — et le retour depuis cet écran vaut « garder », l'état déjà écrit.
+- L'analyse est rangée sous **la même clé que `suivi.html`** (`natty_analyse_plat_<id>` +
+  `meals.analyse_json`) : rouvrir le plat depuis l'historique affiche ce texte-là, sans le
+  régénérer ni en produire un autre.
+- `natty:repas-ajoute` est émis **dès l'écriture**, pas à la fermeture : l'anneau de Suivi doit
+  descendre tout de suite, pas quand l'utilisateur a fini de lire.
+- Si `meals.partage` n'existe pas sur l'instance, l'INSERT entier serait refusé : un repli
+  réenregistre sans la colonne et on cesse de l'envoyer.
+
 **Enregistrement** : rien n'est écrit avant « Terminer ». Chaque plat de la session devient une
 ligne `meals` + ses `meal_ingredients` (la photo Cloudinary va sur le premier). L'échec de
 l'upload photo n'empêche pas l'enregistrement. À la fin, l'événement `natty:repas-ajoute` est
@@ -1412,6 +1428,18 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   l'utilisateur retire les ingrédients à la main.
 
 **Fil social**
+- ✅ **Rien n'est publié sans qu'on l'ait demandé** (août 2026) : le bouton `+` écrit
+  `partage: false`, et le choix se fait à la fin du bilan. Les plats enregistrés AVANT ce
+  changement restent publics (`partage` à `null` vaut public) — les basculer tous en privé est
+  une décision qui ne se reprend pas, elle appartient à Pablo.
+- ✅ **Profil d'un membre** : taper un nom ou une photo, n'importe où dans le fil, ouvre sa page
+  (moyennes de ce qu'il publie, score moyen, tous ses plats). Aucune requête de plus.
+  ⚠️ `[data-membre]` est testé AVANT `[data-id]` : l'en-tête d'auteur est dans la carte du plat.
+- ✅ **Trois points sur ses propres plats** (`profil.html`) : renommer, retirer du fil / y
+  remettre, supprimer. La suppression retire les `meal_ingredients` d'abord — sans cascade en
+  base, ils resteraient orphelins et continueraient de peser dans les macros que le fil
+  recalcule. `prompt()` natif étant proscrit dans le bundle, le renommage passe par une boîte
+  maison (`demanderTexte`).
 - ✅ `social.html` + `assets/social.js` livrés (voir §3) : tendances, amis, communauté,
   meilleurs scores nutritionnels, profils aux besoins proches, recherche, détail en bottom
   sheet. L'onglet « Coaching » de la nav a laissé sa place à « Social » ; `coaching.html`

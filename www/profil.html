@@ -85,6 +85,42 @@
 .posts-empty a{display:block;text-align:center;border-radius:var(--r-lg);background:var(--card);
   padding:34px 20px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:none}
 
+/* ══ La page d'un plat ══
+   Un plat s'ouvre en PAGE pleine (demande de Pablo : « et non plus en pop up
+   comme toutes les pages clickables »). Les réglages et la suppression de
+   compte, eux, restent des feuilles : ce sont des formulaires courts qu'on
+   remplit sans quitter la page où l'on était.
+   La classe est posée sur l'overlay, donc une seule règle suffit. */
+.sheet-ov.pleine{align-items:stretch;background:var(--bg)}
+.sheet-ov.pleine>.sheet{height:100%;max-height:100%;border-radius:0;
+  padding-top:0;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));
+  overscroll-behavior:contain}
+.sheet-ov.pleine .sheet-grip{display:none}
+/* Barre collante : retour à gauche, trois points à droite. */
+.pv-bar{position:sticky;top:0;z-index:5;background:var(--bg);
+  padding:calc(10px + env(safe-area-inset-top,0px)) 0 10px;
+  display:flex;align-items:center;gap:10px}
+.pv-bar button{background:var(--card);border:none;border-radius:12px;padding:9px 13px;
+  font-family:inherit;font-size:14px;font-weight:800;color:var(--muted);cursor:pointer}
+.pv-bar .ttl{flex:1;min-width:0;font-weight:800;font-size:13px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Menu des trois points : il s'ouvre sous eux, pas au milieu de l'écran —
+   il appartient au plat qu'on regarde. */
+.pv-menu{position:absolute;right:var(--pad);top:calc(52px + env(safe-area-inset-top,0px));
+  z-index:8;background:var(--bg);border-radius:18px;box-shadow:0 12px 34px rgba(16,16,20,.22);
+  padding:6px;display:none;min-width:214px}
+.pv-menu.on{display:block}
+.pv-menu button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;
+  border-radius:13px;padding:12px 13px;font-family:inherit;font-size:14px;font-weight:700;
+  color:var(--ink);cursor:pointer;text-align:left}
+.pv-menu button:active{background:var(--card)}
+.pv-menu button.rouge{color:#ff3b30}
+.pv-menu .sep{height:1px;background:var(--line,#e8e8ee);margin:4px 8px}
+/* Étiquette de partage : dit d'un coup d'œil si le plat est dans le fil. */
+.pv-part{display:inline-flex;align-items:center;gap:6px;background:var(--card);
+  border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:700;color:var(--muted);
+  margin-top:12px}
+
 /* ══ Feuilles (réglages / post) ══ */
 .sheet-ov{display:none;position:fixed;inset:0;z-index:600;background:rgba(10,10,14,.45);
   align-items:flex-end;justify-content:center}
@@ -286,13 +322,24 @@
 </div>
 
 <!-- ══ Visionneuse d'un post ══ -->
-<div class="sheet-ov" id="ovPost">
+<div class="sheet-ov pleine" id="ovPost">
   <div class="sheet post-view">
-    <div class="sheet-grip"></div>
+    <div class="pv-bar">
+      <button id="pvBack" aria-label="Retour">←</button>
+      <div class="ttl" id="pvTtl"></div>
+      <button id="pvDots" aria-label="Actions">⋯</button>
+    </div>
+    <div class="pv-menu" id="pvMenu">
+      <button id="pvRenommer">✏️ Renommer le plat</button>
+      <button id="pvPartage">🌍 Retirer du fil</button>
+      <div class="sep"></div>
+      <button id="pvSuppr" class="rouge">🗑️ Supprimer le plat</button>
+    </div>
     <img id="pvImg" alt="">
     <div class="pv-name" id="pvName"></div>
     <div class="pv-date" id="pvDate"></div>
     <div class="pv-mac" id="pvMac"></div>
+    <div id="pvPartEtat"></div>
   </div>
 </div>
 
@@ -417,14 +464,20 @@ function renderPosts(){
   });
 }
 
+var postOuvert = null;   // le plat affiché dans la page, pour les trois points
+
 async function ouvrirPost(i){
   var m = POSTS[i];
   if (!m) return;
+  postOuvert = m;
   $('pvImg').src = m.photo_url;
   $('pvName').textContent = m.name || 'Plat';
+  $('pvTtl').textContent = m.name || 'Plat';
   var d = m.meal_date || m.created_at;
   $('pvDate').textContent = d ? new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }) : '';
   $('pvMac').innerHTML = '';
+  $('pvMenu').classList.remove('on');
+  majEtatPartage(m);
   openSheet('ovPost');
   // Les ingrédients ne sont chargés qu'à l'ouverture — inutile de les tirer
   // pour tous les posts de la grille.
@@ -437,6 +490,130 @@ async function ouvrirPost(i){
     + '<div>🌾 ' + Math.round(mac.g) + 'g</div>'
     + '<div>🥑 ' + Math.round(mac.l) + 'g</div>'
     + '<div>' + Math.round(mac.c) + ' kcal</div>';
+}
+
+/* ═══ Les trois points d'un plat ═══
+   Renommer, retirer du fil, supprimer. Le partage se lit dans `meals.partage`,
+   dont `null` vaut « public » — c'est l'état de tous les plats enregistrés
+   avant que ce réglage existe, et on ne le change pas dans leur dos.
+
+   ⚠️ `partage` peut ne pas exister sur l'instance : PostgREST refuse alors la
+   colonne et l'écriture entière échoue. On détecte une fois, et on le dit
+   plutôt que d'afficher un réglage qui ne tient pas. */
+var PARTAGE_EN_BASE = null;    // null = pas encore testé
+
+function estPartage(m){ return m.partage !== false; }
+
+function majEtatPartage(m){
+  var e = $('pvPartEtat'), b = $('pvPartage');
+  if (!e || !b) return;
+  var pub = estPartage(m);
+  e.innerHTML = '<span class="pv-part">' + (pub ? '🌍 Visible dans le fil' : '🔒 Gardé pour vous') + '</span>';
+  b.textContent = pub ? '🔒 Retirer du fil' : '🌍 Remettre dans le fil';
+}
+
+$('pvBack').addEventListener('click', function(){ closeSheet('ovPost'); });
+$('pvDots').addEventListener('click', function(e){
+  e.stopPropagation();
+  $('pvMenu').classList.toggle('on');
+});
+// Taper ailleurs referme le menu — sans refermer la page.
+$('ovPost').addEventListener('click', function(e){
+  if (!e.target.closest('.pv-menu') && !e.target.closest('#pvDots')) $('pvMenu').classList.remove('on');
+});
+
+$('pvRenommer').addEventListener('click', async function(){
+  $('pvMenu').classList.remove('on');
+  var m = postOuvert; if (!m) return;
+  var nom = await demanderTexte('Renommer le plat', m.name || '');
+  if (nom === null) return;
+  nom = nom.trim();
+  if (!nom || nom === m.name) return;
+  try {
+    await Natty.sbPatch('meals?id=eq.' + m.id, { name: nom });
+    m.name = nom;
+    $('pvName').textContent = nom; $('pvTtl').textContent = nom;
+    renderPosts();
+    toast('Renommé');
+  } catch (e) { toast('Modification impossible'); }
+});
+
+$('pvPartage').addEventListener('click', async function(){
+  $('pvMenu').classList.remove('on');
+  var m = postOuvert; if (!m) return;
+  if (PARTAGE_EN_BASE === false) { toast('Réglage indisponible sur ce compte'); return; }
+  var vise = !estPartage(m);
+  try {
+    await Natty.sbPatch('meals?id=eq.' + m.id, { partage: vise });
+    PARTAGE_EN_BASE = true;
+    m.partage = vise;
+    majEtatPartage(m);
+    toast(vise ? 'Remis dans le fil' : 'Retiré du fil');
+  } catch (e) {
+    // Colonne absente : PostgREST répond 400/404. On ne réessaiera pas.
+    PARTAGE_EN_BASE = false;
+    toast('Réglage indisponible sur ce compte');
+  }
+});
+
+$('pvSuppr').addEventListener('click', async function(){
+  $('pvMenu').classList.remove('on');
+  var m = postOuvert; if (!m) return;
+  var ok = await Natty.confirmer('Supprimer ce plat ?', {
+    detail: 'Il disparaîtra de votre historique, de vos macros et du fil. C’est définitif.',
+    ok: 'Supprimer', danger: true
+  });
+  if (!ok) return;
+  try {
+    await supprimerPlat(m);
+    POSTS = POSTS.filter(function(x){ return x.id !== m.id; });
+    MEALS = MEALS.filter(function(x){ return x.id !== m.id; });
+    renderPosts();
+    closeSheet('ovPost');
+    toast('Plat supprimé');
+  } catch (e) { toast('Suppression impossible'); }
+});
+
+/* Les ingrédients d'abord : sans suppression en cascade côté base, ils
+   resteraient orphelins et continueraient de peser dans les macros que le fil
+   social recalcule. */
+async function supprimerPlat(m){
+  var h = await Natty.entetes({ Prefer: 'return=minimal' });
+  await fetch(Natty.SB_URL + '/rest/v1/meal_ingredients?meal_id=eq.' + m.id, { method:'DELETE', headers:h });
+  var r = await fetch(Natty.SB_URL + '/rest/v1/meals?id=eq.' + m.id, { method:'DELETE', headers:h });
+  if (!r.ok) throw new Error(await r.text());
+}
+
+/* Une saisie courte, dans le style de Natty.confirmer — `prompt()` natif est
+   proscrit dans le bundle pour la même raison que `confirm()` : il s'affiche
+   avec l'origine de la WebView en titre. */
+function demanderTexte(question, valeur){
+  return new Promise(function(res){
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;inset:0;z-index:100002;display:flex;align-items:center;'
+      + 'justify-content:center;padding:24px;background:rgba(20,20,30,.42);opacity:0;transition:opacity .2s';
+    d.innerHTML = '<div style="width:100%;max-width:320px;background:#fff;border-radius:22px;padding:22px">'
+      + '<div style="font-size:16px;font-weight:800;color:#1a1a2e;text-align:center">' + esc(question) + '</div>'
+      + '<input id="dtVal" style="width:100%;margin-top:16px;padding:13px 14px;border:1px solid #e2e2e8;'
+      + 'border-radius:14px;font-family:inherit;font-size:15px;outline:none">'
+      + '<div style="display:flex;flex-direction:column;gap:9px;margin-top:16px">'
+      + '<button id="dtOk" style="padding:14px;border:none;border-radius:14px;background:#1a1a2e;color:#fff;'
+      + 'font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer">Enregistrer</button>'
+      + '<button id="dtNo" style="padding:14px;border:none;border-radius:14px;background:#f0f0f3;color:#6a6a78;'
+      + 'font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer">Annuler</button>'
+      + '</div></div>';
+    document.body.appendChild(d);
+    requestAnimationFrame(function(){ d.style.opacity = '1'; });
+    setTimeout(function(){ d.style.opacity = '1'; }, 60);
+    var inp = d.querySelector('#dtVal');
+    inp.value = valeur || '';
+    setTimeout(function(){ inp.focus(); inp.select(); }, 120);
+    function fin(v){ d.remove(); res(v); }
+    d.querySelector('#dtOk').addEventListener('click', function(){ fin(inp.value); });
+    d.querySelector('#dtNo').addEventListener('click', function(){ fin(null); });
+    d.addEventListener('click', function(e){ if (e.target === d) fin(null); });
+    inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') fin(inp.value); });
+  });
 }
 
 /* ═══ Feuilles ═══ */
@@ -731,7 +908,16 @@ async function charger(){
 
   try{
     MEALS = await Natty.sbFetch('meals?user_id=eq.' + Natty.USER_ID
-      + '&select=id,name,photo_url,meal_date,created_at&order=created_at.desc&limit=200');
+      /* `partage` est demandé pour que les trois points sachent quoi proposer.
+         ⚠️ La colonne peut manquer sur l'instance, et PostgREST refuse alors la
+         requête ENTIÈRE (42703) — pas seulement la colonne. D'où le repli sans
+         elle juste en dessous : `partage` indéfini se lit « public », ce qui est
+         exactement l'état des plats enregistrés avant que le réglage existe. */
+      + '&select=id,name,photo_url,meal_date,created_at,partage&order=created_at.desc&limit=200')
+      .catch(function(){
+        return Natty.sbFetch('meals?user_id=eq.' + Natty.USER_ID
+          + '&select=id,name,photo_url,meal_date,created_at&order=created_at.desc&limit=200');
+      });
   }catch(e){ MEALS = []; }
 
   POSTS = MEALS.filter(function(m){ return !!m.photo_url; });
