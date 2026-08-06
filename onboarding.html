@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Natty">
   <link rel="apple-touch-icon" href="/natty-icon-180.png">
+<script src="/assets/theme.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -18,9 +19,27 @@
   --shadow-in:  inset 3px 3px 8px rgba(174,174,192,0.35), inset -3px -3px 8px rgba(255,255,255,0.85);
   --shadow-sm:  4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85);
   --green: #5a9e6f; --green-light: #eaf4ee; --text: #3a3a4a; --muted: #aaa; --black: #1a1a2e;
+  --surface-ink: #1a1a2e; --on-ink: #ffffff;
 }
+
+/* Thème sombre — l'attribut vient d'assets/theme.js, chargé dans le <head>.
+   Le fond « papier » (pointillés) reste, mais en clair sur sombre : sans lui
+   l'écran devient un aplat noir, et c'est justement ce grain qui donne à ces
+   longs questionnaires l'air d'un formulaire et non d'un terminal. */
+:root[data-theme="dark"] {
+  --tint-r: #3a1e1e; --tint-r-ink: #ffa5a5;
+  --tint-o: #3a2c14; --tint-o-ink: #ffc46b;
+  --grain: rgba(255,255,255,.07);
+  --bg: #0e0e11;
+  --shadow-out: 6px 6px 16px rgba(0,0,0,.6), -6px -6px 16px rgba(255,255,255,.035);
+  --shadow-in:  inset 3px 3px 8px rgba(0,0,0,.6), inset -3px -3px 8px rgba(255,255,255,.04);
+  --shadow-sm:  4px 4px 10px rgba(0,0,0,.55), -4px -4px 10px rgba(255,255,255,.035);
+  --green: #7fd499; --green-light: #17331f; --text: #e9e9ef; --muted: #8e8e99;
+  --black: #f4f4f7; --surface-ink: #202128; --on-ink: #f0f0f4;
+}
+
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; padding-bottom: 48px; color: var(--text); }
-.bg-pattern { position: fixed; inset: 0; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0); background-size: 26px 26px; z-index: 0; }
+.bg-pattern { position: fixed; inset: 0; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, var(--grain, rgba(180,180,200,0.16)) 1px, transparent 0); background-size: 26px 26px; z-index: 0; }
 .wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 16px; }
 .header { position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 20px 16px 14px; max-width: 480px; margin: 0 auto; }
 .header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
@@ -69,8 +88,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .cur-head  { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .cur-name  { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
 .cur-badge { font-size: 12px; font-weight: 500; padding: 3px 12px; border-radius: 99px; background: var(--bg); box-shadow: var(--shadow-sm); min-width: 42px; text-align: center; }
-.cur-badge.low { background: #fde8e8; color: #c77b7b; box-shadow: none; }
-.cur-badge.mid { background: #faeeda; color: #ba7517; box-shadow: none; }
+.cur-badge.low { background: var(--tint-r, #fde8e8); color: var(--tint-r-ink, #c77b7b); box-shadow: none; }
+.cur-badge.mid { background: var(--tint-o, #faeeda); color: var(--tint-o-ink, #ba7517); box-shadow: none; }
 .cur-badge.hi  { background: var(--green-light); color: var(--green); box-shadow: none; }
 .cur-track { background: var(--bg); border-radius: 12px; padding: 12px 16px; box-shadow: var(--shadow-in); }
 input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 3px; background: rgba(174,174,192,0.3); outline: none; cursor: pointer; }
@@ -130,7 +149,7 @@ input[type=range]::-webkit-slider-thumb:active { transform: scale(1.15); }
 .offre-btn-main:active { transform: scale(0.98); }
 .offre-btn-skip { width: 100%; background: transparent; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; padding: 10px; }
 
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: #fff; padding: 11px 22px; border-radius: 20px; font-size: 13px; z-index: 2000; transition: transform 0.3s; pointer-events: none; box-shadow: 4px 4px 12px rgba(174,174,192,0.4); }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--bg); padding: 11px 22px; border-radius: 20px; font-size: 13px; z-index: 2000; transition: transform 0.3s; pointer-events: none; box-shadow: 4px 4px 12px rgba(174,174,192,0.4); }
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.ok  { background: var(--green); }
 .toast.err { background: #c77b7b; }
@@ -292,7 +311,7 @@ input[type=range]::-webkit-slider-thumb:active { transform: scale(1.15); }
             <p><strong>Sécurité</strong><br>
             Toutes les données sont stockées de manière sécurisée sur des serveurs certifiés (Supabase — SOC 2 Type II) et ne sont jamais accessibles à des tiers non autorisés.</p>
           </div>
-          <button onclick="fermerRGPD()" style="width:100%;padding:16px;background:#111;color:#fff;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:20px;">J'ai compris</button>
+          <button onclick="fermerRGPD()" style="width:100%;padding:16px;background:var(--surface-ink);color:var(--on-ink);border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:20px;">J'ai compris</button>
         </div>
       </div>
 

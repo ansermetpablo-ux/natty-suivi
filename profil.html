@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#ffffff">
 <link rel="apple-touch-icon" href="/natty-icon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="/assets/theme.js"></script>
 <link rel="stylesheet" href="/assets/style.css">
 <style>
 /* ══════════════════════════════════════════════════════════
@@ -22,6 +23,18 @@
   --navy:#0c0c31;        /* anneau de l'avatar */
   --score:#3fa959;       /* vert du Natty score (maquette) */
   --track:#d5d5da;       /* piste de la barre de niveau */
+  --grip:#dcdce1;        /* poignée des feuilles */
+  --sw-off:#c9c9d0;      /* interrupteur au repos */
+}
+/* Les trois couleurs relevées sur la maquette sont pensées pour du blanc :
+   le bleu nuit de l'anneau se confond avec le fond sombre, et le vert du
+   score y perd tout son éclat. Leurs pendants sombres, mêmes rôles. */
+:root[data-theme="dark"]{
+  --navy:#4a4ac0;
+  --score:#4fd06c;
+  --track:#2f2f38;
+  --grip:#33333c;
+  --sw-off:#3a3a44;
 }
 .top button{background:none;border:none;display:flex;align-items:center;justify-content:center;
   color:var(--icon-mut);cursor:pointer;padding:0}
@@ -49,16 +62,16 @@
    La hauteur vient de l'aspect-ratio de .av-face — aucun enfant en
    height:100%, sinon le bouton se met à empiler ses enfants et s'allonge. */
 .p-avatar{position:relative;width:clamp(96px,30vw,148px);border-radius:50%;
-  border:4px solid var(--navy);padding:3px;background:#fff;cursor:pointer;
+  border:4px solid var(--navy);padding:3px;background:var(--bg);cursor:pointer;
   display:block;flex-shrink:0}
 .av-face{display:block;position:relative;width:100%;aspect-ratio:1/1;
   border-radius:50%;overflow:hidden;background:var(--ink)}
 .av-ini{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  color:#fff;font-weight:900;font-size:clamp(30px,9vw,44px);letter-spacing:-1px}
+  color:var(--on-ink);font-weight:900;font-size:clamp(30px,9vw,44px);letter-spacing:-1px}
 .av-face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
 .av-face img.on{display:block}
 .p-avatar .cam{position:absolute;right:0;bottom:0;width:26px;height:26px;border-radius:50%;
-  background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;
+  background:var(--ink);color:var(--on-ink);display:flex;align-items:center;justify-content:center;
   font-size:12px;border:2px solid var(--bg)}
 
 /* Natty score */
@@ -107,15 +120,15 @@
 /* Menu des trois points : il s'ouvre sous eux, pas au milieu de l'écran —
    il appartient au plat qu'on regarde. */
 .pv-menu{position:absolute;right:var(--pad);top:calc(52px + env(safe-area-inset-top,0px));
-  z-index:8;background:var(--bg);border-radius:18px;box-shadow:0 12px 34px rgba(16,16,20,.22);
+  z-index:8;background:var(--bg);border-radius:18px;box-shadow:0 12px 34px rgba(0,0,0,.28);
   padding:6px;display:none;min-width:214px}
 .pv-menu.on{display:block}
 .pv-menu button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;
   border-radius:13px;padding:12px 13px;font-family:inherit;font-size:14px;font-weight:700;
   color:var(--ink);cursor:pointer;text-align:left}
 .pv-menu button:active{background:var(--card)}
-.pv-menu button.rouge{color:#ff3b30}
-.pv-menu .sep{height:1px;background:var(--line,#e8e8ee);margin:4px 8px}
+.pv-menu button.rouge{color:var(--red)}
+.pv-menu .sep{height:1px;background:var(--line);margin:4px 8px}
 /* Étiquette de partage : dit d'un coup d'œil si le plat est dans le fil. */
 .pv-part{display:inline-flex;align-items:center;gap:6px;background:var(--card);
   border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:700;color:var(--muted);
@@ -129,7 +142,7 @@
   padding:0 var(--pad) calc(26px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow-y:auto;
   -webkit-overflow-scrolling:touch;animation:sheetUp .3s cubic-bezier(.32,.72,0,1)}
 @keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.sheet-grip{width:38px;height:5px;border-radius:3px;background:#dcdce1;margin:12px auto 18px}
+.sheet-grip{width:38px;height:5px;border-radius:3px;background:var(--grip);margin:12px auto 18px}
 .sheet-title{font-size:17px;font-weight:900;margin-bottom:16px}
 .fld{margin-bottom:12px}
 .fld label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
@@ -137,7 +150,7 @@
   background:var(--card);border:none;border-radius:var(--r-md);padding:13px 14px;resize:none}
 .fld select{-webkit-appearance:none;appearance:none}
 .fld textarea{min-height:64px;line-height:1.4}
-.btn-ink{width:100%;background:var(--ink);color:#fff;border:none;border-radius:var(--r-md);
+.btn-ink{width:100%;background:var(--ink);color:var(--on-ink);border:none;border-radius:var(--r-md);
   padding:15px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}
 .btn-ink:active{transform:scale(.99)}
 .btn-ghost{width:100%;background:none;border:none;border-radius:var(--r-md);padding:14px;
@@ -146,12 +159,12 @@
 /* ══ Zone sensible : suppression du compte ══
    Volontairement séparée du reste par un filet et placée en dernier : ce
    bouton est irréversible, il ne doit pas voisiner « Enregistrer ». */
-.zone-danger{margin-top:26px;padding-top:18px;border-top:1px solid rgba(157,157,168,.22)}
+.zone-danger{margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}
 .zone-danger .zd-title{font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:10px}
 .btn-danger{width:100%;background:none;border:1.5px solid var(--red);border-radius:var(--r-md);
   padding:13px;font-family:inherit;font-size:13px;font-weight:800;color:var(--red);cursor:pointer}
 .btn-danger:disabled{opacity:.5;cursor:default}
-.del-warn{font-size:12.5px;line-height:1.55;color:#3a3a44;margin:0 0 14px}
+.del-warn{font-size:12.5px;line-height:1.55;color:var(--ink);opacity:.85;margin:0 0 14px}
 .del-warn ul{margin:8px 0 0;padding-left:19px}
 .del-warn li{margin-bottom:4px}
 .del-conf{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 8px}
@@ -167,9 +180,9 @@
 .sw-body{flex:1;min-width:0}
 .sw-lbl{font-size:13.5px;font-weight:800}
 .sw-sub{font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:3px}
-.sw{flex:none;width:48px;height:28px;border-radius:14px;background:#c9c9d0;border:none;padding:0;
+.sw{flex:none;width:48px;height:28px;border-radius:14px;background:var(--sw-off);border:none;padding:0;
   cursor:pointer;position:relative;transition:background .2s}
-.sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;
+.sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fdfdff;
   transition:transform .2s cubic-bezier(.22,1,.36,1);box-shadow:0 2px 5px rgba(20,20,30,.25)}
 .sw.on{background:var(--green)}
 .sw.on i{transform:translateX(20px)}
@@ -184,7 +197,7 @@
   text-align:center;font-weight:800;font-size:13px}
 
 .toast{position:fixed;left:50%;bottom:118px;transform:translate(-50%,14px);background:var(--ink);
-  color:#fff;border-radius:18px;padding:12px 20px;font-size:12.5px;font-weight:700;opacity:0;
+  color:var(--on-ink);border-radius:18px;padding:12px 20px;font-size:12.5px;font-weight:700;opacity:0;
   transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:700;white-space:nowrap}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 </style>
@@ -254,6 +267,15 @@
     <div class="fld"><label for="fAge">Âge</label><input id="fAge" type="number" min="10" max="110" inputmode="numeric"></div>
     <div class="fld"><label for="fBio">Description</label><textarea id="fBio" placeholder="Joueur de foot ⚽️"></textarea></div>
     <button class="btn-ink" id="btnSave">Enregistrer</button>
+
+    <div class="sw-row">
+      <div class="sw-body">
+        <div class="sw-lbl">Mode sombre</div>
+        <div class="sw-sub" id="themeSub">Chargement…</div>
+      </div>
+      <button class="sw" id="themeSwitch" role="switch" aria-checked="false"
+              aria-label="Activer le mode sombre"><i></i></button>
+    </div>
 
     <div class="sw-row">
       <div class="sw-body">
@@ -592,14 +614,15 @@ function demanderTexte(question, valeur){
     var d = document.createElement('div');
     d.style.cssText = 'position:fixed;inset:0;z-index:100002;display:flex;align-items:center;'
       + 'justify-content:center;padding:24px;background:rgba(20,20,30,.42);opacity:0;transition:opacity .2s';
-    d.innerHTML = '<div style="width:100%;max-width:320px;background:#fff;border-radius:22px;padding:22px">'
-      + '<div style="font-size:16px;font-weight:800;color:#1a1a2e;text-align:center">' + esc(question) + '</div>'
-      + '<input id="dtVal" style="width:100%;margin-top:16px;padding:13px 14px;border:1px solid #e2e2e8;'
-      + 'border-radius:14px;font-family:inherit;font-size:15px;outline:none">'
+    d.innerHTML = '<div style="width:100%;max-width:320px;background:var(--bg);border-radius:22px;padding:22px">'
+      + '<div style="font-size:16px;font-weight:800;color:var(--ink);text-align:center">' + esc(question) + '</div>'
+      + '<input id="dtVal" style="width:100%;margin-top:16px;padding:13px 14px;border:1px solid var(--line);'
+      + 'border-radius:14px;font-family:inherit;font-size:15px;outline:none;'
+      + 'background:var(--card);color:var(--ink)">'
       + '<div style="display:flex;flex-direction:column;gap:9px;margin-top:16px">'
-      + '<button id="dtOk" style="padding:14px;border:none;border-radius:14px;background:#1a1a2e;color:#fff;'
+      + '<button id="dtOk" style="padding:14px;border:none;border-radius:14px;background:var(--ink);color:var(--on-ink);'
       + 'font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer">Enregistrer</button>'
-      + '<button id="dtNo" style="padding:14px;border:none;border-radius:14px;background:#f0f0f3;color:#6a6a78;'
+      + '<button id="dtNo" style="padding:14px;border:none;border-radius:14px;background:var(--card);color:var(--muted);'
       + 'font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer">Annuler</button>'
       + '</div></div>';
     document.body.appendChild(d);
@@ -631,6 +654,7 @@ $('btnSettings').addEventListener('click', function(){
   $('fAge').value    = (ONB && ONB.age) || '';
   $('fBio').value    = localStorage.getItem(lsKey('bio')) || '';
   openSheet('ovSettings');
+  renderTheme();
   chargerPrefFil();
   chargerNotifs();
 });
@@ -679,6 +703,41 @@ $('filSwitch').addEventListener('click', async function(){
   this.disabled = false;
   renderPrefFil();
 });
+
+/* ═══ Mode sombre ═══
+   L'interrupteur montre CE QUI EST À L'ÉCRAN, pas la préférence enregistrée :
+   tant que personne n'y a touché, l'app suit le téléphone, et l'interrupteur
+   reflète donc l'état du téléphone. Le premier geste fige le choix — d'où le
+   sous-titre, qui dit laquelle des deux situations on est en train de lire.
+
+   Il ne se désactive jamais et ne dépend d'aucune table : c'est un réglage
+   d'affichage, il doit répondre même hors ligne. */
+
+function renderTheme(){
+  var sw = $('themeSwitch');
+  if (!window.NattyTheme) {
+    sw.disabled = true;
+    $('themeSub').textContent = 'Réglage indisponible sur cette page.';
+    return;
+  }
+  var sombre = NattyTheme.sombre();
+  sw.classList.toggle('on', sombre);
+  sw.setAttribute('aria-checked', sombre ? 'true' : 'false');
+  $('themeSub').textContent = NattyTheme.preference() === 'auto'
+    ? 'Suit le réglage de votre téléphone (actuellement ' + (sombre ? 'sombre' : 'clair') + ').'
+    : (sombre ? 'Fond sombre sur tous les écrans.' : 'Fond clair sur tous les écrans.');
+}
+
+$('themeSwitch').addEventListener('click', function(){
+  if (!window.NattyTheme) return;
+  NattyTheme.basculer();
+  renderTheme();
+  toast(NattyTheme.sombre() ? 'Mode sombre activé' : 'Mode clair activé');
+});
+
+// Le téléphone peut basculer pendant que la feuille est ouverte (coucher du
+// soleil, centre de contrôle) : l'interrupteur doit suivre, pas mentir.
+document.addEventListener('natty:theme', renderTheme);
 
 /* ═══ Rappel quotidien (notifications locales) ═══
    Réglage propre à l'appareil, et assumé comme tel : une notification locale

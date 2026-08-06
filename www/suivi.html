@@ -16,6 +16,7 @@
   <link rel="apple-touch-icon" sizes="120x120" href="/natty-icon-120.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/natty-favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/natty-favicon-16.png">
+<script src="/assets/theme.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -31,7 +32,51 @@ body { overscroll-behavior:none; touch-action:manipulation; overflow-x:hidden; }
   --si: inset 3px 3px 8px rgba(174,174,192,0.35), inset -3px -3px 8px rgba(255,255,255,0.85);
   --sm: 4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85);
   --text: #2d2d3a; --muted: #9a9aaa; --black: #1a1a2e;
+  /* Surface sombre (bandeaux, boutons pleins, cartes noires). Séparée de
+     --black, qui reste la couleur du TEXTE : en thème sombre le texte doit
+     s'éclaircir alors que ces cartes doivent rester sombres. Les confondre
+     rendait l'un des deux illisible, quel que soit le sens du basculement. */
+  --surface-ink: #1a1a2e;
+  /* Ce qui se pose SUR --surface-ink : le bouton clair d'un bandeau sombre.
+     Il reste clair dans les deux thèmes — c'est l'inverse de sa carte, pas
+     l'inverse de la page. */
+  --on-ink: #ffffff;
+  --card2: #f5f5f7;      /* encarts clairs posés sur --bg */
+  --line: #e5e5ea;       /* filets, boutons de fermeture */
+  --tint-g: #e8f9ee; --tint-g-ink: #2a9e4f;   /* pastilles vertes */
+  --tint-o: #fff3e0; --tint-o-ink: #c97a00;   /* … orange */
+  --tint-r: #ffecec; --tint-r-ink: #c0392b;   /* … rouge */
+  --tint-b: #e8eeff; --tint-b-ink: #4a6cf7;   /* … bleue */
   --green: #34c759; --orange: #ff6b35; --amber: #ff9500; --purple: #7b5ea7;
+}
+
+/* ═══ Thème sombre ═══
+   L'attribut vient d'assets/theme.js, chargé dans le <head>. Cette page a son
+   propre jeu de variables (plus ancien que celui d'assets/style.css, qu'elle
+   ne charge pas) : les jetons sont donc redéclarés ici, avec les mêmes noms.
+
+   Le neumorphisme ne s'inverse pas — un relief blanc à .88 sur du noir fait
+   un halo laiteux. Les reliefs tombent à ~.04 et c'est l'ombre qui creuse. */
+:root[data-theme="dark"] {
+  --bg: #0e0e11;
+  --text: #e9e9ef;
+  --muted: #8e8e99;
+  --black: #f4f4f7;
+  --surface-ink: #202128;
+  --on-ink: #f0f0f4;
+  --card2: #1c1c22;
+  --line: #2a2a32;
+  --so: 6px 6px 16px rgba(0,0,0,.6), -6px -6px 16px rgba(255,255,255,.035);
+  --si: inset 3px 3px 8px rgba(0,0,0,.6), inset -3px -3px 8px rgba(255,255,255,.04);
+  --sm: 4px 4px 10px rgba(0,0,0,.55), -4px -4px 10px rgba(255,255,255,.035);
+  --green: #32d74b; --orange: #ff8a5c; --amber: #ffb340;
+  /* Les pastilles teintées gardent leur code couleur — c'est lui qui porte le
+     sens (bien / à surveiller / trop) — mais fond et encre s'échangent : un
+     fond pastel sur du noir éblouit et écrase le texte qu'il porte. */
+  --tint-g: #163a24; --tint-g-ink: #7fe09b;
+  --tint-o: #3d2a10; --tint-o-ink: #ffc46b;
+  --tint-r: #3d1c1c; --tint-r-ink: #ff8a80;
+  --tint-b: #1b2340; --tint-b-ink: #93a9ff;
 }
 body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-height:100vh; color:var(--text); }
 
@@ -69,7 +114,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .cal-unit { font-size:9px; color:var(--muted); }
 .cal-bar { width:100%; height:3px; background:var(--bg); border-radius:2px; box-shadow:var(--si); overflow:hidden; margin-top:2px; }
 .cal-fill { height:100%; border-radius:2px; background:var(--green); transition:width 1.2s ease; }
-.cal-obj { font-size:8px; color:#c0c0cc; text-align:center; }
+.cal-obj { font-size:8px; color:var(--muted); text-align:center; }
 
 /* Colonne centre : score ring */
 .score-col { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; }
@@ -91,26 +136,26 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .m-name  { font-size:11px; font-weight:600; color:var(--muted); }
 .m-val   { font-size:20px; font-weight:800; color:var(--black); display:flex; align-items:baseline; gap:2px; }
 .m-unit  { font-size:10px; font-weight:400; color:var(--muted); }
-.m-obj   { font-size:10px; color:#c0c0cc; }
+.m-obj   { font-size:10px; color:var(--muted); }
 .m-track { height:3px; background:var(--bg); border-radius:2px; box-shadow:var(--si); overflow:hidden; }
 .m-fill  { height:100%; border-radius:2px; transition:width 1.2s cubic-bezier(.34,1.56,.64,1); }
 
 /* ── BANDEAU ── */
-.bandeau { background:var(--black); border-radius:20px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; box-shadow:4px 4px 14px rgba(26,26,46,0.35); }
+.bandeau { background:var(--surface-ink); border-radius:20px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; box-shadow:4px 4px 14px rgba(26,26,46,0.35); }
 .bandeau-l { display:flex; align-items:center; gap:10px; }
 .bandeau-icon { font-size:20px; }
 .bandeau-title { font-size:13px; font-weight:600; color:#fff; }
 .bandeau-sub   { font-size:11px; color:rgba(255,255,255,0.45); margin-top:1px; }
-.bandeau-btn   { background:#fff; color:var(--black); border:none; border-radius:10px; padding:8px 14px; font-family:'Inter',sans-serif; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; }
+.bandeau-btn   { background:var(--on-ink); color:var(--surface-ink); border:none; border-radius:10px; padding:8px 14px; font-family:'Inter',sans-serif; font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; }
 
 /* ── NUTRI CARD ── */
 .nutri-card { cursor:pointer; }
 .nutri-inner { display:flex; align-items:center; gap:12px; padding:14px 16px; }
-.nutri-av { width:44px; height:44px; border-radius:50%; background:var(--black); display:flex; align-items:center; justify-content:center; font-size:20px; position:relative; flex-shrink:0; box-shadow:var(--sm); }
+.nutri-av { width:44px; height:44px; border-radius:50%; background:var(--surface-ink); display:flex; align-items:center; justify-content:center; font-size:20px; position:relative; flex-shrink:0; box-shadow:var(--sm); }
 .nutri-online { position:absolute; bottom:1px; right:1px; width:11px; height:11px; border-radius:50%; background:var(--green); border:2px solid var(--bg); }
 .nutri-name  { font-size:14px; font-weight:600; color:var(--black); }
 .nutri-role  { font-size:12px; color:var(--muted); }
-.unread-pill { background:var(--black); color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:3px 10px; margin-left:auto; display:none; }
+.unread-pill { background:var(--surface-ink); color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:3px 10px; margin-left:auto; display:none; }
 .unread-pill.visible { display:block; }
 .nutri-prev { padding:0 16px 14px; font-size:13px; color:var(--muted); }
 .nutri-prev.unread { color:var(--black); font-weight:500; }
@@ -118,7 +163,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 /* ── ACTION DE LA SEMAINE (écrite par le nutritionniste dans l'admin) ──
    Fond noir : c'est la seule carte de l'écran qui porte la parole d'un être
    humain, elle ne doit pas se confondre avec les cartes de chiffres. */
-.action-card  { background:var(--black); border-radius:20px; padding:16px 18px; margin-bottom:14px;
+.action-card  { background:var(--surface-ink); border-radius:20px; padding:16px 18px; margin-bottom:14px;
                 box-shadow:4px 4px 14px rgba(26,26,46,0.3); }
 .action-head  { display:flex; align-items:center; gap:8px; margin-bottom:9px; }
 .action-em    { font-size:17px; line-height:1; }
@@ -128,7 +173,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .action-date  { font-size:11px; color:rgba(255,255,255,0.4); margin-top:9px; }
 
 /* ── OFFRES BANNER ── */
-.offres-banner { background:var(--black); border-radius:20px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; box-shadow:4px 4px 14px rgba(26,26,46,0.3); }
+.offres-banner { background:var(--surface-ink); border-radius:20px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; box-shadow:4px 4px 14px rgba(26,26,46,0.3); }
 .ob-title { font-size:14px; font-weight:700; color:#fff; }
 .ob-sub   { font-size:11px; color:rgba(255,255,255,0.4); margin-top:2px; }
 .ob-arr   { font-size:20px; color:rgba(255,255,255,0.4); }
@@ -147,15 +192,15 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .meal-name  { font-size:14px; font-weight:600; color:var(--black); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .meal-ings  { font-size:11px; color:var(--muted); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .meal-tag   { font-size:10px; font-weight:600; padding:3px 9px; border-radius:99px; }
-.tg  { background:#e8f9ee; color:#2a9e4f; }
-.to  { background:#fff3e0; color:#c97a00; }
-.tb  { background:#e8eeff; color:#4a6cf7; }
+.tg  { background:var(--tint-g); color:var(--tint-g-ink); }
+.to  { background:var(--tint-o); color:var(--tint-o-ink); }
+.tb  { background:var(--tint-b); color:var(--tint-b-ink); }
 .meal-right { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0; }
-.meal-date  { font-size:10px; color:#c0c0cc; }
+.meal-date  { font-size:10px; color:var(--muted); }
 .sr-wrap { position:relative; width:42px; height:42px; }
 .sr-wrap svg { position:absolute; inset:0; transform:rotate(-90deg); }
 .sr-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--black); }
-.meal-dots  { font-size:16px; color:#c0c0cc; cursor:pointer; }
+.meal-dots  { font-size:16px; color:var(--muted); cursor:pointer; }
 
 /* ── POINTS FORTS / FAIBLES ── */
 .pts-grid  { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -163,8 +208,8 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .pts-card:active { box-shadow:var(--si); }
 .pc-hdr    { display:flex; align-items:center; gap:7px; margin-bottom:10px; }
 .pc-ico    { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; box-shadow:var(--sm); }
-.pc-ico-g  { background:#e8f9ee; color:#2a9e4f; }
-.pc-ico-o  { background:#fff3e0; color:#c97a00; }
+.pc-ico-g  { background:var(--tint-g); color:var(--tint-g-ink); }
+.pc-ico-o  { background:var(--tint-o); color:var(--tint-o-ink); }
 .pc-title  { font-size:12px; font-weight:700; color:var(--black); }
 .pt-row    { display:flex; align-items:center; gap:7px; padding:5px 0; border-bottom:.5px solid rgba(174,174,192,0.18); }
 .pt-row:last-child { border-bottom:none; }
@@ -172,11 +217,11 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .pt-info { flex:1; }
 .pt-name { font-size:11px; font-weight:500; color:var(--black); }
 .pt-val  { font-size:10px; color:var(--muted); }
-.pt-arr  { font-size:12px; color:#c0c0cc; }
-.pc-tap  { font-size:10px; color:#c0c0cc; text-align:center; margin-top:6px; }
+.pt-arr  { font-size:12px; color:var(--muted); }
+.pc-tap  { font-size:10px; color:var(--muted); text-align:center; margin-top:6px; }
 
 /* ── RDV ── */
-.rdv-mod { background:var(--black); border-radius:22px; overflow:hidden; box-shadow:4px 4px 14px rgba(26,26,46,0.35); }
+.rdv-mod { background:var(--surface-ink); border-radius:22px; overflow:hidden; box-shadow:4px 4px 14px rgba(26,26,46,0.35); }
 .rdv-top { display:flex; align-items:center; justify-content:space-between; padding:16px 18px 12px; }
 .rdv-title { font-size:15px; font-weight:700; color:#fff; }
 .rdv-plus  { width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.1); border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
@@ -184,8 +229,8 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .rdv-form.open { display:block; }
 .rdv-form-row { display:flex; gap:8px; margin-bottom:10px; }
 .rdv-inp { flex:1; background:rgba(255,255,255,0.08); border:none; border-radius:10px; padding:10px 12px; font-family:'Inter',sans-serif; font-size:13px; color:#fff; outline:none; }
-.rdv-inp option { background:var(--black); }
-.rdv-sbtn { width:100%; padding:12px; background:#fff; color:var(--black); border:none; border-radius:11px; font-family:'Inter',sans-serif; font-size:13px; font-weight:700; cursor:pointer; }
+.rdv-inp option { background:var(--surface-ink); }
+.rdv-sbtn { width:100%; padding:12px; background:var(--on-ink); color:var(--surface-ink); border:none; border-radius:11px; font-family:'Inter',sans-serif; font-size:13px; font-weight:700; cursor:pointer; }
 .rdv-slots { padding:0 14px 14px; display:flex; flex-direction:column; gap:8px; }
 .rdv-slot { display:flex; align-items:center; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.05); border-radius:14px; }
 .rdv-db  { width:42px; height:46px; background:rgba(255,255,255,0.08); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
@@ -211,9 +256,9 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .wc-head  { text-align:center; padding:9px 2px 7px; border-bottom:.5px solid rgba(174,174,192,0.15); }
 .wc-dname { font-size:9px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
 .wc-dnum  { font-size:13px; font-weight:700; margin-top:3px; line-height:1; color:var(--text); }
-.wc-col.today .wc-nwrap { background:var(--black); color:#fff; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:3px auto 0; font-size:11px; font-weight:700; }
+.wc-col.today .wc-nwrap { background:var(--surface-ink); color:#fff; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:3px auto 0; font-size:11px; font-weight:700; }
 .wc-evts  { min-height:64px; padding:4px 2px; display:flex; flex-direction:column; gap:2px; }
-.wc-ev    { background:var(--black); color:#fff; border-radius:4px; padding:3px 4px; font-size:8px; font-weight:600; }
+.wc-ev    { background:var(--surface-ink); color:#fff; border-radius:4px; padding:3px 4px; font-size:8px; font-weight:600; }
 .wc-ev .ev-t { display:block; opacity:.5; font-size:7px; }
 .wc-ev.ev-s { background:#1e4d2b; }
 .wc-ev.ev-x { background:#4d1e1e; }
@@ -248,10 +293,10 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .compo-photo img { width:100%; height:100%; object-fit:cover; border-radius:18px; }
 .compo-items { flex:1; display:flex; flex-direction:column; gap:7px; }
 .compo-item  { display:flex; align-items:center; gap:8px; }
-.pct-pill    { background:var(--black); color:#fff; border-radius:99px; font-size:12px; font-weight:700; padding:4px 12px; min-width:52px; text-align:center; flex-shrink:0; box-shadow:var(--sm); }
+.pct-pill    { background:var(--surface-ink); color:#fff; border-radius:99px; font-size:12px; font-weight:700; padding:4px 12px; min-width:52px; text-align:center; flex-shrink:0; box-shadow:var(--sm); }
 .pct-pill-g  { background:#1e4d2b; }
 .compo-name  { font-size:12px; color:var(--muted); }
-.compo-ideal-badge { display:inline-block; background:#e8f9ee; color:#2a9e4f; font-size:10px; font-weight:600; padding:3px 10px; border-radius:99px; margin-bottom:12px; }
+.compo-ideal-badge { display:inline-block; background:var(--tint-g); color:var(--tint-g-ink); font-size:10px; font-weight:600; padding:3px 10px; border-radius:99px; margin-bottom:12px; }
 .compo-divider { height:.5px; background:rgba(174,174,192,0.2); margin:16px 0; }
 
 /* ── FAB ── */
@@ -305,7 +350,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .plat-photo img { width:100%; height:100%; object-fit:cover; border-radius:12px; }
 .plat-info  { flex:1; }
 .plat-name  { font-size:14px; font-weight:700; margin-bottom:6px; color:var(--black); }
-.macro-pill { background:var(--black); color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:5px 14px; display:inline-block; margin-bottom:8px; }
+.macro-pill { background:var(--surface-ink); color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:5px 14px; display:inline-block; margin-bottom:8px; }
 .ing-line   { font-size:12px; color:var(--muted); margin-bottom:3px; display:flex; align-items:center; gap:4px; }
 .ing-grid-pop { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
 .ing-card-pop { background:var(--bg); border-radius:14px; padding:12px; display:flex; align-items:center; gap:8px; box-shadow:var(--sm); }
@@ -322,14 +367,14 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .ap-em   { font-size:20px; }
 .ap-name { font-size:14px; font-weight:700; color:var(--black); }
 .ap-val  { font-size:12px; font-weight:600; padding:3px 10px; border-radius:99px; margin-left:auto; }
-.av-g { background:#e8f9ee; color:#2a9e4f; }
-.av-o { background:#fff3e0; color:#c97a00; }
-.ap-desc { font-size:12px; color:#7a7a8a; line-height:1.6; margin-bottom:6px; }
+.av-g { background:var(--tint-g); color:var(--tint-g-ink); }
+.av-o { background:var(--tint-o); color:var(--tint-o-ink); }
+.ap-desc { font-size:12px; color:var(--muted); line-height:1.6; margin-bottom:6px; }
 .ap-tip  { font-size:12px; font-weight:600; display:flex; align-items:center; gap:5px; }
-.at-g { color:#2a9e4f; } .at-o { color:#c97a00; }
+.at-g { color:var(--tint-g-ink); } .at-o { color:var(--tint-o-ink); }
 .ing-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
-.ic-rem { font-size:11px; padding:4px 10px; border-radius:99px; background:#ffecec; color:#c0392b; font-weight:500; }
-.ic-add { font-size:11px; padding:4px 10px; border-radius:99px; background:#e8f9ee; color:#2a9e4f; font-weight:500; }
+.ic-rem { font-size:11px; padding:4px 10px; border-radius:99px; background:var(--tint-r); color:var(--tint-r-ink); font-weight:500; }
+.ic-add { font-size:11px; padding:4px 10px; border-radius:99px; background:var(--tint-g); color:var(--tint-g-ink); font-weight:500; }
 
 /* ── POPUP REPAS ── */
 .mode-chooser { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:6px; }
@@ -343,7 +388,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .mode-form.active { display:block; }
 .form-lbl  { font-size:11px; color:var(--muted); letter-spacing:.8px; text-transform:uppercase; margin-bottom:6px; display:block; font-weight:600; }
 .form-inp  { width:100%; background:var(--bg); border:none; border-radius:12px; padding:13px 14px; color:var(--black); font-size:15px; font-family:'Inter',sans-serif; margin-bottom:14px; outline:none; box-shadow:var(--si); }
-.form-inp::placeholder { color:#c0c0cc; }
+.form-inp::placeholder { color:var(--muted); }
 .photo-btns { display:flex; gap:10px; margin-bottom:14px; }
 .photo-btn  { flex:1; padding:14px; background:var(--bg); border:none; border-radius:14px; color:var(--muted); font-size:12px; cursor:pointer; font-family:'Inter',sans-serif; text-align:center; box-shadow:var(--so); }
 .pb-ico { font-size:22px; display:block; margin-bottom:5px; }
@@ -353,9 +398,9 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .ing-row .form-inp { margin-bottom:0; flex:1; }
 .qty { width:80px; flex:none !important; }
 .btn-add-ing  { width:100%; padding:12px; background:var(--bg); border:none; border-radius:12px; color:var(--muted); font-size:13px; cursor:pointer; font-family:'Inter',sans-serif; margin-bottom:14px; box-shadow:var(--so); }
-.btn-save-rep { width:100%; padding:16px; background:var(--black); border:none; border-radius:16px; color:#fff; font-size:16px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; box-shadow:4px 4px 14px rgba(26,26,46,0.35); }
+.btn-save-rep { width:100%; padding:16px; background:var(--surface-ink); border:none; border-radius:16px; color:#fff; font-size:16px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; box-shadow:4px 4px 14px rgba(26,26,46,0.35); }
 .btn-save-rep:disabled { background:var(--muted); box-shadow:none; }
-.ai-analyse-wrap { background:var(--black); border-radius:16px; padding:20px; text-align:center; }
+.ai-analyse-wrap { background:var(--surface-ink); border-radius:16px; padding:20px; text-align:center; }
 .ai-spinner { width:36px; height:36px; border-radius:50%; border:3px solid rgba(255,255,255,0.1); border-top-color:#fff; animation:spin .8s linear infinite; margin:0 auto 14px; }
 .ai-status { font-size:14px; font-weight:600; color:#fff; margin-bottom:4px; }
 .ai-status-sub { font-size:12px; color:rgba(255,255,255,0.5); }
@@ -364,7 +409,7 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .ai-macros-row { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
 .ai-macro-chip { background:var(--bg); border-radius:10px; padding:6px 12px; font-size:12px; font-weight:600; box-shadow:var(--sm); color:var(--black); }
 .ai-ings-list  { display:flex; flex-direction:column; gap:4px; }
-.ai-ing-row    { font-size:13px; color:#7a7a8a; }
+.ai-ing-row    { font-size:13px; color:var(--muted); }
 
 /* ── EDITABLE INGREDIENTS ── */
 .ai-ing-edit-row { display:flex; align-items:center; gap:8px; background:var(--bg); border-radius:12px; padding:8px 12px; box-shadow:var(--si); margin-bottom:6px; }
@@ -372,11 +417,11 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .ai-ing-edit-name { flex:1; border:none; background:transparent; font-family:'Inter',sans-serif; font-size:13px; color:var(--black); outline:none; }
 .ai-ing-edit-qty { width:64px; border:none; background:transparent; font-family:'Inter',sans-serif; font-size:13px; color:var(--black); outline:none; text-align:right; }
 .ai-ing-edit-unit { font-size:11px; color:var(--muted); flex-shrink:0; }
-.ai-ing-del { width:26px; height:26px; border-radius:50%; background:#ffecec; border:none; cursor:pointer; font-size:12px; color:#c0392b; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ai-ing-del { width:26px; height:26px; border-radius:50%; background:var(--tint-r); border:none; cursor:pointer; font-size:12px; color:var(--tint-r-ink); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .ai-add-ing-btn { width:100%; padding:10px; background:var(--bg); border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:13px; color:var(--muted); cursor:pointer; margin-top:8px; box-shadow:var(--so); }
-.ai-recalc-btn { width:100%; padding:12px; background:var(--black); color:#fff; border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:13px; font-weight:600; cursor:pointer; margin-top:8px; }
+.ai-recalc-btn { width:100%; padding:12px; background:var(--surface-ink); color:#fff; border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:13px; font-weight:600; cursor:pointer; margin-top:8px; }
 .ai-macros-live { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 4px; }
-.ai-macro-live-chip { background:var(--black); color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:4px 12px; }
+.ai-macro-live-chip { background:var(--surface-ink); color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:4px 12px; }
 
 /* ── MEAL DETAIL ── */
 .meal-ap-header { display:flex; gap:14px; align-items:center; background:var(--bg); border-radius:18px; padding:14px; margin-bottom:16px; box-shadow:var(--so); }
@@ -395,9 +440,9 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .meal-score-sub   { font-size:12px; color:var(--muted); }
 .mc-card { background:var(--bg); border-radius:14px; padding:12px 14px; margin-bottom:8px; box-shadow:var(--so); }
 .mc-card-title { font-size:13px; font-weight:600; margin-bottom:4px; display:flex; align-items:center; gap:6px; color:var(--black); }
-.mc-card-desc { font-size:12px; color:#7a7a8a; line-height:1.6; }
+.mc-card-desc { font-size:12px; color:var(--muted); line-height:1.6; }
 .mc-card-tip { font-size:12px; font-weight:600; margin-top:6px; }
-.tip-g { color:#2a9e4f; } .tip-o { color:#c97a00; }
+.tip-g { color:var(--tint-g-ink); } .tip-o { color:var(--tint-o-ink); }
 .compo-donut-mini { display:flex; gap:16px; align-items:center; background:var(--bg); border-radius:14px; padding:14px 16px; margin-bottom:14px; box-shadow:var(--so); }
 .donut-mini-wrap { position:relative; width:80px; height:80px; flex-shrink:0; }
 .donut-mini-wrap canvas { position:absolute; inset:0; }
@@ -414,10 +459,10 @@ input[type="file"] { display:none; }
 .tabs { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
 .tabs::-webkit-scrollbar { display:none; }
 .ch-tab-btn { padding:9px 18px; border-radius:99px; background:var(--bg); box-shadow:var(--so); font-family:'Inter',sans-serif; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); white-space:nowrap; border:none; transition:all .15s; }
-.ch-tab-btn.active { background:var(--black); color:#fff; box-shadow:3px 3px 8px rgba(26,26,46,0.35); }
+.ch-tab-btn.active { background:var(--surface-ink); color:#fff; box-shadow:3px 3px 8px rgba(26,26,46,0.35); }
 .ch-tab-content { display:none; }
 .ch-tab-content.active { display:flex; flex-direction:column; gap:14px; }
-.challenge-hero { background:linear-gradient(135deg,var(--black),#2d2d4e); border-radius:22px; padding:24px 20px; color:#fff; box-shadow:4px 4px 14px rgba(26,26,46,0.35); }
+.challenge-hero { background:linear-gradient(135deg,var(--surface-ink),#2d2d4e); border-radius:22px; padding:24px 20px; color:#fff; box-shadow:4px 4px 14px rgba(26,26,46,0.35); }
 .ch-type-badge { display:inline-block; background:rgba(255,255,255,0.12); border-radius:99px; font-size:11px; font-weight:700; padding:4px 12px; letter-spacing:.5px; text-transform:uppercase; margin-bottom:12px; }
 .ch-title { font-size:22px; font-weight:800; letter-spacing:-.5px; margin-bottom:6px; color:#fff; }
 .ch-sub { font-size:13px; color:rgba(255,255,255,0.6); margin-bottom:20px; line-height:1.5; }
@@ -425,16 +470,16 @@ input[type="file"] { display:none; }
 .ch-reward-icon { font-size:28px; }
 .ch-reward-text { font-size:14px; font-weight:600; color:#fff; }
 .ch-reward-sub  { font-size:11px; color:rgba(255,255,255,0.55); margin-top:2px; }
-.ch-btn { width:100%; padding:14px; background:#fff; color:var(--black); border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; }
+.ch-btn { width:100%; padding:14px; background:var(--on-ink); color:var(--surface-ink); border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; }
 .ch-btn-outline { background:transparent; color:#fff; border:2px solid rgba(255,255,255,0.3); margin-top:8px; }
 .ps-label { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px; display:block; }
 .ps-select { width:100%; background:var(--bg); border:none; border-radius:12px; padding:13px 14px; font-family:'Inter',sans-serif; font-size:14px; color:var(--text); outline:none; appearance:none; cursor:pointer; margin-bottom:14px; box-shadow:var(--si); }
 .ps-inp { width:100%; background:var(--bg); border:none; border-radius:12px; padding:13px 14px; font-family:'Inter',sans-serif; font-size:14px; color:var(--text); outline:none; margin-bottom:14px; box-shadow:var(--si); }
-.ps-inp::placeholder { color:#c0c0cc; }
+.ps-inp::placeholder { color:var(--muted); }
 .duration-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
 .dur-chip { padding:9px 16px; border-radius:99px; background:var(--bg); box-shadow:var(--so); font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer; color:var(--muted); border:none; transition:all .15s; }
-.dur-chip.on { box-shadow:var(--si); color:var(--green); background:#e8f9ee; }
-.ps-submit { width:100%; padding:15px; background:var(--black); color:#fff; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; box-shadow:4px 4px 14px rgba(26,26,46,0.35); }
+.dur-chip.on { box-shadow:var(--si); color:var(--green); background:var(--tint-g); }
+.ps-submit { width:100%; padding:15px; background:var(--surface-ink); color:#fff; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; box-shadow:4px 4px 14px rgba(26,26,46,0.35); }
 .ps-submit:disabled { opacity:.4; }
 .pa-ring { position:relative; width:160px; height:160px; }
 .pa-ring svg { position:absolute; inset:0; transform:rotate(-90deg); }
@@ -446,11 +491,11 @@ input[type="file"] { display:none; }
 .pa-stat { background:var(--bg); border-radius:14px; padding:14px; box-shadow:var(--si); }
 .pa-stat-val { font-size:22px; font-weight:800; color:var(--black); margin-bottom:2px; }
 .pa-stat-lbl { font-size:11px; color:var(--muted); }
-.pa-reward { display:flex; align-items:center; gap:10px; background:#e8f9ee; border-radius:14px; padding:14px; margin-bottom:16px; }
+.pa-reward { display:flex; align-items:center; gap:10px; background:var(--tint-g); border-radius:14px; padding:14px; margin-bottom:16px; }
 .pa-reward-em { font-size:28px; }
-.pa-reward-t  { font-size:14px; font-weight:600; color:#2a9e4f; }
-.pa-reward-s  { font-size:11px; color:#2a9e4f; opacity:.7; margin-top:2px; }
-.pa-abandon { width:100%; padding:12px; background:transparent; border:1.5px solid #ffb3b3; border-radius:12px; font-family:'Inter',sans-serif; font-size:13px; font-weight:600; color:#c0392b; cursor:pointer; }
+.pa-reward-t  { font-size:14px; font-weight:600; color:var(--tint-g-ink); }
+.pa-reward-s  { font-size:11px; color:var(--tint-g-ink); opacity:.7; margin-top:2px; }
+.pa-abandon { width:100%; padding:12px; background:transparent; border:1.5px solid #ffb3b3; border-radius:12px; font-family:'Inter',sans-serif; font-size:13px; font-weight:600; color:var(--tint-r-ink); cursor:pointer; }
 .rank-item { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:.5px solid rgba(174,174,192,0.18); }
 .rank-item:last-child { border-bottom:none; }
 .rank-num  { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0; box-shadow:var(--sm); }
@@ -458,20 +503,20 @@ input[type="file"] { display:none; }
 .rn-silver { background:#c0c0c0; color:var(--black); }
 .rn-bronze { background:#cd7f32; color:#fff; }
 .rn-other  { background:var(--bg); color:var(--muted); box-shadow:var(--si); }
-.rank-av   { width:40px; height:40px; border-radius:50%; background:var(--black); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; box-shadow:var(--sm); }
+.rank-av   { width:40px; height:40px; border-radius:50%; background:var(--surface-ink); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; box-shadow:var(--sm); }
 .rank-info { flex:1; }
 .rank-name { font-size:14px; font-weight:600; color:var(--black); }
 .rank-company { font-size:11px; color:var(--muted); }
 .rank-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
 .rank-pct  { font-size:18px; font-weight:800; color:var(--black); }
 .rank-trend { font-size:11px; }
-.rt-up { color:#2a9e4f; } .rt-down { color:#c0392b; }
-.rank-me { background:#e8f9ee !important; }
+.rt-up { color:var(--tint-g-ink); } .rt-down { color:var(--tint-r-ink); }
+.rank-me { background:var(--tint-g) !important; }
 .realtime-dot { width:8px; height:8px; border-radius:50%; background:var(--green); display:inline-block; margin-right:4px; animation:pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
 /* ── TOAST ── */
-.toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--black); color:#fff; padding:12px 22px; border-radius:20px; font-size:14px; z-index:1000; transition:transform .3s; pointer-events:none; white-space:nowrap; box-shadow:4px 4px 14px rgba(26,26,46,0.3); }
+.toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--surface-ink); color:#fff; padding:12px 22px; border-radius:20px; font-size:14px; z-index:1000; transition:transform .3s; pointer-events:none; white-space:nowrap; box-shadow:4px 4px 14px rgba(26,26,46,0.3); }
 .toast.show { transform:translateX(-50%) translateY(0); }
 .toast.ok  { background:#1e4d2b; }
 .toast.err { background:#c0392b; }
@@ -502,17 +547,17 @@ input[type="file"] { display:none; }
 .profil-conseil-card { background:var(--bg); border-radius:14px; padding:14px 16px; margin-bottom:10px; box-shadow:var(--so); }
 .pcc-theme { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; font-weight:600; }
 .pcc-title { font-size:14px; font-weight:700; margin-bottom:6px; color:var(--black); }
-.pcc-desc { font-size:13px; color:#7a7a8a; line-height:1.6; margin-bottom:8px; }
+.pcc-desc { font-size:13px; color:var(--muted); line-height:1.6; margin-bottom:8px; }
 .pcc-recipes { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .pcc-recipe-chip { font-size:11px; padding:4px 10px; border-radius:99px; background:var(--bg); color:var(--black); font-weight:500; box-shadow:var(--sm); }
 .pcc-ings { display:flex; flex-wrap:wrap; gap:6px; }
-.pcc-ing-chip { font-size:11px; padding:4px 10px; border-radius:99px; background:#e8f9ee; color:#2a9e4f; font-weight:500; }
+.pcc-ing-chip { font-size:11px; padding:4px 10px; border-radius:99px; background:var(--tint-g); color:var(--tint-g-ink); font-weight:500; }
 .profil-loading { text-align:center; padding:32px; color:var(--muted); font-size:13px; }
 .profil-spinner { width:28px; height:28px; border-radius:50%; border:2.5px solid rgba(174,174,192,0.3); border-top-color:var(--black); animation:spin .8s linear infinite; margin:0 auto 12px; }
 
 /* ── ONBOARDING CTA ── */
 .ob-card { background:var(--bg); border-radius:24px; overflow:hidden; box-shadow:var(--so); }
-.ob-hero { background:var(--black); padding:30px 22px 26px; text-align:center; }
+.ob-hero { background:var(--surface-ink); padding:30px 22px 26px; text-align:center; }
 .ob-em { font-size:44px; display:block; margin-bottom:12px; }
 .ob-title { font-size:22px; font-weight:800; color:#fff; letter-spacing:-.5px; margin-bottom:6px; }
 .ob-sub   { font-size:13px; color:rgba(255,255,255,0.5); line-height:1.6; }
@@ -535,19 +580,19 @@ input[type="file"] { display:none; }
 .onb-slide-title { font-size:22px; font-weight:700; color:var(--black); line-height:1.25; letter-spacing:-.4px; }
 .onb-phone { width:160px; height:280px; border-radius:24px; background:var(--bg); margin:0 auto; overflow:hidden; position:relative; box-shadow:var(--so); flex-shrink:0; }
 .onb-phone-inner { width:100%; height:100%; display:flex; flex-direction:column; padding:12px 10px; gap:7px; }
-.onb-slide-desc { font-size:14px; color:#7a7a8a; line-height:1.65; }
+.onb-slide-desc { font-size:14px; color:var(--muted); line-height:1.65; }
 .onb-footer { position:absolute; bottom:22px; left:24px; right:24px; display:flex; align-items:center; justify-content:space-between; }
 .onb-dots { display:flex; gap:5px; }
 .onb-dot { width:6px; height:6px; border-radius:50%; background:rgba(174,174,192,0.4); transition:all .3s; box-shadow:var(--sm); }
-.onb-dot.active { width:18px; border-radius:3px; background:var(--black); }
-.onb-next-btn { background:var(--black); color:#fff; border:none; border-radius:20px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; box-shadow:4px 4px 12px rgba(26,26,46,0.35); }
+.onb-dot.active { width:18px; border-radius:3px; background:var(--surface-ink); }
+.onb-next-btn { background:var(--surface-ink); color:#fff; border:none; border-radius:20px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; box-shadow:4px 4px 12px rgba(26,26,46,0.35); }
 .onb-bar { height:3px; background:var(--bg); border-radius:2px; box-shadow:var(--si); overflow:hidden; margin-bottom:2px; }
 .onb-bar-fill { height:100%; border-radius:2px; transition:width 1.2s ease; }
 
 /* ── PROCHAINS REPAS ── */
 .pr-slot.on { box-shadow:var(--si) !important; border-color:var(--green) !important; background:var(--bg); }
 .pr-formule.on { box-shadow:var(--si) !important; border-color:var(--black) !important; }
-.pr-filter.active { background:var(--black) !important; color:#fff !important; }
+.pr-filter.active { background:var(--surface-ink) !important; color:#fff !important; }
 .pr-jour { min-width:52px; padding:10px 6px; border-radius:14px; text-align:center; cursor:pointer; background:var(--bg); box-shadow:var(--so); border:2px solid transparent; transition:all .15s; flex-shrink:0; }
 .pr-jour.on { border-color:var(--black); box-shadow:var(--si); }
 .pr-jour-name { font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; margin-bottom:4px; }
@@ -566,7 +611,7 @@ input[type="file"] { display:none; }
 .plat-menu-check { width:32px; height:32px; border-radius:50%; background:var(--bg); border:none; box-shadow:var(--sm); font-size:14px; font-weight:700; cursor:pointer; color:var(--muted); flex-shrink:0; display:flex; align-items:center; justify-content:center; }
 .plat-menu-card.selected .plat-menu-check { background:var(--green); color:#fff; }
 .pr-filter { padding:7px 14px; border-radius:99px; background:var(--bg); box-shadow:var(--so); font-family:'Inter',sans-serif; font-size:12px; font-weight:600; cursor:pointer; color:var(--muted); border:none; white-space:nowrap; transition:all .15s; }
-.pr-filter.active { background:var(--black); color:#fff; box-shadow:2px 2px 6px rgba(26,26,46,0.3); }
+.pr-filter.active { background:var(--surface-ink); color:#fff; box-shadow:2px 2px 6px rgba(26,26,46,0.3); }
 .pr-jour { display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px; background:var(--bg); border-radius:12px; cursor:pointer; box-shadow:var(--so); border:2px solid transparent; transition:all .15s; }
 .pr-jour.on { box-shadow:var(--si); border-color:var(--green); }
 .pr-jour-name { font-size:9px; font-weight:600; color:var(--muted); text-transform:uppercase; }
@@ -641,14 +686,14 @@ input[type="file"] { display:none; }
 
 /* ── MACRO CONSEIL CARD (style photo) ── */
 .mc-card-visual { background:var(--bg); border-radius:24px; box-shadow:var(--so); overflow:hidden; margin-bottom:12px; }
-.mc-card-photo  { width:100%; height:200px; background:#f5f5f5; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+.mc-card-photo  { width:100%; height:200px; background:var(--card2); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
 .mc-card-photo img { width:100%; height:100%; object-fit:cover; }
 .mc-card-photo-placeholder { font-size:80px; }
 .mc-card-kcal-pill { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:var(--bg); border-radius:99px; padding:6px 20px; font-size:14px; font-weight:700; color:var(--black); box-shadow:var(--si); white-space:nowrap; }
 .mc-card-body { padding:16px 18px 18px; }
 .mc-card-nom { font-size:18px; font-weight:800; color:var(--black); margin-bottom:10px; letter-spacing:-.3px; }
 .mc-chips-row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
-.mc-chip-big { background:var(--black); color:#fff; border-radius:99px; padding:8px 16px; font-size:13px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:1px; }
+.mc-chip-big { background:var(--surface-ink); color:#fff; border-radius:99px; padding:8px 16px; font-size:13px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:1px; }
 .mc-chip-big span { font-size:10px; font-weight:500; opacity:.7; }
 
 /* ── CONSEIL SECTION ── */
@@ -658,7 +703,7 @@ input[type="file"] { display:none; }
 .mc-recette-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
 .mc-recette-chip { background:var(--bg); border-radius:99px; padding:6px 14px; font-size:12px; font-weight:500; color:var(--black); box-shadow:var(--sm); }
 .mc-ing-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-.mc-ing-chip { background:#e8f9ee; color:#1e5c30; border-radius:99px; padding:5px 12px; font-size:12px; font-weight:500; }
+.mc-ing-chip { background:var(--tint-g); color:var(--tint-g-ink); border-radius:99px; padding:5px 12px; font-size:12px; font-weight:500; }
 /* Aliments à privilégier — chaque ligne est un bouton : la toucher met
    l'aliment dans la liste de courses, la retoucher l'en retire. */
 .mc-alim-list { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
@@ -672,7 +717,7 @@ input[type="file"] { display:none; }
 .mc-alim-txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
 .mc-alim-txt b { font-size:13px; font-weight:700; color:var(--black); }
 .mc-alim-txt i { font-size:11px; font-style:normal; color:var(--muted); }
-.mc-alim-plus { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:var(--black);
+.mc-alim-plus { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:var(--surface-ink);
   color:#fff; font-size:14px; font-weight:700; display:flex; align-items:center;
   justify-content:center; line-height:1; }
 .mc-alim.on .mc-alim-plus { background:var(--green); }
@@ -685,20 +730,20 @@ input[type="file"] { display:none; }
 #popupConseils { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(12px); z-index:500; align-items:center; justify-content:center; padding:20px; }
 #popupConseils.active { display:flex; }
 .pc-popup-card { background:var(--bg); border-radius:28px; width:100%; max-width:380px; box-shadow:var(--so); overflow:hidden; animation:popIn .35s cubic-bezier(.34,1.56,.64,1); }
-.pc-popup-hero { background:var(--black); padding:28px 24px 22px; text-align:center; }
+.pc-popup-hero { background:var(--surface-ink); padding:28px 24px 22px; text-align:center; }
 .pc-popup-hero-em { font-size:52px; display:block; margin-bottom:12px; }
 .pc-popup-hero-title { font-size:20px; font-weight:800; color:#fff; margin-bottom:6px; }
 .pc-popup-hero-sub { font-size:13px; color:rgba(255,255,255,0.55); line-height:1.55; }
 .pc-popup-steps { padding:20px 20px 6px; display:flex; flex-direction:column; gap:10px; }
 .pc-popup-step { display:flex; align-items:center; gap:14px; background:var(--bg); border-radius:16px; padding:14px; box-shadow:var(--so); }
 .pc-popup-step.done { box-shadow:var(--si); opacity:.7; }
-.pc-step-num { width:36px; height:36px; border-radius:50%; background:var(--black); color:#fff; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:var(--sm); }
+.pc-step-num { width:36px; height:36px; border-radius:50%; background:var(--surface-ink); color:#fff; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:var(--sm); }
 .pc-step-num.done { background:#34c759; }
 .pc-step-title { font-size:13px; font-weight:700; color:var(--black); margin-bottom:2px; }
 .pc-step-sub { font-size:11px; color:var(--muted); }
-.pc-step-badge { font-size:11px; font-weight:600; padding:3px 10px; border-radius:99px; background:#e8f9ee; color:#2a9e4f; margin-left:auto; flex-shrink:0; }
+.pc-step-badge { font-size:11px; font-weight:600; padding:3px 10px; border-radius:99px; background:var(--tint-g); color:var(--tint-g-ink); margin-left:auto; flex-shrink:0; }
 .pc-popup-actions { padding:14px 20px 24px; display:flex; flex-direction:column; gap:8px; }
-.pc-popup-btn-main { width:100%; padding:16px; background:var(--black); color:#fff; border:none; border-radius:16px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; }
+.pc-popup-btn-main { width:100%; padding:16px; background:var(--surface-ink); color:#fff; border:none; border-radius:16px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; cursor:pointer; }
 .pc-popup-btn-later { width:100%; padding:12px; background:transparent; color:var(--muted); border:none; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer; }
 /* ── PROFIL CONSEILS RICH ── */
 .profil-conseil-card-rich { background:var(--bg); border-radius:20px; box-shadow:var(--so); overflow:hidden; margin-bottom:12px; }
@@ -706,7 +751,7 @@ input[type="file"] { display:none; }
 .pccr-color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 .pccr-theme { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; }
 .pccr-title { font-size:15px; font-weight:700; color:var(--black); padding:12px 16px 6px; }
-.pccr-desc { font-size:13px; color:#6a6a7a; line-height:1.65; padding:0 16px 12px; }
+.pccr-desc { font-size:13px; color:var(--muted); line-height:1.65; padding:0 16px 12px; }
 .pccr-aliments { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:0 16px 14px; }
 .pccr-aliments::-webkit-scrollbar { display:none; }
 .pccr-aliment { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -728,7 +773,7 @@ input[type="file"] { display:none; }
 .lc-item-name { font-size:13px; font-weight:500; color:var(--black); flex:1; }
 .lc-item-qty { font-size:12px; color:var(--muted); font-weight:600; }
 .recette-card { background:var(--bg); border-radius:20px; box-shadow:var(--so); overflow:hidden; margin-bottom:14px; }
-.recette-card-header { background:var(--black); padding:14px 16px; display:flex; align-items:center; gap:10px; }
+.recette-card-header { background:var(--surface-ink); padding:14px 16px; display:flex; align-items:center; gap:10px; }
 .recette-card-em { font-size:28px; }
 .recette-card-nom { font-size:16px; font-weight:700; color:#fff; }
 .recette-card-macros { display:flex; gap:6px; margin-top:4px; flex-wrap:wrap; }
@@ -738,7 +783,7 @@ input[type="file"] { display:none; }
 .etape-num { width:24px; height:24px; border-radius:50%; background:var(--bg); box-shadow:var(--sm); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--black); flex-shrink:0; margin-top:1px; }
 .etape-text { font-size:13px; color:var(--text); line-height:1.6; flex:1; }
 .recette-ings { padding:0 16px 14px; display:flex; flex-wrap:wrap; gap:6px; }
-.recette-ing-chip { background:#e8f9ee; color:#1e5c30; border-radius:99px; padding:5px 12px; font-size:11px; font-weight:500; }
+.recette-ing-chip { background:var(--tint-g); color:var(--tint-g-ink); border-radius:99px; padding:5px 12px; font-size:11px; font-weight:500; }
 
 
 /* ── HERO SCORE BLOCK ── */
@@ -757,7 +802,7 @@ input[type="file"] { display:none; }
 .hero-macro-val { font-size:20px; font-weight:800; color:var(--black); letter-spacing:-1px; line-height:1; }
 .hero-macro-unit { font-size:9px; color:var(--muted); font-weight:500; }
 .hero-macro-lbl  { font-size:9px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
-.hero-macro-bar  { width:100%; height:3px; background:var(--bg); border-radius:2px; box-shadow:inset 1px 1px 3px rgba(174,174,192,0.35),inset -1px -1px 3px rgba(255,255,255,0.8); overflow:hidden; margin-top:4px; }
+.hero-macro-bar  { width:100%; height:3px; background:var(--bg); border-radius:2px; box-shadow:var(--si); overflow:hidden; margin-top:4px; }
 .hero-macro-fill { height:100%; border-radius:2px; transition:width 1.2s cubic-bezier(.34,1.56,.64,1); }
 /* Calories row */
 .hero-cal-row { width:100%; background:var(--bg); border-radius:14px; padding:10px 16px; box-shadow:var(--si); display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
@@ -809,7 +854,7 @@ html.no-scroll {
 .pc-step-num.done { background:var(--green); color:#fff; }
 .pc-step-title { font-size:13px; font-weight:600; color:var(--black); }
 .pc-step-sub { font-size:11px; color:var(--muted); margin-top:2px; }
-.pc-step-badge { font-size:10px; font-weight:700; background:#e8f9ee; color:#2a9e4f; padding:3px 9px; border-radius:99px; }
+.pc-step-badge { font-size:10px; font-weight:700; background:var(--tint-g); color:var(--tint-g-ink); padding:3px 9px; border-radius:99px; }
 
 /* ── PROFIL CONSEIL CARD ── */
 .profil-conseil-card-rich { background:var(--bg); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:var(--sm); }
@@ -823,16 +868,16 @@ html.no-scroll {
 .pccr-aliment-em { font-size:14px; }
 .pccr-aliment-nom { font-size:11px; font-weight:500; color:var(--black); }
 .pccr-recettes { display:flex; flex-wrap:wrap; gap:6px; }
-.pccr-recette-chip { font-size:11px; background:var(--black); color:#fff; border-radius:99px; padding:4px 10px; }
+.pccr-recette-chip { font-size:11px; background:var(--surface-ink); color:#fff; border-radius:99px; padding:4px 10px; }
 .profil-loading { display:flex; align-items:center; gap:10px; padding:24px; color:var(--muted); font-size:13px; }
 .profil-spinner { width:20px; height:20px; border:2px solid rgba(174,174,192,0.3); border-top-color:#34c759; border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
 @keyframes spin { to { transform:rotate(360deg); } }
-#onbD0.active, #onbD1.active, #onbD2.active, #onbD3.active { background:var(--black) !important; }
+#onbD0.active, #onbD1.active, #onbD2.active, #onbD3.active { background:var(--surface-ink) !important; }
 
 /* ── Refonte nav : modules retires de l'ecran Suivi ── */
 .natty-hidden { display:none !important; }
 .header-top { align-items:center; }
-.hdr-ico { display:flex; align-items:center; justify-content:center; color:#b5b5bd; background:none; box-shadow:none; width:auto; height:auto; }
+.hdr-ico { display:flex; align-items:center; justify-content:center; color:var(--muted); background:none; box-shadow:none; width:auto; height:auto; }
 .hdr-ico svg { width:26px; height:26px; }
 
 /* ══════════════════════════════════════════════════════════
@@ -849,7 +894,19 @@ html.no-scroll {
   --sh-out: 0 1px 0 rgba(255,255,255,0.8) inset, 8px 8px 16px rgba(163,167,176,0.4), -6px -6px 14px rgba(255,255,255,0.75);
   --sh-in: inset 4px 4px 9px rgba(163,167,176,0.4), inset -3px -3px 8px rgba(255,255,255,0.7);
   --sh-dark: 0 1px 0 rgba(255,255,255,0.06) inset, 8px 8px 18px rgba(20,21,24,0.35), -3px -3px 10px rgba(255,255,255,0.5);
+}
+/* Suite du thème sombre : ce second bloc de variables est déclaré plus bas
+   dans le fichier que le premier, il lui faut donc son propre pendant.
+   ⚠️ `--sh-out` portait un reflet blanc à .75 : sur fond noir ce n'est plus
+   un relief, c'est un halo — la carte « Historique de repas » avait l'air
+   allumée par en dessous. Vu à l'écran, pas dans le code. */
+:root[data-theme="dark"]{
+  --sh-out: 0 1px 0 rgba(255,255,255,0.05) inset, 8px 8px 18px rgba(0,0,0,.6), -6px -6px 14px rgba(255,255,255,.03);
+  --sh-in: inset 4px 4px 9px rgba(0,0,0,.6), inset -3px -3px 8px rgba(255,255,255,.03);
+  --sh-dark: 0 1px 0 rgba(255,255,255,0.06) inset, 8px 8px 18px rgba(0,0,0,.5), -3px -3px 10px rgba(255,255,255,.05);
+}
 
+:root{
   /* Noir métallisé : noir quasi pur + deux reflets doux, sans motif/texture */
   --metal-black:
     radial-gradient(130% 65% at 12% -10%, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0) 42%),
@@ -859,6 +916,17 @@ html.no-scroll {
     inset 0 1px 0 rgba(255,255,255,0.14),
     inset 0 -1px 0 rgba(0,0,0,0.6),
     0 10px 24px rgba(0,0,0,0.5);
+}
+
+:root[data-theme="dark"]{
+  --metal-black:
+    radial-gradient(130% 65% at 12% -10%, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0) 42%),
+    linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 28%),
+    linear-gradient(165deg, #23242a 0%, #17181c 55%, #0f1013 100%);
+  --sh-metal:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 10px 24px rgba(0,0,0,0.6);
 }
 .suivi-top-group{ display:flex; flex-direction:column; gap:14px; }
 
@@ -895,20 +963,20 @@ html.no-scroll {
 
 #mealsList{ display:flex; flex-direction:column; gap:12px; }
 .meal-card{ position:relative; background:var(--bg); border-radius:22px; padding:14px 14px 12px; box-shadow:var(--sh-out); }
-.meal-card .meal-date{ text-align:right; font-size:11.5px; color:#a3a6ad; font-weight:600; margin-bottom:6px; }
+.meal-card .meal-date{ text-align:right; font-size:11.5px; color:var(--muted); font-weight:600; margin-bottom:6px; }
 .meal-card .meal-row{ display:flex; gap:12px; align-items:flex-start; }
 .meal-card .thumb{ flex:0 0 auto; width:58px; height:58px; border-radius:16px; overflow:hidden; box-shadow:var(--sh-in); }
 .meal-card .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
 .meal-card .thumb.iconic{ display:flex; align-items:center; justify-content:center; background:var(--metal-black); font-size:24px; }
 .meal-card .meal-info{ flex:1 1 auto; min-width:0; }
 .meal-card .meal-info h4{ font-size:14.5px; font-weight:700; color:var(--black); letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.meal-card .meal-info .desc{ font-size:12px; color:#a3a6ad; font-weight:500; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.meal-card .meal-info .desc{ font-size:12px; color:var(--muted); font-weight:500; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tag-choice{ display:inline-block; margin-top:8px; background:var(--bg); color:var(--tag-ink); font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:999px; box-shadow:var(--sh-in); }
 .meal-side{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:8px; }
 .score-ring{ position:relative; width:46px; height:46px; }
 .score-ring svg{ width:100%; height:100%; transform:rotate(-90deg); }
 .score-ring .val{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:var(--black); }
-.dots{ color:#a3a6ad; font-size:16px; letter-spacing:1px; font-weight:700; cursor:pointer; }
+.dots{ color:var(--muted); font-size:16px; letter-spacing:1px; font-weight:700; cursor:pointer; }
 
 .pts-card{ background:var(--bg); box-shadow:var(--sh-out); }
 .pts-card:active{ box-shadow:var(--sh-in); }
@@ -1053,7 +1121,7 @@ html.no-scroll {
     </div>
   </div>
 
-  <button onclick="openRepasOverlay()" class="natty-hidden" style="width:100%;padding:16px;background:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.06);">+ Ajouter un repas</button>
+  <button onclick="openRepasOverlay()" class="natty-hidden" style="width:100%;padding:16px;background:var(--card2);border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.06);">+ Ajouter un repas</button>
 
   <!-- BLOC PROCHAINS REPAS PERMANENT -->
   <div id="blocProchainsRepas" class="natty-hidden" style="background:var(--bg);border-radius:24px;box-shadow:var(--so);overflow:hidden;">
@@ -1088,7 +1156,7 @@ html.no-scroll {
         <!-- État : pas de date -->
         <div id="prDateVide" style="display:flex;align-items:center;gap:12px;">
           <div style="flex:1;font-size:13px;color:var(--muted);">Aucune date choisie</div>
-          <button onclick="openProchainRepas()" style="padding:9px 16px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:2px 2px 8px rgba(26,26,46,0.3);">Choisir →</button>
+          <button onclick="openProchainRepas()" style="padding:9px 16px;background:var(--surface-ink);color:#fff;border:none;border-radius:12px;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:2px 2px 8px rgba(26,26,46,0.3);">Choisir →</button>
         </div>
         <!-- État : date choisie -->
         <div id="prDateChoisie" style="display:none;align-items:center;gap:12px;">
@@ -1121,7 +1189,7 @@ html.no-scroll {
 
   <!-- GÉNÉRER MES CONSEILS — une fois par semaine, puis affichage -->
   <div id="blocGenConseils" style="margin-top:4px;">
-    <button id="btnGenConseils" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:18px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;box-shadow:var(--sm);">✨ Générer mes conseils</button>
+    <button id="btnGenConseils" style="width:100%;padding:16px;background:var(--surface-ink);color:#fff;border:none;border-radius:18px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;box-shadow:var(--sm);">✨ Générer mes conseils</button>
     <div id="genConseilsEtat" style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px;"></div>
   </div>
 </div>
@@ -1182,14 +1250,14 @@ html.no-scroll {
 
   <!-- PERSO -->
   <div class="ch-tab-content active" id="chTabPerso">
-    <div id="persoContent"><div style="text-align:center;padding:24px;color:#c7c7cc;">Chargement...</div></div>
+    <div id="persoContent"><div style="text-align:center;padding:24px;color:var(--muted);">Chargement...</div></div>
     <div id="persoCompleted"></div>
   </div>
 
   <!-- DUO -->
   <div class="ch-tab-content" id="chTabDuo">
     <div id="duoInvite" style="display:none;"></div>
-    <div id="duoContent"><div style="text-align:center;padding:24px;color:#c7c7cc;">Chargement...</div></div>
+    <div id="duoContent"><div style="text-align:center;padding:24px;color:var(--muted);">Chargement...</div></div>
   </div>
 
   <!-- ENTREPRISE -->
@@ -1197,9 +1265,9 @@ html.no-scroll {
     <div class="card">
       <div style="padding:16px 16px 12px;display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:15px;font-weight:700;">Classement <span class="realtime-dot"></span></div>
-        <button onclick="lockScroll(); openOverlay('ovEntSetup')" style="padding:7px 14px;background:#1c1c1e;color:#fff;border:none;border-radius:10px;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">+ Rejoindre</button>
+        <button onclick="lockScroll(); openOverlay('ovEntSetup')" style="padding:7px 14px;background:var(--surface-ink);color:#fff;border:none;border-radius:10px;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">+ Rejoindre</button>
       </div>
-      <div class="ranking-list" id="rankingList"><div style="text-align:center;padding:24px;color:#c7c7cc;">Chargement...</div></div>
+      <div class="ranking-list" id="rankingList"><div style="text-align:center;padding:24px;color:var(--muted);">Chargement...</div></div>
     </div>
   </div>
 
@@ -1209,7 +1277,7 @@ html.no-scroll {
       <div class="sheet-handle"></div>
       <button onclick="closeOverlay('ovPersoSetup')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-bottom:14px;">← Retour</button>
       <div style="font-size:20px;font-weight:800;margin-bottom:4px;">Nouveau challenge</div>
-      <div style="font-size:13px;color:#8e8e93;margin-bottom:20px;">Définissez votre objectif et la durée</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Définissez votre objectif et la durée</div>
       <label class="ps-label">Type d'objectif</label>
       <select class="ps-select" id="cObjectif">
         <option value="poids_prise">💪 Prise de masse</option>
@@ -1225,9 +1293,9 @@ html.no-scroll {
         <div class="dur-chip" data-weeks="8" onclick="chalSelectDuration(this,'perso')">2 mois</div>
         <div class="dur-chip" data-weeks="12" onclick="chalSelectDuration(this,'perso')">3 mois</div>
       </div>
-      <div style="background:#f5f5f7;border-radius:14px;padding:14px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+      <div style="background:var(--card2);border-radius:14px;padding:14px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
         <span style="font-size:28px;">🎁</span>
-        <div><div style="font-size:14px;font-weight:600;">1 semaine de repas offerte</div><div style="font-size:12px;color:#8e8e93;">Si vous réussissez</div></div>
+        <div><div style="font-size:14px;font-weight:600;">1 semaine de repas offerte</div><div style="font-size:12px;color:var(--muted);">Si vous réussissez</div></div>
       </div>
       <button class="ps-submit" id="btnStartPerso" onclick="chalStartChallenge()">Lancer →</button>
       <button class="close-btn" onclick="closeOverlay('ovPersoSetup')">Annuler</button>
@@ -1328,7 +1396,7 @@ html.no-scroll {
     <div class="sheet-handle"></div>
     <button onclick="closeOverlay('ovAnalyse')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:none;border-radius:12px;padding:8px 12px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;box-shadow:var(--sm);margin-bottom:14px;">← Retour</button>
     <div style="font-size:22px;font-weight:800;margin-bottom:4px;" id="analyseTitle">Analyse</div>
-    <div style="font-size:13px;color:#8e8e93;margin-bottom:18px;" id="analyseSub">Basée sur vos repas</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:18px;" id="analyseSub">Basée sur vos repas</div>
     <div id="analyseCont"><div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Analyse...</div></div>
     <button class="close-btn" onclick="closeOverlay('ovAnalyse')">Fermer</button>
   </div>
@@ -1343,7 +1411,7 @@ html.no-scroll {
     <div class="sheet-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div style="font-size:20px;font-weight:800;">Historique de repas</div>
-      <button onclick="closeOverlay('ovHistorique')" style="width:30px;height:30px;border-radius:50%;background:#e5e5ea;border:none;cursor:pointer;font-size:13px;color:#8e8e93;display:flex;align-items:center;justify-content:center;">✕</button>
+      <button onclick="closeOverlay('ovHistorique')" style="width:30px;height:30px;border-radius:50%;background:var(--line);border:none;cursor:pointer;font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
     <div id="histoCount" style="font-size:12.5px;color:var(--muted);margin-bottom:16px;"></div>
     <!-- La nav du bas (#nattyNav, z-index 500) passe au-dessus des overlays
@@ -1357,7 +1425,7 @@ html.no-scroll {
     <div class="sheet-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
       <div style="font-size:20px;font-weight:800;">Ajouter un repas</div>
-      <button onclick="closeOverlay('ovRepas')" style="width:30px;height:30px;border-radius:50%;background:#e5e5ea;border:none;cursor:pointer;font-size:13px;color:#8e8e93;display:flex;align-items:center;justify-content:center;">✕</button>
+      <button onclick="closeOverlay('ovRepas')" style="width:30px;height:30px;border-radius:50%;background:var(--line);border:none;cursor:pointer;font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
     <!-- MODE CHOOSER -->
     <div class="mode-chooser" id="modeChooser">
@@ -1511,7 +1579,7 @@ html.no-scroll {
           <option value="actif">Très actif</option>
           <option value="extreme">Extrêmement actif</option>
         </select>
-        <button onclick="profilSaveInfo()" style="background:var(--black);color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">Enregistrer</button>
+        <button onclick="profilSaveInfo()" style="background:var(--surface-ink);color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">Enregistrer</button>
       </div>
     </div>
 
@@ -1567,7 +1635,7 @@ html.no-scroll {
         </div>
         <!-- Slide 1 : IA -->
         <div style="min-width:100%;padding:0 4px;text-align:center;">
-          <div style="background:var(--black);border-radius:20px;padding:20px;margin-bottom:16px;">
+          <div style="background:var(--surface-ink);border-radius:20px;padding:20px;margin-bottom:16px;">
             <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px;">IA Nutrition</div>
             <div id="onbAiChips" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:10px;"></div>
             <div id="onbAiTxt" style="font-size:13px;color:rgba(255,255,255,.7);">Analyse en cours...</div>
@@ -1577,7 +1645,7 @@ html.no-scroll {
         </div>
         <!-- Slide 2 : Conseils -->
         <div style="min-width:100%;padding:0 4px;text-align:center;">
-          <div style="background:var(--black);border-radius:20px;padding:20px;margin-bottom:16px;min-height:80px;display:flex;align-items:center;justify-content:center;">
+          <div style="background:var(--surface-ink);border-radius:20px;padding:20px;margin-bottom:16px;min-height:80px;display:flex;align-items:center;justify-content:center;">
             <div id="onbConseil" style="font-size:13px;color:rgba(255,255,255,.85);transition:opacity .2s;">Chargement...</div>
           </div>
           <div style="font-size:15px;font-weight:700;color:var(--black);margin-bottom:8px;">Conseils hebdomadaires IA</div>
@@ -1624,12 +1692,12 @@ html.no-scroll {
     </div>
     <!-- Dots -->
     <div style="display:flex;justify-content:center;gap:6px;margin-bottom:20px;">
-      <div id="onbD0" class="active" style="width:8px;height:8px;border-radius:50%;background:var(--black);transition:background .2s;"></div>
+      <div id="onbD0" class="active" style="width:8px;height:8px;border-radius:50%;background:var(--surface-ink);transition:background .2s;"></div>
       <div id="onbD1" style="width:8px;height:8px;border-radius:50%;background:rgba(174,174,192,.4);transition:background .2s;"></div>
       <div id="onbD2" style="width:8px;height:8px;border-radius:50%;background:rgba(174,174,192,.4);transition:background .2s;"></div>
       <div id="onbD3" style="width:8px;height:8px;border-radius:50%;background:rgba(174,174,192,.4);transition:background .2s;"></div>
     </div>
-    <button id="onbNextBtn" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Suite ›</button>
+    <button id="onbNextBtn" style="width:100%;padding:16px;background:var(--surface-ink);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Suite ›</button>
     <button onclick="closeOnbPopup()" style="width:100%;padding:12px;background:none;border:none;font-family:'Inter',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px;">Passer</button>
   </div>
 </div>
@@ -1645,7 +1713,7 @@ html.no-scroll {
     <div style="font-size:20px;font-weight:800;color:var(--black);margin-bottom:6px;">Débloquez vos conseils IA</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Complétez ces étapes pour recevoir votre analyse nutritionnelle personnalisée.</div>
     <div id="pcStepsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
-    <button id="pcActionBtn" onclick="pcActionClick()" data-action="onboarding" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Commencer</button>
+    <button id="pcActionBtn" onclick="pcActionClick()" data-action="onboarding" style="width:100%;padding:16px;background:var(--surface-ink);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Commencer</button>
     <button onclick="closePopupConseils()" style="width:100%;padding:12px;background:none;border:none;font-family:'Inter',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px;">Plus tard</button>
   </div>
 </div>
@@ -1660,7 +1728,7 @@ html.no-scroll {
     <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Nouveaux conseils disponibles</div>
     <div style="font-size:20px;font-weight:800;color:var(--black);margin-bottom:16px;">Vos conseils de la semaine ✨</div>
     <div id="conseilsPopupPreview" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
-    <button onclick="conseilsPopupVoir()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Voir mes conseils →</button>
+    <button onclick="conseilsPopupVoir()" style="width:100%;padding:16px;background:var(--surface-ink);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Voir mes conseils →</button>
     <button onclick="conseilsPopupFermer()" style="width:100%;padding:12px;background:none;border:none;font-family:'Inter',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px;">← Retour</button>
   </div>
 </div>
@@ -1727,7 +1795,7 @@ html.no-scroll {
         </div>
       </div>
 
-      <button id="btnPrNext" onclick="prGoToMenus()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none;transition:opacity .2s;">Voir les menus →</button>
+      <button id="btnPrNext" onclick="prGoToMenus()" style="width:100%;padding:16px;background:var(--surface-ink);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none;transition:opacity .2s;">Voir les menus →</button>
     </div>
 
     <!-- STEP 2 : sélection plats -->
@@ -1752,7 +1820,7 @@ html.no-scroll {
 
       <!-- Filtres -->
       <div style="display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;scrollbar-width:none;">
-        <div class="pr-filter active" data-cat="tous" onclick="prFilter(this)" style="padding:6px 14px;border-radius:99px;background:var(--black);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">Tous</div>
+        <div class="pr-filter active" data-cat="tous" onclick="prFilter(this)" style="padding:6px 14px;border-radius:99px;background:var(--surface-ink);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">Tous</div>
         <div class="pr-filter" data-cat="proteines" onclick="prFilter(this)" style="padding:6px 14px;border-radius:99px;background:var(--bg);box-shadow:var(--sm);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">🥩 Protéines</div>
         <div class="pr-filter" data-cat="legumes" onclick="prFilter(this)" style="padding:6px 14px;border-radius:99px;background:var(--bg);box-shadow:var(--sm);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">🥦 Légumes</div>
         <div class="pr-filter" data-cat="equilibre" onclick="prFilter(this)" style="padding:6px 14px;border-radius:99px;background:var(--bg);box-shadow:var(--sm);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">⚖️ Équilibre</div>
@@ -1773,7 +1841,7 @@ html.no-scroll {
         </div>
       </div>
 
-      <button id="btnPrValider" onclick="prValiderCommande()" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none;transition:opacity .2s;">Confirmer ma commande →</button>
+      <button id="btnPrValider" onclick="prValiderCommande()" style="width:100%;padding:16px;background:var(--surface-ink);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;opacity:.4;pointer-events:none;transition:opacity .2s;">Confirmer ma commande →</button>
     </div>
 
     <!-- STEP 3 : confirmation -->
@@ -1782,7 +1850,7 @@ html.no-scroll {
       <div style="font-size:20px;font-weight:800;color:var(--black);margin-bottom:8px;">Commande confirmée !</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:20px;" id="prConfirmTxt"></div>
       <div id="prConfirmPlats" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;text-align:left;"></div>
-      <button onclick="closeOverlay('ovProchainRepas')" style="width:100%;padding:16px;background:var(--black);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">← Retour à l'accueil</button>
+      <button onclick="closeOverlay('ovProchainRepas')" style="width:100%;padding:16px;background:var(--surface-ink);color:#fff;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">← Retour à l'accueil</button>
     </div>
   </div>
 </div>
@@ -2223,7 +2291,7 @@ function setScore(pct) {
   var b=document.getElementById('ringBadge');
   if (b) {
     b.textContent=pct>=80?'Excellent':pct>=60?'Bon':pct>=40?'Moyen':'À revoir';
-    b.style.background=pct>=60?'#e8f9ee':pct>=40?'#fff3e0':'#ffecec';
+    b.style.background=pct>=60?'var(--tint-g)':pct>=40?'var(--tint-o)':'var(--tint-r)';
     b.style.color=pct>=60?'#34c759':pct>=40?'#ff9500':'#ff3b30';
   }
 }
@@ -2246,7 +2314,7 @@ function mealScore(m) {
 function afficherMeals(meals, elId) {
   var el=document.getElementById(elId||'mealsList');
   if(!el) return;
-  if(!meals||!meals.length){el.innerHTML='<div style="text-align:center;color:#c7c7cc;font-size:13px;padding:28px;">Ajoutez votre premier repas !</div>';return;}
+  if(!meals||!meals.length){el.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;padding:28px;">Ajoutez votre premier repas !</div>';return;}
   el.innerHTML=meals.map(function(m){
     var date=new Date(m.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
     var ings=(m.meal_ingredients||[]).map(function(i){return i.name;}).join(', ')||'Aucun ingrédient';
@@ -2321,7 +2389,7 @@ function chargerDiagnostics() {
   function rPts(id,items){
     document.getElementById(id).innerHTML=items.slice(0,3).map(function(it){
       return '<div class="pt-row"><div class="pt-em">'+it.em+'</div><div class="pt-info"><div class="pt-name">'+it.n+'</div><div class="pt-val">'+it.v+'</div></div><div class="pt-arr">›</div></div>';
-    }).join('')||'<div style="font-size:11px;color:#c7c7cc;padding:6px 0;">Ajoutez des repas</div>';
+    }).join('')||'<div style="font-size:11px;color:var(--muted);padding:6px 0;">Ajoutez des repas</div>';
   }
   rPts('fortsItems',forts); rPts('faiblesItems',faibles);
 }
@@ -2427,7 +2495,7 @@ function openMacroPopup(type) {
       var c = MACRO_CFG[t], actif = (t === type);
       return '<button data-macro="'+t+'" style="flex:1;padding:8px 4px;border:none;border-radius:12px;'
         + 'font-family:\'Inter\',sans-serif;font-size:12px;font-weight:700;cursor:pointer;'
-        + (actif ? 'background:var(--black);color:#fff;' : 'background:var(--bg);color:var(--muted);box-shadow:var(--sm);')
+        + (actif ? 'background:var(--surface-ink);color:#fff;' : 'background:var(--bg);color:var(--muted);box-shadow:var(--sm);')
         + '">'+c.emoji+' '+c.name.charAt(0)+c.name.slice(1).toLowerCase()+'</button>';
     }).join('');
     // data-* + addEventListener : pas d'onclick fabriqué à la chaîne (règle §9 #8).
@@ -2656,7 +2724,7 @@ function toastMacro(msg) {
     t = document.createElement('div');
     t.id = 'mcToast';
     t.style.cssText = 'position:fixed;left:50%;bottom:96px;transform:translate(-50%,14px);'
-      + 'background:#1a1a2e;color:#fff;border-radius:18px;padding:11px 18px;font-size:12.5px;'
+      + 'background:var(--surface-ink);color:#fff;border-radius:18px;padding:11px 18px;font-size:12.5px;'
       + 'font-weight:700;opacity:0;transition:all .3s cubic-bezier(.22,1,.36,1);'
       + 'pointer-events:none;z-index:100002;white-space:nowrap;max-width:88vw;overflow:hidden;'
       + 'text-overflow:ellipsis';
@@ -2836,8 +2904,8 @@ function dessinerComposition() {
   var lastWithPhoto=allMeals.find(function(m){return m.photo_url&&(m.meal_ingredients||[]).length>0;});
   var lastMeal=lastWithPhoto||allMeals[0];
   if (!lastMeal||!(lastMeal.meal_ingredients||[]).length) {
-    el.innerHTML='<div style="color:#c7c7cc;font-size:13px;padding:8px;">Ajoutez des repas pour voir la composition.</div>';
-    elI.innerHTML='<div style="color:#c7c7cc;font-size:13px;padding:8px;">Profil nutritionnel en attente.</div>';
+    el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px;">Ajoutez des repas pour voir la composition.</div>';
+    elI.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px;">Profil nutritionnel en attente.</div>';
     return;
   }
   var mac=calcMac(lastMeal.meal_ingredients);
@@ -3043,7 +3111,7 @@ function renderAIResult() {
     + '<span class="ai-macro-live-chip">🥑 ' + mac.l + 'g lip.</span>'
     + '<span class="ai-macro-live-chip">⚡ ' + mac.c + ' kcal</span>'
     + '</div>'
-    + '<div style="font-size:11px;color:#8e8e93;margin-bottom:8px;">Modifiez les ingredients si necessaire</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Modifiez les ingredients si necessaire</div>'
     + '<div id="aiIngsList"></div>'
     + '</div>';
 
@@ -3230,7 +3298,7 @@ async function fetchAnalysePlat(meal, mac) {
     peindreAnalysePlat(data);
     ecrireAnalysePlat(meal.id, data);   // la prochaine ouverture sera instantanée
   } catch(e) {
-    document.getElementById('mealAnalyseIA').innerHTML = '<div style="color:#c7c7cc;font-size:13px;">Analyse indisponible — vérifiez votre connexion.</div>';
+    document.getElementById('mealAnalyseIA').innerHTML = '<div style="color:var(--muted);font-size:13px;">Analyse indisponible — vérifiez votre connexion.</div>';
   }
 }
 
@@ -3265,7 +3333,7 @@ function peindreAnalysePlat(data) {
         return '<div class="ap-card"><div style="font-size:13px;font-weight:600;">'+s.remplacer+' → '+s.par+'</div><div class="ap-desc">'+s.pourquoi+'</div></div>';
       }).join('');
     }
-    cible.innerHTML = html || '<div style="color:#c7c7cc;font-size:13px;">Analyse indisponible.</div>';
+    cible.innerHTML = html || '<div style="color:var(--muted);font-size:13px;">Analyse indisponible.</div>';
 }
 
 async function saveIA(){
@@ -3334,8 +3402,8 @@ function afficherOnboardingCTA(){
     +'<div class="ob-btn-w">'
     +'<button class="ob-btn" id="btnStartOB">Commencer →</button>'
     +'<div id="loginForm" style="margin-top:16px;">'
-    +'<input id="loginEmail" type="email" placeholder="Email" style="width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;margin-bottom:10px;font-family:Inter,sans-serif;background:#f5f5f7;outline:none;">'
-    +'<input id="loginPwd" type="password" placeholder="Mot de passe" style="width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;margin-bottom:10px;font-family:Inter,sans-serif;background:#f5f5f7;outline:none;">'
+    +'<input id="loginEmail" type="email" placeholder="Email" style="width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;margin-bottom:10px;font-family:Inter,sans-serif;background:var(--card2);outline:none;">'
+    +'<input id="loginPwd" type="password" placeholder="Mot de passe" style="width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;margin-bottom:10px;font-family:Inter,sans-serif;background:var(--card2);outline:none;">'
     +'<button id="btnLogin" style="width:100%;padding:14px;background:#34c759;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;">Se connecter</button>'
     +'<div id="loginErr" style="color:#ff3b30;font-size:12px;margin-top:8px;text-align:center;"></div>'
     +'</div>'
@@ -3868,7 +3936,7 @@ async function buildMealDetail(meal) {
 
     document.getElementById('critiqueContent').innerHTML = critiqueHtml;
   } catch(e) {
-    document.getElementById('critiqueContent').innerHTML = '<div style="color:#c7c7cc;font-size:13px;padding:8px;">Analyse indisponible — ajoutez des ingrédients pour obtenir une critique.</div>';
+    document.getElementById('critiqueContent').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px;">Analyse indisponible — ajoutez des ingrédients pour obtenir une critique.</div>';
   }
 }
 
@@ -3884,7 +3952,7 @@ function drawDonutMeal(id, data, colors) {
     ctx.closePath(); ctx.fillStyle=colors[i]; ctx.fill();
     start+=angle;
   });
-  ctx.beginPath(); ctx.arc(cx,cy,ri*0.85,0,Math.PI*2); ctx.fillStyle='#f5f5f7'; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy,ri*0.85,0,Math.PI*2); ctx.fillStyle='var(--card2)'; ctx.fill();
 }
 
 
@@ -4031,7 +4099,7 @@ function chalSelectDuration(el, type) {
 
 async function chalInit() {
   if (!USER_ID) {
-    document.getElementById('persoContent').innerHTML = '<div style="text-align:center;padding:40px;color:#c7c7cc;"><div style="font-size:48px;margin-bottom:12px;">🔒</div><div style="font-size:16px;font-weight:600;">Connexion requise</div></div>';
+    document.getElementById('persoContent').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><div style="font-size:48px;margin-bottom:12px;">🔒</div><div style="font-size:16px;font-weight:600;">Connexion requise</div></div>';
     return;
   }
   // Init duo link
@@ -4093,7 +4161,7 @@ function chalAfficherCompletes(done) {
     var labels = {poids_prise:'Prise masse',poids_perte:'Perte poids',proteines:'Protéines',calories:'Calories',regularite:'Régularité'};
     return win
       ? '<div class="completed-card"><span class="cc-trophy">🏆</span><div class="cc-title">Challenge réussi !</div><div class="cc-sub">'+(labels[ch.objectif_type]||'')+'</div></div>'
-      : '<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;"><div style="font-size:28px;">😤</div><div><div style="font-size:14px;font-weight:600;">'+(labels[ch.objectif_type]||'')+' — '+ch.progression+'%</div><div style="font-size:12px;color:#8e8e93;">Relancez un nouveau challenge !</div></div></div>';
+      : '<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px;"><div style="font-size:28px;">😤</div><div><div style="font-size:14px;font-weight:600;">'+(labels[ch.objectif_type]||'')+' — '+ch.progression+'%</div><div style="font-size:12px;color:var(--muted);">Relancez un nouveau challenge !</div></div></div>';
   }).join('');
   document.getElementById('persoCompleted').innerHTML = html;
 }
@@ -4133,7 +4201,7 @@ function chalAfficherDuoActif(ch) {
   var prog = ch.progression||0, progAdv = ch.progression_adversaire||Math.round(prog*0.8+Math.random()*15);
   var lead = prog>=progAdv, me = chalUserPrenom||'Moi', adv = ch.adversaire_prenom||'Adversaire';
   document.getElementById('duoContent').innerHTML =
-    '<div class="card versus-card"><div style="font-size:13px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;">Duel en cours <span class="realtime-dot"></span></div>'
+    '<div class="card versus-card"><div style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;">Duel en cours <span class="realtime-dot"></span></div>'
     +'<div class="versus-wrap"><div class="versus-player"><div class="versus-av">'+me.charAt(0)+'</div><div class="versus-name">'+me+' (Moi)</div><div class="versus-pct">'+prog+'%</div></div>'
     +'<div class="versus-sep">VS</div>'
     +'<div class="versus-player"><div class="versus-av">'+adv.charAt(0)+'</div><div class="versus-name">'+adv+'</div><div class="versus-pct">'+progAdv+'%</div></div>'
@@ -4187,7 +4255,7 @@ function chalAfficherClassementDemo() {
 }
 
 function chalRenderClassement(data) {
-  if (!data||!data.length) { document.getElementById('rankingList').innerHTML='<div style="text-align:center;padding:24px;color:#c7c7cc;">Aucun participant</div>'; return; }
+  if (!data||!data.length) { document.getElementById('rankingList').innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);">Aucun participant</div>'; return; }
   var html = data.map(function(p,i){
     var isMe = p.user_id===USER_ID;
     var medal = i===0?'rn-gold':i===1?'rn-silver':i===2?'rn-bronze':'rn-other';
@@ -4317,7 +4385,7 @@ function renderProfilScore() {
   document.getElementById('psrPct').textContent = score;
   var badge = document.getElementById('psrBadge');
   badge.textContent = score >= 80 ? 'Excellent' : score >= 60 ? 'Bon' : score >= 40 ? 'Moyen' : 'À améliorer';
-  badge.style.background = score >= 60 ? '#e8f9ee' : score >= 40 ? '#fff3e0' : '#ffecec';
+  badge.style.background = score >= 60 ? 'var(--tint-g)' : score >= 40 ? 'var(--tint-o)' : 'var(--tint-r)';
   badge.style.color = score >= 60 ? '#34c759' : score >= 40 ? '#ff9500' : '#ff3b30';
 }
 
@@ -4703,7 +4771,7 @@ function montrerCTAConseils(cont, apres) {
         + '<div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px;">'
         + 'Vos conseils, vos recettes et votre liste de courses se composent en une fois,'
         + ' à partir de votre profil et de vos repas.</div>')
-    + '<button id="profilConseilsGen" style="width:100%;padding:15px;background:var(--black);'
+    + '<button id="profilConseilsGen" style="width:100%;padding:15px;background:var(--surface-ink);'
     + 'color:#fff;border:none;border-radius:16px;font-family:\'Inter\',sans-serif;font-size:15px;'
     + 'font-weight:700;cursor:pointer;">' + (apres ? '↻ Renouveler pour cette semaine' : '✨ Générer mes conseils') + '</button>'
     + '<div style="font-size:11.5px;color:var(--muted);margin-top:10px;">Une seule fois par semaine — vous pouvez quitter l’écran pendant la préparation.</div>'
@@ -5184,7 +5252,7 @@ function ouvrirListeCourses() {
         + '<div style="font-size:32px;margin-bottom:8px;">🛒</div>'
         + 'Votre liste de courses personnalisée sera générée avec vos conseils de la semaine.<br><br>'
         + '<button onclick="conseilsGenererEtSauvegarder(false).then(function(){ouvrirListeCourses();}).catch(function(){});" '
-        + 'style="padding:12px 20px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:\'Inter\',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Générer maintenant</button></div>';
+        + 'style="padding:12px 20px;background:var(--surface-ink);color:#fff;border:none;border-radius:12px;font-family:\'Inter\',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Générer maintenant</button></div>';
       return;
     }
     var html = '';
@@ -5252,7 +5320,7 @@ function ouvrirRecettes() {
         + '<div style="font-size:32px;margin-bottom:8px;">👨‍🍳</div>'
         + 'Vos recettes personnalisées seront générées avec vos conseils de la semaine.<br><br>'
         + '<button onclick="conseilsGenererEtSauvegarder(false).then(function(){ouvrirRecettes();}).catch(function(){});" '
-        + 'style="padding:12px 20px;background:var(--black);color:#fff;border:none;border-radius:12px;font-family:\'Inter\',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Générer maintenant</button></div>';
+        + 'style="padding:12px 20px;background:var(--surface-ink);color:#fff;border:none;border-radius:12px;font-family:\'Inter\',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Générer maintenant</button></div>';
       return;
     }
     cont.innerHTML = recettes.map(function(r) {

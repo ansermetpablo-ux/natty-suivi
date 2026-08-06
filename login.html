@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Natty — Connexion</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <script src="/assets/theme.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -13,7 +14,20 @@
       --si: inset 3px 3px 8px rgba(174,174,192,0.35), inset -3px -3px 8px rgba(255,255,255,0.85);
       --sm: 4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85);
       --text: #2d2d3a; --muted: #9a9aaa; --black: #1a1a2e;
+      --surface-ink: #1a1a2e; --on-ink: #ffffff; --card: #ffffff;
       --green: #34c759; --orange: #ff6b35;
+    }
+    /* Thème sombre — attribut posé par assets/theme.js, chargé dans le <head>.
+       C'est le PREMIER écran de l'app : le laisser blanc pendant que le reste
+       est sombre revient à éblouir à chaque ouverture. */
+    :root[data-theme="dark"] {
+      --bg: #0e0e11;
+      --so: 6px 6px 16px rgba(0,0,0,.6), -6px -6px 16px rgba(255,255,255,.035);
+      --si: inset 3px 3px 8px rgba(0,0,0,.6), inset -3px -3px 8px rgba(255,255,255,.04);
+      --sm: 4px 4px 10px rgba(0,0,0,.55), -4px -4px 10px rgba(255,255,255,.035);
+      --text: #e9e9ef; --muted: #8e8e99; --black: #f4f4f7;
+      --surface-ink: #202128; --on-ink: #f0f0f4; --card: #1c1c22;
+      --green: #32d74b; --orange: #ff8a5c;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -122,8 +136,8 @@
     .btn-submit {
       width: 100%;
       padding: 16px;
-      background: var(--black);
-      color: #fff;
+      background: var(--surface-ink);
+      color: var(--on-ink);
       border: none;
       border-radius: 16px;
       font-family: 'Inter', sans-serif;
@@ -213,8 +227,8 @@
       bottom: 32px;
       left: 50%;
       transform: translateX(-50%) translateY(100px);
-      background: var(--black);
-      color: #fff;
+      background: var(--surface-ink);
+      color: var(--on-ink);
       padding: 12px 20px;
       border-radius: 14px;
       font-size: 13px;
@@ -268,7 +282,7 @@
   <!-- Reconnexion : affiché quand core.js a renvoyé ici quelqu'un qui se
        croyait connecté (identité héritée, sans session). Sans ce mot, la
        personne se retrouve devant un formulaire sans savoir pourquoi. -->
-  <div id="msgReconnexion" style="display:none;background:#fff4e5;border-radius:14px;padding:12px 14px;
+  <div id="msgReconnexion" style="display:none;background:var(--card);border-radius:14px;padding:12px 14px;
        margin-bottom:16px;font-size:13px;line-height:1.5;color:#8a5a00;text-align:center;">
     Reconnectez-vous une fois : Natty sécurise désormais votre compte,
     vos données ne sont plus accessibles sans connexion.

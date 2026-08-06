@@ -49,7 +49,7 @@ var NattyMiniJeux = (function () {
   /* ── Styles ──────────────────────────────────────────────── */
 
   var CSS = ''
-  + '#mjOverlay{position:fixed;inset:0;background:#fff;z-index:900;display:none;'
+  + '#mjOverlay{position:fixed;inset:0;background:var(--bg,#fff);z-index:900;display:none;'
   +   'flex-direction:column;align-items:center;padding:24px 20px 40px;overflow-y:auto}'
   + '#mjOverlay.on{display:flex}'
   + '#mjOverlay .mj-close{position:absolute;top:18px;right:18px;width:36px;height:36px;'
@@ -59,7 +59,7 @@ var NattyMiniJeux = (function () {
   +   'margin-bottom:20px;line-height:1.5}'
   + '#mjOverlay .mj-stage{width:100%;max-width:320px;display:flex;align-items:center;'
   +   'justify-content:center;position:relative;min-height:250px}'
-  + '#mjOverlay .mj-cta{margin-top:20px;background:var(--ink,#101014);color:#fff;font-weight:800;'
+  + '#mjOverlay .mj-cta{margin-top:20px;background:var(--ink,#101014);color:var(--on-ink,#fff);font-weight:800;'
   +   'font-size:14px;border:none;border-radius:22px;padding:14px 28px;cursor:pointer;font-family:inherit}'
 
   /* globe */
@@ -75,7 +75,7 @@ var NattyMiniJeux = (function () {
   +   'cursor:grab;touch-action:none;user-select:none;transition:transform .5s cubic-bezier(.2,.8,.3,1.2);z-index:3}'
 
   /* potager */
-  + '.mj-garden{width:100%;max-width:300px;height:240px;position:relative;background:#fbfbf9;'
+  + '.mj-garden{width:100%;max-width:300px;height:240px;position:relative;background:var(--card,#fbfbf9);'
   +   'border-radius:20px;overflow:hidden}'
   + '.mj-soil-back{position:absolute;left:0;right:0;bottom:0;height:52%;background:linear-gradient(180deg,#7a4f30,#5c3a20)}'
   // La fane est en haut (elle dépasse de la terre), le légume dessous et
@@ -108,7 +108,7 @@ var NattyMiniJeux = (function () {
   + '.mj-reco .t{font-size:14px;font-weight:800}'
   + '.mj-reco .w{font-size:12px;color:var(--muted,#9d9da8);line-height:1.45;margin-top:4px}'
   + '.mj-reco .m{font-size:11px;font-weight:700;color:var(--muted,#9d9da8);margin-top:6px}'
-  + '.mj-follow{width:100%;margin-top:8px;background:var(--ink,#101014);color:#fff;font-weight:800;'
+  + '.mj-follow{width:100%;margin-top:8px;background:var(--ink,#101014);color:var(--on-ink,#fff);font-weight:800;'
   +   'border:none;border-radius:20px;padding:14px;font-size:14px;cursor:pointer;font-family:inherit}'
   + '.mj-retry{display:block;text-align:center;margin-top:14px;font-size:12.5px;'
   +   'color:var(--muted,#9d9da8);font-weight:700;text-decoration:underline;cursor:pointer}'

@@ -16,8 +16,15 @@
   --bg:#ffffff;
   --card:#ececef;
   --ink:#101014;
+  /* Texte/icône POSÉ SUR --ink (pastilles noires, bouton principal, avatar).
+     Il ne peut pas rester `#fff` en dur : en thème sombre --ink devient clair,
+     et un `color:#fff` sur fond clair est illisible. Les deux vont par paire,
+     toujours. */
+  --on-ink:#ffffff;
   --muted:#9d9da8;
   --icon-mut:#b5b5bd;
+  /* Filets et séparateurs — un `#e8e8ee` en dur reste visible en sombre. */
+  --line:#e8e8ee;
   --green:#34c759;
   --amber:#ff9f0a;
   --red:#ff3b30;
@@ -63,6 +70,63 @@
   /* Gabarit */
   --col:480px;
   --pad:20px;
+}
+
+/* ═══ Thème sombre ═══════════════════════════════════════════
+   L'attribut est posé sur <html> par assets/theme.js, chargé dans le
+   <head> de façon synchrone — donc AVANT le premier rendu, sinon chaque
+   changement d'écran donne un éclair blanc.
+
+   On ne redéclare QUE les jetons : aucune règle de composant n'est
+   dupliquée ici. Tout ce qui passe par une variable bascule tout seul,
+   et ce qui ne bascule pas signale une couleur écrite en dur — c'est
+   le seul moyen de savoir qu'il en reste.
+
+   ⚠️ Le neumorphisme ne se transpose pas en inversant les ombres : sur
+   fond sombre, un « relief blanc » à .88 d'opacité fait un halo laiteux.
+   Les reliefs passent donc à ~.04, et c'est l'OMBRE portée qui creuse.
+   ═══════════════════════════════════════════════════════════ */
+:root[data-theme="dark"]{
+  --bg:#0e0e11;
+  --card:#1c1c22;
+  --ink:#f4f4f7;
+  --on-ink:#0e0e11;
+  --muted:#8e8e99;
+  --icon-mut:#75757f;
+  --line:#2a2a32;
+  /* Variantes « dark system » : les couleurs vives d'iOS clair vibrent et
+     bavent sur fond noir. Ce sont les valeurs sombres d'Apple. */
+  --green:#32d74b;
+  --amber:#ffb340;
+  --red:#ff453a;
+
+  --nm-so:6px 6px 16px rgba(0,0,0,.6), -6px -6px 16px rgba(255,255,255,.035);
+  --nm-bright:inset 0 1px 1px rgba(255,255,255,.05), inset 0 -1px 1px rgba(0,0,0,.35);
+  --nm-soft:0 8px 24px rgba(0,0,0,.55);
+  --nm-in:inset 4px 4px 9px rgba(0,0,0,.55), inset -3px -3px 8px rgba(255,255,255,.035);
+
+  /* Le noir métallisé ne peut pas rester noir : le fond l'est déjà, la carte
+     disparaîtrait. Elle s'éclaircit juste assez pour se détacher. */
+  --metal-black:
+    radial-gradient(130% 65% at 12% -10%, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0) 42%),
+    linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 28%),
+    linear-gradient(165deg, #23242a 0%, #17181c 55%, #0f1013 100%);
+  --sh-metal:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    0 10px 24px rgba(0,0,0,0.6);
+
+  /* Le pendant clair devient le graphite des panneaux : même rôle (module
+     posé sur le fond), même relief, valeurs inversées. */
+  --metal-white:
+    radial-gradient(130% 65% at 12% -10%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 45%),
+    linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 30%),
+    linear-gradient(165deg, #22232a 0%, #191a1f 55%, #131418 100%);
+  --sh-metal-light:
+    inset 0 1px 0 rgba(255,255,255,0.09),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    6px 8px 18px rgba(0,0,0,.55),
+    -4px -4px 12px rgba(255,255,255,.03);
 }
 
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -139,7 +203,7 @@ body{
 
 /* ── Badges noirs (pilules) ── */
 .badge-ink{
-  display:inline-block;background:var(--ink);color:#fff;
+  display:inline-block;background:var(--ink);color:var(--on-ink);
   font-weight:800;font-size:15px;letter-spacing:.4px;
   padding:10px 18px;border-radius:var(--r-full);white-space:nowrap;
 }

@@ -58,7 +58,7 @@ window.NattyGeneration = (function () {
     s.textContent = [
       /* Fond blanc plein : l'attente occupe tout l'écran, il n'y a rien d'autre
          à regarder, donc rien qui donne envie de partir. */
-      '#ngen{position:fixed;inset:0;z-index:100000;background:#fff;display:flex;',
+      '#ngen{position:fixed;inset:0;z-index:100000;background:var(--nt-bg,#fff);display:flex;',
       'flex-direction:column;align-items:center;justify-content:center;',
       'font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;padding:32px;opacity:0;',
       'transition:opacity .45s ease;',
@@ -70,18 +70,18 @@ window.NattyGeneration = (function () {
          l'étape en cours au centre. Signe de vie, sans agitation. */
       '#ngen .ring{width:104px;height:104px;position:relative;margin-bottom:32px}',
       '#ngen .ring svg{width:100%;height:100%;animation:ngenTurn 2.4s linear infinite}',
-      '#ngen .ring circle{fill:none;stroke:#1a1a2e;stroke-width:3;stroke-linecap:round;',
+      '#ngen .ring circle{fill:none;stroke:var(--nt-ink,#1a1a2e);stroke-width:3;stroke-linecap:round;',
       'stroke-dasharray:64 220;opacity:.9}',
-      '#ngen .ring .bg{stroke:#ececf0;stroke-dasharray:none;opacity:1}',
+      '#ngen .ring .bg{stroke:var(--nt-line,#ececf0);stroke-dasharray:none;opacity:1}',
       '@keyframes ngenTurn{to{transform:rotate(360deg)}}',
       '#ngen .em{position:absolute;inset:0;display:flex;align-items:center;',
       'justify-content:center;font-size:34px;animation:ngenPulse 2.8s ease-in-out infinite;',
       'transition:opacity .35s ease,transform .35s ease}',
       '@keyframes ngenPulse{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.08);opacity:1}}',
 
-      '#ngen .txt{font-size:20px;font-weight:800;color:#1a1a2e;text-align:center;',
+      '#ngen .txt{font-size:20px;font-weight:800;color:var(--nt-ink,#1a1a2e);text-align:center;',
       'letter-spacing:-.3px;min-height:26px;transition:opacity .4s ease,transform .4s ease}',
-      '#ngen .sub{font-size:13.5px;color:#9a9aaa;text-align:center;margin-top:9px;',
+      '#ngen .sub{font-size:13.5px;color:var(--nt-muted,#9a9aaa);text-align:center;margin-top:9px;',
       'min-height:34px;max-width:300px;line-height:1.5;transition:opacity .4s ease}',
       '#ngen .fade{opacity:0;transform:translateY(-6px)}',
 
@@ -89,34 +89,34 @@ window.NattyGeneration = (function () {
          franchit 100 % que quand la ligne est réellement en base : une barre
          qui atteint la fin sans que rien n'arrive est pire que pas de barre. */
       '#ngen .bar{width:100%;max-width:300px;height:6px;border-radius:99px;',
-      'background:#ececf0;margin-top:30px;overflow:hidden}',
-      '#ngen .fill{height:100%;width:0;border-radius:99px;background:#1a1a2e;',
+      'background:var(--nt-line,#ececf0);margin-top:30px;overflow:hidden}',
+      '#ngen .fill{height:100%;width:0;border-radius:99px;background:var(--nt-ink,#1a1a2e);',
       'transition:width 1s cubic-bezier(.22,1,.36,1)}',
-      '#ngen .pct{font-size:11.5px;font-weight:700;color:#b5b5bd;margin-top:10px;',
+      '#ngen .pct{font-size:11.5px;font-weight:700;color:var(--nt-muted,#b5b5bd);margin-top:10px;',
       'letter-spacing:.3px}',
 
       /* Les points d'étape : où on en est, sans chiffre trompeur. */
       '#ngen .dots{display:flex;gap:7px;margin-top:16px}',
-      '#ngen .dot{width:6px;height:6px;border-radius:50%;background:#e2e2e8;transition:all .5s ease}',
-      '#ngen .dot.on{background:#1a1a2e;transform:scale(1.35)}',
+      '#ngen .dot{width:6px;height:6px;border-radius:50%;background:var(--nt-line,#e2e2e8);transition:all .5s ease}',
+      '#ngen .dot.on{background:var(--nt-ink,#1a1a2e);transform:scale(1.35)}',
 
       /* Le mot qui compte le plus de tout l'écran. */
-      '#ngen .libre{margin-top:34px;font-size:12.5px;color:#b5b5bd;text-align:center;',
+      '#ngen .libre{margin-top:34px;font-size:12.5px;color:var(--nt-muted,#b5b5bd);text-align:center;',
       'line-height:1.65;max-width:290px}',
       '#ngen .err{margin-top:22px;font-size:13px;color:#ff3b30;text-align:center;display:none;',
       'max-width:300px;line-height:1.5}',
       '#ngen .btns{margin-top:18px;display:flex;flex-direction:column;gap:10px;align-items:center}',
       '#ngen button{padding:13px 24px;border:none;border-radius:14px;font-family:inherit;',
       'font-size:14px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}',
-      '#ngen .fond{background:#f0f0f3;color:#6a6a78}',
-      '#ngen .plein{background:#1a1a2e;color:#fff;display:none}',
+      '#ngen .fond{background:var(--nt-card,#f0f0f3);color:var(--nt-muted,#6a6a78)}',
+      '#ngen .plein{background:var(--nt-ink,#1a1a2e);color:var(--nt-on-ink,#fff);display:none}',
 
       /* ── La question du garde-manger ────────────────────────────────
          Elle vient AVANT l'attente, et elle est le seul endroit où l'on
          renseigne ce qu'on a chez soi (le panneau de l'écran Repas s'en va).
          Même mise en scène que l'attente : plein écran, une question, deux
          réponses — parce que c'est une décision, pas un formulaire. */
-      '#ngenQ{position:fixed;inset:0;z-index:100000;background:#fff;display:flex;',
+      '#ngenQ{position:fixed;inset:0;z-index:100000;background:var(--nt-bg,#fff);display:flex;',
       'flex-direction:column;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;',
       'padding:26px 24px calc(24px + env(safe-area-inset-bottom,0px));opacity:0;',
       'padding-top:calc(30px + env(safe-area-inset-top,0px));transition:opacity .4s ease;',
@@ -124,28 +124,29 @@ window.NattyGeneration = (function () {
       '#ngenQ.on{opacity:1}',
       '#ngenQ .qem{font-size:52px;text-align:center;margin-bottom:16px;',
       'animation:ngenPulse 3s ease-in-out infinite}',
-      '#ngenQ h2{font-size:25px;font-weight:900;color:#1a1a2e;text-align:center;',
+      '#ngenQ h2{font-size:25px;font-weight:900;color:var(--nt-ink,#1a1a2e);text-align:center;',
       'letter-spacing:-.6px;line-height:1.2}',
-      '#ngenQ .qsub{font-size:13.5px;color:#9a9aaa;text-align:center;margin-top:10px;',
+      '#ngenQ .qsub{font-size:13.5px;color:var(--nt-muted,#9a9aaa);text-align:center;margin-top:10px;',
       'line-height:1.55;max-width:320px;margin-left:auto;margin-right:auto}',
       '#ngenQ .qchips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin:22px 0 4px}',
-      '#ngenQ .qchip{display:inline-flex;align-items:center;gap:5px;background:#f2f2f7;',
-      'border-radius:99px;padding:8px 13px;font-size:12.5px;font-weight:700;color:#3a3a48}',
-      '#ngenQ .qchip b{font-weight:600;color:#9a9aaa}',
+      '#ngenQ .qchip{display:inline-flex;align-items:center;gap:5px;background:var(--nt-card,#f2f2f7);',
+      'border-radius:99px;padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--nt-ink,#3a3a48)}',
+      '#ngenQ .qchip b{font-weight:600;color:var(--nt-muted,#9a9aaa)}',
       '#ngenQ .qacts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:20px}',
-      '#ngenQ .qact{background:#f7f7fa;border:none;border-radius:16px;padding:13px 2px 10px;',
-      'font-family:inherit;font-size:10px;font-weight:700;color:#3a3a48;cursor:pointer;',
+      '#ngenQ .qact{background:var(--nt-card,#f7f7fa);border:none;border-radius:16px;padding:13px 2px 10px;',
+      'font-family:inherit;font-size:10px;font-weight:700;color:var(--nt-ink,#3a3a48);cursor:pointer;',
       'display:flex;flex-direction:column;align-items:center;gap:6px;line-height:1.2}',
       '#ngenQ .qact .e{font-size:20px}',
       '#ngenQ .qsaisie{display:none;margin-top:12px}',
       '#ngenQ .qsaisie.on{display:block}',
-      '#ngenQ textarea{width:100%;min-height:88px;border:1px solid #e2e2e8;border-radius:16px;',
-      'padding:12px 14px;font-family:inherit;font-size:13.5px;color:#1a1a2e;resize:none;outline:none}',
-      '#ngenQ .qetat{font-size:12px;color:#9a9aaa;text-align:center;margin-top:12px;min-height:18px}',
+      '#ngenQ textarea{width:100%;min-height:88px;border:1px solid var(--nt-line,#e2e2e8);border-radius:16px;',
+      'padding:12px 14px;font-family:inherit;font-size:13.5px;color:var(--nt-ink,#1a1a2e);',
+      'background:var(--nt-bg,#fff);resize:none;outline:none}',
+      '#ngenQ .qetat{font-size:12px;color:var(--nt-muted,#9a9aaa);text-align:center;margin-top:12px;min-height:18px}',
       '#ngenQ .qbtns{margin-top:auto;padding-top:26px;display:flex;flex-direction:column;gap:10px}',
-      '#ngenQ button.qgo{padding:17px;border:none;border-radius:16px;background:#1a1a2e;color:#fff;',
+      '#ngenQ button.qgo{padding:17px;border:none;border-radius:16px;background:var(--nt-ink,#1a1a2e);color:var(--nt-on-ink,#fff);',
       'font-family:inherit;font-size:16px;font-weight:800;cursor:pointer}',
-      '#ngenQ button.qno{padding:14px;border:none;border-radius:16px;background:#f0f0f3;color:#6a6a78;',
+      '#ngenQ button.qno{padding:14px;border:none;border-radius:16px;background:var(--nt-card,#f0f0f3);color:var(--nt-muted,#6a6a78);',
       'font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}',
 
       /* Mode discret : l'utilisateur a demandé à continuer sans regarder. La
@@ -153,13 +154,13 @@ window.NattyGeneration = (function () {
          relancerait une génération par-dessus. */
       '#ngenPill{position:fixed;left:50%;transform:translateX(-50%);',
       'bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:99998;',
-      'background:#1a1a2e;color:#fff;border:none;border-radius:99px;padding:11px 18px;',
+      'background:var(--nt-ink,#1a1a2e);color:var(--nt-on-ink,#fff);border:none;border-radius:99px;padding:11px 18px;',
       'font-family:Inter,-apple-system,sans-serif;font-size:12.5px;font-weight:700;',
       'box-shadow:0 8px 24px rgba(0,0,0,.22);cursor:pointer;opacity:0;',
       'transition:opacity .4s ease;-webkit-tap-highlight-color:transparent}',
       '#ngenPill.on{opacity:1}',
       '#ngenPill i{display:inline-block;width:7px;height:7px;border-radius:50%;',
-      'background:#fff;margin-right:8px;animation:ngenBlink 1.4s ease-in-out infinite}',
+      'background:currentColor;margin-right:8px;animation:ngenBlink 1.4s ease-in-out infinite}',
       '@keyframes ngenBlink{0%,100%{opacity:1}50%{opacity:.25}}'
     ].join('');
     document.head.appendChild(s);

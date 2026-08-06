@@ -3,22 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<script src="/assets/theme.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* ── Thème ────────────────────────────────────────────────────
+   Cet écran n'avait aucune variable : ses couleurs étaient écrites en dur,
+   à la façon d'iMessage. On les nomme d'abord, on les bascule ensuite —
+   sinon le mode sombre ne serait qu'une seconde copie du même fichier. */
+:root{
+  --c-bg:#f2f2f7;      /* fond de la conversation */
+  --c-surface:#ffffff; /* barres, bulle reçue */
+  --c-ink:#1c1c1e;
+  --c-muted:var(--c-muted);
+  --c-line:#e5e5ea;
+  --c-moi:#1a1a2e;     /* bulle envoyée */
+  --c-moi-ink:#ffffff;
+  --c-champ:#f2f2f7;
+}
+:root[data-theme="dark"]{
+  --c-bg:#0e0e11;
+  --c-surface:#1c1c22;
+  --c-ink:#f4f4f7;
+  --c-muted:#8e8e99;
+  --c-line:#2a2a32;
+  --c-moi:#3a3a48;
+  --c-moi-ink:#f4f4f7;
+  --c-champ:#26262e;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { font-family: 'Inter', sans-serif; background: #f2f2f7; height: 100vh; display: flex; flex-direction: column; color: #1c1c1e; overflow: hidden; }
+body { font-family: 'Inter', sans-serif; background: var(--c-bg); height: 100vh; display: flex; flex-direction: column; color: var(--c-ink); overflow: hidden; }
 
 .chat-header {
-  background: #fff;
+  background: var(--c-surface);
   padding: 14px 16px 12px;
   display: flex; align-items: center; gap: 12px;
-  border-bottom: 0.5px solid #e5e5ea;
+  border-bottom: 0.5px solid var(--c-line);
   flex-shrink: 0;
 }
 .btn-back {
   width: 34px; height: 34px; border-radius: 50%;
-  background: #f2f2f7; border: none; cursor: pointer;
-  font-size: 18px; color: #1c1c1e; display: flex; align-items: center; justify-content: center;
+  background: var(--c-champ); border: none; cursor: pointer;
+  font-size: 18px; color: var(--c-ink); display: flex; align-items: center; justify-content: center;
 }
 .nutri-avatar {
   width: 42px; height: 42px; border-radius: 50%;
@@ -47,11 +73,11 @@ body { font-family: 'Inter', sans-serif; background: #f2f2f7; height: 100vh; dis
   word-break: break-word;
 }
 .msg-group.client .msg-bubble {
-  background: #1a1a2e; color: #fff;
+  background: var(--c-moi); color: var(--c-moi-ink);
   border-bottom-right-radius: 5px;
 }
 .msg-group.nutri .msg-bubble {
-  background: #fff; color: #1c1c1e;
+  background: var(--c-surface); color: var(--c-ink);
   border-bottom-left-radius: 5px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.07);
 }
@@ -62,7 +88,7 @@ body { font-family: 'Inter', sans-serif; background: #f2f2f7; height: 100vh; dis
   padding: 6px 0; display: flex; align-items: center; gap: 10px;
 }
 .msg-day-sep::before, .msg-day-sep::after {
-  content: ''; flex: 1; height: 0.5px; background: #e5e5ea;
+  content: ''; flex: 1; height: 0.5px; background: var(--c-line);
 }
 
 .typing-indicator {
@@ -88,29 +114,29 @@ body { font-family: 'Inter', sans-serif; background: #f2f2f7; height: 100vh; dis
   color: #aeaeb2; text-align: center; padding: 40px;
 }
 .empty-chat .empty-icon { font-size: 44px; margin-bottom: 4px; }
-.empty-chat .empty-title { font-size: 16px; font-weight: 600; color: #8e8e93; }
+.empty-chat .empty-title { font-size: 16px; font-weight: 600; color: var(--c-muted); }
 .empty-chat .empty-sub { font-size: 13px; line-height: 1.6; }
 
 .chat-input-bar {
-  background: #fff; border-top: 0.5px solid #e5e5ea;
+  background: var(--c-surface); border-top: 0.5px solid var(--c-line);
   padding: 10px 12px 22px; display: flex; align-items: flex-end; gap: 8px;
   flex-shrink: 0;
 }
 .msg-input {
-  flex: 1; background: #f2f2f7; border: none; border-radius: 20px;
+  flex: 1; background: var(--c-champ); color: var(--c-ink); border: none; border-radius: 20px;
   padding: 10px 14px; font-size: 15px; font-family: 'Inter', sans-serif;
-  color: #1c1c1e; outline: none; resize: none; max-height: 120px;
+  color: var(--c-ink); outline: none; resize: none; max-height: 120px;
   line-height: 1.4; min-height: 40px;
 }
-.msg-input::placeholder { color: #c7c7cc; }
+.msg-input::placeholder { color: var(--c-muted); }
 .btn-send {
   width: 40px; height: 40px; border-radius: 50%;
-  background: #1a1a2e; border: none; cursor: pointer;
+  background: var(--c-moi); border: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   font-size: 16px; flex-shrink: 0; transition: transform 0.15s;
 }
 .btn-send:active { transform: scale(0.93); }
-.btn-send:disabled { background: #c7c7cc; cursor: not-allowed; }
+.btn-send:disabled { background: var(--c-line); cursor: not-allowed; }
 
 .loading-screen {
   flex: 1; display: flex; align-items: center; justify-content: center;
@@ -118,7 +144,7 @@ body { font-family: 'Inter', sans-serif; background: #f2f2f7; height: 100vh; dis
 }
 .loading-spinner {
   width: 32px; height: 32px; border: 3px solid #f0f0f0;
-  border-top-color: #1a1a2e; border-radius: 50%;
+  border-top-color: var(--c-ink); border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -126,7 +152,7 @@ body { font-family: 'Inter', sans-serif; background: #f2f2f7; height: 100vh; dis
 .toast {
   position: fixed; bottom: 90px; left: 50%;
   transform: translateX(-50%) translateY(40px);
-  background: #1c1c1e; color: #fff; padding: 10px 20px;
+  background: var(--c-ink); color: var(--c-bg); padding: 10px 20px;
   border-radius: 20px; font-size: 13px; z-index: 999;
   transition: transform 0.3s; pointer-events: none; white-space: nowrap;
   opacity: 0; transition: all 0.3s;
@@ -154,7 +180,7 @@ body { font-family: 'Inter', sans-serif; background: #f2f2f7; height: 100vh; dis
 
 <div class="typing-indicator" id="typingIndicator">
   <div class="nutri-avatar" style="width:28px;height:28px;font-size:13px;">🧑‍⚕️</div>
-  <div class="msg-bubble" style="padding:10px 14px;background:#fff;">
+  <div class="msg-bubble" style="padding:10px 14px;background:var(--c-surface);">
     <div class="typing-bubbles">
       <div class="typing-dot"></div>
       <div class="typing-dot"></div>

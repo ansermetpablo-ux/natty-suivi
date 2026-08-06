@@ -7,17 +7,18 @@
   var CSS = '' +
     '#nattyNav{position:fixed;left:0;right:0;bottom:0;z-index:500;display:flex;justify-content:center;' +
       'padding:0 14px calc(14px + env(safe-area-inset-bottom,0px));pointer-events:none}' +
-    '#nattyNav .nn-bar{pointer-events:auto;width:100%;max-width:480px;background:#fff;border-radius:28px;' +
+    '#nattyNav .nn-bar{pointer-events:auto;width:100%;max-width:480px;background:var(--nt-bg,#fff);border-radius:28px;' +
       'display:flex;align-items:center;justify-content:space-between;padding:8px 10px;' +
-      'box-shadow:0 8px 28px rgba(20,20,30,.14);}' +
+      'box-shadow:0 8px 28px var(--nt-ombre,rgba(20,20,30,.14));}' +
     '#nattyNav .nn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;' +
-      'background:none;border:none;padding:8px 2px;cursor:pointer;color:#b7b7c0;font-family:inherit}' +
+      'background:none;border:none;padding:8px 2px;cursor:pointer;color:var(--nt-muted,#b7b7c0);font-family:inherit}' +
     '#nattyNav .nn-item svg{width:22px;height:22px;display:block}' +
     '#nattyNav .nn-item span{font-size:11px;font-weight:600;letter-spacing:.1px}' +
-    '#nattyNav .nn-item.active{color:#101014}' +
-    '#nattyNav .nn-add{flex:0 0 auto;width:54px;height:54px;border-radius:50%;background:#101014;' +
+    '#nattyNav .nn-item.active{color:var(--nt-ink,#101014)}' +
+    '#nattyNav .nn-add{flex:0 0 auto;width:54px;height:54px;border-radius:50%;background:var(--nt-ink,#101014);' +
       'display:flex;align-items:center;justify-content:center;margin:0 4px;cursor:pointer;border:none;' +
-      'box-shadow:0 6px 16px rgba(16,16,20,.35);transition:transform .12s}' +
+      'box-shadow:0 6px 16px var(--nt-ombre,rgba(16,16,20,.35));transition:transform .12s}' +
+    '#nattyNav .nn-add{color:var(--nt-on-ink,#fff)}' +
     '#nattyNav .nn-add:active{transform:scale(.93)}' +
     '#nattyNav .nn-add svg{width:24px;height:24px}' +
     'body{padding-bottom:104px}';
@@ -28,7 +29,7 @@
     coaching: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>',
     social: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c0-3.6 2.9-5.8 6.5-5.8s6.5 2.2 6.5 5.8"/><path d="M16.5 4.7a3.4 3.4 0 0 1 0 6.6M18 14.6c2.1.6 3.5 2.3 3.5 4.6"/></svg>',
     defis: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 3-2 4-2 7a3 3 0 0 0 6 0c1.5 1.5 2 3.3 2 5a6 6 0 1 1-12 0c0-4 2-7 6-12Z"/></svg>',
-    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
   };
 
   var ITEMS = [
@@ -80,7 +81,7 @@
   var CSS_PASTILLE =
     '#nattyNav .nn-item{position:relative}' +
     '#nattyNav .nn-dot{position:absolute;top:6px;right:calc(50% - 15px);width:8px;height:8px;' +
-      'border-radius:50%;background:#ff3b30;box-shadow:0 0 0 2px var(--nn-bg,#fff);pointer-events:none}';
+      'border-radius:50%;background:#ff3b30;box-shadow:0 0 0 2px var(--nn-bg,var(--nt-bg,#fff));pointer-events:none}';
 
   function injecterCssPastille() {
     if (document.getElementById('nnCssDot')) return;

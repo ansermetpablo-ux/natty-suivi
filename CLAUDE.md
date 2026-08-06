@@ -691,6 +691,55 @@ case pleine ouvre la recette dans le hero si c'en est une, sinon la fiche `detai
 panneau qui listait les recettes s'appelle désormais **« Recettes conseillées »** : deux titres
 « Ma semaine » pour deux contenus différents faisaient passer l'un pour l'autre.
 
+### `assets/theme.js` — le thème clair / sombre
+Chargé **dans le `<head>`, de façon synchrone**, par tous les écrans de l'app
+(les six porteurs de la nav, plus `login`, `onboarding`, `questionnaire-alim`,
+`chat`, `offre` et les trois pages légales). C'est la seule chose qui compte
+ici : `assets/core.js` est en fin de `<body>`, donc trop tard — un thème posé
+après le premier rendu donne un **éclair blanc à chaque changement d'écran**,
+et sur une app plein écran ça se lit comme un flash, pas comme une transition.
+L'attribut est posé sur `<html>` (`data-theme="dark"|"light"`), jamais sur
+`<body>` : `<html>` est peint avant que `<body>` n'existe.
+
+**Trois états, pas deux** : `auto` (défaut — suit le téléphone, et le suit
+**en direct** via `matchMedia`, donc la bascule au coucher du soleil se voit
+sans relancer l'app), `clair`, `sombre`. **L'interrupteur des réglages n'en
+montre que deux, et c'est voulu** : il affiche ce qui est *à l'écran
+maintenant*, et le premier geste fige le choix. Le sous-titre dit laquelle des
+deux situations on lit — « Suit le réglage de votre téléphone (actuellement
+sombre) » ou « Fond sombre sur tous les écrans ».
+
+La préférence vit en `localStorage`, **donc par appareil**, et c'est le bon
+endroit : un thème est un réglage d'affichage. Le stocker en base le ferait
+voyager d'un téléphone à l'autre alors que l'écran, la luminosité de la pièce
+et l'heure d'usage, eux, ne voyagent pas.
+
+**API** — `NattyTheme.preference()` (ce qui est enregistré), `.actuel()` /
+`.sombre()` (ce qui est affiché), `.definir(p)`, `.basculer()`. L'événement
+`natty:theme` est émis sur `document` à chaque changement : `profil.html`
+s'en sert pour que son interrupteur ne mente pas quand le téléphone bascule
+pendant que la feuille est ouverte.
+
+**Deux choses de plus, faciles à oublier :**
+- `<meta name="theme-color">` est réécrit. Sans ça l'app passe en sombre et
+  **garde un bandeau blanc en haut** — c'est la première chose qu'on voit.
+- `documentElement.style.colorScheme` est posé, ce qui fait basculer les
+  contrôles **natifs** (champs, `<select>`, barres de défilement). Sans lui,
+  le sélecteur d'heure des rappels reste blanc au milieu d'un écran sombre.
+
+**Jetons `--nt-*`** — `theme.js` injecte aussi une petite feuille définissant
+`--nt-bg`, `--nt-card`, `--nt-ink`, `--nt-on-ink`, `--nt-muted`, `--nt-line`,
+`--nt-ombre`, `--nt-voile`. C'est pour les **modules injectés** (`nav.js`,
+`core.js`/`Natty.confirmer`, `generation.js`) : ils s'invitent aussi bien sur
+`assets/style.css` que sur `suivi.html`, qui a son propre jeu de variables
+plus ancien où `--bg` ne vaut pas la même chose. Il leur faut donc des jetons
+à eux, valables partout, sans collision. `theme.js` est le seul fichier que
+**toutes** les pages chargent — d'où la feuille écrite en JS et non en `.css`.
+
+**Modules déjà sombres par construction** — `ajout.js`, `planning.js`,
+`macros-cal.js` n'ont rien eu à changer : leurs écrans sont noirs dans les
+deux thèmes, par choix de mise en scène. Ne pas « corriger » leurs `#fff`.
+
 ### `assets/notifs.js` — le rappel quotidien (notifications **locales**)
 Chargé par les cinq écrans porteurs de la nav (`suivi`, `repas`, `menu`/`www/index`, `social`,
 `coaching`, `profil`) juste avant `assets/nav.js`. Hors application native, le module se charge
@@ -1449,10 +1498,39 @@ Colonnes **relevées en base** (`select=*`, juillet 2026) :
 - **Overlays** : `display:none` → `display:flex` (PAS classList.add('active') pour les overlays injectés dynamiquement)
 - **Sheets (bottom sheets)** : `-webkit-overflow-scrolling: touch` pour le scroll mobile
 
+### Thème sombre (août 2026) — voir `assets/theme.js` en §3
+Chaque écran porte désormais **deux jeux de jetons**, le clair et son pendant
+`:root[data-theme="dark"]`. Fond `#0e0e11`, carte `#1c1c22`, encre `#f4f4f7`,
+filets `#2a2a32`, verts/orangés/rouges en valeurs « dark system » d'Apple
+(`#32d74b`, `#ffb340`, `#ff453a`) — les couleurs vives du thème clair bavent
+sur du noir.
+
+⚠️ **Le neumorphisme ne s'inverse pas.** Un relief blanc à `.88` sur fond noir
+n'est plus un relief, c'est un halo : les cartes ont l'air allumées par en
+dessous. Les reliefs tombent à `~.035` et c'est **l'ombre portée** qui creuse.
+Deux fois ce défaut a été trouvé **à l'écran et nulle part ailleurs** — la
+carte « Historique de repas » de `suivi.html` (`--sh-out`) et toutes celles
+d'`offre.html`, dont les ombres étaient écrites en dur, hors variable.
+
+⚠️ **`--ink` / `--black` avaient DEUX rôles**, et c'est là qu'est toute la
+difficulté : couleur du **texte** (134 usages dans `suivi.html`) et fond des
+**surfaces sombres** (49 usages). En sombre l'un doit s'éclaircir et l'autre
+rester sombre — les confondre rend forcément l'un des deux illisible. D'où la
+séparation en `--surface-ink` (le fond) et le couple `--ink` / `--on-ink`
+(ce qui se pose dessus). Toute nouvelle règle doit choisir son rôle.
+
+**Ce qui reste volontairement clair en thème sombre** : les boutons
+principaux (`--ink` sur fond de page) s'inversent en pastille claire à texte
+sombre — c'est le contraste attendu, pas un oubli. De même le bouton *Sign in
+with Apple* garde son noir et son blanc : son habillage est imposé par Apple.
+
 ### Admin (style neumorphique)
 - Même variables CSS que le dashboard
 - Typographie : DM Sans
 - Onglets : highlight vert `#34c759` sur l'onglet actif
+- ⚠️ **Pas de thème sombre** : `admin.html` et l'ancien `index.html` vivent
+  dans un navigateur de bureau, pas dans l'app. Ils ne chargent pas
+  `assets/theme.js` et restent clairs.
 
 ### [narration] DA du module parcours (mise à jour — N&B uniforme)
 - **DA noir & blanc uniforme, neumorphisme sobre façon Apple, police Inter.** Fini les palettes colorées par univers.
@@ -1463,6 +1541,15 @@ Colonnes **relevées en base** (`select=*`, juillet 2026) :
 - Surlignages de mots kinetic en **noir** (`hl`) par défaut ; jaune (`hlY`) réservé au sens fort/défis.
 - Le jeu de la jauge utilise un **panneau blanc** dédié même en thème sombre, pour que le sujet détouré et la jauge restent lisibles.
 - Colonne mobile **480 px** : `#klayer` est ancré à cette colonne centrée (et non à la fenêtre entière) pour un rendu correct sur ordinateur comme sur mobile.
+- ⚠️ **`narration.html` NE SUIT PAS le mode sombre de l'app** (décision d'août
+  2026, en même temps que `assets/theme.js`). Il ne charge pas `theme.js` et
+  garde son alternance blanc/noir pilotée par le type de beat. Ce n'est pas un
+  oubli : ici le blanc est une **matière**, choisie plan par plan comme dans un
+  film, et le parcours alterne déjà les deux à chaque écran — un utilisateur en
+  mode sombre y voit donc des écrans blancs *par construction*, pas par défaut
+  de thème. Le rendre « sombre » demanderait de reprendre ses 68 blancs écrits
+  en dur et sa bibliothèque `K_SVG`, au risque des bugs de rendu documentés en
+  §7. À faire un jour comme un chantier à part, pas comme un correctif.
 
 ---
 
@@ -1493,6 +1580,26 @@ Colonnes **relevées en base** (`select=*`, juillet 2026) :
 ### Login
 - **login.html** : page standalone pour accès direct sans Wix. Encode user_id en hex → même format que le token Wix.
 - **Google OAuth** : nécessite configuration dans Supabase (Site URL + Redirect URLs) ET dans Google Console (Authorized redirect URIs = `https://hrsvcelmwdlcswwagxfa.supabase.co/auth/v1/callback`).
+
+### Thème sombre (août 2026)
+- **`assets/theme.js` dans le `<head>`, en synchrone** — pas dans `core.js`.
+  Une seule raison, mais elle suffit : `core.js` est en fin de `<body>`, donc
+  le thème s'appliquerait après le premier rendu et chaque changement d'écran
+  ferait un éclair blanc.
+- **Un interrupteur, trois états.** Pablo a demandé « un switch », et un
+  segmenté Clair/Sombre/Auto aurait été plus bavard que le réglage ne le
+  mérite. L'état `auto` reste donc l'état *par défaut*, invisible et non
+  sélectionnable : l'interrupteur montre ce qui est à l'écran, le premier
+  geste fige. Personne n'a à choisir « auto », c'est déjà le cas.
+- **Préférence en `localStorage`, jamais en base** : un thème est un réglage
+  d'appareil (voir §3).
+- **`--surface-ink` séparé de `--ink`/`--black`** dans `suivi.html`,
+  `login.html`, `onboarding.html`, `questionnaire-alim.html` et `offre.html` :
+  fond sombre d'un côté, couleur de texte de l'autre. Voir §5 pour le
+  pourquoi — c'est la décision structurante de tout ce chantier.
+- **`narration.html` reste hors du thème** (voir §5, [narration]).
+- **`admin.html` et l'ancien `index.html` restent clairs** : ils vivent dans
+  un navigateur de bureau, pas dans l'app.
 
 ---
 
@@ -1647,6 +1754,37 @@ les pages Wix, d'où la persistance du bug ailleurs. Corrigé : headers rapatri�
 ### Webhook Stripe sans vérification de signature
 **Problème** : `api/webhook.js` traite `await req.json()` sans jamais vérifier le header `stripe-signature` ni utiliser `STRIPE_WEBHOOK_SECRET`. N'importe qui connaissant l'URL peut POSTer un faux event `checkout.session.completed` avec un `user_id` arbitraire et activer un abonnement gratuit.
 **Solution** : implémenter `stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET)` et rejeter (400) toute requête dont la signature ne correspond pas. **Priorité sécurité avant toute mise en prod réelle** (voir aussi §8).
+
+### Thème sombre : un `:root` coupé en deux, et deux halos — ✅ corrigés
+Trois défauts trouvés en **regardant l'écran**, aucun détectable par lecture
+ni par `node --check`. Ils sont ici parce qu'ils se reproduiront à la
+prochaine page qu'on thémera.
+
+1. ⚠️ **`suivi.html` a DEUX blocs `:root`**, séparés de 850 lignes. En
+   insérant le bloc sombre au milieu du second, tout ce qui le suivait —
+   `--metal-black`, `--sh-metal` — s'est retrouvé **défini uniquement en mode
+   sombre**. Résultat : en mode **clair**, les cartes Calories et Objectif
+   perdaient leur fond noir et affichaient du blanc sur gris perle. Le mode
+   qu'on ne venait pas de toucher. Avant d'insérer un bloc de variables dans
+   un fichier de 5 000 lignes : `grep -c ':root'`.
+2. ⚠️ **Les ombres neumorphiques ne sont pas toutes dans des variables.**
+   `--sh-out` (`suivi.html`) et une quarantaine de `rgba(255,255,255,.88)`
+   écrits en dur dans `offre.html` ont continué à peindre un reflet blanc sur
+   fond noir : un **halo**, comme si les cartes étaient rétroéclairées.
+   Dans `offre.html` les valeurs sont conservées **une par opacité**
+   (`--relief-88`, `--creux-42`…) plutôt que normalisées : normaliser les
+   alphas aurait retouché un écran clair qui fonctionnait.
+3. ⚠️ **Un `color:#fff` n'est pas toujours à remplacer.** Sur `var(--ink)` il
+   faut `var(--on-ink)` — mais sur une photo, sur du vert, ou sur une carte
+   volontairement noire dans les deux thèmes, il doit **rester**. C'est ce qui
+   interdit un simple rechercher-remplacer : il faut lire le fond de chaque
+   règle.
+
+**Comment vérifier une page sans la relire** : en thème sombre, balayer le DOM
+et remonter tout bloc de plus de 40×20 px dont le `backgroundColor` calculé a
+une luminance > 0,8 et qui ne porte pas d'image. Ce qui passe par une variable
+a déjà basculé ; ce qui ressort est écrit en dur. Sur les six écrans de la nav
+il ne reste ainsi que des boutons principaux **volontairement** inversés.
 
 ### Colonnes fantômes de `onboarding` (`42703`)
 **Problème** : demander `nb_repas`, `proteines`, `glucides`, `lipides`, `calories`, `freins`,
@@ -1899,6 +2037,34 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   plats du dépôt (`plat-demo1/2-week.png`) sont des plats précis : les coller sur « Poulet
   rôti » serait un mensonge à l'écran. Il faut de vraies photos, fournies par Pablo (règle §9
   #24 : on ne va pas en chercher sur le web).
+
+**Thème sombre**
+- ✅ **Livré** (août 2026) — `assets/theme.js` + un pendant `[data-theme="dark"]`
+  sur chaque écran, et l'interrupteur « Mode sombre » en tête des réglages de
+  `profil.html`. Détail en §3, décisions en §5/§6, pièges en §7.
+- ✅ Couvre les **six écrans de la nav** (suivi, repas, menu/`www/index`,
+  social, coaching, profil), les **écrans d'entrée** (login, onboarding,
+  questionnaire-alim), **chat**, **offre** et les **trois pages légales** ;
+  plus les modules injectés `nav.js`, `core.js` (`Natty.confirmer`),
+  `generation.js`, `liste.js`, `minijeux.js`, `recette.js`.
+- ✅ Vérifié en navigateur (colonne 375 px) sur chacun de ces écrans, dans les
+  **deux** thèmes — le clair a été recontrôlé après coup, et c'est là qu'a été
+  attrapée la régression du `:root` coupé en deux (§7). Balayage automatique
+  des fonds restés clairs : plus rien d'involontaire.
+- 🔄 **Non vérifié sur téléphone** : la barre d'état (`theme-color`) et les
+  contrôles natifs (`color-scheme`) n'ont pu être testés qu'en navigateur.
+  À regarder au prochain build iOS, en même temps que le reste.
+- 🔄 **Le suivi « en direct » du réglage système n'a pas pu être vérifié.**
+  L'émulation `prefers-color-scheme` des outils de développement change bien la
+  requête média mais **ne déclenche pas l'événement `change`** — mesuré : un
+  écouteur posé à la main juste avant la bascule reçoit 0 événement, donc c'est
+  le banc de test, pas le code. La résolution, elle, est juste (`appliquer()`
+  appelé à la main rend le bon thème). Au pire, en `auto`, la bascule du
+  téléphone se verrait au changement d'écran suivant, chaque page rejouant
+  `appliquer()` au chargement.
+- 🔄 **`narration.html` volontairement hors périmètre** (§5). C'est le seul
+  écran de l'app qui reste blanc quand le reste est sombre.
+- 🔄 `admin.html` et l'ancien `index.html` restent clairs — écrans de bureau.
 
 **Notifications**
 - ✅ **Rappel quotidien livré** — `assets/notifs.js` + interrupteur dans `profil.html`
@@ -2161,6 +2327,15 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 19. **Après chaque push GitHub**, attendre le redéploiement Vercel (statut Ready) avant de tester
 20. **`window._factureProduitsCache`** — données facture dans array global avec `data-idx`, pas en JSON dans `data-produit`
 31. **Compatibilité Capacitor** : signaler à Pablo toute décision qui dépendrait d'une API navigateur non supportée en WebView (voir §10), ou d'un chemin absolu qui casserait si l'app n'est plus servie depuis la racine du domaine
+33. **Une couleur écrite en dur est une couleur qui ne basculera pas.** Toute
+    nouvelle règle CSS passe par un jeton (`--bg`, `--card`, `--ink`,
+    `--on-ink`, `--muted`, `--line`, ou les `--nt-*` pour un module injecté).
+    Et avant d'écrire `color:#fff`, se demander sur quoi il repose : sur
+    `var(--ink)` c'est `var(--on-ink)` ; sur une photo ou sur du vert, `#fff`
+    est juste. Voir §5 et §7.
+34. **Toute page nouvelle charge `assets/theme.js` dans le `<head>`**, avant
+    sa feuille de style — sinon elle clignote en blanc à chaque ouverture.
+
 32. **Push automatique autorisé** (décidé le 2026-07-26) : une fois un commit créé sur ce repo, `git push origin main` peut être fait directement, **sans redemander confirmation à chaque fois**. Authentification via clé SSH dédiée (`~/.ssh/id_ed25519_github`, clé "Claude Accès" sur GitHub, remote `origin` en SSH). Cette autorisation est spécifique à ce repo — ne pas l'étendre à un autre dépôt ou à d'autres actions destructrices (force-push, reset, etc., qui restent soumises à confirmation).
 
 ### [narration] Règles spécifiques au module parcours
@@ -2613,3 +2788,27 @@ session « fil social » :*
   (`conseilsPresents`/`conseilsFrais`/`CONSEILS_COLS`, retrait des générations déclenchées par
   une simple consultation). Impossible de l'en séparer sans réécrire son travail ; c'est noté
   ici, comme pour `e01e20b`.
+
+---
+
+*Contribution session « mode sombre » (Claude Opus, 6 août 2026) :*
+- **Nouveau** `assets/theme.js` (+ `www/`) : moteur de thème clair/sombre/auto,
+  chargé en synchrone dans le `<head>` de tous les écrans de l'app. Détail en §3.
+- **Interrupteur « Mode sombre »** en tête des réglages de `profil.html`, avec
+  le sous-titre qui dit si l'on suit le téléphone ou un choix figé. Il écoute
+  `natty:theme` pour ne pas mentir si le téléphone bascule pendant qu'il est
+  affiché.
+- Pendant `:root[data-theme="dark"]` ajouté à `assets/style.css`, `suivi.html`,
+  `login.html`, `onboarding.html`, `questionnaire-alim.html`, `chat.html`,
+  `offre.html` ; jetons `--nt-*` pour les modules injectés ; `assets/legal.css`
+  passé aux variables.
+- **`--surface-ink` séparé de `--ink`/`--black`** — la décision structurante :
+  la même variable servait de couleur de texte ET de fond de carte sombre, deux
+  rôles qui basculent en sens contraire (§5).
+- Trois défauts trouvés **en regardant l'écran** et corrigés : un `:root` coupé
+  en deux qui cassait le mode CLAIR de `suivi.html`, et deux séries d'ombres
+  neumorphiques écrites hors variable qui faisaient halo sur fond noir (§7).
+- Vérifié en navigateur sur les 13 écrans concernés, dans les deux thèmes, plus
+  un balayage automatique des fonds restés clairs.
+- **Pas touché** : `narration.html` (art direction propre, §5), `admin.html` et
+  l'ancien `index.html` (écrans de bureau).

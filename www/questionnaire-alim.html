@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<script src="/assets/theme.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -13,9 +14,26 @@
   --shadow-sm:  4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85);
   --green: #5a9e6f; --green-light: #eaf4ee; --text: #3a3a4a; --muted: #aaa; --black: #1a1a2e;
   --red: #c77b7b; --red-light: #fde8e8; --amber: #ba7517; --amber-light: #faeeda;
+  --surface-ink: #1a1a2e; --on-ink: #ffffff;
 }
+
+/* Thème sombre — l'attribut vient d'assets/theme.js, chargé dans le <head>.
+   Le fond « papier » (pointillés) reste, mais en clair sur sombre : sans lui
+   l'écran devient un aplat noir, et c'est justement ce grain qui donne à ces
+   longs questionnaires l'air d'un formulaire et non d'un terminal. */
+:root[data-theme="dark"] {
+  --grain: rgba(255,255,255,.07);
+  --bg: #0e0e11;
+  --shadow-out: 6px 6px 16px rgba(0,0,0,.6), -6px -6px 16px rgba(255,255,255,.035);
+  --shadow-in:  inset 3px 3px 8px rgba(0,0,0,.6), inset -3px -3px 8px rgba(255,255,255,.04);
+  --shadow-sm:  4px 4px 10px rgba(0,0,0,.55), -4px -4px 10px rgba(255,255,255,.035);
+  --green: #7fd499; --green-light: #17331f; --text: #e9e9ef; --muted: #8e8e99;
+  --black: #f4f4f7; --surface-ink: #202128; --on-ink: #f0f0f4;
+  --red: #d99a9a; --red-light: #3a1e1e; --amber: #e0a44a; --amber-light: #3a2c14;
+}
+
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; padding-bottom: 48px; color: var(--text); }
-.bg-pattern { position: fixed; inset: 0; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.18) 1px, transparent 0); background-size: 26px 26px; z-index: 0; pointer-events: none; }
+.bg-pattern { position: fixed; inset: 0; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, var(--grain, rgba(180,180,200,0.18)) 1px, transparent 0); background-size: 26px 26px; z-index: 0; pointer-events: none; }
 .app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 18px; }
 .top-bar { display: flex; align-items: center; gap: 12px; padding: 20px 0 14px; }
 .btn-back { width: 38px; height: 38px; border-radius: 50%; background: var(--bg); border: none; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text); flex-shrink: 0; }
@@ -85,7 +103,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .sel-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; min-height: 28px; }
 .sel-tag { font-size: 11px; padding: 4px 10px; border-radius: 99px; background: var(--green-light); color: var(--green); font-weight: 500; }
 .sel-tag.bad { background: var(--red-light); color: var(--red); }
-.btn-c { width: 100%; padding: 17px; border-radius: 16px; background: var(--black); border: none; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 4px 4px 14px rgba(26,26,46,0.35); transition: all 0.15s; letter-spacing: -0.2px; }
+.btn-c { width: 100%; padding: 17px; border-radius: 16px; background: var(--surface-ink); border: none; color: var(--on-ink); font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 4px 4px 14px rgba(26,26,46,0.35); transition: all 0.15s; letter-spacing: -0.2px; }
 .btn-c:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 .btn-c:not(:disabled):active { transform: scale(0.98); }
 .recap-bloc { background: var(--bg); border-radius: 16px; padding: 16px 18px; box-shadow: var(--shadow-in); margin-bottom: 10px; }
