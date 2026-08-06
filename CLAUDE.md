@@ -353,7 +353,37 @@ d'abord vers une page ferait perdre le geste utilisateur et iOS/WebKit refuserai
 la caméra. `assets/nav.js` appelle `window.NattyAjout.start()` en premier, et retombe sur
 l'ancien `window.NattyOnAdd` puis sur `suivi.html?add=1` si le module n'est pas chargé.
 
-**Enchaînement des écrans** (maquettes fournies par Pablo) :
+**Refonte en trois temps (2026-08-05, demande de Pablo).** L'écran unique faisait
+tout — cadre, anneaux, liste, « Terminer » — et c'est ce qui étouffait le cadre photo.
+Il est découpé :
+1. **`naScRepas` — la prise de vue.** Le cadre est le HÉROS (3/4, centré), puis les
+   anneaux en **−30 %** (92 px au lieu de 132, trait et textes réduits dans le même
+   rapport), le **module noir des calories restantes** (vocabulaire `--metal-black` /
+   `--sh-metal` de `suivi.html`, valeurs recopiées : ces tokens vivent dans son
+   `<style>`, pas dans `assets/style.css`), et les trois sources — **Prendre la photo**,
+   **Galerie**, **Écrire**. Ni liste d'ingrédients ni « Terminer » : ils n'ont aucun sens
+   avant qu'un plat existe.
+2. **`naScOk` — la validation.** Rond puis V vert, reprise de `.vok` d'`assets/planning.js`
+   (deux tracés décalés ; un seul tracé continu ne se lit pas comme une validation).
+   Enchaîne seule au bout de 1,75 s — c'est une confirmation, pas une étape.
+   ⚠️ La caméra est arrêtée **avant** la transition : la laisser tourner garde l'indicateur
+   allumé sur des écrans qui ne filment plus. Le minuteur est annulé par `fermer()`, sinon
+   un overlay fermé pendant l'animation se rouvrirait tout seul sur un `S` déjà nul.
+3. **`naScRecap` — le récap.** Nom modifiable, vignettes, anneaux à taille normale, liste
+   des ingrédients **ouverte** (retirer / corriger la quantité / ajouter), puis
+   **Enrichir** — qui n'apparaît qu'ici — et **Terminer et enregistrer**.
+   « Écrire » y mène **sans** la transition verte : rien n'a été reconnu, il n'y a rien à
+   confirmer.
+
+Retours : depuis le récap on revient à la prise de vue (c'est là qu'on ajoute une seconde
+photo au même repas) ; c'est depuis la prise de vue qu'on abandonne. Retirer la dernière
+vignette ramène à la prise de vue, plutôt que d'afficher un récap vide avec « Terminer ».
+
+⚠️ **Les anneaux existent en DEUX exemplaires**, d'où le préfixe d'identifiant
+(`naArcp` / `naArcmp`) et `PREFIXES` : `majAnneaux()` peint les deux du même coup, ils ne
+peuvent donc pas se contredire d'un écran à l'autre.
+
+**Enchaînement des écrans** (maquettes d'origine, avant la refonte ci-dessus) :
 1. `<input capture="environment">` → caméra native.
 2. `naScAnalyse` — photo envoyée à `/api/claude` (vision), même prompt que `analyserAvecIA()`
    de `suivi.html`. En cas d'échec : « Reprendre une photo » / « Galerie » / « Saisir à la main »
@@ -407,6 +437,23 @@ critique → suggestion du prochain repas → **et seulement ensuite** le choix 
 ⚠️ **Le cadre photo est en `object-fit:contain`, en portrait.** En `cover` dans un cadre 4/3, un
 cliché de téléphone (3/4) était rogné des deux tiers : on cadrait son assiette sur une vue
 tronquée, et la photo réellement analysée ne ressemblait pas à ce qu'on avait vu.
+
+> ⚠️⚠️ **ET IL ÉTAIT DÉCLARÉ 3/4 SANS L'ÊTRE** (corrigé le 2026-08-05, sur photo de Pablo).
+> Mesuré à 390×844 : **346 × 207 px, rapport 1,67**. `aspect-ratio:3/4` donnait une hauteur
+> préférée de 461 px, le contenu de l'écran dépassait donc la fenêtre, et le cadre étant le
+> seul élément vraiment compressible, c'est lui qui absorbait tout le manque
+> (`flex-shrink` vaut 1 par défaut). **Un `aspect-ratio` ne survit pas à une compression
+> flex** : la largeur restait étirée à 100 %, la hauteur tombait, le rapport partait à
+> l'envers. Une photo de téléphone en `contain` s'affichait alors en bande de 152 px entre
+> deux bandes noires de 95 px.
+> La correction inverse la logique : un conteneur `flex:1` prend la place restante, le cadre
+> s'y inscrit en `height:100%` + `aspect-ratio`, donc c'est la **largeur** qui se déduit de la
+> hauteur. Mesuré après : **306 × 408 px, rapport 0,75 exact, centré, zéro bande** — quatre
+> fois la surface de photo visible. Un `min-height` sert de plancher sur petit écran
+> (375×667) : mieux vaut laisser l'écran défiler de quelques pixels que réduire la photo à un
+> timbre-poste.
+> Le titre est passé à une ligne (25 px au lieu de 38, vérifié du « premier » au « dixième »
+> repas) : à deux lignes il mangeait 81 px pris directement sur le cadre.
 
 **Suggestions** : `optionsIA()` interroge `/api/claude` (texte seul) ; `optionsLocales()` les
 compose depuis la table nutritionnelle de `core.js`. Une suggestion dont les macros sont nulles
