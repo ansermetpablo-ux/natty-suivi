@@ -874,6 +874,52 @@ html.no-scroll {
 @keyframes spin { to { transform:rotate(360deg); } }
 #onbD0.active, #onbD1.active, #onbD2.active, #onbD3.active { background:var(--surface-ink) !important; }
 
+/* ══ Mon garde-manger — panneau en bas de l'écran Suivi ══
+   Tout est écrit avec les jetons de CETTE page (`--bg`, `--text`, `--muted`,
+   `--line`, `--so`, `--si`, `--surface-ink`, `--on-ink`) : le panneau suit donc
+   les deux thèmes sans une seule couleur en dur. La version d'origine, dans
+   repas.html, utilisait `--card`/`--ink`/`--nm-in`, qui n'existent pas ici. */
+#gmWrap { margin-top:16px; }
+.gm-panel { background:var(--bg); border-radius:22px; box-shadow:var(--so); padding:18px; }
+.gm-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; }
+.gm-titre { font-size:15.5px; font-weight:900; color:var(--text); }
+.gm-titre span { font-size:11.5px; font-weight:700; color:var(--muted); margin-left:6px; }
+.gm-vider { font-size:12px; font-weight:800; color:var(--text); text-decoration:underline; cursor:pointer; }
+.gm-acts { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:13px; }
+.gm-act { background:var(--bg); border:none; border-radius:15px; padding:11px 2px 9px; font-family:inherit;
+  font-size:9.5px; font-weight:700; color:var(--text); cursor:pointer; display:flex; flex-direction:column;
+  align-items:center; gap:6px; box-shadow:var(--sm); line-height:1.15; text-align:center; }
+.gm-act:active { transform:scale(.96); box-shadow:var(--si); }
+.gm-act .em { font-size:20px; }
+.gm-saisie { display:none; gap:8px; margin-bottom:13px; }
+.gm-saisie.on { display:flex; }
+.gm-saisie input { flex:1; min-width:0; background:var(--bg); border:1px solid var(--line); border-radius:14px;
+  padding:11px 13px; font-family:inherit; font-size:13px; color:var(--text); box-shadow:var(--si); }
+.gm-saisie button { background:var(--surface-ink); color:var(--on-ink); border:none; border-radius:14px;
+  padding:0 16px; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap; }
+.gm-etat { display:none; font-size:12.5px; color:var(--muted); text-align:center; padding:8px 0 12px; }
+.gm-etat.on { display:block; }
+.gm-etat .sp { display:inline-block; width:14px; height:14px; border:2px solid var(--line);
+  border-top-color:var(--text); border-radius:50%; animation:gmSpin .8s linear infinite;
+  vertical-align:-2px; margin-right:7px; }
+@keyframes gmSpin { to { transform:rotate(360deg); } }
+.gm-vide { font-size:12.5px; color:var(--muted); line-height:1.5; text-align:center; padding:2px 4px 4px; }
+.gm-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.gm-it { position:relative; background:var(--bg); border-radius:15px; padding:12px 4px 9px; text-align:center;
+  box-shadow:var(--sm); }
+.gm-it .em { font-size:22px; line-height:1; }
+.gm-it .nm { font-size:11px; font-weight:700; color:var(--text); margin-top:5px; line-height:1.2;
+  word-break:break-word; }
+.gm-it .qt { font-size:10px; color:var(--muted); margin-top:2px; }
+.gm-it .del { position:absolute; top:4px; right:4px; width:18px; height:18px; border-radius:50%;
+  background:var(--bg); border:none; color:var(--muted); font-size:9px; line-height:1; cursor:pointer;
+  box-shadow:var(--sm); }
+.gm-gen { width:100%; margin-top:14px; background:var(--surface-ink); color:var(--on-ink); border:none;
+  border-radius:999px; padding:14px; font-family:inherit; font-size:13.5px; font-weight:800; cursor:pointer;
+  box-shadow:var(--sm); }
+.gm-gen:disabled { opacity:.35; box-shadow:none; cursor:default; }
+.gm-note { font-size:10.5px; color:var(--muted); text-align:center; margin-top:9px; line-height:1.4; }
+
 /* ── Refonte nav : modules retires de l'ecran Suivi ── */
 .natty-hidden { display:none !important; }
 .header-top { align-items:center; }
@@ -1192,7 +1238,20 @@ html.no-scroll {
     <button id="btnGenConseils" style="width:100%;padding:16px;background:var(--surface-ink);color:#fff;border:none;border-radius:18px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;box-shadow:var(--sm);">✨ Générer mes conseils</button>
     <div id="genConseilsEtat" style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px;"></div>
   </div>
+
+  <!-- MON GARDE-MANGER — tout en bas de l'écran Suivi (demande de Pablo,
+       2026-08-05). Il avait quitté l'écran Repas au profit de la seule question
+       plein écran d'`assets/generation.js` ; il revient ici en panneau permanent,
+       pour qu'on puisse composer sa liste quand on veut et pas seulement au
+       moment où l'app la demande. Le contenu est rendu par rendreGardeManger(). -->
+  <div id="gmWrap"></div>
 </div>
+
+<!-- Les deux entrées photo du garde-manger. Hors du panneau : `rendreGardeManger()`
+     réécrit son innerHTML à chaque changement, ce qui détruirait les inputs et
+     leurs écouteurs au premier ingrédient ajouté. -->
+<input type="file" id="gmCam" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="gmGal" accept="image/*" style="display:none">
 
 <!-- ══ ONGLET PROGRESSION ══ -->
 <div class="tab-page" id="pageProg" style="display:none;">
@@ -2724,6 +2783,173 @@ function brancherAjoutCourses(cont) {
 }
 
 /* Un mot bref, sans dialogue : l'ajout doit se sentir, pas s'interrompre. */
+/* ═══ Mon garde-manger ═══════════════════════════════════════
+   Ce que l'utilisateur a chez lui, en bas de l'écran Suivi. Repris du panneau
+   qui vivait dans repas.html (commit c40aa0f) et remis ici à la demande de
+   Pablo, avec deux différences imposées par l'architecture actuelle :
+
+   • la génération de la semaine est CÔTÉ SERVEUR depuis août 2026 :
+     `NattyReco.genererSemaine()`, qu'appelait l'ancien bouton, n'existe plus.
+     On passe donc par `NattyGeneration.lancer()` ;
+   • et on lui transmet `garde` directement, pour qu'il NE REPOSE PAS la question
+     « on part de ton garde-manger ? » : l'utilisateur vient de composer sa liste
+     sous ses yeux et d'appuyer sur « Générer mes repas avec ces ingrédients ».
+
+   ⚠️ Le module `assets/garde-manger.js` doit être chargé (il l'est depuis
+   7d6b313). Sans lui, le panneau ne s'affiche pas du tout plutôt que de montrer
+   une coquille vide dont aucun bouton ne marcherait. */
+
+var gmType = 'courses';        // 'courses' | 'ticket' | 'auto' — sens du scan
+
+function gmEtat(msg, spin) {
+  var e = document.getElementById('gmEtat');
+  if (!e) return;
+  e.classList.toggle('on', !!msg);
+  e.innerHTML = msg ? ((spin ? '<span class="sp"></span>' : '') + esc(msg)) : '';
+}
+
+function rendreGardeManger() {
+  var w = document.getElementById('gmWrap');
+  if (!w || typeof NattyGardeManger === 'undefined') return;
+  var items = NattyGardeManger.liste();
+
+  var corps = items.length
+    ? '<div class="gm-grid">' + items.map(function (x, i) {
+        return '<div class="gm-it">'
+          + '<button class="del" data-gmdel="' + i + '" aria-label="Retirer ' + esc(x.nom) + '">✕</button>'
+          + '<div class="em">' + esc(x.em || x.emoji || '🥄') + '</div>'
+          + '<div class="nm">' + esc(x.nom) + '</div>'
+          + (x.qte || x.qt ? '<div class="qt">' + esc(x.qte || x.qt) + '</div>' : '')
+          + '</div>';
+      }).join('') + '</div>'
+    : '<div class="gm-vide">Scannez vos courses ou votre ticket de caisse : vos recettes de la semaine partiront de ce que vous avez déjà.</div>';
+
+  w.innerHTML = '<div class="gm-panel">'
+    + '<div class="gm-head">'
+      + '<div class="gm-titre">Mon garde-manger <span>(' + items.length + ')</span></div>'
+      + (items.length ? '<div class="gm-vider" id="gmVider">Tout vider</div>' : '')
+    + '</div>'
+    + '<div class="gm-acts">'
+      + '<button class="gm-act" data-gm="courses"><span class="em">🛒</span>Mes courses</button>'
+      + '<button class="gm-act" data-gm="ticket"><span class="em">🧾</span>Ticket</button>'
+      + '<button class="gm-act" data-gm="galerie"><span class="em">🖼️</span>Une photo</button>'
+      + '<button class="gm-act" data-gm="saisie"><span class="em">✏️</span>Saisir</button>'
+    + '</div>'
+    + '<div class="gm-saisie" id="gmSaisie">'
+      + '<input id="gmInput" type="text" placeholder="poulet, riz 500 g, brocoli…" autocomplete="off">'
+      + '<button id="gmAdd">Ajouter</button>'
+    + '</div>'
+    + '<div class="gm-etat" id="gmEtat"></div>'
+    + corps
+    + '<button class="gm-gen" id="gmGen"' + (items.length ? '' : ' disabled') + '>'
+      + 'Générer mes repas avec ces ingrédients</button>'
+    + (NattyGardeManger.estSynchronise() ? ''
+        : '<div class="gm-note">Liste gardée sur cet appareil uniquement.</div>')
+    + '</div>';
+
+  brancherGardeManger();
+}
+
+/* Les écouteurs sont reposés à chaque rendu : `innerHTML` a détruit les
+   précédents. D'où `data-*` + addEventListener, jamais d'onclick inline avec un
+   nom d'aliment apostrophé (règle §9 #8). */
+function brancherGardeManger() {
+  document.querySelectorAll('#gmWrap .gm-act').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var mode = b.dataset.gm;
+      if (mode === 'saisie') {
+        var z = document.getElementById('gmSaisie');
+        z.classList.toggle('on');
+        if (z.classList.contains('on')) document.getElementById('gmInput').focus();
+        return;
+      }
+      // ⚠️ `input.click()` doit rester SYNCHRONE dans le handler, sinon iOS
+      // refuse d'ouvrir l'appareil photo (geste utilisateur perdu).
+      if (mode === 'galerie') { gmType = 'auto'; document.getElementById('gmGal').click(); return; }
+      gmType = mode;                              // 'courses' | 'ticket'
+      document.getElementById('gmCam').click();
+    });
+  });
+
+  var add = document.getElementById('gmAdd');
+  if (add) add.addEventListener('click', gmAjoutSaisie);
+  var inp = document.getElementById('gmInput');
+  if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') gmAjoutSaisie(); });
+
+  document.querySelectorAll('#gmWrap [data-gmdel]').forEach(function (b) {
+    b.addEventListener('click', async function () {
+      await NattyGardeManger.retirer(+b.dataset.gmdel);
+      rendreGardeManger();
+    });
+  });
+
+  var vider = document.getElementById('gmVider');
+  if (vider) vider.addEventListener('click', async function () {
+    if (window.Natty && Natty.confirmer
+        && !(await Natty.confirmer('Vider le garde-manger ?', 'Les ' + NattyGardeManger.nbItems()
+             + ' ingrédients seront retirés.', 'Vider'))) return;
+    await NattyGardeManger.vider();
+    rendreGardeManger();
+    toastMacro('Garde-manger vidé');
+  });
+
+  var gen = document.getElementById('gmGen');
+  if (gen) gen.addEventListener('click', gmGenerer);
+}
+
+async function gmAjoutSaisie() {
+  var inp = document.getElementById('gmInput');
+  var trouves = NattyGardeManger.depuisTexte(inp.value);
+  if (!trouves.length) { toastMacro('Rien à ajouter'); return; }
+  await NattyGardeManger.ajouter(trouves);
+  rendreGardeManger();
+  toastMacro(trouves.length + (trouves.length > 1 ? ' ingrédients ajoutés' : ' ingrédient ajouté'));
+}
+
+async function gmScan(file) {
+  gmEtat(gmType === 'ticket' ? 'Lecture du ticket…' : 'Lecture de la photo…', true);
+  try {
+    var trouves = await NattyGardeManger.scanner(file, gmType);
+    if (!trouves.length) {
+      gmEtat('Aucun aliment reconnu. Reprenez la photo, ou saisissez-les à la main.');
+      return;
+    }
+    await NattyGardeManger.ajouter(trouves);
+    rendreGardeManger();          // remet aussi gm-etat à zéro
+    toastMacro(trouves.length + (trouves.length > 1 ? ' ingrédients ajoutés' : ' ingrédient ajouté'));
+  } catch (e) {
+    gmEtat('Lecture impossible. Réessayez, ou saisissez les ingrédients à la main.');
+  }
+}
+
+/* Lance la génération de la semaine en partant du garde-manger. `opts.garde`
+   évite de reposer la question que le panneau vient de rendre inutile. */
+async function gmGenerer() {
+  if (!window.NattyGeneration) { toastMacro('Génération indisponible'); return; }
+  var g = document.getElementById('gmGen');
+  if (g) { g.disabled = true; g.textContent = 'Génération lancée…'; }
+  try {
+    await NattyGeneration.lancer({ forcer: true, garde: NattyGardeManger.pourPrompt() || '' });
+  } catch (e) {}
+  rendreGardeManger();            // rend le bouton, quel qu'ait été le résultat
+}
+
+(function () {
+  var cam = document.getElementById('gmCam'), gal = document.getElementById('gmGal');
+  if (cam) cam.addEventListener('change', function () {
+    if (this.files && this.files[0]) gmScan(this.files[0]);
+    this.value = '';
+  });
+  if (gal) gal.addEventListener('change', function () {
+    if (this.files && this.files[0]) gmScan(this.files[0]);
+    this.value = '';
+  });
+  // Premier rendu : le module lit d'abord sa liste (base ou localStorage).
+  if (typeof NattyGardeManger !== 'undefined') {
+    NattyGardeManger.charger().then(rendreGardeManger, rendreGardeManger);
+  }
+})();
+
 function toastMacro(msg) {
   var t = document.getElementById('mcToast');
   if (!t) {

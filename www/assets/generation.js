@@ -571,8 +571,15 @@ window.NattyGeneration = (function () {
          doit rien demander à personne. Le garde-manger retenu est passé à
          `envoyer`, qui le transmet au serveur (il ne peut pas lire un
          localStorage). */
+      /* `opts.garde` : l'appelant a DÉJÀ le garde-manger sous les yeux et n'a
+         donc rien à demander — c'est le cas du panneau « Mon garde-manger » de
+         `suivi.html`, où l'on vient de composer sa liste et d'appuyer sur
+         « Générer mes repas avec ces ingrédients ». Reposer la question juste
+         après serait une étape pour rien. Une chaîne vide reste une réponse
+         valable (« génère sans »), d'où le test sur `undefined`. */
       var garde = '';
-      if (!opts.discret && window.NattyGardeManger) garde = await demanderGardeManger();
+      if (opts.garde !== undefined) garde = opts.garde;
+      else if (!opts.discret && window.NattyGardeManger) garde = await demanderGardeManger();
       m = { debut: Date.now(), discret: !!opts.discret, semaine: lundi() };
       poserMarqueur(m);
       envoyer(m.semaine, garde);

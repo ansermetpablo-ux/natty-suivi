@@ -353,6 +353,31 @@ create table public.garde_manger (
 alter table public.garde_manger disable row level security;
 ```
 
+**Deux endroits pour le remplir, et c'est voulu** (2026-08-05) :
+- la **question plein écran** juste avant la génération de la semaine
+  (`assets/generation.js`) — au moment où la réponse change quelque chose ;
+- le **panneau « Mon garde-manger »**, tout en bas de l'écran **Suivi** (demande de
+  Pablo). Il avait quitté `repas.html` au profit de la seule question ; il revient
+  en permanent, pour qu'on puisse composer sa liste quand on veut et pas seulement
+  quand l'app la réclame. Mêmes quatre entrées, plus le retrait et « Tout vider ».
+
+⚠️ **Le bouton du panneau ne repasse PAS par la question.** Il appelle
+`NattyGeneration.lancer({ forcer: true, garde: … })` : `opts.garde` court-circuite
+`demanderGardeManger()`, parce que l'utilisateur vient de composer sa liste sous ses
+yeux — la lui redemander serait une étape pour rien. Une chaîne vide reste une
+réponse valable (« génère sans »), d'où le test sur `undefined` et non sur la
+véracité.
+⚠️ **L'ancien bouton appelait `NattyReco.genererSemaine()`, qui n'existe plus** : la
+génération est côté serveur depuis août 2026. Ressusciter le panneau tel quel
+aurait donné un bouton inerte.
+⚠️ **Les deux `<input type="file">` vivent HORS du panneau** : `rendreGardeManger()`
+réécrit son `innerHTML` à chaque changement, ce qui les détruirait — avec leurs
+écouteurs — dès le premier ingrédient ajouté.
+⚠️ **Le CSS du panneau est réécrit avec les jetons de `suivi.html`** (`--bg`,
+`--text`, `--muted`, `--line`, `--so`, `--si`, `--surface-ink`, `--on-ink`) : la
+version d'origine utilisait `--card`/`--ink`/`--nm-in`, qui n'existent pas sur cette
+page. Vérifié dans les deux thèmes.
+
 **Effet sur les recettes** : `assets/reco.js` → `chargerProfil()` appelle `NattyGardeManger`
 s'il est chargé et remplit `profil.garde` ; `construirePrompt()` ajoute alors la section
 « INGRÉDIENTS DISPONIBLES » et deux règles (partir de ce stock, marquer `dispo` sur chaque
