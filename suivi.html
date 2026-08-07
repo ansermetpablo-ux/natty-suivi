@@ -1863,6 +1863,12 @@ html.no-scroll {
      change rien d'autre. Les autres modules (ajout/notifs/push/nav) restent en
      bas, après lui, comme avant. -->
 <script src="/assets/core.js"></script>
+<!-- ⚠️ Le garde-manger doit être chargé PARTOUT où une génération peut être
+     lancée. `assets/generation.js` demande « on part de ton garde-manger ? »
+     derrière un `if (window.NattyGardeManger)` : sans le module, la question
+     est silencieusement sautée, et l'option n'existait donc que depuis
+     l'écran Repas — le seul qui le chargeait. -->
+<script src="/assets/garde-manger.js"></script>
 <!-- La génération de la semaine (conseils + recettes + liste de courses) part
      d'ici, et ne vit PLUS dans cette page : elle est côté serveur, et ce module
      n'en montre que l'attente. ⚠️ Cet écran exigeait `NattyReco` sans jamais le

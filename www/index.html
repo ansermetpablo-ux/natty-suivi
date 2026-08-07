@@ -37,7 +37,7 @@
   <button id="btnRetour" aria-label="Retour" style="display:none">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
-  <a href="https://www.natty-nutrition.com" id="lienSite" aria-label="Accueil">
+  <a href="menu.html" aria-label="Accueil">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b5b5bd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
   </a>
   <a href="profil.html" aria-label="Profil">
@@ -93,25 +93,21 @@ async function loadFormule(){
   }catch(e){}
 }
 
-// Le site vitrine ne fait pas partie du bundle : l'ouvrir dans la WebView
-// piégerait l'utilisateur hors de l'app, sans barre de navigateur pour revenir.
-// En natif on le sort donc dans le navigateur système.
-(function(){
-  var lien = document.getElementById('lienSite');
-  if (!lien) return;
-  if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
-  lien.addEventListener('click', function(e){
-    e.preventDefault();
-    var Browser = window.Capacitor.Plugins.Browser;
-    if (Browser) Browser.open({ url: lien.href });
-  });
-})();
+// ⚠️ Le gestionnaire qui sortait l'icône maison dans le navigateur système a
+// été retiré avec le lien externe : l'icône ramène désormais à l'accueil de
+// l'app. Le laisser en place aurait ouvert menu.html HORS de l'app.
 
 (async function(){
   if (!Natty.requireAuth()) return;
   await loadFormule();
 })();
 </script>
+<!-- ⚠️ Le garde-manger doit être chargé PARTOUT où une génération peut être
+     lancée. `assets/generation.js` demande « on part de ton garde-manger ? »
+     derrière un `if (window.NattyGardeManger)` : sans le module, la question
+     est silencieusement sautée, et l'option n'existait donc que depuis
+     l'écran Repas — le seul qui le chargeait. -->
+<script src="/assets/garde-manger.js"></script>
 <!-- Reprend l’écran d’attente si une génération de la semaine est en cours
      (elle tourne sur le serveur : elle survit au changement d’écran). -->
 <script src="/assets/generation.js"></script>

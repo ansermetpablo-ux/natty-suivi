@@ -124,6 +124,12 @@
 <script src="/assets/core.js"></script>
 <script src="/assets/reco.js"></script>
 <script src="/assets/liste.js"></script>
+<!-- ⚠️ Le garde-manger doit être chargé PARTOUT où une génération peut être
+     lancée. `assets/generation.js` demande « on part de ton garde-manger ? »
+     derrière un `if (window.NattyGardeManger)` : sans le module, la question
+     est silencieusement sautée, et l'option n'existait donc que depuis
+     l'écran Repas — le seul qui le chargeait. -->
+<script src="/assets/garde-manger.js"></script>
 <!-- Cet écran ne génère rien : il lit. Le module est chargé pour deux raisons —
      reprendre l'écran d'attente si une génération est en cours ailleurs, et
      proposer de la lancer quand la semaine est encore vide. -->

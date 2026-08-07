@@ -321,6 +321,22 @@ détection automatique), `✏️ Saisir` accepte une liste libre (`poulet 600 g,
 caisse, l'IA laissait passer « liquide vaisselle ». Un emoji est déduit du nom (`emojiPour`)
 quand le scan n'en fournit pas.
 
+> ⚠️ **LE MODULE DOIT ÊTRE CHARGÉ PARTOUT OÙ UNE GÉNÉRATION PEUT ÊTRE LANCÉE**
+> (corrigé le 2026-08-05, signalé par Pablo : « je ne vois plus l'option de
+> planification en fonction du garde-manger »). `assets/generation.js` pose la
+> question « On part de ton garde-manger ? » derrière un
+> `if (!opts.discret && window.NattyGardeManger)` — donc **sans le module, la
+> question est sautée SANS un mot**. Or `garde-manger.js` n'était chargé que par
+> `repas.html`, alors que `generation.js` l'est par **12 écrans** : l'option
+> n'existait que depuis l'écran Repas, et nulle part ailleurs. Elle n'avait pas
+> été retirée, elle était muette. Vérifié en navigateur, dans les deux sens : avec
+> le module, la feuille s'affiche avec le contenu du garde-manger et ses quatre
+> façons de le remplir ; sans lui, `question affichée : false`.
+> ⚠️ Pour ce contrôle inverse, écraser la variable à `undefined` — **pas
+> `delete`** : le module se déclare en `var`, la propriété de `window` n'est donc
+> pas configurable et `delete` échoue en silence (le premier essai montrait la
+> question qu'il était censé faire disparaître).
+
 **Rapprochement avec les recettes** : `contient(nom)` compare **mot à mot**, jamais en
 sous-chaîne — sinon « ail » serait trouvé dans « volaille ». Un ingrédient de recette absent du
 garde-manger s'affiche avec une pastille orange `+` et le compteur « N à acheter ».
@@ -2519,6 +2535,29 @@ Le scheme est déclaré dans `ios/App/App/Info.plist` (`CFBundleURLTypes`) et da
 
 ### Safe area
 La WebView est rendue **bord à bord**. `assets/style.css` applique `env(safe-area-inset-top)` sur `.top` (couvre Menu, Suivi, Coaching, Repas, Profil) ; `offre.html` et `narration.html` ont leur propre header et leur propre correctif. `nav.js` gérait déjà le bas. `env()` vaut 0 sur le web : aucun impact côté navigateur.
+
+### L'icône maison ramène à l'accueil de l'app
+Signalé par Pablo le 2026-08-05 (« certains boutons home renvoient sur le site
+internet plutôt que sur menu.html »). Trois choses, dont une bien plus grave que
+les deux autres :
+- `profil.html` (+ `www/`) : l'icône maison pointait sur `https://www.natty-nutrition.com`.
+  Sur un écran secondaire, une maison veut dire « retour à l'accueil » — corrigé.
+- `menu.html` / `www/index.html` : même lien, sur l'écran d'accueil lui-même.
+  Corrigé aussi, **et le gestionnaire `lienSite` a été retiré avec lui** : laissé en
+  place, il aurait ouvert `menu.html` **hors** de l'app, dans le navigateur système.
+  Conséquence assumée : **il n'y a plus de lien vers le site vitrine dans l'app.**
+- 🔴 ⚠️ **`www/menu.html` était un fossile, et c'est LUI que servait le bundle.**
+  Tous les écrans pointent vers `menu.html` ; dans le bundle ce fichier existait
+  en doublon de `www/index.html`, figé depuis `99e57f3` — **sans `theme.js`
+  (donc sans mode sombre), sans `planning.js` (donc sans déclencheur de
+  planification), sans `garde-manger.js`**, et avec le lien sortant vers le site.
+  Autrement dit, dans l'app native, taper « Accueil » depuis n'importe quel écran
+  ramenait sur une vieille version de l'accueil. Réaligné sur `www/index.html`.
+  > Le piège à retenir : `www/index.html` est le point d'entrée du bundle, mais
+  > **`www/menu.html` doit exister ET rester identique**, parce que c'est le nom
+  > vers lequel tous les liens pointent. Sur le web, `index.html` est l'ANCIEN
+  > dashboard — les liens ne peuvent donc pas être renommés. Les deux fichiers se
+  > répercutent ensemble, à chaque modification de `menu.html`.
 
 ### Ne pas piéger l'utilisateur hors du bundle
 Un lien externe suivi dans la WebView sort de l'app **sans barre de navigateur pour revenir** (et c'est un motif possible de refus en review). Toute URL hors bundle doit passer par `@capacitor/browser`. Fait pour l'icône maison de `www/index.html`.

@@ -686,6 +686,12 @@ $('q').addEventListener('input', function(){
   }
 })();
 </script>
+<!-- ⚠️ Le garde-manger doit être chargé PARTOUT où une génération peut être
+     lancée. `assets/generation.js` demande « on part de ton garde-manger ? »
+     derrière un `if (window.NattyGardeManger)` : sans le module, la question
+     est silencieusement sautée, et l'option n'existait donc que depuis
+     l'écran Repas — le seul qui le chargeait. -->
+<script src="/assets/garde-manger.js"></script>
 <!-- Reprend l’écran d’attente si une génération de la semaine est en cours
      (elle tourne sur le serveur : elle survit au changement d’écran). -->
 <script src="/assets/generation.js"></script>
