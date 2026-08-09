@@ -806,6 +806,77 @@ case pleine ouvre la recette dans le hero si c'en est une, sinon la fiche `detai
 panneau qui listait les recettes s'appelle désormais **« Recettes conseillées »** : deux titres
 « Ma semaine » pour deux contenus différents faisaient passer l'un pour l'autre.
 
+### `assets/journee.js` — « Ma journée », le guide cinématique des étapes du jour
+Plein écran noir qui s'invite à la **première ouverture de la journée**, puis à chaque
+**moment clé** (un repas qui commence, le palier du soir). Il montre la journée en **arc de
+jalons** — l'heure et l'étape — qui **défile de droite à gauche** : ce qui vient arrive par la
+droite, passe au sommet quand c'est son heure, sort par la gauche une fois fait. Chargé par
+`menu.html`/`www/index.html` (version longue) et par `suivi.html` et `repas.html` (version
+courte). Dépend d'`assets/core.js` ; utilise `creneaux.js`, `planning.js`, `ajout.js` et
+`nav.js` s'ils sont là.
+
+**Composition, reprise d'une maquette fournie par Pablo** (arc de pastilles avec des `+`, gros
+titre, rangée de vignettes, filet, phrase de fin) et **traduite dans la DA Natty** : le dégradé
+rose de la maquette devient une **lueur blanche** derrière l'arc — même composition, où la
+lumière remplace la couleur. Noir, comme toutes les cinématiques de l'app (`planning.js`,
+`ajout.js`), donc **hors du thème clair/sombre** : il est noir dans les deux.
+
+**Il n'invente aucune donnée**, et c'est ce qui le rend utilisable :
+
+| Ce qu'il affiche | D'où ça vient |
+|---|---|
+| les créneaux, leurs heures, ce qu'il RESTE à manger | `NattyCreneaux` |
+| la semaine planifiée, le repas prévu aujourd'hui | `NattyPlanning.lire()` |
+| défi / suivi déjà ouverts aujourd'hui | `NattyNav.vuAujourdhui()` |
+
+⚠️ **Aucun drapeau « étape faite » n'est stocké** — même raison que `realises()` de
+`planning.js` : un drapeau posé depuis un écran rate ce qui se passe ailleurs et dérive dès
+qu'un repas est supprimé. La question a déjà sa réponse en base.
+
+**Le déroulé** : `[Planifier ma semaine]` → les créneaux de repas → `Le palier du jour` (20 h 30)
+→ `Le point du soir` (21 h 30). Le palier avant le bilan : on apprend quelque chose, **puis** on
+regarde sa journée — l'inverse ferait du bilan une étape de passage avant un jeu.
+- **L'action de chaque repas s'adapte** : une recette prévue au plan se **prépare**
+  (« Suivre la recette », avec « J'ai mangé autre chose » en second) ; sinon on **note**
+  (`NattyAjout.start()`, appelé **synchronement** dans le clic, sinon iOS n'ouvre pas la caméra).
+- **Les heures annoncées ne sont pas les bornes des créneaux** (`HEURE_TYPE`) : le midi s'ouvre
+  à 11 h pour *ranger* un repas, mais annoncer « 11 h · Déjeuner » ferait passer le guide pour un
+  réveil mal réglé.
+- ⚠️ **L'étape « Planifier » n'a pas d'heure** (`libelle: 'D'abord'`). Placée à 8 h comme le
+  petit déjeuner, elle donnait **deux jalons marqués « 8 h » côte à côte** dans l'arc.
+- ⚠️ **Elle n'apparaît QUE si `planning.js` est chargé.** Sans lui, `plan` vaut `null` parce
+  qu'on n'a pas regardé, pas parce que la semaine n'est pas planifiée — d'où le chargement de
+  `planning.js` dans `suivi.html`, **pour être lu et non pour se déclencher**.
+- Une étape passée de plus de 2 h 30 n'est plus « celle du moment » (proposer de noter son petit
+  déjeuner à 15 h, c'est parler d'autre chose), mais elle **reste visible, non cochée** : un
+  manque montré vaut mieux qu'un manque effacé.
+
+**Deux versions, et c'est la décision d'UX centrale.** La longue (bonjour → « voici votre
+journée », l'arc se déroule → l'étape du moment + le récapitulatif écrit) une fois par jour ;
+la **courte** (directement l'étape du moment) aux moments clés — quelqu'un qui arrive à 12 h 40
+pour noter son déjeuner n'a pas à regarder quatre plans avant de pouvoir le faire.
+Mémoire : `natty_journee_vu_<uid>` (le jour) et `natty_journee_etape_<uid>` (`jour|étape`).
+
+⚠️ **Le déclencheur attend 6,5 s, contre 5 s pour `planning.js`** : si la semaine n'est pas
+planifiée, c'est SA séquence qui doit s'ouvrir. Le module regarde l'écran avant de s'y poser
+(`#nplan`, `#nattyAjout`, `NattyGeneration.enCours()`) — deux plein écran l'un sur l'autre ne se
+discutent pas.
+
+**Trois pièges de mise en page, tous trouvés à l'écran et aucun par `node --check` :**
+- ⚠️ **L'arc n'est PAS remplacé d'une scène à l'autre** — contrairement à `planning.js`, il est
+  le fil de la séquence. Seul le bloc de texte sous lui est échangé, et le **bloc sortant passe
+  en `position:absolute`** le temps de croiser l'entrant, sinon la page fait un bond.
+- ⚠️ **`transform:scale()` ne libère pas de place dans le flux.** L'arc réduit à `.92` sur petit
+  écran continuait d'occuper ses 224 px pour n'en montrer que 206 : ces 18 px poussaient la
+  dernière ligne du texte **sous le bouton**. La marge négative rend exactement ce que l'échelle
+  a libéré.
+- ⚠️ **La place réservée en bas se MESURE**, elle ne se devine pas : figée à 146 px elle suffit à
+  deux boutons, pas à trois (~195 px). Et on ne dégage que le **premier bouton**, pas la barre
+  entière — son tiers haut est un dégradé transparent.
+- ⚠️ **Le trait de l'orbite s'éteint par un masque**, il n'est pas coupé : le cercle qui porte
+  les jalons a un rayon de 230 px, ses extrémités descendaient barrer le grand titre. Un
+  `overflow:hidden` l'aurait tranché net, ce qui se voit encore plus.
+
 ### `assets/theme.js` — le thème clair / sombre
 Chargé **dans le `<head>`, de façon synchrone**, par tous les écrans de l'app
 (les six porteurs de la nav, plus `login`, `onboarding`, `questionnaire-alim`,
@@ -2034,6 +2105,21 @@ d'un appareil à l'autre. Sans elle, tout marche, mais en local.
 **Problème** : `chat.html`, `challenges.html` et `suivi.html` ouvrent chacun un `WebSocket` manuel vers `wss://.../realtime/v1/websocket` avec un `phx_join` minimal (`{topic:'realtime:public:<table>', payload:{}}`), sans `config.postgres_changes` — c'est le protocole Supabase Realtime **pré-`postgres_changes`**, potentiellement incompatible avec une instance Supabase récente (qui exige ce champ de config pour router les événements).
 **Solution** : à tester en conditions réelles (envoyer un message/défi et vérifier la réception live) ; si cassé, migrer vers le client `supabase-js` (`.channel().on('postgres_changes', ...)`) plutôt que le protocole WebSocket brut.
 
+### ⚠️ Un banc qui ne PEINT pas gèle les animations — et fait conclure à un bug
+Trouvé en développant `assets/journee.js` (août 2026), après **deux fausses pistes**. Quand la
+page du banc n'est pas rendue (onglet en arrière-plan, aucune capture depuis un moment), le
+navigateur **suspend les animations CSS et les transitions**. On mesure alors, deux secondes
+après l'insertion, un `opacity: 0` sur un titre parfaitement correct, et une pastille qui n'a
+pas bougé alors que son `left` cible a bien été écrit.
+**La lecture au banc dit donc l'état de DÉPART, pas l'état final** — et elle ressemble trait
+pour trait à « l'animation ne se déclenche pas ».
+**Parade** : prendre une **capture d'écran d'abord** (elle force un rendu), et mesurer ensuite.
+Deux captures successives permettent en plus de voir une transition à deux instants, ce qui est
+le seul moyen de vérifier qu'un mouvement a bien lieu — c'est comme ça que le défilement de
+l'arc de « Ma journée » a été constaté.
+> À rapprocher de la règle 31 : `node --check` valide la syntaxe, pas le comportement visuel.
+> Ici, même le navigateur ment si on ne le fait pas peindre.
+
 ### Icône PWA cassée (`/icon-192.png` inexistant)
 **Problème** : `manifest.json`, `suivi.html` et `onboarding.html` référencent `/icon-192.png`, fichier absent de la racine (seuls `icon-512.png` et les `natty-icon-*.png` existent).
 **Solution** : soit ajouter un `icon-192.png` à la racine, soit faire pointer ces références vers `/natty-icon-192.png` (qui existe déjà).
@@ -2167,6 +2253,27 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - 🔄 Les scores plafonnent bas (~57/100 sur les données actuelles) parce que beaucoup
   d'ingrédients manquent à la table de `core.js` et que `nb_repas='1_2'` gonfle la cible par
   repas. Le classement reste juste (même biais pour tous), pas les valeurs absolues.
+
+**Guide « Ma journée »**
+- ✅ **Livré** (août 2026) — `assets/journee.js`, détail en §3. Arc de jalons qui défile de
+  droite à gauche, version longue à la première ouverture du jour, version courte aux moments
+  clés. Branché sur `menu.html`/`www/index.html`, `suivi.html` et `repas.html` (+ copies `www/`).
+- ✅ Vérifié en navigateur (colonne 375 × 812) sur **cinq scénarios**, avec des doublures
+  complètes et une horloge pilotée : 8 h rien de fait, 12 h 40 avec recette prévue, 21 h 50 tout
+  fait, 9 h semaine non planifiée, 16 h avec le midi jamais noté (jalon « manqué »). Vérifié
+  aussi que l'arc **se déplace réellement** entre deux instants, que le déclencheur ouvre une
+  fois par jour puis une fois par créneau (3ᵉ passage silencieux, réouverture au dîner), et que
+  l'étape « Planifier » disparaît quand `planning.js` n'est pas chargé.
+- 🔄 **Non vérifié avec une vraie session** : toutes les lectures (`meals`, `onboarding`,
+  `questionnaire_alim`, `planning_semaine`) n'ont tourné que contre des doublures — il faut un
+  mot de passe de compte, que je n'ai pas. Le calcul, lui, est celui de `NattyCreneaux` et de
+  `NattyPlanning`, déjà éprouvés ailleurs.
+- 🔄 **Non vérifié sur téléphone** : le rythme des scènes, le défilement de l'arc et la zone
+  sûre en bas n'ont pu être jugés qu'en navigateur.
+- 🔄 Les moments clés ne se déclenchent que **quand l'app est ouverte**. Pour qu'ils arrivent
+  d'eux-mêmes, il faut passer par les notifications (`assets/notifs.js` envoie déjà un rappel à
+  midi vers `suivi.html`, et le rappel du soir vers le parcours) — le guide prend alors le relais
+  à l'ouverture. Une notification qui ouvrirait directement le guide reste à faire.
 
 **Planification de la semaine**
 - ✅ **Séquence complète livrée** (août 2026) — `assets/planning.js`, détail en §3. Bonjour →
@@ -3008,3 +3115,20 @@ session « fil social » :*
   un balayage automatique des fonds restés clairs.
 - **Pas touché** : `narration.html` (art direction propre, §5), `admin.html` et
   l'ancien `index.html` (écrans de bureau).
+
+---
+
+*Contribution session « Ma journée » (Claude Opus, 9 août 2026) :*
+- **Nouveau** `assets/journee.js` (+ copie `www/`) : le guide cinématique des étapes du jour —
+  arc de jalons qui défile de droite à gauche, version longue à la première ouverture, version
+  courte aux moments clés. Documenté en §3, statut en §8.
+- Branché sur `menu.html`, `suivi.html`, `repas.html` et les copies `www/` (`www/index.html` et
+  `www/menu.html` répercutés ensemble, cf. §11 — c'est `menu.html` que visent tous les liens).
+- `suivi.html` charge désormais `assets/planning.js` **pour le lire**, pas pour le déclencher :
+  sans lui, le guide ne saurait pas quelle recette est prévue au créneau du moment, et
+  proposerait de planifier une semaine peut-être déjà planifiée.
+- **§7** : nouveau piège méthodologique — un banc qui ne peint pas gèle animations et
+  transitions, et la mesure rend alors l'état de départ. Deux fausses pistes avant de le
+  comprendre.
+- Vérifié en navigateur sur cinq scénarios avec doublures et horloge pilotée ; banc jetable
+  `_test-journee.html` (préfixe `_`, donc hors dépôt).

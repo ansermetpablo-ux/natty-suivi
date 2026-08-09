@@ -27,6 +27,15 @@
       ],
       "port": 4188,
       "autoPort": false
+    },
+    {
+      "name": "natty-journee",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-pablo-Documents-GitHub-natty-suivi/76f3ae8c-bd47-4964-afd8-4a239a9e09b0/scratchpad/serve.js"
+      ],
+      "port": 4191,
+      "autoPort": false
     }
   ]
 }

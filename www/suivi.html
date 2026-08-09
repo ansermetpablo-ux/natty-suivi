@@ -5681,6 +5681,18 @@ window.addEventListener('natty:repas-ajoute', function(){
 <script src="/assets/creneaux.js"></script>
 <!-- core.js avant ajout.js : le parcours du bouton + s'appuie sur Natty.* -->
 <script src="/assets/ajout.js"></script>
+<!-- ⚠️ `planning.js` est chargé ICI pour être LU, pas pour se déclencher :
+     `proposerSiNecessaire()` n'est appelé que depuis l'écran d'arrivée. Sans
+     lui, le guide ci-dessous ne saurait pas quelle recette est prévue au
+     créneau du moment — et il proposerait de planifier une semaine qui l'est
+     peut-être déjà, faute d'avoir pu regarder. -->
+<script src="/assets/planning.js"></script>
+<!-- Le guide « Ma journée » : c'est sur cet écran qu'atterrit le rappel de
+     midi, donc l'endroit où sa version courte a le plus de sens. -->
+<script src="/assets/journee.js"></script>
+<script>
+  if (window.NattyJournee) NattyJournee.proposerSiNecessaire();
+</script>
 <script src="/assets/notifs.js"></script>
 <script src="/assets/push.js"></script>
 <script src="/assets/nav.js"></script>
