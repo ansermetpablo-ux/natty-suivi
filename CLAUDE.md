@@ -792,6 +792,33 @@ plus ancien où `--bg` ne vaut pas la même chose. Il leur faut donc des jetons
 `macros-cal.js` n'ont rien eu à changer : leurs écrans sont noirs dans les
 deux thèmes, par choix de mise en scène. Ne pas « corriger » leurs `#fff`.
 
+### ⚠️ « Quel jour sommes-nous » — `Natty.jour()`, jamais `toISOString()`
+Corrigé le 2026-08-05, signalé par Pablo (« les macros de suivi doivent se
+réinitialiser à 00 h »). `new Date().toISOString().split('T')[0]` convertit en
+**UTC** : entre 00 h et 02 h à Paris, il rend **la veille**. Conséquences mesurées :
+- les macros du jour basculaient à **02 h** (1 h en hiver), pas à minuit ;
+- un repas ajouté à 00 h 30 était **compté sur la journée précédente** — son
+  `meal_date` était écrit en UTC, et `estDuJour()` comparait `created_at` en
+  préfixe de chaîne, donc en UTC lui aussi ;
+- le lundi de la semaine partait au dimanche, d'où la divergence de clé avec
+  `assets/liste.js` (qui doit encore lire l'union des deux).
+
+Le piège vivait dans **neuf** endroits de `suivi.html` et dans `assets/ajout.js`.
+D'où un point de vérité unique : **`Natty.jour(d)`** (date locale) et
+**`Natty.aMinuit(fn)`** dans `assets/core.js`.
+
+⚠️ **Un contrôle au chargement ne suffit pas** : l'app reste ouverte, et
+`resetIfNewDay()` ne tournait qu'à l'`init()`. On pouvait donc lire « 1 800 kcal »
+à 00 h 05 sur une journée vide. `Natty.aMinuit()` arme un minuteur sur le prochain
+minuit **local**, à 00:00:02 (à la seconde pile, `jour()` peut encore rendre la
+veille selon l'arrondi de l'horloge).
+⚠️ **Et le minuteur seul ne suffit pas non plus** : un téléphone en veille ne
+l'exécute pas à l'heure. On réarme donc aussi sur `visibilitychange` — la bascule
+se voit au plus tard en rouvrant l'app. `nouvelleJournee()` est **idempotente**
+(`resetIfNewDay()` compare la date enregistrée à celle du jour), donc les trois
+déclencheurs — minuit, retour à l'écran, rechargement — ne peuvent pas archiver
+deux fois la même journée dans `daily_macros`. Vérifié.
+
 ### `assets/notifs.js` — le rappel quotidien (notifications **locales**)
 Chargé par les cinq écrans porteurs de la nav (`suivi`, `repas`, `menu`/`www/index`, `social`,
 `coaching`, `profil`) juste avant `assets/nav.js`. Hors application native, le module se charge
@@ -801,6 +828,27 @@ et ne fait rien : `dispo()` renvoie `false`, toutes les actions sont des no-op.
 aucune table de tokens. La contrepartie est que le texte est figé au moment de la planification.
 « Il te reste 40 g de protéines » ou « un ami a ajouté un plat » exigent un calcul à l'envoi ou
 un déclencheur venu d'un autre appareil : **ceux-là relèvent du push serveur**, chantier séparé.
+
+**DEUX rendez-vous par jour** (le second ajouté le 2026-08-05, demande de Pablo) :
+- **midi**, ids 4201..4207 — « Vos performances / Ajoutez votre premier plat de la
+  journée », mène à `suivi.html` où vit le bouton `+`. Heure **fixe** : midi est le
+  moment où l'on a déjeuné sans forcément l'avoir noté, ce n'est pas un réglage de
+  plus à ajouter aux réglages ;
+- **le soir** (19 h par défaut, réglable), ids 4101..4107 — le palier du parcours.
+> ⚠️ **Deux séries d'ids, et `annuler()` doit couvrir les deux.** N'annuler que la
+> première laisserait les rappels de midi de la planification précédente s'empiler
+> avec les nouveaux — le « tout annuler puis tout replanifier » ne protège que ce
+> qu'il connaît.
+> ⚠️ **Le créneau du jour saute si un repas est déjà noté**, via le marqueur
+> `natty_dernier_repas_<uid>` qu'écrit `assets/ajout.js` à l'enregistrement : une
+> notification locale porte un texte figé dès la planification, elle ne peut rien
+> vérifier à l'envoi — c'est donc au moment de l'écriture que l'information existe.
+> ⚠️ **Les deux fichiers doivent dériver la clé de la même façon**, repli `'anon'`
+> compris. Attrapé au banc : `ajout.js` écrivait sous `…_null` quand `USER_ID` était
+> absent, pendant que `notifs.js` lisait `…_anon` — le saut n'aurait jamais eu lieu.
+> Et l'invitation à activer annonce bien **les deux** rappels : promettre « rien
+> d'autre » puis en envoyer deux serait un mensonge, et c'est la seule occasion de
+> demander la permission sur iOS.
 
 **Sept notifications, pas une répétition.** Une planification `on:{hour,minute}` ne porterait
 qu'un seul texte, à vie. Le module planifie donc **les 7 prochains jours** un par un (ids fixes

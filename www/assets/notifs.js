@@ -35,6 +35,20 @@ var NattyNotifs = (function () {
   var JOURS    = 7;          // horizon de planification
   var H_DEFAUT = 19;         // 19 h 00, avant le repas du soir
 
+  /* ── Le rappel de MIDI (demande de Pablo, 2026-08-05) ────────
+     Un second rendez-vous, indépendant du rappel du parcours : celui-ci parle du
+     SUIVI, pas des défis. Il a donc ses propres ids (4201..4207) — sans quoi
+     « tout annuler puis tout replanifier » effacerait l'un en posant l'autre —
+     et une heure FIXE : midi est le moment où l'on a déjeuné sans forcément
+     l'avoir noté, et ce n'est pas un réglage à ajouter aux réglages.
+     Il mène à `suivi.html`, où vit le bouton `+`. */
+  var ID_MIDI = 4200;        // ids 4201..4207
+  var H_MIDI  = 12;
+  var TEXTE_MIDI = {
+    t: 'Vos performances',
+    b: 'Ajoutez votre premier plat de la journée'
+  };
+
   function user() { return (window.Natty && Natty.USER_ID) ? Natty.USER_ID : 'anon'; }
   function cle(k) { return 'natty_notif_' + k + '_' + user(); }
 
@@ -119,6 +133,19 @@ var NattyNotifs = (function () {
     return false;
   }
 
+  /* ⚠️ Le pendant de `defisVuAujourdhui()` pour le rappel de midi : « ajoutez
+     votre premier plat » ne doit pas partir à quelqu'un qui a déjà déjeuné. Le
+     marqueur est écrit par `assets/ajout.js` à l'enregistrement — c'est le seul
+     instant où l'information existe, une notification locale portant un texte
+     figé dès la planification.
+     Il vaut `false` par défaut : un rappel de trop vaut mieux qu'un rappel
+     manquant, comme pour les défis. */
+  function repasAujourdhui() {
+    try {
+      return localStorage.getItem('natty_dernier_repas_' + user()) === jourCle(new Date());
+    } catch (e) { return false; }
+  }
+
   /* Les `at` à planifier, du plus proche au plus lointain. Le créneau du jour
      n'est retenu que s'il est encore à venir ET que le parcours n'a pas déjà
      été ouvert aujourd'hui. */
@@ -134,16 +161,31 @@ var NattyNotifs = (function () {
     return out;
   }
 
+  /* Mêmes règles pour midi, avec sa propre condition de saut. */
+  function creneauxMidi() {
+    var out = [], now = new Date();
+    for (var i = 0; i < JOURS; i++) {
+      var d = new Date();
+      d.setDate(d.getDate() + i);
+      d.setHours(H_MIDI, 0, 0, 0);
+      if (i === 0 && (d <= now || repasAujourdhui())) continue;
+      out.push(d);
+    }
+    return out;
+  }
+
   /* ── Planification ───────────────────────────────────────────
      Toujours « tout annuler puis tout replanifier » : les ids sont fixes
-     (4101..4107), donc deux ouvertures d'affilée ne peuvent pas empiler
-     deux rappels pour le même jour. */
+     (4101..4107 pour le parcours, 4201..4207 pour midi), donc deux ouvertures
+     d'affilée ne peuvent pas empiler deux rappels pour le même jour. */
 
   async function annuler() {
     var LN = plugin();
     if (!LN) return;
     var ids = [];
-    for (var i = 1; i <= JOURS; i++) ids.push({ id: ID_BASE + i });
+    // Les DEUX séries : n'annuler que la première laisserait les rappels de midi
+    // de la planification précédente s'empiler avec les nouveaux.
+    for (var i = 1; i <= JOURS; i++) { ids.push({ id: ID_BASE + i }); ids.push({ id: ID_MIDI + i }); }
     try { await LN.cancel({ notifications: ids }); } catch (e) {}
   }
 
@@ -184,6 +226,18 @@ var NattyNotifs = (function () {
         extra: { route: 'narration.html', jour: jourCle(d) }
       });
     }
+    var midis = creneauxMidi();
+    for (var k = 0; k < midis.length; k++) {
+      liste.push({
+        id: ID_MIDI + k + 1,
+        title: TEXTE_MIDI.t,
+        body: TEXTE_MIDI.b,
+        schedule: { at: midis[k], allowWhileIdle: true },
+        channelId: CANAL,
+        extra: { route: 'suivi.html', jour: jourCle(midis[k]) }
+      });
+    }
+
     if (!liste.length) return true;
     try { await LN.schedule({ notifications: liste }); return true; }
     catch (e) { return false; }
@@ -292,8 +346,12 @@ var NattyNotifs = (function () {
       '<div class="ni-sheet">' +
         '<div class="ni-em">🔔</div>' +
         '<h3>Un rappel par jour ?</h3>' +
-        '<p>Natty te prévient à ' + heure() + ' h si tu n\'as pas encore fait ton palier du jour. ' +
-          'Rien d\'autre — et tu peux couper ça dans ton profil.</p>' +
+        // La feuille doit annoncer les DEUX rendez-vous : promettre « rien
+        // d'autre » puis en envoyer deux serait un mensonge, et c'est la seule
+        // occasion de demander la permission sur iOS.
+        '<p>Deux rappels par jour, pas plus : à midi pour noter ton premier plat, ' +
+          'et à ' + heure() + ' h si tu n\'as pas encore fait ton palier. ' +
+          'Tu peux couper ça dans ton profil.</p>' +
         '<button class="ni-ok" id="niOk">Oui, me rappeler</button>' +
         '<button class="ni-no" id="niNo">Plus tard</button>' +
       '</div>';

@@ -2109,6 +2109,7 @@ async function init() {
   await Promise.all([loadOnboarding(), loadMeals(), loadScore(), loadDailyHistory(), verifierAbonnement(), chargerActionSemaine()]);
   afficherMacros(); chargerRdv(); chargerDiagnostics(); majCalendrierMacros();
   resetIfNewDay();
+  armerMinuit();
   if (document.getElementById('pageProg').classList.contains('active')) dessinerProgression();
 }
 
@@ -2156,7 +2157,7 @@ async function loadMeals() {
     }
     allMeals = mealsRaw.map(function(m){ m.meal_ingredients = parRepas[m.id] || []; return m; });
     afficherMeals(repasAAfficher());
-    var today = new Date().toISOString().split('T')[0];
+    var today = Natty.jour();          // date LOCALE — voir Natty.jour()
     macAuj = {p:0,l:0,g:0,c:0};
     allMeals.filter(function(m){ return estDuJour(m, today); })
       .forEach(function(m){ var mac=calcMac(m.meal_ingredients); macAuj.p+=mac.p; macAuj.l+=mac.l; macAuj.g+=mac.g; macAuj.c+=mac.c; });
@@ -2186,7 +2187,7 @@ async function loadDailyHistory() {
 // ═══ RESET DAILY AT MIDNIGHT ═══
 function resetIfNewDay() {
   var lastKey = localStorage.getItem('natty_last_day_'+USER_ID);
-  var today   = new Date().toISOString().split('T')[0];
+  var today   = Natty.jour();
   if (lastKey && lastKey !== today) {
     // Save yesterday's macros
     var yesterday = lastKey;
@@ -2204,6 +2205,39 @@ function resetIfNewDay() {
   // Also save current in localStorage for cross-page
   var cur = {p:macAuj.p, l:macAuj.l, g:macAuj.g, c:macAuj.c};
   localStorage.setItem('natty_mac_'+USER_ID+'_'+today, JSON.stringify(cur));
+}
+
+/* ═══ Bascule de journée à MINUIT ═══════════════════════════
+   `resetIfNewDay()` ne tournait qu'au chargement de la page : l'app restée
+   ouverte gardait les macros de la veille jusqu'au prochain rechargement, et on
+   pouvait lire « 1 800 kcal » à 00 h 05 sur une journée vide. Signalé par Pablo.
+
+   Le minuteur de `Natty.aMinuit` se réarme aussi au retour à l'écran, parce
+   qu'un téléphone en veille ne l'exécute pas à l'heure — la bascule se voit donc
+   au plus tard quand on rouvre l'app.
+
+   ⚠️ `nouvelleJournee()` est IDEMPOTENTE : `resetIfNewDay()` compare la date
+   enregistrée à la date du jour et ne fait rien si elles sont égales. Elle peut
+   donc être appelée plusieurs fois (minuit, retour à l'écran, rechargement)
+   sans archiver deux fois la même journée dans `daily_macros`. */
+function nouvelleJournee() {
+  resetIfNewDay();          // archive la veille si le jour a changé, remet macAuj à 0
+  // Les repas d'hier ne sont plus « du jour » : on recalcule le total et on
+  // repeint, sinon les anneaux resteraient sur les chiffres de la veille.
+  var j = Natty.jour();
+  macAuj = { p: 0, l: 0, g: 0, c: 0 };
+  (allMeals || []).filter(function (m) { return estDuJour(m, j); })
+    .forEach(function (m) {
+      var mac = calcMac(m.meal_ingredients);
+      macAuj.p += mac.p; macAuj.l += mac.l; macAuj.g += mac.g; macAuj.c += mac.c;
+    });
+  afficherMacros();
+  afficherMeals(repasAAfficher());
+  if (typeof majCalendrierMacros === 'function') majCalendrierMacros();
+}
+
+function armerMinuit() {
+  if (window.Natty && Natty.aMinuit) Natty.aMinuit(nouvelleJournee);
 }
 
 // ═══ MACROS DISPLAY — moyenne 7 jours ═══
@@ -2407,14 +2441,20 @@ function afficherMeals(meals, elId) {
 
 // Repas du jour : la date de référence est meal_date, avec created_at en
 // secours — les deux ne concordent pas toujours selon l'écran d'ajout.
+/* ⚠️ On compare sur la journée LOCALE, et `created_at` d'abord. `created_at` est
+   un horodatage UTC : un repas ajouté à 00 h 30 à Paris y porte la veille, et le
+   comparer en préfixe de chaîne le rangeait donc dans la journée précédente.
+   `meal_date` reste le repli — les lignes anciennes le portent en UTC, faute de
+   mieux. */
 function estDuJour(m, jour) {
-  return m.meal_date===jour || (m.created_at && m.created_at.indexOf(jour)===0);
+  if (m.created_at) return Natty.jour(new Date(m.created_at)) === jour;
+  return m.meal_date === jour;
 }
 
 // L'écran Suivi montre la journée en cours ; s'il n'y a rien aujourd'hui, les
 // 3 derniers repas, pour ne pas laisser un bloc vide.
 function repasAAfficher() {
-  var jour = new Date().toISOString().split('T')[0];
+  var jour = Natty.jour();
   var duJour = allMeals.filter(function(m){ return estDuJour(m, jour); });
   return duJour.length ? duJour : allMeals.slice(0,3);
 }
@@ -3096,7 +3136,7 @@ function dessinerEvolution() {
 
   // Construire les points depuis daily_macros ou estimation
   var dateArr=[];
-  for(var di=days-1;di>=0;di--){var d=new Date();d.setDate(d.getDate()-di);dateArr.push(d.toISOString().split('T')[0]);}
+  for(var di=days-1;di>=0;di--){var d=new Date();d.setDate(d.getDate()-di);dateArr.push(Natty.jour(d));}
   var histMap={};
   dailyHistory.forEach(function(d){histMap[d.date]={p:d.prot_g,l:d.lip_g,g:d.gluc_g,c:d.cal_kcal};});
 
@@ -3574,7 +3614,7 @@ async function saveIA(){
   try{
     var photoUrl=null;
     if(photoIAFile){var fd=new FormData();fd.append('file',photoIAFile);fd.append('upload_preset',CLD_PRE);var ur=await(await fetch('https://api.cloudinary.com/v1_1/'+CLD_CLD+'/image/upload',{method:'POST',body:fd})).json();photoUrl=ur.secure_url;}
-    var saved=await sbPostR('meals',{user_id:USER_ID,name:aiMealData.nom,photo_url:photoUrl,meal_date:new Date().toISOString().split('T')[0]});
+    var saved=await sbPostR('meals',{user_id:USER_ID,name:aiMealData.nom,photo_url:photoUrl,meal_date:Natty.jour()});
     var meal=saved[0];
     var ings=(aiMealData.ingredients||[]).map(function(i){return{meal_id:meal.id,name:i.nom,quantity_g:i.quantite_g};});
     if(ings.length)await sbPost('meal_ingredients',ings);
@@ -3592,7 +3632,7 @@ async function saveManuel(){
   try{
     var photoUrl=null;
     if(photoManuFile){var fd=new FormData();fd.append('file',photoManuFile);fd.append('upload_preset',CLD_PRE);var ur=await(await fetch('https://api.cloudinary.com/v1_1/'+CLD_CLD+'/image/upload',{method:'POST',body:fd})).json();photoUrl=ur.secure_url;}
-    var saved=await sbPostR('meals',{user_id:USER_ID,name:nom,photo_url:photoUrl,meal_date:new Date().toISOString().split('T')[0]});
+    var saved=await sbPostR('meals',{user_id:USER_ID,name:nom,photo_url:photoUrl,meal_date:Natty.jour()});
     var meal=saved[0];
     var rows=document.querySelectorAll('#ingsList .ing-row');var ings=[];
     rows.forEach(function(row){var inputs=row.querySelectorAll('input');var n=inputs[0].value.trim(),q=parseFloat(inputs[1].value);if(n&&q>0)ings.push({meal_id:meal.id,name:n,quantity_g:q});});
@@ -3728,7 +3768,7 @@ function prBuildJoursGrid() {
     d.setDate(d.getDate() + i);
     var dayOfWeek = d.getDay(); // 0=dim
     var jIdx = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    var ds = d.toISOString().split('T')[0];
+    var ds = Natty.jour(d);
     html += '<div class="pr-jour" data-date="' + ds + '" data-label="' + JOURS[jIdx] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + '" onclick="prSelectJour(this)">'
       + '<div class="pr-jour-name">' + JOURS[jIdx] + '</div>'
       + '<div class="pr-jour-num">' + d.getDate() + '</div>'
@@ -3900,7 +3940,7 @@ async function prChargerPlatsNutri() {
   if (!USER_ID) return;
   try {
     // Chercher la commande de la semaine en cours ou à venir proposée par le nutri
-    var today = new Date().toISOString().split('T')[0];
+    var today = Natty.jour();
     var commandes = await sbFetch('commandes?user_id=eq.' + USER_ID + '&semaine=gte.' + today + '&order=semaine.asc&limit=1');
     if (!commandes || !commandes.length) {
       // Aucune commande → état vide avec message nutri
@@ -4721,7 +4761,10 @@ function getLundiSemaine() {
   var day = d.getDay();
   var diff = (day === 0 ? -6 : 1 - day);
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  // ⚠️ Date LOCALE : en `toISOString()` ce lundi devenait le DIMANCHE entre
+  // 00 h et 02 h à Paris — la clé hebdomadaire divergeait alors de celle
+  // d'assets/liste.js, qui doit encore lire l'union des deux.
+  return Natty.jour(d);
 }
 
 /* ── « La semaine est-elle déjà générée ? » — UNE seule réponse ──

@@ -359,7 +359,9 @@
   }
   function q(sel) { return dom ? dom.querySelector(sel) : null; }
   function r1(n) { return Math.round(n * 10) / 10; }
-  function today() { return new Date().toISOString().split('T')[0]; }
+  // Date LOCALE : `toISOString()` rend la veille entre 00 h et 02 h à Paris,
+  // donc un repas ajouté à 00 h 30 était enregistré sur la journée précédente.
+  function today() { return Natty.jour(); }
 
   var toastEl = null;
   function toast(msg) {
@@ -1507,6 +1509,19 @@
          l'émet MAINTENANT : le plat est en base, l'anneau de Suivi doit
          descendre tout de suite, sans attendre que l'utilisateur ait fini de
          lire son analyse. */
+      /* Marqueur local « un repas a été enregistré aujourd'hui ». Il sert au
+         rappel de midi d'`assets/notifs.js` : « Ajoutez votre premier plat de la
+         journée » ne doit pas partir à quelqu'un qui a déjà déjeuné. Une
+         notification locale porte un texte figé à la planification, elle ne peut
+         donc rien vérifier à l'envoi — c'est ici, au moment de l'écriture, que
+         l'information existe. */
+      try {
+        // ⚠️ Même dérivation de clé que `user()` d'assets/notifs.js, repli
+        // `'anon'` compris : sans lui, un USER_ID absent écrivait sous
+        // `…_null` pendant que le rappel lisait `…_anon`, et le saut du
+        // créneau de midi n'aurait jamais eu lieu. Attrapé au banc.
+        localStorage.setItem('natty_dernier_repas_' + (Natty.USER_ID || 'anon'), today());
+      } catch (e) {}
       window.dispatchEvent(new CustomEvent('natty:repas-ajoute'));
 
       if (!ids.length) { fermer(); toast('Repas enregistré !'); return; }

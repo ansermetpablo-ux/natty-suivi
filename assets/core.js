@@ -452,6 +452,58 @@ var Natty = (function () {
   function r1(v) { return Math.round(v * 10) / 10; }
 
   /**
+   * La date LOCALE au format YYYY-MM-DD.
+   *
+   * ⚠️ POINT DE VÉRITÉ POUR « QUEL JOUR SOMMES-NOUS ». Ne jamais utiliser
+   * `new Date().toISOString().split('T')[0]` pour ça : `toISOString()` convertit
+   * en UTC, donc entre 00 h et 02 h à Paris il rend **la veille**. Conséquence
+   * mesurée et signalée par Pablo : les macros du jour ne se remettaient pas à
+   * zéro à minuit mais à 02 h (1 h en hiver), et un repas ajouté à 00 h 30
+   * comptait pour la journée précédente. Le même piège traînait dans neuf
+   * endroits de `suivi.html`, dans `assets/ajout.js` et dans le calcul du lundi.
+   *
+   * @param {Date} [d] par défaut maintenant
+   */
+  function jour(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-'
+      + String(d.getMonth() + 1).padStart(2, '0') + '-'
+      + String(d.getDate()).padStart(2, '0');
+  }
+
+  /**
+   * Appelle `fn` au prochain minuit LOCAL, puis à chaque minuit suivant.
+   *
+   * Pourquoi un minuteur et pas seulement un contrôle au chargement : l'app
+   * reste ouverte. Sans lui, les compteurs du jour ne basculent qu'au prochain
+   * rechargement de page — on peut donc voir « 1 800 kcal » à 00 h 05 alors que
+   * la journée est vide.
+   *
+   * ⚠️ Le minuteur seul ne suffit pas non plus : un téléphone en veille ne
+   * l'exécute pas à l'heure. On réarme donc aussi au retour à l'écran, et on
+   * laisse `fn` décider si la journée a réellement changé (elle est idempotente).
+   * @returns {function} pour tout annuler
+   */
+  function aMinuit(fn) {
+    var t = null;
+    function armer() {
+      clearTimeout(t);
+      var n = new Date();
+      var m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 2);
+      // +2 s de marge : à 00 h 00 min 00 s pile, `jour()` peut encore rendre la
+      // veille selon l'arrondi de l'horloge.
+      t = setTimeout(function () { try { fn(); } catch (e) {} armer(); }, m - n);
+    }
+    function auReveil() { if (!document.hidden) { try { fn(); } catch (e) {} armer(); } }
+    document.addEventListener('visibilitychange', auReveil);
+    armer();
+    return function () {
+      clearTimeout(t);
+      document.removeEventListener('visibilitychange', auReveil);
+    };
+  }
+
+  /**
    * Macros d'une liste d'ingrédients.
    *
    * ⚠️ ORDRE DE CONFIANCE, et c'est tout le sujet : on prend d'abord les macros
@@ -618,6 +670,7 @@ var Natty = (function () {
     TOKEN: TOKEN, USER_ID: USER_ID,
     sbFetch: sbFetch, sbPost: sbPost, sbPatch: sbPatch,
     calcMac: calcMac, getNutri: getNutri, goto: goto, requireAuth: requireAuth,
+    jour: jour, aMinuit: aMinuit,
     // Questions et avertissements, sans dialogue natif (voir plus haut).
     confirmer: confirmer, alerte: alerte,
     // Session : entetes() sert aux appels qui n'utilisent pas les helpers
