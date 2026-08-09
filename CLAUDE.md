@@ -958,6 +958,42 @@ planifiée, c'est SA séquence qui doit s'ouvrir. Le module regarde l'écran ava
 (`#nplan`, `#nattyAjout`, `NattyGeneration.enCours()`) — deux plein écran l'un sur l'autre ne se
 discutent pas.
 
+**⚠️ LES QUATRE FAUX RACCORDS DE LA SÉQUENCE** (corrigés en août 2026, demande de Pablo :
+« les animations du guide ne sont pas fluides, les éléments doivent être au même endroit lors de
+l'animation et lors du visuel »). Aucun n'était visible à la lecture du code ; tous se mesurent
+en comparant la position d'un élément d'une scène à l'autre.
+
+| Ce qui sautait | Pourquoi | Ce qui le remplace |
+|---|---|---|
+| **L'arc, à chaque scène** — 105 px d'écart entre la 1ʳᵉ et la 3ᵉ, mesuré à 375 × 812 | `.col` était en `justify-content:center` : le groupe arc + texte se recentrait, or le bloc de texte n'a pas la même hauteur d'une scène à l'autre (rien, puis rien du tout, puis ~260 px) | `justify-content:flex-start` et une marge haute FIXE sur `.arc`. C'est le vide qui descend en bas, plus l'arc qui remonte |
+| **Le bloc sortant** | Il passait en `bottom:0` + `justify-content:center` : son contenu bondissait au milieu de la zone à l'instant où la sortie commençait | Épinglé en `top:0`, il reste où il était et se contente de partir |
+| **Toute la composition, encore** | `col.style.paddingBottom` était réécrit à chaque scène et RETOMBAIT à 14 px sur celles sans bouton | La réserve ne redescend jamais : on ne l'augmente que si les boutons l'exigent |
+| **Les jalons, au montage** | Sans position inline, ils naissent empilés au coin haut-gauche : la première `peindreArc()` les faisait voler depuis ce coin | `monterArc(hote, cur)` les pose sous `.pose` (transitions coupées), force le calcul, puis rend les transitions |
+
+Deux détails de la même famille : le **voile du bas** (`#njCta`) grandissait d'un coup à
+l'arrivée des boutons — il a maintenant une `min-height` constante, égale à la réserve de
+`.col` ; et le **tracé de l'orbite** se jouait pendant la scène « bonjour », où l'arc est encore
+à `opacity:0` — il n'est armé que sous `.arcvu` (et directement dans le bandeau).
+
+**⚠️ L'ÉCHELLE DU BANDEAU S'ADAPTE À LA PLACE QUI RESTE** (`ajusterBandeau`), au lieu d'être
+figée à 0,58. Demande de Pablo : « pour le menu, tous les éléments doivent être accessibles sans
+scroll ». À 0,58 le bandeau faisait 284 px et l'accueil débordait de 63 px sous la barre
+d'onglets à 375 × 812 — et d'une centaine de plus sur un téléphone à encoche, dont les zones
+sûres mangent le haut ET le bas. Aucune constante ne pouvait tenir sur tous les gabarits.
+- On MESURE : la position du bandeau (donc l'encoche), la hauteur des blocs qui le suivent
+  **marges comprises** (`getBoundingClientRect()` ne les inclut pas — il manquait 24 px, et
+  l'accueil dépassait encore de 14 px), et la barre d'onglets si elle est là.
+- En dessous de **0,34**, on cesse de tout rapetisser et on **retire le plat en grand** : il fait
+  le tiers de la composition, et à cette échelle il ne dépasse plus la bulle du moment, qui le
+  montre déjà. Sans lui, l'arc et le titre restent lisibles là où les trois ne l'étaient plus.
+- ⚠️ **La mesure repart TOUJOURS de la composition complète.** Sans remettre le plat avant de
+  mesurer, `H` valait encore la hauteur réduite de la fois d'avant : en passant d'un petit écran
+  à un grand, le bandeau se retrouvait coupé d'une centaine de pixels. Attrapé en
+  redimensionnant, pas en lisant le code.
+- Mesuré : 375 × 812 → 0,448 ; 390 × 844 → 0,483 ; 430 × 932 → 0,58 (le maximum, rien à
+  rogner) ; 375 × 667 → 0,26 sans le plat. Dans les quatre cas le bas de l'accueil passe
+  au-dessus de la barre d'onglets.
+
 **Pièges de mise en page, tous trouvés à l'écran et aucun par `node --check` :**
 - ⚠️ **Le sommet de l'arc est à −90°, pas −98.** Décalée de 8°, la pastille du moment tombait à
   41 % de la largeur : tout l'écran — date, titre, bouton — est centré, elle seule ne l'était
@@ -1312,6 +1348,22 @@ contenu déjà prêt — et il disparaissait complètement quand personne n'avai
 c'est-à-dire au moment où l'écran avait le plus besoin de quelque chose à montrer. La recherche
 fouille les deux : chercher « tofu » et ne rien trouver alors que six plats du monde en
 contiennent ferait passer la barre pour cassée.
+
+**Le détail d'un plat — une PHOTO, pas une fiche** (août 2026, demande de Pablo). Taper un
+plat n'ouvre plus une page de champs empilés : la photo prend tout l'écran, le nom est posé sur
+un **rectangle arrondi noir**, les macros sur **quatre bulles de verre**, et une ligne dit ce que
+la base sait du plat sans rien inventer (« Déjeuner de Hélène · 12 août · 6 ingrédients »).
+Le reste — la note de score, les ingrédients, les actions — vit dans un **tiroir** qui monte à la
+demande (« Voir le détail »), et les pastilles d'ingrédients s'ajoutent aux courses par la même
+clé que « Découvrir » et `coaching.html`. Le retour referme d'abord le tiroir : on remonte d'un
+cran, on ne saute pas de la fiche au fil d'un seul geste.
+- ⚠️ **Le verre des bulles est SOMBRE**, teinté noir sous un liseré clair. Même leçon que la
+  visionneuse « Découvrir » : un voile blanc sous du texte blanc n'a de contraste que par
+  accident, selon la photo. Le rectangle du titre, lui, est franchement opaque — c'est ce qui
+  garantit que le nom se lit sur n'importe laquelle des photos du fil.
+- ⚠️ Cette page est **noire dans les deux thèmes**, comme la visionneuse et `assets/ajout.js`.
+- Sans ingrédient saisi, le bouton « Tout ajouter » s'éteint et dit « Rien à ajouter » : un
+  bouton cliquable qui ne fait rien est pire qu'un bouton éteint.
 
 **Illustrations** — un jeu de tracés (`ILLU`, dans la page) posé sur les titres de section par
 `poserIcones()`, plus une grande assiette-globe pour l'état vide et une assiette sous l'emoji
@@ -3434,3 +3486,25 @@ session « fil social » :*
 - Aucune écriture en base : ce catalogue est entièrement embarqué, il ne dépend d'aucune
   requête et fonctionne hors ligne. Le seul geste qui écrit quelque chose est l'ajout d'un
   ingrédient à la liste de courses, qui passe par `NattyListe` et sa clé existante.
+
+---
+
+*Contribution session « détail d'un plat, faux raccords, menu sans scroll » (Claude Opus,
+9 août 2026) — trois demandes de Pablo, trois fichiers :*
+- `social.html` (+ `www/`) : le détail d'un plat devient une **page-photo** — rectangle noir
+  pour le titre, bulles de verre pour les macros, description courte, et un tiroir « Voir le
+  détail » qui porte les ingrédients (ajoutables aux courses) et les actions. Détail en §3.
+- `assets/journee.js` (+ `www/`) : **quatre faux raccords corrigés** dans la séquence du guide
+  — l'arc qui se déplaçait de 105 px d'une scène à l'autre, le bloc sortant qui bondissait au
+  centre, la réserve du bas qui montait et redescendait, et les jalons qui volaient depuis un
+  coin au montage. Plus le voile du bas et le tracé de l'orbite, de la même famille. Tableau
+  complet en §3.
+- `assets/journee.js` encore : **l'échelle du bandeau se calcule sur la place disponible**, pour
+  que l'accueil tienne sans défilement sur tous les gabarits. Vérifié sur quatre tailles, dans
+  les deux sens (un aller-retour petit → grand a révélé un bug de mesure).
+- Vérifié en navigateur avec un banc jetable `_test-journee2.html` (préfixe `_`, hors dépôt) :
+  horloge, cas de figure et mode en paramètres d'URL. Positions relevées scène par scène —
+  l'arc reste à 93 px sur les trois plans, et le bloc sortant à 302 px sur les deux
+  transitions.
+- 🔄 **Non vérifié sur téléphone** : la fluidité réelle des transitions et le rendu des zones
+  sûres n'ont pu être jugés qu'en navigateur.

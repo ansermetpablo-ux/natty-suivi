@@ -154,6 +154,100 @@ body{overflow-x:hidden}
 .sheet-bar .ttl{flex:1;min-width:0;font-weight:800;font-size:13px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+/* ══ Le détail d'un plat — une PHOTO, pas une fiche ══
+   Demande de Pablo : la photo, le titre sur un rectangle arrondi noir, les
+   macros en bulles de verre, une description courte — et le détail seulement
+   si on le demande. Même vocabulaire que la visionneuse « Découvrir »
+   (assets/decouverte.js) : plein cadre, voiles haut et bas, verre sombre.
+
+   ⚠️ Cette page est NOIRE dans les deux thèmes, comme la visionneuse et
+   `assets/ajout.js` : le fond n'est pas une surface d'interface, c'est le
+   bord de l'image. Ne pas « corriger » ses #fff. */
+.sheet.plat{background:#000}
+.sheet.plat .sheet-in{background:#000;color:#fff;padding:0;overflow:hidden;position:relative}
+.pv{position:absolute;inset:0;overflow:hidden}
+.pv-ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pv-fb{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:110px;background:#141418}
+.pv-hz{position:absolute;left:0;right:0;top:0;height:190px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(0,0,0,.76) 0%,rgba(0,0,0,.22) 58%,rgba(0,0,0,0) 100%)}
+.pv-bz{position:absolute;left:0;right:0;bottom:0;height:64%;pointer-events:none;
+  background:linear-gradient(0deg,rgba(0,0,0,.92) 0%,rgba(0,0,0,.66) 30%,rgba(0,0,0,.2) 64%,rgba(0,0,0,0) 100%)}
+
+/* Barre du haut : retour, auteur, j'aime. L'auteur mène à son profil. */
+.pv-top{position:absolute;left:0;right:0;top:0;z-index:4;display:flex;align-items:center;gap:11px;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 16px 0}
+.pv-rd{width:38px;height:38px;flex:none;border:none;border-radius:50%;padding:0;color:#fff;
+  background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;cursor:pointer}
+.pv-rd:active{transform:scale(.92)}
+.pv-who{flex:1;min-width:0;display:flex;align-items:center;gap:9px;cursor:pointer;
+  background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border-radius:999px;padding:5px 14px 5px 5px}
+.pv-who .av{width:28px;height:28px;font-size:11px;background:#fff;color:#101014}
+.pv-who .nm{flex:1;min-width:0;font-size:12.5px;font-weight:800;letter-spacing:.2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv-rd.on svg{stroke:var(--red);fill:var(--red)}
+.pv-rd svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:2}
+
+/* Le bas : le rectangle noir, les bulles, et le bouton qui ouvre le détail. */
+.pv-body{position:absolute;left:0;right:0;bottom:0;z-index:3;
+  padding:0 18px calc(16px + env(safe-area-inset-bottom,0px))}
+/* Le rectangle arrondi noir qui porte le titre — demandé tel quel. Opaque
+   plutôt que translucide : c'est ce qui garantit que le nom du plat se lit
+   sur n'importe laquelle des photos. */
+.pv-plate{background:rgba(8,8,10,.86);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
+  border:1px solid rgba(255,255,255,.09);border-radius:24px;padding:16px 18px}
+.pv-nm{font-weight:900;font-size:25px;line-height:1.1;letter-spacing:-.5px}
+.pv-desc{font-size:12.5px;line-height:1.45;color:#b9b9c4;margin-top:6px}
+/* ⚠️ Les bulles sont en verre SOMBRE, pas clair, et c'est la leçon déjà payée
+   sur la visionneuse Découvrir : un voile blanc sous du texte blanc n'a de
+   contraste que par accident, selon le plat photographié — la pastille
+   « Vietnam » du phở s'affichait vide. Le liseré clair et le flou donnent le
+   verre ; c'est la teinte sombre qui garantit qu'on lit les chiffres. */
+.pv-mac{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}
+.pv-mac .b{background:rgba(0,0,0,.34);-webkit-backdrop-filter:blur(20px) saturate(1.5);
+  backdrop-filter:blur(20px) saturate(1.5);border:1px solid rgba(255,255,255,.3);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+  border-radius:17px;padding:10px 0;text-align:center;
+  text-shadow:0 1px 6px rgba(0,0,0,.55)}
+.pv-mac .b .v{font-weight:900;font-size:15px;line-height:1.1}
+.pv-mac .b .k{font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  color:#b9b9c4;margin-top:3px}
+.pv-mac.vide{grid-template-columns:1fr}
+.pv-mac.vide .b{font-size:11.5px;font-weight:700;color:#b9b9c4;padding:11px}
+.pv-open{width:100%;margin-top:10px;border:none;border-radius:999px;padding:14px;cursor:pointer;
+  background:#fff;color:#101014;font-family:inherit;font-size:13.5px;font-weight:800}
+.pv-open:active{transform:scale(.98)}
+
+/* Le détail — il monte par-dessus la photo quand on le demande, et il défile
+   sur lui-même. Rendu d'emblée, la photo n'aurait plus aucune place. */
+.pv-det{position:absolute;left:0;right:0;bottom:0;z-index:5;max-height:88%;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  background:rgba(8,8,10,.94);-webkit-backdrop-filter:blur(26px);backdrop-filter:blur(26px);
+  border-radius:28px 28px 0 0;border-top:1px solid rgba(255,255,255,.1);
+  padding:8px 18px calc(18px + env(safe-area-inset-bottom,0px));
+  transform:translateY(101%);transition:transform .34s cubic-bezier(.22,1,.36,1)}
+.pv.det .pv-det{transform:none}
+.pv-grip{width:38px;height:4px;border-radius:2px;background:rgba(255,255,255,.22);margin:0 auto 14px}
+.pv-sst{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+  color:#8b8b96;margin:16px 0 9px}
+.pv-note{font-size:12.5px;line-height:1.5;color:#b9b9c4}
+.pv-ings{display:flex;flex-wrap:wrap;gap:7px}
+.pv-ing{display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;color:#fff;
+  background:rgba(255,255,255,.1);font-family:inherit;border-radius:999px;padding:8px 13px;
+  font-size:12px;font-weight:700;transition:background .18s,transform .12s}
+.pv-ing:active{transform:scale(.95)}
+.pv-ing.on{background:#fff;color:#101014}
+.pv-ing .q{font-weight:600;opacity:.6}
+.pv-acts{display:flex;gap:9px;margin-top:18px}
+.pv-b1{flex:1;background:#fff;color:#101014;border:none;border-radius:999px;padding:15px;
+  font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+.pv-b2{flex:none;background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:999px;
+  padding:15px 18px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+.pv-b1:active,.pv-b2:active{transform:scale(.98)}
+.pv-b1[disabled]{opacity:.45}
+
 /* ══ Profil d'un membre ══ */
 .pf-head{display:flex;align-items:center;gap:14px;margin-top:8px}
 .pf-av{width:64px;height:64px;border-radius:50%;background:var(--ink);color:var(--on-ink);flex:none;
@@ -700,21 +794,54 @@ function rendre(){
 
 /* ══ Détail ══ */
 
+var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août',
+            'septembre','octobre','novembre','décembre'];
+var detOuvert = false;   // le tiroir « détail » est-il déplié ?
+
 function ouvrir(id){
   var p = NattySocial.platParId(id);
   if (!p) return;
   ouvert = p;
+  detOuvert = false;
   NattySocial.marquerVue(id);
   rendreSheet();
-  $('sheet').classList.add('on');
+  $('sheet').classList.add('on', 'plat');
   document.body.style.overflow = 'hidden';
 }
 
 function fermer(){
   $('sheet').classList.remove('on');
+  $('sheet').classList.remove('plat');
   document.body.style.overflow = '';
   ouvert = null;
+  detOuvert = false;
   rendre();   // les compteurs ont pu bouger pendant la consultation
+}
+
+/* ══ Liste de courses ══
+   Les ingrédients d'un plat du fil s'ajoutent aux courses par le MÊME
+   mécanisme que ceux d'un plat du monde et que les aliments à privilégier de
+   coaching.html : une seule clé, donc une seule liste. Sans `assets/liste.js`
+   les pastilles sont désactivées, plutôt que de promettre un geste sans effet. */
+function listeDispo(){ return !!window.NattyListe && !!NattyListe.basculerExtra; }
+function moi(){ return (window.Natty && Natty.USER_ID) || 'anon'; }
+function dansLaListe(nom){ return listeDispo() && NattyListe.contientExtra(moi(), nom); }
+// Une apostrophe (« Huile d'olive ») glissée telle quelle dans un sélecteur
+// d'attribut casserait la requête.
+function attr(s){ return String(s).replace(/["\\]/g, '\\$&'); }
+
+/* La description courte : ce que la base sait dire de ce plat sans rien
+   inventer — quel repas, de qui, quand, et combien d'ingrédients. */
+function descriptionPlat(p){
+  var qui = (p.auteur && p.auteur.prenom) || 'un membre';
+  var t = (p.type || '').trim();
+  var bouts = [t ? (t.charAt(0).toUpperCase() + t.slice(1) + ' de ' + qui)
+                 : ('Le plat de ' + qui)];
+  var d = p.date ? new Date(p.date + 'T00:00:00') : null;
+  if (d && !isNaN(d)) bouts.push(d.getDate() + ' ' + MOIS[d.getMonth()]);
+  var n = p.ingredients.length;
+  if (n) bouts.push(n + ' ingrédient' + (n > 1 ? 's' : ''));
+  return bouts.join(' · ');
 }
 
 function rendreSheet(){
@@ -723,61 +850,142 @@ function rendreSheet(){
   var c = NattySocial.compteurs(p.id);
   var ami = NattySocial.estAmi(p.user_id);
   var m = p.macros || { c:0, p:0, l:0, g:0 };
-  var d = p.date ? new Date(p.date + 'T00:00:00') : null;
-  var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  // Sans ingrédient saisi, il n'y a rien à mettre dans les courses : le bouton
+  // resterait cliquable et ne ferait rien, ce qui est pire qu'un bouton éteint.
+  var achete = listeDispo() && p.ingredients.length > 0;
 
   var note = '';
   if (p.score !== null && p.auteur && p.auteur.repas){
     var r = p.auteur.repas;
-    note = 'Score calculé face aux besoins de ' + esc(p.auteur.prenom) + ' pour un repas : '
-      + r.p + ' g de protéines, ' + r.g + ' g de glucides, ' + r.l + ' g de lipides, ' + r.c + ' kcal.';
+    note = 'Score ' + p.score + '/100, calculé face aux besoins de ' + esc(p.auteur.prenom)
+      + ' pour un repas : ' + r.p + ' g de protéines, ' + r.g + ' g de glucides, '
+      + r.l + ' g de lipides, ' + r.c + ' kcal.';
   } else if (!m.c){
-    note = 'Les macros de ce plat n\'ont pas pu être estimées : certains ingrédients ne sont pas dans notre table nutritionnelle.';
+    note = 'Les macros de ce plat n\'ont pas pu être estimées : certains de ses ingrédients ne sont pas dans notre table nutritionnelle. Un manque affiché vaut mieux qu\'un total faux.';
   }
 
-  $('sheetIn').innerHTML = '<div class="sheet-bar"><button id="shBack">←</button>'
-    + '<div class="ttl">' + esc(p.nom) + '</div></div>'
-    + '<div class="sheet-photo">' + visuel(p) + '</div>'
-    /* L'en-tête d'auteur mène à son profil : le nom et la photo sont ce sur
+  var macros = m.c
+    ? '<div class="pv-mac">'
+      + '<div class="b"><div class="v">' + Math.round(m.p) + 'g</div><div class="k">Prot</div></div>'
+      + '<div class="b"><div class="v">' + Math.round(m.g) + 'g</div><div class="k">Gluc</div></div>'
+      + '<div class="b"><div class="v">' + Math.round(m.l) + 'g</div><div class="k">Lip</div></div>'
+      + '<div class="b"><div class="v">' + Math.round(m.c) + '</div><div class="k">Kcal</div></div>'
+      + '</div>'
+    : '<div class="pv-mac vide"><div class="b">Macros non estimées</div></div>';
+
+  $('sheetIn').innerHTML = '<div class="pv" id="pv">'
+    + (p.photo
+        ? '<img class="pv-ph" src="' + esc(p.photo) + '" alt="">'
+        : '<div class="pv-fb">' + p.emoji + '</div>')
+    + '<div class="pv-hz"></div><div class="pv-bz"></div>'
+
+    + '<div class="pv-top">'
+    +   '<button class="pv-rd" id="shBack" aria-label="Retour">←</button>'
+    /* L'en-tête d'auteur mène à son profil : le nom et l'initiale sont ce sur
        quoi on appuie naturellement pour « voir qui c'est ». */
-    + '<div class="sheet-head" data-membre="' + esc(p.user_id) + '" style="cursor:pointer">'
-    + '<div class="av">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
-    + '<div class="who"><div class="nm">' + esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div>'
-    + '<div class="dt">' + (d ? d.getDate() + ' ' + MOIS[d.getMonth()] : '') + (p.type ? ' · ' + esc(p.type) : '') + '</div></div>'
-    + (p.score !== null ? '<span class="score ' + classeScore(p.score) + '">' + p.score + ' / 100</span>' : '')
+    +   '<div class="pv-who" data-membre="' + esc(p.user_id) + '">'
+    +     '<div class="av">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
+    +     '<div class="nm">' + esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div>'
+    +   '</div>'
+    +   '<button class="pv-rd' + (c.aime ? ' on' : '') + '" id="shLike" aria-label="J\'aime">'
+    +     '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">'
+    +     '<path d="M12 20.5S3.5 15 3.5 9.2A4.7 4.7 0 0 1 12 6.6a4.7 4.7 0 0 1 8.5 2.6c0 5.8-8.5 11.3-8.5 11.3Z"/></svg>'
+    +   '</button>'
     + '</div>'
-    + '<div class="sheet-title">' + esc(p.nom) + '</div>'
-    + '<div class="sheet-stats"><span>' + c.likes + ' j\'aime</span><span>' + c.vues + ' vue' + (c.vues > 1 ? 's' : '') + '</span></div>'
-    + '<div class="sheet-macros">'
-    + '<div class="mp"><div class="v">' + Math.round(m.p) + 'g</div><div class="k">Prot</div></div>'
-    + '<div class="mp"><div class="v">' + Math.round(m.g) + 'g</div><div class="k">Gluc</div></div>'
-    + '<div class="mp"><div class="v">' + Math.round(m.l) + 'g</div><div class="k">Lip</div></div>'
-    + '<div class="mp"><div class="v">' + Math.round(m.c) + '</div><div class="k">Kcal</div></div>'
+
+    /* Le bas : le rectangle noir porte le nom et la description, les bulles
+       portent les macros, et le bouton ouvre le détail. Rien de plus — c'est
+       la photo qui doit occuper l'écran. */
+    + '<div class="pv-body">'
+    +   '<div class="pv-plate">'
+    +     '<div class="pv-nm">' + esc(p.nom) + '</div>'
+    +     '<div class="pv-desc">' + esc(descriptionPlat(p)) + '</div>'
+    +   '</div>'
+    +   macros
+    +   '<button class="pv-open" id="pvOpen">Voir le détail</button>'
     + '</div>'
-    + (note ? '<div class="sheet-note">' + note + '</div>' : '')
-    + (p.ingredients.length
-        ? '<div class="ingr-chips">' + p.ingredients.map(function(i){
-            return '<span class="chip">' + esc(i.name)
-              + (i.quantity_g ? '<span class="q">' + Math.round(i.quantity_g) + 'g</span>' : '') + '</span>';
+
+    + '<div class="pv-det" id="pvDet">'
+    +   '<div class="pv-grip"></div>'
+    +   (note ? '<div class="pv-note">' + note + '</div>' : '')
+    +   '<div class="pv-sst">Ce qu\'il y a dedans</div>'
+    +   (p.ingredients.length
+        ? '<div class="pv-ings">' + p.ingredients.map(function(i){
+            var nom = i.name || '';
+            var on = achete && dansLaListe(nom);
+            return '<button class="pv-ing' + (on ? ' on' : '') + '" data-ing="' + esc(nom) + '"'
+              + (achete ? '' : ' disabled') + '>' + esc(nom)
+              + (i.quantity_g ? '<span class="q">' + Math.round(i.quantity_g) + 'g</span>' : '')
+              + '</button>';
           }).join('') + '</div>'
-        : '')
-    + '<div class="sheet-acts">'
-    + '<button class="btn-ink" id="shLike">' + (c.aime ? '❤️ Aimé' : '🤍 J\'aime') + '</button>'
-    + '<button class="btn-ghost" id="shFollow">' + (ami ? 'Suivi ✓' : 'Suivre') + '</button>'
-    + '<button class="btn-ghost" id="shClose">Fermer</button>'
+        : '<div class="pv-note">Aucun ingrédient n\'a été saisi pour ce plat.</div>')
+    +   '<div class="pv-acts">'
+    +     '<button class="pv-b1" id="pvCourses"' + (achete ? '' : ' disabled') + '>'
+    +       (achete ? 'Tout ajouter à mes courses'
+                    : (p.ingredients.length ? 'Liste de courses indisponible'
+                                            : 'Rien à ajouter')) + '</button>'
+    +     '<button class="pv-b2" id="shFollow">' + (ami ? 'Suivi ✓' : 'Suivre') + '</button>'
+    +   '</div>'
     + '</div>';
 
-  $('shBack').addEventListener('click', fermer);
+  var pv = $('pv');
+  if (detOuvert) pv.classList.add('det');
+
+  $('shBack').addEventListener('click', function(){
+    // Le retour referme d'abord le tiroir : on remonte d'un cran, on ne saute
+    // pas de la fiche détaillée au fil en un seul geste.
+    if (detOuvert){ detOuvert = false; pv.classList.remove('det'); return; }
+    fermer();
+  });
   $('shLike').addEventListener('click', function(){
-    NattySocial.toggleLike(p.id);
-    rendreSheet();
+    var etat = NattySocial.toggleLike(p.id);
+    this.classList.toggle('on', etat.aime);
+  });
+  $('pvOpen').addEventListener('click', function(){
+    detOuvert = !detOuvert;
+    pv.classList.toggle('det', detOuvert);
+    this.textContent = detOuvert ? 'Masquer le détail' : 'Voir le détail';
+  });
+  // Taper la poignée referme le tiroir — le geste attendu sur une feuille.
+  $('pvDet').querySelector('.pv-grip').addEventListener('click', function(){
+    detOuvert = false; pv.classList.remove('det');
+    $('pvOpen').textContent = 'Voir le détail';
   });
   $('shFollow').addEventListener('click', function(){
     var suit = NattySocial.basculerAmi(p.user_id);
-    rendreSheet();
+    this.textContent = suit ? 'Suivi ✓' : 'Suivre';
     toast(suit ? 'Vous suivez ' + p.auteur.prenom : 'Vous ne suivez plus ' + p.auteur.prenom);
   });
-  $('shClose').addEventListener('click', fermer);
+
+  var btnC = $('pvCourses');
+  if (achete) btnC.addEventListener('click', function(){
+    var n = 0;
+    p.ingredients.forEach(function(i){
+      if (i.name && !dansLaListe(i.name)){ NattyListe.basculerExtra(moi(), i.name, '🛒'); n++; }
+    });
+    peindreIngredients();
+    toast(n ? n + (n > 1 ? ' ingrédients ajoutés' : ' ingrédient ajouté') + ' à vos courses'
+            : 'Tout est déjà dans vos courses');
+  });
+
+  $('pvDet').addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-ing]');
+    if (!b || !achete) return;
+    var nom = b.dataset.ing;
+    var ajoute = NattyListe.basculerExtra(moi(), nom, '🛒');
+    // Le même ingrédient peut apparaître deux fois dans un plat : toutes ses
+    // pastilles doivent bouger, pas seulement celle qu'on a touchée.
+    $('pvDet').querySelectorAll('[data-ing="' + attr(nom) + '"]').forEach(function(x){
+      x.classList.toggle('on', ajoute);
+    });
+    toast(ajoute ? nom + ' ajouté à vos courses' : nom + ' retiré de vos courses');
+  });
+
+  function peindreIngredients(){
+    $('pvDet').querySelectorAll('[data-ing]').forEach(function(x){
+      x.classList.toggle('on', dansLaListe(x.dataset.ing));
+    });
+  }
 }
 
 /* ══ Profil d'un membre ══

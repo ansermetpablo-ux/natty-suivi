@@ -407,12 +407,21 @@ window.NattyJournee = (function () {
          Même gabarit que le reste de l'app, et la place de la barre d'action
          réservée en bas : un contenu qui passe dessous se lit mal et se tape
          encore plus mal.
-         ⚠️ `justify-content:center` : le contenu est court, et top-aligné il
-         laissait l'arc collé au bord haut avec la moitié de l'écran vide en
-         dessous — « problème de centrage, trop haut ». Le groupe arc + texte
-         se centre maintenant dans la place disponible. */
+         ⚠️⚠️ `justify-content:flex-start`, ET C'EST LA CORRECTION DU FAUX
+         RACCORD PRINCIPAL. En `center`, le groupe arc + texte se centrait dans
+         la place disponible — donc l'arc se déplaçait à CHAQUE scène, puisque
+         le bloc de texte sous lui n'a pas la même hauteur d'une scène à
+         l'autre : rien au « bonjour », rien du tout sur la scène de l'arc,
+         puis ~260 px avec le jour, l'étape et le plat. Mesuré à 375 × 812 :
+         **105 px d'écart entre la première scène et la dernière**. L'arc est
+         le fil de la séquence, c'est précisément l'élément qui ne doit jamais
+         bouger. Il est donc posé à une hauteur fixe, et c'est le VIDE qui
+         descend en bas quand la scène est courte.
+         (Le défaut d'origine — « arc collé au bord haut, moitié d'écran vide
+         en dessous » — est réglé par la marge haute de `.arc`, pas par un
+         centrage qui dépend du contenu.) */
       '#njour .col{position:absolute;inset:0;display:flex;flex-direction:column;',
-      'align-items:center;justify-content:center;',
+      'align-items:center;justify-content:flex-start;',
       'padding:calc(20px + env(safe-area-inset-top,0px)) 22px ',
       'calc(146px + env(safe-area-inset-bottom,0px));overflow-y:auto;',
       '-webkit-overflow-scrolling:touch;text-align:center}',
@@ -426,14 +435,28 @@ window.NattyJournee = (function () {
          nom, et rien d'autre. */
       '#njour .arc{opacity:0;transition:opacity .6s ease}',
       '#njour.arcvu .arc{opacity:1}',
+      /* ⚠️ POSER LES JALONS SANS TRANSITION AU MONTAGE. Ils naissent sans
+         position inline, donc empilés au coin haut-gauche du cadre ; la
+         première `peindreArc()` les faisait alors VOLER depuis ce coin, en
+         même temps que l'arc apparaissait en fondu. On voyait six pastilles
+         partir d'un point et se déployer — un mouvement que rien dans la
+         séquence ne raconte. `.pose` coupe les transitions le temps de les
+         placer ; seuls les déplacements VOULUS s'animent ensuite. */
+      '.njsk .arc.pose .jal{transition:none}',
 
       /* ── L'arc ──────────────────────────────────────────────
          Les jalons sont des éléments HTML posés sur le cercle, pas des formes
          SVG : c'est la seule façon d'avoir un vrai neumorphisme (reliefs et
          creux) et un texte net sous chacun. Le trait du cercle, lui, reste en
          SVG derrière. */
+      /* La marge haute remplace l'ancien centrage : elle pose l'arc à une
+         hauteur FIXE, la même sur les quatre scènes. C'est elle qu'on règle si
+         la composition paraît trop haute ou trop basse — jamais le centrage,
+         qui dépendrait du contenu et ferait bouger l'arc d'une scène à l'autre. */
       '.njsk .arc{position:relative;width:360px;height:224px;flex-shrink:0;',
-      'margin:10px 0 0}',
+      'margin:64px 0 0}',
+      // Dans le bandeau, la marge n'a pas lieu d'être : il est déjà cadré.
+      '.njb .arc{margin-top:6px}',
       /* ⚠️ LE TRAIT DE L'ORBITE DOIT S'ÉTEINDRE, PAS ÊTRE COUPÉ. Le cercle qui
          porte les jalons a un rayon de 230 px : ses extrémités descendent bien
          en dessous du cadre de l'arc et venaient barrer le grand titre (mesuré
@@ -445,8 +468,15 @@ window.NattyJournee = (function () {
       'overflow:visible;fill:none;stroke-linecap:round;',
       '-webkit-mask-image:radial-gradient(62% 78% at 41% 48%,#000 38%,rgba(0,0,0,.35) 72%,transparent 100%);',
       'mask-image:radial-gradient(62% 78% at 41% 48%,#000 38%,rgba(0,0,0,.35) 72%,transparent 100%)}',
+      /* ⚠️ LE TRACÉ NE PART QU'UNE FOIS L'ARC VISIBLE. Déclenché au montage, il
+         se jouait entièrement pendant la scène « bonjour », où l'arc est encore
+         à `opacity:0` : on payait une animation de 1,6 s que personne ne voyait,
+         et l'arc apparaissait ensuite déjà tracé. D'où deux règles — le
+         plein écran attend `.arcvu`, le bandeau trace dès qu'il est posé. */
       '.njsk .arc svg.orbite path{stroke:var(--j-trait);stroke-width:1;',
-      'stroke-dasharray:900;stroke-dashoffset:900;animation:njTrace 1.6s cubic-bezier(.22,1,.36,1) forwards}',
+      'stroke-dasharray:900;stroke-dashoffset:900}',
+      '#njour.arcvu .arc svg.orbite path,.njb .arc svg.orbite path{',
+      'animation:njTrace 1.6s cubic-bezier(.22,1,.36,1) forwards}',
       '.njsk .arc svg.orbite path.b{stroke:var(--j-trait2);animation-delay:.16s}',
       '.njsk .arc svg.orbite path.c{stroke:var(--j-trait2);animation-delay:.3s;opacity:.6}',
       '@keyframes njTrace{to{stroke-dashoffset:0}}',
@@ -546,11 +576,16 @@ window.NattyJournee = (function () {
       /* ⚠️ 12 px et non 22 : depuis que le PLAT s'affiche sous le titre, c'est
          lui qui occupe le bas de la scène. Le titre remonte donc vers l'arc,
          dont il est le commentaire — « Dîner » sous la bulle du dîner. */
-      '.njsk .zone{flex:0 0 auto;width:100%;max-width:420px;margin-top:12px;',
+      '.njsk .zone{flex:1 1 auto;width:100%;max-width:420px;margin-top:12px;',
       'position:relative;display:flex;flex-direction:column;justify-content:flex-start}',
       '#njour .bloc{width:100%}',
-      '#njour .bloc.sort{position:absolute;left:0;right:0;top:0;bottom:0;',
-      'display:flex;flex-direction:column;justify-content:center;pointer-events:none}',
+      /* ⚠️ LE BLOC SORTANT NE DOIT PAS BOUGER EN SORTANT. Il passait en
+         `bottom:0` + `justify-content:center` : à l'instant précis où la
+         sortie commençait, son contenu SAUTAIT au milieu de la zone avant de
+         s'effacer — un faux raccord à chaque changement de scène, et le plus
+         visible de tous puisqu'il se produit quatre fois. Épinglé en haut, il
+         reste exactement là où il était et se contente de partir. */
+      '#njour .bloc.sort{position:absolute;left:0;right:0;top:0;pointer-events:none}',
       /* ⚠️ QUATRE ÉLÉMENTS DE TEXTE EN TOUT, ET PAS UN DE PLUS. La première
          version empilait libellé d'heure, titre, « étape 2 sur 5 », une phrase
          explicative, trois pastilles de macros, un filet, une devise et le
@@ -610,10 +645,17 @@ window.NattyJournee = (function () {
          Fixe, hors du bloc animé. Leçon de `narration.html` : un bouton posé
          dans la scène part avec son animation de sortie et disparaît sous le
          doigt. */
+      /* ⚠️ `min-height` CONSTANTE, et les boutons calés en bas. Sans elle, la
+         barre ne mesurait que ses marges tant qu'elle était vide (scènes 1 et
+         2) puis passait d'un coup à ~140 px : le voile qui referme le bas de
+         l'écran grandissait brutalement à l'arrivée des boutons. La hauteur
+         réservée est la même que celle du bas de `.col` — les deux décrivent
+         la même chose. */
       '#njCta{position:absolute;left:0;right:0;bottom:0;z-index:6;',
+      'min-height:calc(146px + env(safe-area-inset-bottom,0px));',
       'padding:14px 22px calc(20px + env(safe-area-inset-bottom,0px));display:flex;',
-      'flex-direction:column;gap:9px;align-items:stretch;pointer-events:none;',
-      'background:linear-gradient(to top,var(--j-bg) 60%,transparent)}',
+      'flex-direction:column;justify-content:flex-end;gap:9px;align-items:stretch;',
+      'pointer-events:none;background:linear-gradient(to top,var(--j-bg) 60%,transparent)}',
       '#njCta > *{pointer-events:auto;max-width:436px;width:100%;margin:0 auto;',
       'animation:njGlide .42s cubic-bezier(.22,1,.36,1) .26s backwards}',
       '#njour .b1{background:var(--j-vif);color:var(--j-sur-vif);border-radius:22px;padding:18px;',
@@ -773,9 +815,22 @@ window.NattyJournee = (function () {
     return h + '</div>';
   }
 
-  function monterArc(hote) {
+  /**
+   * Pose l'arc, jalons DÉJÀ placés autour de `cur`, sans animation.
+   *
+   * ⚠️ Le placement initial ne doit pas s'animer. Sans position inline, les
+   * jalons naissent empilés au coin haut-gauche du cadre ; la première
+   * `peindreArc()` les faisait donc voler depuis ce coin. `.pose` coupe les
+   * transitions, on force le calcul du style, puis on les rend — à partir de
+   * là, seul un vrai changement d'étape déplace quelque chose.
+   */
+  function monterArc(hote, cur) {
     hote.insertAdjacentHTML('beforeend', htmlArc(etat.etapes, 'njArc'));
     arcEl = hote.querySelector('#njArc');
+    arcEl.classList.add('pose');
+    peindreArc(cur || 0);
+    void arcEl.offsetHeight;   // fige l'état posé avant de rendre les transitions
+    arcEl.classList.remove('pose');
   }
 
   /**
@@ -875,11 +930,13 @@ window.NattyJournee = (function () {
       cta.appendChild(el);
     });
 
-    /* ⚠️ LA PLACE RÉSERVÉE EN BAS DÉPEND DU NOMBRE DE BOUTONS. Elle était
-       figée à 146 px, ce qui suffit à deux boutons ; avec trois — le cas d'un
-       repas dont la recette est prévue — la barre monte à ~200 px et mangeait
-       la dernière ligne du texte. On la mesure donc, une fois les boutons
-       posés, au lieu de la deviner. */
+    /* ⚠️ LA PLACE RÉSERVÉE EN BAS NE REDESCEND JAMAIS. Elle est mesurée parce
+       qu'une barre à trois boutons monte à ~200 px et mangerait la dernière
+       ligne du texte. Mais l'écrire à chaque scène la faisait aussi RÉDUIRE
+       sur les scènes sans bouton (14 px au lieu de 146) : combinée à l'ancien
+       centrage, c'est ce qui faisait remonter puis redescendre toute la
+       composition entre deux plans. On ne l'augmente donc que si le contenu
+       réel l'exige, et jamais dans l'autre sens. */
     var col = racine.querySelector('#njCol');
     requestAnimationFrame(function () {
       if (!col || !cta) return;
@@ -887,8 +944,10 @@ window.NattyJournee = (function () {
       // son tiers supérieur est un dégradé transparent, et réserver aussi
       // cette hauteur-là coûtait 18 px de texte pour rien.
       var b1 = cta.firstElementChild;
-      var haut = b1 ? (cta.offsetHeight - b1.offsetTop) : cta.offsetHeight;
-      col.style.paddingBottom = (haut + 14) + 'px';
+      if (!b1) return;
+      var voulu = (cta.offsetHeight - b1.offsetTop) + 14;
+      var actuel = parseFloat(getComputedStyle(col).paddingBottom) || 0;
+      if (voulu > actuel) col.style.paddingBottom = Math.round(voulu) + 'px';
     });
 
     if (o.pret) o.pret(d);
@@ -1032,14 +1091,16 @@ window.NattyJournee = (function () {
     };
 
     monter();
-    monterArc(racine.querySelector('#njCol'));
+    // L'arc est posé d'emblée à l'endroit d'où il PART : sur l'étape du moment
+    // pour la version courte, sur la première pour la longue — que la scène 2
+    // fera ensuite défiler jusqu'au moment présent.
+    monterArc(racine.querySelector('#njCol'), etat.court ? etat.cur : 0);
     monterZone();
 
     if (etat.court) {
       // Version courte : l'arc est là dès la première image, déjà calé sur le
       // moment. Pas de bonjour, pas de déroulé — on vient noter un repas.
       racine.classList.add('arcvu');
-      peindreArc(etat.cur);
       scEtape();
     } else {
       // Le prénom n'est pas bloquant : la scène s'ouvre tout de suite et se
@@ -1107,7 +1168,25 @@ window.NattyJournee = (function () {
      Il vit dans le thème courant sans rien faire de particulier : les jetons
      `--j-*` ont déjà leur pendant clair (`:root[data-theme="light"] .njsk`). */
 
-  var K_BANDEAU = 0.58;
+  /* L'échelle du bandeau. `K_MAX` est la taille de confort — celle qu'il garde
+     dès que l'écran a la place. `K_MIN` est le plancher en dessous duquel le
+     texte cesse d'être lisible.
+
+     ⚠️ L'ÉCHELLE S'ADAPTE À LA PLACE QUI RESTE, elle n'est plus fixe. Demande
+     de Pablo : « pour le menu, tous les éléments doivent être accessibles sans
+     scroll ». À 0,58 le bandeau faisait 284 px et l'accueil débordait de 63 px
+     sous la barre d'onglets (mesuré à 375 × 812 — et d'une centaine de plus sur
+     un iPhone à encoche, dont les zones sûres mangent le haut ET le bas). Une
+     valeur fixe ne pouvait pas tenir sur tous les gabarits : c'est la seule
+     raison pour laquelle elle est calculée. */
+  var K_MAX = 0.58, K_MIN = 0.26;
+  /* En dessous de ce seuil, on cesse de tout rapetisser et on RETIRE le plat en
+     grand : à 156 px de haut, c'est le tiers de la composition, et sous 0,34
+     d'échelle il ne fait plus que 50 px — c'est-à-dire à peine plus que la
+     bulle du moment dans l'arc, qui le montre déjà. Mieux vaut un arc et un
+     titre lisibles sans le plat, que les trois illisibles. */
+  var K_SANS_HERO = 0.34;
+  var K_BANDEAU = K_MAX;
 
   function cssBandeau() {
     if (document.getElementById('njband-css')) return;
@@ -1129,25 +1208,85 @@ window.NattyJournee = (function () {
       'flex-direction:column;align-items:center;pointer-events:none;',
       'transform:scale(var(--njb-k));transform-origin:top center}',
       /* Le bouton entier est la zone de tap ; rien à l'intérieur ne la découpe. */
-      '.njb .njb-in *{pointer-events:none}'
+      '.njb .njb-in *{pointer-events:none}',
+      // Écran trop court : le plat en grand disparaît (voir K_SANS_HERO).
+      '.njb.njb-sec .hero{display:none}'
     ].join('');
     document.head.appendChild(s);
   }
 
-  /* La hauteur réelle = celle du contenu × l'échelle. `offsetHeight` ignore les
-     transformations, c'est justement ce qu'on veut mesurer.
-     ⚠️ La rAF seule ne se déclenche pas si la page ne peint pas (onglet caché) :
-     le minuteur la double, sinon l'en-tête resterait à sa hauteur de plancher. */
+  /**
+   * Règle l'échelle du bandeau sur la place qui reste, puis fixe sa hauteur.
+   *
+   * La hauteur réelle = celle du contenu × l'échelle. `offsetHeight` ignore les
+   * transformations, c'est justement ce qu'on veut mesurer.
+   *
+   * ⚠️ On mesure la place, on ne la devine pas. Les trois inconnues — la zone
+   * sûre du haut, la hauteur de la barre d'onglets, et la taille des cartes de
+   * l'accueil (qui dépendent de la largeur) — changent d'un téléphone à
+   * l'autre. Aucune constante ne pouvait tenir sur tous.
+   *
+   * ⚠️ La rAF seule ne se déclenche pas si la page ne peint pas (onglet caché) :
+   * le minuteur la double, sinon l'en-tête resterait à sa hauteur de plancher.
+   */
   function ajusterBandeau(b) {
     var dedans = b.querySelector('.njb-in');
     function maj() {
       if (!dedans || !b.parentNode) return;
-      var k = parseFloat(getComputedStyle(b).getPropertyValue('--njb-k')) || K_BANDEAU;
-      var h = dedans.offsetHeight * k;
-      if (h > 60) b.style.height = Math.round(h) + 'px';
+      /* ⚠️ ON REPART TOUJOURS DE LA COMPOSITION COMPLÈTE. Mesurer sans remettre
+         le plat, c'est mesurer l'état de la fois d'avant : au passage d'un
+         petit écran à un grand, `H` valait encore la hauteur RÉDUITE (316 px)
+         alors que le plat venait d'être rendu, et le bandeau se retrouvait
+         coupé d'une centaine de pixels. Attrapé en redimensionnant, pas en
+         lisant le code. */
+      b.classList.remove('njb-sec');
+      var H = dedans.offsetHeight;          // hauteur naturelle, avant l'échelle
+      if (H < 60) return;
+
+      /* Ce qui vient APRÈS le bandeau dans la page. Leurs hauteurs ne dépendent
+         pas de la sienne (ce sont des blocs à ratio fixe, réglés sur la
+         largeur) : on peut donc les mesurer avant de décider de l'échelle,
+         sans boucler. */
+      /* ⚠️ LES MARGES COMPTENT. `getBoundingClientRect().height` ne les inclut
+         pas : les 8 px au-dessus de la bannière des plats et les 16 px
+         au-dessus des deux cartes manquaient à l'appel, et l'accueil dépassait
+         encore de 14 px sous la barre d'onglets — mesuré, pas supposé. */
+      var apres = 0, n = b.nextElementSibling;
+      while (n) {
+        var st = getComputedStyle(n);
+        apres += n.getBoundingClientRect().height
+               + (parseFloat(st.marginTop) || 0) + (parseFloat(st.marginBottom) || 0);
+        n = n.nextElementSibling;
+      }
+      var mb = getComputedStyle(b).marginBottom;
+      apres += parseFloat(mb) || 0;
+
+      // La barre d'onglets est en `position:fixed` : elle ne compte pas dans le
+      // flux, mais elle recouvre le bas de l'écran. Mesurée si elle est là.
+      var nav = document.getElementById('nattyNav');
+      var basNav = nav ? nav.getBoundingClientRect().height + 10 : 104;
+
+      var haut = b.getBoundingClientRect().top + (window.pageYOffset || 0);
+      var dispo = window.innerHeight - haut - apres - basNav;
+
+      var k = dispo / H;
+      /* Trop serré : on retire le plat plutôt que de tout réduire, puis on
+         remesure — sans lui la composition est plus courte, donc l'échelle
+         remonte, et l'arc comme le titre restent lisibles. */
+      if (k < K_SANS_HERO) {
+        b.classList.add('njb-sec');
+        H = dedans.offsetHeight;
+        k = dispo / H;
+      }
+
+      k = Math.max(K_MIN, Math.min(K_MAX, k));
+      b.style.setProperty('--njb-k', k.toFixed(3));
+      b.style.height = Math.round(H * k) + 'px';
     }
     requestAnimationFrame(maj);
     setTimeout(maj, 90);
+    // Les images de l'accueil changent la hauteur de leurs cartes en arrivant.
+    setTimeout(maj, 600);
     window.addEventListener('resize', maj);
   }
 
