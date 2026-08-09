@@ -37,6 +37,10 @@ const TABLES_USER = [
   'onboarding', 'questionnaire_alim', 'messages', 'nutrition_scores',
   'daily_macros', 'profil_conseils', 'challenges', 'challenge_entreprise',
   'rdv', 'commandes', 'plans_repas', 'appareils', 'push_etat',
+  // ⚠️ `planning_semaine` manquait à cette liste alors que la table existe
+  // (créée depuis) : un compte supprimé laissait ses plans de repas derrière
+  // lui — donc quand la personne est chez elle et ce qu'elle mange.
+  'planning_semaine',
   'garde_manger', 'abonnements', 'meals'
 ];
 

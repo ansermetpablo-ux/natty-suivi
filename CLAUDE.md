@@ -341,17 +341,19 @@ quand le scan n'en fournit pas.
 sous-chaîne — sinon « ail » serait trouvé dans « volaille ». Un ingrédient de recette absent du
 garde-manger s'affiche avec une pastille orange `+` et le compteur « N à acheter ».
 
-**⚠️ Persistance** : la table `garde_manger` **n'existe pas encore** sur l'instance. Tant
-qu'elle est absente, le module bascule seul sur `localStorage` (liste propre à l'appareil) et
-l'affiche à l'utilisateur. La créer suffit à activer la synchronisation, sans toucher au code :
-```sql
-create table public.garde_manger (
-  user_id    text primary key,
-  items      jsonb not null default '[]'::jsonb,
-  updated_at timestamptz not null default now()
-);
-alter table public.garde_manger disable row level security;
-```
+**⚠️ Persistance** : tant que la table `garde_manger` est absente, le module bascule seul sur
+`localStorage` (liste propre à l'appareil) et **le panneau le dit** (« Liste gardée sur cet
+appareil uniquement »). La créer suffit à activer la synchronisation, sans toucher au code —
+`estSynchronise()` passe à `true` de lui-même. **SQL : `natty_garde_manger.sql`.**
+- ⚠️ **RLS ACTIVÉE, avec une policy « soi seulement ».** Les versions précédentes de ce
+  document et l'en-tête du module proposaient `disable row level security` : c'était écrit
+  **avant** l'activation générale des RLS (2026-08-04), et ce serait aujourd'hui exposer à la
+  clé anon publique ce que chacun a chez lui.
+- ⚠️ **`user_id` doit être la CLÉ PRIMAIRE**, et c'est structurel : `sauver()` écrit en
+  `resolution=merge-duplicates` **sans** `?on_conflict=`, donc PostgREST résout sur la clé
+  primaire. Avec un `id` uuid en clé, chaque enregistrement repartirait en **409** et le
+  garde-manger ne se synchroniserait jamais — même piège que `meal_likes` / `membre_amis`.
+  La table se comporte alors comme `membre_prefs` : rien à changer côté code.
 
 **Deux endroits pour le remplir, et c'est voulu** (2026-08-05) :
 - la **question plein écran** juste avant la génération de la semaine
@@ -1500,7 +1502,7 @@ Colonnes **relevées en base** (`select=*`, juillet 2026) :
 | statut | text | en_attente/confirmee/livree/annulee |
 | skip | boolean | |
 
-#### `planning_semaine` — 🔄 **n'existe pas encore** (`natty_planning.sql`)
+#### `planning_semaine` — ✅ **existe** (`natty_planning.sql`, exécuté)
 | Colonne | Type | Notes |
 |---|---|---|
 | user_id | text | PK avec `semaine` |
@@ -2053,8 +2055,13 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   « 5 repas planifiés sur 21 », le repli local s'annonce quand l'écriture en base échoue,
   la validation affiche bien la coche verte `#34c759`, et le panneau « Ma semaine » rend les
   7 jours sans défilement.
-- 🔴 🔄 **`natty_planning.sql` à exécuter** — sans lui le plan ne suit pas l'utilisateur d'un
-  appareil à l'autre. SQL en §4.
+- ✅ **`natty_planning.sql` exécuté** — vérifié le 2026-08-05 à la clé anon : `planning_semaine`
+  répond `[]` (la table existe, la RLS filtre) et non `PGRST205`. Le plan suit donc bien
+  l'utilisateur d'un appareil à l'autre. Cette entrée réclamait le SQL depuis plusieurs
+  sessions : il était fait.
+  > ⚠️ La table manquait à la liste `TABLES_USER` d'`api/supprimer-compte.js` — un compte
+  > supprimé laissait ses plans derrière lui, donc *quand la personne est chez elle et ce
+  > qu'elle mange*. Ajoutée.
 - 🔄 **Non vérifié avec une vraie session** : les lectures `meals`/`onboarding`/
   `questionnaire_alim` et l'appel `/api/claude` des 3 plats macro n'ont tourné que contre des
   doublures. Il faut un compte pour aller plus loin.
@@ -2240,7 +2247,8 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   > (une colonne absente répond `42703`, une colonne présente sous RLS répond `[]` — le test
   > de contrôle sur une colonne inventée confirme la lecture). Donc « Garder pour moi » et le
   > cache d'analyse d'un plat fonctionnent réellement, sans repli silencieux.
-  > 🔄 **`garde_manger` n'existe toujours pas** (`PGRST205`) : le garde-manger reste propre à
+  > 🔄 **`garde_manger` n'existe toujours pas** (`PGRST205`, revérifié le 2026-08-05) — SQL
+  > prêt dans `natty_garde_manger.sql`. Le garde-manger reste propre à
   > l'appareil. SQL au § 3 de `natty_avant_publication.sql`.
   >
   > **Déployé le 2026-08-04** : `main` sert le code d'app-native (vérifié en prod —

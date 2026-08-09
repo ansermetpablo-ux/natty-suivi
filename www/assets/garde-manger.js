@@ -9,17 +9,22 @@
    liste dans le prompt pour que les recettes partent de ce qui est
    réellement disponible (voir « INGRÉDIENTS DISPONIBLES »).
 
-   ⚠️ PERSISTANCE — la table `garde_manger` n'existe pas encore sur
-   l'instance Supabase. Tant qu'elle est absente, le module bascule
-   tout seul sur localStorage (donc propre à l'appareil). Créer la
-   table suffit à activer la synchronisation, sans toucher au code :
+   ⚠️ PERSISTANCE — tant que la table `garde_manger` est absente, le
+   module bascule tout seul sur localStorage (donc propre à
+   l'appareil) et le panneau le DIT. La créer suffit à activer la
+   synchronisation, sans toucher au code.
 
-     create table public.garde_manger (
-       user_id    text primary key,
-       items      jsonb not null default '[]'::jsonb,
-       updated_at timestamptz not null default now()
-     );
-     alter table public.garde_manger disable row level security;
+   Le SQL vit désormais dans `natty_garde_manger.sql`, avec ses
+   raisons. ⚠️ Cet en-tête proposait autrefois
+   `disable row level security` : c'était écrit AVANT l'activation
+   générale des RLS (2026-08-04), et ce serait aujourd'hui exposer à
+   la clé anon publique ce que chacun a chez lui. La table s'active
+   avec une policy « soi seulement », comme `planning_semaine`.
+
+   ⚠️ `user_id` doit être la CLÉ PRIMAIRE : `sauver()` écrit en
+   `resolution=merge-duplicates` sans `?on_conflict=`, et PostgREST
+   résout alors sur la clé primaire. Avec un `id` uuid en clé, chaque
+   enregistrement repartirait en 409.
 
    ═══════════════════════════════════════════════════════════ */
 var NattyGardeManger = (function () {
