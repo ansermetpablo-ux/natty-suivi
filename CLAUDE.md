@@ -341,10 +341,19 @@ quand le scan n'en fournit pas.
 sous-chaîne — sinon « ail » serait trouvé dans « volaille ». Un ingrédient de recette absent du
 garde-manger s'affiche avec une pastille orange `+` et le compteur « N à acheter ».
 
-**⚠️ Persistance** : tant que la table `garde_manger` est absente, le module bascule seul sur
-`localStorage` (liste propre à l'appareil) et **le panneau le dit** (« Liste gardée sur cet
-appareil uniquement »). La créer suffit à activer la synchronisation, sans toucher au code —
-`estSynchronise()` passe à `true` de lui-même. **SQL : `natty_garde_manger.sql`.**
+**✅ Persistance — la table `garde_manger` EXISTE** (`natty_garde_manger.sql`, exécuté par
+Pablo le 2026-08-05). Vérifié à la clé anon : elle répond `[]` et non `PGRST205`, ses trois
+colonnes `user_id` / `items` / `updated_at` sont présentes (témoin : une colonne inventée répond
+bien `42703`, donc le test lit vraiment le schéma), et un INSERT à la seule clé anon est
+**refusé en `42501`** — la policy protège. La synchronisation est donc active, sans changement
+de code : `estSynchronise()` passe à `true` de lui-même, et le panneau n'affiche plus
+« Liste gardée sur cet appareil uniquement ». Le repli `localStorage` reste en place au cas où
+la table disparaîtrait.
+> Bon à savoir sur ce relevé : l'écriture a échoué sur la **RLS** et non sur `42P10` (« no
+> unique constraint matching the ON CONFLICT specification »). La requête a donc été
+> **planifiée** avant d'être refusée — ce qui prouve que la cible du `ON CONFLICT` s'est
+> résolue, donc que la clé primaire sur `user_id` est bien en place (voir ci-dessous pourquoi
+> elle est structurelle).
 - ⚠️ **RLS ACTIVÉE, avec une policy « soi seulement ».** Les versions précédentes de ce
   document et l'en-tête du module proposaient `disable row level security` : c'était écrit
   **avant** l'activation générale des RLS (2026-08-04), et ce serait aujourd'hui exposer à la
@@ -1124,8 +1133,11 @@ plat, et l'écran qui affiche le second donnerait l'impression que la générati
 Autres points de vigilance :
 - **`semaine` vient du client** quand il la fournit. Le serveur est en UTC : un lundi entre 00 h
   et 02 h à Paris, il calculerait le lundi *précédent* et la page conclurait aussitôt « périmés ».
-- **Le garde-manger est transmis dans le corps de la requête** — il vit dans le `localStorage` de
-  l'appareil (la table `garde_manger` n'existe pas encore), le serveur ne peut pas le lire.
+- **Le garde-manger est transmis dans le corps de la requête**, et le reste même depuis que la
+  table `garde_manger` existe : c'est le **navigateur** qui détient la session, donc lui seul
+  peut lire les lignes que la policy « soi seulement » protège. Le serveur, avec sa clé service,
+  pourrait techniquement les lire — mais il faudrait alors qu'il devine quel `user_id` demander
+  et refaire le nettoyage du module. Passer la liste dans la requête reste plus court et plus sûr.
 - **`forcer`** (vrai depuis l'app, faux depuis le cron) : sans lui, `processUser` s'arrête dès
   qu'une ligne existe pour la semaine — **même vide**, ce qui était l'état de la base et bloquait
   le bouton en silence. Une ligne sans `conseils_json` ne compte plus pour faite.
@@ -2003,8 +2015,9 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ Panneau « Mon garde-manger » dans `repas.html` : scan des courses, du ticket de caisse ou
   d'une photo importée, plus saisie libre ; bouton « Générer mes repas avec ces ingrédients ».
   Les recettes affichent ce qu'il reste à acheter. Voir `assets/garde-manger.js` en §3.
-- 🔄 **À faire côté Supabase** : créer la table `garde_manger` (SQL en §3) pour que la liste
-  suive l'utilisateur d'un appareil à l'autre. Sans elle, tout marche mais en local.
+- ✅ **Table `garde_manger` créée** (`natty_garde_manger.sql`, exécuté par Pablo le 2026-08-05,
+  vérifié en base — voir §3) : la liste suit désormais l'utilisateur d'un appareil à l'autre.
+  RLS activée, policy « soi seulement », INSERT anon refusé.
 - 🔄 Le garde-manger ne se décrémente pas quand une recette est suivie ou un repas enregistré :
   l'utilisateur retire les ingrédients à la main.
 
@@ -2247,9 +2260,9 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   > (une colonne absente répond `42703`, une colonne présente sous RLS répond `[]` — le test
   > de contrôle sur une colonne inventée confirme la lecture). Donc « Garder pour moi » et le
   > cache d'analyse d'un plat fonctionnent réellement, sans repli silencieux.
-  > 🔄 **`garde_manger` n'existe toujours pas** (`PGRST205`, revérifié le 2026-08-05) — SQL
-  > prêt dans `natty_garde_manger.sql`. Le garde-manger reste propre à
-  > l'appareil. SQL au § 3 de `natty_avant_publication.sql`.
+  > ✅ **`garde_manger` existe** (`natty_garde_manger.sql`, exécuté le 2026-08-05) : RLS
+  > activée, policy « soi seulement », INSERT anon refusé en `42501`. Le garde-manger suit
+  > désormais l'utilisateur d'un appareil à l'autre.
   >
   > **Déployé le 2026-08-04** : `main` sert le code d'app-native (vérifié en prod —
   > `POST /api/generer-conseils` répond « Session requise », ce qui n'existe que sur cette
