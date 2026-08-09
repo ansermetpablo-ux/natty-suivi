@@ -848,13 +848,26 @@ temps ; la séquence est maintenant :
 |---|---|---|
 | 1 | `scBonjour` | « Bonjour Prénom ». **Rien d'autre** — pas de date, pas d'arc. 2,2 s |
 | 2 | `scArc` | **L'arc seul, aucun texte.** Les jalons faits se cochent en vert, l'arc tourne, le barillet se cale sur l'étape en cours. 3,3 s |
-| 3 | `scEtape` | jour + date · l'étape · **un** bouton. C'est la seule scène qui attend |
+| 3 | `scEtape` | jour + date · l'étape · **le plat en grand** · **un** bouton. C'est la seule scène qui attend |
 | 4 | `envol()` | la pastille blanche s'ouvre et prend l'écran → la fonction associée |
 
 Ce qui a été **retiré** de la scène finale et ne doit pas revenir : le libellé d'heure en
 kicker, « Étape 2 sur 5 », la phrase explicative, les trois pastilles de macros, le filet, la
 devise, et le récapitulatif écrit de la journée. Neuf blocs pour une décision qui en demande
 une. Les macros se lisent sur l'écran **Suivi**, qui est fait pour ça.
+
+**Le plat sous le titre** (`.hero`, ajouté le 9 août 2026 à la demande de Pablo) — la **photo
+détourée** du repas prévu, ou l'illustration au trait de l'étape quand il n'y en a pas, en
+156 px sous le nom du créneau. C'est la même `figure()` que dans la bulle de l'arc : la bulle
+dit **quand**, celle-ci dit **quoi** — dans 62 px on devine un plat, à 156 px on le reconnaît.
+Le titre remonte en conséquence (`.zone` : marge de 22 → 12 px), l'arc étant ce qu'il commente.
+- ⚠️ **La lueur est le `background` de `.hero`, pas un `::before`.** Un pseudo-élément positionné
+  se peint **au-dessus** du contenu non positionné, donc par-dessus la photo ; et le renvoyer
+  derrière par `z-index:-1` le fait passer sous le fond de l'écran (`#njour` est en
+  `position:fixed`, donc contexte d'empilement), où il ne se voit plus du tout.
+- ⚠️ **Le trait s'affine quand l'illustration grandit** : la boîte SVG fait 24 unités, donc à
+  156 px un `stroke-width:1` se peint en **6,5 px** — un gros feutre, là où l'arc trace des
+  filets de 2 px. `0.5` rend ~3 px.
 
 **Le barillet** (`.rou`) — deux illustrations empilées dans une fenêtre qui les rogne,
 l'ancienne puis la sienne, avec un léger dépassement avant de revenir : c'est ce « cran » de
@@ -881,21 +894,27 @@ l'animation se jouant par-dessus ; celles qui ne font que naviguer attendent la 
 mouvement. Vérifié au banc : appel à **< 20 ms** pour « Ajouter mon plat », navigation
 **différée** pour « Suivre la recette ».
 
-**L'en-tête de `menu.html`** — `monterBandeau(hote)` pose le guide **en fond d'en-tête**, en
-tête de `.wrap` donc au-dessus des trois éléments de l'accueil (forme demandée le 9 août 2026) :
-**date · arc de cercle · l'étape du moment centrée sous l'arc**. Une lueur très amortie derrière
-l'arc donne l'impression qu'il tourne *derrière* l'en-tête plutôt qu'à côté ; elle reste à peine
-perceptible, car sur une page claire et chargée un halo marqué se lit comme une tache. Pas de
-carte, pas de bouton. Un tap ouvre le guide en version courte.
-- ⚠️ Il vit dans le thème de la **page**, d'où les jetons `--nt-*` d'`assets/theme.js` : du noir
-  en dur donnerait une barre noire sur un accueil blanc, et invisible en thème sombre.
-- ⚠️ **Le trait est échantillonné sur la même parabole que les pastilles.** Une courbe de Bézier
-  tracée de la première à la dernière ne passe pas par les points du milieu : mesurée, elle
-  coupait 3,4 px sous la pastille du moment, et les jalons avaient l'air posés à côté de leur
-  propre fil.
+**L'en-tête de `menu.html` — LE MÊME ÉCRAN, EN PLUS PETIT** (refonte du 9 août 2026 : « garder
+exactement la même présentation, il ne doit pas y avoir de différence de style »).
+`monterBandeau(hote)` pose en tête de `.wrap` la composition de la scène 3 — arc et jalons, jour
+et date, nom de l'étape, plat en dessous — réduite d'un coup par **une seule mise à l'échelle**
+(`--njb-k`, 0,58). Un tap ouvre le guide en version courte.
+- ⚠️ **C'est une échelle, PAS des tailles refaites.** La version précédente redessinait tout en
+  petit — arc plat de 78 px, points de 19 à 34 px, date à gauche et compteur à droite, titre en
+  15,5 px — donc deux présentations à tenir à jour, et deux qui divergent. Le bandeau porte
+  maintenant la classe **`njsk`**, celle qui définit le style du guide : toucher au guide
+  retouche le bandeau, forcément. C'est aussi pourquoi `css()` (la feuille du guide) est appelée
+  par `monterBandeau` — sans elle, un en-tête sans arc, sans jalons et sans typographie.
+- ⚠️ **`njsk` porte aussi les jetons `--j-*`**, qui ont déjà leur pendant clair
+  (`:root[data-theme="light"] .njsk`) : l'en-tête suit donc le thème de la page sans rien faire
+  de particulier. Les `--nt-*` d'`assets/theme.js` ne sont plus utilisés ici.
+- ⚠️ **Le bloc mis à l'échelle est en `position:absolute`, et la hauteur du bouton est MESURÉE**
+  (`offsetHeight × k`, qui ignore les transformations). Une mise à l'échelle ne libère pas de
+  place dans le flux — même piège que l'arc du guide sur petit écran : laissé en flux, il
+  occuperait sa hauteur pleine et l'accueil commencerait ~200 px trop bas.
 - ⚠️ **Journée bouclée = aucun jalon « en cours ».** `courante()` rend la dernière étape faute de
-  mieux ; sans ce test, le bandeau posait une pastille noire « c'est maintenant » sur une étape
-  déjà cochée.
+  mieux ; sans ce test, le bandeau posait une pastille pleine « c'est maintenant » sur une étape
+  déjà cochée. D'où le 4ᵉ argument `sansActif` de `peindreArcDans()`.
 
 **Il n'invente aucune donnée**, et c'est ce qui le rend utilisable :
 
@@ -3263,3 +3282,22 @@ session « fil social » :*
   avec la lueur du guide en fond.
 - Banc `_test-entete.html` (préfixe `_`, hors dépôt) : monte au chargement, avec heure, thème et
   cas de figure en paramètres d'URL — c'est le seul rendu fiable dans ce navigateur (§7).
+
+---
+
+*Contribution session « Ma journée — le plat, et un seul style » (Claude Opus, 9 août 2026, 4ᵉ passe) :*
+- **Le plat en grand sous le titre** (`.hero`) : photo détourée du repas prévu, illustration au
+  trait sinon. Le titre remonte vers l'arc (`.zone` : 22 → 12 px de marge).
+- **L'en-tête de `menu.html` est désormais LE MÊME écran, mis à l'échelle** — plus une seconde
+  présentation dessinée à part. Le CSS du guide passe du sélecteur `#njour` à la classe **`njsk`**
+  (jetons, arc, jalons, typographie, plat), que le plein écran ET le bandeau portent ; ne restent
+  sous `#njour` que ses affaires à lui (fond, colonne, barre d'action, envol, fermeture).
+  `htmlArc()` et `peindreArcDans()` sortent des variables globales pour servir aux deux.
+- Deux réglages seulement pour tout le bandeau : `--njb-k` (0,58) et la hauteur, **mesurée**.
+- Vérifié en navigateur (375 × 812 et 375 × 667, thèmes clair et sombre) : la séquence longue
+  complète, la version courte, un repas prévu avec photo, un repas sans plan (illustration), la
+  journée bouclée, le tap sur l'en-tête qui ouvre le guide, et l'accueil qui reprend juste sous
+  l'en-tête (hauteur mesurée, pas devinée).
+- Banc `_test-journee-plat.html` (préfixe `_`, hors dépôt) : heure, thème et cas de figure en
+  paramètres d'URL, plein écran optionnel — la page doit peindre pour que les animations
+  tournent (§7).
