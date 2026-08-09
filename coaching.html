@@ -106,7 +106,10 @@
   <div class="sec-title">Chat</div>
   <div class="msg-list" id="msgList"><div class="empty">Chargement…</div></div>
 
-  <div class="sec-title">Conseils de la semaine</div>
+  <!-- Cible de `coaching.html#conseils`, d'où arrive « Voir mes conseils »
+       de l'écran Suivi. Sans elle on atterrirait sur le rendez-vous et le
+       calendrier, à deux écrans de ce qu'on vient lire. -->
+  <div class="sec-title" id="conseils">Conseils de la semaine</div>
   <div class="adv-week" id="advWeek"></div>
   <div class="adv-grid" id="advList"><div class="empty">Chargement…</div></div>
 
@@ -489,9 +492,31 @@ document.addEventListener('natty:conseils-prets', function(){
   loadConseils(); loadCourses(); loadAliments();
 });
 
+/* Arrivée depuis « Voir mes conseils » (suivi.html) : on descend jusqu'à la
+   section. Le défilement est fait APRÈS le chargement, pas au `hashchange`
+   natif du navigateur : à l'ouverture, « Conseils de la semaine » n'est encore
+   qu'une ligne « Chargement… », donc le saut natif viserait une position que
+   le contenu déplace aussitôt — on se retrouverait au milieu du chat. */
+function allerAuxConseils() {
+  if (window.location.hash !== '#conseils') return;
+  var el = document.getElementById('conseils');
+  if (!el) return;
+  /* ⚠️ NI `scrollIntoView`, NI `behavior:'smooth'`, et les deux ont une raison
+     mesurée :
+     • le lissé n'avance que sur des images peintes — mesuré dans un cadre non
+       rendu, `scrollY` ne bouge PAS d'un pixel, alors que le saut instantané
+       arrive à destination. Une arrivée sur un écran qu'on n'a pas encore lu
+       n'a de toute façon rien à gagner à défiler sous les yeux ;
+     • `block:'start'` colle le titre à y=0, donc SOUS la barre `.top`, qui est
+       `sticky` et mesure 54 px : on atterrirait sur un titre invisible. */
+  var y = el.getBoundingClientRect().top + window.scrollY - 66;
+  window.scrollTo(0, Math.max(0, y));
+}
+
 (async function(){
   if (!Natty.requireAuth()) return;
   await Promise.all([loadRdv(), loadMessages(), loadConseils(), loadCourses(), loadAliments()]);
+  allerAuxConseils();
 })();
 </script>
 <script src="/assets/ajout.js"></script>

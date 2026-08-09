@@ -100,8 +100,14 @@ export async function collecterProfil(SB_URL, SB_KEY, uid, onboarding) {
 
   const q = await sbGet(SB_URL, SB_KEY, `questionnaire_alim?user_id=eq.${uid}`
     + '&order=completed_at.desc&limit=1'
+    // `decouverte_variantes` et `curiosite_libre` étaient écrites par le
+    // questionnaire et demandées nulle part : deux des quatre familles d'envies
+    // et la phrase que l'utilisateur a formulée lui-même n'arrivaient jamais
+    // jusqu'au prompt. Elles sont modifiables depuis `assets/preferences.js`,
+    // c'est ici qu'elles doivent produire un effet.
     + '&select=allergies,regime,aliments_aimes,aliments_evites,decouverte_cuisines,'
-    + 'decouverte_styles,decouverte_ingredients,frequence_cuisine,nb_repas,defi_principal');
+    + 'decouverte_styles,decouverte_ingredients,decouverte_variantes,curiosite_libre,'
+    + 'frequence_cuisine,nb_repas,defi_principal');
   out.questionnaire = (Array.isArray(q) && q.length) ? q[0] : null;
 
   const d = new Date(); d.setDate(d.getDate() - 7);
@@ -206,6 +212,8 @@ export function construirePrompt(profil, nb, garde) {
   p += '\nGOÛTS\n';
   p += '- Aime : ' + listeOuVide(q.aliments_aimes || onb.aliments_plaisir) + '\n';
   p += '- Curieux de : ' + listeOuVide(q.decouverte_cuisines) + ' / ' + listeOuVide(q.decouverte_ingredients) + '\n';
+  p += '- Styles et variantes souhaités : ' + listeOuVide(q.decouverte_styles) + ' / ' + listeOuVide(q.decouverte_variantes) + '\n';
+  if (q.curiosite_libre) p += '- Envie exprimée : ' + q.curiosite_libre + '\n';
   if (q.defi_principal) p += '- Défi principal : ' + q.defi_principal + '\n';
 
   p += '\nDÉJÀ MANGÉ CETTE SEMAINE (à ne PAS reproduire)\n';

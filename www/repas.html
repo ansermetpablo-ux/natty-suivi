@@ -180,6 +180,13 @@ body{overflow-x:hidden}
   <div class="empty">Chargement…</div>
 </div>
 
+<!-- « Mes préférences » — allergies, goûts, envies de découverte. Hors de
+     `#content` pour la même raison que le calendrier : render() le remplace
+     en entier à chaque changement de recette, le panneau disparaîtrait au
+     premier tap sur une vignette.
+     Sa place ici est voulue : il suit « Découvrir », et c'est exactement ce
+     que ces réglages pilotent. -->
+<div class="wrap" id="prefWrap"></div>
 
 <div class="toast" id="toast"></div>
 
@@ -193,6 +200,9 @@ body{overflow-x:hidden}
      replanification (bouton « Replanifier » du panneau). -->
 <script src="/assets/planning.js"></script>
 <script src="/assets/garde-manger.js"></script>
+<!-- Préférences alimentaires : ce que reco.js injecte dans le prompt de la
+     génération. Modifiables ici, plutôt que figées au questionnaire. -->
+<script src="/assets/preferences.js"></script>
 <script src="/assets/minijeux.js"></script>
 <!-- Suivre une recette retire ses ingrédients du garde-manger (voir brancher()). -->
 <script src="/assets/recette.js"></script>
@@ -641,6 +651,13 @@ document.addEventListener('natty:planning-pret', function(){ monterMaSemaine(); 
   // Sans `await` : le calendrier fait sa propre lecture, et les recettes ne
   // doivent pas attendre après elle pour s'afficher.
   monterMaSemaine();
+
+  /* Idem pour les préférences : leur lecture est indépendante, et le panneau
+     vit en bas de l'écran — le faire attendre retarderait le hero pour un
+     contenu qu'on ne voit qu'après avoir défilé. Monté AVANT le `try` qui
+     suit : celui-ci rend la main plus haut quand la page est ouverte sur un
+     repas précis (?id=), et le panneau ne serait alors jamais peint. */
+  if (window.NattyPreferences) NattyPreferences.monter(document.getElementById('prefWrap'));
 
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');

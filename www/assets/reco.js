@@ -63,7 +63,12 @@ var NattyReco = (function () {
         + 'poids,taille,age,sexe,activite,bmr,tdee,deficit,contexte_repas,aliments_plaisir,aliments_refuses,allergies,regime,score_rigueur')
         .catch(function () { return []; }),
       Natty.sbFetch('questionnaire_alim?user_id=eq.' + uid + '&order=completed_at.desc&limit=1'
-        + '&select=allergies,regime,aliments_aimes,aliments_evites,decouverte_cuisines,decouverte_styles,decouverte_ingredients,frequence_cuisine,nb_repas,defi_principal')
+        // `decouverte_variantes` et `curiosite_libre` étaient enregistrés par le
+        // questionnaire mais n'étaient DEMANDÉS nulle part : deux des quatre
+        // familles d'envies et la phrase libre ne sont donc jamais arrivées
+        // jusqu'au prompt. Elles sont éditables depuis `assets/preferences.js`,
+        // il faut désormais qu'elles servent.
+        + '&select=allergies,regime,aliments_aimes,aliments_evites,decouverte_cuisines,decouverte_styles,decouverte_ingredients,decouverte_variantes,curiosite_libre,frequence_cuisine,nb_repas,defi_principal')
         .catch(function () { return []; }),
       chargerSemaine(uid).catch(function () { return []; })
     ]);
@@ -189,6 +194,10 @@ var NattyReco = (function () {
     p += "\nGOÛTS\n";
     p += "- Aime : " + listeOuVide(q.aliments_aimes || onb.aliments_plaisir) + "\n";
     p += "- Curieux de : " + listeOuVide(q.decouverte_cuisines) + " / " + listeOuVide(q.decouverte_ingredients) + "\n";
+    p += "- Styles et variantes souhaités : " + listeOuVide(q.decouverte_styles) + " / " + listeOuVide(q.decouverte_variantes) + "\n";
+    // Écrite à la main par l'utilisateur : c'est la seule ligne du prompt qu'il
+    // a formulée lui-même, elle passe donc telle quelle.
+    if (q.curiosite_libre) p += "- Envie exprimée : " + q.curiosite_libre + "\n";
     if (q.defi_principal) p += "- Défi principal : " + q.defi_principal + "\n";
 
     p += "\nDÉJÀ MANGÉ CETTE SEMAINE (à ne PAS reproduire)\n";

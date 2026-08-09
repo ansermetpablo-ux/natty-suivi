@@ -4841,7 +4841,7 @@ async function actionBoutonConseils() {
   if (!btn || _genConseilsOccupe) return;
 
   // Déjà générés : simple affichage, aucun appel.
-  if (btn.dataset.mode === 'voir') { openProfilOverlay(); return; }
+  if (btn.dataset.mode === 'voir') { ouvrirCoaching(); return; }
 
   _genConseilsOccupe = true;
   btn.disabled = true;
@@ -5314,7 +5314,28 @@ function conseilsPopupFermer() {
 
 function conseilsPopupVoir() {
   conseilsPopupFermer();
-  openProfilOverlay();
+  ouvrirCoaching();
+}
+
+/* « Voir mes conseils » mène à l'écran Coaching (demande de Pablo, 2026-08-09)
+   ─────────────────────────────────────────────────────────────
+   Les conseils vivaient dans l'overlay profil de cet écran ALORS QUE
+   `coaching.html` en a déjà une section entière — « Conseils de la semaine » —
+   nourrie par la même ligne `profil_conseils`, à côté des aliments à
+   privilégier et de la liste de courses qui en découlent. Deux lectures du
+   même contenu, dont une coupée de sa suite.
+
+   ⚠️ Le déverrouillage du défilement est fait AVANT de partir : le popup du
+   lundi pose `overflow:hidden` sur `<body>`, et sur un retour arrière depuis
+   Coaching, la page réapparaîtrait figée (le navigateur restaure l'état du
+   DOM, pas le geste de fermeture qui n'a jamais eu lieu).
+
+   Le `#conseils` n'est pas décoratif : Coaching s'ouvre sur le rendez-vous et
+   le calendrier, donc sans lui on atterrit à deux écrans de ce qu'on est venu
+   lire. `coaching.html` fait défiler jusqu'à la section quand il le trouve. */
+function ouvrirCoaching() {
+  try { forceUnlockScroll(); } catch (e) {}
+  window.location.href = 'coaching.html#conseils';
 }
 
 </script>
