@@ -1095,7 +1095,13 @@ html.no-scroll {
 
   <!-- Objectif (3 macros en anneaux) -->
   <div class="objectif-card">
-    <h2>Votre objectif</h2>
+    <!-- ⚠️ Le grand nombre de chaque anneau est le RESTANT, pas l'objectif. Le
+         titre disait pourtant « Votre objectif » : on lisait donc « 25 g » comme
+         une cible de 25 g de protéines. C'est le reproche de Pablo, et il est
+         réglé par le titre plutôt que par une légende de plus dans un anneau de
+         88 px. Le libellé retombe sur « Votre objectif » quand le profil ne
+         permet pas de calculer un reste. -->
+    <h2 id="objTitre">Il vous reste aujourd'hui</h2>
     <div class="rings">
       <div class="ring-item" onclick="openMacroPopup('prot')">
         <div class="ring-box">
@@ -2327,12 +2333,22 @@ function afficherMacros() {
       lr = partRestante(macObj.l, lp);
 
   // Labels : le pourcentage annoncé est celui de l'anneau, donc le restant.
+  /* Le titre de la carte dit ce que sont les grands nombres. Sans objectif
+     calculable, « il reste » n'a pas de sens : on annonce l'objectif. */
+  var ot = document.getElementById('objTitre');
+  if (ot) ot.textContent = macObj.p ? 'Il vous reste aujourd’hui' : 'Votre objectif';
+
+  /* Et chaque anneau porte le mot, pour qu'il se lise seul : un anneau regardé
+     hors de son titre ne doit pas pouvoir passer pour un objectif. */
   var op = document.getElementById('oProt');
-  if (op) op.textContent = hasData ? ('Reste '+pr+'% · obj. '+macObj.p+'g') : ('Obj. '+(macObj.p||'–')+'g');
+  if (op) op.textContent = hasData ? ('restant · ' + pr + '% de ' + macObj.p + 'g')
+                                   : (macObj.p ? ('restant sur ' + macObj.p + 'g') : 'objectif –');
   var og = document.getElementById('oGluc');
-  if (og) og.textContent = hasData ? ('Reste '+gr+'% · obj. '+macObj.g+'g') : ('Obj. '+(macObj.g||'–')+'g');
+  if (og) og.textContent = hasData ? ('restant · ' + gr + '% de ' + macObj.g + 'g')
+                                   : (macObj.g ? ('restant sur ' + macObj.g + 'g') : 'objectif –');
   var ol = document.getElementById('oLip');
-  if (ol) ol.textContent = hasData ? ('Reste '+lr+'% · obj. '+macObj.l+'g') : ('Obj. '+(macObj.l||'–')+'g');
+  if (ol) ol.textContent = hasData ? ('restant · ' + lr + '% de ' + macObj.l + 'g')
+                                   : (macObj.l ? ('restant sur ' + macObj.l + 'g') : 'objectif –');
 
   // Label calories avec indicateur
   var calRow = document.querySelector('.hero-cal-left');
@@ -5659,6 +5675,10 @@ window.addEventListener('natty:repas-ajoute', function(){
   }
 });
 </script>
+<!-- Les créneaux de repas (combien, lequel maintenant, ce qui y est déjà
+     noté) : `assets/ajout.js` en a besoin pour dire ce qu'il RESTE sur le
+     repas en cours, et non « la journée divisée par le nombre de repas ». -->
+<script src="/assets/creneaux.js"></script>
 <!-- core.js avant ajout.js : le parcours du bouton + s'appuie sur Natty.* -->
 <script src="/assets/ajout.js"></script>
 <script src="/assets/notifs.js"></script>

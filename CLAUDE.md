@@ -450,6 +450,69 @@ peuvent donc pas se contredire d'un écran à l'autre.
 5. `naScCarou` — carrousel scroll-snap de 5 cartes (titre, emoji, pastille kcal, 3 pastilles
    macro, raison). Un tap ajoute au repas et renvoie à l'écran 3.
 
+### `assets/creneaux.js` — combien de repas, lequel maintenant, et combien de macros chacun
+Chargé partout où `assets/ajout.js` l'est (les 5 écrans porteurs de la nav + `www/`).
+Dépend de `assets/core.js` (`Natty.jour`, `Natty.calcMac`).
+
+**Deux défauts qu'il corrige**, signalés par Pablo le 2026-08-09 :
+- 🔴 **un plat enregistré à 12 h 03 n'était pas compté quand on rouvrait `+` à
+  12 h 40.** `restant()` ne soustrayait que `totalSession()` — les plats de la
+  session en cours — donc le midi repartait de sa cible PLEINE alors qu'on venait
+  de manger. C'est le **créneau** qui porte le compte, pas la session : ce qui est
+  déjà en base est relu (`mange(cle)`) et soustrait lui aussi ;
+- **diviser la journée par le nombre de repas est faux pour presque tout le
+  monde.** Quelqu'un qui saute le petit déjeuner n'a pas un tiers de ses calories
+  le matin.
+
+**Le découpage** vient de `questionnaire_alim.nb_repas` — vocabulaire réel
+`1_2` / `3` / `3_collations` / `grignotage` (relevé dans `questionnaire-alim.html`,
+ne pas en inventer d'autres) → 2, 3 ou 4 créneaux. ⚠️ Les bornes horaires couvrent
+la journée **en continu, de 3 h à 3 h** (d'où des heures > 24) : sans continuité,
+« dans quel créneau suis-je ? » n'a pas toujours de réponse et un repas de 1 h du
+matin tombe dans le vide. Le créneau vient de `created_at`, **jamais** de
+`meal_date` — une date sèche n'a pas d'heure (même piège que `planning.js`).
+
+**La répartition** croise deux sources, moitié-moitié :
+1. **le déclaratif** — parts de base du découpage, corrigées par `repas_sautes`
+   (`petit_dej` → matin ×0,45 ; `dejeuner` → midi ×0,75 ; `souvent_repas` → les
+   deux) et `snacking` (`bureau` → collation ×1,4 ; `soir` → soir ×1,12). Ce sont
+   les **seuls** champs du questionnaire qui parlent de répartition dans la
+   journée ; les autres parlent de goûts, ce qui ne dit rien de l'heure — les
+   utiliser ici serait inventer ;
+2. **le mesuré** — les repas des 28 derniers jours rangés par créneau, **macro par
+   macro**. Une part unique par créneau écraserait justement l'information utile :
+   on peut prendre ses glucides le midi et ses protéines le soir. En dessous de
+   6 repas journalisés on s'en tient au déclaratif — trois repas ne décrivent pas
+   une semaine.
+
+> ⚠️ **Plancher à 8 % par créneau.** Sans lui, quelqu'un qui n'a jamais
+> journalisé son petit déjeuner se verrait proposer une cible du matin proche de
+> zéro, donc « objectif atteint » avant d'avoir mangé — l'inverse du service
+> rendu. Renormalisation par macro après application du plancher.
+> ⚠️ **Ne demander à `onboarding` que `poids` et `tdee`**, et prendre la première
+> ligne *exploitable* (la table contient de vrais doublons). Et demander les
+> quatre colonnes de macros à `meal_ingredients`, sinon `calcMac` retombe en
+> silence sur la table locale (§3, `api/_nutrition.js`).
+
+Vérifié en navigateur sur six scénarios : parts qui somment à 100 % par macro,
+créneau juste à 8 h / 12 h 40 / 1 h du matin, **le plat de 12 h 03 bien soustrait
+à 12 h 40 tandis que le soir reste intact**, dépassement annoncé au lieu d'un
+zéro, saut du petit-déjeuner qui redistribue, habitudes qui déforment macro par
+macro (protéines 62 % le soir contre 18 % le matin), et les découpages à 2 et
+4 créneaux.
+
+**Présentation — « on doit comprendre en un coup d'œil que c'est un reste ».**
+- Sur le `+` : une ligne **au-dessus** des anneaux (« Il vous reste pour votre
+  déjeuner ») et, en dessous, ce qui est déjà noté (« 1 plat déjà noté · 700 kcal
+  comptées ») — sans quoi un reste amputé d'un plat pris une demi-heure plus tôt
+  ressemble à une erreur. Au-dessus des anneaux et non dans chacun : à 92 px de
+  diamètre, une quatrième ligne de texte ne se lit plus. Le module noir dit
+  « kcal restantes », et « +300 kcal de trop » en ambre au-delà de la cible.
+- Sur **Suivi** : le grand nombre de chaque anneau est le restant, mais le titre
+  de la carte disait « Votre objectif » — on lisait donc « 25 g » comme une cible.
+  Il dit maintenant « Il vous reste aujourd'hui », et chaque anneau porte le mot
+  (« restant · 34 % de 176 g ») pour se lire seul.
+
 **Cible par repas** : `chargerCibles()` lit `onboarding` (`poids`, `tdee`) et refait le calcul
 de `calcMacros()`, puis divise par le nombre de repas par jour issu de
 `questionnaire_alim.nb_repas` (libellé → entier via `REPAS_PAR_JOUR`). Fallback 2000 kcal /

@@ -164,6 +164,14 @@
     /* Compacté (2026-08-05) : ces pixels-là repartent au cadre photo. « Restants »
        est un intertitre, pas un chiffre — il n'a pas besoin d'être plus gros que
        les valeurs des anneaux. */
+    /* — l'en-tête « il vous reste » —
+       Volontairement au-dessus des anneaux et non dans chacun : à 92 px de
+       diamètre, une quatrième ligne de texte dans un anneau ne se lit plus. Un
+       seul mot bien placé couvre les trois. */
+    + '#nattyAjout .na-reste-h{text-align:center;margin:14px 0 0;font-size:14.5px;'
+      + 'font-weight:800;color:#e9e9ef;letter-spacing:-.2px;line-height:1.35}'
+    + '#nattyAjout .na-reste-deja{display:block;font-size:11.5px;font-weight:600;'
+      + 'color:#8a8a92;margin-top:3px}'
     + '#nattyAjout .na-restants{text-align:center;font-size:17px;font-weight:600;color:#8a8a92;margin:10px 0 2px}'
 
     /* — module « calories restantes », noir métallisé —
@@ -183,7 +191,7 @@
     + '#nattyAjout .na-kmod-s{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.45);margin-top:2px}'
     + '#nattyAjout .na-kmod-v{text-align:right;flex:none}'
     + '#nattyAjout .na-kmod-n{font-size:31px;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1}'
-    + '#nattyAjout .na-kmod-u{font-size:11px;font-weight:700;color:rgba(255,255,255,.42);margin-top:3px}'
+    + '#nattyAjout .na-kmod-u{font-size:11px;font-weight:700;color:rgba(255,255,255,.42);margin-top:3px;white-space:nowrap}'
 
     /* — transition de validation, reprise d'assets/planning.js (`.vok`) —
        Le rond se trace, puis le V. Deux animations distinctes et décalées : un
@@ -421,11 +429,33 @@
       repasDuJour = (m || []).length;
     } catch (e) { repasDuJour = 0; }
 
+    /* Les créneaux : combien, lequel maintenant, et ce qui y est déjà enregistré.
+       Chargé APRÈS le reste pour que les anneaux s'affichent tout de suite avec
+       le repli, puis se corrigent — plutôt que d'attendre trois requêtes devant
+       un écran vide. */
+    if (window.NattyCreneaux) {
+      try { await NattyCreneaux.charger(true); } catch (e) {}
+    }
+
     majTitre();
     majAnneaux();
   }
 
+  /* La cible du CRÉNEAU où l'on se trouve, pas « la journée divisée par le
+     nombre de repas ». Diviser en parts égales est faux pour presque tout le
+     monde : quelqu'un qui saute le petit déjeuner n'a pas un tiers de ses
+     calories le matin. `assets/creneaux.js` porte le calcul (déclaratif +
+     habitudes mesurées) ; ici on ne fait que le lire.
+     Repli sur la division égale si le module n'est pas chargé — l'overlay doit
+     rester utilisable. */
+  function creneauCourant() {
+    if (!window.NattyCreneaux) return null;
+    return NattyCreneaux.courant();
+  }
+
   function cibleRepas() {
+    var cr = creneauCourant();
+    if (cr && cr.cible) return cr.cible;
     var n = Math.max(1, nbRepas);
     return {
       p: Math.round(cibleJour.p / n), l: Math.round(cibleJour.l / n),
@@ -517,12 +547,30 @@
     return { p: r1(t.p), l: r1(t.l), g: r1(t.g), c: Math.round(t.c) };
   }
 
+  /* ⚠️ ON RETIRE AUSSI CE QUI EST DÉJÀ ENREGISTRÉ SUR CE CRÉNEAU, pas seulement
+     les plats de la session en cours. Signalé par Pablo : un plat ajouté à
+     12 h 03 n'était pas compté quand on rouvrait `+` à 12 h 40 — le midi
+     repartait de sa cible pleine alors qu'on venait de manger. `totalSession()`
+     ne connaît que ce qui n'est pas encore écrit ; le reste vit en base. */
   function restant() {
-    var c = cibleRepas(), u = totalSession();
+    var u = totalSession();
+    var cr = creneauCourant();
+    if (cr && window.NattyCreneaux) return NattyCreneaux.restant(cr.cle, u);
+    var c = cibleRepas();
     return {
       p: Math.max(0, Math.round(c.p - u.p)), l: Math.max(0, Math.round(c.l - u.l)),
       g: Math.max(0, Math.round(c.g - u.g)), c: Math.max(0, Math.round(c.c - u.c))
     };
+  }
+
+  /* Ce qui est déjà enregistré sur le créneau — sert à l'expliquer à l'écran
+     plutôt que de laisser l'utilisateur deviner pourquoi son reste a fondu. */
+  function dejaCreneau() {
+    var cr = creneauCourant();
+    if (!cr || !window.NattyCreneaux) return { p: 0, l: 0, g: 0, c: 0, n: 0 };
+    var m = NattyCreneaux.mange(cr.cle);
+    m.n = NattyCreneaux.nbDeja(cr.cle);
+    return m;
   }
 
   /* ═══════════════════ Construction de l'overlay ═══════════════════ */
@@ -594,6 +642,13 @@
          découpage qui laisse enfin au cadre la place d'être un héros. */
       + '  <div class="na-screen" id="naScRepas">'
       + '    <div class="na-hero-wrap"><div class="na-hero" id="naHero"><span class="na-hero-em">🍽️</span></div></div>'
+      /* ⚠️ Nommer ce qu'on regarde. Trois anneaux et un nombre ne disent pas
+         d'eux-mêmes qu'il s'agit d'un RESTE, ni sur quel repas — c'est le
+         reproche de Pablo. Cette ligne le dit, et dit aussi ce qui est déjà
+         noté : sans elle, un reste amputé d'un plat pris une demi-heure plus tôt
+         ressemble à une erreur. */
+      + '    <div class="na-reste-h"><span id="naResteH">Il vous reste pour ce repas</span>'
+      + '      <span class="na-reste-deja" id="naResteDeja"></span></div>'
       +      ringsHTML('m', 'mini')
       + '    <div class="na-kmod">'
       + '      <div class="na-kmod-l">'
@@ -642,7 +697,8 @@
       + '    <div class="na-plat-plus" id="naPlatPlus"></div>'
       + '    <div class="na-vigns" id="naVign"></div>'
       +      ringsHTML('', '')
-      + '    <div class="na-restants">Restants</div>'
+      + '    <div class="na-reste-h"><span id="naResteH2">Il vous reste pour ce repas</span>'
+      + '      <span class="na-reste-deja" id="naResteDeja2"></span></div>'
       + '    <div class="na-kcal-line" id="naKcal"></div>'
       + '    <div class="na-detail ouvert">'
       + '      <button class="na-detail-h" id="naDetailH">Détail du repas <span id="naDetailC">▴</span></button>'
@@ -1085,23 +1141,44 @@
         if (v) v.textContent = r[k] + 'g';
       });
     });
+    /* L'en-tête nomme le repas et annonce ce qui est déjà noté. C'est lui qui
+       rend le reste compréhensible : « il reste 500 kcal » n'a de sens que si on
+       sait sur quoi, et pourquoi ce n'est pas la cible pleine. */
+    var cr = creneauCourant(), dj = dejaCreneau();
+    var nomRepas = cr ? cr.nom.toLowerCase() : 'ce repas';
+    // Ne pas dire « il vous reste » quand il ne reste rien : la phrase doit
+    // décrire ce qu'on voit, sinon elle contredit le chiffre juste en dessous.
+    var phrase = (r.c <= 0 && (u.c + dj.c) > c.c)
+      ? 'Votre ' + nomRepas + ' est déjà complet'
+      : 'Il vous reste pour votre ' + nomRepas;
+    var sousPhrase = dj.n
+      ? dj.n + (dj.n > 1 ? ' plats déjà notés' : ' plat déjà noté') + ' · ' + dj.c + ' kcal comptées'
+      : (cr ? 'sur ' + c.c + ' kcal prévues pour ce créneau' : '');
+    ['naResteH', 'naResteH2'].forEach(function (id) {
+      var e = q('#' + id); if (e) e.textContent = phrase;
+    });
+    ['naResteDeja', 'naResteDeja2'].forEach(function (id) {
+      var e = q('#' + id); if (e) e.textContent = sousPhrase;
+    });
+
     var kc = q('#naKcal');
     if (kc) {
       kc.textContent = r.c > 0
-        ? r.c + ' kcal restantes sur ' + c.c + ' pour ce repas (' + nbRepas + ' repas / jour)'
-        : 'Cible du repas atteinte — ' + u.c + ' kcal sur ' + c.c;
+        ? r.c + ' kcal restantes sur ' + c.c + ' pour ce ' + nomRepas
+        : 'Cible atteinte — ' + (u.c + dj.c) + ' kcal sur ' + c.c;
     }
     /* Le module noir de l'écran de prise de vue. Le grand chiffre est ce qu'il
        RESTE ; quand la cible est dépassée on affiche le dépassement plutôt qu'un
        zéro, qui laisserait croire à un compte juste. */
     var n = q('#naKmodN'), su = q('#naKmodS'), un = q('#naKmodU');
     if (n && su && un) {
+      var prisTotal = u.c + dj.c;          // session en cours + déjà enregistré
       var depasse = r.c <= 0;
-      n.textContent = depasse ? '+' + (u.c - c.c) : r.c;
-      un.textContent = 'kcal';
+      n.textContent = depasse ? '+' + (prisTotal - c.c) : r.c;
+      un.textContent = depasse ? 'kcal de trop' : 'kcal restantes';
       su.textContent = depasse
-        ? 'au-delà de la cible (' + u.c + ' / ' + c.c + ')'
-        : 'sur ' + c.c + ' pour ce repas · ' + nbRepas + ' repas / jour';
+        ? 'au-delà de votre ' + nomRepas + ' (' + prisTotal + ' / ' + c.c + ')'
+        : 'sur ' + c.c + ' pour votre ' + nomRepas;
       n.style.color = depasse ? '#ff9500' : '#fff';
     }
     var enr = q('#naEnrichir');
@@ -1522,6 +1599,11 @@
         // créneau de midi n'aurait jamais eu lieu. Attrapé au banc.
         localStorage.setItem('natty_dernier_repas_' + (Natty.USER_ID || 'anon'), today());
       } catch (e) {}
+      /* Le créneau vient de recevoir un plat : on relit la journée pour que le
+         reste soit juste si l'utilisateur rouvre `+` tout de suite après. Sans
+         ça, le plat qu'on vient d'écrire ne serait compté qu'au prochain
+         chargement complet. */
+      if (window.NattyCreneaux) NattyCreneaux.rafraichirJour().catch(function () {});
       window.dispatchEvent(new CustomEvent('natty:repas-ajoute'));
 
       if (!ids.length) { fermer(); toast('Repas enregistré !'); return; }
