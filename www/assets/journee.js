@@ -504,6 +504,11 @@ window.NattyJournee = (function () {
          cocher est plus honnête que de l'effacer. */
       '#njour .jal.manque{background:var(--j-creux);color:var(--j-mut2);',
       'box-shadow:0 0 0 1px var(--j-trait)}',
+      /* ⚠️ La PHOTO d'un repas manqué doit s'éteindre elle aussi. Les jetons de
+         couleur ne l'atteignent pas : le jalon passait en contour gris pendant
+         que le plat gardait ses couleurs pleines, donc le repas le plus
+         appétissant de l'arc était justement celui qu'on n'avait pas noté. */
+      '#njour .jal.manque img{filter:grayscale(1) brightness(.72);opacity:.75}',
       /* Maintenant — la pastille pleine de la maquette, sa lueur comprise. */
       '#njour .jal.actif{background:var(--j-vif);color:var(--j-sur-vif);',
       'box-shadow:0 0 44px var(--j-lueur1),0 0 0 1px var(--j-vif),',
@@ -1094,6 +1099,7 @@ window.NattyJournee = (function () {
       '.njb-p.next,.njb-p.miss{width:22px;height:22px;color:var(--nt-muted,#9a9aaa);',
       'box-shadow:inset 0 0 0 1.5px var(--nt-line,#e8e8ee)}',
       '.njb-p.miss{opacity:.5}',
+      '.njb-p.miss img{filter:grayscale(1) brightness(.8)}',
 
       '.njb-e{font-size:15.5px;font-weight:800;letter-spacing:-.3px;color:var(--nt-ink,#101014);',
       'margin-top:2px}',

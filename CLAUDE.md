@@ -833,7 +833,10 @@ créneau quand la planification en a un, l'illustration au trait sinon. Chaque b
 de SON étape, y compris celles à venir : le « + » de la maquette d'origine ne disait rien de ce
 qui vient, alors qu'on regarde cet écran pour voir sa journée, pas une file d'attente.
 ⚠️ `object-fit:contain`, jamais `cover` : le sujet est détouré, et un plat rogné aux bords dans
-une pastille de 62 px ne se reconnaît plus. Une photo qui n'arrive pas repose son illustration
+une pastille de 62 px ne se reconnaît plus.
+⚠️ **La photo d'un repas MANQUÉ passe en niveaux de gris.** Les jetons de couleur ne l'atteignent
+pas : le jalon passait en contour éteint pendant que le plat gardait ses couleurs pleines, donc
+le repas le plus appétissant de l'arc était justement celui qu'on n'avait pas noté. Une photo qui n'arrive pas repose son illustration
 (`brancherPhoto`), sinon l'icône cassée du navigateur atterrit au milieu de l'arc — à l'endroit
 exact que l'écran désigne.
 
