@@ -816,10 +816,61 @@ courte). Dépend d'`assets/core.js` ; utilise `creneaux.js`, `planning.js`, `ajo
 `nav.js` s'ils sont là.
 
 **Composition, reprise d'une maquette fournie par Pablo** (arc de pastilles avec des `+`, gros
-titre, rangée de vignettes, filet, phrase de fin) et **traduite dans la DA Natty** : le dégradé
-rose de la maquette devient une **lueur blanche** derrière l'arc — même composition, où la
-lumière remplace la couleur. Noir, comme toutes les cinématiques de l'app (`planning.js`,
-`ajout.js`), donc **hors du thème clair/sombre** : il est noir dans les deux.
+titre) et **traduite dans la DA Natty** : le dégradé rose de la maquette devient une **lueur
+blanche** derrière l'arc — même composition, où la lumière remplace la couleur. Noir, comme
+toutes les cinématiques de l'app (`planning.js`, `ajout.js`), donc **hors du thème
+clair/sombre** : il est noir dans les deux.
+
+**⚠️ QUATRE SCÈNES, ET UNE SEULE PORTE DU TEXTE** (refonte du 9 août 2026, demande de Pablo :
+« beaucoup trop d'éléments et d'information »). La première version montrait tout en même
+temps ; la séquence est maintenant :
+
+| # | Scène | Ce qu'il y a dessus |
+|---|---|---|
+| 1 | `scBonjour` | « Bonjour Prénom ». **Rien d'autre** — pas de date, pas d'arc. 2,2 s |
+| 2 | `scArc` | **L'arc seul, aucun texte.** Les jalons faits se cochent en vert, l'arc tourne, le barillet se cale sur l'étape en cours. 3,3 s |
+| 3 | `scEtape` | jour + date · l'étape · **un** bouton. C'est la seule scène qui attend |
+| 4 | `envol()` | la pastille blanche s'ouvre et prend l'écran → la fonction associée |
+
+Ce qui a été **retiré** de la scène finale et ne doit pas revenir : le libellé d'heure en
+kicker, « Étape 2 sur 5 », la phrase explicative, les trois pastilles de macros, le filet, la
+devise, et le récapitulatif écrit de la journée. Neuf blocs pour une décision qui en demande
+une. Les macros se lisent sur l'écran **Suivi**, qui est fait pour ça.
+
+**Le barillet** (`.rou`) — deux icônes empilées dans une fenêtre qui les rogne, l'ancienne puis
+la sienne, avec un léger dépassement avant de revenir : c'est ce « cran » de sélecteur iOS qui
+montre le passage à l'étape suivante. Un simple fondu ne le donne pas.
+⚠️ La fenêtre est un élément **interne** (`.ic`) : rogner sur `.jal` emporterait l'anneau de
+pulsation, qui déborde volontairement.
+
+**Le V vert** (`.vok`) — anneau puis coche, deux tracés décalés, `#34c759`. Même recette que
+`.vok` d'`assets/planning.js`, en petit.
+⚠️ **Le contenu d'un jalon n'est réécrit que si son rôle change** (`data-role`). `peindreArc()`
+tourne à chaque scène ; réécrire à chaque fois relançait le tracé du V et le cran du barillet —
+une validation qui se rejoue en boucle ne valide plus rien.
+
+**L'envol, et le piège de la caméra.** ⚠️ `sync` n'est pas un détail : `NattyAjout.start()`
+ouvre la caméra, et iOS ne l'accepte que si l'appel part du geste de l'utilisateur, **dans la
+même pile**. Retarder de 380 ms pour faire joli, c'est une caméra qui ne s'ouvre plus. Les
+étapes qui appellent `NattyAjout` portent donc `sync: true` et partent tout de suite,
+l'animation se jouant par-dessus ; celles qui ne font que naviguer attendent la fin du
+mouvement. Vérifié au banc : appel à **< 20 ms** pour « Ajouter mon plat », navigation
+**différée** pour « Suivre la recette ».
+
+**Le bandeau de `menu.html`** — `monterBandeau(hote)` pose le même arc, **en tout petit et en
+tête de `.wrap`**, donc au-dessus des trois éléments de l'accueil. Trois choses seulement : le
+jour et la date, ce qui est validé (`3 sur 5`), et où l'on en est. Pas de titre, pas de libellé
+sous les jalons, pas de bouton — une ligne de statut, pas une quatrième carte. Un tap ouvre le
+guide en version courte.
+- ⚠️ Il vit dans le thème de la **page**, d'où les jetons `--nt-*` d'`assets/theme.js` : du noir
+  en dur donnerait une barre noire sur un accueil blanc, et invisible en thème sombre.
+- ⚠️ **Le trait est échantillonné sur la même parabole que les pastilles.** Une courbe de Bézier
+  tracée de la première à la dernière ne passe pas par les points du milieu : mesurée, elle
+  coupait 3,4 px sous la pastille du moment, et les jalons avaient l'air posés à côté de leur
+  propre fil.
+- ⚠️ **Journée bouclée = aucun jalon « en cours ».** `courante()` rend la dernière étape faute de
+  mieux ; sans ce test, le bandeau posait une pastille noire « c'est maintenant » sur une étape
+  déjà cochée.
 
 **Il n'invente aucune donnée**, et c'est ce qui le rend utilisable :
 
@@ -837,8 +888,9 @@ qu'un repas est supprimé. La question a déjà sa réponse en base.
 → `Le point du soir` (21 h 30). Le palier avant le bilan : on apprend quelque chose, **puis** on
 regarde sa journée — l'inverse ferait du bilan une étape de passage avant un jeu.
 - **L'action de chaque repas s'adapte** : une recette prévue au plan se **prépare**
-  (« Suivre la recette », avec « J'ai mangé autre chose » en second) ; sinon on **note**
-  (`NattyAjout.start()`, appelé **synchronement** dans le clic, sinon iOS n'ouvre pas la caméra).
+  (« Suivre la recette ») ; sinon on **note** (`NattyAjout.start()`). **Un seul bouton d'action**,
+  plus « Plus tard » en discret : le « J'ai mangé autre chose » de la première version faisait un
+  troisième choix à trancher pour un cas de bord, alors que le `+` de la nav est toujours là.
 - **Les heures annoncées ne sont pas les bornes des créneaux** (`HEURE_TYPE`) : le midi s'ouvre
   à 11 h pour *ranger* un repas, mais annoncer « 11 h · Déjeuner » ferait passer le guide pour un
   réveil mal réglé.
@@ -851,10 +903,10 @@ regarde sa journée — l'inverse ferait du bilan une étape de passage avant un
   déjeuner à 15 h, c'est parler d'autre chose), mais elle **reste visible, non cochée** : un
   manque montré vaut mieux qu'un manque effacé.
 
-**Deux versions, et c'est la décision d'UX centrale.** La longue (bonjour → « voici votre
-journée », l'arc se déroule → l'étape du moment + le récapitulatif écrit) une fois par jour ;
-la **courte** (directement l'étape du moment) aux moments clés — quelqu'un qui arrive à 12 h 40
-pour noter son déjeuner n'a pas à regarder quatre plans avant de pouvoir le faire.
+**Deux versions, et c'est la décision d'UX centrale.** La longue (les scènes 1 → 2 → 3) une
+fois par jour ; la **courte** (l'arc déjà calé, directement la scène 3) aux moments clés —
+quelqu'un qui arrive à 12 h 40 pour noter son déjeuner n'a pas à regarder trois plans avant de
+pouvoir le faire.
 Mémoire : `natty_journee_vu_<uid>` (le jour) et `natty_journee_etape_<uid>` (`jour|étape`).
 
 ⚠️ **Le déclencheur attend 6,5 s, contre 5 s pour `planning.js`** : si la semaine n'est pas
@@ -862,7 +914,11 @@ planifiée, c'est SA séquence qui doit s'ouvrir. Le module regarde l'écran ava
 (`#nplan`, `#nattyAjout`, `NattyGeneration.enCours()`) — deux plein écran l'un sur l'autre ne se
 discutent pas.
 
-**Trois pièges de mise en page, tous trouvés à l'écran et aucun par `node --check` :**
+**Pièges de mise en page, tous trouvés à l'écran et aucun par `node --check` :**
+- ⚠️ **Le texte se pose SOUS l'arc, il ne se centre pas dans ce qui reste.** Avec `flex:1`, la
+  zone absorbait toute la hauteur libre et le titre partait au milieu de l'écran, à 300 px de
+  l'arc : deux blocs qui ne se parlaient plus. Une fois le contenu réduit à quatre lignes, c'est
+  le **vide** qui descend en bas, pas le texte.
 - ⚠️ **L'arc n'est PAS remplacé d'une scène à l'autre** — contrairement à `planning.js`, il est
   le fil de la séquence. Seul le bloc de texte sous lui est échangé, et le **bloc sortant passe
   en `position:absolute`** le temps de croiser l'entrant, sinon la page fait un bond.
@@ -2258,6 +2314,10 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ **Livré** (août 2026) — `assets/journee.js`, détail en §3. Arc de jalons qui défile de
   droite à gauche, version longue à la première ouverture du jour, version courte aux moments
   clés. Branché sur `menu.html`/`www/index.html`, `suivi.html` et `repas.html` (+ copies `www/`).
+- ✅ **Refonte du 9 août 2026** (« beaucoup trop d'éléments ») : séquence en quatre temps —
+  bonjour seul, arc seul, jour/date/étape/bouton, envol vers la fonction. Neuf blocs de texte
+  retirés de la scène finale, V vert et barillet ajoutés, et le **bandeau très sobre** en tête
+  de `menu.html`. Détail en §3.
 - ✅ Vérifié en navigateur (colonne 375 × 812) sur **cinq scénarios**, avec des doublures
   complètes et une horloge pilotée : 8 h rien de fait, 12 h 40 avec recette prévue, 21 h 50 tout
   fait, 9 h semaine non planifiée, 16 h avec le midi jamais noté (jalon « manqué »). Vérifié
@@ -3132,3 +3192,20 @@ session « fil social » :*
   comprendre.
 - Vérifié en navigateur sur cinq scénarios avec doublures et horloge pilotée ; banc jetable
   `_test-journee.html` (préfixe `_`, donc hors dépôt).
+
+---
+
+*Contribution session « Ma journée — refonte sobre » (Claude Opus, 9 août 2026) :*
+- `assets/journee.js` (+ `www/`) : séquence remise en **quatre temps** à la demande de Pablo
+  (« beaucoup trop d'éléments et d'information ») — bonjour seul → arc seul → jour + date +
+  étape + un bouton → envol vers la fonction. Neuf blocs de texte retirés de la scène finale.
+- Ajouts : **V vert type Apple** sur les étapes validées, **barillet** qui se cale sur l'étape
+  en cours, **envol** de la pastille blanche au clic (avec le drapeau `sync` qui protège
+  l'ouverture de la caméra sur iOS).
+- **Nouveau** `NattyJournee.monterBandeau()` : le même arc en tout petit, en tête de `menu.html`
+  (au-dessus des trois éléments de l'accueil) — date, étapes validées, où l'on en est.
+- Code mort retiré au passage : le récapitulatif écrit, les pastilles de macros, l'en-tête
+  « Ma journée », l'entrée `para` et le libellé `detail` de chaque étape.
+- Vérifié au banc : les cinq scénarios inchangés côté logique, le barillet qui se cale sur la
+  bonne icône (animation `finished`, transform identité), l'appel caméra à < 20 ms et la
+  navigation différée, et le bandeau en thème clair.

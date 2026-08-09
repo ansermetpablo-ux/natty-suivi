@@ -131,7 +131,12 @@ async function loadFormule(){
      et se tait si un autre plein écran l'occupe déjà. -->
 <script src="/assets/journee.js"></script>
 <script>
-  if (window.NattyJournee) NattyJournee.proposerSiNecessaire();
+  if (window.NattyJournee) {
+    NattyJournee.proposerSiNecessaire();
+    // Le bandeau se pose EN TÊTE de `.wrap`, donc au-dessus des trois éléments
+    // de l'accueil. Il ne monte pas du tout s'il n'a rien à dire.
+    NattyJournee.monterBandeau(document.querySelector('.wrap'));
+  }
 </script>
 <script src="/assets/notifs.js"></script>
 <script src="/assets/push.js"></script>

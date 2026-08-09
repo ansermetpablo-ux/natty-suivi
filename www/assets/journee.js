@@ -83,12 +83,15 @@ window.NattyJournee = (function () {
     return e + ' h' + (m ? ' ' + String(m).padStart(2, '0') : '');
   }
 
-  /* ⚠️ La majuscule est posée ICI, et pas par `text-transform:capitalize` :
-     la règle CSS majuscule CHAQUE mot — elle affichait « Dimanche 9 Août ». */
-  function dateLongue(d) {
+  /* Le jour en gras, la date en gris — les deux seules lignes de contexte que
+     garde la scène finale.
+     ⚠️ La majuscule est posée ICI, et pas par `text-transform:capitalize` :
+     la règle CSS majuscule CHAQUE mot, et affichait « Dimanche 9 Août ». */
+  function jourEtDate(d) {
     d = d || new Date();
-    var s = JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()];
-    return s.charAt(0).toUpperCase() + s.slice(1);
+    var j = JOURS[d.getDay()];
+    return '<b>' + esc(j.charAt(0).toUpperCase() + j.slice(1)) + '</b> '
+      + esc(d.getDate() + ' ' + MOIS[d.getMonth()]);
   }
 
   function cle(quoi) {
@@ -200,16 +203,19 @@ window.NattyJournee = (function () {
        serait pire que de ne rien proposer. */
     if (!plan && window.NattyPlanning) {
       out.push({
-        cle: 'planifier', nom: 'Planifier ma semaine', icone: 'planifier',
+        // Le titre et le bouton ne disent pas la même chose : « Planifier ma
+        // semaine » aux deux endroits se lisait deux fois pour rien.
+        cle: 'planifier', nom: 'Ma semaine', icone: 'planifier',
         // ⚠️ Pas d'heure affichée, et c'est voulu : elle n'en a pas. Placée à
         // 8 h comme le petit déjeuner, elle donnait DEUX jalons marqués « 8 h »
         // côte à côte dans l'arc, ce qui se lit comme un doublon. `h` ne sert
         // plus qu'à la ranger en tête ; c'est `libelle` qu'on lit.
         h: Math.min(hMaintenant(), 7.5) - 0.5, libelle: 'D’abord', fait: false,
-        detail: 'Cinq repas placés là où vos macros en ont le plus besoin.',
-        cta: 'Planifier maintenant',
+        cta: 'Planifier ma semaine',
+        // ⚠️ Les actions ne ferment PLUS elles-mêmes : c'est `envol()` qui le
+        // fait, après son animation. Fermer ici retirerait la racine avant que
+        // le mouvement n'ait commencé.
         action: function () {
-          fermer();
           if (window.NattyPlanning) NattyPlanning.ouvrir();
           else Natty.goto('repas.html');
         }
@@ -228,47 +234,27 @@ window.NattyJournee = (function () {
         h: HEURE_TYPE[c.cle] != null ? HEURE_TYPE[c.cle] : (c.h0 + (c.h1 - c.h0) / 3),
         fait: deja > 0,
         prevu: prevu,
-        detail: '',
         cta: 'Ajouter mon plat',
+        // ⚠️ SYNCHRONE : `assets/ajout.js` ouvre la caméra, et iOS ne l'accepte
+        // que si l'appel part du geste de l'utilisateur, dans la même pile.
+        // C'est ce drapeau que lit `envol()` pour ne pas retarder l'action.
+        sync: true,
         action: function () {
-          fermer();
-          // ⚠️ Appel SYNCHRONE depuis le clic : `assets/ajout.js` ouvre la
-          // caméra tout de suite, et iOS refuse de l'ouvrir si le geste de
-          // l'utilisateur n'est plus dans la pile d'appels.
           if (window.NattyAjout && NattyAjout.start) NattyAjout.start();
           else Natty.goto('suivi.html');
         }
       };
 
-      /* ⚠️ La phrase ne redit JAMAIS les chiffres des pastilles. La première
-         version annonçait « il vous reste 1120 kcal et 66 g de protéines »
-         juste au-dessus de trois pastilles portant 1120, 66 et 140 : on lisait
-         deux fois la même chose, et la phrase — qui est le seul endroit où
-         l'app peut expliquer quelque chose — ne servait plus à rien. */
-      if (deja > 0) {
-        e.detail = deja > 1
-          ? deja + ' plats sont déjà notés sur ce repas. Vous pouvez en ajouter un autre.'
-          : 'Votre plat est noté. Vous pouvez en ajouter un autre si vous reprenez.';
-      } else if (prevu) {
-        e.detail = 'Ce repas était prévu à ce créneau lors de votre planification.';
-      } else {
-        e.detail = 'Notez ce que vous mangez : c’est ce qui fait bouger vos anneaux.';
-      }
-
-      // Une recette prévue prend la main sur « ajouter » : on n'a pas encore
-      // mangé, l'action utile est de la préparer. « Ajouter » reste offert en
-      // second — on peut très bien avoir mangé autre chose.
+      /* Une recette prévue prend la main sur « ajouter » : on n'a pas encore
+         mangé, l'action utile est de la préparer. Un seul bouton, et pas de
+         « j'ai mangé autre chose » : le `+` de la barre de navigation est
+         toujours là, et un troisième bouton est un choix de plus à faire pour
+         un cas de bord. */
       if (prevu && deja === 0) {
-        e.nom = c.nom;
         e.titre2 = prevu.nom;
         e.cta = 'Suivre la recette';
-        e.cta2 = 'J’ai mangé autre chose';
-        e.action = function () { marquerEtape(e.cle); fermer(); Natty.goto('repas.html'); };
-        e.action2 = function () {
-          fermer();
-          if (window.NattyAjout && NattyAjout.start) NattyAjout.start();
-          else Natty.goto('suivi.html');
-        };
+        e.sync = false;
+        e.action = function () { marquerEtape(e.cle); Natty.goto('repas.html'); };
       }
       out.push(e);
     });
@@ -279,17 +265,15 @@ window.NattyJournee = (function () {
     out.push({
       cle: 'defi', nom: 'Le palier du jour', icone: 'defi', h: H_DEFI,
       fait: ongletVu('defis'),
-      detail: 'Quelques minutes pour comprendre ce que vous mangez.',
       cta: 'Ouvrir le parcours',
-      action: function () { marquerEtape('defi'); fermer(); Natty.goto('narration.html'); }
+      action: function () { marquerEtape('defi'); Natty.goto('narration.html'); }
     });
 
     out.push({
       cle: 'bilan', nom: 'Le point du soir', icone: 'bilan', h: H_BILAN,
       fait: ongletVu('suivi'),
-      detail: 'Vos anneaux, vos macros, et ce que la journée a donné.',
       cta: 'Voir mon suivi',
-      action: function () { marquerEtape('bilan'); fermer(); Natty.goto('suivi.html'); }
+      action: function () { marquerEtape('bilan'); Natty.goto('suivi.html'); }
     });
 
     out.sort(function (a, b) { return a.h - b.h; });
@@ -363,10 +347,15 @@ window.NattyJournee = (function () {
       'calc(146px + env(safe-area-inset-bottom,0px));overflow-y:auto;',
       '-webkit-overflow-scrolling:touch;text-align:center}',
 
-      /* ── L'en-tête ──────────────────────────────────────────*/
-      '#njour .tete{width:100%;max-width:420px;flex-shrink:0}',
-      '#njour .tete .t{font-size:19px;font-weight:800;letter-spacing:-.4px}',
-      '#njour .tete .d{font-size:12px;color:#7c7c86;margin-top:5px}',
+      /* ⚠️ PLUS D'EN-TÊTE. « Ma journée » + la date en haut de chaque scène
+         répétaient ce que la scène finale dit déjà, et faisaient un écran de
+         plus à lire avant d'arriver à l'action. La date vit maintenant dans la
+         seule scène qui en a besoin. */
+
+      /* L'arc n'existe qu'à partir de la deuxième scène : le bonjour est le
+         nom, et rien d'autre. */
+      '#njour .arc{opacity:0;transition:opacity .6s ease}',
+      '#njour.arcvu .arc{opacity:1}',
 
       /* ── L'arc ──────────────────────────────────────────────
          Les jalons sont des éléments HTML posés sur le cercle, pas des formes
@@ -398,6 +387,32 @@ window.NattyJournee = (function () {
       'opacity .7s ease,background .5s ease,box-shadow .7s ease}',
       '#njour .jal svg{width:46%;height:46%;fill:none;stroke:currentColor;stroke-width:1.9;',
       'stroke-linecap:round;stroke-linejoin:round}',
+
+      /* ── Le barillet ────────────────────────────────────────
+         Le jalon du moment ne se contente pas de s'allumer : son icône ARRIVE,
+         comme le cran d'un sélecteur iOS qui se cale. Deux icônes empilées dans
+         une fenêtre qui les rogne — celle d'avant, puis la sienne — et la
+         courbe d'accélération dépasse légèrement avant de revenir : c'est ce
+         petit dépassement qui fait « cran », un simple fondu ne le donne pas.
+         ⚠️ La fenêtre est un élément INTERNE (`.ic`) : rogner sur `.jal` même
+         emporterait l'anneau de pulsation, qui déborde volontairement. */
+      '#njour .jal .ic{position:absolute;inset:0;border-radius:50%;overflow:hidden;',
+      'display:flex;align-items:center;justify-content:center}',
+      '#njour .jal .rou{position:absolute;left:0;right:0;top:0;height:200%;',
+      'display:flex;flex-direction:column}',
+      '#njour .jal .rou > *{height:50%;display:flex;align-items:center;justify-content:center}',
+      '#njour .jal.actif .rou{animation:njBarillet .82s cubic-bezier(.2,1.24,.32,1) both}',
+      '@keyframes njBarillet{from{transform:translateY(-50%)}to{transform:translateY(0)}}',
+
+      /* ── La validation ──────────────────────────────────────
+         Le V vert d'Apple : l'anneau se dessine, puis la coche. Deux tracés
+         décalés — un seul trait continu ne se lit pas comme une validation.
+         Même recette que `.vok` d'`assets/planning.js`, en petit. */
+      '#njour .jal .vok{width:100%;height:100%;stroke-width:2.4}',
+      '#njour .jal .vok .rd{stroke:#34c759;stroke-dasharray:64;stroke-dashoffset:64;',
+      'animation:njTrace .52s cubic-bezier(.22,1,.36,1) forwards}',
+      '#njour .jal .vok .ck{stroke:#34c759;stroke-dasharray:20;stroke-dashoffset:20;',
+      'animation:njTrace .34s cubic-bezier(.22,1,.36,1) .34s forwards}',
 
       /* À venir — le creux neumorphique et le « + » de la maquette : une
          place réservée, pas encore un événement. */
@@ -435,67 +450,40 @@ window.NattyJournee = (function () {
          l'entrant. Sans ça, les deux se suivent dans le flux pendant 360 ms et
          la page fait un bond de la hauteur du bloc — le même piège que la
          carte du jour de `assets/planning.js`. */
-      '#njour .zone{flex:1 0 auto;width:100%;max-width:420px;margin-top:6px;',
-      'position:relative;display:flex;flex-direction:column;justify-content:center}',
+      /* ⚠️ LE TEXTE SE POSE SOUS L'ARC, il ne se centre pas dans ce qui reste.
+         Avec `flex:1`, la zone absorbait toute la hauteur libre et le titre
+         partait au milieu de l'écran, à 300 px de l'arc : deux blocs qui ne se
+         parlaient plus. Une fois le contenu réduit à quatre lignes, c'est le
+         VIDE qui doit descendre en bas, pas le texte. */
+      '#njour .zone{flex:0 0 auto;width:100%;max-width:420px;margin-top:22px;',
+      'position:relative;display:flex;flex-direction:column;justify-content:flex-start}',
       '#njour .bloc{width:100%}',
       '#njour .bloc.sort{position:absolute;left:0;right:0;top:0;bottom:0;',
       'display:flex;flex-direction:column;justify-content:center;pointer-events:none}',
-      '#njour .kick{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;',
-      'color:#8b8b95}',
+      /* ⚠️ QUATRE ÉLÉMENTS DE TEXTE EN TOUT, ET PAS UN DE PLUS. La première
+         version empilait libellé d'heure, titre, « étape 2 sur 5 », une phrase
+         explicative, trois pastilles de macros, un filet, une devise et le
+         récapitulatif écrit de la journée : neuf blocs pour une décision qui en
+         demande une. Ne restent que le jour, la date, l'étape et le bouton —
+         les macros et le détail se lisent sur l'écran Suivi, qui est fait pour
+         ça. Les règles `.kick` / `.sous` servent encore, en tout petit. */
+      '#njour .kick{font-size:12.5px;font-weight:600;color:#8b8b95;letter-spacing:.2px}',
+      '#njour .kick b{color:#e7e7ec;font-weight:700}',
       '#njour h1{font-size:44px;font-weight:900;letter-spacing:-1.8px;line-height:1.04;',
-      'margin:10px 0 0}',
+      'margin:12px 0 0}',
       '#njour h1 span{display:inline-block;opacity:0;',
       'animation:njGlide .68s cubic-bezier(.22,1,.36,1) forwards}',
       '#njour h1.p{font-size:34px;letter-spacing:-1.2px}',
-      '#njour .sk{font-size:10.5px;font-weight:800;letter-spacing:1.7px;text-transform:uppercase;',
-      'color:#6e6e78;margin-top:12px}',
-      '#njour .quoi{font-size:17px;font-weight:800;letter-spacing:-.3px;margin-top:14px;',
-      'color:#f2f2f5;line-height:1.3}',
-      '#njour .sous{font-size:14px;color:#8b8b95;line-height:1.55;margin-top:12px;',
-      'max-width:330px;margin-left:auto;margin-right:auto}',
-
-      /* La rangée de vignettes de la maquette : ici, les macros qu'il reste —
-         la seule chose qu'on ait vraiment envie de lire avant de manger. */
-      '#njour .chips{display:flex;justify-content:center;gap:7px;margin-top:16px}',
-      '#njour .chips div{display:flex;align-items:center;gap:5px;padding:8px 13px;',
-      'border-radius:999px;background:#0b0b0e;font-size:11.5px;font-weight:700;color:#c9c9d2;',
-      'box-shadow:inset 1.5px 1.5px 4px rgba(0,0,0,.9),inset -1px -1px 3px rgba(255,255,255,.05),',
-      '0 0 0 1px rgba(255,255,255,.05)}',
-      '#njour .chips b{color:#fff;font-weight:800}',
-      '#njour .filet{width:180px;height:1px;background:rgba(255,255,255,.12);',
-      'margin:18px auto 0}',
-      '#njour .mot{font-size:13px;color:#9a9aa4;margin-top:16px;font-weight:600}',
-
-      /* ── Le récapitulatif de la version longue ──────────────
-         La journée écrite, sous l'arc : l'arc donne le rythme, la liste donne
-         les faits. L'un sans l'autre laisse une impression sans information. */
-      '#njour .liste{width:100%;max-width:420px;margin-top:22px;display:flex;',
-      'flex-direction:column;gap:7px}',
-      '#njour .li{display:flex;align-items:center;gap:13px;padding:12px 14px;border-radius:18px;',
-      'background:#08090b;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);text-align:left;',
-      'opacity:0;animation:njGlide .6s cubic-bezier(.22,1,.36,1) forwards}',
-      '#njour .li .p{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;',
-      'align-items:center;justify-content:center;background:#101115;color:rgba(255,255,255,.6);',
-      'box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}',
-      '#njour .li .p svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;',
-      'stroke-linecap:round;stroke-linejoin:round}',
-      '#njour .li.ok .p{background:#f2f2f5;color:#0a0a0c;box-shadow:0 3px 10px rgba(255,255,255,.14)}',
-      '#njour .li.now{box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}',
-      '#njour .li .n{font-size:13.5px;font-weight:700;line-height:1.3}',
-      '#njour .li .q{font-size:10.5px;color:#7c7c86;margin-top:3px}',
-      '#njour .li .hh{margin-left:auto;font-size:10.5px;font-weight:800;color:#5c5c66;',
-      'letter-spacing:.3px;flex-shrink:0}',
-      '#njour .li.now .hh{color:#fff}',
+      '#njour .sous{font-size:14px;color:#8b8b95;line-height:1.5;margin-top:12px;',
+      'max-width:320px;margin-left:auto;margin-right:auto}',
 
       /* ── Entrées ────────────────────────────────────────────
          Jamais de flou sur du texte : la règle vient de `narration.html` et
          vaut pour toutes les cinématiques de l'app. */
       '@keyframes njGlide{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}',
-      '@keyframes njPara{from{opacity:0;transform:translateY(10px) scale(.975)}to{opacity:1;transform:none}}',
       '#njour [data-in]{opacity:0;animation-duration:.72s;',
       'animation-timing-function:cubic-bezier(.22,1,.36,1);animation-fill-mode:forwards}',
       '#njour [data-in="glide"]{animation-name:njGlide}',
-      '#njour [data-in="para"]{animation-name:njPara}',
       '#njour .bloc.sort{animation:njSort .34s cubic-bezier(.4,0,1,1) forwards}',
       '@keyframes njSort{to{opacity:0;transform:translateY(-12px)}}',
 
@@ -516,6 +504,21 @@ window.NattyJournee = (function () {
       'font-size:14.5px;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.09),',
       '0 8px 22px rgba(0,0,0,.6)}',
       '#njour .b3{background:none;color:#7c7c86;padding:12px;font-size:14px;font-weight:600}',
+
+      /* ── L'envol ────────────────────────────────────────────
+         Au clic, la pastille blanche du moment s'ouvre et prend tout l'écran :
+         on ne « quitte » pas le guide, on entre dans ce qu'il désignait. Le
+         disque part exactement du centre du jalon — sinon le mouvement vient de
+         nulle part et se lit comme un simple fondu.
+         ⚠️ Il ne dure que 380 ms, et pour une bonne raison : c'est du temps
+         volé à ce que l'utilisateur a demandé. */
+      '#njour .envol{position:absolute;width:58px;height:58px;border-radius:50%;',
+      'background:#fff;transform:translate(-50%,-50%) scale(1);z-index:9;',
+      'animation:njEnvol .38s cubic-bezier(.5,0,.9,.6) forwards;pointer-events:none}',
+      '@keyframes njEnvol{to{transform:translate(-50%,-50%) scale(26);opacity:.92}}',
+      '#njour.part .col,#njour.part #njCta,#njour.part #njFerme{',
+      'animation:njPart .3s ease forwards;pointer-events:none}',
+      '@keyframes njPart{to{opacity:0}}',
 
       /* Le bouton de fermeture. Une cinématique qui s'invite doit pouvoir se
          refuser d'un geste, sans lire les boutons du bas. */
@@ -657,22 +660,39 @@ window.NattyJournee = (function () {
       el.style.height = taille + 'px';
       el.style.opacity = Math.abs(d) > VISIBLES ? 0 : opac;
 
-      var cls = 'jal';
-      if (i === cur) cls += ' actif';
-      else if (e.fait) cls += ' passe';
-      else if (e.h < h - FENETRE_H) cls += ' manque';
-      else cls += ' futur';
-      el.className = cls;
+      var role = (i === cur) ? 'actif'
+        : (e.fait ? 'passe' : (e.h < h - FENETRE_H ? 'manque' : 'futur'));
+      el.className = 'jal ' + role;
 
-      // Le contenu suit le rôle : le « + » d'une place réservée, la coche de
-      // ce qui est fait, l'icône de l'étape quand c'est son moment.
-      var ic = el.querySelector('.ic');
-      ic.innerHTML = (i === cur) ? icone(e.icone)
-        : (e.fait ? icone('coche') : icone('plus'));
-      // L'heure ne s'affiche que sur les jalons proches : au-delà, elle se
-      // superpose à sa voisine et on ne lit plus ni l'une ni l'autre.
+      /* ⚠️ LE CONTENU N'EST RÉÉCRIT QUE SI LE RÔLE A CHANGÉ. `peindreArc` est
+         appelée à chaque scène ; réécrire à chaque fois relançait le tracé du
+         V vert et le cran du barillet — donc une validation qui se rejoue
+         indéfiniment, ce qui la vide de son sens. Une animation ne doit se
+         jouer qu'au moment où la chose qu'elle raconte arrive. */
+      if (el.getAttribute('data-role') !== role) {
+        el.setAttribute('data-role', role);
+        var ic = el.querySelector('.ic');
+        if (role === 'actif') {
+          // Le barillet : l'icône précédente, puis la sienne, dans une fenêtre
+          // qui les rogne. C'est ce cran qui montre « on passe à celle-là ».
+          var avant = etat.etapes[i - 1];
+          ic.innerHTML = '<span class="rou"><span>'
+            + icone(avant ? (avant.fait ? 'coche' : avant.icone) : 'plus') + '</span>'
+            + '<span>' + icone(e.icone) + '</span></span>';
+        } else if (role === 'passe') {
+          ic.innerHTML = '<svg class="vok" viewBox="0 0 24 24">'
+            + '<circle class="rd" cx="12" cy="12" r="10.2"/>'
+            + '<path class="ck" d="M7.4 12.3 10.6 15.6 16.8 8.8"/></svg>';
+        } else {
+          ic.innerHTML = icone('plus');
+        }
+      }
+
+      // L'heure ne s'affiche que sur le jalon du moment. Sur les voisins elle
+      // se superposait à celle d'à côté, et surtout elle donnait cinq nombres
+      // à lire là où l'écran n'en demande qu'un.
       var hh = el.querySelector('.h');
-      if (hh) hh.style.display = ad <= 2 ? '' : 'none';
+      if (hh) hh.style.display = (i === cur) ? '' : 'none';
     });
   }
 
@@ -729,110 +749,64 @@ window.NattyJournee = (function () {
     return d;
   }
 
-  function enTete() {
-    var col = racine.querySelector('#njCol');
-    col.insertAdjacentHTML('beforeend',
-      '<div class="tete" data-in="glide"><div class="t">Ma journée</div>'
-      + '<div class="d">' + esc(dateLongue()) + '</div></div>');
-  }
-
   /* La zone qui accueille les blocs successifs — montée une fois, sous l'arc. */
   function monterZone() {
     racine.querySelector('#njCol').insertAdjacentHTML('beforeend',
       '<div class="zone" id="njZone"></div>');
   }
 
-  /* Scène 1 — bonjour. Le nom, la date, rien d'autre : on n'annonce pas un
-     programme avant d'avoir dit bonjour. */
+  /* ── Scène 1 — le nom, et rien d'autre ────────────────────
+     Pas de date, pas d'arc, pas de compte d'étapes. Un écran qui dit bonjour
+     ne dit que bonjour ; tout ce qu'on y ajoute se lit à sa place. */
   function scBonjour() {
     var p = etat.prenom;
     var heure = hMaintenant();
     var mot = heure < 5 ? 'Bonne nuit' : (heure < 18 ? 'Bonjour' : 'Bonsoir');
     bloc({
-      html: '<div class="kick" data-in="glide">' + esc(dateLongue()) + '</div>'
-        + titre(mot + (p ? ' ' + p : ''), '', 0.32),
-      auto: 2500,
-      apres: scDeroule
+      html: titre(mot + (p ? ' ' + p : ''), '', 0.25),
+      auto: 2200,
+      apres: scArc
     });
   }
 
-  /* Scène 2 — la journée se déroule. L'arc est peint sur la PREMIÈRE étape,
-     puis, un temps après, sur celle du moment : ce sont ces deux appels qui
-     font défiler les jalons de droite à gauche sous les yeux. */
-  function scDeroule() {
+  /* ── Scène 2 — l'arc, seul ────────────────────────────────
+     Aucun texte. Les jalons faits se cochent en vert l'un après l'autre, puis
+     l'arc tourne et le barillet du moment se cale sur l'étape en cours. C'est
+     le seul écran qui n'a rien à lire, et c'est pour ça qu'il se regarde. */
+  function scArc() {
+    racine.classList.add('arcvu');
     peindreArc(0);
-    bloc({
-      // Le libellé compte les moments plutôt que de répéter « votre journée »,
-      // déjà écrit dans l'en-tête juste au-dessus.
-      html: '<div class="kick" data-in="glide">' + etat.etapes.length + ' moments</div>'
-        + titre('Voici votre journée', '', 0.15)
-        + '<div class="sous" data-in="glide" style="animation-delay:.6s">'
-        + 'Dans l’ordre, du matin au soir. Vous n’avez jamais qu’une seule chose à faire.'
-        + '</div>',
-      auto: 3000,
-      apres: scMaintenant
-    });
-    // L'arc se met en marche pendant que la phrase se lit : la journée avance
-    // sous le texte qui l'annonce, au lieu d'attendre qu'il finisse.
-    setTimeout(function () { if (ouvert) peindreArc(etat.cur); }, 1150);
+    bloc({ html: '', auto: 3300, apres: scEtape });
+    // L'arc se met en marche une fois les premières coches posées : tout
+    // partir en même temps ferait un mouvement illisible.
+    setTimeout(function () { if (ouvert) peindreArc(etat.cur); }, 1250);
   }
 
-  /* Scène 3 — maintenant. C'est la seule scène qui attend, et la seule qui
-     porte une action : tout le reste ne fait que l'amener. */
-  function scMaintenant() {
+  /* ── Scène 3 — jour, date, étape, action ──────────────────
+     Quatre choses. C'est la seule scène qui attend, et la seule qui porte une
+     action : tout le reste ne fait que l'amener. */
+  function scEtape() {
     peindreArc(etat.cur);
-    var e = etat.etapes[etat.cur];
-
     if (toutFait(etat.etapes)) return scBoucle();
 
-    var reste = null;
-    if (e.cle.indexOf('repas-') === 0 && window.NattyCreneaux) {
-      reste = NattyCreneaux.restant(e.cle.slice(6));
-    }
+    var e = etat.etapes[etat.cur];
 
-    var html = '<div class="kick" data-in="glide">' + esc(e.libelle || libHeure(e.h)) + '</div>'
+    var html = '<div class="kick" data-in="glide">' + jourEtDate() + '</div>'
       // Au-delà d'une douzaine de caractères, le grand corps touche les deux
       // bords à 375 px : « Petit déjeuner » y passe en corps intermédiaire.
-      + titre(e.nom, e.nom.length > 11 ? 'p' : '', 0.12)
-      + '<div class="sk" data-in="glide" style="animation-delay:.55s">Étape '
-      + (etat.cur + 1) + ' sur ' + etat.etapes.length + '</div>'
-      + (e.titre2 ? '<div class="quoi" data-in="glide" style="animation-delay:.66s">'
-          + esc(e.titre2) + '</div>' : '')
-      + '<div class="sous" data-in="glide" style="animation-delay:.78s">' + esc(e.detail) + '</div>';
+      + titre(e.nom, e.nom.length > 11 ? 'p' : '', 0.1)
+      // Le nom de la recette est la seule ligne conservée : sans elle,
+      // « Déjeuner » + « Suivre la recette » ne dit pas LAQUELLE.
+      + (e.titre2 ? '<div class="sous" data-in="glide" style="animation-delay:.5s">'
+          + esc(e.titre2) + '</div>' : '');
 
-    if (reste && reste.c) {
-      html += '<div class="chips" data-in="para" style="animation-delay:.9s">'
-        + '<div><b>' + reste.c + '</b> kcal</div>'
-        + '<div><b>' + reste.p + '</b> g prot.</div>'
-        + '<div><b>' + reste.g + '</b> g gluc.</div></div>';
-    }
-
-    html += '<div class="filet" data-in="glide" style="animation-delay:1s"></div>'
-      + '<div class="mot" data-in="glide" style="animation-delay:1.08s">'
-      + 'Chaque plat noté éclaire votre journée</div>';
-
-    if (!etat.court) html += recap(1.2);
-
-    var boutons = [{ txt: e.cta, cls: 'b1', on: function () { marquerLong(); e.action(); } }];
-    if (e.cta2) boutons.push({ txt: e.cta2, cls: 'b2', on: function () { marquerLong(); e.action2(); } });
-    boutons.push({ txt: 'Plus tard', cls: 'b3', on: function () { marquerLong(); fermer(); } });
-
-    bloc({ html: html, boutons: boutons });
-  }
-
-  /* La journée écrite, sous l'arc. L'arc donne le rythme, la liste donne les
-     faits : sans elle on garde une impression, pas une information. */
-  function recap(delai) {
-    return '<div class="liste">' + etat.etapes.map(function (e, i) {
-      var cls = 'li' + (e.fait ? ' ok' : '') + (i === etat.cur ? ' now' : '');
-      var quoi = e.fait ? 'Fait' : (i === etat.cur ? 'Maintenant'
-        : (e.h < hMaintenant() - FENETRE_H ? 'Non noté' : 'À venir'));
-      return '<div class="' + cls + '" style="animation-delay:' + (delai + i * 0.075).toFixed(2) + 's">'
-        + '<div class="p">' + icone(e.fait ? 'coche' : e.icone) + '</div>'
-        + '<div><div class="n">' + esc(e.titre2 || e.nom) + '</div>'
-        + '<div class="q">' + esc(e.titre2 ? e.nom + ' · ' + quoi : quoi) + '</div></div>'
-        + '<div class="hh">' + esc(e.libelle || libHeure(e.h)) + '</div></div>';
-    }).join('') + '</div>';
+    bloc({
+      html: html,
+      boutons: [
+        { txt: e.cta, cls: 'b1', on: function () { marquerLong(); envol(e.action, e.sync); } },
+        { txt: 'Plus tard', cls: 'b3', on: function () { marquerLong(); fermer(); } }
+      ]
+    });
   }
 
   /* Scène 3 bis — tout est fait. Ce n'est pas un cas particulier à bâcler :
@@ -840,20 +814,42 @@ window.NattyJournee = (function () {
      dire clairement vaut mieux que de resservir une étape déjà cochée. */
   function scBoucle() {
     bloc({
-      // Le libellé compte les moments plutôt que de répéter la date, déjà en
-      // en-tête : c'est la seule information que cet écran peut encore ajouter.
-      html: '<div class="kick" data-in="glide">' + etat.etapes.length + ' sur '
-        + etat.etapes.length + '</div>'
-        + titre('Votre journée est complète', 'p', 0.12)
-        + '<div class="sous" data-in="glide" style="animation-delay:.7s">'
-        + 'Tous vos repas sont notés, le palier du jour est passé. Il n’y a rien'
-        + ' à faire de plus — c’est exactement le but.</div>'
-        + recap(0.9),
+      html: '<div class="kick" data-in="glide">' + jourEtDate() + '</div>'
+        + titre('Journée complète', 'p', 0.1),
       boutons: [
-        { txt: 'Voir mon suivi', cls: 'b1', on: function () { marquerLong(); fermer(); Natty.goto('suivi.html'); } },
+        { txt: 'Voir mon suivi', cls: 'b1',
+          on: function () { marquerLong(); envol(function () { Natty.goto('suivi.html'); }); } },
         { txt: 'Fermer', cls: 'b3', on: function () { marquerLong(); fermer(); } }
       ]
     });
+  }
+
+  /* ── Scène 4 — l'envol vers la fonction ───────────────────
+     La pastille blanche du moment s'ouvre et prend l'écran : on n'a pas quitté
+     le guide, on est entré dans ce qu'il désignait.
+
+     ⚠️ `sync` N'EST PAS UN DÉTAIL. `NattyAjout.start()` ouvre la caméra, et
+     iOS n'accepte cette ouverture que si elle part du geste de l'utilisateur,
+     dans la même pile d'appels : la retarder de 380 ms pour faire joli, c'est
+     une caméra qui ne s'ouvre plus. Ces actions-là partent donc tout de suite,
+     l'animation se jouant par-dessus. Les autres, qui ne font que naviguer,
+     attendent la fin du mouvement.
+  */
+  function envol(action, sync) {
+    if (!racine) { if (action) action(); return; }
+    var jal = arcEl && arcEl.querySelector('.jal.actif');
+    if (jal && arcEl) {
+      var r = jal.getBoundingClientRect();
+      var f = document.createElement('div');
+      f.className = 'envol';
+      f.style.left = (r.left + r.width / 2) + 'px';
+      f.style.top = (r.top + r.height / 2) + 'px';
+      f.style.position = 'fixed';
+      racine.appendChild(f);
+    }
+    racine.classList.add('part');
+    if (sync) { if (action) action(); fermer(); return; }
+    setTimeout(function () { fermer(); if (action) action(); }, 380);
   }
 
   /* ═══ 9. Entrées publiques ═══════════════════════════════ */
@@ -883,18 +879,19 @@ window.NattyJournee = (function () {
     };
 
     monter();
-    enTete();
     monterArc(racine.querySelector('#njCol'));
     monterZone();
 
     if (etat.court) {
+      // Version courte : l'arc est là dès la première image, déjà calé sur le
+      // moment. Pas de bonjour, pas de déroulé — on vient noter un repas.
+      racine.classList.add('arcvu');
       peindreArc(etat.cur);
-      scMaintenant();
+      scEtape();
     } else {
       // Le prénom n'est pas bloquant : la scène s'ouvre tout de suite et se
       // contente de « Bonjour » si la requête traîne. Attendre le réseau pour
       // dire bonjour, c'est faire attendre pour rien.
-      peindreArc(0);
       etat.prenom = await prenom();
       if (!ouvert) return;
       scBonjour();
@@ -939,9 +936,123 @@ window.NattyJournee = (function () {
     }, delai == null ? 6500 : delai);
   }
 
+  /* ═══ 10. Le bandeau de menu.html ════════════════════════
+     Le même arc, en tout petit, posé AU-DESSUS des trois éléments de l'accueil.
+     Il ne porte que trois choses : le jour et la date, ce qui est validé, et où
+     l'on en est. Pas de titre, pas de libellé sous les jalons, pas de bouton —
+     c'est une ligne de statut, pas une carte de plus dans une page qui en a
+     déjà trois. Un tap ouvre le guide.
+
+     ⚠️ Il vit dans le thème de la PAGE, pas dans le noir du guide : d'où les
+     jetons `--nt-*` d'`assets/theme.js`, les seuls valables sur tous les
+     écrans. Écrire du noir en dur ici donnerait une barre noire au milieu d'un
+     accueil blanc, et une barre invisible en thème sombre. */
+
+  function cssBandeau() {
+    if (document.getElementById('njband-css')) return;
+    var s = document.createElement('style');
+    s.id = 'njband-css';
+    s.textContent = [
+      /* Pas d'animation d'entrée : une ligne de statut en tête de page n'a rien
+         à annoncer, et un fondu de plus est exactement ce qu'on cherche à
+         retirer de cet écran. */
+      '.njb{display:block;width:100%;border:none;background:none;padding:2px 0 10px;',
+      'font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;',
+      'text-align:left}',
+      '.njb:active{opacity:.6}',
+      '.njb-l{display:flex;align-items:baseline;justify-content:space-between;gap:10px;',
+      'padding:0 2px 8px}',
+      '.njb-d{font-size:12px;font-weight:600;color:var(--nt-muted,#9a9aaa);letter-spacing:.1px}',
+      '.njb-d b{color:var(--nt-ink,#101014);font-weight:700}',
+      '.njb-n{font-size:11px;font-weight:700;color:var(--nt-muted,#9a9aaa);flex-shrink:0}',
+      /* L'arc est TRÈS plat — 34 px de haut pour 100 % de large. Une vraie
+         courbe demanderait de la hauteur, et la hauteur est exactement ce que
+         cette page n'a pas à donner. */
+      '.njb-arc{position:relative;height:42px;width:100%}',
+      '.njb-arc svg{position:absolute;inset:0;width:100%;height:100%;fill:none;',
+      'stroke:var(--nt-line,#e8e8ee);stroke-width:1;stroke-linecap:round}',
+      '.njb-p{position:absolute;transform:translate(-50%,-50%);border-radius:50%;',
+      'display:flex;align-items:center;justify-content:center;background:var(--nt-bg,#fff)}',
+      '.njb-p svg{position:static;width:9px;height:9px;stroke-width:2.6;stroke:currentColor}',
+      /* Fait : le vert de validation, celui des calendriers de l'app. */
+      '.njb-p.ok{width:15px;height:15px;background:#34c759;color:#fff;',
+      'box-shadow:0 1px 4px rgba(52,199,89,.4)}',
+      /* Maintenant : plein encre, avec un anneau qui l'isole du trait. */
+      '.njb-p.now{width:19px;height:19px;background:var(--nt-ink,#101014);',
+      'box-shadow:0 0 0 3px var(--nt-bg,#fff),0 2px 7px var(--nt-ombre,rgba(20,20,30,.2))}',
+      '.njb-p.now i{width:5px;height:5px;border-radius:50%;background:var(--nt-on-ink,#fff)}',
+      /* À venir : un creux minuscule. */
+      '.njb-p.next{width:9px;height:9px;box-shadow:inset 0 0 0 1.5px var(--nt-line,#e8e8ee)}',
+      '.njb-p.miss{width:9px;height:9px;box-shadow:inset 0 0 0 1.5px var(--nt-line,#e8e8ee);',
+      'opacity:.5}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+
+  /**
+   * Monte le bandeau dans `hote`. Sans étape à montrer, il ne monte RIEN —
+   * une ligne vide en tête de page se lit comme un chargement qui a échoué.
+   * @param {Element} hote
+   */
+  async function monterBandeau(hote) {
+    if (!hote || !window.Natty || !Natty.USER_ID) return null;
+    var d;
+    try { d = await construire(); } catch (e) { return null; }
+    if (!d.etapes.length) return null;
+
+    cssBandeau();
+    // ⚠️ Journée bouclée : AUCUN jalon « en cours ». `courante()` rend la
+    // dernière étape faute de mieux, et le bandeau posait donc une pastille
+    // noire « c'est maintenant » sur quelque chose de déjà coché.
+    var etapes = d.etapes, h = hMaintenant();
+    var cur = toutFait(etapes) ? -1 : courante(etapes);
+    var faits = etapes.filter(function (e) { return e.fait; }).length;
+    var now = new Date();
+
+    /* Une corde très plate : les jalons se répartissent sur la largeur, la
+       courbe ne sert qu'à dire « c'est un parcours », pas à porter la mesure.
+
+       ⚠️ LE TRAIT EST ÉCHANTILLONNÉ SUR LA MÊME PARABOLE QUE LES PASTILLES.
+       Une courbe de Bézier tracée de la première à la dernière ne passe PAS
+       par les points intermédiaires : mesurée, elle coupait 3,4 px sous la
+       pastille du moment, et sur 42 px de haut ça se voit — les jalons avaient
+       l'air posés à côté de leur propre fil. */
+    var n = etapes.length;
+    function courbeY(x) { var t = (x - 50) / 50; return 40 + t * t * 46; }
+    var xs = etapes.map(function (e, i) { return n === 1 ? 50 : (7 + i * (86 / (n - 1))); });
+    var ys = xs.map(courbeY);
+    var trait = '';
+    for (var t = 5; t <= 95; t += 2.5) {
+      trait += (trait ? 'L' : 'M') + t.toFixed(1) + ' ' + courbeY(t).toFixed(1);
+    }
+
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'njb';
+    b.setAttribute('aria-label', 'Ma journée');
+    b.innerHTML = '<div class="njb-l"><div class="njb-d">' + jourEtDate(now) + '</div>'
+      + '<div class="njb-n">' + faits + ' sur ' + n + '</div></div>'
+      + '<div class="njb-arc"><svg viewBox="0 0 100 100" preserveAspectRatio="none">'
+      + '<path d="' + trait + '"/></svg>'
+      + etapes.map(function (e, i) {
+          var role = (i === cur) ? 'now'
+            : (e.fait ? 'ok' : (e.h < h - FENETRE_H ? 'miss' : 'next'));
+          return '<span class="njb-p ' + role + '" style="left:' + xs[i].toFixed(1)
+            + '%;top:' + ys[i].toFixed(1) + '%">'
+            + (role === 'ok' ? '<svg viewBox="0 0 24 24"><path d="M6 12.4 10.2 16.6 18 7.8"/></svg>'
+               : (role === 'now' ? '<i></i>' : '')) + '</span>';
+        }).join('')
+      + '</div>';
+
+    b.addEventListener('click', function () { ouvrir({ court: true }); });
+    hote.insertBefore(b, hote.firstChild);
+    return b;
+  }
+
   return {
     ouvrir: ouvrir,
     fermer: fermer,
+    monterBandeau: monterBandeau,
     proposerSiNecessaire: proposerSiNecessaire,
     /** Le déroulé calculé — pour vérifier, sans ouvrir quoi que ce soit. */
     etapes: async function () { return (await construire()).etapes; },
