@@ -815,11 +815,27 @@ droite, passe au sommet quand c'est son heure, sort par la gauche une fois fait.
 courte). Dépend d'`assets/core.js` ; utilise `creneaux.js`, `planning.js`, `ajout.js` et
 `nav.js` s'ils sont là.
 
-**Composition, reprise d'une maquette fournie par Pablo** (arc de pastilles avec des `+`, gros
-titre) et **traduite dans la DA Natty** : le dégradé rose de la maquette devient une **lueur
-blanche** derrière l'arc — même composition, où la lumière remplace la couleur. Noir, comme
-toutes les cinématiques de l'app (`planning.js`, `ajout.js`), donc **hors du thème
-clair/sombre** : il est noir dans les deux.
+**Composition, reprise d'une maquette fournie par Pablo** (arc de pastilles, gros titre) et
+**traduite dans la DA Natty** : le dégradé rose de la maquette devient une **lueur** derrière
+l'arc — même composition, où la lumière remplace la couleur.
+
+⚠️ **IL SUIT LE THÈME**, contrairement aux autres cinématiques de l'app (§5) — demandé
+explicitement le 9 août 2026. Toutes les couleurs passent par des jetons **`--j-*`** déclarés
+sur `#njour`, et le clair ne redéfinit **que les jetons** : il n'y a qu'un seul jeu de règles.
+Sans ça, chaque retouche serait à faire deux fois et l'un des deux thèmes finirait par diverger
+sans que personne ne s'en aperçoive — exactement ce qui est arrivé aux ombres neumorphiques de
+`suivi.html` (§7). Les jetons `--nt-*` d'`assets/theme.js` ne suffisent pas ici : cet écran a
+des besoins qui n'existent nulle part ailleurs (une lueur, un creux sur fond noir, un relief de
+pastille).
+
+**Ce qu'il y a DANS les bulles** (9 août 2026) — la **photo détourée du plat prévu** à ce
+créneau quand la planification en a un, l'illustration au trait sinon. Chaque bulle porte celle
+de SON étape, y compris celles à venir : le « + » de la maquette d'origine ne disait rien de ce
+qui vient, alors qu'on regarde cet écran pour voir sa journée, pas une file d'attente.
+⚠️ `object-fit:contain`, jamais `cover` : le sujet est détouré, et un plat rogné aux bords dans
+une pastille de 62 px ne se reconnaît plus. Une photo qui n'arrive pas repose son illustration
+(`brancherPhoto`), sinon l'icône cassée du navigateur atterrit au milieu de l'arc — à l'endroit
+exact que l'écran désigne.
 
 **⚠️ QUATRE SCÈNES, ET UNE SEULE PORTE DU TEXTE** (refonte du 9 août 2026, demande de Pablo :
 « beaucoup trop d'éléments et d'information »). La première version montrait tout en même
@@ -837,11 +853,16 @@ kicker, « Étape 2 sur 5 », la phrase explicative, les trois pastilles de macr
 devise, et le récapitulatif écrit de la journée. Neuf blocs pour une décision qui en demande
 une. Les macros se lisent sur l'écran **Suivi**, qui est fait pour ça.
 
-**Le barillet** (`.rou`) — deux icônes empilées dans une fenêtre qui les rogne, l'ancienne puis
-la sienne, avec un léger dépassement avant de revenir : c'est ce « cran » de sélecteur iOS qui
-montre le passage à l'étape suivante. Un simple fondu ne le donne pas.
+**Le barillet** (`.rou`) — deux illustrations empilées dans une fenêtre qui les rogne,
+l'ancienne puis la sienne, avec un léger dépassement avant de revenir : c'est ce « cran » de
+sélecteur iOS qui montre le passage à l'étape suivante. Un simple fondu ne le donne pas.
 ⚠️ La fenêtre est un élément **interne** (`.ic`) : rogner sur `.jal` emporterait l'anneau de
 pulsation, qui déborde volontairement.
+⚠️ **LE SENS EST CONTRE-INTUITIF, ET IL A ÉTÉ ÉCRIT À L'ENVERS.** `.rou` fait 200 % de haut,
+ses deux cases 50 % chacune : à `translateY(0)` c'est la case du HAUT — l'étape **précédente** —
+qu'on voit. Le barillet part donc de `0` et roule vers `−50 %`. L'inverse était en place, et le
+résultat se voit sur la capture qu'a envoyée Pablo : la bulle du dîner affichait la **coche du
+déjeuner**. Vérifié après correction : transform final `translateY(−62px)`.
 
 **Le V vert** (`.vok`) — anneau puis coche, deux tracés décalés, `#34c759`. Même recette que
 `.vok` d'`assets/planning.js`, en petit.
@@ -857,11 +878,12 @@ l'animation se jouant par-dessus ; celles qui ne font que naviguer attendent la 
 mouvement. Vérifié au banc : appel à **< 20 ms** pour « Ajouter mon plat », navigation
 **différée** pour « Suivre la recette ».
 
-**Le bandeau de `menu.html`** — `monterBandeau(hote)` pose le même arc, **en tout petit et en
-tête de `.wrap`**, donc au-dessus des trois éléments de l'accueil. Trois choses seulement : le
-jour et la date, ce qui est validé (`3 sur 5`), et où l'on en est. Pas de titre, pas de libellé
-sous les jalons, pas de bouton — une ligne de statut, pas une quatrième carte. Un tap ouvre le
-guide en version courte.
+**L'en-tête de `menu.html`** — `monterBandeau(hote)` pose le guide **en fond d'en-tête**, en
+tête de `.wrap` donc au-dessus des trois éléments de l'accueil (forme demandée le 9 août 2026) :
+**date · arc de cercle · l'étape du moment centrée sous l'arc**. Une lueur très amortie derrière
+l'arc donne l'impression qu'il tourne *derrière* l'en-tête plutôt qu'à côté ; elle reste à peine
+perceptible, car sur une page claire et chargée un halo marqué se lit comme une tache. Pas de
+carte, pas de bouton. Un tap ouvre le guide en version courte.
 - ⚠️ Il vit dans le thème de la **page**, d'où les jetons `--nt-*` d'`assets/theme.js` : du noir
   en dur donnerait une barre noire sur un accueil blanc, et invisible en thème sombre.
 - ⚠️ **Le trait est échantillonné sur la même parabole que les pastilles.** Une courbe de Bézier
@@ -915,6 +937,14 @@ planifiée, c'est SA séquence qui doit s'ouvrir. Le module regarde l'écran ava
 discutent pas.
 
 **Pièges de mise en page, tous trouvés à l'écran et aucun par `node --check` :**
+- ⚠️ **Le sommet de l'arc est à −90°, pas −98.** Décalée de 8°, la pastille du moment tombait à
+  41 % de la largeur : tout l'écran — date, titre, bouton — est centré, elle seule ne l'était
+  pas, et ça se voit. Rayon resserré (230 → 186) et pas ouvert (17 → 21) pour que l'arc se lise
+  comme un morceau de **cercle** et non comme une ligne à peine courbée.
+- ⚠️ **`justify-content:center` sur la colonne.** Le contenu tient en quatre lignes ; aligné en
+  haut, il laissait l'arc collé au bord supérieur avec la moitié de l'écran vide en dessous.
+- ⚠️ **La lueur est centrée sur l'ARC** (≈ 37 % de la hauteur). À `top:-22%` son foyer tombait à
+  27 %, donc au-dessus des jalons : on voyait une tache lumineuse, et plus bas un arc éteint.
 - ⚠️ **Le texte se pose SOUS l'arc, il ne se centre pas dans ce qui reste.** Avec `flex:1`, la
   zone absorbait toute la hauteur libre et le titre partait au milieu de l'écran, à 300 px de
   l'arc : deux blocs qui ne se parlaient plus. Une fois le contenu réduit à quatre lignes, c'est
@@ -3209,3 +3239,24 @@ session « fil social » :*
 - Vérifié au banc : les cinq scénarios inchangés côté logique, le barillet qui se cale sur la
   bonne icône (animation `finished`, transform identité), l'appel caméra à < 20 ms et la
   navigation différée, et le bandeau en thème clair.
+
+---
+
+*Contribution session « Ma journée — thème, arc, plats » (Claude Opus, 9 août 2026, 3ᵉ passe) :*
+- 🔴 **Bug trouvé sur une capture de Pablo** : le barillet tournait **à l'envers** et la bulle du
+  moment finissait sur l'illustration de l'étape **précédente** (le dîner affichait la coche du
+  déjeuner). Le sens de `njBarillet` est inversé, et le pourquoi est écrit en §3 — c'est un piège
+  qui se retendra à la première retouche.
+- **Mode clair** : `assets/journee.js` suit désormais `assets/theme.js`. Toutes ses couleurs
+  passent par des jetons `--j-*`, le clair ne redéfinit que les jetons. Vérifié dans les deux
+  thèmes, styles calculés à l'appui (fond, encre, bouton, pastille active, creux).
+- **Arc** : sommet ramené à −90° (centrage), rayon resserré et pas ouvert pour qu'il se lise
+  comme un cercle, troisième orbite concentrique, lueur recentrée sur les jalons, colonne
+  centrée verticalement — les quatre remarques de Pablo (« centrage », « trop haut », « plus se
+  rapprocher de l'arc et de l'inspiration »).
+- **Photos détourées** : la bulle d'un repas porte le plat prévu par la planification
+  (`prevu.photo`), l'illustration au trait sinon ; repli si l'image n'arrive pas.
+- **`menu.html`** : le bandeau devient un **en-tête** — date, arc de cercle, étape sous l'arc,
+  avec la lueur du guide en fond.
+- Banc `_test-entete.html` (préfixe `_`, hors dépôt) : monte au chargement, avec heure, thème et
+  cas de figure en paramètres d'URL — c'est le seul rendu fiable dans ce navigateur (§7).

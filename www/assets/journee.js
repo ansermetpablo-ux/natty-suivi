@@ -146,6 +146,38 @@ window.NattyJournee = (function () {
     return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24">' + (ICONES[nom] || ICONES.plus) + '</svg>';
   }
 
+  /**
+   * Ce qu'on met dans une bulle : la PHOTO DÉTOURÉE du plat prévu à ce créneau
+   * quand la planification en a un, l'illustration au trait sinon.
+   *
+   * Un plat reconnaissable vaut mieux qu'un pictogramme de repas : c'est la
+   * différence entre « il y a un dîner » et « il y a CE dîner ».
+   */
+  function figure(e) {
+    var ph = e && e.prevu && e.prevu.photo;
+    if (ph) return '<img src="' + esc(ph) + '" alt="" data-repli="' + esc(e.icone || 'midi') + '">';
+    return icone(e && e.icone ? e.icone : 'plus');
+  }
+
+  /* ⚠️ Une photo qui n'arrive pas laisse l'icône cassée du navigateur AU MILIEU
+     de l'arc — c'est-à-dire à l'endroit exact que l'écran désigne. On repose
+     l'illustration à sa place. Le test `complete && !naturalWidth` couvre
+     l'échec survenu AVANT qu'on écoute l'événement, ce qui arrive avec une
+     image insérée par innerHTML (même parade que `planning.js`). */
+  function brancherPhoto(hote, e) {
+    if (!hote) return;
+    hote.querySelectorAll('img[data-repli]').forEach(function (im) {
+      function replier() {
+        if (!im.parentNode) return;
+        var d = document.createElement('span');
+        d.innerHTML = icone(im.getAttribute('data-repli'));
+        im.parentNode.replaceChild(d.firstChild, im);
+      }
+      im.addEventListener('error', replier);
+      if (im.complete && !im.naturalWidth) replier();
+    });
+  }
+
   /* ═══ 4. Le déroulé de la journée ════════════════════════
      Une liste d'étapes, dans l'ordre des heures. Chaque étape porte son heure,
      son nom, ce qu'elle propose de faire, et si elle est DÉJÀ faite — cette
@@ -309,7 +341,7 @@ window.NattyJournee = (function () {
          Le dégradé de la maquette n'est pas supprimé : il devient une LUEUR
          blanche derrière l'arc — la même composition, traduite en noir et
          blanc, où c'est la lumière qui remplace la couleur. */
-      '#njour{position:fixed;inset:0;z-index:99988;background:#000;color:#fff;',
+      '#njour{position:fixed;inset:0;z-index:99988;',
       'font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;opacity:0;',
       'transition:opacity .5s ease;overflow:hidden;-webkit-font-smoothing:antialiased}',
       '#njour.on{opacity:1}',
@@ -318,32 +350,70 @@ window.NattyJournee = (function () {
       '-webkit-tap-highlight-color:transparent;transition:transform .16s ease}',
       '#njour button:active{transform:scale(.975)}',
 
-      /* ── Le fond ────────────────────────────────────────────
-         Trois couches : une lueur haute qui tient l'arc, un halo bas plus
-         large qui décolle le texte du noir, et un voile qui referme le bas
-         pour que la barre d'action reste lisible. Rien ne bouge vite : c'est
-         une atmosphère, pas une animation. */
+      /* ── Le fond, et les deux thèmes ────────────────────────
+         Toutes les couleurs passent par des jetons `--j-*`, et il n'y a QU'UN
+         jeu de règles : le clair ne redéfinit que les jetons. Sans ça, chaque
+         retouche serait à faire deux fois, et l'un des deux thèmes finirait
+         par diverger sans que personne ne s'en aperçoive — c'est exactement ce
+         qui est arrivé aux ombres neumorphiques de `suivi.html` (§7).
+
+         ⚠️ Les jetons `--nt-*` d'`assets/theme.js` ne suffisent pas ici : cet
+         écran a des besoins qui n'existent nulle part ailleurs (une lueur, un
+         creux sur fond noir, un relief de pastille). Il lui faut les siens.
+
+         Trois couches de fond : une lueur haute qui tient l'arc, un halo bas
+         plus large qui décolle le texte, et un voile qui referme le bas pour
+         que la barre d'action reste lisible. Rien ne bouge vite : c'est une
+         atmosphère, pas une animation. */
+      '#njour{--j-bg:#000;--j-ink:#fff;--j-mut:#8b8b95;--j-mut2:#6e6e78;',
+      '--j-lueur1:rgba(255,255,255,.30);--j-lueur2:rgba(255,255,255,.13);',
+      '--j-lueur3:rgba(255,255,255,.035);--j-halo:rgba(222,225,236,.16);',
+      '--j-halo2:rgba(222,225,236,.05);--j-trait:rgba(255,255,255,.13);',
+      '--j-trait2:rgba(255,255,255,.055);--j-creux:#0a0a0c;--j-relief:#17181c;',
+      '--j-vif:#fff;--j-sur-vif:#0a0a0c;--j-anneau:rgba(255,255,255,.16);',
+      '--j-ombre:rgba(0,0,0,.7);--j-reflet:rgba(255,255,255,.055);',
+      '--j-contour:rgba(255,255,255,.07);--j-fermer:rgba(255,255,255,.07)}',
+      /* Clair — le noir devient blanc, la lueur devient une ombre douce, et la
+         pastille du moment s'inverse : encre pleine sur fond clair. */
+      ':root[data-theme="light"] #njour{--j-bg:#fff;--j-ink:#101014;--j-mut:#8a8a95;',
+      '--j-mut2:#a6a6b0;--j-lueur1:rgba(126,128,145,.16);--j-lueur2:rgba(126,128,145,.07);',
+      '--j-lueur3:rgba(126,128,145,.02);--j-halo:rgba(150,153,168,.10);',
+      '--j-halo2:rgba(150,153,168,.03);--j-trait:rgba(20,20,30,.14);',
+      '--j-trait2:rgba(20,20,30,.06);--j-creux:#eceef1;--j-relief:#f4f5f7;',
+      '--j-vif:#101014;--j-sur-vif:#fff;--j-anneau:rgba(20,20,30,.14);',
+      '--j-ombre:rgba(20,20,30,.16);--j-reflet:rgba(255,255,255,.9);',
+      '--j-contour:rgba(20,20,30,.07);--j-fermer:rgba(20,20,30,.06)}',
+
+      '#njour{background:var(--j-bg);color:var(--j-ink)}',
       '#njour .fade{position:absolute;inset:0;pointer-events:none}',
       '#njour .fade i{position:absolute;display:block;border-radius:50%}',
-      '#njour .f1{left:50%;top:-22%;width:150%;height:76%;transform:translateX(-50%);',
-      'background:radial-gradient(50% 50% at 50% 52%,rgba(255,255,255,.30) 0%,',
-      'rgba(255,255,255,.13) 34%,rgba(255,255,255,.035) 56%,rgba(255,255,255,0) 74%);',
+      /* La lueur est centrée sur l'ARC (≈ 37 % de la hauteur), pas sur le haut
+         de l'écran : à `top:-22%` son foyer tombait à 27 %, donc au-dessus des
+         jalons — on voyait une tache lumineuse et, plus bas, un arc éteint. */
+      '#njour .f1{left:50%;top:-2%;width:150%;height:78%;transform:translateX(-50%);',
+      'background:radial-gradient(50% 50% at 50% 52%,var(--j-lueur1) 0%,',
+      'var(--j-lueur2) 34%,var(--j-lueur3) 56%,transparent 74%);',
       'animation:njSouffle 9s ease-in-out infinite}',
       '#njour .f2{left:50%;top:20%;width:200%;height:74%;transform:translateX(-50%);',
-      'background:radial-gradient(50% 50% at 50% 50%,rgba(222,225,236,.16) 0%,',
-      'rgba(222,225,236,.05) 44%,rgba(255,255,255,0) 72%);',
+      'background:radial-gradient(50% 50% at 50% 50%,var(--j-halo) 0%,',
+      'var(--j-halo2) 44%,transparent 72%);',
       'animation:njSouffle 12s ease-in-out infinite reverse}',
       '#njour .f3{position:absolute;left:0;right:0;bottom:0;height:46%;border-radius:0;',
-      'background:linear-gradient(to top,#000 34%,rgba(0,0,0,0))}',
+      'background:linear-gradient(to top,var(--j-bg) 34%,transparent)}',
       '@keyframes njSouffle{0%,100%{opacity:.85;transform:translateX(-50%) scale(1)}',
       '50%{opacity:1;transform:translateX(-50%) scale(1.06)}}',
 
       /* ── La colonne ─────────────────────────────────────────
-         Même gabarit que le reste de l'app (480 px), et la place de la barre
-         d'action réservée en bas : un contenu qui passe dessous se lit mal
-         et se tape encore plus mal. */
+         Même gabarit que le reste de l'app, et la place de la barre d'action
+         réservée en bas : un contenu qui passe dessous se lit mal et se tape
+         encore plus mal.
+         ⚠️ `justify-content:center` : le contenu est court, et top-aligné il
+         laissait l'arc collé au bord haut avec la moitié de l'écran vide en
+         dessous — « problème de centrage, trop haut ». Le groupe arc + texte
+         se centre maintenant dans la place disponible. */
       '#njour .col{position:absolute;inset:0;display:flex;flex-direction:column;',
-      'align-items:center;padding:calc(20px + env(safe-area-inset-top,0px)) 22px ',
+      'align-items:center;justify-content:center;',
+      'padding:calc(20px + env(safe-area-inset-top,0px)) 22px ',
       'calc(146px + env(safe-area-inset-bottom,0px));overflow-y:auto;',
       '-webkit-overflow-scrolling:touch;text-align:center}',
 
@@ -375,9 +445,10 @@ window.NattyJournee = (function () {
       'overflow:visible;fill:none;stroke-linecap:round;',
       '-webkit-mask-image:radial-gradient(62% 78% at 41% 48%,#000 38%,rgba(0,0,0,.35) 72%,transparent 100%);',
       'mask-image:radial-gradient(62% 78% at 41% 48%,#000 38%,rgba(0,0,0,.35) 72%,transparent 100%)}',
-      '#njour .arc svg.orbite path{stroke:rgba(255,255,255,.13);stroke-width:1;',
+      '#njour .arc svg.orbite path{stroke:var(--j-trait);stroke-width:1;',
       'stroke-dasharray:900;stroke-dashoffset:900;animation:njTrace 1.6s cubic-bezier(.22,1,.36,1) forwards}',
-      '#njour .arc svg.orbite path.b{stroke:rgba(255,255,255,.055);animation-delay:.16s}',
+      '#njour .arc svg.orbite path.b{stroke:var(--j-trait2);animation-delay:.16s}',
+      '#njour .arc svg.orbite path.c{stroke:var(--j-trait2);animation-delay:.3s;opacity:.6}',
       '@keyframes njTrace{to{stroke-dashoffset:0}}',
 
       '#njour .jal{position:absolute;border-radius:50%;display:flex;align-items:center;',
@@ -401,8 +472,14 @@ window.NattyJournee = (function () {
       '#njour .jal .rou{position:absolute;left:0;right:0;top:0;height:200%;',
       'display:flex;flex-direction:column}',
       '#njour .jal .rou > *{height:50%;display:flex;align-items:center;justify-content:center}',
+      /* ⚠️ LE SENS. `.rou` fait 200 % de haut, ses deux cases 50 % chacune : à
+         `translateY(0)` c'est la case du HAUT — l'étape précédente — qu'on voit
+         dans la fenêtre. Le barillet part donc de 0 et roule vers −50 %.
+         L'inverse avait été écrit, et le résultat était visible sur la capture
+         de Pablo : la bulle du dîner affichait la coche du déjeuner, c'est-à-
+         dire qu'elle finissait sur l'étape d'avant. */
       '#njour .jal.actif .rou{animation:njBarillet .82s cubic-bezier(.2,1.24,.32,1) both}',
-      '@keyframes njBarillet{from{transform:translateY(-50%)}to{transform:translateY(0)}}',
+      '@keyframes njBarillet{from{transform:translateY(0)}to{transform:translateY(-50%)}}',
 
       /* ── La validation ──────────────────────────────────────
          Le V vert d'Apple : l'anneau se dessine, puis la coche. Deux tracés
@@ -414,30 +491,36 @@ window.NattyJournee = (function () {
       '#njour .jal .vok .ck{stroke:#34c759;stroke-dasharray:20;stroke-dashoffset:20;',
       'animation:njTrace .34s cubic-bezier(.22,1,.36,1) .34s forwards}',
 
-      /* À venir — le creux neumorphique et le « + » de la maquette : une
-         place réservée, pas encore un événement. */
-      '#njour .jal.futur{background:#0a0a0c;color:rgba(255,255,255,.5);',
-      'box-shadow:inset 1.5px 1.5px 4px rgba(0,0,0,.9),',
-      'inset -1px -1px 3px rgba(255,255,255,.055),0 0 0 1px rgba(255,255,255,.07)}',
+      /* À venir — un creux neumorphique, qui porte DÉJÀ l'illustration de son
+         étape. Le « + » de la maquette d'origine ne disait rien de ce qui
+         vient ; l'icône, si — on voit sa journée, pas une file d'attente. */
+      '#njour .jal.futur{background:var(--j-creux);color:var(--j-mut);',
+      'box-shadow:inset 1.5px 1.5px 4px var(--j-ombre),',
+      'inset -1px -1px 3px var(--j-reflet),0 0 0 1px var(--j-contour)}',
       /* Fait — relief plein, mais discret : c'est derrière soi. */
-      '#njour .jal.passe{background:#17181c;color:rgba(255,255,255,.62);',
-      'box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 3px 10px rgba(0,0,0,.7)}',
-      /* Manqué — ni creux ni relief : un contour interrompu. Le montrer sans
-         le cocher est plus honnête que de l'effacer. */
-      '#njour .jal.manque{background:#0a0a0c;color:rgba(255,255,255,.32);',
-      'box-shadow:0 0 0 1px rgba(255,255,255,.14)}',
-      /* Maintenant — la pastille blanche de la maquette, sa lueur comprise. */
-      '#njour .jal.actif{background:#fff;color:#0a0a0c;',
-      'box-shadow:0 0 44px rgba(255,255,255,.42),0 0 0 1px rgba(255,255,255,.9),',
-      'inset 0 -2px 4px rgba(140,142,152,.34),inset 0 2px 3px rgba(255,255,255,.9)}',
+      '#njour .jal.passe{background:var(--j-relief);color:var(--j-mut);',
+      'box-shadow:inset 0 1px 0 var(--j-reflet),0 3px 10px var(--j-ombre)}',
+      /* Manqué — ni creux ni relief : un contour seul. Le montrer sans le
+         cocher est plus honnête que de l'effacer. */
+      '#njour .jal.manque{background:var(--j-creux);color:var(--j-mut2);',
+      'box-shadow:0 0 0 1px var(--j-trait)}',
+      /* Maintenant — la pastille pleine de la maquette, sa lueur comprise. */
+      '#njour .jal.actif{background:var(--j-vif);color:var(--j-sur-vif);',
+      'box-shadow:0 0 44px var(--j-lueur1),0 0 0 1px var(--j-vif),',
+      'inset 0 -2px 4px rgba(140,142,152,.28),inset 0 2px 3px var(--j-reflet)}',
       '#njour .jal.actif::after{content:"";position:absolute;inset:-14px;border-radius:50%;',
-      'border:1px solid rgba(255,255,255,.16);animation:njPulse 3.4s ease-in-out infinite}',
+      'border:1px solid var(--j-anneau);animation:njPulse 3.4s ease-in-out infinite}',
       '@keyframes njPulse{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(1.13);opacity:0}}',
+
+      /* La photo du plat prévu, quand il y en a une : le sujet est détouré sur
+         fond transparent, donc `contain` et jamais `cover` — un plat rogné aux
+         bords dans une pastille de 62 px ne se reconnaît plus. */
+      '#njour .jal img{width:74%;height:74%;object-fit:contain;display:block}',
 
       '#njour .jal .h{position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);',
       'font-size:9.5px;font-weight:700;letter-spacing:.4px;white-space:nowrap;',
-      'color:rgba(255,255,255,.42)}',
-      '#njour .jal.actif .h{font-size:10.5px;color:#fff;top:calc(100% + 10px)}',
+      'color:var(--j-mut2)}',
+      '#njour .jal.actif .h{font-size:10.5px;color:var(--j-ink);top:calc(100% + 10px)}',
 
       /* ── Le bloc central ────────────────────────────────────
          Il prend la place qui reste sous l'arc et se centre dedans. Sans ça,
@@ -467,14 +550,14 @@ window.NattyJournee = (function () {
          demande une. Ne restent que le jour, la date, l'étape et le bouton —
          les macros et le détail se lisent sur l'écran Suivi, qui est fait pour
          ça. Les règles `.kick` / `.sous` servent encore, en tout petit. */
-      '#njour .kick{font-size:12.5px;font-weight:600;color:#8b8b95;letter-spacing:.2px}',
-      '#njour .kick b{color:#e7e7ec;font-weight:700}',
+      '#njour .kick{font-size:12.5px;font-weight:600;color:var(--j-mut);letter-spacing:.2px}',
+      '#njour .kick b{color:var(--j-ink);font-weight:700}',
       '#njour h1{font-size:44px;font-weight:900;letter-spacing:-1.8px;line-height:1.04;',
       'margin:12px 0 0}',
       '#njour h1 span{display:inline-block;opacity:0;',
       'animation:njGlide .68s cubic-bezier(.22,1,.36,1) forwards}',
       '#njour h1.p{font-size:34px;letter-spacing:-1.2px}',
-      '#njour .sous{font-size:14px;color:#8b8b95;line-height:1.5;margin-top:12px;',
+      '#njour .sous{font-size:14px;color:var(--j-mut);line-height:1.5;margin-top:12px;',
       'max-width:320px;margin-left:auto;margin-right:auto}',
 
       /* ── Entrées ────────────────────────────────────────────
@@ -494,16 +577,16 @@ window.NattyJournee = (function () {
       '#njCta{position:absolute;left:0;right:0;bottom:0;z-index:6;',
       'padding:14px 22px calc(20px + env(safe-area-inset-bottom,0px));display:flex;',
       'flex-direction:column;gap:9px;align-items:stretch;pointer-events:none;',
-      'background:linear-gradient(to top,#000 60%,rgba(0,0,0,0))}',
+      'background:linear-gradient(to top,var(--j-bg) 60%,transparent)}',
       '#njCta > *{pointer-events:auto;max-width:436px;width:100%;margin:0 auto;',
       'animation:njGlide .42s cubic-bezier(.22,1,.36,1) .26s backwards}',
-      '#njour .b1{background:#f2f2f5;color:#101014;border-radius:22px;padding:18px;',
+      '#njour .b1{background:var(--j-vif);color:var(--j-sur-vif);border-radius:22px;padding:18px;',
       'font-size:16.5px;font-weight:800;letter-spacing:-.2px;',
-      'box-shadow:0 10px 30px rgba(255,255,255,.10)}',
-      '#njour .b2{background:#17181c;color:#e9e9ee;border-radius:22px;padding:15px;',
-      'font-size:14.5px;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.09),',
-      '0 8px 22px rgba(0,0,0,.6)}',
-      '#njour .b3{background:none;color:#7c7c86;padding:12px;font-size:14px;font-weight:600}',
+      'box-shadow:0 10px 30px var(--j-ombre)}',
+      '#njour .b2{background:var(--j-relief);color:var(--j-ink);border-radius:22px;padding:15px;',
+      'font-size:14.5px;font-weight:700;box-shadow:inset 0 1px 0 var(--j-reflet),',
+      '0 8px 22px var(--j-ombre)}',
+      '#njour .b3{background:none;color:var(--j-mut);padding:12px;font-size:14px;font-weight:600}',
 
       /* ── L'envol ────────────────────────────────────────────
          Au clic, la pastille blanche du moment s'ouvre et prend tout l'écran :
@@ -513,7 +596,7 @@ window.NattyJournee = (function () {
          ⚠️ Il ne dure que 380 ms, et pour une bonne raison : c'est du temps
          volé à ce que l'utilisateur a demandé. */
       '#njour .envol{position:absolute;width:58px;height:58px;border-radius:50%;',
-      'background:#fff;transform:translate(-50%,-50%) scale(1);z-index:9;',
+      'background:var(--j-vif);transform:translate(-50%,-50%) scale(1);z-index:9;',
       'animation:njEnvol .38s cubic-bezier(.5,0,.9,.6) forwards;pointer-events:none}',
       '@keyframes njEnvol{to{transform:translate(-50%,-50%) scale(26);opacity:.92}}',
       '#njour.part .col,#njour.part #njCta,#njour.part #njFerme{',
@@ -523,8 +606,8 @@ window.NattyJournee = (function () {
       /* Le bouton de fermeture. Une cinématique qui s'invite doit pouvoir se
          refuser d'un geste, sans lire les boutons du bas. */
       '#njFerme{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;',
-      'z-index:8;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.07);',
-      'color:#c9c9d2;font-size:17px;line-height:1;display:flex;align-items:center;',
+      'z-index:8;width:34px;height:34px;border-radius:50%;background:var(--j-fermer);',
+      'color:var(--j-mut);font-size:17px;line-height:1;display:flex;align-items:center;',
       'justify-content:center;padding-bottom:2px}',
 
       /* Petit écran : l'arc rétrécit plutôt que de pousser le titre hors vue.
@@ -597,17 +680,25 @@ window.NattyJournee = (function () {
   /* ═══ 7. L'arc ═══════════════════════════════════════════
      Géométrie : un cercle dont le sommet tombe dans le cadre, les jalons
      répartis tous les 22°. Le jalon courant est posé un peu à GAUCHE du
-     sommet (−98°), comme dans la maquette : ce qui vient arrive par la
-     droite, passe au sommet quand c'est son heure, et sort par la gauche.
-     C'est le mouvement de la journée, et il n'a pas besoin d'être expliqué. */
+     sommet : ce qui vient arrive par la droite, passe au sommet quand c'est
+     son heure, et sort par la gauche. C'est le mouvement de la journée, et il
+     n'a pas besoin d'être expliqué. */
 
   /* ⚠️ LE PAS ET LE NOMBRE DE JALONS SE RÈGLENT ENSEMBLE. À 22° et quatre
      jalons de chaque côté, l'arc balayait ±88° : le trait de l'orbite
      redescendait le long des deux bords jusque DERRIÈRE le titre, et les
-     jalons extrêmes sortaient du cadre par le bas. Mesuré à 375 px. À 17° et
-     trois jalons, tout tient dans la bande haute, et ce qui part à gauche sort
-     par le coin — ce qui est justement le mouvement recherché. */
-  var CX = 180, CY = 352, R = 230, PAS = 17, SOMMET = -98;
+     jalons extrêmes sortaient du cadre par le bas. Mesuré à 375 px.
+
+     ⚠️ ET LE SOMMET EST À −90°, PAS −98. Décalée de 8°, la pastille du moment
+     tombait à 41 % de la largeur : tout l'écran — titre, date, bouton — est
+     centré, elle seule ne l'était pas, et ça se voyait (« problème de
+     centrage »). Au sommet exact, le passé descend à gauche et l'à-venir à
+     droite, symétriquement.
+
+     Le rayon a été resserré (230 → 186) et le pas ouvert (17 → 21) : l'arc se
+     lit maintenant comme un morceau de CERCLE, et non comme une ligne à peine
+     courbée — c'est ce que demande l'inspiration. */
+  var CX = 180, CY = 300, R = 186, PAS = 21, SOMMET = -90;
 
   function pos(delta) {
     var a = (SOMMET + delta * PAS) * Math.PI / 180;
@@ -616,7 +707,7 @@ window.NattyJournee = (function () {
 
   function cheminOrbite(r) {
     var p0 = null, d = '';
-    for (var t = -154; t <= -42; t += 4) {
+    for (var t = -160; t <= -20; t += 4) {
       var a = t * Math.PI / 180;
       var x = CX + r * Math.cos(a), y = CY + r * Math.sin(a);
       d += (p0 ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
@@ -626,9 +717,12 @@ window.NattyJournee = (function () {
   }
 
   function monterArc(hote) {
+    // Trois orbites concentriques plutôt qu'une : c'est ce qui donne à
+    // l'inspiration sa profondeur — un fil porteur, et deux échos autour.
     var h = '<div class="arc" id="njArc"><svg class="orbite" viewBox="0 0 360 224" preserveAspectRatio="none">'
       + '<path d="' + cheminOrbite(R) + '"/>'
-      + '<path class="b" d="' + cheminOrbite(R - 17) + '"/></svg>';
+      + '<path class="b" d="' + cheminOrbite(R - 16) + '"/>'
+      + '<path class="c" d="' + cheminOrbite(R + 22) + '"/></svg>';
     etat.etapes.forEach(function (e, i) {
       h += '<div class="jal" data-i="' + i + '"><span class="ic"></span>'
         + '<span class="h">' + esc(e.libelle || libHeure(e.h)) + '</span></div>';
@@ -651,8 +745,8 @@ window.NattyJournee = (function () {
       var i = +el.getAttribute('data-i'), e = etat.etapes[i], d = i - cur;
       if (Math.abs(d) > VISIBLES) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; }
       var p = pos(d), ad = Math.min(Math.abs(d), VISIBLES);
-      var taille = [58, 40, 32, 25][ad];
-      var opac = [1, .6, .4, .22][ad];
+      var taille = [62, 42, 33, 26][ad];
+      var opac = [1, .62, .42, .24][ad];
 
       el.style.left = p.x + 'px';
       el.style.top = p.y + 'px';
@@ -673,18 +767,23 @@ window.NattyJournee = (function () {
         el.setAttribute('data-role', role);
         var ic = el.querySelector('.ic');
         if (role === 'actif') {
-          // Le barillet : l'icône précédente, puis la sienne, dans une fenêtre
-          // qui les rogne. C'est ce cran qui montre « on passe à celle-là ».
+          // Le barillet : l'illustration précédente, puis la sienne, dans une
+          // fenêtre qui les rogne. C'est ce cran qui montre « on y est ».
           var avant = etat.etapes[i - 1];
           ic.innerHTML = '<span class="rou"><span>'
-            + icone(avant ? (avant.fait ? 'coche' : avant.icone) : 'plus') + '</span>'
-            + '<span>' + icone(e.icone) + '</span></span>';
+            + (avant ? (avant.fait ? icone('coche') : figure(avant)) : icone('plus')) + '</span>'
+            + '<span>' + figure(e) + '</span></span>';
+          brancherPhoto(ic, e);
         } else if (role === 'passe') {
           ic.innerHTML = '<svg class="vok" viewBox="0 0 24 24">'
             + '<circle class="rd" cx="12" cy="12" r="10.2"/>'
             + '<path class="ck" d="M7.4 12.3 10.6 15.6 16.8 8.8"/></svg>';
         } else {
-          ic.innerHTML = icone('plus');
+          // ⚠️ Plus de « + » : chaque bulle porte l'illustration de SON étape.
+          // Un « + » ne dit rien de ce qui vient — on voit sa journée, pas une
+          // file d'attente. (Demande de Pablo, 9 août 2026.)
+          ic.innerHTML = figure(e);
+          brancherPhoto(ic, e);
         }
       }
 
@@ -953,45 +1052,63 @@ window.NattyJournee = (function () {
     var s = document.createElement('style');
     s.id = 'njband-css';
     s.textContent = [
-      /* Pas d'animation d'entrée : une ligne de statut en tête de page n'a rien
-         à annoncer, et un fondu de plus est exactement ce qu'on cherche à
-         retirer de cet écran. */
-      '.njb{display:block;width:100%;border:none;background:none;padding:2px 0 10px;',
+      /* Pas d'animation d'entrée : un en-tête n'a rien à annoncer, et un fondu
+         de plus est exactement ce qu'on cherche à retirer de cet écran. */
+      '.njb{display:block;width:100%;border:none;background:none;padding:4px 0 14px;',
       'font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;',
-      'text-align:left}',
-      '.njb:active{opacity:.6}',
+      'text-align:center;position:relative}',
+      '.njb:active{opacity:.65}',
+
+      /* La lueur du guide, en sourdine — c'est ce qui donne l’impression
+         qu’il tourne DERRIÈRE l’en-tête plutôt qu’à côté. Elle reste
+         volontairement à peine perceptible : sur une page claire et chargée,
+         un halo marqué se lirait comme une tache. */
+      '.njb::before{content:"";position:absolute;left:50%;top:16px;width:230px;height:130px;',
+      'transform:translateX(-50%);border-radius:50%;pointer-events:none;',
+      'background:radial-gradient(50% 50% at 50% 50%,var(--nt-ombre,rgba(20,20,30,.14)) 0%,',
+      'transparent 70%);opacity:.5}',
+
       '.njb-l{display:flex;align-items:baseline;justify-content:space-between;gap:10px;',
-      'padding:0 2px 8px}',
-      '.njb-d{font-size:12px;font-weight:600;color:var(--nt-muted,#9a9aaa);letter-spacing:.1px}',
+      'padding:0 2px 2px;position:relative}',
+      '.njb-d{font-size:12.5px;font-weight:600;color:var(--nt-muted,#9a9aaa);letter-spacing:.1px}',
       '.njb-d b{color:var(--nt-ink,#101014);font-weight:700}',
       '.njb-n{font-size:11px;font-weight:700;color:var(--nt-muted,#9a9aaa);flex-shrink:0}',
-      /* L'arc est TRÈS plat — 34 px de haut pour 100 % de large. Une vraie
-         courbe demanderait de la hauteur, et la hauteur est exactement ce que
-         cette page n'a pas à donner. */
-      '.njb-arc{position:relative;height:42px;width:100%}',
+
+      '.njb-arc{position:relative;height:78px;width:100%;margin-top:2px}',
       '.njb-arc svg{position:absolute;inset:0;width:100%;height:100%;fill:none;',
       'stroke:var(--nt-line,#e8e8ee);stroke-width:1;stroke-linecap:round}',
+      '.njb-arc svg .b{opacity:.45}',
       '.njb-p{position:absolute;transform:translate(-50%,-50%);border-radius:50%;',
       'display:flex;align-items:center;justify-content:center;background:var(--nt-bg,#fff)}',
-      '.njb-p svg{position:static;width:9px;height:9px;stroke-width:2.6;stroke:currentColor}',
-      /* Fait : le vert de validation, celui des calendriers de l'app. */
-      '.njb-p.ok{width:15px;height:15px;background:#34c759;color:#fff;',
-      'box-shadow:0 1px 4px rgba(52,199,89,.4)}',
-      /* Maintenant : plein encre, avec un anneau qui l'isole du trait. */
-      '.njb-p.now{width:19px;height:19px;background:var(--nt-ink,#101014);',
-      'box-shadow:0 0 0 3px var(--nt-bg,#fff),0 2px 7px var(--nt-ombre,rgba(20,20,30,.2))}',
-      '.njb-p.now i{width:5px;height:5px;border-radius:50%;background:var(--nt-on-ink,#fff)}',
-      /* À venir : un creux minuscule. */
-      '.njb-p.next{width:9px;height:9px;box-shadow:inset 0 0 0 1.5px var(--nt-line,#e8e8ee)}',
-      '.njb-p.miss{width:9px;height:9px;box-shadow:inset 0 0 0 1.5px var(--nt-line,#e8e8ee);',
-      'opacity:.5}'
+      '.njb-p svg{position:static;width:52%;height:52%;stroke-width:2;stroke:currentColor;fill:none;',
+      'stroke-linecap:round;stroke-linejoin:round}',
+      '.njb-p img{width:74%;height:74%;object-fit:contain}',
+      /* Fait : le vert de validation, celui des calendriers de l’app. */
+      '.njb-p.ok{width:19px;height:19px;background:#34c759;color:#fff;',
+      'box-shadow:0 1px 5px rgba(52,199,89,.38)}',
+      /* Maintenant : pleine encre, l’illustration ou la photo du plat prévu. */
+      '.njb-p.now{width:34px;height:34px;background:var(--nt-ink,#101014);',
+      'color:var(--nt-on-ink,#fff);',
+      'box-shadow:0 0 0 4px var(--nt-bg,#fff),0 3px 12px var(--nt-ombre,rgba(20,20,30,.22))}',
+      /* À venir : un creux, avec DÉJÀ son illustration. */
+      '.njb-p.next,.njb-p.miss{width:22px;height:22px;color:var(--nt-muted,#9a9aaa);',
+      'box-shadow:inset 0 0 0 1.5px var(--nt-line,#e8e8ee)}',
+      '.njb-p.miss{opacity:.5}',
+
+      '.njb-e{font-size:15.5px;font-weight:800;letter-spacing:-.3px;color:var(--nt-ink,#101014);',
+      'margin-top:2px}',
+      '.njb-e span{color:var(--nt-muted,#9a9aaa);font-weight:600}'
     ].join('');
     document.head.appendChild(s);
   }
 
   /**
-   * Monte le bandeau dans `hote`. Sans étape à montrer, il ne monte RIEN —
-   * une ligne vide en tête de page se lit comme un chargement qui a échoué.
+   * Monte l'en-tête dans `hote`, en première position.
+   *
+   * Ce n'est pas une carte de plus : c'est le guide lui-même, posé en fond
+   * d'en-tête — date, arc de cercle, et l'étape du moment sous l'arc (demande
+   * de Pablo, 9 août 2026). Sans étape à montrer, il ne monte RIEN : une ligne
+   * vide en tête de page se lit comme un chargement qui a échoué.
    * @param {Element} hote
    */
   async function monterBandeau(hote) {
@@ -1002,48 +1119,56 @@ window.NattyJournee = (function () {
 
     cssBandeau();
     // ⚠️ Journée bouclée : AUCUN jalon « en cours ». `courante()` rend la
-    // dernière étape faute de mieux, et le bandeau posait donc une pastille
-    // noire « c'est maintenant » sur quelque chose de déjà coché.
+    // dernière étape faute de mieux, et l'en-tête posait donc une pastille
+    // pleine « c'est maintenant » sur une étape déjà cochée.
     var etapes = d.etapes, h = hMaintenant();
-    var cur = toutFait(etapes) ? -1 : courante(etapes);
+    var fini = toutFait(etapes);
+    var cur = fini ? -1 : courante(etapes);
     var faits = etapes.filter(function (e) { return e.fait; }).length;
-    var now = new Date();
 
-    /* Une corde très plate : les jalons se répartissent sur la largeur, la
-       courbe ne sert qu'à dire « c'est un parcours », pas à porter la mesure.
+    /* L'arc. Les jalons se répartissent sur la largeur, la hauteur donne la
+       courbure — assez marquée pour qu'on lise un morceau de cercle, ce que la
+       première version (34 px, presque plate) ne donnait pas.
 
        ⚠️ LE TRAIT EST ÉCHANTILLONNÉ SUR LA MÊME PARABOLE QUE LES PASTILLES.
        Une courbe de Bézier tracée de la première à la dernière ne passe PAS
-       par les points intermédiaires : mesurée, elle coupait 3,4 px sous la
-       pastille du moment, et sur 42 px de haut ça se voit — les jalons avaient
-       l'air posés à côté de leur propre fil. */
+       par les points du milieu : mesurée, elle coupait 3,4 px sous la pastille
+       du moment, et les jalons avaient l'air posés à côté de leur propre fil. */
     var n = etapes.length;
-    function courbeY(x) { var t = (x - 50) / 50; return 40 + t * t * 46; }
-    var xs = etapes.map(function (e, i) { return n === 1 ? 50 : (7 + i * (86 / (n - 1))); });
-    var ys = xs.map(courbeY);
-    var trait = '';
-    for (var t = 5; t <= 95; t += 2.5) {
+    function courbeY(x) { var t = (x - 50) / 50; return 27 + t * t * 52; }
+    var xs = etapes.map(function (e, i) { return n === 1 ? 50 : (8 + i * (84 / (n - 1))); });
+    var trait = '', trait2 = '';
+    for (var t = 6; t <= 94; t += 2) {
       trait += (trait ? 'L' : 'M') + t.toFixed(1) + ' ' + courbeY(t).toFixed(1);
+      trait2 += (trait2 ? 'L' : 'M') + t.toFixed(1) + ' ' + (courbeY(t) + 13).toFixed(1);
     }
+
+    var e0 = fini ? null : etapes[cur];
 
     var b = document.createElement('button');
     b.type = 'button';
     b.className = 'njb';
     b.setAttribute('aria-label', 'Ma journée');
-    b.innerHTML = '<div class="njb-l"><div class="njb-d">' + jourEtDate(now) + '</div>'
+    b.innerHTML = '<div class="njb-l"><div class="njb-d">' + jourEtDate() + '</div>'
       + '<div class="njb-n">' + faits + ' sur ' + n + '</div></div>'
       + '<div class="njb-arc"><svg viewBox="0 0 100 100" preserveAspectRatio="none">'
-      + '<path d="' + trait + '"/></svg>'
+      + '<path d="' + trait + '"/><path class="b" d="' + trait2 + '"/></svg>'
       + etapes.map(function (e, i) {
           var role = (i === cur) ? 'now'
             : (e.fait ? 'ok' : (e.h < h - FENETRE_H ? 'miss' : 'next'));
+          var dedans = role === 'ok'
+            ? '<svg viewBox="0 0 24 24"><path d="M6 12.4 10.2 16.6 18 7.8"/></svg>'
+            : figure(e);
           return '<span class="njb-p ' + role + '" style="left:' + xs[i].toFixed(1)
-            + '%;top:' + ys[i].toFixed(1) + '%">'
-            + (role === 'ok' ? '<svg viewBox="0 0 24 24"><path d="M6 12.4 10.2 16.6 18 7.8"/></svg>'
-               : (role === 'now' ? '<i></i>' : '')) + '</span>';
+            + '%;top:' + courbeY(xs[i]).toFixed(1) + '%">' + dedans + '</span>';
         }).join('')
+      + '</div>'
+      + '<div class="njb-e">' + (fini
+          ? 'Journée complète'
+          : esc(e0.nom) + ' <span>· ' + esc(e0.libelle || libHeure(e0.h)) + '</span>')
       + '</div>';
 
+    brancherPhoto(b, null);
     b.addEventListener('click', function () { ouvrir({ court: true }); });
     hote.insertBefore(b, hote.firstChild);
     return b;
