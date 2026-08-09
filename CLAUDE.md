@@ -1304,6 +1304,23 @@ Onglet « Social » de la nav, **à la place de Coaching** (qui n'est pas suppri
 reste accessible par sa carte dans `menu.html`). `social.js` porte les données, `social.html`
 le rendu — même découpage que `reco.js` / `repas.html`.
 
+**En haut de l'écran, avant le fil : « Découvrir »** (août 2026) — trois rangées servies par
+`assets/decouverte.js` (cuisines du monde, envies, sélection du jour). Elles vivent **hors de
+`#fil`** et se rendent **avant** que la moindre requête ne parte : le catalogue est embarqué
+dans l'app, le faire patienter derrière le fil c'était cinq secondes d'écran vide sur un
+contenu déjà prêt — et il disparaissait complètement quand personne n'avait rien publié,
+c'est-à-dire au moment où l'écran avait le plus besoin de quelque chose à montrer. La recherche
+fouille les deux : chercher « tofu » et ne rien trouver alors que six plats du monde en
+contiennent ferait passer la barre pour cassée.
+
+**Illustrations** — un jeu de tracés (`ILLU`, dans la page) posé sur les titres de section par
+`poserIcones()`, plus une grande assiette-globe pour l'état vide et une assiette sous l'emoji
+des plats sans photo. Du trait sur `currentColor`, jamais d'aplat : le même dessin sert dans
+les deux thèmes, sans pendant à maintenir (règle 33).
+> ⚠️ L'assiette de l'état vide porte un couteau et une fourchette, et ce n'est pas décoratif :
+> sans eux, le cercle et ses méridiens se lisaient comme un globe surmonté d'ondes wifi
+> (constaté à l'écran sur la première version).
+
 **Source du fil** : la table `meals` elle-même, `user_id=neq.<moi>`, 150 dernières lignes.
 Aucune table de posts : un plat enregistré depuis le bouton `+` est *déjà* un post. Les macros
 sont recalculées côté client par `Natty.calcMac` (les colonnes `calories`/`proteins_g`/… de
@@ -1363,6 +1380,79 @@ où une table disparaîtrait, mais n'est plus le chemin normal.
 
 ⚠️ Tant que `membre_prefs` n'existe pas, **tous** les repas enregistrés sont visibles par les
 autres membres.
+
+### `assets/decouverte.js` — « Découvrir » : 93 plats du monde, et la visionneuse plein écran
+Trois rangées **en haut de `social.html`**, plus l'écran qui s'ouvre quand on tape un plat.
+Chargé par `social.html` (+ `www/`), avec `assets/liste.js` juste derrière. Dépend
+d'`assets/core.js`.
+
+**Le catalogue** — 19 cuisines (Brésil, Chine, Corée, Éthiopie, Géorgie, Grèce, Inde, Iran,
+Italie, Japon, Liban, Maroc, Mexique, Pérou, Philippines, Sénégal, Thaïlande, Turquie,
+Vietnam), 93 plats, chacun avec sa photo, une description, ses
+étiquettes, 5 à 6 **ingrédients clés** et une **note « côté nutrition »**. Les photos viennent
+de `design/images menu/` (fournies par Pablo, août 2026), recompressées dans
+`assets/img/decouverte/` en deux tailles : `<slug>.jpg` (860 px, q70) pour le plein écran et
+`<slug>-t.jpg` (400 px) pour les vignettes — **10,3 Mo au total**, contre 18 Mo de sources.
+⚠️ **L'ordre de `CUISINES` est alphabétique par nom de pays français**, et la rangée du haut
+de `social.html` le rend tel quel : une cuisine ajoutée à la fin donnerait une rangée triée
+« sauf les dernières », ce qui se lit comme un bug.
+- ⚠️ **Trois fichiers source sont volontairement écartés**, et il ne faut pas les « rattraper » :
+  `ind tandoorie agneau couleur inspi.jpg` (variante colorimétrique du tandoori),
+  `thai curry rouge.jpg` (fichier **strictement identique** à `thai curry rouge legume.jpg`) et
+  `peru ceviche.jpg` (capture d'une fiche recette, avec le texte incrusté dans l'image).
+- ⚠️ **`bre Feijoada.html` et son dossier `bre Feijoada_files/` sont ignorés par git** : c'est
+  la sauvegarde complète d'une page web (28 Mo de JS et de CSS d'un site tiers), pas une
+  source de design. Seule la photo qu'elle contenait a été extraite, sous le nom
+  `bre feijoada.jpg`, et c'est elle qui est versionnée.
+  La liste de correspondance nom de fichier → slug vit dans le message du commit
+  d'intégration ; les slugs, eux, sont dans `CUISINES`.
+
+> ⚠️ **AUCUNE MACRO N'EST ANNONCÉE, ET C'EST UNE DÉCISION.** Écrire « 620 kcal » sous un pad
+> thaï supposerait une recette et des grammages que personne n'a pesés : ce serait un chiffre
+> inventé, exactement ce que le reste de l'app refuse (règle 12, et le « un manque visible vaut
+> mieux qu'un total silencieusement faux » d'`assets/ajout.js`). On montre donc ce qui est vrai
+> — les ingrédients — et une phrase factuelle sur ce que le plat apporte. Le jour où ces plats
+> deviendront des recettes avec des grammages, `Natty.calcMac` fera le calcul, sans rien
+> changer au reste.
+
+**La visionneuse** (`ouvrir({plats, index, titre})`) — photo plein cadre, jauge de progression
+en segments, et le plat suivant **d'un geste latéral**. Tout est préfixé `nd-` et scellé sous
+`#ndec`, z-index 880 (au-dessus de la nav et des pages de `social.html`, sous `assets/ajout.js`).
+- ⚠️ **Le geste est un `scroll-snap-type:x mandatory`, pas un suivi de pointeur maison.** Le jeu
+  « Tier list » de `narration.html` a coûté une session entière à `setPointerCapture` et ses
+  gestes inachevés (§7) : ici le navigateur fait tout — inertie, arrêt sur une diapositive,
+  clavier — et il n'y a aucun état à tenir. La position est relue dans un `scroll` amorti par
+  `requestAnimationFrame`.
+- ⚠️ **Le positionnement initial se fait APRÈS `classList.add('on')`**, sans animation : tant
+  que `#ndec` est en `display:none`, `clientWidth` vaut 0, et un `scrollTo` calculé là-dessus
+  ramène à la première diapositive quel que soit le plat sur lequel on a tapé.
+- ⚠️ **`max-height:58%` sur `.nd-body`, ET C'EST LE RÉGLAGE CENTRAL.** La fiche complète fait
+  deux fois la hauteur d'un iPhone : affichée d'un bloc, elle recouvrait la photo entière —
+  donc la seule raison d'être d'un plein écran. Au-delà, le bloc défile sur lui-même.
+- ⚠️⚠️ **LE VERRE DÉPOLI EST NOIR, PAS BLANC.** Première version en
+  `rgba(255,255,255,.16)` + texte blanc : impeccable sur une photo sombre,
+  **littéralement invisible** sur une photo claire — la pastille « 🇻🇳 Vietnam » du phở
+  s'affichait vide, un rectangle flou sans texte (vu à l'écran, pas par `node --check`).
+  Un voile clair sous du texte blanc n'a de contraste que par accident, selon le plat
+  photographié. Le noir fonctionne sur les 93.
+- ⚠️ **La visionneuse est NOIRE dans les deux thèmes**, comme `assets/ajout.js` et
+  `assets/planning.js` : le fond n'est pas une surface d'interface, c'est le bord de l'image.
+  Ne pas « corriger » ses `#fff`. Sur écran large, la colonne reste bornée à `--col` — les
+  photos sont en portrait, les étirer les rognerait aux deux tiers.
+- L'indice « Glissez → » n'apparaît qu'une fois (`natty_decouverte_geste`) et s'efface au
+  premier glissement. Il est dans le **tiers haut** : centré, il tombait pile sur le nom du
+  plat, puisque la fiche occupe le bas de l'écran.
+
+**Le seul geste qui écrit quelque chose** : les pastilles d'ingrédients et « Tout ajouter à mes
+courses » passent par `NattyListe.basculerExtra` — **la même clé localStorage** que les aliments
+à privilégier de `coaching.html`, donc une seule liste de courses. Sans `assets/liste.js`, les
+pastilles sont désactivées et le bouton disparaît, plutôt que de promettre un geste sans effet.
+
+**`selection(n)`** tire les plats du jour avec une graine issue de `Natty.jour()` (jamais
+`toISOString()`, §3) : la sélection change chaque jour mais **ne bouge pas** d'un rendu à
+l'autre — sinon les cartes sauteraient à chaque retour sur l'écran et on ne pourrait jamais
+retrouver le plat qu'on venait de voir. Un plat par cuisine au maximum, sans quoi le tirage
+sort trois currys thaïs et la « sélection du monde » n'en est plus une.
 
 ### `api/claude.js`
 Proxy vers l'API Claude pour les conseils nutritionnels.
@@ -2325,6 +2415,28 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   RLS activée, policy « soi seulement », INSERT anon refusé.
 - 🔄 Le garde-manger ne se décrémente pas quand une recette est suivie ou un repas enregistré :
   l'utilisateur retire les ingrédients à la main.
+
+**Découvrir (plats du monde)**
+- ✅ **Livré** (août 2026) — `assets/decouverte.js`, détail en §3. 93 plats, 19 cuisines, trois
+  rangées en tête de `social.html`, et la visionneuse plein écran en geste latéral. Photos
+  fournies par Pablo, recompressées dans `assets/img/decouverte/` (10,3 Mo, deux tailles).
+- ✅ Vérifié en navigateur (colonne 375 × 812, thèmes clair ET sombre) : les 3 rangées, les
+  **186 images qui répondent toutes** (aucun slug orphelin), l'ouverture depuis une cuisine /
+  une étiquette / la grille du jour, l'ouverture **à un index non nul** (6/9 demandé, 6/9
+  obtenu, au pixel de défilement près), un **vrai geste de glissement** qui avance de deux
+  plats et cale la jauge, le retour qui rend le défilement à la page et vide la piste, les
+  pastilles d'ingrédients dans les deux sens **jusque dans la liste de courses réelle**,
+  « Tout ajouter » (6/6), un nom à apostrophe (« Huile d'olive ») qui ne casse pas le
+  sélecteur, la recherche croisée fil + catalogue, et la sélection du jour stable sur deux
+  appels avec 8 pays distincts.
+- 🔄 **Non vérifié sur téléphone** : le rythme du défilement par à-coups, la zone sûre du bas
+  et la lisibilité du texte sur les photos les plus claires n'ont pu être jugés qu'en
+  navigateur.
+- 🔄 **Ces plats ne sont pas des recettes** : pas d'étapes, pas de grammages, donc pas de
+  macros (voir l'encadré de §3). Les brancher sur la génération de la semaine — « je veux
+  celui-là jeudi » — reste à faire, et c'est la suite naturelle.
+- 🔄 Les photos sont servies depuis le dépôt. Si le poids devient un sujet, elles suivront le
+  même chemin que `narration.html` : Cloudinary (`CLOUD_BASE`), cloud `dujji1s6g`.
 
 **Fil social**
 - ✅ **Rien n'est publié sans qu'on l'ait demandé** (août 2026) : le bouton `+` écrit
@@ -3301,3 +3413,24 @@ session « fil social » :*
 - Banc `_test-journee-plat.html` (préfixe `_`, hors dépôt) : heure, thème et cas de figure en
   paramètres d'URL, plein écran optionnel — la page doit peindre pour que les animations
   tournent (§7).
+
+---
+
+*Contribution session « Découvrir » (Claude Opus, 9 août 2026) :*
+- **Nouveau** `assets/decouverte.js` (+ copie `www/`) : le catalogue des 66 plats du monde et
+  la visionneuse plein écran en geste latéral. Documenté en §3, statut en §8.
+- **Nouveau** `assets/img/decouverte/` (+ `www/`) : les 96 photos fournies par Pablo (69, puis
+  26 de plus — Brésil, Chine, Géorgie, Iran, Italie, Philippines, Sénégal — déposées pendant
+  la session, plus la feijoada extraite d'une page enregistrée), recompressées en deux tailles
+  (860 px pour le plein écran, 400 px pour les vignettes) — 10,3 Mo au lieu de 18. Trois sources écartées et pourquoi : voir §3.
+- `social.html` (+ `www/`) : les trois rangées « Découvrir » **en tête d'écran et hors de
+  `#fil`**, le jeu d'illustrations au trait sur les titres de section, l'assiette-globe de
+  l'état vide, l'assiette sous l'emoji des plats sans photo, et la recherche qui fouille
+  aussi le catalogue.
+- **Deux défauts trouvés à l'écran, aucun par `node --check`** : le verre dépoli **blanc** qui
+  rendait les pastilles illisibles sur une photo claire (la pastille « Vietnam » du phở
+  s'affichait vide), et le voile du bas trop lourd, qui éteignait le plat que la page entière
+  sert à montrer. Les deux sont détaillés en §3 — ils se retendront à la prochaine retouche.
+- Aucune écriture en base : ce catalogue est entièrement embarqué, il ne dépend d'aucune
+  requête et fonctionne hors ligne. Le seul geste qui écrit quelque chose est l'ajout d'un
+  ingrédient à la liste de courses, qui passe par `NattyListe` et sa clé existante.

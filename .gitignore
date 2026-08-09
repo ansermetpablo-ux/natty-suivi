@@ -7,3 +7,11 @@ node_modules/
 # `git add -A` malheureux — celui-là même qui a emporté deux sessions dans
 # e01e20b — mettrait une page de démo en ligne sur natty-suivi.vercel.app.
 _test-*.html
+
+# Pages web enregistrées depuis un navigateur (« Enregistrer sous → page
+# complète ») : le dossier `*_files` embarque tout le JS et le CSS du site
+# d'origine — 28 Mo pour la seule feijoada. Ce n'est pas une source de
+# design. Quand une de ces pages porte une photo utile, on l'extrait et on
+# la range sous son propre nom dans `design/images menu/`.
+design/**/*_files/
+design/**/*Feijoada.html

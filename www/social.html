@@ -200,6 +200,71 @@ body{overflow-x:hidden}
   color:var(--on-ink);border-radius:18px;padding:12px 20px;font-size:12.5px;font-weight:700;opacity:0;
   transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:800;white-space:nowrap}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ══ Illustrations ══
+   Des traits, pas des aplats : le dessin doit tenir dans les DEUX thèmes
+   sans être redessiné, et `currentColor` suffit à ça. Un SVG rempli
+   demanderait un pendant sombre, donc deux versions à maintenir — c'est
+   exactement ce que la §5 de CLAUDE.md reproche aux couleurs en dur. */
+.sec-title{display:flex;align-items:center;gap:9px}
+.sec-title .ic{flex:none;width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+/* Le grand dessin des états vides. Sans lui, un fil vide n'est qu'une
+   phrase grise au milieu d'un écran blanc — on croit à un chargement raté. */
+.illu-big{display:block;width:132px;height:132px;margin:8px auto 18px;stroke:var(--muted);fill:none;
+  stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.illu-big .fill{fill:var(--card);stroke:none}
+/* Un plat sans photo : l'emoji seul flotte dans le vide, on lui pose une
+   assiette dessous. Purement décoratif, d'où le aria-hidden côté rendu. */
+.fallback{position:relative}
+.fallback .plate{position:absolute;inset:14%;stroke:var(--muted);fill:none;stroke-width:1.4;opacity:.4}
+.fallback .em{position:relative;z-index:1}
+
+/* ══ Découvrir ══
+   Trois rangées, en haut de l'écran et HORS de `#fil` : ce contenu est
+   embarqué dans l'app, il ne dépend d'aucune requête. Le mettre dans le
+   fil l'aurait fait disparaître quand personne n'a encore rien publié —
+   c'est-à-dire précisément le moment où l'écran a le plus besoin de
+   quelque chose à regarder. */
+.pays-rail .pays{flex:0 0 43%;scroll-snap-align:start;position:relative;border-radius:var(--r-lg);
+  overflow:hidden;aspect-ratio:1/1.22;cursor:pointer;background:var(--card);box-shadow:var(--nm-soft)}
+.pays img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  opacity:0;transition:opacity .45s ease}
+.pays img.vu{opacity:1}
+.pays .vo{position:absolute;left:0;right:0;bottom:0;padding:30px 12px 12px;color:#fff;
+  background:linear-gradient(0deg,rgba(0,0,0,.86) 0%,rgba(0,0,0,.45) 45%,rgba(0,0,0,0) 100%)}
+.pays .fl{font-size:19px;line-height:1}
+.pays .nm{font-weight:900;font-size:15px;letter-spacing:-.2px;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pays .nb{font-size:10.5px;font-weight:700;opacity:.78;margin-top:1px}
+
+/* Les envies : des pastilles, pas une liste. Un tap ouvre directement la
+   visionneuse sur tous les plats de l'étiquette — filtrer une grille en
+   place aurait demandé un second geste pour arriver au même endroit. */
+.envies{display:flex;gap:8px;overflow-x:auto;margin:0 calc(var(--pad) * -1);
+  padding:2px var(--pad) 6px;scroll-padding-left:var(--pad);-webkit-overflow-scrolling:touch}
+.envies::-webkit-scrollbar{display:none}
+.envie{flex:none;display:inline-flex;align-items:center;gap:7px;border:none;cursor:pointer;
+  background:var(--card);color:var(--ink);font-family:inherit;border-radius:var(--r-full);
+  padding:11px 16px;font-size:12.5px;font-weight:800;white-space:nowrap}
+.envie:active{transform:scale(.96)}
+.envie .e{font-size:15px;line-height:1}
+
+/* Les plats du monde en grille : même gabarit que `.post-img` pour que
+   les deux moitiés de l'écran se répondent, mais sans en-tête d'auteur —
+   personne n'a posté ces plats, ils viennent du catalogue. */
+.dishes{display:grid;grid-template-columns:1fr 1fr;gap:6px 5px}
+.dish{position:relative;aspect-ratio:1/1.3;border-radius:var(--r-lg);overflow:hidden;
+  background:var(--card);box-shadow:var(--nm-soft);cursor:pointer}
+.dish img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .45s ease}
+.dish img.vu{opacity:1}
+.dish .fl{position:absolute;top:8px;left:8px;z-index:2;font-size:15px;line-height:1;
+  background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border-radius:999px;padding:5px 7px}
+.dish .nm{position:absolute;left:6px;right:6px;bottom:6px;z-index:2;color:#fff;font-weight:800;
+  font-size:12px;line-height:1.25;text-shadow:0 1px 8px rgba(0,0,0,.75)}
+.dish .sh{position:absolute;left:0;right:0;bottom:0;height:58%;
+  background:linear-gradient(0deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,0) 100%)}
 </style>
 </head>
 <body>
@@ -215,24 +280,50 @@ body{overflow-x:hidden}
 </div>
 
 <div class="wrap">
+
+  <!-- ══ Découvrir ══
+       Hors de `#fil`, et rendu AVANT que la moindre requête ne parte : ce
+       catalogue est embarqué dans l'app. C'est ce que l'on voit en arrivant,
+       même hors ligne, même le premier jour où personne n'a rien publié. -->
+  <div id="decouv">
+    <div class="sec-head-row">
+      <div class="sec-title" id="ttDecouv">Découvrir</div>
+      <button class="lnk" id="btnMonde">Tout voir</button>
+    </div>
+    <div class="sec-sub" id="decouvSub"></div>
+    <div class="rail pays-rail" id="railPays"></div>
+
+    <div class="sec-title" id="ttEnvies">Envie de quoi ?</div>
+    <div class="sec-sub">Une étiquette, et on fait défiler les plats qui vont avec</div>
+    <div class="envies" id="envies"></div>
+
+    <div class="sec-title" id="ttSel">À goûter cette semaine</div>
+    <div class="sec-sub">Une sélection qui change chaque jour, un plat par pays</div>
+    <div class="dishes" id="selJour"></div>
+  </div>
+
   <div id="etat" class="empty">Chargement du fil…</div>
 
   <!-- Résultats de recherche : masquent le fil tant qu'une requête est saisie -->
   <div id="secRech" class="hidden">
-    <div class="sec-title">Résultats</div>
+    <div id="secRechMonde" class="hidden">
+      <div class="sec-title" id="ttRechMonde">Plats du monde</div>
+      <div class="dishes" id="rechMonde"></div>
+    </div>
+    <div class="sec-title" id="ttRech">Dans le fil</div>
     <div class="posts" id="rech"></div>
   </div>
 
   <div id="fil" class="hidden">
     <div id="secTend" class="hidden">
-      <div class="sec-title">Tendances</div>
+      <div class="sec-title" id="ttTend">Tendances</div>
       <div id="vedette"></div>
       <div class="rail" id="tend"></div>
     </div>
 
     <div id="secAmis" class="hidden">
       <div class="sec-head-row">
-        <div class="sec-title">Vos amis</div>
+        <div class="sec-title" id="ttAmis">Vos amis</div>
         <button class="lnk" id="btnMembres">Gérer</button>
       </div>
       <div class="sec-sub" id="amisSub"></div>
@@ -241,19 +332,19 @@ body{overflow-x:hidden}
     </div>
 
     <div id="secComm" class="hidden">
-      <div class="sec-title">La communauté</div>
+      <div class="sec-title" id="ttComm">La communauté</div>
       <div class="sec-sub">Les derniers plats publiés par les membres</div>
       <div class="posts" id="comm"></div>
     </div>
 
     <div id="secTop" class="hidden">
-      <div class="sec-title">Dans le mille</div>
+      <div class="sec-title" id="ttTop">Dans le mille</div>
       <div class="sec-sub">Les plats qui collent le mieux aux objectifs de ceux qui les ont postés</div>
       <div class="posts" id="top"></div>
     </div>
 
     <div id="secSim" class="hidden">
-      <div class="sec-title">Profils comme le vôtre</div>
+      <div class="sec-title" id="ttSim">Profils comme le vôtre</div>
       <div class="sec-sub" id="simSub"></div>
       <div class="posts" id="sim"></div>
     </div>
@@ -282,6 +373,16 @@ body{overflow-x:hidden}
 
 <script src="/assets/core.js"></script>
 <script src="/assets/social.js"></script>
+<!-- Le catalogue « Découvrir » et sa visionneuse plein écran. Chargé AVANT le
+     script de la page : celle-ci appelle `rendreDecouverte()` dès l'analyse,
+     sans attendre la moindre requête. -->
+<script src="/assets/decouverte.js"></script>
+<!-- Uniquement pour `NattyListe.basculerExtra` : les ingrédients d'un plat du
+     monde s'ajoutent à la liste de courses, exactement comme les aliments à
+     privilégier de coaching.html — même clé localStorage, donc une seule
+     liste. Sans ce module, les pastilles sont désactivées et le bouton
+     « Tout ajouter » disparaît, plutôt que de promettre un geste sans effet. -->
+<script src="/assets/liste.js"></script>
 <script>
 var VUE = null;      // dernier rendu de NattySocial.vues()
 var ouvert = null;   // plat affiché dans la bottom sheet
@@ -296,6 +397,60 @@ function toast(msg){
 }
 
 function initiale(prenom){ return (prenom || '?').trim().charAt(0).toUpperCase(); }
+
+/* ══ Illustrations ══════════════════════════════════════════
+   Du trait sur `currentColor`, jamais d'aplat coloré : le même dessin
+   sert en thème clair et en thème sombre, sans pendant à maintenir
+   (règle 33 de CLAUDE.md). Les icônes de titre sont `aria-hidden` —
+   le titre est déjà écrit à côté, les annoncer deux fois ne rend
+   service à personne.                                                */
+function svg(d, cls, vb){
+  return '<svg class="' + (cls || 'ic') + '" viewBox="' + (vb || '0 0 24 24') + '" aria-hidden="true">'
+    + d + '</svg>';
+}
+var ILLU = {
+  globe:  '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/>'
+        + '<path d="M12 3c3.4 3.6 3.4 14.4 0 18c-3.4-3.6-3.4-14.4 0-18Z"/>',
+  flamme: '<path d="M12 3s5.2 4.3 5.2 8.8a5.2 5.2 0 1 1-10.4 0C6.8 9.3 8.8 8 8.8 8s.4 2.1 1.7 2.8C11.3 8.7 12 6 12 3Z"/>',
+  amis:   '<circle cx="9" cy="8" r="3.2"/><path d="M2.8 20c0-3.4 2.8-5.6 6.2-5.6s6.2 2.2 6.2 5.6"/>'
+        + '<path d="M16.2 5.6a3.2 3.2 0 0 1 0 5.8"/><path d="M17.6 15c2.1.7 3.6 2.5 3.6 5"/>',
+  comm:   '<circle cx="12" cy="6.6" r="2.9"/><circle cx="5" cy="16.4" r="2.6"/><circle cx="19" cy="16.4" r="2.6"/>'
+        + '<path d="M9.8 8.4 6.8 13.9"/><path d="M14.2 8.4l3 5.5"/><path d="M7.6 17.4h8.8"/>',
+  cible:  '<circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1"/>',
+  bouss:  '<circle cx="12" cy="12" r="9"/><path d="m15.4 8.6-2 4.8-4.8 2 2-4.8 4.8-2Z"/>',
+  etoile: '<path d="M11 3.2 12.6 8.4 17.8 10 12.6 11.6 11 16.8 9.4 11.6 4.2 10 9.4 8.4 11 3.2Z"/>'
+        + '<path d="m18.4 15.4.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1Z"/>',
+  bol:    '<path d="M3.4 10.6h17.2a8.6 8.6 0 0 1-17.2 0Z"/><path d="M2.4 20.6h19.2"/>'
+        + '<path d="M9.2 7.4c0-1.4 1-1.8 1-3.2s-1-1.7-1-1.7"/>'
+        + '<path d="M13.8 7.4c0-1.4 1-1.8 1-3.2s-1-1.7-1-1.7"/>',
+  loupe:  '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
+  plate:  '<circle cx="12" cy="12" r="10.6"/><circle cx="12" cy="12" r="7"/>',
+  /* L'état vide : une assiette qui est aussi un globe. C'est l'image de
+     l'écran — on y mange, et on y voyage.
+     ⚠️ Les couverts ne sont pas décoratifs : sans eux, le cercle et ses
+     méridiens se lisaient comme un globe surmonté d'ondes wifi (vu à
+     l'écran, première version). Ce sont eux qui disent « assiette ». */
+  vide:   '<circle cx="60" cy="58" r="40"/><circle cx="60" cy="58" r="28"/>'
+        + '<path d="M32 58h56"/>'
+        + '<path d="M60 30C68 40 68 76 60 86C52 76 52 40 60 30Z"/>'
+        + '<path d="M6 18v13M12 18v13M18 18v13"/>'
+        + '<path d="M6 31c0 3.3 2.7 6 6 6s6-2.7 6-6"/><path d="M12 37v57"/>'
+        + '<path d="M110 18c4 3.6 5.6 8.7 5.6 14.3s-1.9 7.2-5.6 7.2v54.5"/>'
+};
+
+/* Les titres de section reçoivent leur dessin après coup : les écrire dans
+   le HTML aurait dupliqué chaque tracé, et les six sections du fil sont
+   déjà rendues conditionnellement. */
+function poserIcones(){
+  var carte = {
+    ttDecouv:'globe', ttEnvies:'etoile', ttSel:'bol', ttTend:'flamme', ttAmis:'amis',
+    ttComm:'comm', ttTop:'cible', ttSim:'bouss', ttRech:'loupe', ttRechMonde:'globe'
+  };
+  Object.keys(carte).forEach(function(id){
+    var el = $(id);
+    if (el && !el.querySelector('svg')) el.insertAdjacentHTML('afterbegin', svg(ILLU[carte[id]]));
+  });
+}
 
 function classeScore(s){ return s >= 75 ? 'hi' : (s >= 50 ? 'mid' : ''); }
 
@@ -315,10 +470,96 @@ function ligneMacros(p){
 }
 
 function visuel(p, taille){
+  // Sans photo, l'emoji seul flottait au milieu d'un carré gris : on lui pose
+  // une assiette dessous, et la case ressemble enfin à un plat plutôt qu'à
+  // une image qui n'a pas chargé.
   return p.photo
     ? '<img src="' + esc(p.photo) + '" alt="" loading="lazy">'
-    : '<div class="fallback">' + p.emoji + '</div>';
+    : '<div class="fallback">' + svg(ILLU.plate, 'plate')
+      + '<span class="em">' + p.emoji + '</span></div>';
 }
+
+/* ══ Découvrir ══════════════════════════════════════════════
+   Les données viennent d'assets/decouverte.js, le rendu est ici —
+   même partage que NattySocial / social.html. La visionneuse plein
+   écran, elle, appartient au module : elle s'invite par-dessus
+   l'écran et doit donc porter son propre style.
+
+   ⚠️ Ce bloc se rend AVANT `NattySocial.charger()`, pas après. Le
+   catalogue est embarqué, il n'attend aucune requête : le faire
+   patienter derrière le fil, c'est cinq secondes d'écran vide sur
+   un contenu qui était prêt tout de suite.                        */
+
+var ENVIES = {
+  'Végétarien':'🥬', 'Protéiné':'🥩', 'Léger':'🍋',
+  'Épicé':'🌶️', 'Réconfortant':'🍲', 'Riche en fibres':'🌾'
+};
+
+function carteDish(p){
+  return '<div class="dish" data-plat="' + esc(p.cle) + '">'
+    + '<img src="' + NattyDecouverte.vignette(p) + '" alt="" loading="lazy"'
+    + ' onload="this.classList.add(\'vu\')">'
+    + '<span class="fl">' + p.drapeau + '</span><div class="sh"></div>'
+    + '<div class="nm">' + esc(p.n) + '</div></div>';
+}
+
+function rendreDecouverte(){
+  if (!window.NattyDecouverte) { $('decouv').classList.add('hidden'); return; }
+  var pays = NattyDecouverte.cuisines();
+  var tous = NattyDecouverte.tous();
+
+  $('decouvSub').textContent = tous.length + ' plats, ' + pays.length
+    + ' cuisines — de quoi ne pas remanger deux fois la même chose';
+
+  $('railPays').innerHTML = pays.map(function(c){
+    // La photo de couverture est celle du premier plat : un choix, pas un
+    // hasard — la liste est ordonnée, la vignette ne changera donc jamais
+    // d'un chargement à l'autre.
+    return '<div class="pays" data-pays="' + esc(c.cle) + '">'
+      + '<img src="' + NattyDecouverte.vignette(c.plats[0]) + '" alt="" loading="lazy"'
+      + ' onload="this.classList.add(\'vu\')">'
+      + '<div class="vo"><div class="fl">' + c.drapeau + '</div>'
+      + '<div class="nm">' + esc(c.nom) + '</div>'
+      + '<div class="nb">' + c.plats.length + ' plats</div></div></div>';
+  }).join('');
+
+  $('envies').innerHTML = NattyDecouverte.tags().map(function(t){
+    return '<button class="envie" data-envie="' + esc(t) + '">'
+      + '<span class="e">' + (ENVIES[t] || '🍽️') + '</span>' + esc(t) + '</button>';
+  }).join('');
+
+  $('selJour').innerHTML = NattyDecouverte.selection(8).map(carteDish).join('');
+}
+
+document.addEventListener('click', function(e){
+  if (!window.NattyDecouverte) return;
+  var c = e.target.closest && e.target.closest('[data-pays]');
+  if (c){
+    var cu = NattyDecouverte.cuisine(c.dataset.pays);
+    NattyDecouverte.ouvrir({ plats: cu.plats, index: 0, titre: cu.drapeau + ' ' + cu.nom });
+    return;
+  }
+  var t = e.target.closest && e.target.closest('[data-envie]');
+  if (t){
+    var tag = t.dataset.envie;
+    NattyDecouverte.ouvrir({ plats: NattyDecouverte.parTag(tag), index: 0, titre: tag });
+    return;
+  }
+  var d = e.target.closest && e.target.closest('[data-plat]');
+  if (d){
+    // On ouvre sur la LISTE affichée, pas sur le catalogue entier : le geste
+    // latéral doit parcourir ce qu'on avait sous les yeux, sinon le plat
+    // suivant sort de nulle part.
+    var boite = d.closest('.dishes');
+    var cles = [].map.call(boite.querySelectorAll('[data-plat]'), function(x){ return x.dataset.plat; });
+    var plats = cles.map(NattyDecouverte.platParCle).filter(Boolean);
+    NattyDecouverte.ouvrir({
+      plats: plats,
+      index: cles.indexOf(d.dataset.plat),
+      titre: boite.id === 'rechMonde' ? 'Plats du monde' : 'À goûter cette semaine'
+    });
+  }
+});
 
 function coeur(p){
   var c = NattySocial.compteurs(p.id);
@@ -428,7 +669,11 @@ function section(id, plats){
 function rendre(){
   VUE = NattySocial.vues();
   if (!VUE.total){
-    $('etat').textContent = 'Personne n\'a encore publié de plat. Ajoutez le vôtre avec le bouton +, il ouvrira le bal.';
+    // Un écran vide ne doit pas ressembler à un chargement qui a échoué :
+    // le dessin dit que c'est bien la fin du contenu, pas une panne.
+    $('etat').innerHTML = svg(ILLU.vide, 'illu-big', '0 0 120 120')
+      + 'Personne n\'a encore publié de plat.<br>Ajoutez le vôtre avec le bouton +, il ouvrira le bal.';
+    $('etat').classList.remove('hidden');
     $('fil').classList.add('hidden');
     return;
   }
@@ -643,6 +888,12 @@ function majAmisPlusTard(){
 /* Plus de clic sur le fond : une page pleine n'a pas de fond. Le retour est
    dans la barre collante en haut. */
 
+/* « Tout voir » : les 66 plats à la suite, dans l'ordre du catalogue —
+   donc pays par pays, ce qui reste un parcours et non un sac. */
+$('btnMonde').addEventListener('click', function(){
+  if (window.NattyDecouverte) NattyDecouverte.ouvrir({ plats: NattyDecouverte.tous(), titre: 'Tous les plats' });
+});
+
 $('btnMembres').addEventListener('click', function(){
   rendreMembres();
   $('sheetMbr').classList.add('on');
@@ -657,6 +908,21 @@ function fermerMembres(){
 $('mbrClose').addEventListener('click', fermerMembres);
 $('sheetMbr').addEventListener('click', function(e){ if (e.target === this) fermerMembres(); });
 
+/* La recherche fouille les DEUX contenus : ce que les membres ont publié, et
+   le catalogue des plats du monde. Chercher « tofu » et ne rien trouver alors
+   que six plats du monde en contiennent ferait passer la barre pour cassée. */
+function chercherMonde(q){
+  if (!window.NattyDecouverte) return [];
+  var t = (q || '').trim().toLowerCase();
+  if (!t) return [];
+  return NattyDecouverte.tous().filter(function(p){
+    return p.n.toLowerCase().indexOf(t) > -1
+      || p.paysNom.toLowerCase().indexOf(t) > -1
+      || p.t.some(function(x){ return x.toLowerCase().indexOf(t) > -1; })
+      || p.ingr.some(function(g){ return g.n.toLowerCase().indexOf(t) > -1; });
+  }).slice(0, 12);
+}
+
 var rechT;
 $('q').addEventListener('input', function(){
   var q = this.value;
@@ -664,17 +930,29 @@ $('q').addEventListener('input', function(){
   rechT = setTimeout(function(){
     if (!q.trim()){
       $('secRech').classList.add('hidden');
+      $('decouv').classList.remove('hidden');
       $('fil').classList.remove('hidden');
       return;
     }
     var res = NattySocial.chercher(q);
+    var monde = chercherMonde(q);
     $('fil').classList.add('hidden');
+    // « Découvrir » descend le temps de la recherche : ses trois rangées
+    // repousseraient les résultats sous la ligne de flottaison.
+    $('decouv').classList.add('hidden');
     $('secRech').classList.remove('hidden');
+    $('secRechMonde').classList.toggle('hidden', !monde.length);
+    $('rechMonde').innerHTML = monde.map(carteDish).join('');
     $('rech').innerHTML = res.length
       ? res.map(function(p){ return carte(p, true); }).join('')
-      : '<div class="empty" style="grid-column:1/-1">Aucun plat ne correspond à « ' + esc(q) + ' ».</div>';
+      : '<div class="empty" style="grid-column:1/-1">Aucun plat du fil ne correspond à « ' + esc(q) + ' ».</div>';
   }, 180);
 });
+
+/* Découvrir d'abord, le fil ensuite. Les deux sont indépendants : si le
+   chargement du fil échoue, le catalogue reste entier à l'écran. */
+poserIcones();
+rendreDecouverte();
 
 (async function(){
   if (!Natty.requireAuth()) return;
