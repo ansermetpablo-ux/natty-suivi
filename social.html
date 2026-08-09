@@ -233,6 +233,7 @@ body{overflow-x:hidden}
 .pv-sst{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
   color:#8b8b96;margin:16px 0 9px}
 .pv-note{font-size:12.5px;line-height:1.5;color:#b9b9c4}
+.pv-stats{font-size:11.5px;font-weight:700;color:#8b8b96;margin-bottom:10px}
 .pv-ings{display:flex;flex-wrap:wrap;gap:7px}
 .pv-ing{display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;color:#fff;
   background:rgba(255,255,255,.1);font-family:inherit;border-radius:999px;padding:8px 13px;
@@ -907,6 +908,11 @@ function rendreSheet(){
 
     + '<div class="pv-det" id="pvDet">'
     +   '<div class="pv-grip"></div>'
+    /* Les compteurs vivent ici et pas sur la photo : ils décrivent le plat, ils
+       ne servent pas à le reconnaître. Sur la première vue ils prendraient la
+       place du nom pour dire quelque chose que personne ne vient chercher. */
+    +   '<div class="pv-stats">' + c.likes + ' j\'aime · ' + c.vues
+    +     ' vue' + (c.vues > 1 ? 's' : '') + '</div>'
     +   (note ? '<div class="pv-note">' + note + '</div>' : '')
     +   '<div class="pv-sst">Ce qu\'il y a dedans</div>'
     +   (p.ingredients.length
