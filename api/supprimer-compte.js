@@ -41,6 +41,12 @@ const TABLES_USER = [
   // (créée depuis) : un compte supprimé laissait ses plans de repas derrière
   // lui — donc quand la personne est chez elle et ce qu'elle mange.
   'planning_semaine',
+  // Le bilan du soir porte le ressenti, la motivation et les difficultés
+  // déclarées jour après jour : ce qu'il y a de plus personnel dans l'app.
+  // Ajouté en même temps qu'`assets/bilan.js` — la route ignore sans broncher
+  // une table qui n'existe pas encore, donc l'ordre entre le SQL et ce
+  // déploiement n'a pas d'importance.
+  'bilan_jour',
   'garde_manger', 'abonnements', 'meals'
 ];
 

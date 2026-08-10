@@ -134,6 +134,13 @@ async function loadFormule(){
     NattyJournee.monterBandeau(document.querySelector('.wrap'));
   }
 </script>
+<script src="/assets/bilan.js"></script>
+<script>
+  /* Le bilan du soir, et celui de la semaine le samedi. Il attend plus
+     longtemps que le guide du jour (9 s contre 6,5) : quand les deux sont dus,
+     c'est le guide qui doit s'ouvrir, et le bilan renonce en le voyant. */
+  if (window.NattyBilan) NattyBilan.proposerSiNecessaire();
+</script>
 <script src="/assets/notifs.js"></script>
 <script src="/assets/push.js"></script>
 <script src="/assets/nav.js"></script>

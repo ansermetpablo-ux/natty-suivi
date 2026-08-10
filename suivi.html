@@ -1095,19 +1095,18 @@ html.no-scroll {
 
   <!-- Objectif (3 macros en anneaux) -->
   <div class="objectif-card">
-    <!-- ⚠️ Le grand nombre de chaque anneau est le RESTANT, pas l'objectif. Le
-         titre disait pourtant « Votre objectif » : on lisait donc « 25 g » comme
-         une cible de 25 g de protéines. C'est le reproche de Pablo, et il est
-         réglé par le titre plutôt que par une légende de plus dans un anneau de
-         88 px. Le libellé retombe sur « Votre objectif » quand le profil ne
-         permet pas de calculer un reste. -->
-    <h2 id="objTitre">Il vous reste aujourd'hui</h2>
+    <!-- ⚠️ Le grand nombre de chaque anneau est ce qui a été CONSOMMÉ
+         aujourd'hui, et l'anneau se REMPLIT en conséquence (demande de Pablo,
+         2026-08-10). Le titre le nomme : il a déjà trompé une fois dans l'autre
+         sens (« Votre objectif » posé au-dessus d'un restant, donc « 25 g » lu
+         comme une cible). L'objectif et le reste vivent sous chaque anneau. -->
+    <h2 id="objTitre">Consommé aujourd'hui</h2>
     <div class="rings">
       <div class="ring-item" onclick="openMacroPopup('prot')">
         <div class="ring-box">
           <svg viewBox="0 0 88 88">
             <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
-            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#redGrad)" stroke-width="7" stroke-linecap="round" id="ringProt" stroke-dasharray="239 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
+            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#redGrad)" stroke-width="7" stroke-linecap="round" id="ringProt" stroke-dasharray="0 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
             <defs><linearGradient id="redGrad"><stop offset="0%" stop-color="var(--red-1)"/><stop offset="100%" stop-color="var(--red-2)"/></linearGradient></defs>
           </svg>
           <div class="center"><span id="vProt">–</span>g</div>
@@ -1119,7 +1118,7 @@ html.no-scroll {
         <div class="ring-box">
           <svg viewBox="0 0 88 88">
             <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
-            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#yellowGrad)" stroke-width="7" stroke-linecap="round" id="ringGluc" stroke-dasharray="239 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
+            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#yellowGrad)" stroke-width="7" stroke-linecap="round" id="ringGluc" stroke-dasharray="0 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
             <defs><linearGradient id="yellowGrad"><stop offset="0%" stop-color="var(--yellow-1)"/><stop offset="100%" stop-color="var(--yellow-2)"/></linearGradient></defs>
           </svg>
           <div class="center"><span id="vGluc">–</span>g</div>
@@ -1131,7 +1130,7 @@ html.no-scroll {
         <div class="ring-box">
           <svg viewBox="0 0 88 88">
             <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
-            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#greenGrad2)" stroke-width="7" stroke-linecap="round" id="ringLip" stroke-dasharray="239 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
+            <circle cx="44" cy="44" r="38" fill="none" stroke="url(#greenGrad2)" stroke-width="7" stroke-linecap="round" id="ringLip" stroke-dasharray="0 239" style="transition:stroke-dasharray 1.2s cubic-bezier(.34,1.56,.64,1);"/>
             <defs><linearGradient id="greenGrad2"><stop offset="0%" stop-color="var(--green-1)"/><stop offset="100%" stop-color="var(--green-2)"/></linearGradient></defs>
           </svg>
           <div class="center"><span id="vLip">–</span>g</div>
@@ -1432,8 +1431,11 @@ html.no-scroll {
         <div style="display:flex;align-items:baseline;gap:4px;margin-top:2px;">
           <span style="font-size:32px;font-weight:800;color:var(--black);letter-spacing:-1px;" id="mbVal">–</span>
           <span style="font-size:16px;color:var(--muted);font-weight:500;" id="mbUnit">g</span>
-          <span style="font-size:13px;color:var(--muted);margin-left:4px;">restants aujourd'hui</span>
+          <span style="font-size:13px;color:var(--muted);margin-left:4px;">consommés aujourd'hui</span>
         </div>
+        <!-- Le reste passe en second : c'est une soustraction, elle n'est plus
+             le sujet du bloc. Vide tant qu'aucun objectif n'est calculable. -->
+        <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px;" id="mbReste"></div>
       </div>
       <!-- Mini ring -->
       <div style="position:relative;width:56px;height:56px;flex-shrink:0;">
@@ -1952,44 +1954,28 @@ const CLD_CLD = 'dujji1s6g';
 const CLD_PRE = 'meal_photos';
 const CLAUDE_API = 'https://natty-suivi.vercel.app/api/claude';
 
-// ═══ NUTRI TABLE (~100 ingredients, per 100g) ═══
-const NT = {
-  'poulet':{c:165,p:31,l:3.6,g:0},'dinde':{c:135,p:29,l:1,g:0},'boeuf':{c:250,p:26,l:15,g:0},
-  'saumon':{c:208,p:20,l:13,g:0},'thon':{c:132,p:28,l:1,g:0},'cabillaud':{c:82,p:18,l:0.7,g:0},
-  'crevettes':{c:99,p:21,l:1.1,g:0},'sardines':{c:208,p:25,l:11,g:0},
-  'oeuf':{c:155,p:13,l:11,g:1.1},'oeufs':{c:155,p:13,l:11,g:1.1},
-  'agneau':{c:282,p:25,l:20,g:0},'porc':{c:242,p:27,l:14,g:0},'lardons':{c:337,p:18,l:29,g:0},
-  'tofu':{c:76,p:8,l:4.2,g:1.9},'tempeh':{c:195,p:19,l:11,g:9.4},
-  'lentilles':{c:116,p:9,l:0.4,g:20},'pois chiches':{c:164,p:9,l:2.6,g:27},'haricots':{c:127,p:9,l:0.5,g:23},
-  'edamame':{c:122,p:11,l:5.2,g:9.9},
-  'riz':{c:130,p:2.7,l:0.3,g:28},'pates':{c:131,p:5,l:1.1,g:25},'quinoa':{c:120,p:4.4,l:1.9,g:22},
-  'pain':{c:265,p:9,l:3.2,g:49},'pomme de terre':{c:77,p:2,l:0.1,g:17},
-  'patate douce':{c:86,p:1.6,l:0.1,g:20},'avoine':{c:389,p:17,l:7,g:66},
-  'polenta':{c:83,p:2,l:0.5,g:18},'boulgour':{c:83,p:3,l:0.2,g:18},'sarrasin':{c:92,p:3.4,l:0.6,g:20},
-  'brocoli':{c:34,p:2.8,l:0.4,g:7},'epinards':{c:23,p:2.9,l:0.4,g:3.6},'courgette':{c:17,p:1.2,l:0.3,g:3.1},
-  'tomate':{c:18,p:0.9,l:0.2,g:3.9},'carotte':{c:41,p:0.9,l:0.2,g:10},'poivron':{c:31,p:1,l:0.3,g:6},
-  'salade':{c:15,p:1.4,l:0.2,g:2.9},'avocat':{c:160,p:2,l:15,g:9},'champignons':{c:22,p:3.1,l:0.3,g:3.3},
-  'oignon':{c:40,p:1.1,l:0.1,g:9},'ail':{c:149,p:6.4,l:0.5,g:33},'aubergine':{c:25,p:1,l:0.2,g:6},
-  'pomme':{c:52,p:0.3,l:0.2,g:14},'banane':{c:89,p:1.1,l:0.3,g:23},'fraise':{c:32,p:0.7,l:0.3,g:7.7},
-  'orange':{c:47,p:0.9,l:0.1,g:12},'mangue':{c:60,p:0.8,l:0.4,g:15},'kiwi':{c:61,p:1.1,l:0.5,g:15},
-  'yaourt':{c:59,p:3.5,l:3.3,g:4.7},'fromage blanc':{c:79,p:8,l:4,g:3.5},'feta':{c:264,p:14,l:21,g:4},
-  'mozzarella':{c:280,p:18,l:22,g:2.2},'parmesan':{c:431,p:38,l:29,g:4},'lait':{c:61,p:3.2,l:3.3,g:4.8},
-  'huile olive':{c:884,p:0,l:100,g:0},'huile':{c:884,p:0,l:100,g:0},'beurre':{c:717,p:0.9,l:81,g:0.1},
-  'noix':{c:654,p:15,l:65,g:14},'amandes':{c:579,p:21,l:50,g:22},'tahini':{c:595,p:17,l:54,g:21},
-};
+/* ═══ Les macros d'un repas — UN SEUL point de vérité ═══════════════════════
+   🔴 Cette page portait sa PROPRE table nutritionnelle (59 aliments) et son
+   propre `calcMac`, tous deux périmés. Deux conséquences, mesurées au banc le
+   2026-08-10 en même temps que le bug des « 89 g restants » :
 
-function getNutri(name, qty) {
-  var n = name.toLowerCase();
-  var key = Object.keys(NT).find(function(k){ return n.includes(k) || k.split(' ').every(function(w){ return n.includes(w); }); });
-  if (!key) return null;
-  var f = qty/100, b = NT[key];
-  return {c:Math.round(b.c*f), p:Math.round(b.p*f*10)/10, l:Math.round(b.l*f*10)/10, g:Math.round(b.g*f*10)/10};
-}
-function calcMac(ings) {
-  var t = {c:0,p:0,l:0,g:0};
-  (ings||[]).forEach(function(i){ var r=getNutri(i.name,i.quantity_g||0); if(r){t.c+=r.c;t.p+=r.p;t.l+=r.l;t.g+=r.g;} });
-  return t;
-}
+   1. ⚠️ **LES MACROS ÉCRITES EN BASE ÉTAIENT JETÉES.** Ce `calcMac` local ne
+      lisait que `name` et `quantity_g` : il redevinait tout, y compris pour les
+      lignes que `assets/ajout.js` mesure et écrit depuis août 2026
+      (`calories`, `proteins_g`, `carbs_g`, `fats_g`). Un plat analysé en photo à
+      15 g de protéines s'affichait donc à 15,6 g — la valeur de la table, pas la
+      mesure. C'est exactement ce que la règle 12 interdit.
+   2. **L'appariement était l'ANCIEN, par sous-chaîne** (`n.includes(k)`) :
+      « pomme de terre » tombait sur « pomme », « ail » se trouvait dans
+      « volaille ». `assets/core.js` est passé au rapprochement mot à mot
+      plus-long-libellé-gagnant, et à 230 aliments — cette copie était restée à
+      l'état d'avant, sans jamais le signaler.
+
+   Même leçon que `api/_nutrition.js` (§3 de CLAUDE.md) : une copie mécanique ne
+   se signale pas elle-même quand la source bouge. Il n'y a donc plus de copie —
+   on délègue, et le nom local reste pour ne pas réécrire les 30 appels. */
+function getNutri(name, qty) { return Natty.getNutri(name, qty); }
+function calcMac(ings) { return Natty.calcMac(ings); }
 
 // ═══ STATE ═══
 var USER_ID=null, TOKEN='', estAbonne=false;
@@ -2280,95 +2266,102 @@ function calcMoyenneMacros() {
   return { p:Math.round(totJ.p/nj), l:Math.round(totJ.l/nj), g:Math.round(totJ.g/nj), c:Math.round(totJ.c/nj), jours:nj };
 }
 
+/* ═══ La carte des macros — CE QUI A ÉTÉ MANGÉ AUJOURD'HUI ═══════════════
+   🔴 Deux défauts corrigés d'un coup (signalés par Pablo le 2026-08-10 :
+   « j'ai enregistré 15 g de protéines aujourd'hui mais on me dit qu'il me
+   reste 89 g alors que je dois en manger 140 »).
+
+   1. ⚠️ **LES MACROS D'HIER COMPTAIENT POUR AUJOURD'HUI.** `conso` venait de
+      `calcMoyenneMacros()` — la MOYENNE des 7 derniers jours, lue dans
+      `daily_macros`. La carte annonçait donc « objectif − moyenne de la
+      semaine », et non « objectif − ce que j'ai mangé ». Le compte de Pablo
+      le dit exactement : 140 − 51 (sa moyenne) = 89, quand son vrai total du
+      jour était 15. `macAuj` — le total du jour, déjà calculé par
+      `loadMeals()` et remis à zéro à minuit par `nouvelleJournee()` —
+      existait, et **n'était utilisé nulle part dans cette fonction**.
+      Une moyenne ne se réinitialise pas à minuit : c'est structurellement le
+      mauvais chiffre pour une carte qui dit « aujourd'hui ».
+   2. **L'anneau se REMPLIT désormais** (demande de Pablo). Le grand nombre est
+      ce qui a été CONSOMMÉ, et l'arc monte avec lui : on ajoute un plat, les
+      deux avancent ensemble. Avant, le nombre était un restant et l'arc se
+      vidait — ce qui était cohérent, mais donnait une journée pleine au
+      réveil et vide le soir, soit l'inverse de la sensation de progression.
+
+   ⚠️ Le SCORE, lui, reste sur la moyenne 7 jours (`moy`) : c'est un indicateur
+   d'habitude, et le calculer sur la seule journée en cours le ferait plonger
+   chaque matin avant le petit déjeuner. D'où deux jeux de pourcentages. */
 function afficherMacros() {
   var moy = calcMoyenneMacros();
-  var hasData = moy.jours > 0;
 
-  /* ⚠️ Piège : `calcMoyenneMacros()` renvoie L'OBJECTIF quand aucun repas n'est
-     enregistré (« pas de repas → afficher objectif », un reste de l'époque où
-     le chiffre affiché était le consommé). Le prendre pour du consommé donnait
-     100 % d'atteinte sur une journée vierge — donc un anneau vide alors que
-     tout reste à manger, et un score « objectifs atteints » à 100 % sans avoir
-     mangé. On repart donc de zéro tant qu'il n'y a rien. */
-  var conso = hasData ? moy : { p:0, l:0, g:0, c:0 };
+  // Ce qui a été mangé AUJOURD'HUI, et rien d'autre.
+  var conso = { p: macAuj.p || 0, l: macAuj.l || 0, g: macAuj.g || 0, c: macAuj.c || 0 };
+  var hasData = (conso.p + conso.l + conso.g + conso.c) > 0;
 
-  // Pourcentages sur objectif — part CONSOMMÉE (le score en dépend).
-  var pp = macObj.p>0 ? Math.min(100, Math.round((conso.p/macObj.p)*100)) : 0;
-  var lp = macObj.l>0 ? Math.min(100, Math.round((conso.l/macObj.l)*100)) : 0;
-  var gp = macObj.g>0 ? Math.min(100, Math.round((conso.g/macObj.g)*100)) : 0;
-  var cp = macObj.c>0 ? Math.min(100, Math.round((conso.c/macObj.c)*100)) : 0;
-
-  // Valeurs affichées
-  // Grammes affichés dans les anneaux = restants (objectif - consommé), pas consommés.
-  // Sans objectif connu (onboarding sans poids ni tdee), « restant » n'a aucun
-  // sens : afficher 0 se lirait « objectif atteint », soit l'inverse de la
-  // réalité. On affiche un tiret jusqu'à ce que le profil soit renseigné.
-  function restantAffiche(obj, mange) {
-    if (!obj) return '–';
-    return Math.max(0, Math.round(obj - mange));
+  // Part consommée du jour — c'est ce que montrent les anneaux.
+  function part(obj, val) {
+    return obj > 0 ? Math.max(0, Math.min(100, Math.round((val / obj) * 100))) : 0;
   }
-  setText('vProt', restantAffiche(macObj.p, conso.p));
-  setText('vGluc', restantAffiche(macObj.g, conso.g));
-  setText('vLip',  restantAffiche(macObj.l, conso.l));
-  setText('vCal',  hasData ? conso.c : (macObj.c||'–'));
+  var pp = part(macObj.p, conso.p),
+      gp = part(macObj.g, conso.g),
+      lp = part(macObj.l, conso.l);
+
+  /* Les grammes affichés = les grammes MANGÉS. Sans objectif connu (onboarding
+     sans poids ni tdee) on affiche quand même le consommé : contrairement à un
+     restant, un consommé garde tout son sens sans cible — c'est une mesure, pas
+     une soustraction. */
+  setText('vProt', Math.round(conso.p));
+  setText('vGluc', Math.round(conso.g));
+  setText('vLip',  Math.round(conso.l));
+  setText('vCal',  Math.round(conso.c));
   setText('oCal',  macObj.c||'–');
 
-  /* ── L'anneau se VIDE, il ne se remplit pas ────────────────────
-     Le chiffre au centre a toujours été le RESTANT (128 g à manger), mais
-     l'arc, lui, était dessiné avec la part CONSOMMÉE : on ajoutait un plat,
-     le nombre descendait de 128 à 102 pendant que l'anneau, lui, montait de
-     0 à 12 %. Les deux disaient le contraire l'un de l'autre.
-     Une jauge qui accompagne un restant part donc pleine et descend vers 0 :
-     journée sans repas = 100 %, objectif atteint = anneau vide.
-     ⚠️ `pp/gp/lp` (la part consommée) restent tels quels : c'est ce que
-     calcScoreFromAvg attend, et un score « atteinte des objectifs » calculé
-     sur du restant serait exactement à l'envers. */
-  function partRestante(obj, consommePct) {
-    // Objectif inconnu : un anneau plein voudrait dire « tout te reste »,
-    // alors qu'on ne sait rien. On n'affiche donc rien.
-    return obj > 0 ? Math.max(0, 100 - consommePct) : 0;
-  }
-  var pr = partRestante(macObj.p, pp),
-      gr = partRestante(macObj.g, gp),
-      lr = partRestante(macObj.l, lp);
-
-  // Labels : le pourcentage annoncé est celui de l'anneau, donc le restant.
-  /* Le titre de la carte dit ce que sont les grands nombres. Sans objectif
-     calculable, « il reste » n'a pas de sens : on annonce l'objectif. */
+  /* Le titre dit ce que sont les grands nombres. Il a déjà induit en erreur une
+     fois dans l'autre sens (« Votre objectif » au-dessus d'un restant) : il
+     nomme donc explicitement le geste. */
   var ot = document.getElementById('objTitre');
-  if (ot) ot.textContent = macObj.p ? 'Il vous reste aujourd’hui' : 'Votre objectif';
+  if (ot) ot.textContent = 'Consommé aujourd’hui';
 
-  /* Et chaque anneau porte le mot, pour qu'il se lise seul : un anneau regardé
-     hors de son titre ne doit pas pouvoir passer pour un objectif. */
+  /* Et chaque anneau porte le mot, pour se lire seul : un anneau regardé hors
+     de son titre ne doit pas pouvoir passer pour un objectif ni pour un reste.
+     On annonce aussi ce qu'il reste, en second — l'information n'a pas disparu,
+     elle a changé de rang. */
+  function sousTitre(obj, val, pct) {
+    if (!obj) return 'objectif –';
+    var reste = Math.max(0, Math.round(obj - val));
+    return pct + '% de ' + obj + 'g · ' + (reste ? 'reste ' + reste + 'g' : 'objectif atteint');
+  }
   var op = document.getElementById('oProt');
-  if (op) op.textContent = hasData ? ('restant · ' + pr + '% de ' + macObj.p + 'g')
-                                   : (macObj.p ? ('restant sur ' + macObj.p + 'g') : 'objectif –');
+  if (op) op.textContent = sousTitre(macObj.p, conso.p, pp);
   var og = document.getElementById('oGluc');
-  if (og) og.textContent = hasData ? ('restant · ' + gr + '% de ' + macObj.g + 'g')
-                                   : (macObj.g ? ('restant sur ' + macObj.g + 'g') : 'objectif –');
+  if (og) og.textContent = sousTitre(macObj.g, conso.g, gp);
   var ol = document.getElementById('oLip');
-  if (ol) ol.textContent = hasData ? ('restant · ' + lr + '% de ' + macObj.l + 'g')
-                                   : (macObj.l ? ('restant sur ' + macObj.l + 'g') : 'objectif –');
+  if (ol) ol.textContent = sousTitre(macObj.l, conso.l, lp);
 
-  // Label calories avec indicateur
+  /* Le libellé des calories ne parle plus de moyenne : le chiffre juste à côté
+     est celui du jour. Il annonçait « ⚡ Moy. 7j » au-dessus de ce qui est
+     maintenant un total du jour — c'était la même confusion, en plus petit. */
   var calRow = document.querySelector('.hero-cal-left');
-  if (calRow) calRow.textContent = hasData
-    ? '⚡ Moy. ' + (moy.jours > 1 ? moy.jours+'j' : 'aujourd\'hui')
-    : '⚡ Calories aujourd\'hui';
+  if (calRow) calRow.textContent = '⚡ Calories aujourd\'hui';
 
-  // Anneaux et barres : la part RESTANTE (voir partRestante ci-dessus).
+  // Anneaux et barres : la part CONSOMMÉE. Ils se remplissent.
   setTimeout(function(){
-    var bp=document.getElementById('bProt'); if(bp) bp.style.width=pr+'%';
-    var bg=document.getElementById('bGluc'); if(bg) bg.style.width=gr+'%';
-    var bl=document.getElementById('bLip');  if(bl) bl.style.width=lr+'%';
+    var bp=document.getElementById('bProt'); if(bp) bp.style.width=pp+'%';
+    var bg=document.getElementById('bGluc'); if(bg) bg.style.width=gp+'%';
+    var bl=document.getElementById('bLip');  if(bl) bl.style.width=lp+'%';
     var mrC=2*Math.PI*38;
-    var rp=document.getElementById('ringProt'); if(rp) rp.style.strokeDasharray=((pr/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
-    var rg2=document.getElementById('ringGluc'); if(rg2) rg2.style.strokeDasharray=((gr/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
-    var rl=document.getElementById('ringLip');  if(rl) rl.style.strokeDasharray=((lr/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
+    var rp=document.getElementById('ringProt'); if(rp) rp.style.strokeDasharray=((pp/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
+    var rg2=document.getElementById('ringGluc'); if(rg2) rg2.style.strokeDasharray=((gp/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
+    var rl=document.getElementById('ringLip');  if(rl) rl.style.strokeDasharray=((lp/100)*mrC).toFixed(1)+' '+mrC.toFixed(1);
   }, 100);
 
-  // Recalculer et afficher le score basé sur la moyenne
-  setScore(calcScoreFromAvg(conso, pp, gp, lp));
+  /* Le score reste un indicateur d'HABITUDE, donc sur la moyenne 7 jours — et
+     avec ses propres pourcentages, sinon il repartirait de zéro chaque matin.
+     Quand il n'y a pas encore d'historique, `calcMoyenneMacros()` renvoie
+     l'objectif (un reste de l'époque où elle servait à l'affichage) : le
+     prendre pour du consommé donnerait 100 % d'atteinte sans avoir mangé. */
+  var moyOk = moy.jours > 0;
+  var mc = moyOk ? moy : { p:0, l:0, g:0, c:0 };
+  setScore(calcScoreFromAvg(mc, part(macObj.p, mc.p), part(macObj.g, mc.g), part(macObj.l, mc.l)));
 }
 
 function calcScoreFromAvg(moy, pp, gp, lp) {
@@ -2596,16 +2589,21 @@ function openMacroPopup(type) {
   // Update header
   setText('mbName', cfg.name);
   setText('mbUnit', cfg.unit.toLowerCase());
-  // Même règle que les anneaux de l'écran Suivi : la jauge suit le RESTANT.
-  var pctRestant = obj>0 ? Math.max(0, 100-pct) : 0;
-  setText('mbVal', restant||(obj>0?obj:'–'));
-  setText('mbPct', pctRestant+'%');
+  /* Même règle que les anneaux de l'écran Suivi : le chiffre et la jauge
+     montrent ce qui a été CONSOMMÉ aujourd'hui, et la jauge se remplit. Le
+     reste est annoncé en second, sous le chiffre. */
+  setText('mbVal', Math.round(auj));
+  setText('mbPct', pct+'%');
+  var mbReste = document.getElementById('mbReste');
+  if (mbReste) mbReste.textContent = obj
+    ? (restant ? 'sur ' + obj + cfg.unit.toLowerCase() + ' · reste ' + restant : 'objectif de ' + obj + cfg.unit.toLowerCase() + ' atteint')
+    : '';
   var emojiEl = document.getElementById('mbEmojiCircle');
   if (emojiEl) emojiEl.textContent = cfg.emoji;
   var arc = document.getElementById('mbArc');
   if (arc) {
     arc.style.stroke = cfg.color;
-    setTimeout(function(){ arc.style.strokeDasharray = ((pctRestant/100)*circ)+' '+circ; }, 50);
+    setTimeout(function(){ arc.style.strokeDasharray = ((pct/100)*circ)+' '+circ; }, 50);
   }
 
   // Onglets : on repeint à chaque ouverture, la macro active changeant.
@@ -5692,6 +5690,13 @@ window.addEventListener('natty:repas-ajoute', function(){
 <script src="/assets/journee.js"></script>
 <script>
   if (window.NattyJournee) NattyJournee.proposerSiNecessaire();
+</script>
+<script src="/assets/bilan.js"></script>
+<script>
+  /* Le bilan du soir, et celui de la semaine le samedi. Il attend plus
+     longtemps que le guide du jour (9 s contre 6,5) : quand les deux sont dus,
+     c'est le guide qui doit s'ouvrir, et le bilan renonce en le voyant. */
+  if (window.NattyBilan) NattyBilan.proposerSiNecessaire();
 </script>
 <script src="/assets/notifs.js"></script>
 <script src="/assets/push.js"></script>

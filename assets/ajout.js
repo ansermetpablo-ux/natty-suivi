@@ -8,9 +8,13 @@
    naviguer d'abord ferait perdre le geste.
 
    Enchaînement des écrans (cf. maquettes) :
-     photo → analyse IA → « Votre premier repas » (anneaux de macros
-     restantes pour CE repas) → « Réussir votre objectif » (4 options)
-     → carrousel de suggestions → retour aux anneaux, qui diminuent.
+     photo → analyse IA → « Votre premier repas » (anneaux des macros
+     COMPTÉES sur CE repas) → « Réussir votre objectif » (4 options)
+     → carrousel de suggestions → retour aux anneaux, qui montent.
+
+   ⚠️ Les anneaux se REMPLISSENT (2026-08-10, demande de Pablo) : ils montrent
+   ce qui a été mangé sur le créneau, pas ce qu'il en reste. Voir `majAnneaux()`.
+   Ce qu'il reste n'a pas disparu — il est passé au second rang des libellés.
 
    Dépend de assets/core.js (Natty.*). Toute évolution du parcours se
    fait ici uniquement, pas dupliquée par page.
@@ -647,12 +651,12 @@
          reproche de Pablo. Cette ligne le dit, et dit aussi ce qui est déjà
          noté : sans elle, un reste amputé d'un plat pris une demi-heure plus tôt
          ressemble à une erreur. */
-      + '    <div class="na-reste-h"><span id="naResteH">Il vous reste pour ce repas</span>'
+      + '    <div class="na-reste-h"><span id="naResteH">Vous avez mangé pour ce repas</span>'
       + '      <span class="na-reste-deja" id="naResteDeja"></span></div>'
       +      ringsHTML('m', 'mini')
       + '    <div class="na-kmod">'
       + '      <div class="na-kmod-l">'
-      + '        <div class="na-kmod-t">Calories restantes</div>'
+      + '        <div class="na-kmod-t" id="naKmodT">Calories comptées</div>'
       + '        <div class="na-kmod-s" id="naKmodS">pour ce repas</div>'
       + '      </div>'
       + '      <div class="na-kmod-v">'
@@ -697,7 +701,7 @@
       + '    <div class="na-plat-plus" id="naPlatPlus"></div>'
       + '    <div class="na-vigns" id="naVign"></div>'
       +      ringsHTML('', '')
-      + '    <div class="na-reste-h"><span id="naResteH2">Il vous reste pour ce repas</span>'
+      + '    <div class="na-reste-h"><span id="naResteH2">Vous avez mangé pour ce repas</span>'
       + '      <span class="na-reste-deja" id="naResteDeja2"></span></div>'
       + '    <div class="na-kcal-line" id="naKcal"></div>'
       + '    <div class="na-detail ouvert">'
@@ -1126,31 +1130,40 @@
       : '';
   }
 
+  /* Ce qui est COMPTÉ sur ce créneau : ce qui est déjà en base plus ce qui est
+     dans la session en cours. C'est ce que montrent les anneaux depuis le
+     2026-08-10 (demande de Pablo) : ils se remplissent au fil des ajouts, au
+     lieu de se vider. `restant()` sert encore, mais pour la marge d'« Enrichir »
+     et le second rang des libellés. */
+  function pris() {
+    var u = totalSession(), dj = dejaCreneau();
+    return { p: r1(u.p + dj.p), l: r1(u.l + dj.l), g: r1(u.g + dj.g), c: Math.round(u.c + dj.c) };
+  }
+
   function majAnneaux() {
     if (!dom || !S || !cibleJour) return;
-    var c = cibleRepas(), u = totalSession(), r = restant();
-    // Les DEUX jeux d'anneaux (prise de vue en −30 %, récap à taille normale)
-    // sont peints du même coup : ils montrent la même chose, ils ne peuvent pas
-    // se contredire d'un écran à l'autre.
+    var c = cibleRepas(), r = restant(), t = pris();
+    /* Les DEUX jeux d'anneaux (prise de vue en −30 %, récap à taille normale)
+       sont peints du même coup : ils montrent la même chose, ils ne peuvent pas
+       se contredire d'un écran à l'autre.
+       ⚠️ L'anneau se REMPLIT — la fraction est le CONSOMMÉ sur la cible, plafonné
+       à 1. Sans plafond, un dépassement enroulerait l'arc une seconde fois par
+       dessus le premier tour et un gros excès ressemblerait à un petit. */
     PREFIXES.forEach(function (pre) {
       ['p', 'l', 'g'].forEach(function (k) {
-        var frac = c[k] > 0 ? Math.max(0, Math.min(1, (c[k] - u[k]) / c[k])) : 0;
+        var frac = c[k] > 0 ? Math.max(0, Math.min(1, t[k] / c[k])) : 0;
         var arc = q('#naArc' + pre + k);
         if (arc) arc.setAttribute('stroke-dasharray', (frac * CIRC).toFixed(1) + ' ' + CIRC.toFixed(1));
         var v = q('#naVal' + pre + k);
-        if (v) v.textContent = r[k] + 'g';
+        if (v) v.textContent = Math.round(t[k]) + 'g';
       });
     });
     /* L'en-tête nomme le repas et annonce ce qui est déjà noté. C'est lui qui
-       rend le reste compréhensible : « il reste 500 kcal » n'a de sens que si on
-       sait sur quoi, et pourquoi ce n'est pas la cible pleine. */
+       rend le chiffre compréhensible : « 500 kcal » n'a de sens que si on sait
+       sur quel repas, et ce qui y était déjà compté avant cette session. */
     var cr = creneauCourant(), dj = dejaCreneau();
     var nomRepas = cr ? cr.nom.toLowerCase() : 'ce repas';
-    // Ne pas dire « il vous reste » quand il ne reste rien : la phrase doit
-    // décrire ce qu'on voit, sinon elle contredit le chiffre juste en dessous.
-    var phrase = (r.c <= 0 && (u.c + dj.c) > c.c)
-      ? 'Votre ' + nomRepas + ' est déjà complet'
-      : 'Il vous reste pour votre ' + nomRepas;
+    var phrase = 'Vous avez mangé pour votre ' + nomRepas;
     var sousPhrase = dj.n
       ? dj.n + (dj.n > 1 ? ' plats déjà notés' : ' plat déjà noté') + ' · ' + dj.c + ' kcal comptées'
       : (cr ? 'sur ' + c.c + ' kcal prévues pour ce créneau' : '');
@@ -1164,23 +1177,33 @@
     var kc = q('#naKcal');
     if (kc) {
       kc.textContent = r.c > 0
-        ? r.c + ' kcal restantes sur ' + c.c + ' pour ce ' + nomRepas
-        : 'Cible atteinte — ' + (u.c + dj.c) + ' kcal sur ' + c.c;
+        ? t.c + ' kcal sur ' + c.c + ' pour ce ' + nomRepas + ' · reste ' + r.c
+        : t.c + ' kcal sur ' + c.c + ' — cible atteinte';
     }
-    /* Le module noir de l'écran de prise de vue. Le grand chiffre est ce qu'il
-       RESTE ; quand la cible est dépassée on affiche le dépassement plutôt qu'un
-       zéro, qui laisserait croire à un compte juste. */
-    var n = q('#naKmodN'), su = q('#naKmodS'), un = q('#naKmodU');
+    /* Le module noir de l'écran de prise de vue. Le grand chiffre est ce qui a
+       été COMPTÉ ; le dépassement se dit dans le sous-titre et par la couleur,
+       plutôt qu'en remplaçant le chiffre — on veut toujours pouvoir lire ce
+       qu'on a mangé, y compris quand on a mangé plus que prévu. */
+    var n = q('#naKmodN'), su = q('#naKmodS'), un = q('#naKmodU'), ti = q('#naKmodT');
     if (n && su && un) {
-      var prisTotal = u.c + dj.c;          // session en cours + déjà enregistré
-      var depasse = r.c <= 0;
-      n.textContent = depasse ? '+' + (prisTotal - c.c) : r.c;
-      un.textContent = depasse ? 'kcal de trop' : 'kcal restantes';
+      var depasse = r.c <= 0 && t.c > c.c;
+      if (ti) ti.textContent = 'Calories comptées';
+      n.textContent = t.c;
+      un.textContent = 'kcal';
       su.textContent = depasse
-        ? 'au-delà de votre ' + nomRepas + ' (' + prisTotal + ' / ' + c.c + ')'
+        ? '+' + (t.c - c.c) + ' au-delà de votre ' + nomRepas + ' (' + c.c + ')'
         : 'sur ' + c.c + ' pour votre ' + nomRepas;
       n.style.color = depasse ? '#ff9500' : '#fff';
     }
+    /* Le titre de chaque plat, dans la liste des ingrédients. Rafraîchi ici et
+       non par `rendreDetail()`, qui réécrirait le champ en cours de saisie. */
+    if (dom.querySelectorAll) {
+      dom.querySelectorAll('#naDetailB .na-grp[data-grp]').forEach(function (h) {
+        var pl = S.plats[+h.getAttribute('data-grp')];
+        if (pl) h.textContent = pl.nom + ' — ' + macrosIngs(pl.ingredients).c + ' kcal';
+      });
+    }
+
     var enr = q('#naEnrichir');
     /* « Enrichir » n'a de sens que s'il reste de la marge sur ce repas — ET
        qu'un plat existe. Il vit désormais sur le seul écran de récap, donc la
@@ -1201,6 +1224,14 @@
       var m = macrosIngs(pl.ingredients);
       var h = document.createElement('div');
       h.className = 'na-grp';
+      /* ⚠️ Le titre du plat porte un `data-grp` pour que `majAnneaux()` puisse le
+         rafraîchir SANS repasser par `rendreDetail()` — celui-ci réécrit tout
+         l'`innerHTML`, donc il détruirait le champ dans lequel on est en train de
+         taper. Sans ce marqueur, on lisait « MON PLAT — 0 KCAL » au-dessus
+         d'anneaux à 680 kcal : deux chiffres du même écran qui se contredisent,
+         exactement ce qu'on vient de corriger ailleurs (relevé au banc le
+         2026-08-10, le compteur ne bougeait qu'au retrait d'un ingrédient). */
+      h.setAttribute('data-grp', String(pi));
       h.textContent = pl.nom + ' — ' + m.c + ' kcal';
       b.appendChild(h);
 

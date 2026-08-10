@@ -125,6 +125,17 @@ window.NattyJournee = (function () {
     try { return !!NattyNav.vuAujourdhui(k); } catch (e) { return true; }
   }
 
+  /* Le bilan du soir a-t-il été fait aujourd'hui ? On relit la MÊME clé que
+     celle qu'écrit `assets/bilan.js` — pas une copie du nom : deux clés
+     voisines donneraient une étape qui ne se coche jamais, ou qui se coche
+     sans raison. Le module ne l'expose pas, la clé est le contrat. */
+  function bilanFait() {
+    try {
+      var u = (window.Natty && Natty.USER_ID) || 'anon';
+      return localStorage.getItem('natty_bilan_vu_' + u) === jourCourant();
+    } catch (e) { return false; }
+  }
+
   /* ═══ 3. Les illustrations ═══════════════════════════════
      Trait blanc, jamais d'emoji : la demande est un noir et blanc sérieux, et
      l'app parle déjà cette langue-là dans ses cinématiques (`.illu` de
@@ -301,11 +312,26 @@ window.NattyJournee = (function () {
       action: function () { marquerEtape('defi'); Natty.goto('narration.html'); }
     });
 
+    /* ── Le point du soir ─────────────────────────────────
+       Il OUVRE le bilan (`assets/bilan.js`) plutôt que de renvoyer sur l'écran
+       Suivi. L'étape s'appelle « le point du soir » : y répondre par « va
+       regarder tes chiffres » laissait à l'utilisateur le travail de faire le
+       point lui-même. Le bilan le fait — récap, trois questions, analyse,
+       corps, progression.
+       ⚠️ Repli sur `suivi.html` si le module n'est pas chargé : une étape dont
+       le bouton ne mène nulle part est pire que l'ancienne destination. Et
+       `fait` regarde ce que le bilan a enregistré (`natty_bilan_vu_<uid>`), pas
+       l'onglet Suivi — ouvrir Suivi ne fait pas le point du soir. */
+    var bilanDispo = !!(window.NattyBilan && NattyBilan.ouvrirJour);
     out.push({
       cle: 'bilan', nom: 'Le point du soir', icone: 'bilan', h: H_BILAN,
-      fait: ongletVu('suivi'),
-      cta: 'Voir mon suivi',
-      action: function () { marquerEtape('bilan'); Natty.goto('suivi.html'); }
+      fait: bilanDispo ? bilanFait() : ongletVu('suivi'),
+      cta: bilanDispo ? 'Faire mon bilan' : 'Voir mon suivi',
+      action: function () {
+        marquerEtape('bilan');
+        if (bilanDispo) NattyBilan.ouvrirJour();
+        else Natty.goto('suivi.html');
+      }
     });
 
     out.sort(function (a, b) { return a.h - b.h; });
