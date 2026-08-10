@@ -1433,7 +1433,70 @@ où une table disparaîtrait, mais n'est plus le chemin normal.
 ⚠️ Tant que `membre_prefs` n'existe pas, **tous** les repas enregistrés sont visibles par les
 autres membres.
 
-### `assets/decouverte.js` — « Découvrir » : 93 plats du monde, et la visionneuse plein écran
+### `assets/visionneuse.js` — la page plein écran d'un plat
+**UNE** page pour tous les plats de l'app, d'où qu'ils viennent : un plat du monde de
+« Découvrir » ou le repas qu'un membre a publié dans le fil. Demande de Pablo (août 2026) : les
+deux doivent se comporter exactement pareil. Chargée par `social.html` (+ `www/`), **avant**
+`decouverte.js`, qui lui délègue son affichage.
+
+> ⚠️ **C'est pour ça qu'il y a UN module et pas deux.** Chaque fois que ce dépôt a laissé deux
+> écrans raconter la même chose, ils ont divergé — les ombres de `suivi.html` (§7), l'en-tête
+> de `menu.html` (§3), `www/menu.html` (§11). L'appelant fournit des **données**, jamais une
+> mise en page : `{items, index, titre, courses, actions, aimer, surVue, surMembre}`.
+
+**La composition**, de haut en bas : la jauge en segments et la barre de retour ; le **HÉROS** —
+la photo dans une carte neumorphique arrondie qui occupe **70 % de la hauteur** et sur laquelle
+**rien** n'est posé ; puis, SOUS la carte, la bulle **noire** du titre (nom + description) et
+les bulles **sombres** des macros (emoji + valeur) ; enfin « Voir les détails », en **texte
+gris**, qui fait monter les ingrédients, les étiquettes, la note et les actions.
+
+> ⚠️ **LA PHOTO EST LIBRE, ET C'EST LA RÈGLE QUI COMMANDE TOUT LE RESTE.** Demande de Pablo :
+> « le titre et les macros ne doivent pas être au même endroit, la photo du plat doit être
+> parfaitement libre ». Ni bulle, ni voile, ni dégradé ne se posent dessus — on voit le plat
+> entier, cadré comme le photographe l'a cadré. C'est le prix des 70 % : à 80 %, il n'y avait
+> pas la place de descendre le titre et les macros sous la carte.
+
+- ⚠️ **LE FOND SUIT LE THÈME**, contrairement à la version précédente qui était noire dans les
+  deux modes. Tout passe par les jetons `--nt-*` d'`assets/theme.js` — le seul fichier que
+  toutes les pages chargent, donc le seul endroit d'où un module injecté peut tirer des
+  couleurs valables partout.
+- ⚠️ **Les bulles, elles, restent sombres dans les deux thèmes.** Elles reposent SUR une photo,
+  pas sur l'interface : le contraste d'un voile clair sous du texte blanc ne tient que par
+  accident selon l'image. Leçon déjà payée deux fois (la pastille « Vietnam » du phở
+  s'affichait vide).
+- ⚠️ **Le relief neumorphique ne s'inverse pas en sombre** : un reflet blanc à .9 sur fond noir
+  n'est plus un relief, c'est un halo. Il tombe à .04, et c'est l'ombre portée qui creuse
+  (`--v-so` / `--v-si`, même règle qu'au §5).
+- ⚠️ **`height:70%` fermement, pas `flex:1`.** Les 70 % sont une promesse ; une carte qui se
+  compresserait au gré de la longueur du texte ne la tiendrait pas.
+- ⚠️ **La diapositive n'a AUCUNE marge verticale**, et c'est ce qui permet d'annoncer 70 %
+  honnêtement : un pourcentage se résout sur la boîte de contenu du parent, donc avec 10 px en
+  haut et en bas, `height:70%` valait 70 % de 792 px — **68,2 % de l'écran**. Les retraits de
+  zone sûre vivent sur les enfants (la jauge en haut, le bouton en bas). Mesuré après :
+  **70,0 % exactement** à 375 × 812.
+- ⚠️ **Le liseré de la bulle noire n'est pas décoratif** : sur le fond sombre de l'app
+  (`#0e0e11`), une bulle noire ne se distingue plus du tout — le bloc du titre se dissolvait
+  dans la page.
+- ⚠️ **Sous 700 px de haut**, mesuré à 375 × 667, le bloc du bas n'avait que 88 px pour un
+  contenu de 113 : la bulle du titre chevauchait les macros. Deux choses cèdent, dans cet
+  ordre — la **description** disparaît (elle reste entière dans le tiroir, c'est la ligne dont
+  on peut le plus se passer), puis la carte lâche quatre points (66 %). Rogner la photo
+  d'abord aurait été trahir la promesse pour du texte lisible ailleurs.
+- **Le tap sur la photo avance d'un plat** (« swippable par un simple click »), en plus du
+  geste latéral. ⚠️ Il est testé **en dernier** dans le gestionnaire, après tous les boutons :
+  posé avant, il avalerait le clic sur « Voir les détails ». Et il relit la position **réelle**
+  de la piste plutôt que `INDEX` — celui-ci n'est mis à jour que par l'écouteur de défilement,
+  amorti par une rAF, donc un tap qui suit de près un glissement partirait d'une valeur périmée.
+- Le geste latéral reste un `scroll-snap-type:x mandatory`, jamais un suivi de pointeur maison
+  (voir l'encadré « Tier list » de §7).
+
+**Ce que chaque appelant traduit** — `assets/decouverte.js` transforme un plat du catalogue
+(pays en kicker, étiquettes, note, ingrédients, **aucune macro**) ; `social.html` transforme un
+plat du fil (auteur en chapeau, description calculée, macros de `Natty.calcMac`, note de score,
+j'aime, « Suivre », lien vers le profil, et la **liste de la section d'où l'on vient** pour que
+le geste latéral parcoure ce qu'on avait sous les yeux).
+
+### `assets/decouverte.js` — « Découvrir » : 93 plats du monde
 Trois rangées **en haut de `social.html`**, plus l'écran qui s'ouvre quand on tape un plat.
 Chargé par `social.html` (+ `www/`), avec `assets/liste.js` juste derrière. Dépend
 d'`assets/core.js`.
@@ -1467,9 +1530,10 @@ de `social.html` le rend tel quel : une cuisine ajoutée à la fin donnerait une
 > deviendront des recettes avec des grammages, `Natty.calcMac` fera le calcul, sans rien
 > changer au reste.
 
-**La visionneuse** (`ouvrir({plats, index, titre})`) — photo plein cadre, jauge de progression
-en segments, et le plat suivant **d'un geste latéral**. Tout est préfixé `nd-` et scellé sous
-`#ndec`, z-index 880 (au-dessus de la nav et des pages de `social.html`, sous `assets/ajout.js`).
+**La visionneuse a quitté ce fichier** (août 2026) : elle vit dans `assets/visionneuse.js`,
+partagée avec le fil social. `ouvrir({plats, index, titre})` ne fait plus que traduire un plat
+du catalogue en item de visionneuse. Les pièges qui suivent valent toujours — ils ont juste
+déménagé avec elle.
 - ⚠️ **Le geste est un `scroll-snap-type:x mandatory`, pas un suivi de pointeur maison.** Le jeu
   « Tier list » de `narration.html` a coûté une session entière à `setPointerCapture` et ses
   gestes inachevés (§7) : ici le navigateur fait tout — inertie, arrêt sur une diapositive,
@@ -3508,3 +3572,21 @@ session « fil social » :*
   transitions.
 - 🔄 **Non vérifié sur téléphone** : la fluidité réelle des transitions et le rendu des zones
   sûres n'ont pu être jugés qu'en navigateur.
+
+---
+
+*Contribution session « une seule visionneuse » (Claude Opus, 9 août 2026) :*
+- **Nouveau** `assets/visionneuse.js` (+ `www/`) : la page plein écran d'un plat, la MÊME pour
+  « Découvrir » et pour le fil social. Fond qui suit le thème, héros à 70 % avec la photo
+  libre de tout élément, bulle noire du titre et bulles sombres des macros SOUS la carte,
+  « Voir les détails » en texte gris, geste latéral et tap-pour-avancer. Détail en §3.
+- `assets/decouverte.js` (+ `www/`) : sa visionneuse est partie dans le module partagé — 283
+  lignes en moins. Ne reste que la traduction d'un plat du catalogue en item de visionneuse.
+- `social.html` (+ `www/`) : la page-photo maison est remplacée par le même appel ; le geste
+  latéral parcourt la **section d'où vient le plat**, et non le seul plat touché.
+- Vérifié en navigateur, thèmes clair ET sombre : héros à **70,0 %** mesuré, photo sans aucun
+  enfant autre que l'image, tap sur la photo qui avance d'un plat et cale la jauge, tiroir,
+  ingrédients (dont un à apostrophe) jusque dans la liste de courses réelle, j'aime, « Suivre »
+  qui change de libellé, retour qui referme d'abord le tiroir, et 375 × 667 sans chevauchement.
+- 🔄 **Non vérifié sur téléphone** : le rendu du neumorphisme sur écran OLED et la zone sûre du
+  bas n'ont pu être jugés qu'en navigateur.

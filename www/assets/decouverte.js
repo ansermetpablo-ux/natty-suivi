@@ -706,350 +706,67 @@ var NattyDecouverte = (function () {
   }
 
   /* ══════════════════════════════════════════════════════════
-     La visionneuse plein écran
+     La visionneuse — déléguée à `assets/visionneuse.js`
      ══════════════════════════════════════════════════════════
-     Le geste latéral est un simple `scroll-snap-type:x mandatory`,
-     pas un suivi de pointeur maison. C'est délibéré : le jeu « Tier
-     list » de narration.html a coûté une session entière à cause de
-     `setPointerCapture` qui laissait des gestes inachevés (CLAUDE.md
-     §7). Ici le navigateur fait tout — inertie, rebond, accessibilité
-     clavier — et il n'y a aucun état à tenir.
-     ══════════════════════════════════════════════════════════ */
+     Elle vivait ici, en propre. Elle est partie dans son module le jour
+     où le fil social a dû ouvrir ses plats exactement de la même façon
+     (demande de Pablo, août 2026) : deux visionneuses, c'est deux
+     présentations à tenir à jour, donc deux qui divergent — le dépôt
+     s'est déjà fait avoir trois fois là-dessus (§5, §11).
 
-  var racine = null, piste = null, jauge = null;
-  var LISTE = [], INDEX = 0, TITRE = '';
-  var scrollBloque = '';
+     Ne reste ici que la TRADUCTION : un plat du catalogue devient un
+     item de la visionneuse. Ce module sait ce qu'est un plat du monde ;
+     l'autre sait comment on regarde un plat.
 
-  var CSS = [
-    '#ndec{position:fixed;inset:0;z-index:880;display:none;background:#000;color:#fff;',
-      "font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}",
-    '#ndec.on{display:block}',
-    /* La colonne : les photos sont en portrait, les étirer sur un écran
-       large les rognerait aux deux tiers. Le noir de part et d'autre est
-       le bord de l'image, pas un fond d'interface. */
-    '#ndec .nd-col{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);',
-      'width:100%;max-width:var(--col,480px);overflow:hidden;background:#0a0a0c}',
-    '#ndec .nd-track{position:absolute;inset:0;display:flex;overflow-x:auto;overflow-y:hidden;',
-      'scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;',
-      'overscroll-behavior-x:contain}',
-    '#ndec .nd-track::-webkit-scrollbar{display:none}',
-    '#ndec .nd-sl{position:relative;flex:0 0 100%;width:100%;height:100%;',
-      'scroll-snap-align:center;scroll-snap-stop:always;overflow:hidden}',
-    '#ndec .nd-ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;',
-      'opacity:0;transition:opacity .5s ease}',
-    '#ndec .nd-ph.vu{opacity:1}',
-    /* Deux voiles, pas un seul : le haut porte la jauge et le retour, le bas
-       porte tout le texte. Un dégradé unique sur toute la hauteur assombrirait
-       le milieu de la photo, c'est-à-dire le plat. */
-    '#ndec .nd-hz{position:absolute;left:0;right:0;top:0;height:220px;',
-      'background:linear-gradient(180deg,rgba(0,0,0,.78) 0%,rgba(0,0,0,.25) 55%,rgba(0,0,0,0) 100%);',
-      'pointer-events:none}',
-    /* ⚠️ Le voile du bas s'est déjà révélé trop lourd une fois : à .82 sur
-       ses 26 premiers pour cent, il éteignait le plat au lieu de porter le
-       texte, et l'écran entier virait au noir. Il tombe vite, et il ne
-       devient franc que sous le titre. */
-    '#ndec .nd-bz{position:absolute;left:0;right:0;bottom:0;height:70%;',
-      'background:linear-gradient(0deg,rgba(0,0,0,.93) 0%,rgba(0,0,0,.74) 26%,',
-      'rgba(0,0,0,.30) 58%,rgba(0,0,0,0) 100%);pointer-events:none}',
-
-    /* ── Barre du haut ── */
-    '#ndec .nd-top{position:absolute;left:0;right:0;top:0;z-index:6;',
-      'padding:calc(10px + env(safe-area-inset-top,0px)) 16px 0}',
-    '#ndec .nd-jauge{display:flex;gap:4px}',
-    '#ndec .nd-seg{flex:1;height:2.5px;border-radius:2px;background:rgba(255,255,255,.28)}',
-    '#ndec .nd-seg.on{background:#fff}',
-    '#ndec .nd-bar{display:flex;align-items:center;gap:12px;margin-top:14px}',
-    '#ndec .nd-back{width:38px;height:38px;flex:none;border:none;border-radius:50%;padding:0;',
-      'background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);',
-      'color:#fff;font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;',
-      'justify-content:center}',
-    '#ndec .nd-back:active{transform:scale(.92)}',
-    '#ndec .nd-ttl{flex:1;min-width:0;font-weight:800;font-size:13px;letter-spacing:.3px;',
-      'text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
-      'text-shadow:0 1px 8px rgba(0,0,0,.6)}',
-    '#ndec .nd-num{flex:none;font-size:12px;font-weight:700;opacity:.75}',
-
-    /* ── Contenu du bas ──
-       ⚠️ `max-height` À 58 %, ET C'EST LE RÉGLAGE CENTRAL DE L'ÉCRAN. La
-       fiche complète (nom, description, étiquettes, note, ingrédients,
-       bouton) fait deux fois la hauteur d'un iPhone : affichée d'un bloc,
-       elle recouvrait la photo entière — donc la seule raison d'être d'une
-       page plein écran. Au-delà de 58 %, le bloc défile SUR LUI-MÊME : on
-       voit d'emblée le plat, son nom et à quoi il ressemble, et on va
-       chercher les ingrédients d'un pouce si on les veut. */
-    '#ndec .nd-body{position:absolute;left:0;right:0;bottom:0;z-index:5;',
-      'padding:0 20px calc(18px + env(safe-area-inset-bottom,0px));',
-      'max-height:58%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}',
-    /* ⚠️⚠️ LE VERRE EST NOIR, PAS BLANC, ET C'EST UN DÉFAUT TROUVÉ À
-       L'ÉCRAN. Ces pastilles étaient en `rgba(255,255,255,.16)` avec du
-       texte blanc : sur une photo sombre elles se lisaient très bien, sur
-       une photo claire elles devenaient LITTÉRALEMENT INVISIBLES — la
-       pastille « 🇻🇳 Vietnam » du phở apparaissait vide, un rectangle flou
-       sans texte. Un voile clair sous du texte blanc n'a de contraste que
-       par accident, selon le plat photographié. Le verre sombre, lui,
-       fonctionne sur les 66. */
-    '#ndec .nd-pays{display:inline-flex;align-items:center;gap:7px;',
-      'background:rgba(0,0,0,.45);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);',
-      'border-radius:999px;padding:6px 13px;font-size:11.5px;font-weight:800;letter-spacing:.3px;',
-      'text-transform:uppercase}',
-    '#ndec .nd-nom{font-weight:900;font-size:29px;line-height:1.08;letter-spacing:-.6px;margin-top:12px;',
-      'text-shadow:0 2px 14px rgba(0,0,0,.75)}',
-    '#ndec .nd-desc{font-size:14px;line-height:1.5;opacity:.94;margin-top:9px;',
-      'text-shadow:0 1px 10px rgba(0,0,0,.8)}',
-    '#ndec .nd-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}',
-    '#ndec .nd-tag{border:1px solid rgba(255,255,255,.4);border-radius:999px;padding:5px 11px;',
-      'background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);',
-      'font-size:10.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase}',
-    /* La note nutrition est le seul bloc encadré : c'est l'apport de Natty
-       sur une page qui, sans elle, ne serait qu'un beau catalogue. */
-    '#ndec .nd-note{display:flex;gap:10px;margin-top:15px;padding:12px 14px;border-radius:16px;',
-      'background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);',
-      'font-size:12.5px;line-height:1.45}',
-    '#ndec .nd-note .nd-em{flex:none;font-size:15px;line-height:1.2}',
-    '#ndec .nd-sst{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;',
-      'opacity:.72;margin:17px 0 9px;text-shadow:0 1px 8px rgba(0,0,0,.9)}',
-    '#ndec .nd-ings{display:flex;flex-wrap:wrap;gap:7px}',
-    '#ndec .nd-ing{display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;',
-      'background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);',
-      'color:#fff;font-family:inherit;border-radius:999px;',
-      'padding:8px 13px;font-size:12px;font-weight:700;transition:background .18s,transform .12s}',
-    '#ndec .nd-ing:active{transform:scale(.95)}',
-    '#ndec .nd-ing.on{background:#fff;color:#101014}',
-    '#ndec .nd-ing .nd-k{font-weight:900}',
-    '#ndec .nd-cta{width:100%;margin-top:16px;border:none;border-radius:999px;padding:15px;',
-      'background:#fff;color:#101014;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}',
-    '#ndec .nd-cta:active{transform:scale(.98)}',
-    '#ndec .nd-cta[disabled]{opacity:.5}',
-
-    /* ── L'indice de geste ──
-       Il ne s'affiche que la première fois, et il s'efface au premier
-       glissement : un tutoriel qui reste à l'écran alors qu'on a déjà
-       compris devient du bruit. */
-    /* ⚠️ Centré verticalement, l'indice tombait pile sur le nom du plat : la
-       fiche occupe le bas de l'écran, le milieu de la FENÊTRE est donc le
-       haut de la fiche. Il se pose dans le tiers haut, sur la photo. */
-    '#ndec .nd-hint{position:absolute;right:16px;top:30%;z-index:6;transform:translateY(-50%);',
-      'display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;',
-      'background:rgba(0,0,0,.48);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);',
-      'font-size:11.5px;font-weight:800;pointer-events:none;',
-      'animation:ndHint 2.4s ease-in-out infinite;transition:opacity .35s ease}',
-    '#ndec .nd-hint.off{opacity:0}',
-    '@keyframes ndHint{0%,100%{transform:translate(0,-50%)}50%{transform:translate(-8px,-50%)}}',
-
-    '#ndec .nd-toast{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));',
-      'transform:translate(-50%,14px);z-index:10;background:#fff;color:#101014;border-radius:18px;',
-      'padding:12px 20px;font-size:12.5px;font-weight:700;opacity:0;pointer-events:none;',
-      'transition:all .3s cubic-bezier(.4,0,.2,1);white-space:nowrap;max-width:88vw;overflow:hidden;',
-      'text-overflow:ellipsis}',
-    '#ndec .nd-toast.on{opacity:1;transform:translate(-50%,0)}'
-  ].join('');
-
-  function esc(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+     ⚠️ Toujours pas de macros — voir l'encadré en tête de fichier. La
+     visionneuse affiche « Macros non estimées » d'elle-même, ce qui est
+     l'aveu recherché et non un trou dans la mise en page. */
 
   function uid() { return (window.Natty && Natty.USER_ID) || 'anon'; }
-
   function listeDispo() { return !!window.NattyListe && !!NattyListe.basculerExtra; }
-  function dansLaListe(nom) {
-    return listeDispo() ? NattyListe.contientExtra(uid(), nom) : false;
-  }
 
-  function monter() {
-    if (racine) return;
-    var st = document.createElement('style');
-    st.textContent = CSS;
-    document.head.appendChild(st);
-
-    racine = document.createElement('div');
-    racine.id = 'ndec';
-    racine.innerHTML =
-        '<div class="nd-col">'
-      +   '<div class="nd-track" id="ndTrack"></div>'
-      +   '<div class="nd-hz"></div>'
-      +   '<div class="nd-top">'
-      +     '<div class="nd-jauge" id="ndJauge"></div>'
-      +     '<div class="nd-bar">'
-      +       '<button class="nd-back" id="ndBack" aria-label="Fermer">✕</button>'
-      +       '<div class="nd-ttl" id="ndTitre"></div>'
-      +       '<div class="nd-num" id="ndNum"></div>'
-      +     '</div>'
-      +   '</div>'
-      +   '<div class="nd-hint" id="ndHint">Glissez <span>→</span></div>'
-      + '</div>'
-      + '<div class="nd-toast" id="ndToast"></div>';
-    document.body.appendChild(racine);
-
-    piste = racine.querySelector('#ndTrack');
-    jauge = racine.querySelector('#ndJauge');
-    racine.querySelector('#ndBack').addEventListener('click', fermer);
-
-    /* ⚠️ Le voile du haut (`.nd-hz`) est posé APRÈS la piste dans le DOM :
-       sans `pointer-events:none` sur lui, il avalerait le geste de
-       défilement sur le tiers haut de l'écran. La règle est dans le CSS,
-       ce commentaire est là pour qu'on ne la retire pas « pour tester ». */
-
-    piste.addEventListener('scroll', function () {
-      if (piste._raf) return;
-      piste._raf = requestAnimationFrame(function () {
-        piste._raf = 0;
-        var i = Math.round(piste.scrollLeft / Math.max(1, piste.clientWidth));
-        if (i !== INDEX) { INDEX = i; majJauge(); }
-        if (piste.scrollLeft > 12) cacherIndice();
-      });
-    }, { passive: true });
-
-    document.addEventListener('keydown', function (e) {
-      if (!racine.classList.contains('on')) return;
-      if (e.key === 'Escape') fermer();
-      if (e.key === 'ArrowRight') aller(INDEX + 1);
-      if (e.key === 'ArrowLeft') aller(INDEX - 1);
-    });
-
-    // Les ingrédients : un seul écouteur pour toute la visionneuse, les
-    // diapositives étant réécrites à chaque ouverture.
-    racine.addEventListener('click', function (e) {
-      var b = e.target.closest && e.target.closest('[data-ing]');
-      if (b) { basculerIngredient(b); return; }
-      var t = e.target.closest && e.target.closest('[data-tout]');
-      if (t) toutAjouter(t.dataset.tout);
-    });
-  }
-
-  function cacherIndice() {
-    var h = racine.querySelector('#ndHint');
-    if (h) h.classList.add('off');
-    try { localStorage.setItem('natty_decouverte_geste', '1'); } catch (e) {}
-  }
-
-  var toastT;
-  function toast(msg) {
-    var t = racine.querySelector('#ndToast');
-    t.textContent = msg;
-    t.classList.add('on');
-    clearTimeout(toastT);
-    toastT = setTimeout(function () { t.classList.remove('on'); }, 2000);
-  }
-
-  function diapo(p, i) {
-    var achete = listeDispo();
-    return '<div class="nd-sl" data-i="' + i + '">'
-      + '<img class="nd-ph" alt="" src="' + img(p) + '" '
-      +   (i < 2 ? '' : 'loading="lazy" ')
-      +   'onload="this.classList.add(\'vu\')">'
-      + '<div class="nd-bz"></div>'
-      + '<div class="nd-body">'
-      +   '<span class="nd-pays">' + p.drapeau + ' ' + esc(p.paysNom) + '</span>'
-      +   '<div class="nd-nom">' + esc(p.n) + '</div>'
-      +   '<div class="nd-desc">' + esc(p.d) + '</div>'
-      +   '<div class="nd-tags">' + p.t.map(function (x) {
-            return '<span class="nd-tag">' + esc(x) + '</span>';
-          }).join('') + '</div>'
-      +   '<div class="nd-note"><span class="nd-em">💡</span><span>' + esc(p.nu) + '</span></div>'
-      +   '<div class="nd-sst">Ce qu\'il y a dedans</div>'
-      +   '<div class="nd-ings">' + p.ingr.map(function (g) {
-            var on = achete && dansLaListe(g.n);
-            return '<button class="nd-ing' + (on ? ' on' : '') + '" data-ing="' + esc(g.n) + '"'
-              + ' data-em="' + esc(g.e) + '"' + (achete ? '' : ' disabled')
-              + '><span>' + g.e + '</span><span class="nd-k">' + esc(g.n) + '</span></button>';
-          }).join('') + '</div>'
-      +   (achete
-            ? '<button class="nd-cta" data-tout="' + esc(p.cle) + '">Tout ajouter à mes courses</button>'
-            : '')
-      + '</div>'
-      + '</div>';
-  }
-
-  function majJauge() {
-    var segs = jauge.children;
-    for (var i = 0; i < segs.length; i++) segs[i].classList.toggle('on', i <= INDEX);
-    var p = LISTE[INDEX];
-    racine.querySelector('#ndNum').textContent = (INDEX + 1) + '/' + LISTE.length;
-    racine.querySelector('#ndTitre').textContent = TITRE || (p ? p.paysNom : '');
-  }
-
-  function aller(i) {
-    if (i < 0 || i >= LISTE.length) return;
-    piste.scrollTo({ left: i * piste.clientWidth, behavior: 'smooth' });
-  }
-
-  function basculerIngredient(btn) {
-    if (!listeDispo()) return;
-    var nom = btn.dataset.ing;
-    var ajoute = NattyListe.basculerExtra(uid(), nom, btn.dataset.em);
-    // Le même ingrédient peut apparaître sur plusieurs plats de la liste :
-    // toutes ses pastilles doivent bouger, pas seulement celle qu'on a touchée.
-    racine.querySelectorAll('[data-ing="' + CSS_ESC(nom) + '"]').forEach(function (b) {
-      b.classList.toggle('on', ajoute);
-    });
-    toast(ajoute ? nom + ' ajouté à vos courses' : nom + ' retiré de vos courses');
-  }
-
-  // Un nom d'ingrédient peut contenir une apostrophe (« Huile d'olive ») :
-  // le glisser tel quel dans un sélecteur d'attribut casserait la requête.
-  function CSS_ESC(s) { return String(s).replace(/["\\]/g, '\\$&'); }
-
-  function toutAjouter(cle) {
-    if (!listeDispo()) return;
-    var p = platParCle(cle);
-    if (!p) return;
-    var n = 0;
-    p.ingr.forEach(function (g) {
-      if (!dansLaListe(g.n)) { NattyListe.basculerExtra(uid(), g.n, g.e); n++; }
-    });
-    racine.querySelectorAll('[data-ing]').forEach(function (b) {
-      b.classList.toggle('on', dansLaListe(b.dataset.ing));
-    });
-    toast(n ? n + (n > 1 ? ' ingrédients ajoutés' : ' ingrédient ajouté') + ' à vos courses'
-            : 'Tout est déjà dans vos courses');
+  function versItem(p) {
+    return {
+      cle: p.cle,
+      nom: p.n,
+      photo: img(p),
+      emoji: '🍽️',
+      kicker: p.drapeau + ' ' + p.paysNom,
+      desc: p.d,
+      macros: null,
+      tags: p.t,
+      note: p.nu,
+      ingredients: p.ingr.map(function (g) { return { nom: g.n, emoji: g.e }; })
+    };
   }
 
   /**
-   * Ouvre la visionneuse.
+   * Ouvre la visionneuse sur une liste de plats du catalogue.
    * @param {Object} o {plats:[], index:0, titre:''}
    */
   function ouvrir(o) {
     o = o || {};
-    LISTE = (o.plats && o.plats.length) ? o.plats : TOUS;
-    INDEX = Math.max(0, Math.min(LISTE.length - 1, o.index || 0));
-    TITRE = o.titre || '';
-    monter();
-
-    piste.innerHTML = LISTE.map(diapo).join('');
-    jauge.innerHTML = LISTE.map(function () { return '<div class="nd-seg"></div>'; }).join('');
-
-    var deja = false;
-    try { deja = !!localStorage.getItem('natty_decouverte_geste'); } catch (e) {}
-    racine.querySelector('#ndHint').classList.toggle('off', deja || LISTE.length < 2);
-
-    racine.classList.add('on');
-    scrollBloque = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    /* ⚠️ Le positionnement se fait APRÈS l'affichage, et sans animation.
-       Tant que `#ndec` est en `display:none`, `clientWidth` vaut 0 : un
-       `scrollTo` calculé là-dessus ramène systématiquement à la première
-       diapositive, quel que soit le plat sur lequel on a tapé. */
-    piste.scrollLeft = INDEX * piste.clientWidth;
-    majJauge();
+    var plats = (o.plats && o.plats.length) ? o.plats : TOUS;
+    if (!window.NattyVisionneuse) return;
+    NattyVisionneuse.ouvrir({
+      items: plats.map(versItem),
+      index: o.index || 0,
+      titre: o.titre || '',
+      courses: listeDispo() ? {
+        contient: function (nom) { return NattyListe.contientExtra(uid(), nom); },
+        basculer: function (nom, em) { return NattyListe.basculerExtra(uid(), nom, em); }
+      } : null
+    });
   }
 
-  function fermer() {
-    if (!racine) return;
-    racine.classList.remove('on');
-    document.body.style.overflow = scrollBloque;
-    // Les photos gardent leur place en mémoire tant que la piste existe ;
-    // on la vide pour qu'un aller-retour ne cumule pas douze plein écran.
-    piste.innerHTML = '';
-    if (typeof window.NattyDecouverteFermee === 'function') window.NattyDecouverteFermee();
-  }
+  function fermer() { if (window.NattyVisionneuse) NattyVisionneuse.fermer(); }
+
 
   return {
     cuisines: cuisines, cuisine: cuisine, parCuisine: parCuisine,
     tous: tous, parTag: parTag, tags: tags, selection: selection,
     platParCle: platParCle, img: img, vignette: vignette,
     ouvrir: ouvrir, fermer: fermer,
-    estOuverte: function () { return !!racine && racine.classList.contains('on'); }
+    estOuverte: function () { return !!window.NattyVisionneuse && NattyVisionneuse.estOuverte(); }
   };
 })();
