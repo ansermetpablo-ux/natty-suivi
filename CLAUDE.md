@@ -1021,6 +1021,84 @@ sûres mangent le haut ET le bas. Aucune constante ne pouvait tenir sur tous les
   les jalons a un rayon de 230 px, ses extrémités descendaient barrer le grand titre. Un
   `overflow:hidden` l'aurait tranché net, ce qui se voit encore plus.
 
+### `assets/bilan.js` — le récap du soir, et celui du samedi
+Plein écran qui raconte la journée qui vient de se passer : ce qui a été mangé, ce que la
+personne en pense (trois questions), ce que les chiffres en disent (quatre critères), ce que
+son corps en a fait, et où elle en est depuis un mois. **Le samedi soir, la même séquence
+porte sur les sept jours.** Chargé par les écrans porteurs de la nav (`suivi`, `repas`,
+`menu`/`www/index`) + copies `www/`. Dépend d'`assets/core.js` ; utilise `creneaux.js` s'il
+est là et sait s'en passer.
+
+**⚠️ IL N'INVENTE AUCUN CHIFFRE, et c'est ce qui a dessiné l'écran.** Un bilan est l'endroit
+de l'app où il serait le plus facile — et le plus grave — d'inventer : « vous avez brûlé
+400 g de graisse » est une phrase que personne ne peut vérifier. Deux règles :
+- ce qui est **mesuré** vient de `meals` + `meal_ingredients` via `Natty.calcMac`, qui préfère
+  les macros écrites à la table (règle 12) ;
+- ce qui est **estimé** — muscle, graisse — est annoncé comme tel, à l'écran, avec son modèle
+  en une ligne. D'où des **grammes et pas des kilos** : le gain de muscle plafonne vers 0,5 %
+  du poids par **semaine**, donc quelques dizaines de grammes par jour. « 0,03 kg » aurait été
+  techniquement juste et pratiquement illisible.
+- ⚠️ **Un jour non noté n'est pas un jour à zéro.** Il casse la courbe au lieu de la faire
+  plonger, et il est compté à part dans les moyennes (« moyenne sur 5 jours notés »). Le
+  compter 0 ferait passer une semaine mal journalisée pour une semaine de jeûne.
+
+**Les quatre critères** (`QUATRE`) — régularité, intensité, variété, équilibre. Chacun compare
+le jour à ce qui est attendu de LUI (créneaux prévus, cible du jour, aliments distincts,
+répartition des macros), jamais à une norme extérieure. `noteRatio()` pénalise un dépassement
+plus qu'un manque, comme le score du fil social.
+
+**Le déclencheur** (`proposerSiNecessaire`) attend **9 s**, contre 6,5 pour `journee.js` et 5
+pour `planning.js` : quand plusieurs sont dus, le guide du jour passe devant, et le bilan
+renonce en voyant son écran (`#nplan`, `#njour`, `#nattyAjout`, `#ndec`, génération en cours).
+Le bilan du **jour** à partir de 21 h, une fois par jour (`natty_bilan_vu_<uid>`) ; celui de la
+**semaine** le samedi, une fois par semaine (`natty_bilan_vusem_<uid>`).
+> ⚠️ **Le bilan de la semaine marque AUSSI la journée comme faite.** Sans ça, le samedi soir :
+> la semaine s'ouvre (elle passe avant), `vusem` est écrit, `vu` ne l'est pas — et à la
+> réouverture suivante, le même soir, le bilan du JOUR s'invitait dans la foulée. Ce que ça
+> coûte, et c'est assumé : les trois questions ne sont pas posées le samedi.
+
+**⚠️ LE PARE-FEU CSS, et pourquoi il existe.** Ce module s'invite sur des pages qui ont leur
+propre feuille, et ses classes internes sont volontairement courtes — `.st`, `.v`, `.n`,
+`.bar`, `.d`, `.j`… soit des noms que n'importe quelle page peut avoir déjà pris. Relevé sur
+les écrans porteurs : `suivi.html` a `.em`, `repas.html` `.v` et `.em`, `social.html` `.st`,
+`.n`, `.v`. **Aucun ne nous atteint** — tous sont des sélecteurs de *descendance*
+(`.pf-stats .st`) dont l'ancêtre n'existe pas ici. Mais ça ne tient que par chance : le jour
+où quelqu'un écrit `.st{}` nu, le bilan se déforme sur cette page-là et rien ne le signale.
+D'où `#nbil *{margin:0;padding:0;border:0}` — (1,0,0) bat toute classe nue (0,1,0), pendant
+que les règles du module, au moins (1,1,0), le battent lui. Vérifié : le module ne pose aucune
+balise à marge native (ni `p`, ni titre, ni liste), la remise à zéro ne lui coûte rien.
+
+**Trois défauts trouvés à l'écran, aucun par `node --check` :**
+- ⚠️⚠️ **Les barres de la semaine étaient COMPRIMÉES.** Élément flex dans une piste de hauteur
+  fixe (`.sem{height:132px}`), elles cédaient la place aux étiquettes du haut et du bas :
+  mesuré, des hauteurs calculées à **115, 116, 117 et 118 px se peignaient toutes à 96**. Six
+  jours rigoureusement identiques, dans le seul écran qui sert à les comparer. Il faut les
+  **deux** correctifs — `height:auto` (+ `min-height`) sur la piste et `flex:0 0 auto` sur la
+  barre. Même famille que le cadre photo d'`ajout.js` : **une hauteur demandée ne survit pas à
+  une compression flex.**
+- ⚠️ **Le « trait de dépense » était annoncé sans être dessiné.** La phrase du bas disait
+  « trait de dépense à 2800 kcal » sous un graphique où aucun trait n'existait — on cherchait
+  à l'écran une référence promise par le texte. Il est maintenant tracé, **position mesurée**
+  (le bas réel des barres) et non déduite : elle dépend de la hauteur de la lettre du jour,
+  donc des métriques de la police et pas d'une constante. En pointillé, **derrière** les
+  barres, pour qu'une journée qui le dépasse se lise comme telle.
+- ⚠️ Le plan sortant porte `pointer-events:none` (`#nbil .bloc.sort`) : sans lui, un tap rapide
+  pendant le fondu atteint un bouton déjà périmé — le chevauchement connu de `narration.html`.
+
+**Persistance** : table `bilan_jour` (`natty_bilan.sql`, §4). Tant qu'elle n'existe pas les
+réponses vivent dans le `localStorage` de l'appareil, et le dernier écran **le dit** plutôt que
+de laisser croire à une synchronisation qui n'a pas lieu (même parti pris qu'`assets/planning.js`).
+
+**Le guide du jour y mène** : l'étape « Le point du soir » d'`assets/journee.js` ouvre le bilan
+au lieu de renvoyer sur Suivi — l'étape faisait le point en le laissant à faire. Repli sur
+`suivi.html` si le module n'est pas chargé, et `fait` relit la clé qu'écrit le bilan, pas
+l'onglet Suivi (ouvrir Suivi ne fait pas le point du soir).
+
+⚠️ **Banc à horloge pilotée obligatoire.** Un lundi, la semaine en cours ne contient qu'un
+jour : l'écran à sept est alors **intestable**, et on conclut à tort que le graphique est
+cassé. Le banc remplace `Date` lui-même, avant tout le reste, pour que la doublure des repas,
+`core.js` et `bilan.js` lisent la même heure.
+
 ### `assets/theme.js` — le thème clair / sombre
 Chargé **dans le `<head>`, de façon synchrone**, par tous les écrans de l'app
 (les six porteurs de la nav, plus `login`, `onboarding`, `questionnaire-alim`,
@@ -2026,6 +2104,37 @@ Colonnes **relevées en base** (`select=*`, juillet 2026) :
 > personne n'interroge par morceaux.
 > Tant que la table manque, le plan reste dans le `localStorage` de l'appareil et l'écran le dit.
 
+#### `bilan_jour` — ✅ **existe** (`natty_bilan.sql`, exécuté le 2026-08-10)
+| Colonne | Type | Notes |
+|---|---|---|
+| user_id | text | PK avec `jour` |
+| jour | date | PK |
+| portee | text | `jour` / `semaine` |
+| ressenti | text | « vous avez réussi à bien manger ? » — `oui`/`moyen`/`non` |
+| motivation | text | `haute`/`stable`/`basse` |
+| difficulte | text | `temps`/`envies`/`quantite`/`rien` |
+| note | integer | la note du jour sur 100 |
+| muscle_g / gras_g | integer | les **estimations** du jour |
+| prot_g / cal_kcal | integer | ce qui a été mangé |
+| updated_at | timestamptz | |
+
+**Relevé à la clé anon le 2026-08-10**, cinq contrôles : la table répond `[]` (donc présente,
+et non `PGRST205`) ; le témoin sur une colonne inventée répond `42703`, ce qui prouve que le
+test lit vraiment le schéma ; les douze colonnes ci-dessus sont là ; un INSERT anon est refusé
+en **`42501`**, donc la policy protège.
+> ⚠️ **Et la clé primaire est confirmée par la MÊME mesure.** Un POST avec
+> `?on_conflict=user_id,jour` répond `42501` et **non `42P10`** (« no unique constraint
+> matching the ON CONFLICT specification ») : la requête a donc été **planifiée** avant d'être
+> refusée, ce qui prouve que la cible du `ON CONFLICT` s'est résolue. Sans cette clé, un second
+> bilan le même soir repartirait en **409** au lieu d'écraser — même piège que `meal_likes` /
+> `membre_amis` / `notes_nutritionniste`. Même raisonnement que pour `garde_manger`.
+
+Les colonnes chiffrées sont un **instantané, pas une source** : elles servent à relire une
+série sans refaire le calcul, et le module les recalcule toujours depuis `meals` quand il
+affiche l'écran. Si les deux divergeaient, ce sont les repas qui font foi.
+`bilan_jour` est dans `TABLES_USER` d'`api/supprimer-compte.js` — ce qu'on répond le soir sur
+sa motivation et ses difficultés est ce qu'il y a de plus personnel dans cette app.
+
 ### RLS — état actuel
 - `recettes`, `recettes_ingredients`, `recettes_etapes` : **RLS désactivé** (`DISABLE ROW LEVEL SECURITY`)
 - `profil_conseils` : **RLS désactivé**
@@ -2590,6 +2699,29 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   d'ingrédients manquent à la table de `core.js` et que `nb_repas='1_2'` gonfle la cible par
   repas. Le classement reste juste (même biais pour tous), pas les valeurs absolues.
 
+**Bilan du soir et de la semaine**
+- ✅ **Livré** (2026-08-10) — `assets/bilan.js`, détail en §3. Récap de ce qui a été mangé,
+  trois questions, quatre critères, corps (muscle/graisse estimés), courbe sur un mois ; et
+  le samedi, la même séquence sur les sept jours. Branché sur `suivi`, `repas`,
+  `menu`/`www/index` (+ copies `www/`).
+- ✅ **`natty_bilan.sql` exécuté le 2026-08-10** et vérifié à la clé anon (cinq contrôles,
+  dont la preuve de la clé primaire par `42501` plutôt que `42P10` — voir §4). Les réponses
+  suivent donc la personne d'un appareil à l'autre.
+- ✅ **Les deux défauts de macros signalés par Pablo sont corrigés** : `afficherMacros()`
+  prenait la **moyenne 7 jours** (`calcMoyenneMacros`) pour le consommé du jour — d'où
+  « il reste 89 g » après en avoir mangé 15 sur 140. Une moyenne ne se remet pas à zéro à
+  minuit. C'est `macAuj` qu'il fallait lire, et il existait déjà sans être utilisé ici. Et
+  les anneaux **se remplissent** désormais (Suivi + `+`), fraction plafonnée à 1 — sans
+  plafond, un dépassement enroule l'arc une seconde fois et un gros excès ressemble à un petit.
+- 🔄 **Non vérifié sur téléphone**, ni avec une vraie session : tout a tourné contre des
+  doublures, en navigateur (375 × 812, les deux thèmes, les deux séquences de bout en bout).
+- 🔄 **La courbe couvre 30 jours, pas « depuis le début »** — choix assumé de lisibilité sur
+  375 px, à retrancher avec Pablo.
+- 🔄 **Le samedi ne pose pas les trois questions** (voir §3) — à décider.
+- 🔄 Il ne s'ouvre que **quand l'app est ouverte**. Pour qu'il arrive de lui-même le soir, il
+  faut le brancher sur `assets/notifs.js` (le rappel du soir existe, il pointe vers le
+  parcours).
+
 **Guide « Ma journée »**
 - ✅ **Livré** (août 2026) — `assets/journee.js`, détail en §3. Arc de jalons qui défile de
   droite à gauche, version longue à la première ouverture du jour, version courte aux moments
@@ -2707,7 +2839,16 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 
   🔄 **Ce qui manque, et qui n'est PAS du code :**
   1. **La clé APNs** (Apple Developer → Keys → Apple Push Notifications service, Team
-     `SAZQ9AFAMZ`), puis sur Vercel : `APNS_KEY_ID`, `APNS_P8` (contenu du .p8),
+     **`DJLW82GU5A`** — l'équipe **Natty**, depuis l'achat de la licence Apple Developer
+     Program le 2026-08-10 ; l'ancien `SAZQ9AFAMZ` était le compte **individuel** de Pablo
+     et ne sert plus).
+     > ⚠️ **Une clé `.p8` appartient à UNE équipe.** Si une clé avait été créée sous le
+     > compte individuel, elle ne peut pas signer pour l'app de l'équipe Natty : il en faut
+     > une **nouvelle**, donc `APNS_KEY_ID` **et** `APNS_P8` changent avec `APNS_TEAM_ID`.
+     > Les trois se posent ensemble, jamais l'une sans les autres — un `iss` qui ne
+     > correspond pas à l'équipe signataire de l'app se paie d'un **403 sans un mot**
+     > d'explication (voir l'encadré `dsaEncoding` plus haut, même symptôme, autre cause).
+     Puis sur Vercel : `APNS_KEY_ID`, `APNS_P8` (contenu du .p8),
      `APNS_TEAM_ID`, `APNS_TOPIC` = **`com.pabloansermet.nattysuivi`** (le bundle id réel —
      **PAS** `com.natty.app` de `capacitor.config.json`), `APNS_ENV` = `sandbox` pour un build
      Xcode, `production` pour TestFlight/App Store. Plus `CRON_SECRET` et
@@ -2723,7 +2864,9 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      de l'entitlement : l'enregistrement échoue alors avec « aucune autorisation
      *aps-environment* valide » (constaté). L'entitlement lui-même est correct — le
      `App.app-Simulated.xcent` généré porte bien `aps-environment: development` et
-     `SAZQ9AFAMZ.com.pabloansermet.nattysuivi`. **Un simulateur ne peut de toute façon pas
+     l'identifiant d'application préfixé de l'équipe (relevé à l'époque du compte individuel :
+     `SAZQ9AFAMZ.com.pabloansermet.nattysuivi` ; c'est désormais `DJLW82GU5A.` devant le même
+     bundle id). **Un simulateur ne peut de toute façon pas
      obtenir de vrai jeton APNs** : le premier jeton réel viendra d'un iPhone.
   4. ✅ **Crons : réglé.** `{ "path": "/api/rappel-macros", "schedule": "0 16 * * *" }` ajouté
      à `vercel.json` avec l'accord de Pablo (16 h UTC = 18 h à Paris en été, 17 h en hiver —
@@ -3247,7 +3390,16 @@ reste l'ancien `phx_join` — voir §7.
 - **`challenges.html` est orphelin dans le bundle** : plus aucun lien n'y mène (l'onglet
   « Défis » ouvre `narration.html`). Le fichier reste embarqué. À supprimer de `www/` ou à
   relier — mais pas à laisser en l'état indéfiniment.
-- **Signature** : `CODE_SIGNING_ALLOWED=NO` suffit au simulateur ; un appareil réel ou TestFlight demande un Team Apple dans Xcode.
+- ✅ **Signature : l'équipe existe** (2026-08-10 — Pablo a pris la licence Apple Developer
+  Program à 99 €). `DEVELOPMENT_TEAM = DJLW82GU5A`, l'équipe **Natty**, en Debug comme en
+  Release, et l'entitlement `aps-environment: development` est posé. C'est ce qui débloque
+  l'appareil réel, TestFlight, et le premier vrai jeton APNs.
+  `CODE_SIGNING_ALLOWED=NO` reste ce qu'il faut pour le **simulateur** — mais c'est aussi ce
+  qui empêche d'embarquer l'entitlement, donc à retirer dès qu'on construit pour un iPhone
+  (voir §8, l'erreur « aucune autorisation *aps-environment* valide »).
+  > ⚠️ **On ne travaille plus sur le compte individuel `SAZQ9AFAMZ`.** Tout ce qui est
+  > rattaché à une équipe est à refaire sous la nouvelle : identifiant d'app, profils, et
+  > surtout la **clé APNs** — une `.p8` n'est pas transférable d'une équipe à l'autre.
   ⚠️ **Sauf pour le push** : sans signature, l'entitlement `aps-environment` n'est pas embarqué
   et `PushNotifications.register()` échoue (« aucune autorisation *aps-environment* valide »).
   Ce n'est pas un défaut de configuration — et un simulateur ne peut de toute façon pas obtenir

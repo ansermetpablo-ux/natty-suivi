@@ -1,4 +1,11 @@
 -- Natty — le bilan du soir et celui de la semaine (assets/bilan.js)
+--
+-- ✅ EXÉCUTÉ PAR PABLO LE 2026-08-10, et vérifié à la clé anon : la table
+-- répond [] (et non PGRST205), ses 12 colonnes sont là (témoin : une colonne
+-- inventée répond bien 42703), l'INSERT anon est refusé en 42501, et un POST
+-- avec ?on_conflict=user_id,jour échoue en 42501 et NON en 42P10 — donc la
+-- clé primaire (user_id, jour) est bien en place. Rien à refaire.
+--
 -- À exécuter dans Supabase → SQL Editor, une requête à la fois,
 -- SANS les commentaires (l'éditeur renvoie 42601 sinon).
 --

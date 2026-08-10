@@ -20,7 +20,15 @@
 //   APNS_KEY_ID   identifiant de la clé (10 caractères, visible à sa création)
 //   APNS_P8       contenu du fichier .p8, en-têtes BEGIN/END compris.
 //                 Les retours à la ligne peuvent être échappés en \n.
-//   APNS_TEAM_ID  défaut SAZQ9AFAMZ
+//   APNS_TEAM_ID  défaut DJLW82GU5A — l'équipe Natty, depuis l'achat de la
+//                 licence Apple Developer Program (2026-08-10). Le défaut
+//                 précédent était SAZQ9AFAMZ, le compte individuel de Pablo.
+//                 ⚠️ CE N'EST PAS UN DÉTAIL DE DOCUMENTATION : `iss` du JWT
+//                 doit être l'équipe qui a SIGNÉ l'app, sinon Apple répond un
+//                 403 sans un mot d'explication. Et une clé .p8 appartient à
+//                 une équipe : celle créée sous le compte individuel ne peut
+//                 pas signer pour l'app de l'équipe Natty, il en faut une
+//                 nouvelle (APNS_KEY_ID et APNS_P8 changent avec).
 //   APNS_TOPIC    défaut com.pabloansermet.nattysuivi (= bundle id iOS réel,
 //                 qui n'est PAS l'appId com.natty.app de capacitor.config.json)
 //   APNS_ENV      'sandbox' (défaut, builds Xcode) ou 'production'
@@ -38,7 +46,7 @@ const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 export function apnsConfigure() {
   const keyId  = process.env.APNS_KEY_ID;
   const p8     = process.env.APNS_P8;
-  const teamId = process.env.APNS_TEAM_ID || 'SAZQ9AFAMZ';
+  const teamId = process.env.APNS_TEAM_ID || 'DJLW82GU5A';
   const topic  = process.env.APNS_TOPIC   || 'com.pabloansermet.nattysuivi';
   const env    = process.env.APNS_ENV     || 'sandbox';
   if (!keyId || !p8) return null;

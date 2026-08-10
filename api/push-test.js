@@ -31,7 +31,12 @@ export default async function handler(req, res) {
   const cfg = apnsConfigure();
   const etat = {
     cle_apns: cfg ? 'configurée' : 'ABSENTE (APNS_KEY_ID / APNS_P8)',
-    equipe: process.env.APNS_TEAM_ID || 'SAZQ9AFAMZ (défaut)',
+    // ⚠️ L'équipe qui signe le JWT doit être celle qui a signé l'APP. Depuis
+    // l'achat de la licence (2026-08-10) c'est DJLW82GU5A, l'équipe Natty, et
+    // plus SAZQ9AFAMZ (le compte individuel). Une divergence ici se paie d'un
+    // 403 muet — d'où le rappel affiché quand on tourne encore sur le défaut.
+    equipe: process.env.APNS_TEAM_ID
+      || 'DJLW82GU5A (défaut — équipe Natty ; posez APNS_TEAM_ID pour en changer)',
     topic: process.env.APNS_TOPIC || 'com.pabloansermet.nattysuivi (défaut)',
     environnement: process.env.APNS_ENV || 'sandbox (défaut)',
     cle_supabase: process.env.SUPABASE_SERVICE_KEY ? 'configurée' : 'ABSENTE'
