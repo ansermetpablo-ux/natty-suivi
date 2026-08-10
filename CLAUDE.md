@@ -2849,8 +2849,8 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      > correspond pas à l'équipe signataire de l'app se paie d'un **403 sans un mot**
      > d'explication (voir l'encadré `dsaEncoding` plus haut, même symptôme, autre cause).
      Puis sur Vercel : `APNS_KEY_ID`, `APNS_P8` (contenu du .p8),
-     `APNS_TEAM_ID`, `APNS_TOPIC` = **`com.pabloansermet.nattysuivi`** (le bundle id réel —
-     **PAS** `com.natty.app` de `capacitor.config.json`), `APNS_ENV` = `sandbox` pour un build
+     `APNS_TEAM_ID`, `APNS_TOPIC` = **`com.natty.app`** (le bundle id, **le même partout**
+     depuis le 2026-08-10 — voir §11), `APNS_ENV` = `sandbox` pour un build
      Xcode, `production` pour TestFlight/App Store. Plus `CRON_SECRET` et
      `SUPABASE_SERVICE_KEY` s'ils manquent. Vérification : `GET /api/push-test?secret=…`.
   2. **`natty_push.sql`** à exécuter — tables `appareils`, `push_etat`, `push_config`, plus
@@ -2864,9 +2864,11 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      de l'entitlement : l'enregistrement échoue alors avec « aucune autorisation
      *aps-environment* valide » (constaté). L'entitlement lui-même est correct — le
      `App.app-Simulated.xcent` généré porte bien `aps-environment: development` et
-     l'identifiant d'application préfixé de l'équipe (relevé à l'époque du compte individuel :
-     `SAZQ9AFAMZ.com.pabloansermet.nattysuivi` ; c'est désormais `DJLW82GU5A.` devant le même
-     bundle id). **Un simulateur ne peut de toute façon pas
+     l'identifiant d'application préfixé de l'équipe. Il vaut désormais
+     **`DJLW82GU5A.com.natty.app`** ; le relevé d'origine disait
+     `SAZQ9AFAMZ.com.pabloansermet.nattysuivi` — les DEUX moitiés ont changé le 2026-08-10
+     (équipe et bundle id), donc une capture ou une note antérieure à cette date est fausse
+     de bout en bout. **Un simulateur ne peut de toute façon pas
      obtenir de vrai jeton APNs** : le premier jeton réel viendra d'un iPhone.
   4. ✅ **Crons : réglé.** `{ "path": "/api/rappel-macros", "schedule": "0 16 * * *" }` ajouté
      à `vercel.json` avec l'accord de Pablo (16 h UTC = 18 h à Paris en été, 17 h en hiver —
@@ -3271,6 +3273,40 @@ xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator \
 ```
 - Xcode fournit le **SDK** iOS mais **pas la plateforme** : si aucune destination simulateur n'est éligible, lancer `xcodebuild -downloadPlatform iOS` (ne demande pas de mot de passe).
 - Au tout premier lancement, la WebView peut mettre ~40 s à afficher quoi que ce soit (warm-up WebKit dans le simulateur). **Ce n'est pas un bug** — ne pas partir en chasse.
+
+### Identité de l'app — `com.natty.app`, partout (2026-08-10)
+Un seul identifiant désormais : **bundle id iOS**, `appId` de `capacitor.config.json`,
+`applicationId` et `namespace` Android, package Java (`android/app/src/main/java/com/natty/app/`)
+et **scheme des deep links**.
+
+**Ce qui a changé, et pourquoi celui-là.** Le bundle id iOS valait
+`com.pabloansermet.nattysuivi` — le reverse-DNS du compte **individuel** de Pablo, cohérent
+quand l'app était signée par lui, absurde une fois l'équipe **Natty** en place (le nom d'une
+personne apparaît dans le profil de provisionnement et dans les URLs de l'App Store).
+Le choix ne s'est pas fait sur du goût : **tout le reste du dépôt disait déjà `com.natty.app`**,
+Android jusque dans son arborescence de fichiers. Inventer un troisième identifiant aurait
+imposé de renommer le package Java, l'`applicationId`, le scheme, les URL de redirection
+Supabase et chaque deep link ; s'aligner sur iOS aurait consacré le nom d'une personne. Il n'y
+avait qu'un candidat qui ne coûte rien : celui que l'app portait déjà.
+
+> ⚠️ **Ça supprime un piège documenté, ne pas le réintroduire.** Ce fichier et l'en-tête
+> d'`api/_apns.js` ont longtemps averti qu'`APNS_TOPIC` était `com.pabloansermet.nattysuivi`
+> et **PAS** `com.natty.app`. Cet avertissement est **périmé** : les deux sont désormais le
+> même. Un `APNS_TOPIC` qui n'est pas le bundle id se paie d'un **400 TopicDisallowed**.
+>
+> ⚠️ **Le changement doit être fait AVANT la première publication, et il l'a été.** Après,
+> changer de bundle id ne renomme pas l'app : il en crée une **autre**, sans ses avis, son
+> classement ni ses installations, et les appareils déjà équipés ne reçoivent plus de mise à
+> jour. C'est pourquoi il fallait trancher maintenant ou jamais.
+>
+> ⚠️ **Un bundle id est GLOBALEMENT unique chez Apple.** `com.natty.app` est court et
+> générique : s'il est déjà pris par quelqu'un d'autre, ça se découvrira à l'enregistrement de
+> l'App ID, et il faudra en choisir un autre (`com.nattynutrition.app` suivrait le vrai domaine,
+> `natty-nutrition.com`). Dans ce cas, **tout renommer d'un coup** — la liste des fichiers est
+> celle du premier paragraphe — et refaire les redirections Supabase.
+
+**Ce qui n'a PAS eu à changer** : le scheme des deep links, déjà `com.natty.app` ; donc ni
+`login.html`, ni `checkout-retour.html`, ni `api/checkout.js`, ni les redirections Supabase.
 
 ### Deep links — `com.natty.app://`
 Le scheme est déclaré dans `ios/App/App/Info.plist` (`CFBundleURLTypes`) et dans `AndroidManifest.xml` (intent-filter `VIEW`/`BROWSABLE`, activité déjà en `launchMode="singleTask"`). Deux usages :

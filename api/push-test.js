@@ -15,9 +15,10 @@
 //                             depuis Xcode est un jeton *sandbox*, APNS_ENV
 //                             doit valoir 'sandbox' ; TestFlight et l'App
 //                             Store donnent des jetons *production*
-//   400 TopicDisallowed       APNS_TOPIC n'est pas le bundle id de l'app
-//                             (c'est com.pabloansermet.nattysuivi, PAS
-//                             l'appId com.natty.app de capacitor.config.json)
+//   400 TopicDisallowed       APNS_TOPIC n'est pas le bundle id de l'app.
+//                             C'est com.natty.app — le même partout depuis le
+//                             2026-08-10 (bundle id iOS, appId Capacitor,
+//                             applicationId Android, scheme des deep links).
 //   410 Unregistered          app désinstallée : le jeton est désactivé en base
 //
 // ⚠️ RUNTIME NODE OBLIGATOIRE : _apns.js utilise `http2`. Pas d'edge ici.
@@ -37,7 +38,7 @@ export default async function handler(req, res) {
     // 403 muet — d'où le rappel affiché quand on tourne encore sur le défaut.
     equipe: process.env.APNS_TEAM_ID
       || 'DJLW82GU5A (défaut — équipe Natty ; posez APNS_TEAM_ID pour en changer)',
-    topic: process.env.APNS_TOPIC || 'com.pabloansermet.nattysuivi (défaut)',
+    topic: process.env.APNS_TOPIC || 'com.natty.app (défaut — le bundle id iOS)',
     environnement: process.env.APNS_ENV || 'sandbox (défaut)',
     cle_supabase: process.env.SUPABASE_SERVICE_KEY ? 'configurée' : 'ABSENTE'
   };

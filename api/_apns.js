@@ -29,8 +29,13 @@
 //                 une équipe : celle créée sous le compte individuel ne peut
 //                 pas signer pour l'app de l'équipe Natty, il en faut une
 //                 nouvelle (APNS_KEY_ID et APNS_P8 changent avec).
-//   APNS_TOPIC    défaut com.pabloansermet.nattysuivi (= bundle id iOS réel,
-//                 qui n'est PAS l'appId com.natty.app de capacitor.config.json)
+//   APNS_TOPIC    défaut com.natty.app (= le bundle id iOS, aligné le
+//                 2026-08-10 sur l'appId de capacitor.config.json, sur
+//                 l'applicationId Android et sur le scheme des deep links).
+//                 Il valait com.pabloansermet.nattysuivi, et cette divergence
+//                 était à elle seule un piège : l'app entière parlait
+//                 com.natty.app, iOS seul disait autre chose, et un APNS_TOPIC
+//                 qui n'est pas le bundle id se paie d'un 400 TopicDisallowed.
 //   APNS_ENV      'sandbox' (défaut, builds Xcode) ou 'production'
 //                 (TestFlight et App Store). Un jeton obtenu en développement
 //                 est rejeté par l'hôte de production, et réciproquement :
@@ -47,7 +52,7 @@ export function apnsConfigure() {
   const keyId  = process.env.APNS_KEY_ID;
   const p8     = process.env.APNS_P8;
   const teamId = process.env.APNS_TEAM_ID || 'DJLW82GU5A';
-  const topic  = process.env.APNS_TOPIC   || 'com.pabloansermet.nattysuivi';
+  const topic  = process.env.APNS_TOPIC   || 'com.natty.app';
   const env    = process.env.APNS_ENV     || 'sandbox';
   if (!keyId || !p8) return null;
   return {
