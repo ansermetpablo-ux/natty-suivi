@@ -20,12 +20,12 @@
             </intent-filter>
 
             <!-- Retour d'authentification Google : Supabase redirige vers
-                 com.natty.app://oauth-callback, que le systeme remet a l'app. -->
+                 com.nattynutrition.app://oauth-callback, que le systeme remet a l'app. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.natty.app" />
+                <data android:scheme="com.nattynutrition.app" />
             </intent-filter>
         </activity>
 

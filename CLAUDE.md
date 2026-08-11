@@ -2849,7 +2849,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      > correspond pas à l'équipe signataire de l'app se paie d'un **403 sans un mot**
      > d'explication (voir l'encadré `dsaEncoding` plus haut, même symptôme, autre cause).
      Puis sur Vercel : `APNS_KEY_ID`, `APNS_P8` (contenu du .p8),
-     `APNS_TEAM_ID`, `APNS_TOPIC` = **`com.natty.app`** (le bundle id, **le même partout**
+     `APNS_TEAM_ID`, `APNS_TOPIC` = **`com.nattynutrition.app`** (le bundle id, **le même partout**
      depuis le 2026-08-10 — voir §11), `APNS_ENV` = `sandbox` pour un build
      Xcode, `production` pour TestFlight/App Store. Plus `CRON_SECRET` et
      `SUPABASE_SERVICE_KEY` s'ils manquent. Vérification : `GET /api/push-test?secret=…`.
@@ -2865,7 +2865,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      *aps-environment* valide » (constaté). L'entitlement lui-même est correct — le
      `App.app-Simulated.xcent` généré porte bien `aps-environment: development` et
      l'identifiant d'application préfixé de l'équipe. Il vaut désormais
-     **`DJLW82GU5A.com.natty.app`** ; le relevé d'origine disait
+     **`DJLW82GU5A.com.nattynutrition.app`** ; le relevé d'origine disait
      `SAZQ9AFAMZ.com.pabloansermet.nattysuivi` — les DEUX moitiés ont changé le 2026-08-10
      (équipe et bundle id), donc une capture ou une note antérieure à cette date est fausse
      de bout en bout. **Un simulateur ne peut de toute façon pas
@@ -3274,45 +3274,58 @@ xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator \
 - Xcode fournit le **SDK** iOS mais **pas la plateforme** : si aucune destination simulateur n'est éligible, lancer `xcodebuild -downloadPlatform iOS` (ne demande pas de mot de passe).
 - Au tout premier lancement, la WebView peut mettre ~40 s à afficher quoi que ce soit (warm-up WebKit dans le simulateur). **Ce n'est pas un bug** — ne pas partir en chasse.
 
-### Identité de l'app — `com.natty.app`, partout (2026-08-10)
-Un seul identifiant désormais : **bundle id iOS**, `appId` de `capacitor.config.json`,
-`applicationId` et `namespace` Android, package Java (`android/app/src/main/java/com/natty/app/`)
+### Identité de l'app — `com.nattynutrition.app`, partout (2026-08-10)
+Un seul identifiant : **bundle id iOS**, `appId` de `capacitor.config.json`, `applicationId`
+et `namespace` Android, package Java (`android/app/src/main/java/com/nattynutrition/app/`)
 et **scheme des deep links**.
 
-**Ce qui a changé, et pourquoi celui-là.** Le bundle id iOS valait
-`com.pabloansermet.nattysuivi` — le reverse-DNS du compte **individuel** de Pablo, cohérent
-quand l'app était signée par lui, absurde une fois l'équipe **Natty** en place (le nom d'une
-personne apparaît dans le profil de provisionnement et dans les URLs de l'App Store).
-Le choix ne s'est pas fait sur du goût : **tout le reste du dépôt disait déjà `com.natty.app`**,
-Android jusque dans son arborescence de fichiers. Inventer un troisième identifiant aurait
-imposé de renommer le package Java, l'`applicationId`, le scheme, les URL de redirection
-Supabase et chaque deep link ; s'aligner sur iOS aurait consacré le nom d'une personne. Il n'y
-avait qu'un candidat qui ne coûte rien : celui que l'app portait déjà.
+**Deux valeurs sont mortes, et il faut savoir les reconnaître** — elles traînent encore dans
+des captures, des notes et de vieux commits :
 
-> ⚠️ **Ça supprime un piège documenté, ne pas le réintroduire.** Ce fichier et l'en-tête
-> d'`api/_apns.js` ont longtemps averti qu'`APNS_TOPIC` était `com.pabloansermet.nattysuivi`
-> et **PAS** `com.natty.app`. Cet avertissement est **périmé** : les deux sont désormais le
-> même. Un `APNS_TOPIC` qui n'est pas le bundle id se paie d'un **400 TopicDisallowed**.
+| Valeur | Ce que c'était | Pourquoi elle est morte |
+|---|---|---|
+| `com.pabloansermet.nattysuivi` | l'ancien bundle id **iOS seul** | le reverse-DNS du compte **individuel** de Pablo. Cohérent tant qu'il signait lui-même, absurde une fois l'équipe **Natty** en place : le nom d'une personne apparaît dans le profil de provisionnement et dans les URLs de l'App Store |
+| `com.natty.app` | ce que disait tout le **reste** du dépôt (Capacitor, Android, scheme) | ⚠️ **REFUSÉ PAR APPLE** — « cannot be registered to your development team because it is not available », donc déjà enregistré par quelqu'un d'autre. Un bundle id est **globalement unique**, et celui-là est court et générique |
+
+**Pourquoi `com.nattynutrition.app`.** C'est le reverse-DNS du vrai domaine,
+`natty-nutrition.com` — donc un nom que Natty possède réellement, ce qui est l'unique garantie
+contre une seconde collision. **Sans trait d'union** : un `namespace` Android doit être un
+package Java valide, et Java interdit le tiret dans un identifiant. `com.natty-nutrition.app`
+aurait été accepté par Apple et refusé par Gradle.
+
+> ⚠️ **CE RENOMMAGE TOUCHE L'ARBORESCENCE, pas seulement des chaînes.** Le package Java a
+> déménagé (`git mv`, pour que l'historique suive) : `java/com/natty/app/` →
+> `java/com/nattynutrition/app/`, et `MainActivity.java` déclare le nouveau package. Un
+> `sed` sur les fichiers seuls aurait laissé une classe dont le package ne correspond pas à
+> son chemin — Gradle refuse de compiler, mais seulement au moment du build Android, qui
+> n'a jamais été lancé ici (§11, « reste à faire »). L'erreur serait donc restée invisible.
 >
-> ⚠️ **Le changement doit être fait AVANT la première publication, et il l'a été.** Après,
-> changer de bundle id ne renomme pas l'app : il en crée une **autre**, sans ses avis, son
-> classement ni ses installations, et les appareils déjà équipés ne reçoivent plus de mise à
-> jour. C'est pourquoi il fallait trancher maintenant ou jamais.
+> ⚠️ **Le scheme des deep links a changé AVEC.** Contrairement au premier renommage, celui-ci
+> touche `login.html` (+ `www/`), `checkout-retour.html`, `api/checkout.js` et
+> `AndroidManifest.xml` — et surtout **les Redirect URLs de Supabase**, qui vivent hors du
+> dépôt. Tant qu'elles disent l'ancien scheme, la connexion Google en natif revient dans le
+> vide : le navigateur système ouvre une URL que plus aucune app ne réclame.
 >
-> ⚠️ **Un bundle id est GLOBALEMENT unique chez Apple.** `com.natty.app` est court et
-> générique : s'il est déjà pris par quelqu'un d'autre, ça se découvrira à l'enregistrement de
-> l'App ID, et il faudra en choisir un autre (`com.nattynutrition.app` suivrait le vrai domaine,
-> `natty-nutrition.com`). Dans ce cas, **tout renommer d'un coup** — la liste des fichiers est
-> celle du premier paragraphe — et refaire les redirections Supabase.
+> ⚠️ **Fait AVANT la première publication, et c'était la dernière occasion.** Après, changer
+> de bundle id ne renomme pas une app : il en crée une **autre**, sans ses avis, son
+> classement ni ses installations, et les appareils déjà équipés cessent de recevoir les
+> mises à jour.
+>
+> ⚠️ **`APNS_TOPIC` doit valoir ce bundle id**, sinon **400 TopicDisallowed**. L'ancien
+> avertissement de ce fichier — « c'est `com.pabloansermet.nattysuivi`, **PAS**
+> `com.natty.app` » — est **doublement périmé** : aucune des deux valeurs n'est bonne.
 
-**Ce qui n'a PAS eu à changer** : le scheme des deep links, déjà `com.natty.app` ; donc ni
-`login.html`, ni `checkout-retour.html`, ni `api/checkout.js`, ni les redirections Supabase.
+**Si `com.nattynutrition.app` était refusé lui aussi** : tout renommer d'un coup, la liste des
+fichiers est celle du premier paragraphe, plus le `git mv` du package Java et les Redirect URLs
+Supabase. Un `grep -rn` sur l'ancien identifiant en dehors de `.git` doit ne rien rendre —
+attention à ne pas compter les copies générées (`*/public/`, `*/assets/capacitor.config.json`),
+qui sont ignorées par git et régénérées par `npx cap sync`.
 
-### Deep links — `com.natty.app://`
+### Deep links — `com.nattynutrition.app://`
 Le scheme est déclaré dans `ios/App/App/Info.plist` (`CFBundleURLTypes`) et dans `AndroidManifest.xml` (intent-filter `VIEW`/`BROWSABLE`, activité déjà en `launchMode="singleTask"`). Deux usages :
-- **`com.natty.app://oauth-callback`** — connexion Google. Google **refuse** l'auth depuis une WebView embarquée (`disallowed_useragent`) : `login.html` ouvre donc le navigateur système via `@capacitor/browser`, et récupère le retour par l'écouteur `appUrlOpen` de `@capacitor/app`.
-  ⚠️ **Nécessite `com.natty.app://oauth-callback` dans Supabase → Authentication → URL Configuration → Redirect URLs.** Google Console n'a rien à changer (l'auth est courtée par Supabase).
-- **`com.natty.app://checkout`** — retour de paiement. Stripe n'accepte que des URL http(s), d'où la page relais **`checkout-retour.html`** (côté web, racine) qui rebondit vers le scheme. `api/checkout.js` reçoit `plateforme: 'natif'` et pointe vers cette page.
+- **`com.nattynutrition.app://oauth-callback`** — connexion Google. Google **refuse** l'auth depuis une WebView embarquée (`disallowed_useragent`) : `login.html` ouvre donc le navigateur système via `@capacitor/browser`, et récupère le retour par l'écouteur `appUrlOpen` de `@capacitor/app`.
+  ⚠️ **Nécessite `com.nattynutrition.app://oauth-callback` dans Supabase → Authentication → URL Configuration → Redirect URLs.** Google Console n'a rien à changer (l'auth est courtée par Supabase).
+- **`com.nattynutrition.app://checkout`** — retour de paiement. Stripe n'accepte que des URL http(s), d'où la page relais **`checkout-retour.html`** (côté web, racine) qui rebondit vers le scheme. `api/checkout.js` reçoit `plateforme: 'natif'` et pointe vers cette page.
 
 > **Règle** : tout écouteur `appUrlOpen` doit vérifier le préfixe du scheme et ignorer le reste, sinon un deep link tiers peut injecter un jeton ou simuler un paiement.
 

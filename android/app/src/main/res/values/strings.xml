@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Natty</string>
     <string name="title_activity_main">Natty</string>
-    <string name="package_name">com.natty.app</string>
-    <string name="custom_url_scheme">com.natty.app</string>
+    <string name="package_name">com.nattynutrition.app</string>
+    <string name="custom_url_scheme">com.nattynutrition.app</string>
 </resources>

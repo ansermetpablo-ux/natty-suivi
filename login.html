@@ -553,7 +553,7 @@ async function doReset() {
 
 // Dans l'app native, l'URL de retour est un scheme custom capté par l'app
 // (voir CAP_REDIRECT) ; sur le web, c'est la page elle-même sur Vercel.
-var CAP_REDIRECT = 'com.natty.app://oauth-callback';
+var CAP_REDIRECT = 'com.nattynutrition.app://oauth-callback';
 
 function estNatif() {
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
@@ -636,7 +636,7 @@ function traiterRetourOAuth(fragment) {
 (function() {
   var params = new URLSearchParams(window.location.search);
 
-  // En natif, Supabase renvoie vers com.natty.app://oauth-callback#access_token=…
+  // En natif, Supabase renvoie vers com.nattynutrition.app://oauth-callback#access_token=…
   // que le système transmet à l'app sans recharger la page.
   if (estNatif() && window.Capacitor.Plugins.App) {
     window.Capacitor.Plugins.App.addListener('appUrlOpen', function(event) {

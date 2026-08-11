@@ -27,7 +27,7 @@
 <script>
 /* Page relais entre Stripe et l'app native.
    Stripe n'accepte que des URL http(s) en success_url / cancel_url : on ne peut
-   donc pas lui donner directement com.natty.app://. Cette page, ouverte dans le
+   donc pas lui donner directement com.nattynutrition.app://. Cette page, ouverte dans le
    navigateur système à la fin du paiement, rebondit vers ce scheme, ce qui rend
    la main à l'app. Le bouton reste affiché si le rebond automatique est bloqué. */
 (function(){
@@ -40,7 +40,7 @@
     document.getElementById('titre').textContent = 'Paiement annulé';
   }
 
-  var cible = 'com.natty.app://checkout?statut=' + statut +
+  var cible = 'com.nattynutrition.app://checkout?statut=' + statut +
               '&token=' + encodeURIComponent(token);
   document.getElementById('lien').href = cible;
   location.replace(cible);

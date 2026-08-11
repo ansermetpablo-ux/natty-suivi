@@ -50,7 +50,7 @@ export default async function handler(req, res) {
 
     // Dans l'app native, renvoyer vers le site laisserait l'utilisateur bloqué
     // hors de l'app apres son paiement. Stripe n'acceptant que des URL http(s),
-    // on passe par checkout-retour.html, qui rebondit vers com.natty.app://.
+    // on passe par checkout-retour.html, qui rebondit vers com.nattynutrition.app://.
     const natif = plateforme === 'natif';
     const retour = (statut) => natif
       ? origin + '/checkout-retour.html?statut=' + statut + '&token=' + encodeURIComponent(token || '')

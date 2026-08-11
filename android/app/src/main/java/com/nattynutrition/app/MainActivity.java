@@ -1,4 +1,4 @@
-package com.natty.app;
+package com.nattynutrition.app;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -29,13 +29,15 @@
 //                 une équipe : celle créée sous le compte individuel ne peut
 //                 pas signer pour l'app de l'équipe Natty, il en faut une
 //                 nouvelle (APNS_KEY_ID et APNS_P8 changent avec).
-//   APNS_TOPIC    défaut com.natty.app (= le bundle id iOS, aligné le
-//                 2026-08-10 sur l'appId de capacitor.config.json, sur
-//                 l'applicationId Android et sur le scheme des deep links).
-//                 Il valait com.pabloansermet.nattysuivi, et cette divergence
-//                 était à elle seule un piège : l'app entière parlait
-//                 com.natty.app, iOS seul disait autre chose, et un APNS_TOPIC
-//                 qui n'est pas le bundle id se paie d'un 400 TopicDisallowed.
+//   APNS_TOPIC    défaut com.nattynutrition.app (= le bundle id, le MÊME
+//                 partout depuis le 2026-08-10 : iOS, appId Capacitor,
+//                 applicationId Android et scheme des deep links).
+//                 ⚠️ Deux valeurs mortes traînent peut-être encore dans des
+//                 notes ou des captures : com.pabloansermet.nattysuivi (le
+//                 reverse-DNS du compte individuel) et com.natty.app (refusé
+//                 par Apple — déjà enregistré par quelqu'un d'autre ; un
+//                 bundle id est GLOBALEMENT unique). Un APNS_TOPIC qui n'est
+//                 pas le bundle id se paie d'un 400 TopicDisallowed.
 //   APNS_ENV      'sandbox' (défaut, builds Xcode) ou 'production'
 //                 (TestFlight et App Store). Un jeton obtenu en développement
 //                 est rejeté par l'hôte de production, et réciproquement :
@@ -52,7 +54,7 @@ export function apnsConfigure() {
   const keyId  = process.env.APNS_KEY_ID;
   const p8     = process.env.APNS_P8;
   const teamId = process.env.APNS_TEAM_ID || 'DJLW82GU5A';
-  const topic  = process.env.APNS_TOPIC   || 'com.natty.app';
+  const topic  = process.env.APNS_TOPIC   || 'com.nattynutrition.app';
   const env    = process.env.APNS_ENV     || 'sandbox';
   if (!keyId || !p8) return null;
   return {
