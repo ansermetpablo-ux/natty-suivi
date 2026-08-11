@@ -2748,6 +2748,33 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   à l'ouverture. Une notification qui ouvrirait directement le guide reste à faire.
 
 **Planification de la semaine**
+- ✅ **Le nombre de repas placés n'est plus écrit en dur** (2026-08-11). Deux textes disaient
+  « Cinq repas » en toutes lettres — l'invitation et le titre du calendrier — du temps où la
+  génération rendait invariablement 2 recettes + 3 plats macro. Le compteur juste en dessous,
+  lui, a toujours dit le vrai chiffre : une ligne à 7 recettes affichait donc « Cinq repas »
+  au-dessus de « 10 repas planifiés sur 21 ». Le titre lit `plan.repas.length`, l'invitation
+  `nbAPlacer()`.
+- ⚠️ **Combien de repas peut-on placer, et par quel levier.** `placer()` boucle sur
+  `['p','g','l']` : **exactement trois plats macro sont placés, quel que soit leur nombre dans
+  `conseils_json`**. Le seul levier est donc le nombre de RECETTES, dont la boucle est
+  générique. 10 repas = 7 recettes + 3 plats macro.
+  Plafond réel : les créneaux que la personne se réserve. Le défaut est
+  `[false, true, true]` (petit-déjeuner acheté, midi et soir préparés), soit **14 cases
+  libres** — 10 y tiennent. Quelqu'un qui décoche un créneau global tombe à 7 et le placement
+  s'arrête là, sans le dire.
+- 🔄 **`NB_RECETTES` reste à 2 dans `api/_generation.js`**, et le monter n'est pas gratuit :
+  2 recettes détaillées demandent déjà ~85 s, `maxDuration` de `generer-conseils` vaut 180 s.
+  À 7 recettes la génération dépasserait très probablement le plafond — et une génération
+  coupée ne rend rien du tout, ce qui est pire que 5 repas. Si l'on veut 10 repas pour tout le
+  monde, il faut soit découper la génération en deux appels, soit rendre les repas
+  supplémentaires courts (sans étapes, comme les plats macro) et généraliser la boucle de
+  `placer()`.
+- 🔄 **Les 7 recettes se partagent 2 photos** (`PHOTOS[k % PHOTOS.length]`) : le dépôt n'a que
+  `plat-demo1/2-week.png`. À 2 recettes ça passait, à 7 la répétition saute aux yeux.
+- ℹ️ **Le compte `ansermet.pablo@gmail.com` a reçu une génération de 10 repas** semée à la main
+  le 2026-08-11 (7 recettes + 3 plats macro, `semaine` = le lundi courant). Elle sera
+  **écrasée** par la prochaine génération réelle — le cron du lundi, ou un
+  « ↻ » depuis l'overlay des conseils — qui repassera à 5 tant que `NB_RECETTES` vaut 2.
 - ✅ **Séquence complète livrée** (août 2026) — `assets/planning.js`, détail en §3. Bonjour →
   invitation → deux questions → placement → calendrier → livraison → validation, puis le
   calendrier dans « Ma semaine » en haut de `repas.html`. Branchée sur `menu.html`/
@@ -2934,6 +2961,18 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   > qui paie (défaut attrapé au test : 0 abonné détecté sur 2 réels).
 
 **Sécurité**
+- 🔴 🔄 **`api/save-conseils.js` n'est PAS authentifié, et il écrit avec la clé service.**
+  Il accepte un POST anonyme portant n'importe quel `user_id` et écrase la ligne
+  `profil_conseils` correspondante (la clé primaire étant `user_id`, l'upsert met à jour, il
+  ne duplique pas). N'importe qui connaissant l'URL peut donc remplacer les conseils, les
+  recettes et la liste de courses de n'importe quel membre — la RLS n'y peut rien, elle est
+  contournée par la clé service. Relevé le 2026-08-11 en s'en servant pour semer une
+  génération (voir « 10 repas à planifier » ci-dessous) : ça a marché du premier coup, sans
+  la moindre authentification.
+  ⚠️ **Ne pas le fermer sans regarder qui l'appelle** : l'ancien `index.html` (dashboard web)
+  s'en sert encore, et c'est la seule voie d'écriture depuis août 2026 pour lui. La parade
+  cohérente avec le reste du dépôt est celle d'`api/recalc-macros.js` — exiger un JWT et
+  vérifier que `auth.uid()` vaut le `user_id` demandé.
 - 🔄 **`api/conseils-hebdo` est ouvert si `CRON_SECRET` n'est pas configurée** : la garde
   compare `secret !== process.env.CRON_SECRET`, donc `undefined === undefined` laisse passer
   n'importe qui — et chaque appel consomme l'API Claude. Volontairement **pas** rendu

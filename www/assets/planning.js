@@ -781,7 +781,11 @@ window.NattyPlanning = (function () {
       html: illu('cal')
         + titre('Planifions ensemble votre semaine', 'h1', 0.2)
         + '<div class="sous" data-in="glide" style="animation-delay:.9s">'
-        + 'Cinq repas placés là où vos apports flanchent, à partir de vos conseils de la semaine.</div>',
+        /* Même raison qu'au calendrier : le compte vient de la génération.
+           Ici le plan n'est pas encore calculé, donc c'est ce qu'il y a À
+           PLACER — les recettes plus les trois plats macro — et non ce qui
+           sera finalement placé, qui dépend des créneaux qu'il se réserve. */
+        + nbAPlacer() + ' repas placés là où vos apports flanchent, à partir de vos conseils de la semaine.</div>',
       boutons: [
         { txt: 'Démarrer', cls: 'b1', on: scQuestion },
         { txt: 'Ignorer cette semaine', cls: 'b3', on: function () { marquerVu(); fermer(); } }
@@ -1079,6 +1083,12 @@ window.NattyPlanning = (function () {
     }
   }
 
+  /* Combien de repas la génération donne à placer : ses recettes, plus les
+     trois plats macro (`placer()` en pose toujours trois, repli compris). */
+  function nbAPlacer() {
+    return recettesDe(etat && etat.conseils).length + 3;
+  }
+
   function recettesDe(ligne) {
     if (!ligne || !ligne.conseils_json) return [];
     var j = ligne.conseils_json;
@@ -1124,7 +1134,12 @@ window.NattyPlanning = (function () {
     var auj = jourIndex(new Date());
 
     var html = '<div class="kicker" data-in="glide">Votre semaine</div>'
-      + titre('Cinq repas, placés où ils comptent', 'h2', 0.05)
+      /* ⚠️ Le nombre est CALCULÉ, pas écrit. Il valait « Cinq » en toutes
+         lettres, du temps où la génération rendait invariablement 2 recettes
+         + 3 plats macro. Le compteur juste en dessous, lui, a toujours dit le
+         vrai chiffre : une ligne à 7 recettes affichait donc « Cinq repas »
+         au-dessus de « 10 repas planifiés sur 21 ». */
+      + titre(n + ' repas, placés où ils comptent', 'h2', 0.05)
       + '<div style="height:24px"></div>'
       + '<div class="cal">'
       + '<div class="cj"><div class="nom"></div>'
