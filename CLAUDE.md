@@ -2137,7 +2137,11 @@ sa motivation et ses difficultés est ce qu'il y a de plus personnel dans cette 
 
 ### RLS — état actuel
 - `recettes`, `recettes_ingredients`, `recettes_etapes` : **RLS désactivé** (`DISABLE ROW LEVEL SECURITY`)
-- `profil_conseils` : **RLS désactivé**
+- ⚠️ `profil_conseils` : **RLS ACTIVE, 4 policies** — mesuré en base le 2026-08-12
+  (`pg_class.relrowsecurity`). Cette ligne disait « RLS désactivé » : c'était vrai avant
+  `natty_rls.sql` (2026-08-04) et faux depuis. Une route qui écrit ici avec la clé
+  service passe donc PAR-DESSUS une protection bien réelle, ce qui est exactement ce qui
+  rendait `api/save-conseils.js` dangereux.
 - Autres tables : policies permissives `USING (true)` — à sécuriser en production
 
 ---
@@ -2984,7 +2988,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   > qui paie (défaut attrapé au test : 0 abonné détecté sur 2 réels).
 
 **Sécurité**
-- 🔴 🔄 **`api/claude.js` est un proxy OUVERT vers l'API Anthropic payante.** Aucune
+- 🟠 **`api/claude.js` : plafonné, pas encore fermé** (2026-08-12). Reste un proxy OUVERT vers l'API Anthropic payante, mais un appel ne peut plus coûter arbitrairement cher : `max_tokens` borné à 16 000 (le plafond que `assets/reco.js` s'impose déjà), prompt à 80 000 caractères, image à 6 Mo. ~~Ancien état :~~ Aucune
   authentification : un POST anonyme portant `{prompt, max_tokens}` est relayé tel quel avec
   `ANTHROPIC_API_KEY`, et facturé à Natty. Relevé le 2026-08-12 en s'en servant pour valider la
   règle 0 — trois générations complètes, ~9 400 jetons chacune, sans la moindre clé. N'importe
@@ -2994,7 +2998,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   défis de `narration.html`, suggestions…), dont certains sans session : le fermer demande de
   les recenser d'abord, comme pour `save-conseils`. Parade minimale en attendant : plafonner
   `max_tokens` côté serveur au lieu d'accepter celui du client.
-- 🔴 🔄 **`api/save-conseils.js` n'est PAS authentifié, et il écrit avec la clé service.**
+- ✅ **`api/save-conseils.js` REFERMÉ** (2026-08-12) : session obligatoire, jeton vérifié auprès de GoTrue avec la clé service, et refus si `auth.uid()` ne vaut pas le `user_id` demandé. Coût assumé : l'ancien `index.html` perd l'écriture — mais il ne lit déjà plus rien sous RLS. Détail dans l'en-tête du fichier. ~~Ancien état :~~ **n'était PAS authentifié, et écrivait avec la clé service.**
   Il accepte un POST anonyme portant n'importe quel `user_id` et écrase la ligne
   `profil_conseils` correspondante (la clé primaire étant `user_id`, l'upsert met à jour, il
   ne duplique pas). N'importe qui connaissant l'URL peut donc remplacer les conseils, les
@@ -3006,7 +3010,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   s'en sert encore, et c'est la seule voie d'écriture depuis août 2026 pour lui. La parade
   cohérente avec le reste du dépôt est celle d'`api/recalc-macros.js` — exiger un JWT et
   vérifier que `auth.uid()` vaut le `user_id` demandé.
-- 🔄 **`api/conseils-hebdo` est ouvert si `CRON_SECRET` n'est pas configurée** : la garde
+- ✅ **`api/conseils-hebdo` est fail-closed** (relu le 2026-08-12 : `if (!process.env.CRON_SECRET || secret !== …) return 401`, et `autorise()` d'`_apns.js` fait de même). L'entrée qui suivait disait le contraire — elle décrivait un état corrigé depuis. ~~Ancien texte : ouvert si `CRON_SECRET` n'est pas configurée~~ : la garde
   compare `secret !== process.env.CRON_SECRET`, donc `undefined === undefined` laisse passer
   n'importe qui — et chaque appel consomme l'API Claude. Volontairement **pas** rendu
   fail-closed : si la variable n'existe pas encore sur Vercel, ça couperait net la génération
