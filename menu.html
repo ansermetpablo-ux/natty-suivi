@@ -112,6 +112,13 @@ async function loadFormule(){
      ouverture de la semaine » veut dire quelque chose. Le module se tait de
      lui-même si la semaine est déjà planifiée, déjà ignorée, ou si une
      génération occupe déjà le plein écran. -->
+<!-- Le catalogue des plats et leurs illustrations : depuis que la génération
+     choisit ses recettes DEDANS (api/_generation.js, règle 0), c'est lui qui
+     donne sa photo à chaque plat de la semaine. Sans ces deux fichiers, le
+     héros et le calendrier retombent sur les deux photos de démonstration —
+     l'ancien défaut, en silence. -->
+<script src="/assets/plats-illu.js"></script>
+<script src="/assets/decouverte.js"></script>
 <script src="/assets/planning.js"></script>
 <script>
   if (window.NattyPlanning) NattyPlanning.proposerSiNecessaire();

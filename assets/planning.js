@@ -52,9 +52,26 @@ window.NattyPlanning = (function () {
     l: { nom: 'Lipides',   em: '🥑', cle: 'conseil_lip'  }
   };
 
-  /* Les recettes de la semaine n'ont pas encore de vraie photo : on réutilise
-     les deux plats détourés déjà embarqués, comme le fait `repas.html`. */
+  /* ⚠️ Ces deux photos ne sont plus que le DERNIER repli. Elles tournaient sur
+     toutes les recettes (`PHOTOS[k % 2]`), donc la même image revenait tous les
+     deux plats — le défaut signalé par Pablo. Depuis que la génération choisit
+     ses plats dans le catalogue (`api/_generation.js`, règle 0), chaque recette
+     porte une `cle` et donc sa vraie image. Elles ne servent plus qu'aux lignes
+     générées AVANT ce changement, qui n'ont pas de clé. */
   var PHOTOS = ['/assets/img/plat-demo1-week.png', '/assets/img/plat-demo2-week.png'];
+
+  /* La vignette d'une recette : sa photo du catalogue, sinon son illustration,
+     sinon les photos de démonstration. Rend {photo, illu} — jamais les deux. */
+  function visuelRecette(r, k) {
+    var p = (r && r.cle && window.NattyDecouverte)
+      ? window.NattyDecouverte.platParCle(r.cle) : null;
+    if (p) {
+      var ph = window.NattyDecouverte.vignette(p);
+      if (ph) return { photo: ph, illu: null };
+      return { photo: null, illu: window.NattyDecouverte.illu(p, { trait: 1.2 }) };
+    }
+    return { photo: PHOTOS[k % PHOTOS.length], illu: null };
+  }
 
   var TOTAL_CASES = 21;          // 7 jours × 3 créneaux
   var ouvert = false, planCache = null, scrollGele = null;
@@ -309,7 +326,9 @@ window.NattyPlanning = (function () {
       var mac = r.macros || {};
       sortie.push({
         jour: v.j, creneau: v.c, type: 'recette', macro: null,
-        nom: r.nom || 'Recette', em: '🍲', photo: PHOTOS[k % PHOTOS.length],
+        nom: r.nom || 'Recette', em: '🍲',
+        photo: visuelRecette(r, k).photo, illu: visuelRecette(r, k).illu,
+        cle: r.cle || null,
         pourquoi: r.pourquoi || '', kcal: Math.round(mac.kcal || 0),
         p: Math.round(mac.p || 0), g: Math.round(mac.g || 0), l: Math.round(mac.l || 0),
         ingredients: r.ingredients || [], src: r,
@@ -573,6 +592,12 @@ window.NattyPlanning = (function () {
       'align-items:center;justify-content:center;line-height:1}',
       '#nplan .cc .em{font-size:22px}',
       '#nplan .cc img{width:100%;height:100%;object-fit:cover}',
+      /* L'illustration d'un plat sans photo, dans la case du calendrier et
+         dans la fiche. ⚠️ trait redéclaré : la case fait ~46 px de haut et la
+         boîte du SVG 24 unités, donc le trait d'origine s'y peindrait épais. */
+      '#nplan .cc .vi,#nplf .vi{display:flex;width:100%;height:100%;',
+        'align-items:center;justify-content:center;color:currentColor}',
+      '#nplan .cc .vi svg,#nplf .vi svg{width:72%;height:72%;stroke-width:1.5}',
       '#nplan .cc.arrive{animation:nplPop .5s cubic-bezier(.22,1,.36,1) backwards}',
       '#nplan .cpt{font-size:15px;font-weight:800;margin-top:22px}',
       '#nplan .cpt b{color:#fff}',
@@ -687,9 +712,12 @@ window.NattyPlanning = (function () {
      navigateur au milieu du calendrier, c'est-à-dire au moment précis où l'on
      découvre sa semaine. */
   function vignette(r) {
-    return r.photo
-      ? '<img src="' + esc(r.photo) + '" alt="" data-em="' + esc(r.em || '🍽️') + '">'
-      : (r.em || '🍽️');
+    if (r.photo) {
+      return '<img src="' + esc(r.photo) + '" alt="" data-em="' + esc(r.em || '🍽️') + '">';
+    }
+    // Le plat est au catalogue mais n'a pas été photographié : son trait.
+    if (r.illu) return '<span class="vi">' + r.illu + '</span>';
+    return (r.em || '🍽️');
   }
 
   function brancherVignettes(el) {

@@ -27,6 +27,13 @@ body{overflow-x:hidden}
 .hero-dish.framed img{width:170px;height:170px;object-fit:cover;border-radius:50%;
   border:5px solid var(--bg);box-shadow:0 14px 30px rgba(16,16,18,.22)}
 .hero-dish.framed{filter:none}
+/* L'illustration d'un plat sans photo, au même encombrement que la photo.
+   ⚠️ `stroke-width` redéclaré : la boîte du SVG fait 24 unités, donc à 190 px
+   le trait de plats-illu.js se peindrait en 11 px. */
+.hero-dish.illu{filter:none;color:var(--ink)}
+.hero-dish.illu svg{display:block;width:180px;height:180px;stroke-width:.7}
+.week-dish .wi{display:block;width:54px;height:54px;color:#fff}
+.week-dish .wi svg{width:100%;height:100%;stroke-width:1.2}
 @keyframes floatDish{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-9px)}}
 .leaf{position:absolute;z-index:5;font-size:32px;filter:drop-shadow(0 8px 10px rgba(16,16,18,.2));
   animation:floatLeaf 5.4s ease-in-out infinite}
@@ -198,6 +205,13 @@ body{overflow-x:hidden}
 <script src="/assets/generation.js"></script>
 <!-- Le calendrier de « Ma semaine » et, au besoin, la séquence de
      replanification (bouton « Replanifier » du panneau). -->
+<!-- Le catalogue des plats et leurs illustrations : depuis que la génération
+     choisit ses recettes DEDANS (api/_generation.js, règle 0), c'est lui qui
+     donne sa photo à chaque plat de la semaine. Sans ces deux fichiers, le
+     héros et le calendrier retombent sur les deux photos de démonstration —
+     l'ancien défaut, en silence. -->
+<script src="/assets/plats-illu.js"></script>
+<script src="/assets/decouverte.js"></script>
 <script src="/assets/planning.js"></script>
 <script src="/assets/garde-manger.js"></script>
 <!-- Préférences alimentaires : ce que reco.js injecte dans le prompt de la
@@ -333,17 +347,42 @@ var DEMO_PHOTOS = [
   { hero:'/assets/img/plat-demo2-hero.png', week:'/assets/img/plat-demo2-week.png' }
 ];
 
+/* La photo d'une recette de la semaine, ou son illustration.
+   ⚠️ C'ÉTAIT LE DÉFAUT SIGNALÉ PAR PABLO : `DEMO_PHOTOS[i % 2]` faisait
+   tourner DEUX photos de démonstration, donc la même image revenait tous les
+   deux plats — alors que 93 vraies photos dorment dans le catalogue. Depuis
+   que la génération choisit ses plats DANS le catalogue (`api/_generation.js`,
+   règle 0), chaque recette porte une `cle` et donc son image.
+   Repli, dans l'ordre : la photo du catalogue, l'illustration au trait pour
+   les plats jamais photographiés, et seulement en dernier les deux photos de
+   démonstration — pour les lignes générées AVANT ce changement, qui n'ont pas
+   de clé et qu'on ne va pas régénérer pour une image. */
+function visuelRecette(r, i){
+  var p = (r && r.cle && window.NattyDecouverte)
+    ? NattyDecouverte.platParCle(r.cle) : null;
+  if (p) {
+    var ph = NattyDecouverte.img(p);
+    if (ph) return { photo: ph, photoWeek: NattyDecouverte.vignette(p), illu: null };
+    return { photo: null, photoWeek: null, illu: NattyDecouverte.illu(p, { trait: .9 }) };
+  }
+  return { photo: DEMO_PHOTOS[i % DEMO_PHOTOS.length].hero,
+           photoWeek: DEMO_PHOTOS[i % DEMO_PHOTOS.length].week, illu: null };
+}
+
 function depuisRecette(r, i){
   var m = r.macros || {};
+  var v = visuelRecette(r, i);
   return {
+    cle: r.cle || null,
     nom: r.nom || 'Recette',
     desc: r.pourquoi || '',
     temps: r.temps_min ? r.temps_min + ' min' : '',
     kcal: Math.round(m.kcal || 0),
     p: Math.round(m.p || 0), g: Math.round(m.g || 0), l: Math.round(m.l || 0),
     emoji: EMOJIS[i % EMOJIS.length],
-    photo: DEMO_PHOTOS[i % DEMO_PHOTOS.length].hero,
-    photoWeek: DEMO_PHOTOS[i % DEMO_PHOTOS.length].week,
+    photo: v.photo,
+    photoWeek: v.photoWeek,
+    illu: v.illu,
     ingr: (r.ingredients || []).map(function(x){ return { em:x.em||'🥄', nm:x.nom||'', qt:x.qte||'' }; }),
     steps: (r.steps || []).map(function(s){ return { em:s.em||'👉', t:s.t||'', tip:s.tip||'' }; }),
     // La recette d'origine, telle que NattyReco l'a produite : NattyRecette
@@ -380,6 +419,11 @@ function heroVisuel(d){
     var framed = estDetouree(d.photo) ? '' : ' framed';
     return '<div class="hero-dish'+framed+'"><img src="'+esc(d.photo)+'" alt=""></div>';
   }
+  /* Le plat existe au catalogue mais personne ne l'a photographié : son
+     illustration au trait, plutôt que l'emoji. Elle passe AVANT l'emoji pour
+     la même raison que dans la visionneuse — à 190 px, un emoji est une
+     vignette d'application, pas une image de plat. */
+  if (d.illu) return '<div class="hero-dish illu">'+d.illu+'</div>';
   return '<div class="hero-dish">'+d.emoji+'</div>';
 }
 
@@ -427,7 +471,8 @@ function render(){
          +  '<span class="sec-note">'+PLATS.length+' cette semaine</span></div>'
          +  '<div class="week-row">' + PLATS.map(function(x,i){
               var weekImg = x.photoWeek || x.photo;
-              var vis = weekImg ? '<img src="'+esc(weekImg)+'" alt="">' : x.emoji;
+              var vis = weekImg ? '<img src="'+esc(weekImg)+'" alt="">'
+                      : (x.illu ? '<span class="wi">'+x.illu+'</span>' : x.emoji);
               return '<div class="week-card'+(i===actif?' on':'')+'" data-i="'+i+'">'
                 + '<div class="week-check">✓</div>'
                 + '<div class="week-dish">'+vis+'</div>'

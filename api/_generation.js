@@ -41,6 +41,8 @@
    Depuis la page, ça n'arrivait à l'utilisateur que sous la forme d'un
    « Échec » sans explication — et la ligne `profil_conseils` restait vide,
    ce qu'on a mesuré : conseils_json à 0 caractère. */
+import { CATALOGUE, platParCle, listePourPrompt } from './_catalogue.js';
+
 export const MODELE = 'claude-sonnet-4-5';
 
 /* Nombre de recettes produites par la génération de la semaine.
@@ -231,7 +233,22 @@ export function construirePrompt(profil, nb, garde) {
     p += "\nINGRÉDIENTS DISPONIBLES (garde-manger de l'utilisateur)\n- " + garde + '\n';
   }
 
+  /* ⚠️ LES RECETTES SE CHOISISSENT DANS LE CATALOGUE, elles ne s'inventent
+     plus. Raison directe : chaque plat du catalogue a une photo (ou une
+     illustration), alors qu'un nom inventé n'en a aucune — `repas.html` et
+     `assets/planning.js` retombaient donc sur deux photos de démo qu'ils
+     faisaient tourner, et la même image revenait tous les deux plats. Le
+     modèle ne rend plus un nom libre mais une CLÉ, et l'app sait quoi
+     afficher.
+     Ce que ça ne change pas : les grammages, les étapes et les macros restent
+     produits pour LUI. Le catalogue donne l'identité du plat, la génération
+     donne son exécution — c'est aussi ce qui manquait à ces plats, qui
+     n'avaient « ni étapes, ni grammages, donc pas de macros » (CLAUDE.md §3). */
+  p += '\nCATALOGUE DES PLATS (choisis dedans, une ligne par plat : cle | nom (pays) | ingrédients)\n';
+  p += listePourPrompt() + '\n';
+
   p += '\nRÈGLES\n';
+  p += '0. Chaque recette est un plat DU CATALOGUE ci-dessus. Recopie sa "cle" exactement. N\'invente jamais de plat ni de clé : un plat hors catalogue est rejeté.\n';
   p += "1. Les recettes doivent servir l'objectif ci-dessus (répartition macro et calories).\n";
   p += '2. Elles doivent se DÉMARQUER de la semaine écoulée : change de source de protéines, de féculent, de légumes et de cuisine par rapport aux ingrédients récurrents listés.\n';
   p += '3. Allergies, régime et aliments évités sont bloquants, sans exception.\n';
@@ -279,7 +296,7 @@ export function construirePrompt(profil, nb, garde) {
   p += '{"conseils":{"conseil_prot":"phrase courte","conseil_gluc":"phrase courte",'
      + '"conseil_lip":"phrase courte","conseil_cal":"phrase courte",'
      + '"conseil_amelioration":"1-2 phrases","conseil_points_forts":"1-2 phrases"},';
-  p += '"recettes":[{"nom":"Nom du plat","pourquoi":"une phrase expliquant pourquoi ce plat pour LUI",'
+  p += '"recettes":[{"cle":"la-cle-du-catalogue","nom":"Nom du plat","pourquoi":"une phrase expliquant pourquoi ce plat pour LUI",'
      + '"avantages":"ce que ce plat apporte concrètement à SON objectif, une phrase",'
      + '"temps_min":25,"macros":{"p":42,"g":60,"l":18,"kcal":600},'
      + '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g","dispo":true}],'
@@ -312,12 +329,43 @@ export function extraireObjet(txt) {
    chaînes. On le dérive au lieu de le redemander à l'IA — sinon deux textes
    différents décriraient le même plat, et l'écran qui affiche le second
    donnerait l'impression que la génération a « changé d'avis ». */
+/* Chaque recette est-elle bien un plat du catalogue ? On ne fait pas
+   confiance à la clé rendue : le modèle peut en inventer une, ou renvoyer le
+   bon plat sans clé du tout.
+   ⚠️ UNE CLÉ INCONNUE EST EFFACÉE, PAS DEVINÉE. La tentation serait de
+   rapprocher par le nom — mais « Saumon rôti » tomberait sur
+   `jap-saumon-teriyaki`, un autre plat d'une autre cuisine, et l'écran
+   afficherait la photo du mauvais plat. C'est exactement le mensonge que ce
+   chantier corrige : sans clé, la recette garde son nom et l'app retombera
+   sur l'illustration, ce qui est un manque visible et non une erreur muette.
+   Le rapprochement n'est tenté que sur une correspondance EXACTE de nom, où
+   il n'y a rien à deviner. */
+export function ancrerAuCatalogue(recettes) {
+  const parNom = {};
+  CATALOGUE.forEach(p => { parNom[p.n.toLowerCase()] = p.cle; });
+  return (recettes || []).map(r => {
+    if (!r) return r;
+    let cle = typeof r.cle === 'string' ? r.cle.trim() : '';
+    if (cle && !platParCle(cle)) cle = '';                       // inventée
+    if (!cle) cle = parNom[String(r.nom || '').trim().toLowerCase()] || '';
+    const p = cle ? platParCle(cle) : null;
+    // Le nom du catalogue fait foi quand la clé est bonne : deux libellés pour
+    // le même plat le feraient passer pour deux plats différents d'un écran à
+    // l'autre (le fil, la planification, la liste de courses).
+    return Object.assign({}, r, { cle: cle || null, nom: p ? p.n : (r.nom || 'Recette') });
+  });
+}
+
 export function versAffichage(recettes) {
   const EM = ['🍛', '🐟', '🍲', '🥗', '🍝', '🍜'];
   return (recettes || []).map((r, i) => {
     const m = r.macros || {};
     return {
       emoji: EM[i % EM.length],
+      // La clé suit jusque dans le schéma d'affichage : c'est elle qui donne
+      // sa photo au plat, et l'overlay « Mes recettes » de suivi.html lit
+      // cette forme-là et pas `conseils_json.recettes`.
+      cle: r.cle || null,
       nom: r.nom || 'Recette',
       macros: {
         prot: Math.round(m.p || 0), gluc: Math.round(m.g || 0),
@@ -473,7 +521,7 @@ export async function processUser(user, semaine, SB_URL, SB_KEY, CLAUDE_API, CLA
     throw new Error('Réponse illisible (' + txt.length + ' caractères, JSON incomplet ?)');
   }
 
-  const recettes = (out.recettes || []).slice(0, NB_RECETTES);
+  const recettes = ancrerAuCatalogue((out.recettes || []).slice(0, NB_RECETTES));
   const conseils = out.conseils || {};
   const platsMacro = normaliserPlatsMacro(out.plats_macro);
   if (!recettes.length && !conseils.conseil_amelioration && !conseils.conseil_prot) {

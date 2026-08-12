@@ -5684,6 +5684,13 @@ window.addEventListener('natty:repas-ajoute', function(){
      lui, le guide ci-dessous ne saurait pas quelle recette est prévue au
      créneau du moment — et il proposerait de planifier une semaine qui l'est
      peut-être déjà, faute d'avoir pu regarder. -->
+<!-- Le catalogue des plats et leurs illustrations : depuis que la génération
+     choisit ses recettes DEDANS (api/_generation.js, règle 0), c'est lui qui
+     donne sa photo à chaque plat de la semaine. Sans ces deux fichiers, le
+     héros et le calendrier retombent sur les deux photos de démonstration —
+     l'ancien défaut, en silence. -->
+<script src="/assets/plats-illu.js"></script>
+<script src="/assets/decouverte.js"></script>
 <script src="/assets/planning.js"></script>
 <!-- Le guide « Ma journée » : c'est sur cet écran qu'atterrit le rappel de
      midi, donc l'endroit où sa version courte a le plus de sens. -->
