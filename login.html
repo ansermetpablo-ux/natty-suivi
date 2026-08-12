@@ -306,12 +306,12 @@
     </div>
     <button class="btn-submit" id="btnLogin" onclick="doLogin()">Se connecter</button>
 
-    <div class="divider">ou</div>
-    <button class="btn-google" onclick="doGoogle()">
+    <div class="divider" data-social>ou</div>
+    <button class="btn-google" data-social onclick="doGoogle()">
       <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
       Continuer avec Google
     </button>
-    <button class="btn-apple" onclick="doApple()">
+    <button class="btn-apple" data-social onclick="doApple()">
       <svg width="16" height="19" viewBox="0 0 16 19" fill="#fff" aria-hidden="true"><path d="M13.28 10.09c.01 2.2 1.92 2.93 1.95 2.94-.02.05-.31 1.05-1.02 2.08-.61.89-1.25 1.78-2.26 1.79-.99.02-1.31-.58-2.44-.58-1.13 0-1.48.57-2.42.6-.97.03-1.71-.95-2.33-1.84C3.5 13.26 2.53 9.9 3.83 7.63c.65-1.13 1.8-1.84 3.06-1.86 1.02-.02 1.71.6 2.19.6.47 0 1.42-.74 2.62-.63.5.02 1.92.18 2.83 1.37-.07.05-1.69.99-1.67 2.98M11.26 3.6c.54-.65.9-1.56.8-2.46-.79.03-1.75.53-2.31 1.18-.5.58-.94 1.5-.82 2.39.88.07 1.79-.45 2.33-1.11"/></svg>
       Continuer avec Apple
     </button>
@@ -337,12 +337,12 @@
     </div>
     <button class="btn-submit" id="btnSignup" onclick="doSignup()">Créer mon compte</button>
 
-    <div class="divider">ou</div>
-    <button class="btn-google" onclick="doGoogle()">
+    <div class="divider" data-social>ou</div>
+    <button class="btn-google" data-social onclick="doGoogle()">
       <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
       Continuer avec Google
     </button>
-    <button class="btn-apple" onclick="doApple()">
+    <button class="btn-apple" data-social onclick="doApple()">
       <svg width="16" height="19" viewBox="0 0 16 19" fill="#fff" aria-hidden="true"><path d="M13.28 10.09c.01 2.2 1.92 2.93 1.95 2.94-.02.05-.31 1.05-1.02 2.08-.61.89-1.25 1.78-2.26 1.79-.99.02-1.31-.58-2.44-.58-1.13 0-1.48.57-2.42.6-.97.03-1.71-.95-2.33-1.84C3.5 13.26 2.53 9.9 3.83 7.63c.65-1.13 1.8-1.84 3.06-1.86 1.02-.02 1.71.6 2.19.6.47 0 1.42-.74 2.62-.63.5.02 1.92.18 2.83 1.37-.07.05-1.69.99-1.67 2.98M11.26 3.6c.54-.65.9-1.56.8-2.46-.79.03-1.75.53-2.31 1.18-.5.58-.94 1.5-.82 2.39.88.07 1.79-.45 2.33-1.11"/></svg>
       Continuer avec Apple
     </button>
@@ -596,8 +596,32 @@ function doGoogle() { return ouvrirFournisseur('google'); }
    répond `400 {"msg":"Unsupported provider: provider is not enabled"}` —
    mesuré sur notre instance. Sans ce garde-fou, cliquer le bouton déposerait
    l'utilisateur sur une page de JSON. Passer à `true` le jour où le provider
-   est configuré : c'est la seule ligne à changer. */
+   est configuré : c'est la seule ligne à changer.
+
+   ⚠️⚠️ ET CE DRAPEAU GOUVERNE AUSSI GOOGLE — c'est le point important.
+   La guideline 4.8 ne dit pas « proposez Apple », elle dit : dès qu'une
+   connexion tierce est offerte, une option respectueuse de la vie privée doit
+   l'accompagner. Les deux états défendables sont donc :
+     • Apple configuré  → Google ET Apple, les deux affichés ;
+     • Apple pas prêt   → AUCUN des deux, email et mot de passe seulement.
+   L'état intermédiaire — Google seul, ou un bouton Apple qui répond « bientôt
+   disponible » — cumule deux motifs de refus : 4.8 pour l'absence d'option
+   Apple réelle, et 2.1 pour une fonctionnalité visible qui ne fonctionne pas.
+   C'est exactement l'état dans lequel était cet écran.
+
+   Un seul drapeau pour les deux, donc, et l'app est soumissible dans les deux
+   positions. Le jour où le provider Apple est configuré côté Supabase, passer
+   à `true` rallume Google du même geste — rien d'autre à retoucher. */
 var APPLE_ACTIF = false;
+
+/* Les connexions tierces sont RETIRÉES du DOM, pas masquées en opacité : une
+   revue manuelle regarde l'écran, mais un bouton encore présent et cliquable
+   reste atteignable au clavier et par les outils d'accessibilité. */
+(function reglerConnexionsTierces() {
+  if (APPLE_ACTIF) return;
+  var els = document.querySelectorAll('[data-social]');
+  for (var i = 0; i < els.length; i++) els[i].style.display = 'none';
+})();
 
 function doApple() {
   if (!APPLE_ACTIF) { toast('Connexion Apple bientôt disponible', 'err'); return; }
