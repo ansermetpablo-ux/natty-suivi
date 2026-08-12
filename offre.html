@@ -896,6 +896,52 @@ function toggleRGPD(){
 }
 
 // PAIEMENT
+/* ⚠️ EN NATIF, STRIPE NE DOIT PAS S'OUVRIR DANS LA WEBVIEW.
+   Deux raisons, et la seconde suffit à faire refuser l'app :
+   — la WebView n'a ni barre d'adresse ni bouton retour. Quelqu'un qui renonce
+     à payer se retrouve enfermé sur une page Stripe, hors du bundle, sans
+     aucun moyen de revenir (c'est le piège décrit en §11 du CLAUDE.md) ;
+   — une page de paiement sans barre d'adresse empêche de vérifier le domaine,
+     ce que Stripe déconseille explicitement.
+   On passe donc par le navigateur système, qui rend la main à l'app par le
+   scheme custom — exactement le chemin déjà emprunté par la connexion Google
+   dans login.html.
+
+   ⚠️ ET IL FAUT LE DIRE AU SERVEUR. `api/checkout.js` ne fabrique les URL de
+   retour vers checkout-retour.html QUE s'il reçoit `plateforme: 'natif'`.
+   Sans ce champ — et il n'était pas envoyé — Stripe renvoyait sur le site
+   Vercel : toute la machinerie de rebond existait sans jamais servir. */
+var CAP_CHECKOUT = 'com.nattynutrition.app://checkout';
+
+function estNatif() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+/* Le retour de paiement arrive par le scheme custom. On ne suit JAMAIS l'URL
+   telle quelle : un deep link est une entrée externe, n'importe quelle app
+   peut en émettre un. On ne lit que le statut, et la destination est écrite
+   ici en dur. */
+if (estNatif() && window.Capacitor.Plugins.App) {
+  window.Capacitor.Plugins.App.addListener('appUrlOpen', function(event) {
+    var url = (event && event.url) || '';
+    if (url.indexOf(CAP_CHECKOUT) !== 0) return;
+    var Browser = window.Capacitor.Plugins.Browser;
+    if (Browser) Browser.close();
+
+    var q = url.indexOf('?');
+    var statut = q === -1 ? 'ok' : (new URLSearchParams(url.slice(q + 1)).get('statut') || 'ok');
+
+    var btn = document.getElementById("ctaBtn");
+    if (statut === 'annule') {
+      showToast("Paiement annulé");
+      if (btn) { btn.disabled = false; btn.textContent = "Payer →"; }
+      return;
+    }
+    showToast("Paiement confirmé ✓");
+    setTimeout(function(){ Natty.goto('suivi.html'); }, 900);
+  });
+}
+
 async function souscrire(){
   const btn=document.getElementById("ctaBtn");
   const email=document.getElementById("emailField").value.trim();
@@ -916,6 +962,7 @@ async function souscrire(){
       body:JSON.stringify({
         priceId:selectedFormule===3?PRICE_3:PRICE_4,
         userId,token,
+        plateforme: estNatif() ? 'natif' : 'web',
         formule:String(selectedFormule),
         objectif:selectedObjectif,
         objectifValeur:selectedObjectifVal,
@@ -927,7 +974,19 @@ async function souscrire(){
       })
     });
     const data=await res.json();
-    if(data.url){window.location.href=data.url;}
+    if(data.url){
+      if(estNatif()){
+        const Browser = window.Capacitor.Plugins.Browser;
+        if(!Browser){ showToast("Navigateur indisponible"); btn.disabled=false; btn.textContent="Payer →"; return; }
+        await Browser.open({ url: data.url });
+        /* Le bouton est rendu tout de suite : le navigateur système passe
+           par-dessus l'app, et si la personne le referme sans payer, aucun
+           deep link n'arrive — un bouton resté grisé serait alors définitif. */
+        btn.disabled=false; btn.textContent="Payer →";
+      } else {
+        window.location.href=data.url;
+      }
+    }
     else{showToast("Erreur lors du paiement");btn.disabled=false;btn.textContent="Payer →";}
   }catch(e){showToast("Erreur réseau");btn.disabled=false;btn.textContent="Payer →";}
 }
