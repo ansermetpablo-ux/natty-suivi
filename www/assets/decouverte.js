@@ -50,6 +50,123 @@ var NattyDecouverte = (function () {
      sa place ; l'ajouter à la fin donnerait une rangée triée « sauf les
      dernières », ce qui se lit comme un bug. */
   var CUISINES = [
+    /* ⚠️ « Le quotidien » est EN TÊTE, et hors de la suite alphabétique — à
+       dessein. Ce n'est pas un pays : le ranger entre le Pérou et les
+       Philippines ferait passer la cuisine de tous les jours pour une cuisine
+       étrangère de plus. C'est aussi le groupe dans lequel la génération de la
+       semaine puise le plus (voir `api/_catalogue.js`), donc celui qu'on veut
+       voir en premier.
+       ⚠️ Ses plats n'ont AUCUNE photo, et c'est assumé : personne ne les a
+       photographiés et on ne va pas en chercher sur le web (règle §9 #24). Ils
+       portent un `svg`, une forme de `assets/plats-illu.js`. Un plat porte donc
+       soit une photo, soit une illustration, jamais les deux — c'est `img()` et
+       `vignette()` qui tranchent, en rendant `null` quand `svg` est là. */
+    {
+      cle: 'quo', nom: 'Le quotidien', drapeau: '🍽️',
+      accroche: 'Ce qu\'on cuisine vraiment en semaine, sans y passer la soirée',
+      plats: [
+        { cle:'quo-poulet-roti', n:'Poulet rôti et légumes racines', svg:'grillade',
+          d:'Une cuisse ou un blanc au four avec ce qu\'il reste de légumes, tout sur la même plaque.',
+          i:'🍗 Poulet|🥔 Pommes de terre|🥕 Carotte|🧅 Oignon|🧄 Ail|🫒 Huile d\'olive',
+          t:['Protéiné','Réconfortant'],
+          nu:'Une plaque unique, donc un seul plat à laver : c\'est ce qui fait qu\'on le refait.' },
+        { cle:'quo-steak-haricots', n:'Steak, haricots verts et purée', svg:'assiette',
+          d:'Le classique du soir : une pièce de bœuf saisie, des haricots vapeur, une purée maison.',
+          i:'🥩 Steak|🫛 Haricots verts|🥔 Pommes de terre|🥛 Lait|🧈 Beurre',
+          t:['Protéiné'],
+          nu:'Le fer du bœuf s\'absorbe mieux avec des légumes verts dans la même assiette.' },
+        { cle:'quo-omelette-champignons', n:'Omelette aux champignons', svg:'oeuf',
+          d:'Trois œufs battus, des champignons poêlés à part, du persil au dernier moment.',
+          i:'🥚 Œufs|🍄 Champignons|🧅 Oignon|🌿 Persil|🧈 Beurre',
+          t:['Protéiné','Végétarien'],
+          nu:'Des protéines complètes en dix minutes, quand il n\'y a plus rien au frigo.' },
+        { cle:'quo-pates-bolognaise', n:'Pâtes à la bolognaise', svg:'pates',
+          d:'Une sauce mijotée à la viande hachée et à la tomate, sur des pâtes al dente.',
+          i:'🍝 Pâtes|🥩 Bœuf haché|🍅 Tomates|🧅 Oignon|🥕 Carotte|🧄 Ail',
+          t:['Protéiné','Réconfortant'],
+          nu:'La carotte n\'est pas décorative : elle adoucit l\'acidité de la tomate sans sucre ajouté.' },
+        { cle:'quo-saumon-riz', n:'Saumon vapeur, riz et brocoli', svg:'poisson',
+          d:'Un pavé cuit à la vapeur ou au four, du riz, un brocoli encore ferme.',
+          i:'🐟 Saumon|🍚 Riz|🥦 Brocoli|🍋 Citron|🫒 Huile d\'olive',
+          t:['Protéiné','Léger'],
+          nu:'Les oméga-3 du saumon couvrent une bonne part des lipides du jour sans huile ajoutée.' },
+        { cle:'quo-cesar-poulet', n:'Salade César au poulet', svg:'bol',
+          d:'De la salade croquante, du poulet grillé, du parmesan et des croûtons.',
+          i:'🥬 Salade romaine|🍗 Poulet|🧀 Parmesan|🍞 Croûtons|🥚 Œuf',
+          t:['Protéiné'],
+          nu:'C\'est la sauce qui décide : montée au yaourt, elle divise les lipides par trois.' },
+        { cle:'quo-gratin-courgettes', n:'Gratin de courgettes', svg:'gratin',
+          d:'Des courgettes en rondelles, un peu de crème, du fromage râpé, vingt minutes au four.',
+          i:'🥒 Courgette|🧀 Fromage râpé|🥛 Crème|🥚 Œufs|🧄 Ail',
+          t:['Végétarien','Réconfortant'],
+          nu:'Faire dégorger les courgettes avant : sinon le gratin rend son eau et ne gratine pas.' },
+        { cle:'quo-soupe-legumes', n:'Soupe de légumes du placard', svg:'soupe',
+          d:'Ce qui traîne au bac à légumes, mijoté puis mixé.',
+          i:'🥕 Carotte|🥔 Pomme de terre|🧅 Oignon|🥬 Poireau|🌿 Thym',
+          t:['Végétarien','Léger','Riche en fibres'],
+          nu:'Une soupe rassasie peu à elle seule : elle demande un vrai apport de protéines à côté.' },
+        { cle:'quo-croque-monsieur', n:'Croque-monsieur maison', svg:'sandwich',
+          d:'Pain de mie, jambon, béchamel légère et gruyère, passé au four.',
+          i:'🍞 Pain de mie|🥓 Jambon|🧀 Gruyère|🥛 Lait|🧈 Beurre',
+          t:['Réconfortant'],
+          nu:'Au four plutôt qu\'à la poêle : le beurre de cuisson y est divisé par deux.' },
+        { cle:'quo-quiche-lorraine', n:'Quiche lorraine', svg:'tarte',
+          d:'Une pâte brisée, des lardons, un appareil aux œufs et à la crème.',
+          i:'🥧 Pâte brisée|🥓 Lardons|🥚 Œufs|🥛 Crème|🧀 Gruyère',
+          t:['Réconfortant'],
+          nu:'Une part se marie mal seule : une salade verte à côté équilibre le repas.' },
+        { cle:'quo-burger-maison', n:'Burger maison', svg:'burger',
+          d:'Un steak haché saisi, du cheddar, de la salade et une sauce montée soi-même.',
+          i:'🍔 Pain à burger|🥩 Steak haché|🧀 Cheddar|🥬 Salade|🍅 Tomate|🧅 Oignon',
+          t:['Protéiné','Réconfortant'],
+          nu:'Fait maison, il tombe autour de 600 kcal — la moitié de son équivalent en fast-food.' },
+        { cle:'quo-skyr-granola', n:'Skyr, fruits et granola', svg:'laitier',
+          d:'Un grand bol de skyr, des fruits frais, une poignée de granola.',
+          i:'🥛 Skyr|🍓 Fruits rouges|🍌 Banane|🌾 Granola|🍯 Miel',
+          t:['Protéiné'],
+          nu:'11 g de protéines pour 100 g : c\'est l\'appoint le plus simple quand la cible du jour est haute.' },
+        { cle:'quo-riz-cantonais', n:'Riz sauté aux légumes et œuf', svg:'poele',
+          d:'Du riz de la veille, sauté à feu vif avec un œuf brouillé et des petits légumes.',
+          i:'🍚 Riz|🥚 Œufs|🥕 Carotte|🫛 Petits pois|🧅 Oignon|🫙 Sauce soja',
+          t:['Réconfortant'],
+          nu:'Le riz de la veille tient mieux à la poêle : refroidi, son amidon ne colle plus.' },
+        { cle:'quo-brochettes-poulet', n:'Brochettes de poulet mariné', svg:'brochette',
+          d:'Des cubes de poulet marinés au yaourt et aux épices, passés au gril.',
+          i:'🍗 Poulet|🥛 Yaourt|🌶️ Paprika|🍋 Citron|🧄 Ail|🫑 Poivron',
+          t:['Protéiné','Épicé'],
+          nu:'La marinade au yaourt attendrit la chair : vingt minutes suffisent à changer la texture.' },
+        { cle:'quo-porridge-avoine', n:'Porridge d\'avoine', svg:'porridge',
+          d:'Des flocons cuits dans du lait, garnis de fruits et d\'oléagineux.',
+          i:'🌾 Flocons d\'avoine|🥛 Lait|🍌 Banane|🌰 Amandes|🍯 Miel',
+          t:['Végétarien','Riche en fibres'],
+          nu:'60 g de glucides pour 100 g de flocons : c\'est le petit déjeuner des grosses cibles.' },
+        { cle:'quo-ratatouille', n:'Ratatouille', svg:'legumes',
+          d:'Aubergine, courgette, poivron et tomate mijotés séparément puis réunis.',
+          i:'🍆 Aubergine|🥒 Courgette|🫑 Poivron|🍅 Tomate|🧅 Oignon|🌿 Herbes',
+          t:['Végétarien','Léger','Riche en fibres'],
+          nu:'Cuire les légumes séparément avant de les réunir : ensemble, ils se noient et fondent en purée.' },
+        { cle:'quo-dahl-lentilles', n:'Dahl de lentilles corail', svg:'bol',
+          d:'Des lentilles corail fondues dans du lait de coco et des épices, sur du riz.',
+          i:'🫘 Lentilles corail|🥥 Lait de coco|🍅 Tomate|🫚 Gingembre|🌶️ Curry|🍚 Riz',
+          t:['Végétarien','Épicé','Riche en fibres'],
+          nu:'Lentilles et riz ensemble donnent des protéines complètes, ce qu\'aucun des deux ne fait seul.' },
+        { cle:'quo-cabillaud-poele', n:'Cabillaud poêlé et écrasé de pommes de terre', svg:'poisson',
+          d:'Un dos de cabillaud saisi au beurre, un écrasé de pommes de terre à l\'huile d\'olive.',
+          i:'🐟 Cabillaud|🥔 Pommes de terre|🍋 Citron|🌿 Aneth|🫒 Huile d\'olive',
+          t:['Protéiné','Léger'],
+          nu:'Beaucoup de protéines pour très peu de lipides : le plat qui rattrape un jour trop gras.' },
+        { cle:'quo-buddha-bowl', n:'Buddha bowl', svg:'bol',
+          d:'Une céréale, une légumineuse, des crudités et une sauce, montés en bol.',
+          i:'🌾 Quinoa|🫘 Pois chiches|🥑 Avocat|🥕 Carotte|🥬 Épinards|🌰 Graines',
+          t:['Végétarien','Riche en fibres'],
+          nu:'La formule tient sans recette : une céréale, une légumineuse, deux légumes, une sauce.' },
+        { cle:'quo-escalope-dinde', n:'Escalope de dinde, riz et brocoli', svg:'assiette',
+          d:'Une escalope poêlée deux minutes par face, du riz, un brocoli vapeur.',
+          i:'🦃 Dinde|🍚 Riz|🥦 Brocoli|🍋 Citron|🌿 Herbes',
+          t:['Protéiné','Léger'],
+          nu:'L\'assiette la plus sobre du lot : c\'est celle qu\'on refait sans y penser.' }
+      ]
+    },
     {
       cle: 'bre', nom: 'Brésil', drapeau: '🇧🇷',
       accroche: 'Le lait de coco, l\'huile de palme rouge et les fruits d\'Amazonie',
@@ -651,8 +768,28 @@ var NattyDecouverte = (function () {
     });
   });
 
-  function img(p) { return BASE + (p.cle || p) + '.jpg'; }
-  function vignette(p) { return BASE + (p.cle || p) + '-t.jpg'; }
+  /* ⚠️ Un plat porte SOIT une photo, SOIT une illustration — jamais les deux,
+     et jamais aucune des deux. `img()` et `vignette()` rendent donc `null` sur
+     un plat illustré, plutôt qu'une URL vers un `.jpg` qui n'existe pas : sans
+     ça, chaque plat du quotidien poserait l'icône cassée du navigateur au
+     milieu de la rangée — le défaut déjà payé sur le calendrier
+     d'`assets/planning.js` et sur l'arc d'`assets/journee.js`.
+     Les appelants testent donc `illu(p)` AVANT de poser une `<img>`. */
+  function img(p) { return (p && p.svg) ? null : BASE + (p.cle || p) + '.jpg'; }
+  function vignette(p) { return (p && p.svg) ? null : BASE + (p.cle || p) + '-t.jpg'; }
+
+  /**
+   * L'illustration d'un plat sans photo, ou null s'il en a une.
+   * @param {object} p     un plat du catalogue
+   * @param {object} [o]   passé tel quel à NattyPlatsIllu.svg (ex. {trait:0.9})
+   * @returns {string|null} le `<svg>` complet
+   */
+  function illu(p, o) {
+    if (!p || !p.svg || !window.NattyPlatsIllu) return null;
+    // `window.` explicite : c'est ce que le garde vient de tester, et un
+    // identifiant nu dépendrait de la façon dont le module a été déclaré.
+    return window.NattyPlatsIllu.svg(p.svg, o);
+  }
 
   function cuisines() { return CUISINES; }
   function cuisine(cle) {
@@ -730,6 +867,8 @@ var NattyDecouverte = (function () {
       cle: p.cle,
       nom: p.n,
       photo: img(p),
+      // Trait affiné : la visionneuse dessine grand (voir `#nvue .nv-illu svg`).
+      illu: illu(p, { trait: 0.9 }),
       emoji: '🍽️',
       kicker: p.drapeau + ' ' + p.paysNom,
       desc: p.d,
@@ -765,7 +904,7 @@ var NattyDecouverte = (function () {
   return {
     cuisines: cuisines, cuisine: cuisine, parCuisine: parCuisine,
     tous: tous, parTag: parTag, tags: tags, selection: selection,
-    platParCle: platParCle, img: img, vignette: vignette,
+    platParCle: platParCle, img: img, vignette: vignette, illu: illu,
     ouvrir: ouvrir, fermer: fermer,
     estOuverte: function () { return !!window.NattyVisionneuse && NattyVisionneuse.estOuverte(); }
   };

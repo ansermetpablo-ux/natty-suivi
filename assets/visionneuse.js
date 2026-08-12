@@ -128,6 +128,15 @@ var NattyVisionneuse = (function () {
     '#nvue .nv-ph.vu{opacity:1}',
     '#nvue .nv-fb{position:absolute;inset:0;display:flex;align-items:center;',
       'justify-content:center;font-size:96px}',
+    /* L'illustration d'un plat sans photo. Elle occupe la carte sans la
+       remplir : le trait a besoin de blanc autour, contrairement à une photo
+       qui va bord à bord. ⚠️ `stroke-width` REDÉCLARÉ ici, et faible : la boîte
+       du SVG fait 24 unités, donc dans une carte de ~300 px le trait de 1.4
+       posé par `plats-illu.js` se peindrait en 17 px — un marqueur. Même piège
+       que le `.hero` d'`assets/journee.js`. */
+    '#nvue .nv-illu{position:absolute;inset:0;display:flex;align-items:center;',
+      'justify-content:center;color:var(--nt-ink,#f4f4f7);opacity:.82}',
+    '#nvue .nv-illu svg{width:56%;height:56%;stroke-width:.75}',
 
     /* ── Sous la photo ──
        Le bloc prend ce qui reste et se centre dedans : sur un grand écran il
@@ -395,10 +404,16 @@ var NattyVisionneuse = (function () {
 
       /* La carte photo, et RIEN dessus. */
       + '<div class="nv-hero">'
+      /* Trois cas, dans cet ordre : la photo, l'illustration au trait pour les
+         plats que personne n'a photographiés, et l'emoji en dernier recours.
+         L'illustration passe AVANT l'emoji : à 70 % de la hauteur d'écran, un
+         emoji étiré est une vignette d'application, pas une image de plat. */
       +   (it.photo
           ? '<img class="nv-ph" src="' + esc(it.photo) + '" alt=""'
             + (i < 2 ? '' : ' loading="lazy"') + ' onload="this.classList.add(\'vu\')">'
-          : '<div class="nv-fb">' + (it.emoji || '🍽️') + '</div>')
+          : it.illu
+            ? '<div class="nv-illu">' + it.illu + '</div>'
+            : '<div class="nv-fb">' + (it.emoji || '🍽️') + '</div>')
       + '</div>'
 
       + '<div class="nv-bas">'
@@ -473,7 +488,7 @@ var NattyVisionneuse = (function () {
 
   /**
    * @param {Object} o
-   *   items[]     {nom, photo, emoji, kicker, chapeau, desc, macros, tags,
+   *   items[]     {nom, photo, illu, emoji, kicker, chapeau, desc, macros, tags,
    *                note, stats, ingredients:[{nom,emoji,q}], membre, aime}
    *   index       la diapositive de départ
    *   titre       le libellé de la barre quand l'item n'a pas de `chapeau`

@@ -265,6 +265,13 @@ body{overflow-x:hidden}
   background:var(--card);box-shadow:var(--nm-soft);cursor:pointer}
 .dish img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .45s ease}
 .dish img.vu{opacity:1}
+/* Le fond d'un plat SANS photo : l'illustration au trait, centrée, sur le
+   creux de la carte. ⚠️ `stroke-width` redéclaré et faible — la boîte du SVG
+   fait 24 unités, donc le trait de 1.4 de `plats-illu.js` se peindrait en
+   ~7 px dans une vignette de 120 px. Même piège que le `.hero` de journee.js. */
+.dish .di,.pays .di{position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;background:var(--card);color:var(--muted)}
+.dish .di svg,.pays .di svg{width:52%;height:52%;stroke-width:1}
 .dish .fl{position:absolute;top:8px;left:8px;z-index:2;font-size:15px;line-height:1;
   background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
   border-radius:999px;padding:5px 7px}
@@ -385,6 +392,10 @@ body{overflow-x:hidden}
 <!-- La page plein écran d'un plat — la même pour « Découvrir » et pour le
      fil. Chargée AVANT `decouverte.js`, qui lui délègue son affichage. -->
 <script src="/assets/visionneuse.js"></script>
+<!-- Les illustrations des plats sans photo (« Le quotidien »). AVANT
+     `decouverte.js`, dont `illu()` s'en sert : sans elle, ces plats
+     s'afficheraient sur un fond vide, sans un mot. -->
+<script src="/assets/plats-illu.js"></script>
 <script src="/assets/decouverte.js"></script>
 <!-- Uniquement pour `NattyListe.basculerExtra` : les ingrédients d'un plat du
      monde s'ajoutent à la liste de courses, exactement comme les aliments à
@@ -503,10 +514,20 @@ var ENVIES = {
   'Épicé':'🌶️', 'Réconfortant':'🍲', 'Riche en fibres':'🌾'
 };
 
+/* ⚠️ Un plat du quotidien n'a pas de photo : `vignette()` rend `null`, et une
+   `<img src="null">` poserait l'icône cassée du navigateur au milieu de la
+   rangée. On teste donc la vignette AVANT de poser la balise, et on retombe sur
+   l'illustration au trait de `assets/plats-illu.js`. */
+function fondDish(p){
+  var v = NattyDecouverte.vignette(p);
+  if (v) return '<img src="' + v + '" alt="" loading="lazy"'
+    + ' onload="this.classList.add(\'vu\')">';
+  return '<div class="di">' + (NattyDecouverte.illu(p) || '') + '</div>';
+}
+
 function carteDish(p){
   return '<div class="dish" data-plat="' + esc(p.cle) + '">'
-    + '<img src="' + NattyDecouverte.vignette(p) + '" alt="" loading="lazy"'
-    + ' onload="this.classList.add(\'vu\')">'
+    + fondDish(p)
     + '<span class="fl">' + p.drapeau + '</span><div class="sh"></div>'
     + '<div class="nm">' + esc(p.n) + '</div></div>';
 }
@@ -524,8 +545,7 @@ function rendreDecouverte(){
     // hasard — la liste est ordonnée, la vignette ne changera donc jamais
     // d'un chargement à l'autre.
     return '<div class="pays" data-pays="' + esc(c.cle) + '">'
-      + '<img src="' + NattyDecouverte.vignette(c.plats[0]) + '" alt="" loading="lazy"'
-      + ' onload="this.classList.add(\'vu\')">'
+      + fondDish(c.plats[0])
       + '<div class="vo"><div class="fl">' + c.drapeau + '</div>'
       + '<div class="nm">' + esc(c.nom) + '</div>'
       + '<div class="nb">' + c.plats.length + ' plats</div></div></div>';
