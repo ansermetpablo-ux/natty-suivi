@@ -304,9 +304,15 @@ window.NattyPlanning = (function () {
       });
       var v = dispo[0];
       pris[v.j + '-' + v.c] = 1;
+      /* Le plat macro vient lui aussi du catalogue depuis août 2026 : il a donc
+         une photo, ou une illustration. C'étaient les trois dernières cases du
+         calendrier à n'avoir qu'un emoji au milieu de plats photographiés. */
+      var vm = visuelRecette(plat, 0);
       sortie.push({
         jour: v.j, creneau: v.c, type: 'macro', macro: m,
-        nom: plat.nom, em: plat.em || MACROS[m].em, photo: null,
+        nom: plat.nom, em: plat.em || MACROS[m].em,
+        photo: plat.cle ? vm.photo : null, illu: plat.cle ? vm.illu : null,
+        cle: plat.cle || null,
         pourquoi: plat.pourquoi || '', kcal: plat.kcal || 0,
         p: plat.p || 0, g: plat.g || 0, l: plat.l || 0,
         ingredients: plat.ingredients || [],
@@ -384,7 +390,8 @@ window.NattyPlanning = (function () {
       var t = liste.filter(function (x) { return x && x.macro === m; })[0];
       if (!t || !t.nom) return REPLI[k];
       return {
-        macro: m, nom: t.nom, em: t.em || MACROS[m].em, pourquoi: t.pourquoi || '',
+        macro: m, cle: t.cle || null,
+        nom: t.nom, em: t.em || MACROS[m].em, pourquoi: t.pourquoi || '',
         p: +t.p || 0, g: +t.g || 0, l: +t.l || 0, kcal: +t.kcal || 0,
         ingredients: Array.isArray(t.ingredients) ? t.ingredients : []
       };

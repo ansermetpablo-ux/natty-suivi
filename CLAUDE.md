@@ -2815,7 +2815,13 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   dans le profil, aucune clé `illu` inconnue, JSON complet (15 730 caractères) en **85,4 s**.
 - ✅ **Carte « Ma semaine » refaite** : noire, jours en colonnes, ~115 px de haut au lieu d'une
   carte plus haute que le repas du jour. La fiche d'un repas passe au noir aussi.
-- 🔄 **Les 3 plats macro n'ont pas de photo** — seulement leur emoji. Les deux seules photos de
+- ✅ **Les 3 plats macro ont leur image** (2026-08-12) : ils se choisissent eux aussi dans le
+  catalogue (`cle` demandée au prompt, validée par `normaliserPlatsMacro`), donc photo ou
+  illustration comme les recettes. Vérifié contre l'API réelle : **3/3 ancrés**, et le modèle
+  a pioché dans « Le quotidien » — cohérent, un plat macro est un correctif simple, pas une
+  découverte. Une clé inconnue est effacée : le plat garde son emoji, ce qui est un manque
+  visible plutôt que la photo d'un plat voisin.
+  ~~Ancien état : seulement leur emoji ; les deux seules photos de~~
   plats du dépôt (`plat-demo1/2-week.png`) sont des plats précis : les coller sur « Poulet
   rôti » serait un mensonge à l'écran. Il faut de vraies photos, fournies par Pablo (règle §9
   #24 : on ne va pas en chercher sur le web).

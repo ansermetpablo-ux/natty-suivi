@@ -287,6 +287,10 @@ export function construirePrompt(profil, nb, garde) {
   p += "- Ils prolongent les conseils ci-dessus : le plat \"p\" doit répondre au conseil protéines, et ainsi de suite.\n";
   p += '- Ils seront PLACÉS dans la semaine là où ses apports flanchent. Ils sont donc plus simples que les recettes : pas d\'étapes détaillées.\n';
   p += '- Ils doivent différer des ' + nb + ' recettes ci-dessus.\n';
+  /* Comme les recettes : une CLÉ du catalogue, donc une vraie image. Sans
+     elle, ces trois plats étaient les seuls du calendrier à n'avoir qu'un
+     emoji, au milieu de plats photographiés. */
+  p += '- Chacun est lui aussi un plat DU CATALOGUE : donne sa "cle" exacte. Choisis celui qui corrige le mieux la macro concernée.\n';
   p += '- Joins à chaque plat 4 à 6 ALIMENTS À PRIVILÉGIER pour cette macro : des aliments simples, '
      + 'achetables tels quels, compatibles avec son régime et ses goûts, avec pour chacun sa teneur '
      + 'pour 100 g dans la macro concernée. Ce sont eux qu\'il ajoutera à sa liste de courses.\n';
@@ -302,7 +306,7 @@ export function construirePrompt(profil, nb, garde) {
      + '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g","dispo":true}],'
      + '"steps":[{"illu":"couper","t":"Titre court de l\'étape","detail":"la consigne précise, avec les repères",'
      + '"qte":[{"nom":"Poulet","qte":"150 g"}],"duree_min":5,"temp_c":0,"feu":"","tip":"astuce facultative"}]}],';
-  p += '"plats_macro":[{"macro":"p","nom":"Nom du plat","em":"🍗",'
+  p += '"plats_macro":[{"macro":"p","cle":"la-cle-du-catalogue","nom":"Nom du plat","em":"🍗",'
      + '"pourquoi":"une phrase, adressée à lui, qui dit ce que ce plat corrige",'
      + '"p":45,"g":40,"l":12,"kcal":450,'
      + '"ingredients":[{"em":"🍗","nom":"Poulet","qte":"150 g"}],'
@@ -442,9 +446,15 @@ export function normaliserPlatsMacro(liste) {
   return ['p', 'g', 'l'].map((m, k) => {
     const t = liste.find(x => x && x.macro === m) || liste[k];
     if (!t || !t.nom) return null;
+    /* Même ancrage que les recettes : clé inconnue EFFACÉE et jamais devinée
+       — le plat gardera son emoji, ce qui est un manque visible, plutôt que la
+       photo d'un plat voisin, qui serait un mensonge. */
+    const cle = (typeof t.cle === 'string' && platParCle(t.cle.trim())) ? t.cle.trim() : null;
+    const fiche = cle ? platParCle(cle) : null;
     return {
       macro: m,
-      nom: String(t.nom),
+      cle: cle,
+      nom: fiche ? fiche.n : String(t.nom),
       em: t.em || em[m],
       pourquoi: t.pourquoi || '',
       p: Math.round(+t.p || 0), g: Math.round(+t.g || 0),
