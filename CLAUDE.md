@@ -2613,7 +2613,25 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   s'auto-désinscrivant, l'enregistrement n'avait aucun effet, seulement une incohérence.
 
 **Abonnements & paiements**
-- ✅ `api/webhook.js` sécurisé (vérification de signature Stripe, voir §3/§7). **Nécessite d'ajouter `STRIPE_WEBHOOK_SECRET` dans Vercel avant push**, sinon le webhook rejette tout en fail-closed.
+- ✅ `api/webhook.js` sécurisé (vérification de signature Stripe, voir §3/§7), **et
+  `STRIPE_WEBHOOK_SECRET` EST configurée sur Vercel** — mesuré le 2026-08-12 : un POST portant
+  une signature bidon reçoit **400 « Signature invalide »** et non le 500 « Webhook non
+  configuré » du repli fail-closed. C'est la seule façon de le savoir de l'extérieur, une
+  variable d'environnement Vercel n'étant pas lisible. Cette entrée réclamait la variable
+  depuis plusieurs sessions : elle était posée.
+- ✅ **PAYER N'ENFERME PLUS LE CLIENT DANS LA WEBVIEW** (2026-08-12). `checkout-retour.html` et
+  la branche `natif` d'`api/checkout.js` existaient depuis le portage Capacitor, mais **rien ne
+  les déclenchait** : `www/offre.html` n'envoyait jamais `plateforme`, donc Stripe recevait
+  toujours les URL de retour du site. Le paiement s'ouvrait alors DANS la WebView — qui n'a ni
+  barre d'adresse ni bouton retour : qui renonçait restait enfermé sur une page Stripe hors du
+  bundle, qui payait atterrissait sur Vercel, pareillement piégé. C'est le piège décrit en §11,
+  et un motif de refus en review.
+  Stripe s'ouvre désormais par `Browser.open()` et le retour passe par le scheme custom, comme
+  la connexion Google. **Vérifié en navigateur avec une doublure Capacitor** : `plateforme:
+  'natif'` envoyé, `Browser.open` appelé avec l'URL Stripe, **la WebView ne navigue pas**, le
+  retour `statut=annule` rend le bouton, `statut=ok` mène à `suivi.html`, et un deep link émis
+  par une **autre app** (`com.autreapp://checkout`) est intégralement ignoré.
+  🔄 Non vérifié sur téléphone : le passage réel Safari → app n'a pu être joué qu'en doublure.
 
 **Ajout de plat (bouton +)**
 - ✅ Parcours complet livré dans `assets/ajout.js` (voir §3) : caméra directe, analyse IA,
@@ -2624,16 +2642,20 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ **Les macros sont stockées par ingrédient** depuis août 2026 (`meal_ingredients.calories`,
   `proteins_g`, `carbs_g`, `fats_g`), et `Natty.calcMac` les préfère à la table. Cette entrée
   disait le contraire : c'était vrai avant `65c8a4e`.
-- 🔴 🔄 **Le recalcul est à déclencher UNE fois** pour les ~227 lignes antérieures, encore à 0,
-  qui font sous-compter tout l'historique (totaux, graphiques, scores du fil). **Par le bouton**
-  de `admin.html` → onglet Équipe → « Maintenance › Macros de l'historique » : « Relevé »,
-  puis « Écrire ». Détail et garde-fous en §3.
-  **Je ne peux pas le faire moi-même** : il faut `SUPABASE_SERVICE_KEY`, qui n'existe que sur
-  Vercel — la clé anon ne voit plus rien sous RLS. Et **Pablo n'a pas accès à `CRON_SECRET`**
-  (2026-08-05), d'où le bouton plutôt qu'un `curl`.
-  🔄 Après le relevé : me transmettre `non_reconnus` pour compléter la table de `core.js`,
-  régénérer `api/_nutrition.js`, puis relancer — c'est le seul moyen de connaître la couverture
-  réelle, les noms en base n'étant plus lisibles autrement.
+- ✅ **LE RECALCUL A ÉTÉ LANCÉ, ET IL EST FINI.** Compté en base le 2026-08-12 :
+  **323 lignes chiffrées sur 329**, aucune sans grammes. Cette entrée réclamait le passage
+  depuis plusieurs sessions ; il a eu lieu.
+  Les **6 lignes restantes à zéro sont correctes, et il ne faut pas les « réparer »** —
+  c'est exactement la règle du module (un manque visible vaut mieux qu'un chiffre inventé) :
+
+  | Ligne | Pourquoi zéro |
+  |---|---|
+  | « Verre d'eau » 200 g | l'eau **fait** 0 kcal — la valeur est juste, pas manquante |
+  | « Assaisonnement » 2 g, « Basilique » 1 g | reconnus, mais 1 à 2 g d'aromate s'arrondit à 0 |
+  | « a », « Mempn », « Marcos en boîte » | indéchiffrables, et déjà documentés comme tels |
+
+  Autrement dit la couverture réelle est **totale** sur ce qui est chiffrable : il ne reste
+  aucun nom à ajouter à la table de `core.js`, donc rien à régénérer dans `api/_nutrition.js`.
 
 **Garde-manger & génération de recettes**
 - ✅ Panneau « Mon garde-manger » dans `repas.html` : scan des courses, du ticket de caisse ou
@@ -2890,13 +2912,14 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      depuis le 2026-08-10 — voir §11), `APNS_ENV` = `sandbox` pour un build
      Xcode, `production` pour TestFlight/App Store. Plus `CRON_SECRET` et
      `SUPABASE_SERVICE_KEY` s'ils manquent. Vérification : `GET /api/push-test?secret=…`.
-  2. **`natty_push.sql`** à exécuter — tables `appareils`, `push_etat`, `push_config`, plus
-     `pg_net` et le déclencheur `meals_notifier_amis`. Sans elles aucun jeton n'est stocké et
-     rien ne part. ⚠️ **Remplacer `REMPLACER_PAR_LE_CRON_SECRET`** par la vraie valeur avant
-     d'exécuter : le déclencheur doit s'authentifier auprès de l'endpoint. Le secret vit dans
-     `push_config`, dont la **RLS est activée sans aucune policy** — donc illisible depuis la
-     clé anon, et lu uniquement par la fonction `SECURITY DEFINER`. Ne pas l'écrire en dur
-     dans le corps de la fonction.
+  2. ✅ **`natty_push.sql` — EXÉCUTÉ.** Relevé le 2026-08-12 : `appareils`, `push_etat` et
+     `push_config` existent toutes les trois, **RLS activée et aucune policy** sur les deux
+     dernières — exactement l'état voulu (illisibles à la clé anon, lues par la seule fonction
+     `SECURITY DEFINER`). `push_config` porte **1 ligne**, donc le secret y a bien été semé et
+     le `REMPLACER_PAR_LE_CRON_SECRET` du fichier a été remplacé. `appareils` est à **0 ligne**,
+     ce qui est normal et attendu : aucun jeton APNs réel ne peut exister tant que l'app n'a
+     pas tourné sur un iPhone signé (un simulateur n'en produit pas). Il ne reste donc, de
+     toute cette liste, que la clé Apple et le build signé.
   3. **Un build signé.** ⚠️ Le `CODE_SIGNING_ALLOWED=NO` documenté en §11 empêche l'embarquement
      de l'entitlement : l'enregistrement échoue alors avec « aucune autorisation
      *aps-environment* valide » (constaté). L'entitlement lui-même est correct — le
@@ -3456,6 +3479,39 @@ L'outil réécrit `www/manifest.json` — repasser derrière : il met `type: ima
 - `repas.html` et la **liste de courses de `coaching.html`** ne font que **lire** ce cache. La liste de courses est **dérivée** des recettes (agrégation des ingrédients), donc jamais désynchronisée et sans appel IA.
 - Le **nombre de repas voulus** (1 à 7) est réglable dans `repas.html`. Préférence en `localStorage` (`natty_nb_repas_<userId>`) — donc **propre à l'appareil**, faute de colonne dédiée. La valeur réellement utilisée est conservée dans `conseils_json.nb_repas`.
 
+### 🔴 Guideline 4.8 — la connexion tierce, seul blocage dur qui reste (2026-08-12)
+L'écran de connexion offrait **Google**, et à côté un bouton **Apple qui ne fonctionnait pas** :
+`APPLE_ACTIF = false`, parce que le provider n'est pas configuré côté Supabase. Il répondait
+« Connexion Apple bientôt disponible ». Cet état cumulait **deux** motifs de refus — la 4.8
+(une option respectueuse de la vie privée est exigée **dès qu'**une connexion tierce est
+offerte) et la 2.1 (une fonctionnalité visible qui ne marche pas).
+
+**Ce qui est fait** : `APPLE_ACTIF` gouverne désormais **les deux** boutons, par l'attribut
+`data-social` posé sur le séparateur et les quatre boutons (deux panneaux, connexion et
+inscription). Les deux positions du drapeau sont défendables devant la revue — c'est tout
+l'intérêt :
+
+| `APPLE_ACTIF` | Ce que voit l'utilisateur | 4.8 |
+|---|---|---|
+| `false` (aujourd'hui) | email et mot de passe seuls | ne s'applique pas |
+| `true` | Google **et** Apple | satisfaite |
+
+L'état intermédiaire — celui d'avant — n'était ni l'un ni l'autre.
+⚠️ Les boutons sont **retirés du DOM**, pas estompés : un bouton encore cliquable reste
+atteignable au clavier et par les outils d'accessibilité.
+Vérifié en navigateur dans les deux positions : à `false`, zéro bouton tiers **et le séparateur
+« ou » part avec eux** (sans quoi il resterait un trait orphelin au-dessus de rien) ; à `true`,
+les deux reviennent, Apple dans son habillage imposé (fond noir mesuré).
+
+🔄 **CE QUI RESTE À DÉCIDER, ET C'EST À PABLO.** Publier en l'état est possible **tout de
+suite** : email/mot de passe seuls, aucun risque 4.8. Mais l'app perd la connexion Google, qui
+est le chemin le plus court pour un nouveau client. Rallumer les deux demande, côté Supabase →
+Authentication → Providers → Apple : un **Services ID**, le **Team ID** (`DJLW82GU5A`), un
+**Key ID** et une **clé .p8** — tous délivrés par le compte Apple Developer, qui est payé
+depuis le 2026-08-10. Une fois fait, **une seule ligne** à changer (`var APPLE_ACTIF = true`
+dans `login.html` **et** `www/login.html`).
+⚠️ Ne PAS rallumer Google seul en attendant : c'est précisément l'état qui fait refuser.
+
 ### Conformité App Store — fait en août 2026
 Quatre choses qu'Apple vérifie à l'envoi, et qui n'existaient pas.
 
@@ -3518,9 +3574,12 @@ reste l'ancien `phx_join` — voir §7.
   n'a pas la police. **Ne pas « corriger » ce qui se voit sur les captures du simulateur** :
   les emoji servent d'icônes dans presque tous les écrans, y toucher serait une régression
   gratuite.
-- **`challenges.html` est orphelin dans le bundle** : plus aucun lien n'y mène (l'onglet
-  « Défis » ouvre `narration.html`). Le fichier reste embarqué. À supprimer de `www/` ou à
-  relier — mais pas à laisser en l'état indéfiniment.
+- ✅ **`challenges.html` a quitté le bundle** (2026-08-12) — plus aucun écran n'y menait depuis
+  que l'onglet « Défis » ouvre `narration.html` (revérifié : les occurrences de « challenges »
+  dans `www/` sont toutes la **table** Supabase lue par `suivi.html`, jamais la page). La
+  version racine, servie sur le web, est conservée. C'était le bon des deux choix : la page
+  porte le WebSocket Realtime obsolète et un `navigator.clipboard` non testé en WebView, donc
+  la relier aurait demandé de la reprendre d'abord.
 - ✅ **Signature : l'équipe existe** (2026-08-10 — Pablo a pris la licence Apple Developer
   Program à 99 €). `DEVELOPMENT_TEAM = DJLW82GU5A`, l'équipe **Natty**, en Debug comme en
   Release, et l'entitlement `aps-environment: development` est posé. C'est ce qui débloque
@@ -3873,3 +3932,39 @@ session « fil social » :*
   qui change de libellé, retour qui referme d'abord le tiroir, et 375 × 667 sans chevauchement.
 - 🔄 **Non vérifié sur téléphone** : le rendu du neumorphisme sur écran OLED et la zone sûre du
   bas n'ont pu être jugés qu'en navigateur.
+
+---
+
+*Contribution session « derniers chantiers avant l'App Store » (Claude Opus, 12 août 2026) —
+audit de soumission, deux correctifs, et quatre statuts périmés remis à jour :*
+
+**Deux défauts trouvés, tous deux des motifs de refus en review :**
+- 🔴 **Le paiement enfermait le client dans la WebView.** `checkout-retour.html` et la branche
+  `natif` d'`api/checkout.js` existaient depuis le portage Capacitor, mais `offre.html`
+  n'envoyait jamais `plateforme` : toute la machinerie de rebond n'avait **jamais servi**.
+  Corrigé et vérifié avec une doublure Capacitor — détail en §8.
+- 🔴 **Un bouton « Continuer avec Apple » visible et mort**, à côté d'un bouton Google actif.
+  Un seul drapeau gouverne désormais les deux. C'est le **seul blocage dur qui reste**, et
+  c'est une décision de Pablo, pas du code — encadré dédié en §11.
+
+**Quatre statuts de §8 étaient périmés, tous mesurés faits :**
+`STRIPE_WEBHOOK_SECRET` posée sur Vercel (400 et non 500 sur signature bidon) ·
+`natty_push.sql` exécuté (les trois tables sont là, `push_config` porte son secret) ·
+le recalcul des macros de l'historique **passé** (323 lignes chiffrées sur 329, les 6 restantes
+étant justes ou indéchiffrables) · `challenges.html` retiré du bundle.
+
+⚠️ **Une session parallèle écrivait dans le dépôt pendant celle-ci** et a refermé les deux
+routes ouvertes (`api/claude.js`, `api/save-conseils.js`) dans le commit `6a80a7a` — constaté
+en voyant `save-conseils.js` changer entre deux lectures. D'où `git commit --only` sur mes
+seuls chemins, et aucun `add -A` : la règle du dépôt a servi le jour même où elle a été écrite.
+
+**Ce qui a été vérifié, et comment** : build iOS `BUILD SUCCEEDED`, app lancée sur iPhone 17 Pro
+(l'écran de connexion s'affiche sans bouton tiers), contenu du `.app` construit inspecté
+(`PrivacyInfo.xcprivacy` présent, `challenges.html` absent, correctif checkout embarqué),
+production sondée (`/api/claude` répond 413 sur un prompt de 90 000 caractères,
+`/api/generer-conseils` « Session requise »), et **toutes les tables sous RLS** relevées par
+l'API Supabase.
+
+🔄 **Rien de tout cela n'a été vu sur un iPhone réel** : le passage Safari → app au retour de
+Stripe, la caméra, les notifications et les zones sûres n'ont pu être joués qu'en simulateur
+ou en doublure.
