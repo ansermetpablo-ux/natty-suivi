@@ -2909,6 +2909,29 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      de schéma.
 
 **Génération de la semaine (conseils + recettes + liste de courses)**
+- ✅ **Les recettes se CHOISISSENT dans le catalogue** (2026-08-12) — règle 0 du prompt, clé
+  validée par `ancrerAuCatalogue()`. C'est ce qui donne à chaque plat de la semaine sa vraie
+  photo, au lieu des deux images de démonstration qui tournaient (§3, `assets/plats-illu.js`).
+- ✅ **Vérifié contre l'API RÉELLE, trois générations complètes** (2026-08-12, via le proxy
+  `/api/claude` avec le prompt réel) : **6/6 recettes ancrées au catalogue**, clés existantes
+  (`thai-pad-thai-crevettes`, `mar-tajine-citron`, `viet-poisson-vapeur`, `tur-kisir`,
+  `thai-pad-thai-poulet`, `quo-saumon-riz`), noms alignés sur le catalogue, 11 à 12 étapes par
+  recette, 3 plats macro, 6/6 conseils, **aucune clé `illu` inconnue**, et les photos des plats
+  choisis présentes sur disque. Le modèle n'a jamais inventé de plat.
+- ℹ️ **Les plats du quotidien ne sortent pas pour tous les profils, et c'est correct.** Sur les
+  deux générations au profil de Pablo (défi « variété », envie de cuisine vietnamienne), les
+  quatre plats tirés étaient des cuisines du monde — la règle 2 pousse justement à se démarquer
+  de la semaine écoulée. Contrôle à profil opposé (« pas le temps », aucune envie de
+  découverte) : `quo-saumon-riz` sort immédiatement. Les 20 plats du quotidien sont donc
+  atteignables, ils perdent simplement face à un profil qui demande de la découverte.
+- 🔄 **La marge de durée a fondu.** Le catalogue ajoute ~3 300 jetons d'entrée : mesuré
+  **95 à 107 s** contre ~85 s avant, pour un `maxDuration` de 180 s sur `generer-conseils`.
+  Ça passe, mais il reste moins de marge qu'avant — à surveiller si le catalogue grossit
+  beaucoup, et c'est une raison de plus de ne pas monter `NB_RECETTES`.
+- ⚠️ **`/api/claude` normalise la réponse en `{text}`**, il ne rend pas la forme brute
+  `{content:[{text}]}` de l'API Anthropic — que lit, elle, `api/_generation.js`, qui appelle
+  l'API en direct. Un banc qui passe par le proxy et lit `content[0].text` conclut « JSON
+  illisible » sur une réponse parfaite (erreur commise en écrivant cette vérification).
 - ✅ **Une seule génération, côté serveur, pour tous les écrans** (août 2026) : `api/_generation.js`
   + `api/generer-conseils.js` + `assets/generation.js`. Un appui sur un bouton, une attente
   plein écran avec barre de progression, et ensuite **plus aucune régénération** — tous les écrans
@@ -2961,6 +2984,16 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   > qui paie (défaut attrapé au test : 0 abonné détecté sur 2 réels).
 
 **Sécurité**
+- 🔴 🔄 **`api/claude.js` est un proxy OUVERT vers l'API Anthropic payante.** Aucune
+  authentification : un POST anonyme portant `{prompt, max_tokens}` est relayé tel quel avec
+  `ANTHROPIC_API_KEY`, et facturé à Natty. Relevé le 2026-08-12 en s'en servant pour valider la
+  règle 0 — trois générations complètes, ~9 400 jetons chacune, sans la moindre clé. N'importe
+  qui connaissant l'URL peut donc faire tourner le modèle aux frais du compte, et `max_tokens`
+  est celui de l'appelant.
+  ⚠️ Il est appelé par **beaucoup** d'écrans (analyse photo d'`assets/ajout.js`, garde-manger,
+  défis de `narration.html`, suggestions…), dont certains sans session : le fermer demande de
+  les recenser d'abord, comme pour `save-conseils`. Parade minimale en attendant : plafonner
+  `max_tokens` côté serveur au lieu d'accepter celui du client.
 - 🔴 🔄 **`api/save-conseils.js` n'est PAS authentifié, et il écrit avec la clé service.**
   Il accepte un POST anonyme portant n'importe quel `user_id` et écrase la ligne
   `profil_conseils` correspondante (la clé primaire étant `user_id`, l'upsert met à jour, il
