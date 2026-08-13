@@ -232,6 +232,34 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 .recap-price-val { font-size: 24px; font-weight: 700; color:var(--txt); letter-spacing: -1px; }
 .recap-price-per { font-size: 11px; color:var(--muted); font-weight: 400; text-align: right; }
 
+/* ═══ COMMANDE À L'UNITÉ ═══ */
+.unite-liste { display: flex; flex-direction: column; gap: 10px; }
+.unite-vide { text-align: center; color:var(--muted); font-size: 13px; padding: 28px 10px; }
+.unite-plat { display: flex; align-items: center; gap: 12px; background:var(--bg);
+  border-radius: 18px; padding: 12px 14px; box-shadow: 4px 4px 10px var(--creux-40),-4px -4px 10px var(--relief-88); }
+.unite-img { width: 52px; height: 52px; border-radius: 14px; object-fit: cover; flex-shrink: 0; background:var(--creux-30); }
+.unite-inf { flex: 1; min-width: 0; }
+.unite-nom { font-size: 13.5px; font-weight: 700; color:var(--txt); line-height: 1.3; }
+.unite-mac { font-size: 11px; color:var(--muted); margin-top: 3px; }
+/* Le pas-à-pas plutôt qu'un champ libre : sur mobile, ouvrir un clavier
+   numérique pour taper « 2 » est une étape de trop, et un champ accepte 999. */
+.unite-pas { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.unite-pas button { width: 30px; height: 30px; border-radius: 50%; border: none; cursor: pointer;
+  background:var(--bg); box-shadow: 3px 3px 7px var(--creux-40),-3px -3px 7px var(--relief-88);
+  font-size: 17px; font-weight: 700; color:var(--txt); font-family: inherit; line-height: 1;
+  display: flex; align-items: center; justify-content: center; }
+.unite-pas button:disabled { opacity: .34; cursor: default; }
+.unite-pas button:active:not(:disabled) { box-shadow: inset 2px 2px 5px var(--creux-40),inset -2px -2px 5px var(--relief-88); }
+.unite-qte { font-size: 14px; font-weight: 800; color:var(--txt); min-width: 16px; text-align: center; }
+.unite-total { margin-top: 20px; }
+.unite-total-l { display: flex; justify-content: space-between; align-items: baseline;
+  padding: 0 4px 12px; font-size: 13px; color:var(--muted); }
+.unite-total-l strong { font-size: 22px; font-weight: 800; color:var(--txt); }
+.unite-payer { width: 100%; padding: 16px; border: none; border-radius: 16px; cursor: pointer;
+  background:var(--ink); color:var(--on-ink); font-family: inherit; font-size: 15px; font-weight: 700; }
+.unite-payer:disabled { opacity: .45; cursor: default; }
+.unite-note { font-size: 11px; color:var(--muted); line-height: 1.5; margin-top: 12px; text-align: center; }
+
 /* EMAIL RGPD */
 .email-section { display: flex; flex-direction: column; gap: 14px; }
 .email-toggle-row { display: flex; align-items: center; gap: 12px; cursor: pointer; }
@@ -291,6 +319,31 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
     <div class="etape-item"><div class="etape-dot" id="dot5">5</div><div class="etape-lbl" id="lbl5">Livraison</div></div>
     <div class="etape-line" id="line5"></div>
     <div class="etape-item"><div class="etape-dot" id="dot6">6</div><div class="etape-lbl" id="lbl6">Récap</div></div>
+  </div>
+
+  <!-- ═══ COMMANDE À L'UNITÉ ═══════════════════════════════════════════════
+       Parcours court, ouvert par offre.html?mode=unite (depuis la pastille de
+       la barre du haut, cf. assets/commande.js).
+
+       ⚠️ C'EST UN ÉCRAN À PART, PAS UNE 7ᵉ ÉTAPE DU TUNNEL. Les six étapes
+       servent à composer un ABONNEMENT — objectif, durée, nutritionniste,
+       jour de livraison. Rien de tout ça n'a de sens pour un plat acheté une
+       fois : on choisit ses plats, on paie. Les y faire passer, c'était six
+       écrans pour un achat qui en demande un.
+       ⚠️ Le paiement est UNIQUE côté Stripe (`mode=payment`) — voir la fabrique
+       `creerSession` d'api/checkout.js, partagée avec l'abonnement pour que le
+       retour natif ne soit pas corrigé d'un côté et oublié de l'autre. -->
+  <div class="step" id="stepUnite">
+    <div class="page-header"><h1>Commander à l'unité</h1><p>Sans engagement · 9 € le plat</p></div>
+    <div id="uniteListe" class="unite-liste">
+      <div class="unite-vide">Chargement du menu…</div>
+    </div>
+    <div class="unite-total" id="uniteTotal" style="display:none">
+      <div class="unite-total-l"><span id="uniteNb">0 plat</span><strong id="unitePrix">0 €</strong></div>
+      <button class="unite-payer" id="unitePayer" disabled>Choisissez au moins un plat</button>
+      <p class="unite-note">Livraison au même jour et à la même adresse que votre abonnement.
+        Sans abonnement, nous vous contactons pour convenir de la livraison.</p>
+    </div>
   </div>
 
   <!-- STEP 1 FORMULE -->
@@ -990,6 +1043,163 @@ async function souscrire(){
     else{showToast("Erreur lors du paiement");btn.disabled=false;btn.textContent="Payer →";}
   }catch(e){showToast("Erreur réseau");btn.disabled=false;btn.textContent="Payer →";}
 }
+
+/* ═══ COMMANDE À L'UNITÉ ═════════════════════════════════════════════════
+   Ouvert par offre.html?mode=unite. On masque le tunnel d'abonnement en
+   entier — barre d'étapes comprise : six pastilles numérotées au-dessus d'un
+   écran qui n'en a qu'une annoncent un parcours qui n'existe pas.
+
+   ⚠️ LE PRIX AFFICHÉ N'EST PAS LE PRIX FACTURÉ, et c'est voulu. Stripe fait
+   foi : le serveur lit `STRIPE_PRICE_UNITE` et ne prend rien du client, donc
+   personne ne peut se fabriquer un tarif. Les 9 € ci-dessous ne servent qu'à
+   annoncer un ordre de grandeur avant le paiement — l'écran Stripe affiche le
+   montant réel avant validation. Si le prix change dans Stripe, cette
+   constante est à suivre, sinon l'annonce et la facture divergent. */
+const PRIX_UNITE_AFFICHE = 9;
+const uniteQte = {};   // id du plat → quantité
+let unitePlats = [];
+
+function uniteActif() {
+  return new URLSearchParams(location.search).get('mode') === 'unite';
+}
+
+async function uniteDemarrer() {
+  /* Le tunnel entier disparaît : sa barre d'étapes, ses six panneaux, ET sa
+     barre d'action fixe.
+     ⚠️ Cette dernière est facile à oublier — elle vit HORS des `.step`, en
+     `position:fixed` tout en bas. Vue à l'écran : « Choisir mon objectif → »
+     restait collé sous le récapitulatif à l'unité, et il menait à l'étape 2 de
+     l'abonnement. Le bouton de paiement à l'unité, lui, est dans le flux. */
+  document.querySelectorAll('.step').forEach(function(s){ s.classList.remove('active'); });
+  const row = document.querySelector('.etapes-row');
+  if (row) row.style.display = 'none';
+  const barre = document.querySelector('.cta-fixed');
+  if (barre) barre.style.display = 'none';
+  const t = document.getElementById('ofrTitre');
+  if (t) t.textContent = 'Commande à l\'unité';
+  document.getElementById('stepUnite').classList.add('active');
+
+  const liste = document.getElementById('uniteListe');
+  try {
+    // Les plats du menu, les plus récents d'abord. `actif` écarte ceux qui ont
+    // été retirés par l'admin sans être supprimés.
+    unitePlats = await Natty.sbFetch(
+      'plats_menu?actif=eq.true&order=semaine.desc,nom.asc&limit=30'
+      + '&select=id,nom,description,photo_url,calories,proteines') || [];
+  } catch (e) { unitePlats = []; }
+
+  if (!unitePlats.length) {
+    // Un menu vide se DIT. Une liste blanche laisserait croire à un chargement
+    // qui n'aboutit pas, et on attendrait pour rien.
+    liste.innerHTML = '<div class="unite-vide">Le menu de la semaine n\'est pas encore publié.<br>'
+      + 'Revenez d\'ici peu, ou souscrivez une formule hebdomadaire.</div>';
+    return;
+  }
+
+  liste.innerHTML = unitePlats.map(function(p){
+    const img = p.photo_url
+      ? '<img class="unite-img" src="' + ech(p.photo_url) + '" alt="">'
+      : '<span class="unite-img"></span>';
+    const mac = [
+      p.calories ? Math.round(p.calories) + ' kcal' : null,
+      p.proteines ? Math.round(p.proteines) + ' g de protéines' : null
+    ].filter(Boolean).join(' · ');
+    return '<div class="unite-plat">' + img
+      + '<div class="unite-inf"><div class="unite-nom">' + ech(p.nom || 'Plat') + '</div>'
+      + (mac ? '<div class="unite-mac">' + mac + '</div>' : '') + '</div>'
+      + '<div class="unite-pas">'
+      + '<button data-moins="' + ech(p.id) + '" aria-label="Retirer" disabled>−</button>'
+      + '<span class="unite-qte" id="uq_' + ech(p.id) + '">0</span>'
+      + '<button data-plus="' + ech(p.id) + '" aria-label="Ajouter">+</button>'
+      + '</div></div>';
+  }).join('');
+
+  liste.addEventListener('click', function(ev){
+    const plus = ev.target.closest('[data-plus]');
+    const moins = ev.target.closest('[data-moins]');
+    if (plus)  uniteChanger(plus.getAttribute('data-plus'), +1);
+    if (moins) uniteChanger(moins.getAttribute('data-moins'), -1);
+  });
+
+  document.getElementById('uniteTotal').style.display = 'block';
+  document.getElementById('unitePayer').addEventListener('click', unitePayer);
+  uniteMaj();
+}
+
+function ech(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function uniteTotalQte(){
+  return Object.keys(uniteQte).reduce(function(n,k){ return n + uniteQte[k]; }, 0);
+}
+
+function uniteChanger(id, d){
+  const actuel = uniteQte[id] || 0;
+  // Plafond à 20 plats au total : c'est la même borne que le serveur, qui
+  // refuse au-delà. La poser aussi ici évite de faire cliquer quelqu'un
+  // jusqu'à 25 pour lui annoncer un refus au moment de payer.
+  if (d > 0 && uniteTotalQte() >= 20) { showToast('20 plats au maximum par commande'); return; }
+  const n = Math.max(0, actuel + d);
+  if (n === 0) delete uniteQte[id]; else uniteQte[id] = n;
+  const el = document.getElementById('uq_' + id);
+  if (el) el.textContent = String(n);
+  const mo = document.querySelector('[data-moins="' + id + '"]');
+  if (mo) mo.disabled = n === 0;
+  uniteMaj();
+}
+
+function uniteMaj(){
+  const n = uniteTotalQte();
+  document.getElementById('uniteNb').textContent = n + ' plat' + (n > 1 ? 's' : '');
+  document.getElementById('unitePrix').textContent = (n * PRIX_UNITE_AFFICHE) + ' €';
+  const b = document.getElementById('unitePayer');
+  b.disabled = n === 0;
+  b.textContent = n === 0 ? 'Choisissez au moins un plat'
+    : 'Payer ' + (n * PRIX_UNITE_AFFICHE) + ' € →';
+}
+
+async function unitePayer(){
+  const b = document.getElementById('unitePayer');
+  const n = uniteTotalQte();
+  if (!n) return;
+  b.disabled = true; b.textContent = 'Redirection vers le paiement…';
+  try {
+    const res = await fetch(Natty.API + '/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'unite',
+        quantite: n,
+        // Les plats retenus voyagent pour la préparation de commande ; le prix,
+        // lui, ne vient jamais d'ici (le serveur le lit dans son environnement).
+        plats: Object.keys(uniteQte).map(function(id){ return { id: id, n: uniteQte[id] }; }),
+        userId, token,
+        plateforme: estNatif() ? 'natif' : 'web'
+      })
+    });
+    const data = await res.json();
+    if (!data.url) {
+      showToast(data.error || 'Commande à l\'unité indisponible');
+      b.disabled = false; uniteMaj(); return;
+    }
+    if (estNatif()) {
+      const B = window.Capacitor.Plugins.Browser;
+      if (!B) { showToast('Navigateur indisponible'); b.disabled = false; uniteMaj(); return; }
+      await B.open({ url: data.url });
+      b.disabled = false; uniteMaj();
+    } else {
+      window.location.href = data.url;
+    }
+  } catch(e) {
+    showToast('Erreur réseau');
+    b.disabled = false; uniteMaj();
+  }
+}
+
+if (uniteActif()) uniteDemarrer();
 
 function showToast(msg){
   const t=document.getElementById("toast");
