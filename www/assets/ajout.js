@@ -248,6 +248,22 @@
     + '#nattyAjout .na-item input{width:62px;background:#0a0a0c;border:1px solid #2b2b30;border-radius:10px;'
       + 'color:#fff;font-family:inherit;font-size:13px;font-weight:700;padding:6px 8px;text-align:right}'
     + '#nattyAjout .na-item .u{font-size:12px;color:#6e6e78}'
+    /* Le sélecteur d'unité. Il ressemble à l'ancien libellé « g » — même corps,
+       même gris — parce que c'est ce qu'il remplace : une ligne qui ne propose
+       rien d'autre que des grammes doit se lire exactement comme avant.
+       ⚠️ `appearance:none` retire la flèche native, énorme et bleue dans une
+       WebView iOS ; le chevron est posé en fond. Et `min-width` : « tomates
+       cerises » au pluriel dépasse, la ligne doit pouvoir le montrer sans
+       comprimer le nom de l'aliment. */
+    + '#nattyAjout .na-item select.u{appearance:none;-webkit-appearance:none;background:none;'
+      + 'border:none;color:#8a8a92;font-family:inherit;font-size:12px;font-weight:700;'
+      + 'padding:4px 14px 4px 2px;margin:0;cursor:pointer;max-width:96px;text-align:left;'
+      + 'background-image:linear-gradient(45deg,transparent 50%,#6e6e78 50%),'
+      + 'linear-gradient(135deg,#6e6e78 50%,transparent 50%);'
+      + 'background-position:right 6px center,right 2px center;'
+      + 'background-size:4px 4px,4px 4px;background-repeat:no-repeat}'
+    + '#nattyAjout .na-item select.u:focus{outline:none;color:#eaeaef}'
+    + '#nattyAjout .na-item select.u option{background:#141418;color:#eaeaef}'
     + '#nattyAjout .na-item .del{background:none;border:none;color:#6e6e78;font-size:14px;cursor:pointer;padding:4px}'
     + '#nattyAjout .na-mini{width:100%;background:none;border:1px dashed #33333a;border-radius:14px;'
       + 'color:#8a8a92;font-family:inherit;font-size:12.5px;font-weight:600;padding:11px;cursor:pointer;margin-top:4px}'
@@ -509,6 +525,43 @@
     if (k < 20) return true;
     if (calcule >= k) return calcule <= k * (k < 120 ? 2.2 : 1.5);   // fibres, alcool
     return (k - calcule) / k <= 0.35;                  // énergie inexpliquée
+  }
+
+  /* ═══════════════════ Unités de saisie ═══════════════════
+     Tout le calcul reste en GRAMMES (`quantite_g`) : la table de `core.js`, les
+     anneaux, les cibles de créneau et `meal_ingredients` n'ont pas changé d'un
+     iota. `assets/unites.js` n'ajoute qu'une façon de SAISIR — « 1 banane »
+     plutôt que « 120 g », « 1 dose » plutôt que « 30 g de whey » — et se charge
+     de la conversion.
+
+     ⚠️ Le module est facultatif, et le parcours doit tenir sans lui : une page
+     qui aurait oublié la balise `<script>` continue de saisir en grammes plutôt
+     que de faire tomber l'ajout d'un plat. (C'est exactement le défaut qu'avait
+     `suivi.html` avec `assets/reco.js` — une dépendance supposée présente, et
+     une génération impossible depuis des semaines.) */
+  var DISPO = !!(window.NattyUnites && NattyUnites.deviner);
+
+  function unites(ing, force) {
+    if (!ing) return ing;
+    if (DISPO) return NattyUnites.deviner(ing, force);
+    ing.unite = 'g';
+    ing.qte = ing.quantite_g || 0;
+    return ing;
+  }
+
+  function affQte(ing) {
+    return DISPO ? ing.qte : ing.quantite_g;
+  }
+
+  /* `manuel` marque une quantité posée par l'utilisateur : elle ne doit plus
+     être écrasée par la détection automatique quand il continue de corriger le
+     nom de l'aliment. */
+  function saisirQte(ing, v) {
+    ing.manuel = true;
+    if (DISPO) return NattyUnites.saisir(ing, v);
+    ing.quantite_g = parseFloat(v) || 0;
+    ing.qte = ing.quantite_g;
+    return ing;
   }
 
   function macroDe(i) {
@@ -998,6 +1051,22 @@
       + '≈ 131, crues ≈ 371.\n'
       + '- N’oublie pas ce qui ne se voit qu’à peine mais pèse : huile de cuisson, sauce, beurre, '
       + 'fromage râpé.\n\n'
+      /* Les compléments ne sont pas des aliments comme les autres sur une photo :
+         ce qu'on voit est un POT ou un SHAKER, pas la poudre. Sans cette
+         consigne, le modèle rend « boisson » ou « verre de lait » — donc 8 g de
+         protéines au lieu de 24, et l'anneau ne bouge pas alors que la personne
+         vient de prendre l'apport protéique le plus concentré de sa journée.
+         La dose est demandée en grammes parce que c'est l'unité de la base ;
+         `assets/unites.js` la réaffiche ensuite en « 1 dose ». */
+      + 'COMPLÉMENTS ET NUTRITION SPORTIVE\n'
+      + '- Si tu vois un shaker, un pot de poudre, un doseur, une barre ou une gélule, dis-le '
+      + 'précisément : whey, isolat, caséine, gainer, protéine végétale, créatine, BCAA, '
+      + 'barre protéinée, boisson protéinée.\n'
+      + '- Compte une dose courante quand rien ne permet de mieux juger : whey/isolat/caséine '
+      + '≈ 30 g, gainer ≈ 100 g, créatine ≈ 5 g, BCAA ≈ 10 g, barre ≈ 60 g. Un shaker prêt à '
+      + 'boire se compte en grammes de boisson (≈ 300 g).\n'
+      + '- Ne les fonds jamais dans « boisson » ou « verre de lait » : leurs macros n’ont rien à '
+      + 'voir.\n\n'
       + 'Réponds UNIQUEMENT en JSON, sans backticks :\n'
       + '{"nom":"nom du plat","ingredients":[{"emoji":"🍗","nom":"Poulet grillé","quantite_g":150,'
       + '"pour100":{"kcal":165,"prot":31,"gluc":0,"lip":3.6}}]}';
@@ -1247,6 +1316,10 @@
         em.className = 'em';
         em.textContent = ing.emoji || '🍽️';
 
+        // L'unité d'affichage de la ligne, déduite du nom si elle manque.
+        // Les grammes ne changent pas : c'est la façon de les lire qui change.
+        unites(ing);
+
         var nm = document.createElement('input');
         nm.className = 'nm';
         nm.style.cssText = 'width:auto;flex:1;text-align:left;background:none;border:none;padding:0';
@@ -1265,22 +1338,74 @@
             ing.pour100 = null;
           }
           row.classList.toggle('na-inconnu', inconnu(ing));
+          /* Le nom vient de changer : l'unité qui va de soi a changé avec lui.
+             On ne l'impose QUE si l'utilisateur n'a pas déjà fixé la quantité
+             lui-même — sinon taper « banane » après avoir saisi 200 g
+             ramènerait la ligne à une pièce et effacerait sa mesure. */
+          if (!ing.manuel) {
+            unites(ing, true);
+            // Le pas suit l'unité ici aussi : sans lui, une ligne passée en
+            // pièces gardait `step=1` et le champ refusait « 1,5 » (marqué
+            // invalide par le navigateur, donc une demi-portion impossible à
+            // saisir alors qu'elle est calculée sans problème).
+            qty.step = ing.unite === 'u' ? '0.5' : '1';
+            qty.value = affQte(ing);
+            majUnite();
+          }
           majAnneaux();
         });
 
         var qty = document.createElement('input');
         qty.type = 'number';
         qty.min = 0;
-        qty.value = ing.quantite_g;
+        // `step` suit l'unité : on saisit des demi-portions, pas des demi-grammes.
+        qty.step = ing.unite === 'u' ? '0.5' : '1';
+        qty.value = affQte(ing);
         qty.disabled = !!ing.macros;   // macros fournies par l'IA : quantité figée
         qty.addEventListener('input', function () {
-          ing.quantite_g = parseFloat(this.value) || 0;
+          saisirQte(ing, this.value);
+          majUnite();          // « 1 banane » devient « 2 bananes »
           majAnneaux();
         });
 
-        var u = document.createElement('span');
+        /* ── L'unité : g, ml, ou la pièce de cet aliment ──────────
+           Un menu et non trois boutons : la place d'une ligne d'ingrédient est
+           déjà prise par le nom, et une unité se choisit rarement — une fois
+           pour la ligne, quand le défaut ne convient pas. */
+        var u = document.createElement('select');
         u.className = 'u';
-        u.textContent = 'g';
+        u.setAttribute('aria-label', 'Unité');
+        u.disabled = !!ing.macros;
+        function majUnite() {
+          if (!DISPO) return;
+          u.innerHTML = '';
+          NattyUnites.LISTE.forEach(function (o) {
+            var op = document.createElement('option');
+            op.value = o.cle;
+            // Le libellé de la pièce dépend du nom ET du nombre : « œufs »,
+            // « tranches », « doses ». C'est lui qui rend la ligne lisible.
+            op.textContent = NattyUnites.libelle(o.cle, ing.nom, ing.qte);
+            if (o.cle === ing.unite) op.selected = true;
+            u.appendChild(op);
+          });
+        }
+        if (DISPO) {
+          majUnite();
+          u.addEventListener('change', function () {
+            // Changer d'unité ne change pas la quantité réelle : les grammes
+            // restent, le nombre affiché est recalculé.
+            NattyUnites.poser(ing, this.value);
+            qty.step = ing.unite === 'u' ? '0.5' : '1';
+            qty.value = affQte(ing);
+            majUnite();
+            majAnneaux();
+          });
+        } else {
+          // Sans `assets/unites.js`, la ligne reste ce qu'elle a toujours été.
+          u = document.createElement('span');
+          u.className = 'u';
+          u.textContent = 'g';
+        }
 
         var del = document.createElement('button');
         del.className = 'del';
@@ -1307,6 +1432,21 @@
   }
 
   function ajouterLigne() {
+    /* ⚠️ IL PEUT N'Y AVOIR AUCUN PLAT ENCORE, et ça levait une exception.
+       L'overlay s'ouvre sur l'écran du repas AVANT toute photo (`start()`), donc
+       `S.plats` est vide : `S.plats[S.cur]` valait `undefined` et le clic sur
+       « + Ajouter un ingrédient » mourait sur `pl.ingredients`. Rien ne
+       s'affichait, rien ne le disait — la saisie à la main était donc
+       inaccessible tant qu'on n'avait pas photographié quelque chose. Constaté
+       en navigateur, invisible à `node --check`.
+       On crée donc le plat au premier ingrédient, comme le fait
+       `saisieManuelle()`. */
+    if (!S.plats.length) {
+      S.plats = [{ nom: 'Mon plat', photo: S.photoDataUrl || null, ingredients: [] }];
+      S.cur = 0;
+      majNoms();
+    }
+    if (S.cur < 0 || S.cur >= S.plats.length) S.cur = S.plats.length - 1;
     var pl = S.plats[S.cur] || S.plats[0];
     pl.ingredients.push({ emoji: '🍽️', nom: '', quantite_g: 100 });
     rendreDetail();
@@ -1328,6 +1468,11 @@
      exactement les mêmes chiffres que le reste de l'app. */
   var FB = {
     ingredients: [
+      // Une dose de whey est la façon la plus courte de combler un reste de
+      // protéines : 24 g pour 120 kcal, là où 100 g de poulet en apportent 31
+      // pour 165. Elle a donc sa place dans les propositions, pas seulement
+      // dans la table.
+      { em: '🥛', nom: 'Dose de whey', base: 'whey', qty: 30 },
       { em: '🥚', nom: '3 œufs', base: 'oeufs', qty: 150 },
       { em: '🍗', nom: 'Blanc de poulet', base: 'poulet', qty: 120 },
       { em: '🐟', nom: 'Pavé de saumon', base: 'saumon', qty: 110 },

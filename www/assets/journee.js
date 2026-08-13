@@ -299,6 +299,26 @@ window.NattyJournee = (function () {
         e.sync = false;
         e.action = function () { marquerEtape(e.cle); Natty.goto('repas.html'); };
       }
+
+      /* ── Revenir sur un repas déjà noté ───────────────────
+         Une étape cochée n'était plus qu'un point vert : on pouvait la revoir,
+         pas la corriger. Or c'est précisément là qu'on s'aperçoit d'une erreur
+         de quantité. Le repas est identifié par `NattyCreneaux.repas()` et
+         l'édition s'ouvre dans `suivi.html?repas=<id>` — le même écran que
+         l'historique, pas un second éditeur à tenir à jour.
+         S'il y a plusieurs plats sur le créneau, c'est le plus récent : c'est
+         celui qu'on vient d'ajouter, donc celui qu'on corrige. */
+      var notes = (window.NattyCreneaux && NattyCreneaux.repas) ? NattyCreneaux.repas(c.cle) : [];
+      if (notes.length) {
+        e.notes = notes;
+        e.revoir = {
+          txt: notes.length > 1 ? 'Corriger un plat de ce repas' : 'Modifier ce repas',
+          on: function () { Natty.goto('suivi.html?repas=' + encodeURIComponent(notes[0].id)); }
+        };
+        // Le nom de ce qui a été mangé, à la place de la recette prévue : sur
+        // une étape faite, « Suivre la recette » n'a plus de sens.
+        if (!e.titre2) e.titre2 = notes.map(function (r) { return r.nom; }).join(' + ');
+      }
       out.push(e);
     });
 
@@ -323,7 +343,7 @@ window.NattyJournee = (function () {
        `fait` regarde ce que le bilan a enregistré (`natty_bilan_vu_<uid>`), pas
        l'onglet Suivi — ouvrir Suivi ne fait pas le point du soir. */
     var bilanDispo = !!(window.NattyBilan && NattyBilan.ouvrirJour);
-    out.push({
+    var etBilan = {
       cle: 'bilan', nom: 'Le point du soir', icone: 'bilan', h: H_BILAN,
       fait: bilanDispo ? bilanFait() : ongletVu('suivi'),
       cta: bilanDispo ? 'Faire mon bilan' : 'Voir mon suivi',
@@ -332,7 +352,16 @@ window.NattyJournee = (function () {
         if (bilanDispo) NattyBilan.ouvrirJour();
         else Natty.goto('suivi.html');
       }
-    });
+    };
+    /* Le récap se REVOIT. Le bilan du soir ne s'invite qu'une fois par jour
+       (`natty_bilan_vu_<uid>`), et il n'y avait ensuite plus aucun chemin pour
+       y revenir — le récap de la journée, les trois anneaux et l'analyse
+       étaient perdus jusqu'au lendemain. `NattyBilan.ouvrirJour()` ne porte
+       aucune garde de son côté : le rejouer est sans effet de bord. */
+    if (bilanDispo) {
+      etBilan.revoir = { txt: 'Revoir le récap', on: function () { NattyBilan.ouvrirJour(); } };
+    }
+    out.push(etBilan);
 
     out.sort(function (a, b) { return a.h - b.h; });
     return { etapes: out, plan: plan };
@@ -514,6 +543,13 @@ window.NattyJournee = (function () {
       'opacity .7s ease,background .5s ease,box-shadow .7s ease}',
       '.njsk .jal svg{width:46%;height:46%;fill:none;stroke:currentColor;stroke-width:1.9;',
       'stroke-linecap:round;stroke-linejoin:round}',
+      /* Les jalons du PLEIN ÉCRAN se touchent pour y aller (§7 bis) : d'où le
+         curseur, et un enfoncement qui répond au doigt. Le bandeau, lui, garde
+         ses `pointer-events:none` internes — il n'a qu'une zone de tap, la
+         sienne. `touch-action:pan-y` laisse passer le défilement vertical de la
+         colonne tout en gardant le glissement horizontal pour nous. */
+      '#njour .jal{cursor:pointer;touch-action:pan-y}',
+      '#njour .jal:active{filter:brightness(1.08)}',
 
       /* ── Le barillet ────────────────────────────────────────
          Le jalon du moment ne se contente pas de s'allumer : son icône ARRIVE,
@@ -767,6 +803,10 @@ window.NattyJournee = (function () {
   function fermer() {
     ouvert = false;
     if (minuteur) { clearTimeout(minuteur); minuteur = null; }
+    // ⚠️ Le listener clavier vit sur `document`, pas sur la racine : il ne part
+    // donc PAS avec elle. Sans ce retrait, les flèches continueraient d'appeler
+    // `allerEtape` sur un écran fermé — et chaque ouverture en empilerait un.
+    document.removeEventListener('keydown', touche);
     if (!racine) return;
     var r = racine;
     racine = null; cta = null; blocEnCours = null; arcEl = null;
@@ -857,6 +897,7 @@ window.NattyJournee = (function () {
     peindreArc(cur || 0);
     void arcEl.offsetHeight;   // fige l'état posé avant de rendre les transitions
     arcEl.classList.remove('pose');
+    brancherParcours();        // l'arc devient parcourable (§7 bis)
   }
 
   /**
@@ -891,11 +932,25 @@ window.NattyJournee = (function () {
          appelée à chaque scène ; réécrire à chaque fois relançait le tracé du
          V vert et le cran du barillet — donc une validation qui se rejoue
          indéfiniment, ce qui la vide de son sens. Une animation ne doit se
-         jouer qu'au moment où la chose qu'elle raconte arrive. */
-      if (el.getAttribute('data-role') !== role) {
-        el.setAttribute('data-role', role);
+         jouer qu'au moment où la chose qu'elle raconte arrive.
+         L'état `fait` entre dans la signature depuis qu'un jalon sélectionné
+         peut être déjà coché : deux contenus différents pour un même rôle, donc
+         le rôle seul ne suffit plus à décider s'il faut repeindre. */
+      var signature = role + (e.fait ? '+ok' : '');
+      if (el.getAttribute('data-role') !== signature) {
+        el.setAttribute('data-role', signature);
         var ic = el.querySelector('.ic');
-        if (role === 'actif') {
+        if (role === 'actif' && e.fait) {
+          /* ⚠️ SÉLECTIONNÉ N'EST PAS « À FAIRE ». Depuis qu'on peut parcourir
+             l'arc (§7 bis), le jalon mis en avant peut être une étape DÉJÀ
+             faite : le barillet lui aurait retiré sa coche verte pour la
+             remplacer par son illustration, c'est-à-dire annoncer « c'est
+             maintenant » sur quelque chose de terminé. La pastille pleine dit
+             la sélection, la coche dit l'état — les deux tiennent ensemble. */
+          ic.innerHTML = '<svg class="vok" viewBox="0 0 24 24">'
+            + '<circle class="rd" cx="12" cy="12" r="10.2"/>'
+            + '<path class="ck" d="M7.4 12.3 10.6 15.6 16.8 8.8"/></svg>';
+        } else if (role === 'actif') {
           // Le barillet : l'illustration précédente, puis la sienne, dans une
           // fenêtre qui les rogne. C'est ce cran qui montre « on y est ».
           var avant = etapes[i - 1];
@@ -1018,12 +1073,24 @@ window.NattyJournee = (function () {
      Quatre choses. C'est la seule scène qui attend, et la seule qui porte une
      action : tout le reste ne fait que l'amener. */
   function scEtape() {
-    peindreArc(etat.cur);
-    if (toutFait(etat.etapes)) return scBoucle();
+    if (etat.vue == null) etat.vue = etat.cur;
+    peindreArc(etat.vue);
+    // Journée bouclée : on l'annonce, mais on laisse l'arc parcourable — c'est
+    // justement le moment où l'on veut revoir ce qu'on a fait.
+    if (toutFait(etat.etapes) && etat.vue === etat.cur) return scBoucle();
 
-    var e = etat.etapes[etat.cur];
+    var e = etat.etapes[etat.vue];
+    var ailleurs = etat.vue !== etat.cur;
 
-    var html = '<div class="kick" data-in="glide">' + jourEtDate() + '</div>'
+    /* Le fil de contexte. Sur l'étape du moment, c'est le jour et la date,
+       comme avant. Sur une étape qu'on est allé chercher, c'est SON heure et son
+       état : sans ça, rien à l'écran ne distinguait « voici ton dîner » de
+       « voici ton petit déjeuner de ce matin, déjà noté ». */
+    var contexte = ailleurs
+      ? '<b>' + esc(libHeure(e.h)) + '</b> · ' + (e.fait ? 'déjà fait' : 'à faire')
+      : jourEtDate();
+
+    var html = '<div class="kick" data-in="glide">' + contexte + '</div>'
       // Au-delà d'une douzaine de caractères, le grand corps touche les deux
       // bords à 375 px : « Petit déjeuner » y passe en corps intermédiaire.
       + titre(e.nom, e.nom.length > 11 ? 'p' : '', 0.1)
@@ -1032,33 +1099,127 @@ window.NattyJournee = (function () {
       + (e.titre2 ? '<div class="sous" data-in="glide" style="animation-delay:.5s">'
           + esc(e.titre2) + '</div>' : '')
       // Le plat, en grand. La bulle de l'arc dit QUAND, celle-ci dit QUOI.
-      + '<div class="hero" data-in="glide" style="animation-delay:'
-      + (e.titre2 ? '.62' : '.5') + 's">' + figure(e) + '</div>';
+      + '<div class="hero' + (e.fait && !e.notes ? ' ok' : '') + '" data-in="glide" '
+      + 'style="animation-delay:' + (e.titre2 ? '.62' : '.5') + 's">'
+      + (e.fait && !e.notes ? icone('coche') : figure(e)) + '</div>';
 
-    bloc({
-      html: html,
-      pret: function (d) { brancherPhoto(d, e); },
-      boutons: [
-        { txt: e.cta, cls: 'b1', on: function () { marquerLong(); envol(e.action, e.sync); } },
-        { txt: 'Plus tard', cls: 'b3', on: function () { marquerLong(); fermer(); } }
-      ]
+    /* ── Les boutons ─────────────────────────────────────────
+       Une étape FAITE ne doit pas proposer de la refaire en premier : on ne
+       note pas deux fois le même déjeuner. C'est `revoir` qui prend la tête —
+       corriger le repas, ou rouvrir le récap du soir — et l'action d'origine
+       reste dessous, parce qu'un second plat au même créneau est légitime. */
+    var boutons = [];
+    if (e.fait && e.revoir) {
+      boutons.push({ txt: e.revoir.txt, cls: 'b1',
+        on: function () { marquerLong(); envol(e.revoir.on); } });
+      boutons.push({ txt: e.cta, cls: 'b2',
+        on: function () { marquerLong(); envol(e.action, e.sync); } });
+    } else {
+      boutons.push({ txt: e.cta, cls: 'b1',
+        on: function () { marquerLong(); envol(e.action, e.sync); } });
+      if (e.revoir) {
+        boutons.push({ txt: e.revoir.txt, cls: 'b2',
+          on: function () { marquerLong(); envol(e.revoir.on); } });
+      }
+    }
+    boutons.push(ailleurs
+      // Revenir au présent plutôt que fermer : on est parti explorer son arc,
+      // la sortie naturelle est de rentrer, pas de quitter l'écran.
+      ? { txt: '↩ Revenir à maintenant', cls: 'b3', on: function () { allerEtape(etat.cur); } }
+      : { txt: 'Plus tard', cls: 'b3', on: function () { marquerLong(); fermer(); } });
+
+    bloc({ html: html, pret: function (d) { brancherPhoto(d, e); }, boutons: boutons });
+  }
+
+  /* ═══ 7 bis. Parcourir sa journée ════════════════════════
+     LE GESTE QUI MANQUAIT (demande de Pablo, 13 août 2026 : « pouvoir roll les
+     étapes pour y revenir et les modifier »). L'arc racontait la journée mais
+     ne s'explorait pas : seule l'étape du moment était atteignable, et une
+     étape passée n'était plus qu'un point vert.
+
+     Trois façons d'y aller, parce qu'aucune ne se devine seule : toucher un
+     jalon, faire glisser l'arc, ou les flèches du clavier (le guide s'ouvre
+     aussi sur ordinateur). Le sens du glissement suit celui de l'arc — la
+     journée avance vers la gauche, donc glisser vers la gauche avance. */
+
+  function allerEtape(i) {
+    if (!etat || !racine) return;
+    var n = etat.etapes.length;
+    if (!n) return;
+    i = Math.max(0, Math.min(n - 1, i));
+    if (i === etat.vue) return;
+    etat.vue = i;
+    // La scène est reconstruite, l'arc se déplace : les transitions CSS des
+    // jalons font le mouvement, il n'y a rien à animer à la main.
+    scEtape();
+  }
+
+  function brancherParcours() {
+    if (!arcEl) return;
+
+    // Un jalon = un point d'entrée. Ceux qui sont hors de la fenêtre visible
+    // ont déjà `pointer-events:none` (voir `peindreArcDans`).
+    arcEl.addEventListener('click', function (ev) {
+      var j = ev.target.closest ? ev.target.closest('.jal') : null;
+      if (!j || !arcEl.contains(j)) return;
+      var i = +j.getAttribute('data-i');
+      if (!isNaN(i)) allerEtape(i);
     });
+
+    /* Le glissement. Un seuil de 28 px, et l'axe le plus marqué gagne : sans
+       ça, un défilement vertical de la colonne (le contenu peut déborder sur
+       petit écran) déclencherait un changement d'étape en travers. */
+    var x0 = null, y0 = null;
+    arcEl.addEventListener('pointerdown', function (ev) { x0 = ev.clientX; y0 = ev.clientY; });
+    arcEl.addEventListener('pointerup', function (ev) {
+      if (x0 == null) return;
+      var dx = ev.clientX - x0, dy = ev.clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) < 28 || Math.abs(dx) < Math.abs(dy)) return;
+      allerEtape(etat.vue + (dx < 0 ? 1 : -1));
+    });
+    arcEl.addEventListener('pointercancel', function () { x0 = null; });
+
+    document.addEventListener('keydown', touche);
+  }
+
+  function touche(ev) {
+    if (!racine || !etat) return;
+    if (ev.key === 'ArrowLeft') { ev.preventDefault(); allerEtape(etat.vue - 1); }
+    else if (ev.key === 'ArrowRight') { ev.preventDefault(); allerEtape(etat.vue + 1); }
+    else if (ev.key === 'Escape') { marquerLong(); fermer(); }
   }
 
   /* Scène 3 bis — tout est fait. Ce n'est pas un cas particulier à bâcler :
      c'est le seul moment où l'app peut dire « il n'y a rien à faire », et le
      dire clairement vaut mieux que de resservir une étape déjà cochée. */
   function scBoucle() {
+    /* Le récap du soir depuis la journée bouclée : c'est là qu'on le cherche.
+       Il vit sur l'étape « point du soir », on va donc lire SON action plutôt
+       que d'en écrire une seconde — deux chemins vers le même bilan finiraient
+       par ne plus ouvrir la même chose. */
+    var bil = etat.etapes.filter(function (x) { return x.cle === 'bilan' && x.revoir; })[0];
+    var boutons = [];
+    if (bil) {
+      boutons.push({ txt: bil.revoir.txt, cls: 'b1',
+        on: function () { marquerLong(); envol(bil.revoir.on); } });
+      boutons.push({ txt: 'Voir mon suivi', cls: 'b2',
+        on: function () { marquerLong(); envol(function () { Natty.goto('suivi.html'); }); } });
+    } else {
+      boutons.push({ txt: 'Voir mon suivi', cls: 'b1',
+        on: function () { marquerLong(); envol(function () { Natty.goto('suivi.html'); }); } });
+    }
+    boutons.push({ txt: 'Fermer', cls: 'b3', on: function () { marquerLong(); fermer(); } });
+
     bloc({
       html: '<div class="kick" data-in="glide">' + jourEtDate() + '</div>'
         + titre('Journée complète', 'p', 0.1)
         + '<div class="hero ok" data-in="glide" style="animation-delay:.5s">'
-        + icone('coche') + '</div>',
-      boutons: [
-        { txt: 'Voir mon suivi', cls: 'b1',
-          on: function () { marquerLong(); envol(function () { Natty.goto('suivi.html'); }); } },
-        { txt: 'Fermer', cls: 'b3', on: function () { marquerLong(); fermer(); } }
-      ]
+        + icone('coche') + '</div>'
+        // Le geste ne se devine pas : on le dit une fois, en petit.
+        + '<div class="sous" data-in="glide" style="animation-delay:.7s">'
+        + 'Touchez une étape de l’arc pour la revoir ou la corriger.</div>',
+      boutons: boutons
     });
   }
 
@@ -1115,6 +1276,10 @@ window.NattyJournee = (function () {
       prenom: '', etapes: d.etapes, plan: d.plan,
       cur: courante(d.etapes), court: !!opts.court
     };
+    // `cur` est l'étape du MOMENT et ne bouge plus ; `vue` est celle qu'on
+    // regarde, et c'est elle que le parcours déplace (§7 bis). Les confondre
+    // ferait perdre le chemin du retour vers « maintenant ».
+    etat.vue = etat.cur;
 
     monter();
     // L'arc est posé d'emblée à l'endroit d'où il PART : sur l'étape du moment
@@ -1205,7 +1370,26 @@ window.NattyJournee = (function () {
      un iPhone à encoche, dont les zones sûres mangent le haut ET le bas). Une
      valeur fixe ne pouvait pas tenir sur tous les gabarits : c'est la seule
      raison pour laquelle elle est calculée. */
-  var K_MAX = 0.58, K_MIN = 0.26;
+  var K_MAX = 0.75, K_MIN = 0.26;
+
+  /* ⚠️⚠️ +30 %, ET IL FAUT DIRE CE QUE ÇA COÛTE (demande de Pablo, 13 août 2026 :
+     « agrandir de 30 % »).
+
+     Monter `K_MAX` de 0,58 à 0,75 ne suffisait PAS, et c'est le point à
+     comprendre avant d'y retoucher : l'échelle réelle est
+     `min(K_MAX, place disponible / hauteur du contenu)`, et sur un téléphone
+     c'est la place qui commande, pas le plafond. Calculé à 375 × 812 : la
+     composition mesure ~481 px de haut, il reste ~208 px sous l'en-tête et
+     au-dessus de la bannière des plats, donc k valait **0,43** — très en
+     dessous de 0,58. Relever le seul plafond n'aurait rien changé à l'écran.
+
+     Le facteur s'applique donc à la place mesurée. Conséquence assumée, et
+     c'est un renoncement à la règle du 9 août (« tous les éléments accessibles
+     sans scroll ») : sur un petit écran, l'accueil peut désormais demander un
+     court défilement pour atteindre le bas des deux cartes. Les deux demandes
+     sont incompatibles — un bandeau 30 % plus grand prend 30 % de place en
+     plus — et c'est la plus récente qui l'emporte. */
+  var K_BOOST = 1.3;
   /* En dessous de ce seuil, on cesse de tout rapetisser et on RETIRE le plat en
      grand : à 156 px de haut, c'est le tiers de la composition, et sous 0,34
      d'échelle il ne fait plus que 50 px — c'est-à-dire à peine plus que la
@@ -1222,8 +1406,10 @@ window.NattyJournee = (function () {
       /* La hauteur est posée en dur comme plancher, puis MESURÉE : le contenu
          change avec le nombre d'étapes et la longueur du titre, et une hauteur
          devinée laisserait soit un trou, soit un arc coupé. */
+      // Le plancher suit l'agrandissement : à 290 px il coupait l'arc pendant
+      // les quelques images qui précèdent la mesure.
       '.njb{--njb-k:' + K_BANDEAU + ';position:relative;display:block;width:100%;',
-      'height:290px;border:none;background:none;padding:0;margin:0 0 4px;',
+      'height:377px;border:none;background:none;padding:0;margin:0 0 4px;',
       'font-family:inherit;cursor:pointer;overflow:hidden;text-align:center;',
       '-webkit-tap-highlight-color:transparent;color:var(--j-ink)}',
       '.njb:active{opacity:.72}',
@@ -1295,14 +1481,14 @@ window.NattyJournee = (function () {
       var haut = b.getBoundingClientRect().top + (window.pageYOffset || 0);
       var dispo = window.innerHeight - haut - apres - basNav;
 
-      var k = dispo / H;
+      var k = (dispo / H) * K_BOOST;
       /* Trop serré : on retire le plat plutôt que de tout réduire, puis on
          remesure — sans lui la composition est plus courte, donc l'échelle
          remonte, et l'arc comme le titre restent lisibles. */
       if (k < K_SANS_HERO) {
         b.classList.add('njb-sec');
         H = dedans.offsetHeight;
-        k = dispo / H;
+        k = (dispo / H) * K_BOOST;
       }
 
       k = Math.max(K_MIN, Math.min(K_MAX, k));

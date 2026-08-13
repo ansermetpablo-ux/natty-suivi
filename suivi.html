@@ -419,6 +419,24 @@ body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); min-h
 .ai-ing-edit-unit { font-size:11px; color:var(--muted); flex-shrink:0; }
 .ai-ing-del { width:26px; height:26px; border-radius:50%; background:var(--tint-r); border:none; cursor:pointer; font-size:12px; color:var(--tint-r-ink); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .ai-add-ing-btn { width:100%; padding:10px; background:var(--bg); border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:13px; color:var(--muted); cursor:pointer; margin-top:8px; box-shadow:var(--so); }
+
+/* ══ Édition d'un repas déjà enregistré ══════════════════════════
+   Les lignes réutilisent .ai-ing-edit-* : c'est le même geste que la
+   correction juste après une analyse photo, et le faire ressembler à
+   autre chose donnerait à croire que ça ne fait pas la même chose.
+   ⚠️ `appearance:none` sur le sélecteur d'unité : la flèche native est
+   énorme dans une WebView iOS et déborde de la ligne. */
+.me-name { width:100%; border:none; background:var(--bg); border-radius:14px; box-shadow:var(--si); padding:13px 14px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--black); outline:none; }
+.me-lbl { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; margin:14px 0 7px; }
+.me-unit { appearance:none; -webkit-appearance:none; border:none; background:transparent; font-family:'Inter',sans-serif; font-size:11px; font-weight:700; color:var(--muted); flex-shrink:0; cursor:pointer; padding:2px 13px 2px 2px; max-width:92px; outline:none;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:right 5px center,right 1px center; background-size:4px 4px,4px 4px; background-repeat:no-repeat; }
+.me-warn { font-size:11.5px; color:var(--amber); margin-top:8px; line-height:1.45; }
+.me-acts { display:flex; gap:9px; margin-top:16px; }
+.me-save { flex:1; padding:15px; background:var(--surface-ink); color:#fff; border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+.me-save[disabled] { opacity:.55; }
+.me-cancel { flex:0 0 auto; padding:15px 20px; background:var(--bg); color:var(--text); border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; box-shadow:var(--so); }
+.btn-modif-plat { width:100%; padding:13px; margin-top:12px; background:var(--bg); border:none; border-radius:14px; font-family:'Inter',sans-serif; font-size:13.5px; font-weight:700; color:var(--black); cursor:pointer; box-shadow:var(--so); }
 .ai-recalc-btn { width:100%; padding:12px; background:var(--surface-ink); color:#fff; border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:13px; font-weight:600; cursor:pointer; margin-top:8px; }
 .ai-macros-live { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 4px; }
 .ai-macro-live-chip { background:var(--surface-ink); color:#fff; border-radius:99px; font-size:11px; font-weight:700; padding:4px 12px; }
@@ -1553,6 +1571,18 @@ html.no-scroll {
   </div>
 </div>
 
+<!-- ══ OVERLAY ÉDITION D'UN REPAS ══
+     Un repas enregistré n'était plus modifiable : la seule issue était de le
+     supprimer et de le refaire — donc de reprendre la photo, l'analyse, et de
+     perdre la trace. Ici on corrige le nom, les quantités et les ingrédients
+     d'un plat déjà en base, dans l'unité qui va de soi (voir assets/unites.js). -->
+<div class="overlay" id="ovMealEdit">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div id="mealEditContent"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- OVERLAY ANALYSE PLAT -->
@@ -2046,7 +2076,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('inputGalManu').addEventListener('change', function(){ previewPhoto(this,'prevManu'); photoManuFile=this.files[0]; });
   document.getElementById('inputCamIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
   document.getElementById('inputGalIA').addEventListener('change', function(){ previewPhoto(this,'prevIA'); photoIAFile=this.files[0]; analyserAvecIA(); });
-  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovHistorique'].forEach(function(id){
+  ['ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovMealEdit','ovHistorique'].forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e){ if(e.target===this) closeOverlay(id); });
   });
@@ -2103,6 +2133,28 @@ async function init() {
   resetIfNewDay();
   armerMinuit();
   if (document.getElementById('pageProg').classList.contains('active')) dessinerProgression();
+  ouvrirRepasDemande();
+}
+
+/* ── `?repas=<id>` : ouvrir directement la correction d'un repas ──
+   C'est ce qui permet au guide du jour (`assets/journee.js`) de proposer
+   « Modifier ce repas » sur une étape déjà cochée : il navigue vers cet écran
+   avec l'identifiant, et l'éditeur s'ouvre sans que l'utilisateur ait à
+   retrouver son plat dans l'historique.
+
+   ⚠️ Le paramètre est retiré de l'URL après usage. Sans ça, un rechargement de
+   page — ou un simple retour arrière — rouvrirait l'éditeur indéfiniment. */
+function ouvrirRepasDemande() {
+  var id;
+  try { id = new URLSearchParams(location.search).get('repas'); } catch (e) { return; }
+  if (!id) return;
+  try {
+    var u = new URL(location.href);
+    u.searchParams.delete('repas');
+    history.replaceState(null, '', u.pathname + (u.search || '') + (u.hash || ''));
+  } catch (e) {}
+  var meal = allMeals.filter(function (m) { return m.id === id; })[0];
+  if (meal) ouvrirEditionRepas(meal);
 }
 
 // ═══ DATA LOADING ═══
@@ -3507,8 +3559,14 @@ function ouvrirAnalysePlat(meal) {
     + '<div class="meal-score-ring"><svg viewBox="0 0 70 70" width="70" height="70"><circle cx="35" cy="35" r="28" fill="none" stroke="#f0f0f0" stroke-width="6"/><circle cx="35" cy="35" r="28" fill="none" stroke="'+col+'" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+dash+' '+circ.toFixed(1)+'"/></svg><div class="meal-score-num" style="color:'+col+'">'+sc+'</div></div>'
     + '<div class="meal-score-info"><div class="meal-score-label">'+(sc>=80?'Excellent':sc>=60?'Bon équilibre':sc>=40?'Correct':'À améliorer')+'</div><div class="meal-score-sub">Score nutritionnel basé sur la composition</div></div>'
     + '</div>'
+    /* Le bouton de correction est AU-DESSUS de l'analyse, pas en bas de la
+       feuille : quelqu'un qui ouvre son plat pour corriger « 150 g » n'a pas à
+       attendre dix secondes d'analyse critique avant de voir comment le faire. */
+    + '<button class="btn-modif-plat" id="btnModifPlat">✏️ Modifier ce repas</button>'
     + '<div id="mealAnalyseIA"><div class="sug-load"><div class="spinner" style="border-top-color:#34c759;"></div>Analyse critique en cours...</div></div>';
   document.getElementById('mealAnalyseContent').innerHTML = html;
+  var bMod = document.getElementById('btnModifPlat');
+  if (bMod) bMod.addEventListener('click', function () { ouvrirEditionRepas(meal); });
   lockScroll(); document.getElementById('ovMealAnalyse').classList.add('active');
 
   /* Une seule génération par plat, puis affichage pur.
@@ -3522,6 +3580,366 @@ function ouvrirAnalysePlat(meal) {
     if (cache) { peindreAnalysePlat(cache); return; }
     fetchAnalysePlat(meal, mac);
   });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ÉDITION D'UN REPAS ENREGISTRÉ
+   ───────────────────────────────────────────────────────────
+   Jusqu'ici, un plat écrit en base était définitif : les trois points de la
+   carte ne proposaient que la suppression. Corriger « 150 g » en « 250 g »
+   demandait donc de supprimer le repas et de le refaire entièrement — photo
+   comprise. C'est ce que cet écran répare.
+
+   Ce qu'il écrit, et dans quel ordre :
+     1. `meals.name`, si le nom a changé ;
+     2. les `meal_ingredients` : on efface puis on réécrit la liste. Pas de
+        rapprochement ligne à ligne — elles n'ont pas d'identité stable côté
+        écran (on en ajoute, on en retire), et un diff serait du code fragile
+        pour économiser une requête sur un repas de cinq lignes ;
+     3. les macros par ingrédient, comme `assets/ajout.js` : `calcMac` les
+        PRÉFÈRE à la table nutritionnelle, donc ne pas les réécrire laisserait
+        les anciennes valeurs décrire les nouvelles quantités.
+
+   ⚠️ ET L'ANALYSE CRITIQUE EST JETÉE. Elle décrit une composition ; changer la
+   composition sans l'effacer laisserait un texte qui parle d'un plat qui
+   n'existe plus, et le cache l'aurait resservi indéfiniment sans jamais le
+   régénérer (voir `lireAnalysePlat`).
+   ═══════════════════════════════════════════════════════════ */
+var mealEdit = null;   // {id, nom, photo, ingredients:[{nom,quantite_g,unite,qte,emoji}]}
+
+function ouvrirEditionRepas(meal) {
+  if (!meal) return;
+  mealEdit = {
+    id: meal.id,
+    nom: meal.name || '',
+    photo: meal.photo_url || '',
+    ingredients: (meal.meal_ingredients || []).map(function (i) {
+      var ing = { nom: i.name || '', quantite_g: parseFloat(i.quantity_g) || 0, emoji: '🍽️' };
+      ing.pour100 = pour100De(i);
+      // Les grammes déjà en base sont une mesure : on les affiche tels quels
+      // (`deviner` sans `force` garde l'unité g), sans les réinterpréter en
+      // portions. L'utilisateur peut basculer ligne par ligne s'il préfère.
+      if (window.NattyUnites) NattyUnites.deviner(ing);
+      else { ing.unite = 'g'; ing.qte = ing.quantite_g; }
+      return ing;
+    })
+  };
+  // On ferme l'analyse : deux feuilles empilées, dont celle du dessous parle du
+  // plat d'avant, ne se discutent pas.
+  closeOverlay('ovMealAnalyse');
+  rendreEditionRepas();
+  lockScroll();
+  document.getElementById('ovMealEdit').classList.add('active');
+}
+
+/* ⚠️⚠️ LES MACROS MESURÉES SURVIVENT À UNE MODIFICATION, ET C'EST LE POINT LE
+   PLUS DÉLICAT DE CET ÉCRAN. Une ligne de `meal_ingredients` peut porter des
+   valeurs venues de l'analyse photo — donc une MESURE, souvent pour un aliment
+   que la table de `core.js` ne sait pas chiffrer (« tarte flambée »). Recalculer
+   tout depuis la table à la moindre correction, c'est écraser cette mesure par
+   un zéro : on perdrait des macros en changeant une quantité ailleurs dans le
+   plat, sans que rien ne le dise.
+   On garde donc la valeur POUR 100 g déduite de la ligne, et on la remet à
+   l'échelle de la nouvelle quantité — une macro est linéaire en quantité. Elle
+   n'est jetée que si l'aliment est RENOMMÉ, où garder les valeurs de l'aliment
+   d'avant serait enregistrer sciemment un chiffre faux (même règle
+   qu'`assets/ajout.js`). */
+function pour100De(row) {
+  var q = parseFloat(row.quantity_g) || 0;
+  if (!q) return null;
+  var c = parseFloat(row.calories) || 0, p = parseFloat(row.proteins_g) || 0,
+      g = parseFloat(row.carbs_g) || 0, l = parseFloat(row.fats_g) || 0;
+  // Quatre zéros, c'est le défaut de la base, pas une mesure (même test que
+  // `Natty.calcMac`) : on laisse alors la table faire le travail.
+  if (!(c || p || g || l)) return null;
+  var f = 100 / q;
+  return { kcal: c * f, prot: p * f, gluc: g * f, lip: l * f };
+}
+
+/** Les macros d'UNE ligne : la mesure si on l'a, la table sinon. */
+function macIngEdit(ing) {
+  var q = parseFloat(ing.quantite_g) || 0;
+  if (ing.pour100) {
+    var f = q / 100, p1 = ing.pour100;
+    return { c: Math.round(p1.kcal * f), p: Math.round(p1.prot * f * 10) / 10,
+             g: Math.round(p1.gluc * f * 10) / 10, l: Math.round(p1.lip * f * 10) / 10,
+             inconnu: false };
+  }
+  var m = calcMac([{ name: ing.nom, quantity_g: q }]);
+  return { c: m.c, p: m.p, g: m.g, l: m.l, inconnu: (m.inconnus || []).length > 0 };
+}
+
+function macEdit() {
+  var t = { c: 0, p: 0, g: 0, l: 0 }, inconnus = [];
+  (mealEdit ? mealEdit.ingredients : []).forEach(function (i) {
+    if (!(i.nom || '').trim()) return;
+    var m = macIngEdit(i);
+    t.c += m.c; t.p += m.p; t.g += m.g; t.l += m.l;
+    if (m.inconnu) inconnus.push(i.nom);
+  });
+  return { c: Math.round(t.c), p: Math.round(t.p * 10) / 10,
+           g: Math.round(t.g * 10) / 10, l: Math.round(t.l * 10) / 10, inconnus: inconnus };
+}
+
+/* Sans accents ni casse : « poulet grille » → « poulet grillé » ne doit pas
+   coûter la mesure de la ligne. Même comparaison qu'`aplati()` d'ajout.js. */
+function memeNomIng(a, b) {
+  function plat(x) {
+    return String(x || '').toLowerCase().replace(/œ/g, 'oe')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  return plat(a) === plat(b);
+}
+
+function rendreEditionRepas() {
+  var cont = document.getElementById('mealEditContent');
+  if (!cont || !mealEdit) return;
+  var vignette = mealEdit.photo
+    ? '<div class="meal-ap-photo"><img src="' + mealEdit.photo + '" alt=""></div>'
+    : '<div class="meal-ap-photo">🍽️</div>';
+
+  cont.innerHTML = '<div class="meal-ap-header">' + vignette
+    + '<div style="flex:1;min-width:0;"><div class="meal-ap-name">Modifier le repas</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-top:2px;">Nom, quantités, ingrédients</div>'
+    + '</div></div>'
+    + '<div class="me-lbl">Nom du plat</div>'
+    + '<input class="me-name" id="meNom" type="text" autocomplete="off">'
+    + '<div class="me-lbl">Ingrédients</div>'
+    + '<div class="ai-macros-live" id="meMacros"></div>'
+    + '<div id="meList"></div>'
+    + '<button class="ai-add-ing-btn" id="meAdd">+ Ajouter un ingrédient</button>'
+    + '<div class="me-warn" id="meWarn" style="display:none;"></div>'
+    + '<div class="me-acts">'
+    + '<button class="me-save" id="meSave">Enregistrer les modifications</button>'
+    + '<button class="me-cancel" id="meCancel">Annuler</button>'
+    + '</div>';
+
+  var nom = document.getElementById('meNom');
+  nom.value = mealEdit.nom;
+  nom.addEventListener('input', function () { mealEdit.nom = this.value; });
+
+  document.getElementById('meAdd').addEventListener('click', function () {
+    var ing = { nom: '', quantite_g: 100, emoji: '🍽️', unite: 'g', qte: 100 };
+    mealEdit.ingredients.push(ing);
+    rendreLignesEdition();
+    var champs = document.querySelectorAll('#meList .ai-ing-edit-name');
+    if (champs.length) champs[champs.length - 1].focus();
+  });
+  document.getElementById('meSave').addEventListener('click', enregistrerEditionRepas);
+  document.getElementById('meCancel').addEventListener('click', function () { closeOverlay('ovMealEdit'); });
+
+  rendreLignesEdition();
+}
+
+/* Les lignes sont réécrites seules, sans toucher au reste de la feuille : le
+   champ du nom ne doit pas perdre le curseur parce qu'on a changé une quantité
+   plus bas. Même raison que le `data-grp` d'`assets/ajout.js`. */
+function rendreLignesEdition() {
+  var list = document.getElementById('meList');
+  if (!list || !mealEdit) return;
+  list.innerHTML = '';
+
+  mealEdit.ingredients.forEach(function (ing, idx) {
+    var row = document.createElement('div');
+    row.className = 'ai-ing-edit-row';
+
+    var em = document.createElement('span');
+    em.className = 'ai-ing-edit-em';
+    em.textContent = ing.emoji || '🍽️';
+
+    var nm = document.createElement('input');
+    nm.className = 'ai-ing-edit-name';
+    nm.type = 'text';
+    nm.value = ing.nom;
+    nm.placeholder = 'Ingrédient';
+
+    var qty = document.createElement('input');
+    qty.className = 'ai-ing-edit-qty';
+    qty.type = 'number';
+    qty.min = 0;
+    qty.step = ing.unite === 'u' ? '0.5' : '1';
+    qty.value = window.NattyUnites ? ing.qte : ing.quantite_g;
+
+    var unit;
+    if (window.NattyUnites) {
+      unit = document.createElement('select');
+      unit.className = 'me-unit';
+      unit.setAttribute('aria-label', 'Unité');
+    } else {
+      unit = document.createElement('span');
+      unit.className = 'ai-ing-edit-unit';
+      unit.textContent = 'g';
+    }
+
+    function majUnite() {
+      if (!window.NattyUnites || unit.tagName !== 'SELECT') return;
+      unit.innerHTML = '';
+      NattyUnites.LISTE.forEach(function (o) {
+        var op = document.createElement('option');
+        op.value = o.cle;
+        op.textContent = NattyUnites.libelle(o.cle, ing.nom, ing.qte);
+        if (o.cle === ing.unite) op.selected = true;
+        unit.appendChild(op);
+      });
+    }
+    majUnite();
+
+    var nomInitial = ing.nom;
+    nm.addEventListener('input', function () {
+      ing.nom = this.value;
+      // Un aliment renommé n'est plus le même : ses macros mesurées ne le
+      // décrivent plus. On ne les jette que si le nom a RÉELLEMENT changé.
+      if (ing.pour100 && !memeNomIng(this.value, nomInitial)) ing.pour100 = null;
+      // Renommer une ligne dont la quantité n'a pas été touchée re-déduit
+      // l'unité : « banane » devient 1 pièce, « pâtes » reste en grammes.
+      if (window.NattyUnites && !ing.manuel) {
+        NattyUnites.deviner(ing, true);
+        qty.step = ing.unite === 'u' ? '0.5' : '1';
+        qty.value = ing.qte;
+      }
+      majUnite();
+      majMacrosEdition();
+    });
+
+    qty.addEventListener('input', function () {
+      if (window.NattyUnites) NattyUnites.saisir(ing, this.value);
+      else ing.quantite_g = parseFloat(this.value) || 0;
+      ing.manuel = true;
+      majUnite();
+      majMacrosEdition();
+    });
+
+    if (unit.tagName === 'SELECT') {
+      unit.addEventListener('change', function () {
+        NattyUnites.poser(ing, this.value);
+        qty.step = ing.unite === 'u' ? '0.5' : '1';
+        qty.value = ing.qte;
+        majUnite();
+        majMacrosEdition();
+      });
+    }
+
+    var del = document.createElement('button');
+    del.className = 'ai-ing-del';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', 'Retirer');
+    del.addEventListener('click', function () {
+      mealEdit.ingredients.splice(idx, 1);
+      rendreLignesEdition();
+      majMacrosEdition();
+    });
+
+    row.appendChild(em); row.appendChild(nm); row.appendChild(qty);
+    row.appendChild(unit); row.appendChild(del);
+    list.appendChild(row);
+  });
+
+  majMacrosEdition();
+}
+
+function majMacrosEdition() {
+  var el = document.getElementById('meMacros');
+  if (!el) return;
+  var mac = macEdit();
+  el.innerHTML = '<span class="ai-macro-live-chip">🥩 ' + mac.p + 'g prot.</span>'
+    + '<span class="ai-macro-live-chip">🌾 ' + mac.g + 'g gluc.</span>'
+    + '<span class="ai-macro-live-chip">🥑 ' + mac.l + 'g lip.</span>'
+    + '<span class="ai-macro-live-chip">⚡ ' + mac.c + ' kcal</span>';
+
+  /* Un ingrédient que ni sa mesure ni la table ne savent chiffrer compte pour
+     ZÉRO, et ça doit se voir AVANT d'enregistrer : un total silencieusement faux
+     est pire qu'un total qui manque. `macEdit()` les rend dans `inconnus` — une
+     ligne qui a gardé sa mesure n'y figure donc pas, puisqu'elle pèse. */
+  var w = document.getElementById('meWarn');
+  if (!w) return;
+  var inc = (mac.inconnus || []).filter(Boolean);
+  if (!inc.length) { w.style.display = 'none'; return; }
+  w.style.display = 'block';
+  w.textContent = inc.length === 1
+    ? '« ' + inc[0] + ' » n’est pas reconnu : il compte pour 0. Précisez son nom pour qu’il pèse.'
+    : inc.length + ' ingrédients ne sont pas reconnus et comptent pour 0 : ' + inc.join(', ') + '.';
+}
+
+async function enregistrerEditionRepas() {
+  if (!mealEdit) return;
+  var btn = document.getElementById('meSave');
+  var ings = mealEdit.ingredients.filter(function (i) { return (i.nom || '').trim(); });
+  if (!ings.length) { showToast('Gardez au moins un ingrédient', 'err'); return; }
+
+  btn.disabled = true;
+  var libelle = btn.textContent;
+  btn.textContent = 'Enregistrement…';
+  var id = mealEdit.id;
+
+  try {
+    await fetch(SB_URL + '/rest/v1/meals?id=eq.' + id, {
+      method: 'PATCH',
+      headers: await Natty.entetes({ 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ name: (mealEdit.nom || '').trim() || 'Repas' })
+    });
+
+    // Effacer puis réécrire : voir l'en-tête de section.
+    await fetch(SB_URL + '/rest/v1/meal_ingredients?meal_id=eq.' + id, {
+      method: 'DELETE', headers: await Natty.entetes({ 'Prefer': 'return=minimal' })
+    });
+
+    // ⚠️ `macIngEdit` et non `calcMac` : c'est la même fonction que celle des
+    // chiffres affichés au-dessus du bouton, donc on enregistre exactement ce
+    // que l'utilisateur vient de lire — mesures préservées comprises.
+    var lignes = ings.map(function (i) {
+      var m = macIngEdit(i);
+      return {
+        meal_id: id, name: i.nom.trim(), quantity_g: i.quantite_g || 0,
+        calories: Math.round(m.c), proteins_g: m.p, carbs_g: m.g, fats_g: m.l
+      };
+    });
+    try {
+      await Natty.sbPost('meal_ingredients', lignes, 'return=minimal');
+    } catch (e) {
+      // Instance sans les colonnes de macros : on réécrit le minimum plutôt que
+      // de perdre les ingrédients. Même repli qu'`assets/ajout.js`.
+      if (!/calories|proteins_g|carbs_g|fats_g/.test(String((e && e.message) || e))) throw e;
+      await Natty.sbPost('meal_ingredients', lignes.map(function (l) {
+        return { meal_id: l.meal_id, name: l.name, quantity_g: l.quantity_g };
+      }), 'return=minimal');
+    }
+
+    await oublierAnalysePlat(id);
+
+    await loadMeals();
+    afficherMacros();
+    chargerDiagnostics();
+    // Le créneau du jour doit recompter : le `+` lit ce même total pour dire ce
+    // qu'il reste, et il aurait gardé l'ancien.
+    if (window.NattyCreneaux) NattyCreneaux.rafraichirJour().catch(function () {});
+    window.dispatchEvent(new CustomEvent('natty:repas-ajoute'));
+
+    closeOverlay('ovMealEdit');
+    mealEdit = null;
+    showToast('Repas modifié', 'ok');
+  } catch (e) {
+    showToast('Modification impossible', 'err');
+    btn.disabled = false;
+    btn.textContent = libelle;
+  }
+}
+
+/* L'analyse ne décrit plus le plat : on la retire des deux étages du cache.
+   Sans le PATCH, `lireAnalysePlat` la retrouverait en base au prochain
+   appareil et la remettrait en localStorage — donc un texte périmé, ressuscité. */
+async function oublierAnalysePlat(id) {
+  try { localStorage.removeItem(cleAnalyse(id)); } catch (e) {}
+  if (ANALYSE_EN_BASE === false) return;
+  try {
+    // ⚠️ `Natty.entetes()` et pas des en-têtes à la main : sans le JWT, la RLS
+    // refuse le PATCH — et le refus serait silencieux ici.
+    await fetch(SB_URL + '/rest/v1/meals?id=eq.' + id, {
+      method: 'PATCH',
+      headers: await Natty.entetes({ 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ analyse_json: null })
+    });
+  } catch (e) { /* colonne absente ou hors ligne : le localStorage a déjà été vidé */ }
 }
 
 /* ── Cache d'analyse ─────────────────────────────────────────
@@ -4333,7 +4751,7 @@ function closeOverlay(id) {
     el.style.display = 'none';
   }
   // Vérifier si un overlay est encore ouvert
-  var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovHistorique','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
+  var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovMealEdit','ovHistorique','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
   var hasVisible = allIds.some(function(eid) {
     var e = document.getElementById(eid);
     if (!e) return false;
@@ -4650,7 +5068,7 @@ function openProfilOverlay() {
 function closeProfilOverlay() {
   var el = document.getElementById('profilOverlay');
   if (el) el.style.display = 'none';
-  var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovHistorique','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
+  var allIds = ['profilOverlay','onbPopup','popupConseils','conseilsPopup','ovListeCourses','ovRecettes','ovProchainRepas','ovMacro','ovAnalyse','ovRepas','ovMealAnalyse','ovMealEdit','ovHistorique','ovMealDetail','ovPersoSetup','ovDuoSetup','ovEntSetup'];
   var hasVisible = allIds.some(function(eid) {
     var e = document.getElementById(eid);
     if (!e || eid === 'profilOverlay') return false;
@@ -5676,6 +6094,9 @@ window.addEventListener('natty:repas-ajoute', function(){
 <!-- Les créneaux de repas (combien, lequel maintenant, ce qui y est déjà
      noté) : `assets/ajout.js` en a besoin pour dire ce qu'il RESTE sur le
      repas en cours, et non « la journée divisée par le nombre de repas ». -->
+<!-- Unites de saisie (g / ml / piece) : charge avant ajout.js et avant
+     l'editeur de repas, tous deux facultatifs vis-a-vis de lui. -->
+<script src="/assets/unites.js"></script>
 <script src="/assets/creneaux.js"></script>
 <!-- core.js avant ajout.js : le parcours du bouton + s'appuie sur Natty.* -->
 <script src="/assets/ajout.js"></script>

@@ -120,7 +120,13 @@ var NattyVisionneuse = (function () {
        de 80 à 70 % pour leur laisser la place.
        `height` fermement, pas `flex:1` : les 70 % sont une promesse, et
        une carte qui se compresserait au gré du texte ne la tiendrait pas. */
-    '#nvue .nv-hero{position:relative;flex:none;height:70%;',
+    /* ⚠️ 56 % ET NON 70 % — soit un cinquième de moins (demande de Pablo,
+       13 août 2026 : « diminuer les photos des héros de 20 % et rendre le titre
+       parfaitement perceptible »). Les deux moitiés de la demande sont la même
+       chose : la hauteur rendue par la carte va au bloc du bas, et c'est elle
+       qui permet au titre de passer en 26 px sans être poussé hors de l'écran.
+       Rétrécir la photo sans grossir le titre n'aurait laissé qu'un trou. */
+    '#nvue .nv-hero{position:relative;flex:none;height:56%;',
       'border-radius:34px;overflow:hidden;background:var(--v-fond-carte);',
       'box-shadow:var(--v-so);cursor:pointer}',
     '#nvue .nv-ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;',
@@ -151,16 +157,24 @@ var NattyVisionneuse = (function () {
        bloc du titre se dissolvait dans la page. Ils lui rendent son bord.
        En thème clair, le noir sur blanc se suffit, mais la même ombre y
        creuse un peu la carte : elle sert dans les deux cas. */
-    '#nvue .nv-plate{background:#0b0b0e;border-radius:23px;padding:11px 16px;color:#fff;',
+    '#nvue .nv-plate{background:#0b0b0e;border-radius:23px;padding:14px 17px;color:#fff;',
       'border:1px solid rgba(255,255,255,.09);box-shadow:var(--v-so)}',
-    '#nvue .nv-chap{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.6px;',
-      'text-transform:uppercase;color:#a6a6b2;margin-bottom:4px}',
-    '#nvue .nv-nom{font-weight:900;font-size:20.5px;line-height:1.12;letter-spacing:-.4px}',
-    /* ⚠️ Deux lignes au plus. Une description de quatre lignes reprenait à la
-       carte les pixels qu'on vient de lui rendre ; le texte entier reste
-       lisible dans le tiroir. */
-    '#nvue .nv-desc{font-size:11.5px;line-height:1.38;color:#b9b9c4;margin-top:4px;',
-      'display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
+    '#nvue .nv-chap{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.6px;',
+      'text-transform:uppercase;color:#b6b6c2;margin-bottom:5px}',
+    /* Le titre du plat. 26 px au lieu de 20,5 : c'est le nom de ce qu'on
+       regarde, et il était plus petit que bien des libellés secondaires de
+       l'app. La place vient des 14 % rendus par la carte, juste au-dessus.
+       ⚠️ `text-wrap:balance` : un nom de trois mots qui passait à la ligne
+       laissait un mot seul en dessous — la mise en page cassait exactement là
+       où le titre doit être le plus net. Ignoré sans dommage là où il n'est pas
+       géré. */
+    '#nvue .nv-nom{font-weight:900;font-size:26px;line-height:1.1;letter-spacing:-.6px;',
+      'text-wrap:balance}',
+    /* ⚠️ Trois lignes, contre deux avant : la carte a rendu de la hauteur, et
+       une description coupée au milieu d'une phrase se lit moins bien qu'une
+       ligne de plus. Le texte entier reste dans le tiroir. */
+    '#nvue .nv-desc{font-size:12.5px;line-height:1.42;color:#c2c2cc;margin-top:6px;',
+      'display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
     /* Les bulles SOMBRES des macros, avec leur emoji — sombres elles aussi
        dans les deux thèmes, pour faire bloc avec la bulle du titre. */
     '#nvue .nv-macs{display:flex;gap:6px}',
@@ -235,8 +249,15 @@ var NattyVisionneuse = (function () {
        entier dans le tiroir, et c'est la ligne dont on peut le plus se
        passer), puis la carte lâche quatre points de hauteur. Rogner d'abord la
        photo aurait été trahir la promesse des 70 % pour du texte qu'on peut
-       lire ailleurs. */
-    '@media (max-height:700px){#nvue .nv-hero{height:66%}#nvue .nv-desc{display:none}}'
+       lire ailleurs.
+       ⚠️⚠️ ET CETTE VALEUR SUIT LA HAUTEUR DE BASE, SINON ELLE L'INVERSE. Quand
+       la carte est passée de 70 à 56 %, ce 66 % est resté : mesuré à 375 × 667,
+       la photo occupait alors **66 % sur un petit écran contre 56 % sur un
+       grand** — c'est-à-dire plus grande là où il y a moins de place, et la
+       réduction demandée annulée précisément sur les téléphones qui en avaient
+       le plus besoin. Le rapport d'origine est conservé : 66/70 de 56, soit
+       53 %. Attrapé en redimensionnant, invisible à la lecture. */
+    '@media (max-height:700px){#nvue .nv-hero{height:53%}#nvue .nv-desc{display:none}}'
   ].join('');
 
   /* ── Montage ─────────────────────────────────────────────── */

@@ -378,7 +378,53 @@ var Natty = (function () {
     'steack':{c:250,p:26,l:15,g:0},'amendes':{c:579,p:21,l:50,g:22},
     'basilique':{c:23,p:3.2,l:0.6,g:2.7},'pouivron':{c:31,p:1,l:0.3,g:6},
     'teriaki':{c:89,p:1.5,l:0,g:20},
-    'petits poids':{c:81,p:5,l:0.4,g:14},'poids chiche':{c:164,p:9,l:2.6,g:27}
+    'petits poids':{c:81,p:5,l:0.4,g:14},'poids chiche':{c:164,p:9,l:2.6,g:27},
+    /* ── Compléments et nutrition sportive ─────────────────────────
+       Ils manquaient entièrement, et c'est le pire cas possible pour cette
+       table : une dose de whey, c'est ~24 g de protéines — soit un quart de la
+       cible d'une journée — et elle comptait pour **zéro**. Quelqu'un qui
+       prend deux shakers voyait donc ses anneaux stagner en ayant bien mangé.
+       Valeurs pour 100 g de poudre (étiquetage usuel), pas par dose : la dose
+       est une affaire d'unité de saisie, et elle vit dans `assets/unites.js`.
+
+       ⚠️ AUCUNE CLÉ « proteine » TOUTE SEULE, et c'est délibéré. Le libellé le
+       plus long gagnant, « Poulet riche en protéines » serait tombé sur elle et
+       aurait compté 400 kcal aux 100 g. Les clés restent donc composées.
+       ⚠️ Et les deux orthographes de « protéiné(e) » : la seconde passe ne
+       singularise que les `s`/`x` finaux, donc « barre proteine » ne rattrape
+       PAS « barre protéinée ». Vérifié — l'une sans l'autre laisse la moitié
+       des saisies non reconnues. */
+    'whey':{c:400,p:80,l:7,g:6},'proteine en poudre':{c:400,p:80,l:7,g:6},
+    'poudre proteine':{c:400,p:80,l:7,g:6},'poudre proteinee':{c:400,p:80,l:7,g:6},
+    'isolat':{c:373,p:90,l:1,g:2},'caseine':{c:370,p:80,l:2,g:8},
+    'collagene':{c:360,p:90,l:0,g:0},'proteine vegetale':{c:380,p:75,l:6,g:8},
+    'gainer':{c:380,p:20,l:4,g:65},'maltodextrine':{c:380,p:0,l:0,g:95},
+    'creatine':{c:0,p:0,l:0,g:0},'bcaa':{c:400,p:100,l:0,g:0},
+    'acides amines':{c:400,p:100,l:0,g:0},'glutamine':{c:400,p:100,l:0,g:0},
+    'barre proteinee':{c:370,p:32,l:12,g:33},'barre proteine':{c:370,p:32,l:12,g:33},
+    'boisson proteinee':{c:47,p:10,l:0.5,g:1},'boisson proteine':{c:47,p:10,l:0.5,g:1},
+    'shaker proteine':{c:47,p:10,l:0.5,g:1},
+    'gel energetique':{c:250,p:0,l:0,g:62},'boisson isotonique':{c:26,p:0,l:0,g:6.4},
+    'spiruline':{c:290,p:57,l:8,g:24},'levure de biere':{c:325,p:42,l:6,g:19},
+    'omega 3':{c:900,p:0,l:100,g:0},'huile de poisson':{c:900,p:0,l:100,g:0},
+    /* ⚠️ LES POTS SONT ÉTIQUETÉS EN ANGLAIS, et c'est ce qui se tape. Relevé au
+       banc sur des libellés réels : « Isolate vanille » et « Protein powder »
+       n'étaient PAS reconnus — donc zéro protéine sur la source la plus
+       concentrée qui soit. « Whey protein » passait déjà, mais par `whey`
+       seulement, ce qui est un hasard heureux et non une règle.
+       ⚠️ Toujours pas de clé `protein` seule, pour la raison donnée plus haut :
+       elle happerait n'importe quel aliment « riche en protein(e)s ». */
+    'isolate':{c:373,p:90,l:1,g:2},'protein powder':{c:400,p:80,l:7,g:6},
+    /* Un pré-workout est édulcoré : sans calories, comme la créatine. Le chiffre
+       n'est pas inventé, il est lu sur l'étiquette — mais il vaut mieux le dire
+       ici, parce qu'un 0 ressemble toujours à un oubli. */
+    'pre workout':{c:0,p:0,l:0,g:0},'preworkout':{c:0,p:0,l:0,g:0},
+    /* Le blanc et le jaune, séparés. « Blanc d'œuf » tombait sur `oeuf` et
+       comptait 143 kcal au lieu de 52 — presque trois fois trop — alors que
+       c'est justement l'aliment qu'on prend POUR ses protéines sans le reste.
+       ⚠️ Clé en deux mots : elle exige `blanc` ET `oeuf`, donc « blanc de
+       poulet » ne peut pas l'attraper, et elle bat `oeuf` seul (plus de mots). */
+    'blanc oeuf':{c:52,p:10.9,l:0.2,g:0.7},'jaune oeuf':{c:322,p:16,l:27,g:3.6}
   };
 
   /* ⚠️ Le plus LONG libellé qui correspond gagne, et la correspondance se fait
@@ -417,6 +463,17 @@ var Natty = (function () {
     })
     .sort(function (a, b) { return b.mots.length - a.mots.length || b.k.length - a.k.length; });
 
+  /* Les libellés qui l'emportent sur tout le reste du nom (voir la passe 0 de
+     `getNutri`). Uniquement des compléments : un parfum ne doit pas prendre le
+     pas sur eux, alors qu'ailleurs le mot le plus long est le bon indice. */
+  var FORTS = ['whey', 'isolat', 'caseine', 'collagene', 'gainer', 'maltodextrine',
+    'creatine', 'bcaa', 'acides amines', 'glutamine', 'spiruline', 'levure de biere',
+    'proteine en poudre', 'poudre proteine', 'poudre proteinee', 'proteine vegetale',
+    'barre proteinee', 'barre proteine', 'boisson proteinee', 'boisson proteine',
+    'shaker proteine', 'gel energetique', 'boisson isotonique', 'omega 3',
+    'huile de poisson', 'isolate', 'protein powder', 'pre workout', 'preworkout'];
+  var NT_FORTS = NT_CLES.filter(function (x) { return FORTS.indexOf(x.k) > -1; });
+
   function tousPresents(mots, n) {
     return mots.every(function (m) { return n.indexOf(' ' + m + ' ') > -1; });
   }
@@ -435,11 +492,26 @@ var Natty = (function () {
      r\u00e9solu par la passe exacte et n'y arrive jamais. */
   function getNutri(name, qty) {
     var n = normNom(name), i, t = null;
+    var nS = ' ' + n.trim().split(' ').map(sing).join(' ') + ' ';
+
+    /* ⚠️ PASSE 0 — les compléments passent devant, à égalité de mots.
+       « Whey isolate chocolat » était compté comme du CHOCOLAT : les deux clés
+       font un mot, et c'est alors la plus longue qui gagne (« chocolat », 8
+       lettres, contre « whey », 4). Résultat mesuré : 164 kcal et 1,5 g de
+       protéines pour une dose qui en apporte 24.
+       La règle qui répare ça n'est pas « le premier mot du nom gagne » — testée,
+       elle transforme « Salade de poulet » en salade à 15 kcal. C'est
+       spécifiquement le nom d'un complément qui est dominant : il ne désigne
+       jamais l'ingrédient secondaire d'un plat, seulement son parfum. On le
+       cherche donc d'abord, et les 256 libellés déjà en base n'en contiennent
+       aucun — cette passe ne peut donc rien changer pour eux. */
+    for (i = 0; i < NT_FORTS.length && !t; i++) {
+      if (tousPresents(NT_FORTS[i].mots, n) || tousPresents(NT_FORTS[i].motsS, nS)) t = NT[NT_FORTS[i].k];
+    }
     for (i = 0; i < NT_CLES.length && !t; i++) {
       if (tousPresents(NT_CLES[i].mots, n)) t = NT[NT_CLES[i].k];
     }
     if (!t) {
-      var nS = ' ' + n.trim().split(' ').map(sing).join(' ') + ' ';
       for (i = 0; i < NT_CLES.length && !t; i++) {
         if (tousPresents(NT_CLES[i].motsS, nS)) t = NT[NT_CLES[i].k];
       }

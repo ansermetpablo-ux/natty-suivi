@@ -239,7 +239,7 @@ var NattyCreneaux = (function () {
       var depuis = new Date(); depuis.setDate(depuis.getDate() - JOURS_HABITUDE);
       var ms = await Natty.sbFetch('meals?user_id=eq.' + Natty.USER_ID
         + '&created_at=gte.' + depuis.toISOString()
-        + '&order=created_at.desc&limit=200&select=id,created_at');
+        + '&order=created_at.desc&limit=200&select=id,name,created_at');
       var ids = (ms || []).map(function (m) { return m.id; });
       var parRepas = {};
       for (var i = 0; i < ids.length; i += 40) {
@@ -256,7 +256,8 @@ var NattyCreneaux = (function () {
       repas = (ms || []).map(function (m) {
         var d = new Date(m.created_at);
         var c = creneauDe(d, liste);
-        return { creneau: c ? c.cle : null, quand: d, macros: Natty.calcMac(parRepas[m.id] || []) };
+        return { id: m.id, nom: m.name || 'Repas', creneau: c ? c.cle : null, quand: d,
+                 macros: Natty.calcMac(parRepas[m.id] || []) };
       }).filter(function (x) { return x.creneau; });
     } catch (e) { repas = []; }
 
@@ -342,6 +343,22 @@ var NattyCreneaux = (function () {
     return etat.repasDuJour.filter(function (r) { return r.creneau === cle; }).length;
   }
 
+  /**
+   * Les repas du jour de ce créneau, du plus récent au plus ancien.
+   *
+   * Rendus avec leur `id` : c'est ce qui permet au guide du jour
+   * (`assets/journee.js`) de proposer « Modifier ce repas » sur une étape déjà
+   * cochée, au lieu de renvoyer chercher le plat dans l'historique. `nbDeja`
+   * n'avait besoin que de les compter — d'où l'ajout ici plutôt qu'un second
+   * chargement ailleurs, qui aurait redemandé les mêmes lignes.
+   */
+  function repasDe(cle) {
+    return etat.repasDuJour
+      .filter(function (r) { return r.creneau === cle; })
+      .slice()
+      .sort(function (a, b) { return b.quand - a.quand; });
+  }
+
   /* Rechargement des repas du jour seulement — appelé après un enregistrement,
      sans refaire tout le calcul des poids (les habitudes ne bougent pas d'un
      repas à l'autre). */
@@ -350,7 +367,7 @@ var NattyCreneaux = (function () {
     try {
       var d0 = new Date(); d0.setHours(0, 0, 0, 0);
       var ms = await Natty.sbFetch('meals?user_id=eq.' + Natty.USER_ID
-        + '&created_at=gte.' + d0.toISOString() + '&order=created_at.desc&limit=40&select=id,created_at');
+        + '&created_at=gte.' + d0.toISOString() + '&order=created_at.desc&limit=40&select=id,name,created_at');
       var ids = (ms || []).map(function (m) { return m.id; });
       var parRepas = {};
       if (ids.length) {
@@ -363,7 +380,8 @@ var NattyCreneaux = (function () {
       etat.repasDuJour = (ms || []).map(function (m) {
         var d = new Date(m.created_at);
         var c = creneauDe(d);
-        return { creneau: c ? c.cle : null, quand: d, macros: Natty.calcMac(parRepas[m.id] || []) };
+        return { id: m.id, nom: m.name || 'Repas', creneau: c ? c.cle : null, quand: d,
+                 macros: Natty.calcMac(parRepas[m.id] || []) };
       }).filter(function (x) { return x.creneau && Natty.jour(x.quand) === jour; });
     } catch (e) {}
     return etat;
@@ -373,7 +391,7 @@ var NattyCreneaux = (function () {
     charger: charger, rafraichirJour: rafraichirJour,
     liste: liste, courant: courant, cibleJour: cibleJour, par: par,
     mange: mange, mangeJour: mangeJour, restant: restant, depasse: depasse,
-    nbDeja: nbDeja,
+    nbDeja: nbDeja, repas: repasDe,
     nb: function () { return etat.nb; },
     source: function () { return etat.source; },
     nbMesures: function () { return etat.nbMesures; }

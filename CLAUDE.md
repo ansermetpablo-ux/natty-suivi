@@ -394,6 +394,38 @@ s'il est chargé et remplit `profil.garde` ; `construirePrompt()` ajoute alors l
 « INGRÉDIENTS DISPONIBLES » et deux règles (partir de ce stock, marquer `dispo` sur chaque
 ingrédient). Sans le module, le prompt est strictement celui d'avant.
 
+### `assets/unites.js` — g, ml, ou pièce : ce qu'on saisit, et ce qu'on stocke
+Chargé par les six écrans porteurs du `+` (+ `www/`), juste avant `assets/ajout.js`, et lu
+aussi par l'éditeur de repas de `suivi.html`. **Ne dépend de rien.**
+
+**Pourquoi.** Toute l'app compte en grammes — `meal_ingredients.quantity_g`, la table de
+`core.js`, les anneaux, les cibles de créneau — et ça ne change pas. Mais personne ne pense
+« 120 g de banane » : on pense « une banane ». Le module fait le pont, et rien d'autre.
+- `defaut(nom)` → l'unité et la quantité qui vont de soi : `banane` → 1 banane (120 g),
+  `pâtes` → 100 g, `lait` → 200 ml, `whey` → 1 dose (30 g), `œufs` → 1 œuf (55 g).
+- `poser/saisir/deviner(ing[,force])` mettent la ligne à jour **en place** ; `grammes`,
+  `quantite` et `libelle` font les conversions et l'accord (« 3 œufs », « 2 tranches »).
+- Deux tables, et **aucun chiffre dupliqué avec `core.js`** : le POIDS d'une pièce, et la
+  DENSITÉ d'un liquide. Ni calories ni macros ici.
+
+> ⚠️ **Les grammes restent la vérité.** `unite`/`qte` ne servent qu'à l'affichage ;
+> `quantite_g` est recalculé à chaque frappe et c'est lui qu'on enregistre. Une ligne dont
+> l'unité serait perdue reste donc juste — elle se réaffiche en grammes. C'est ce qui permet
+> de **ne rien migrer** : les lignes déjà en base n'ont pas d'unité et n'en ont pas besoin.
+> ⚠️ **Et l'affichage recale les grammes** (`poser`) : 130 g de banane s'affichent « 1 banane »,
+> donc sans ce recalage l'écran annoncerait 1 banane en comptant 130 g dans les anneaux. Deux
+> nombres du même écran qui se contredisent — le défaut déjà corrigé ailleurs (le titre du plat
+> à « 0 kcal » au-dessus d'anneaux à 680). Le prix est assumé : basculer en pièces arrondit à
+> la portion entière, ce qui est ce que veut dire « une banane ».
+> ⚠️ **Une quantité qui existe déjà reste en grammes**, sauf `force`. Les lignes venues d'une
+> analyse photo portent une **mesure** (« 130 g ») : la convertir en portion type reviendrait à
+> jeter l'estimation du modèle. La détection sert à ce que l'utilisateur TAPE.
+> ⚠️ **`arbitrer()` départage pièce et liquide, et ce n'est pas un cas de bord** : « huile
+> d'olive » était comptée comme **UNE OLIVE de 4 g**. Le libellé le plus précis gagne (« huile
+> olive », 2 mots, devant « olive »), et à égalité celui qui ouvre le nom — « jus de pomme »
+> est un jus. Testé : la règle « le premier mot gagne » seule transformait « Salade de poulet »
+> en salade à 15 kcal, d'où les deux critères et pas un seul.
+
 ### `assets/ajout.js` — parcours « Ajouter un plat » (bouton + de la nav)
 Module partagé, injecté par-dessus l'écran courant (overlay `#nattyAjout`, tout préfixé `na-`/`na`).
 Chargé par `suivi.html`, `repas.html`, `coaching.html`, `profil.html` et `menu.html`
@@ -513,6 +545,12 @@ macro (protéines 62 % le soir contre 18 % le matin), et les découpages à 2 et
   Il dit maintenant « Il vous reste aujourd'hui », et chaque anneau porte le mot
   (« restant · 34 % de 176 g ») pour se lire seul.
 
+**`repas(cle)` rend les repas du jour de ce créneau, avec leur `id`** (ajouté le 2026-08-13) :
+c'est ce qui permet au guide du jour de proposer « Modifier ce repas » sur une étape cochée,
+plutôt que de renvoyer chercher le plat dans l'historique. Les deux requêtes du jour demandent
+donc `name` en plus de `id` — `nbDeja` n'avait besoin que de les compter, mais un second
+chargement ailleurs aurait redemandé les mêmes lignes.
+
 **Cible par repas** : `chargerCibles()` lit `onboarding` (`poids`, `tdee`) et refait le calcul
 de `calcMacros()`, puis divise par le nombre de repas par jour issu de
 `questionnaire_alim.nb_repas` (libellé → entier via `REPAS_PAR_JOUR`). Fallback 2000 kcal /
@@ -597,6 +635,35 @@ du même état.
 ligne `meals` + ses `meal_ingredients` (la photo Cloudinary va sur le premier). L'échec de
 l'upload photo n'empêche pas l'enregistrement. À la fin, l'événement `natty:repas-ajoute` est
 émis : `suivi.html` l'écoute pour rafraîchir macros et historique sans recharger la page.
+
+**Chaque ligne d'ingrédient porte son UNITÉ** (2026-08-13, demande de Pablo) : un menu `g / ml /
+pièce` remplace le « g » figé, et le défaut se déduit du nom dès qu'on le tape — voir
+`assets/unites.js` ci-dessus. Le module est **facultatif** : sans lui, `DISPO` vaut `false` et la
+ligne redevient exactement ce qu'elle était, en grammes. (C'est le défaut qu'avait `suivi.html`
+avec `assets/reco.js` — une dépendance supposée présente, et une génération impossible pendant
+des semaines.)
+- ⚠️ La détection ne s'applique que si l'utilisateur n'a pas fixé la quantité lui-même
+  (`ing.manuel`) : sans ce drapeau, taper « banane » après avoir saisi 200 g ramenait la ligne à
+  une pièce et effaçait sa mesure.
+- ⚠️ `qty.step` suit l'unité (`0.5` pour une pièce) **aux deux endroits** qui changent d'unité :
+  laissé à `1`, le champ refusait « 1,5 » — donc une demi-portion impossible à saisir alors
+  qu'elle se calcule sans problème.
+
+> 🔴 ⚠️ **« + Ajouter un ingrédient » LEVAIT UNE EXCEPTION tant qu'aucune photo n'avait été
+> prise** (corrigé le 2026-08-13, trouvé en navigateur). L'overlay s'ouvre sur l'écran du repas
+> AVANT toute photo, donc `S.plats` est vide : `S.plats[S.cur]` valait `undefined` et le clic
+> mourait sur `pl.ingredients`. Rien ne s'affichait, rien ne le disait — **la saisie à la main
+> était donc inaccessible** sauf en passant par le repli « Saisir le plat à la main » d'un
+> échec d'analyse. `ajouterLigne()` crée maintenant le plat au premier ingrédient, comme
+> `saisieManuelle()`. Invisible à `node --check`, invisible à la lecture.
+
+**L'analyse photo reconnaît les compléments** (même passe) : le prompt nomme whey, isolat,
+caséine, gainer, protéine végétale, créatine, BCAA, barres et boissons protéinées, et donne les
+doses courantes. Sans cette consigne le modèle rendait « boisson » ou « verre de lait » — donc
+8 g de protéines au lieu de 24, et un anneau qui ne bouge pas alors que la personne vient de
+prendre l'apport le plus concentré de sa journée. Une dose de whey figure aussi dans les
+suggestions locales (`FB.ingredients`) : c'est le chemin le plus court pour combler un reste de
+protéines.
 
 ### `assets/recette.js` — préparation détaillée et cinématique « Suivre la recette »
 Chargé par `repas.html` (+ `www/`). Trois entrées : `fiche(recette)` (HTML des étapes),
@@ -953,6 +1020,27 @@ quelqu'un qui arrive à 12 h 40 pour noter son déjeuner n'a pas à regarder tro
 pouvoir le faire.
 Mémoire : `natty_journee_vu_<uid>` (le jour) et `natty_journee_etape_<uid>` (`jour|étape`).
 
+**L'ARC SE PARCOURT** (§7 bis du fichier, 2026-08-13 : « pouvoir roll les étapes pour y revenir
+et les modifier, et pouvoir revoir le récap »). Il racontait la journée sans s'explorer : seule
+l'étape du moment était atteignable, et une étape passée n'était plus qu'un point vert.
+- Trois entrées, parce qu'aucune ne se devine seule : **toucher un jalon**, **glisser l'arc**
+  (seuil 28 px, l'axe le plus marqué gagne — sinon un défilement vertical changeait d'étape en
+  travers), et les **flèches du clavier** (le guide s'ouvre aussi sur ordinateur).
+- ⚠️ **`etat.cur` et `etat.vue` sont deux choses.** `cur` est l'étape du MOMENT et ne bouge
+  plus ; `vue` est celle qu'on regarde. Les confondre ferait perdre le chemin du retour, d'où le
+  bouton « ↩ Revenir à maintenant » qui remplace « Plus tard » dès qu'on s'éloigne.
+- **Une étape faite propose de la CORRIGER, pas de la refaire** : `revoir` prend la tête des
+  boutons (« Modifier ce repas » → `suivi.html?repas=<id>`, « Revoir le récap » →
+  `NattyBilan.ouvrirJour()`), et l'action d'origine reste en second — un deuxième plat sur le
+  même créneau est légitime. L'identifiant vient de `NattyCreneaux.repas(cle)`.
+- ⚠️ **Sélectionné n'est pas « à faire ».** Le jalon mis en avant peut être une étape déjà
+  cochée : le barillet lui retirait sa coche verte pour son illustration, donc annonçait « c'est
+  maintenant » sur quelque chose de terminé. La pastille pleine dit la sélection, la coche dit
+  l'état. Et `data-role` porte désormais l'état `fait` — deux contenus pour un même rôle, donc le
+  rôle seul ne suffisait plus à décider s'il faut repeindre.
+- La scène « Journée complète » reste parcourable et porte « Revoir le récap », en lisant
+  l'action de l'étape du soir plutôt qu'en en écrivant une seconde.
+
 ⚠️ **Le déclencheur attend 6,5 s, contre 5 s pour `planning.js`** : si la semaine n'est pas
 planifiée, c'est SA séquence qui doit s'ouvrir. Le module regarde l'écran avant de s'y poser
 (`#nplan`, `#nattyAjout`, `NattyGeneration.enCours()`) — deux plein écran l'un sur l'autre ne se
@@ -994,6 +1082,24 @@ sûres mangent le haut ET le bas. Aucune constante ne pouvait tenir sur tous les
   rogner) ; 375 × 667 → 0,26 sans le plat. Dans les quatre cas le bas de l'accueil passe
   au-dessus de la barre d'onglets.
 
+**⚠️⚠️ +30 % (2026-08-13), ET ÇA COÛTE LE « SANS SCROLL » DU 9 AOÛT.** Les deux demandes de
+Pablo sont incompatibles — un bandeau 30 % plus grand prend 30 % de place en plus — et c'est la
+plus récente qui l'emporte.
+- **Monter `K_MAX` de 0,58 à 0,75 ne suffisait PAS**, et c'est le point à comprendre avant d'y
+  retoucher : l'échelle réelle vaut `min(K_MAX, place mesurée / hauteur du contenu)`, et sur un
+  téléphone c'est la PLACE qui commande. Mesuré à 375 × 812 : contenu 489 px, place 208 px, donc
+  k = 0,43 — très en dessous du plafond. Relever le seul plafond n'aurait rien changé à l'écran.
+  Le facteur `K_BOOST = 1.3` s'applique donc à la place mesurée.
+- Mesuré après (bandeau, et défilement de l'accueil) : **375 × 667 → k 0,297, 94 px, 27 px de
+  défilement** (le plat en grand tombe, comme prévu) ; **375 × 812 → k 0,577, 282 px** contre
+  217 px avant, soit +30 % exactement, **70 px de défilement** ; **430 × 932 → k 0,75 (plafond),
+  367 px, 90 px de défilement**.
+- Autrement dit le bas des deux cartes de l'accueil passe désormais sous la barre d'onglets et
+  demande un court défilement. **Pour revenir en arrière, une seule constante : `K_BOOST = 1`.**
+- ⚠️ **Piège de banc** : `resize_window` du navigateur piloté **ne déclenche pas** l'événement
+  `resize` dans la page. Le `k` semblait donc figé à 0,577 sur les trois gabarits, et le code
+  paraissait cassé. Il faut envoyer `new Event('resize')` à la main avant de mesurer.
+
 **Pièges de mise en page, tous trouvés à l'écran et aucun par `node --check` :**
 - ⚠️ **Le sommet de l'arc est à −90°, pas −98.** Décalée de 8°, la pastille du moment tombait à
   41 % de la largeur : tout l'écran — date, titre, bouton — est centré, elle seule ne l'était
@@ -1020,6 +1126,42 @@ sûres mangent le haut ET le bas. Aucune constante ne pouvait tenir sur tous les
 - ⚠️ **Le trait de l'orbite s'éteint par un masque**, il n'est pas coupé : le cercle qui porte
   les jalons a un rayon de 230 px, ses extrémités descendaient barrer le grand titre. Un
   `overflow:hidden` l'aurait tranché net, ce qui se voit encore plus.
+
+### `suivi.html` — corriger un repas déjà enregistré
+Overlay `#ovMealEdit` + `ouvrirEditionRepas(meal)`, ouvert par le bouton « ✏️ Modifier ce
+repas » en tête de la feuille d'analyse d'un plat (donc **avant** l'analyse critique : qui
+vient corriger « 150 g » n'a pas à attendre dix secondes d'IA pour voir comment faire).
+
+**Pourquoi.** Un plat écrit en base était définitif : les trois points de la carte ne
+proposaient que la suppression. Corriger une quantité demandait donc de supprimer le repas et
+de le refaire — photo comprise. On y règle le nom, les quantités (avec l'unité de
+`assets/unites.js`), et on ajoute ou retire des ingrédients.
+
+Ce qui est écrit, dans cet ordre : `meals.name` ; les `meal_ingredients` **effacés puis
+réécrits** (pas de rapprochement ligne à ligne — elles n'ont pas d'identité stable côté
+écran, et un diff serait du code fragile pour économiser une requête sur un repas de cinq
+lignes) ; puis les quatre colonnes de macros, comme `assets/ajout.js`.
+- ⚠️ **Les macros sont OBLIGATOIREMENT réécrites** : `Natty.calcMac` les préfère à la table,
+  donc les laisser en place ferait décrire les nouvelles quantités par les anciennes valeurs.
+  Repli sans ces colonnes si l'instance ne les a pas, comme à l'enregistrement.
+- ⚠️ **L'ANALYSE CRITIQUE EST JETÉE** (`oublierAnalysePlat`). Elle décrit une composition ;
+  changer la composition sans l'effacer laisse un texte qui parle d'un plat qui n'existe
+  plus, et le cache à deux étages l'aurait resservi indéfiniment sans jamais la régénérer. Le
+  `localStorage` ET la colonne `meals.analyse_json` sont vidés — sans le second, la prochaine
+  ouverture sur un autre appareil la ressusciterait.
+- ⚠️ `Natty.entetes()` et pas des en-têtes à la main sur ce PATCH : sans le JWT, la RLS refuse,
+  et le refus serait silencieux.
+- Un ingrédient que la table ne sait pas chiffrer est **gardé, compté 0, et annoncé** en ambre
+  avant d'enregistrer (`calcMac(...).inconnus`) : même règle que le liseré du `+` et que
+  `api/recalc-macros.js`.
+- Après écriture : `loadMeals()`, `afficherMacros()`, `chargerDiagnostics()`,
+  `NattyCreneaux.rafraichirJour()` (le `+` lit ce total pour dire ce qu'il reste) et
+  `natty:repas-ajoute`.
+
+**`?repas=<id>` ouvre directement la correction**, et c'est ce qui permet au guide du jour de
+proposer « Modifier ce repas » sur une étape cochée. ⚠️ Le paramètre est **retiré de l'URL**
+après usage (les autres, dont `token`, sont conservés) : sans ça, un rechargement ou un retour
+arrière rouvrirait l'éditeur indéfiniment.
 
 ### `assets/bilan.js` — le récap du soir, et celui du samedi
 Plein écran qui raconte la journée qui vient de se passer : ce qui a été mangé, ce que la
@@ -1523,7 +1665,8 @@ deux doivent se comporter exactement pareil. Chargée par `social.html` (+ `www/
 > mise en page : `{items, index, titre, courses, actions, aimer, surVue, surMembre}`.
 
 **La composition**, de haut en bas : la jauge en segments et la barre de retour ; le **HÉROS** —
-la photo dans une carte neumorphique arrondie qui occupe **70 % de la hauteur** et sur laquelle
+la photo dans une carte neumorphique arrondie qui occupe **56 % de la hauteur** (70 % jusqu'au
+2026-08-13) et sur laquelle
 **rien** n'est posé ; puis, SOUS la carte, la bulle **noire** du titre (nom + description) et
 les bulles **sombres** des macros (emoji + valeur) ; enfin « Voir les détails », en **texte
 gris**, qui fait monter les ingrédients, les étiquettes, la note et les actions.
@@ -1533,6 +1676,14 @@ gris**, qui fait monter les ingrédients, les étiquettes, la note et les action
 > parfaitement libre ». Ni bulle, ni voile, ni dégradé ne se posent dessus — on voit le plat
 > entier, cadré comme le photographe l'a cadré. C'est le prix des 70 % : à 80 %, il n'y avait
 > pas la place de descendre le titre et les macros sous la carte.
+
+> ⚠️⚠️ **PUIS −20 % (2026-08-13) : 56 %, ET LE TITRE À 26 PX.** Demande de Pablo :
+> « diminuer les photos des héros de 20 % et rendre le titre parfaitement perceptible ». Les
+> deux moitiés sont la MÊME chose — la hauteur rendue par la carte va au bloc du bas, et c'est
+> elle qui permet au titre de passer de 20,5 à 26 px sans être poussé hors de l'écran.
+> Rétrécir la photo sans grossir le titre n'aurait laissé qu'un trou. La description passe à
+> 3 lignes (12,5 px) pour la même raison. Mesuré à 375 × 812 : **56,0 % exactement**, titre sur
+> 3 lignes pour un nom long, aucun chevauchement, et rien d'autre que l'image dans le héros.
 
 - ⚠️ **LE FOND SUIT LE THÈME**, contrairement à la version précédente qui était noire dans les
   deux modes. Tout passe par les jetons `--nt-*` d'`assets/theme.js` — le seul fichier que
@@ -1545,7 +1696,7 @@ gris**, qui fait monter les ingrédients, les étiquettes, la note et les action
 - ⚠️ **Le relief neumorphique ne s'inverse pas en sombre** : un reflet blanc à .9 sur fond noir
   n'est plus un relief, c'est un halo. Il tombe à .04, et c'est l'ombre portée qui creuse
   (`--v-so` / `--v-si`, même règle qu'au §5).
-- ⚠️ **`height:70%` fermement, pas `flex:1`.** Les 70 % sont une promesse ; une carte qui se
+- ⚠️ **`height` fermement, pas `flex:1`.** Le pourcentage est une promesse ; une carte qui se
   compresserait au gré de la longueur du texte ne la tiendrait pas.
 - ⚠️ **La diapositive n'a AUCUNE marge verticale**, et c'est ce qui permet d'annoncer 70 %
   honnêtement : un pourcentage se résout sur la boîte de contenu du parent, donc avec 10 px en
@@ -1558,8 +1709,14 @@ gris**, qui fait monter les ingrédients, les étiquettes, la note et les action
 - ⚠️ **Sous 700 px de haut**, mesuré à 375 × 667, le bloc du bas n'avait que 88 px pour un
   contenu de 113 : la bulle du titre chevauchait les macros. Deux choses cèdent, dans cet
   ordre — la **description** disparaît (elle reste entière dans le tiroir, c'est la ligne dont
-  on peut le plus se passer), puis la carte lâche quatre points (66 %). Rogner la photo
+  on peut le plus se passer), puis la carte lâche quatre points. Rogner la photo
   d'abord aurait été trahir la promesse pour du texte lisible ailleurs.
+- ⚠️⚠️ **ET CETTE VALEUR SUIT LA HAUTEUR DE BASE, SINON ELLE L'INVERSE.** Quand la carte est
+  passée de 70 à 56 %, le 66 % de cette règle média est resté : mesuré à 375 × 667, la photo
+  occupait **66 % sur un petit écran contre 56 % sur un grand** — plus grande là où il y a
+  moins de place, et la réduction demandée annulée précisément sur les téléphones qui en
+  avaient le plus besoin. Le rapport d'origine est conservé : 66/70 de 56, soit **53 %**
+  (mesuré). Attrapé en redimensionnant, invisible à la lecture.
 - **Le tap sur la photo avance d'un plat** (« swippable par un simple click »), en plus du
   geste latéral. ⚠️ Il est testé **en dernier** dans le gestionnaire, après tous les boutons :
   posé avant, il avalerait le clic sur « Voir les détails ». Et il relit la position **réelle**
@@ -2547,6 +2704,18 @@ l'arc de « Ma journée » a été constaté.
 > À rapprocher de la règle 31 : `node --check` valide la syntaxe, pas le comportement visuel.
 > Ici, même le navigateur ment si on ne le fait pas peindre.
 
+### La clé la plus longue gagne — sauf pour un complément (`getNutri`, passe 0)
+**Problème** (2026-08-13) : « Whey isolate chocolat » était compté comme du **chocolat**. Les
+deux clés font un mot, et c'est alors la plus longue qui gagne (« chocolat », 8 lettres,
+contre « whey », 4) : 164 kcal et 1,5 g de protéines pour une dose qui en apporte 24.
+**Fausse solution, testée puis écartée** : « le premier mot du nom gagne » transforme
+« Salade de poulet » en salade à 15 kcal. C'est spécifiquement le nom d'un complément qui est
+dominant — il ne désigne jamais l'ingrédient secondaire d'un plat, seulement son parfum.
+**Solution** : une passe 0 sur la liste `FORTS` avant les deux passes habituelles. Aucun des
+256 libellés déjà en base ne contient un de ces mots, donc elle ne peut rien changer pour eux.
+Vérifié en A/B sur 10 cas de non-régression (dont « Salade de poulet », « Pâte de campagne »,
+« Riz au lait », « chocolat noir »).
+
 ### Icône PWA cassée (`/icon-192.png` inexistant)
 **Problème** : `manifest.json`, `suivi.html` et `onboarding.html` référencent `/icon-192.png`, fichier absent de la racine (seuls `icon-512.png` et les `natty-icon-*.png` existent).
 **Solution** : soit ajouter un `icon-192.png` à la racine, soit faire pointer ces références vers `/natty-icon-192.png` (qui existe déjà).
@@ -2656,6 +2825,41 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 
   Autrement dit la couverture réelle est **totale** sur ce qui est chiffrable : il ne reste
   aucun nom à ajouter à la table de `core.js`, donc rien à régénérer dans `api/_nutrition.js`.
+
+**Saisie des quantités, unités, compléments (2026-08-13)**
+- ✅ **Unités g / ml / pièce** avec détection automatique — `assets/unites.js`, branché sur le
+  `+` et sur l'éditeur de repas. Vérifié en navigateur : `banane` → 1 banane (120 g),
+  `pâtes` → 100 g, `whey` → 1 dose (30 g), `lait` → 200 ml, `œufs` → 1 œuf puis « 3 œufs »
+  (165 g), et la bascule pièces → grammes qui recale les deux nombres.
+- ✅ **Compléments reconnus** : 27 entrées dans la table de `core.js` (whey, isolat, caséine,
+  collagène, gainer, maltodextrine, créatine, BCAA, barres et boissons protéinées, gels,
+  spiruline…), la passe 0 de `getNutri`, les doses dans `unites.js`, et la consigne dans le
+  prompt de l'analyse photo.
+- ✅ **Modifier un repas enregistré** : nom, quantités, ajout/retrait d'ingrédients, depuis
+  l'historique ou par `suivi.html?repas=<id>`. Vérifié bout en bout avec `fetch` sous cloche :
+  PATCH du nom, DELETE puis POST des ingrédients avec leurs macros justes (poulet 250 g →
+  413 kcal / 77,5 P ; whey 30 g → 120 kcal / 24 P), `analyse_json` remise à null, rechargement
+  des macros du jour. Suit les deux thèmes.
+- ✅ **Bug bloquant corrigé** : « + Ajouter un ingrédient » du `+` levait une exception tant
+  qu'aucune photo n'avait été prise (voir §3) — la saisie à la main était inaccessible.
+- 🔄 **Non vérifié sur téléphone** : le menu déroulant d'unité est un `<select>` natif, dont le
+  rendu (roue iOS) n'a pu être jugé qu'en navigateur de bureau.
+- 🔄 **Non vérifié avec une vraie session** : l'éditeur a tourné contre une doublure de `fetch`
+  et des repas fabriqués. Aucune écriture réelle n'a été faite en base.
+
+**Guide « Ma journée » — parcourir et corriger (2026-08-13)**
+- ✅ **Bandeau de `menu.html` agrandi de 30 %** (`K_BOOST`). Mesuré : 375 × 812 → 282 px contre
+  217 px avant. ⚠️ **Coût assumé** : l'accueil demande désormais 27 à 90 px de défilement selon
+  le gabarit, ce qui abandonne la règle « sans scroll » du 9 août — les deux demandes sont
+  incompatibles. Une constante suffit à revenir en arrière (§3).
+- ✅ **L'arc se parcourt** : tap sur un jalon, glissement, flèches du clavier. Une étape faite
+  propose « Modifier ce repas » ; l'étape du soir et la scène « Journée complète » proposent
+  « Revoir le récap ». Vérifié en navigateur : aller sur le matin déjà noté (coche verte
+  conservée sur la pastille sélectionnée), glisser vers le déjeuner, revenir au dîner par la
+  flèche, et un seul bloc dans le DOM après chaque transition (pas d'empilement).
+- 🔄 **Non vérifié sur téléphone** : le glissement réel (inertie, seuil de 28 px) et le rendu
+  des scènes n'ont pu être jugés qu'en navigateur, avec des doublures de `NattyCreneaux`,
+  `NattyPlanning`, `NattyNav` et `NattyBilan`.
 
 **Garde-manger & génération de recettes**
 - ✅ Panneau « Mon garde-manger » dans `repas.html` : scan des courses, du ticket de caisse ou
@@ -3197,6 +3401,15 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 19. **Après chaque push GitHub**, attendre le redéploiement Vercel (statut Ready) avant de tester
 20. **`window._factureProduitsCache`** — données facture dans array global avec `data-idx`, pas en JSON dans `data-produit`
 31. **Compatibilité Capacitor** : signaler à Pablo toute décision qui dépendrait d'une API navigateur non supportée en WebView (voir §10), ou d'un chemin absolu qui casserait si l'app n'est plus servie depuis la racine du domaine
+35. **Une quantité se SAISIT dans une unité, elle se STOCKE en grammes.** Tout nouvel écran qui
+    fait saisir un ingrédient passe par `assets/unites.js` (`deviner`/`saisir`/`poser`) et
+    écrit `quantity_g`. Ne jamais enregistrer `qte`/`unite` en base : rien ne les lit, et une
+    quantité dont l'unité serait perdue deviendrait un chiffre faux. Et si l'affichage change
+    l'arrondi, ce sont les grammes qui suivent — jamais l'inverse.
+36. **Toujours vérifier qu'une règle `@media` suit la valeur de base qu'elle corrige.** Trouvé
+    deux fois : la carte de la visionneuse à 66 % sous 700 px alors que la base passait à
+    56 %, donc plus grande sur petit écran. Une valeur de repli qui ne bouge pas quand la
+    valeur principale bouge finit par l'inverser.
 33. **Une couleur écrite en dur est une couleur qui ne basculera pas.** Toute
     nouvelle règle CSS passe par un jeton (`--bg`, `--card`, `--ink`,
     `--on-ink`, `--muted`, `--line`, ou les `--nt-*` pour un module injecté).
