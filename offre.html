@@ -259,6 +259,9 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
   background:var(--ink); color:var(--on-ink); font-family: inherit; font-size: 15px; font-weight: 700; }
 .unite-payer:disabled { opacity: .45; cursor: default; }
 .unite-note { font-size: 11px; color:var(--muted); line-height: 1.5; margin-top: 12px; text-align: center; }
+/* Sans cette règle, le lien tel: prend le bleu souligné du navigateur — la
+   seule tache de bleu de toute l'application, juste sous le bouton de paiement. */
+.unite-note a { color:var(--txt); font-weight: 700; text-decoration: none; border-bottom: 1px solid var(--creux-30); }
 
 /* EMAIL RGPD */
 .email-section { display: flex; flex-direction: column; gap: 14px; }
@@ -334,15 +337,16 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
        `creerSession` d'api/checkout.js, partagée avec l'abonnement pour que le
        retour natif ne soit pas corrigé d'un côté et oublié de l'autre. -->
   <div class="step" id="stepUnite">
-    <div class="page-header"><h1>Commander à l'unité</h1><p>Sans engagement · 9 € le plat</p></div>
+    <div class="page-header"><h1>Commander à l'unité</h1><p>Sans engagement · 10,50 € le plat</p></div>
     <div id="uniteListe" class="unite-liste">
       <div class="unite-vide">Chargement du menu…</div>
     </div>
     <div class="unite-total" id="uniteTotal" style="display:none">
       <div class="unite-total-l"><span id="uniteNb">0 plat</span><strong id="unitePrix">0 €</strong></div>
       <button class="unite-payer" id="unitePayer" disabled>Choisissez au moins un plat</button>
-      <p class="unite-note">Livraison au même jour et à la même adresse que votre abonnement.
-        Sans abonnement, nous vous contactons pour convenir de la livraison.</p>
+      <p class="unite-note">Livraison à Paris, au même jour et à la même adresse que votre
+        abonnement. Sans abonnement, nous vous contactons pour convenir de la livraison —
+        une question&nbsp;? <a href="tel:+33770242964">07&nbsp;70&nbsp;24&nbsp;29&nbsp;64</a>.</p>
     </div>
   </div>
 
@@ -1051,11 +1055,23 @@ async function souscrire(){
 
    ⚠️ LE PRIX AFFICHÉ N'EST PAS LE PRIX FACTURÉ, et c'est voulu. Stripe fait
    foi : le serveur lit `STRIPE_PRICE_UNITE` et ne prend rien du client, donc
-   personne ne peut se fabriquer un tarif. Les 9 € ci-dessous ne servent qu'à
+   personne ne peut se fabriquer un tarif. Les 10,50 € ci-dessous ne servent qu'à
    annoncer un ordre de grandeur avant le paiement — l'écran Stripe affiche le
    montant réel avant validation. Si le prix change dans Stripe, cette
    constante est à suivre, sinon l'annonce et la facture divergent. */
-const PRIX_UNITE_AFFICHE = 9;
+const PRIX_UNITE_AFFICHE = 10.5;
+
+/* ⚠️ Un prix à décimales s'écrit à la française, sinon `3 × 10.5` s'affiche
+   « 31.5 € » — point décimal et centime manquant, sur l'écran juste avant le
+   paiement. `toLocaleString` met la virgule ET les deux décimales, et laisse
+   « 21 € » sans décimales inutiles quand le total tombe rond. */
+function euros(n) {
+  const rond = Math.abs(n - Math.round(n)) < 0.005;
+  return n.toLocaleString('fr-FR', {
+    minimumFractionDigits: rond ? 0 : 2,
+    maximumFractionDigits: 2
+  }) + ' €';
+}
 const uniteQte = {};   // id du plat → quantité
 let unitePlats = [];
 
@@ -1154,11 +1170,11 @@ function uniteChanger(id, d){
 function uniteMaj(){
   const n = uniteTotalQte();
   document.getElementById('uniteNb').textContent = n + ' plat' + (n > 1 ? 's' : '');
-  document.getElementById('unitePrix').textContent = (n * PRIX_UNITE_AFFICHE) + ' €';
+  document.getElementById('unitePrix').textContent = euros(n * PRIX_UNITE_AFFICHE);
   const b = document.getElementById('unitePayer');
   b.disabled = n === 0;
   b.textContent = n === 0 ? 'Choisissez au moins un plat'
-    : 'Payer ' + (n * PRIX_UNITE_AFFICHE) + ' € →';
+    : 'Payer ' + euros(n * PRIX_UNITE_AFFICHE) + ' →';
 }
 
 async function unitePayer(){
