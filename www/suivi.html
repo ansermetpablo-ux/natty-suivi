@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<!-- Aucun zoom : ni pincée, ni double-tap (le <meta viewport> ne suffit pas,
+     iOS l'ignore). Synchrone et dans le <head>, comme theme.js. -->
+<script src="/assets/zoom.js"></script>
   <title>Natty · Suivi</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#000000">
@@ -20,12 +23,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-/* Pas de zoom (le double-tap se désarme avec touch-action, pas avec le
-   seul meta viewport) et pas de rebond élastique : c'est lui qui faisait
+/* Pas de zoom — point de vérité dans `assets/zoom.js`. `pan-x pan-y` et non
+   `manipulation` : celle-ci ne désarme que le double-tap, la pincée passait
+   encore. Et le seul <meta viewport> ne suffit pas : iOS l'ignore depuis la
+   version 10.
+   Pas de rebond élastique non plus : c'est lui qui faisait
    « suivre le scroll » à la barre d'onglets, pourtant en position:fixed —
    iOS translate tout le calque, éléments fixes compris. */
 html { -webkit-text-size-adjust:100%; text-size-adjust:100%; overscroll-behavior:none; }
-body { overscroll-behavior:none; touch-action:manipulation; overflow-x:hidden; }
+body { overscroll-behavior:none; touch-action:pan-x pan-y; overflow-x:hidden; }
 :root {
   --bg: #f0f0f3;
   --so: 6px 6px 16px rgba(174,174,192,0.42), -6px -6px 16px rgba(255,255,255,0.88);

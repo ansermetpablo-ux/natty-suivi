@@ -1370,26 +1370,24 @@ window.NattyJournee = (function () {
      un iPhone à encoche, dont les zones sûres mangent le haut ET le bas). Une
      valeur fixe ne pouvait pas tenir sur tous les gabarits : c'est la seule
      raison pour laquelle elle est calculée. */
-  var K_MAX = 0.75, K_MIN = 0.26;
+  var K_MAX = 0.58, K_MIN = 0.26;
 
-  /* ⚠️⚠️ +30 %, ET IL FAUT DIRE CE QUE ÇA COÛTE (demande de Pablo, 13 août 2026 :
-     « agrandir de 30 % »).
+  /* ⚠️ L'AGRANDISSEMENT DE 30 % A ÉTÉ ESSAYÉ PUIS RETIRÉ (13 août 2026, dans la
+     journée : « agrandis de 30 % » puis « oublie le grossissement »). La note
+     reste, parce qu'elle explique pourquoi la demande n'était pas tenable et
+     évitera de la reprendre à l'identique.
 
-     Monter `K_MAX` de 0,58 à 0,75 ne suffisait PAS, et c'est le point à
-     comprendre avant d'y retoucher : l'échelle réelle est
+     Ce qui a été mesuré. Monter `K_MAX` ne suffit pas : l'échelle réelle vaut
      `min(K_MAX, place disponible / hauteur du contenu)`, et sur un téléphone
-     c'est la place qui commande, pas le plafond. Calculé à 375 × 812 : la
-     composition mesure ~481 px de haut, il reste ~208 px sous l'en-tête et
-     au-dessus de la bannière des plats, donc k valait **0,43** — très en
-     dessous de 0,58. Relever le seul plafond n'aurait rien changé à l'écran.
+     c'est la PLACE qui commande. À 375 × 812, la composition mesure ~489 px pour
+     ~208 px disponibles, donc k = 0,43 — très en dessous du plafond. Le facteur
+     devait donc s'appliquer à la place mesurée, ce qui donnait bien +30 %
+     (282 px contre 217) mais faisait passer le bas des deux cartes de l'accueil
+     SOUS la barre d'onglets : 27 à 90 px de défilement selon le gabarit.
 
-     Le facteur s'applique donc à la place mesurée. Conséquence assumée, et
-     c'est un renoncement à la règle du 9 août (« tous les éléments accessibles
-     sans scroll ») : sur un petit écran, l'accueil peut désormais demander un
-     court défilement pour atteindre le bas des deux cartes. Les deux demandes
-     sont incompatibles — un bandeau 30 % plus grand prend 30 % de place en
-     plus — et c'est la plus récente qui l'emporte. */
-  var K_BOOST = 1.3;
+     C'était incompatible avec la règle du 9 août — « tous les éléments
+     accessibles sans scroll » — et c'est cette règle qui est conservée. Le
+     bandeau reprend donc sa taille de confort. */
   /* En dessous de ce seuil, on cesse de tout rapetisser et on RETIRE le plat en
      grand : à 156 px de haut, c'est le tiers de la composition, et sous 0,34
      d'échelle il ne fait plus que 50 px — c'est-à-dire à peine plus que la
@@ -1406,10 +1404,8 @@ window.NattyJournee = (function () {
       /* La hauteur est posée en dur comme plancher, puis MESURÉE : le contenu
          change avec le nombre d'étapes et la longueur du titre, et une hauteur
          devinée laisserait soit un trou, soit un arc coupé. */
-      // Le plancher suit l'agrandissement : à 290 px il coupait l'arc pendant
-      // les quelques images qui précèdent la mesure.
       '.njb{--njb-k:' + K_BANDEAU + ';position:relative;display:block;width:100%;',
-      'height:377px;border:none;background:none;padding:0;margin:0 0 4px;',
+      'height:290px;border:none;background:none;padding:0;margin:0 0 4px;',
       'font-family:inherit;cursor:pointer;overflow:hidden;text-align:center;',
       '-webkit-tap-highlight-color:transparent;color:var(--j-ink)}',
       '.njb:active{opacity:.72}',
@@ -1481,14 +1477,14 @@ window.NattyJournee = (function () {
       var haut = b.getBoundingClientRect().top + (window.pageYOffset || 0);
       var dispo = window.innerHeight - haut - apres - basNav;
 
-      var k = (dispo / H) * K_BOOST;
+      var k = dispo / H;
       /* Trop serré : on retire le plat plutôt que de tout réduire, puis on
          remesure — sans lui la composition est plus courte, donc l'échelle
          remonte, et l'arc comme le titre restent lisibles. */
       if (k < K_SANS_HERO) {
         b.classList.add('njb-sec');
         H = dedans.offsetHeight;
-        k = (dispo / H) * K_BOOST;
+        k = dispo / H;
       }
 
       k = Math.max(K_MIN, Math.min(K_MAX, k));

@@ -1082,20 +1082,20 @@ sûres mangent le haut ET le bas. Aucune constante ne pouvait tenir sur tous les
   rogner) ; 375 × 667 → 0,26 sans le plat. Dans les quatre cas le bas de l'accueil passe
   au-dessus de la barre d'onglets.
 
-**⚠️⚠️ +30 % (2026-08-13), ET ÇA COÛTE LE « SANS SCROLL » DU 9 AOÛT.** Les deux demandes de
-Pablo sont incompatibles — un bandeau 30 % plus grand prend 30 % de place en plus — et c'est la
-plus récente qui l'emporte.
+**⚠️⚠️ +30 % ESSAYÉ PUIS RETIRÉ (13 août 2026, dans la journée).** « Agrandis de 30 % », puis
+« oublie le grossissement » une fois vu à l'écran. La note reste, parce qu'elle explique
+pourquoi la demande n'était pas tenable et évitera de la reprendre à l'identique.
 - **Monter `K_MAX` de 0,58 à 0,75 ne suffisait PAS**, et c'est le point à comprendre avant d'y
   retoucher : l'échelle réelle vaut `min(K_MAX, place mesurée / hauteur du contenu)`, et sur un
   téléphone c'est la PLACE qui commande. Mesuré à 375 × 812 : contenu 489 px, place 208 px, donc
   k = 0,43 — très en dessous du plafond. Relever le seul plafond n'aurait rien changé à l'écran.
   Le facteur `K_BOOST = 1.3` s'applique donc à la place mesurée.
-- Mesuré après (bandeau, et défilement de l'accueil) : **375 × 667 → k 0,297, 94 px, 27 px de
-  défilement** (le plat en grand tombe, comme prévu) ; **375 × 812 → k 0,577, 282 px** contre
-  217 px avant, soit +30 % exactement, **70 px de défilement** ; **430 × 932 → k 0,75 (plafond),
-  367 px, 90 px de défilement**.
-- Autrement dit le bas des deux cartes de l'accueil passe désormais sous la barre d'onglets et
-  demande un court défilement. **Pour revenir en arrière, une seule constante : `K_BOOST = 1`.**
+- Mesuré alors : **375 × 812 → 282 px** contre 217 px, soit +30 % exactement — mais le bas des
+  deux cartes de l'accueil passait **sous la barre d'onglets**, avec 27 à 90 px de défilement
+  selon le gabarit. C'était incompatible avec la règle du 9 août (« tous les éléments
+  accessibles sans scroll »), et c'est cette règle qui a été conservée.
+- État actuel, remesuré après retrait : **375 × 812 → k 0,435, 213 px**, et le bas de
+  l'accueil (713 px) repasse au-dessus de la barre d'onglets (727 px).
 - ⚠️ **Piège de banc** : `resize_window` du navigateur piloté **ne déclenche pas** l'événement
   `resize` dans la page. Le `k` semblait donc figé à 0,577 sur les trois gabarits, et le code
   paraissait cassé. Il faut envoyer `new Event('resize')` à la main avant de mesurer.
@@ -1240,6 +1240,53 @@ l'onglet Suivi (ouvrir Suivi ne fait pas le point du soir).
 jour : l'écran à sept est alors **intestable**, et on conclut à tort que le graphique est
 cassé. Le banc remplace `Date` lui-même, avant tout le reste, pour que la doublure des repas,
 `core.js` et `bilan.js` lisent la même heure.
+
+### `assets/zoom.js` — aucun zoom, nulle part
+Chargé **en synchrone dans le `<head>`** de tous les écrans de l'app (34 pages, racine +
+`www/`), juste après le `<meta name="viewport">` — il corrige cette balise, donc il doit la
+trouver déjà analysée. N'expose rien, ne dépend de rien.
+
+> ⚠️⚠️ **`user-scalable=no` NE SUFFIT PAS, ET C'EST TOUT LE SUJET.** iOS l'ignore
+> délibérément depuis la version 10 — Safari comme WKWebView, donc l'app Capacitor aussi.
+> Les `maximum-scale=1.0, user-scalable=no` étaient pourtant **déjà présents sur presque
+> toutes les pages** : ils n'ont jamais rien empêché sur iPhone. Le commentaire
+> d'`assets/style.css` affirmait même l'inverse (« suffit à la pincée »), ce qui explique que
+> le zoom ait survécu à une première passe. Corrigé sur place — ne pas le réécrire.
+
+Trois verrous, et ce que chacun arrête :
+1. **`touch-action:pan-x pan-y` sur `html` et `body`** → la pincée ET le double-tap. Toute
+   valeur autre que `auto`/`manipulation` désarme le double-tap ; `pan-x pan-y` retire en plus
+   la pincée, là où `manipulation` (ce qu'il y avait) la laissait passer. Le défilement reste
+   intact, c'est précisément ce que `pan-x`/`pan-y` autorisent.
+2. **`gesturestart` / `gesturechange` / `gestureend`** en `preventDefault` → la pincée WebKit,
+   qui passe par ces événements propriétaires. `{passive:false}` est obligatoire, sinon
+   `preventDefault()` n'a aucun effet.
+3. **`-webkit-text-size-adjust:100%`** → l'autre zoom, celui que WebKit applique tout seul au
+   texte.
+
+- ⚠️ **`!important` sur `html,body`, et c'est délibéré.** Le module s'injecte depuis le
+  `<head>`, donc AVANT les `<link rel="stylesheet">` qui suivent : sans lui, le
+  `body{touch-action:manipulation}` d'`assets/style.css` (même spécificité, déclaré plus tard)
+  l'emporterait et la pincée reviendrait. Il ne porte que sur ces deux éléments.
+- ⚠️ **Les glissements des jeux ne sont PAS touchés** : `.tl-item`, `.sw-card`, `.dial`,
+  `.paint-stage` (narration.html), les pièces d'`assets/minijeux.js` et les jalons
+  d'`assets/journee.js` déclarent leur propre `touch-action` sur des sélecteurs plus
+  spécifiques. Vérifié : un `.tl-item` inséré dans un document en `pan-x pan-y` calcule bien
+  `none`.
+- ⚠️ **Il ne crée jamais une seconde balise viewport.** S'il tourne avant qu'elle soit
+  analysée, il ne la trouve pas ; en ajouter une donnerait DEUX `meta[name=viewport]`, et
+  c'est la dernière qui gagne — donc celle qu'on voulait corriger. Il corrige ce qui est là,
+  puis repasse au `DOMContentLoaded` pour le reste.
+- **`admin.html` est volontairement exclu** : back-office de bureau, où la pincée sur un
+  tableau sert à quelque chose et où il n'y a pas d'app à protéger.
+- **Ce qui n'est pas bloqué** : le zoom du NAVIGATEUR (Ctrl +/−, Ctrl + molette) sur le web.
+  Ce n'est pas un geste dans la page mais un réglage de l'utilisateur ; le retirer casserait
+  l'accessibilité sur ordinateur sans rien apporter à l'app.
+
+⚠️ **`www/index.html` — le point d'entrée du bundle natif — était l'UNE DES RARES PAGES à ne
+pas porter `maximum-scale`/`user-scalable`.** L'app native était donc le seul endroit où même
+le garde-fou d'Android manquait. Aligné, et c'est justement pour ça que la normalisation vit
+dans le module et non page par page.
 
 ### `assets/theme.js` — le thème clair / sombre
 Chargé **dans le `<head>`, de façon synchrone**, par tous les écrans de l'app
@@ -2847,11 +2894,24 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - 🔄 **Non vérifié avec une vraie session** : l'éditeur a tourné contre une doublure de `fetch`
   et des repas fabriqués. Aucune écriture réelle n'a été faite en base.
 
+**Zoom retiré de toute l'application (2026-08-13)**
+- ✅ **`assets/zoom.js`**, chargé dans le `<head>` des 34 écrans (racine + `www/`) : pincée,
+  double-tap et zoom automatique du texte. Détail et pièges en §3.
+- ✅ Vérifié en navigateur sur quatre familles de pages — `menu.html` (avec `style.css`),
+  `suivi.html` (feuille propre), `narration.html` (aucune feuille partagée) et `cgu.html`
+  (`legal.css`) : `touch-action` calculé à `pan-x pan-y` sur `html` ET `body`, une seule balise
+  viewport normalisée, `gesturestart`/`gesturechange` interceptés, **le défilement intact**
+  (250 px et 400 px demandés, obtenus), et un élément glissable qui conserve `touch-action:
+  none`.
+- 🔄 **Non vérifié sur iPhone** — et c'est le seul endroit où la question se pose vraiment,
+  puisque c'est iOS qui ignorait le `<meta viewport>`. À refaire au prochain build : pincer,
+  double-taper, et vérifier qu'un glissement dans les jeux du parcours répond toujours.
+
 **Guide « Ma journée » — parcourir et corriger (2026-08-13)**
-- ✅ **Bandeau de `menu.html` agrandi de 30 %** (`K_BOOST`). Mesuré : 375 × 812 → 282 px contre
-  217 px avant. ⚠️ **Coût assumé** : l'accueil demande désormais 27 à 90 px de défilement selon
-  le gabarit, ce qui abandonne la règle « sans scroll » du 9 août — les deux demandes sont
-  incompatibles. Une constante suffit à revenir en arrière (§3).
+- ↩️ **Bandeau de `menu.html` : agrandissement de 30 % essayé puis RETIRÉ** le jour même, à la
+  demande de Pablo (« oublie le grossissement »). Il faisait passer le bas des deux cartes
+  sous la barre d'onglets. Le bandeau est revenu à sa taille de confort — vérifié :
+  213 px à 375 × 812, accueil de nouveau atteignable sans défiler.
 - ✅ **L'arc se parcourt** : tap sur un jalon, glissement, flèches du clavier. Une étape faite
   propose « Modifier ce repas » ; l'étape du soir et la scène « Journée complète » proposent
   « Revoir le récap ». Vérifié en navigateur : aller sur le matin déjà noté (coche verte
@@ -3401,6 +3461,10 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 19. **Après chaque push GitHub**, attendre le redéploiement Vercel (statut Ready) avant de tester
 20. **`window._factureProduitsCache`** — données facture dans array global avec `data-idx`, pas en JSON dans `data-produit`
 31. **Compatibilité Capacitor** : signaler à Pablo toute décision qui dépendrait d'une API navigateur non supportée en WebView (voir §10), ou d'un chemin absolu qui casserait si l'app n'est plus servie depuis la racine du domaine
+37. **Le zoom se coupe avec `touch-action`, jamais avec le seul `<meta viewport>`.** iOS ignore
+    `user-scalable=no` depuis la version 10. Toute page nouvelle charge `assets/zoom.js` dans
+    son `<head>`, juste après sa balise viewport — et si elle déclare un `touch-action` sur
+    `body`, ce doit être `pan-x pan-y` et non `manipulation`, qui laisse passer la pincée.
 35. **Une quantité se SAISIT dans une unité, elle se STOCKE en grammes.** Tout nouvel écran qui
     fait saisir un ingrédient passe par `assets/unites.js` (`deviner`/`saisir`/`poser`) et
     écrit `quantity_g`. Ne jamais enregistrer `qte`/`unite` en base : rien ne les lit, et une

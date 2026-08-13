@@ -134,12 +134,18 @@
 /* ── Pas de zoom, pas de rebond ─────────────────────────────
    Deux corrections liées, toutes deux demandées après essai sur iPhone.
 
-   1. ZOOM. Le `user-scalable=no` du <meta viewport> suffit à la pincée, mais
-      pas au DOUBLE-TAP : c'est `touch-action:manipulation` qui le désarme
-      (le navigateur cesse d'attendre un éventuel second tap, ce qui rend au
-      passage les boutons plus francs — ~300 ms de moins).
-      `-webkit-text-size-adjust` empêche l'autre zoom, celui que WebKit
-      applique tout seul au texte.
+   1. ZOOM — VOIR `assets/zoom.js`, qui en est le point de vérité et couvre
+      TOUS les écrans, y compris ceux qui ne chargent pas cette feuille
+      (`narration.html`, `suivi.html`, les pages d'entrée).
+      ⚠️ Ce commentaire affirmait que « le `user-scalable=no` du <meta viewport>
+      suffit à la pincée ». C'est FAUX : iOS l'ignore depuis la version 10,
+      Safari comme WKWebView. Et `touch-action:manipulation` ne désarme que le
+      double-tap, pas la pincée — d'où le zoom encore possible sur iPhone après
+      cette première passe. La valeur est donc `pan-x pan-y` (voir le module).
+      Ce qui restait juste : `touch-action` rend au passage les boutons plus
+      francs (~300 ms de moins, le navigateur n'attend plus un second tap), et
+      `-webkit-text-size-adjust` empêche l'autre zoom, celui que WebKit applique
+      tout seul au texte.
 
    2. LA BARRE D'ONGLETS QUI « SUIT LE SCROLL ». Elle est pourtant en
       `position:fixed` depuis toujours : ce qu'on voit bouger, c'est le
@@ -159,7 +165,7 @@ body{
   color:var(--ink);
   min-height:100vh;
   overscroll-behavior:none;
-  touch-action:manipulation;
+  touch-action:pan-x pan-y;   /* pas manipulation : elle laisse passer la pincée */
   overflow-x:hidden;
 }
 
