@@ -543,6 +543,83 @@ var Natty = (function () {
     window.location.href = page + qs;
   }
 
+  /* ── Les liens, et les deux façons dont ils cassent en WebView ──────────
+     Signalé par Pablo : dans `offre.html`, taper « politique de confidentialité »
+     ou « conditions de vente » n'ouvrait RIEN. Ce n'était pas un mauvais chemin —
+     c'était `target="_blank"`.
+
+     ⚠️ `target="_blank"` NE FAIT RIEN dans une WebView Capacitor. Ouvrir un
+     nouvel onglet suppose un gestionnaire de fenêtre ; il n'y en a pas, donc le
+     clic est avalé en silence. Le lien a l'air mort, et sur une case à cocher
+     RGPD que l'utilisateur doit accepter, c'est un vrai problème de conformité :
+     on lui demande d'accepter un document qu'il ne peut pas lire.
+
+     ⚠️ Et un lien EXTERNE suivi dans la WebView est le piège inverse (§11) :
+     il quitte le bundle et il n'y a ni barre d'adresse ni bouton retour pour
+     revenir. Motif possible de refus en review.
+
+     Un seul gestionnaire délégué règle les deux, pour toutes les pages qui
+     chargent ce fichier — plutôt que de corriger trois `<a>` aujourd'hui et
+     d'oublier le quatrième demain :
+       • lien INTERNE ouvert en `_blank` → on ouvre dans la même vue. Les pages
+         légales portent déjà leur bouton retour (`lg-back`), donc rien ne manque ;
+       • lien EXTERNE en natif → navigateur système, qui a ses propres commandes.
+     Sur le web, on ne touche à rien : `target="_blank"` y fonctionne. */
+  function estNatif() {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform
+              && window.Capacitor.isNativePlatform());
+  }
+
+  function brancherLiens() {
+    /* ⚠️ EN PHASE DE CAPTURE, ET C'EST INDISPENSABLE. Les deux liens légaux de
+       la case RGPD d'`offre.html` portent `onclick="event.stopPropagation()"` —
+       nécessaire là-bas, sinon taper le lien cocherait la case, dont le
+       `.rgpd-row` parent est cliquable. Mais `stopPropagation()` coupe la
+       remontée : un écouteur posé sur `document` en phase de bulle n'est JAMAIS
+       appelé. C'est ce qui s'est vu au banc — le clic passait, le lien ne
+       s'ouvrait toujours pas.
+       La capture descend depuis `document` vers la cible, donc avant que le
+       `onclick` du lien ne s'exécute : elle voit tout, quoi que fasse la page. */
+    document.addEventListener('click', function (ev) {
+      // Un clic avec modificateur, ou autre que le bouton principal, appartient
+      // à l'utilisateur (nouvel onglet volontaire sur le web) : on s'abstient.
+      if (ev.defaultPrevented || ev.button !== 0) return;
+      if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+
+      var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+      if (!a) return;
+
+      var href = a.getAttribute('href') || '';
+      // Ancres, gestionnaires JS, mailto:, tel: — laissés au navigateur, qui
+      // sait déjà les traiter (Capacitor route mailto/tel vers l'app native).
+      if (!href || href.charAt(0) === '#') return;
+      if (/^(javascript|mailto|tel|sms):/i.test(href)) return;
+
+      var externe = /^https?:\/\//i.test(href) && a.host && a.host !== window.location.host;
+
+      if (externe) {
+        if (!estNatif()) return;              // sur le web, comportement natif du navigateur
+        var B = window.Capacitor.Plugins.Browser;
+        if (!B) return;                       // sans le plugin, mieux vaut le lien tel quel
+        ev.preventDefault();
+        B.open({ url: a.href });
+        return;
+      }
+
+      // Interne : le seul cas à réparer est la cible `_blank`.
+      if (a.target === '_blank') {
+        ev.preventDefault();
+        window.location.href = a.href;
+      }
+    }, true);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', brancherLiens);
+  } else {
+    brancherLiens();
+  }
+
   /* ── Demander, et prévenir — sans dialogue natif ────────────
      `confirm()` et `alert()` fonctionnent dans une WebView, mais s'y affichent
      avec l'origine du bundle en titre — « capacitor://localhost », ou une page
