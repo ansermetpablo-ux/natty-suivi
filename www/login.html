@@ -603,18 +603,31 @@ var CAP_REDIRECT = 'com.nattynutrition.app://oauth-callback';
    le message dira « Connexion réussie » : confirmer son email OUVRE la
    session, ce n'est pas qu'une case à cocher.
 
-   ⚠️⚠️ ET C'EST EXACTEMENT L'URL DE LA CONNEXION GOOGLE WEB, `?oauth=1`
-   compris — ne pas la « corriger » en `?confirme=1`, qui serait pourtant
-   plus parlant. Une valeur hors de la liste Authentication → URL
-   Configuration → Redirect URLs n'est pas refusée : elle est
-   **silencieusement remplacée** par le Site URL, donc par le bug qu'on vient
-   de corriger. Relevé le 2026-08-14 en sondant `/auth/v1/verify` avec un
-   jeton bidon (inoffensif, et c'est le chemin exact du lien d'un email) :
-   la liste ne contient QUE deux entrées, littérales —
-   `https://natty-suivi.vercel.app/login.html?oauth=1` et
-   `com.nattynutrition.app://oauth-callback`. Ni `/login.html` nu, ni
-   `?oauth=1&x=2`, ni la racine ne passent. Viser la seule URL https
-   autorisée est ce qui rend ce correctif effectif sans toucher à Supabase. */
+   ⚠️ UNE VALEUR HORS DE LA LISTE Authentication → URL Configuration →
+   Redirect URLs N'EST PAS REFUSÉE : elle est **silencieusement remplacée**
+   par le Site URL, donc par le bug qu'on vient de corriger. Sonder avant
+   d'écrire, avec `/auth/v1/verify` et un jeton bidon — inoffensif, et c'est
+   le chemin exact du lien d'un email :
+
+     curl -s -o /dev/null -w '%{redirect_url}\n' \
+       "$SB/auth/v1/verify?token=000&type=signup&redirect_to=<URL encodée>"
+
+   L'URL rendue est celle qu'on a demandée si elle est autorisée, sinon c'est
+   le Site URL — ce qui révèle les deux informations d'un coup.
+
+   État mesuré (2026-08-14, APRÈS que Pablo a élargi la liste) : tout
+   `https://natty-suivi.vercel.app/**` passe, un domaine étranger est refusé.
+   Ce n'était pas le cas quelques heures plus tôt — la liste tenait alors en
+   deux entrées littérales, et `?confirme=1` était rejeté. D'où le choix de
+   `?oauth=1`, l'URL de la connexion Google web, qui marchait déjà : on le
+   garde parce qu'il marche, pas parce qu'il est plus juste. Le renommer en
+   `?confirme=1` serait plus parlant et n'apporterait rien — ce paramètre
+   n'est lu par personne, `traiterRetourOAuth()` ne regardant que le fragment.
+
+   ⚠️ ET LE SITE URL, LUI, EST TOUJOURS `com.natty.app://oauth-callback` —
+   vérifié le même jour. Tout email d'authentification qui n'envoie pas son
+   propre `redirect_to` (changement d'adresse, invitation, lien magique)
+   retombe donc encore sur la page noire. Ces deux appels-ci sont couverts. */
 var RETOUR_EMAIL = 'https://natty-suivi.vercel.app/login.html?oauth=1';
 
 function estNatif() {

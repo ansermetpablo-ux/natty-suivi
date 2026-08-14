@@ -2,40 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "static",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "4173"
-      ],
-      "port": 4173
-    },
-    {
-      "name": "static-node",
+      "name": "natty",
       "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "/private/tmp/claude-501/-Users-pablo-Documents-GitHub-natty-suivi/f16805e2-9211-40fe-890b-76f7785d0876/scratchpad/serve.js"
-      ],
-      "port": 4174
-    },
-    {
-      "name": "natty-dark",
-      "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "/private/tmp/claude-501/-Users-pablo-Documents-GitHub-natty-suivi/57cad5c5-a00d-459a-be82-b63eab3af7ea/scratchpad/serve.js"
-      ],
-      "port": 4188,
-      "autoPort": false
-    },
-    {
-      "name": "natty-journee",
-      "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "/private/tmp/claude-501/-Users-pablo-Documents-GitHub-natty-suivi/76f3ae8c-bd47-4964-afd8-4a239a9e09b0/scratchpad/serve.js"
-      ],
-      "port": 4191,
-      "autoPort": false
+      "runtimeArgs": ["scripts/serveur-local.js"],
+      "port": 4196
     }
   ]
 }
