@@ -78,8 +78,45 @@ var NattyCommande = (function () {
       'background:var(--nt-ink);color:var(--nt-on-ink);border:none;border-radius:999px;',
       'padding:8px 14px;font-family:inherit;font-size:12.5px;font-weight:800;',
       'letter-spacing:.2px;cursor:pointer;white-space:nowrap;max-width:52vw;',
-      'overflow:hidden;text-overflow:ellipsis;line-height:1.15;flex:0 1 auto}',
+      'overflow:hidden;line-height:1.15;flex:0 1 auto}',
       '.top .ncmd-chip:active,.ncmd-chip:active{opacity:.8}',
+      /* ⚠️ LES POINTS DE SUSPENSION VEULENT UN ÉLÉMENT À EUX. `text-overflow`
+         ne s'applique pas à un conteneur flex : posé sur la pastille elle-même,
+         le libellé se coupait NET au bord (vu à 320 px), ce qui se lit comme un
+         bug d'affichage et non comme un texte abrégé. Le rétrécissement, lui,
+         a besoin de `min-width:0` — un élément flex refuse par défaut de
+         passer sous la largeur de son contenu. */
+      '.ncmd-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+
+      /* ── le centrage, et pourquoi il ne peut plus dépendre des icônes ──
+         ⚠️ `space-between` NE CENTRE RIEN. Avec [maison, pastille, profil] la
+         répartition tombait à peu près au milieu ; dès que le retour « ‹ »
+         apparaît (au retour d'une page, `window.history.length > 1`), l'espace
+         se redistribue entre QUATRE éléments et la pastille glisse vers la
+         droite. Elle changeait donc de place selon d'où l'on arrivait.
+         Elle est désormais posée en absolu sur l'axe de l'écran : sa position
+         ne dépend plus de ce qu'il y a autour. `.top` est en `position:sticky`,
+         donc déjà un bloc conteneur — surtout NE PAS lui ajouter
+         `position:relative`, ce qui décollerait la barre au défilement.
+         Les icônes, elles, passent en `flex-start` et le dernier élément
+         (le profil) est renvoyé à droite : sans ça, `space-between` sur les
+         trois icônes restantes poserait la maison pile au centre, sous la
+         pastille. */
+      '.top.ncmd-bar{justify-content:flex-start;gap:14px}',
+      '.top.ncmd-bar .ncmd-fin{margin-left:auto}',
+      /* Le décalage vertical recopie le rembourrage haut de `.top`
+         (assets/style.css) plus la demi-hauteur d'une icône (26 px), pour que
+         la pastille s'aligne sur la maison et le profil. Centrer sur la boîte
+         entière la ferait descendre : le rembourrage est asymétrique (haut
+         ≥ 20 px, bas 8 px). Hors flux, elle ne change plus la hauteur de la
+         barre — elle déborde dans le rembourrage, qui a la place. */
+      '.top.ncmd-bar .ncmd-chip{position:absolute;left:50%;',
+      'top:calc(20px + env(safe-area-inset-top, 0px) + 13px);',
+      'transform:translate(-50%,-50%);',
+      /* La réserve tient les deux icônes de gauche (2 × 26 px + gouttière) et
+         celle de droite, rembourrages compris : la pastille se tronque en
+         points de suspension plutôt que de passer dessous. */
+      'max-width:calc(100% - 190px)}',
       /* Le point d'état : la couleur porte l'info, le texte la répète — un point
          seul serait indéchiffrable pour qui ne distingue pas les teintes. */
       '.ncmd-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:0 0 auto}',
@@ -228,17 +265,27 @@ var NattyCommande = (function () {
     return { txt: 'Commander', pt: '' };
   }
 
-  function peindrePastille() {
+  /* Le libellé passe TOUJOURS par ici, y compris le texte neutre du montage :
+     lui seul, écrit en `textContent` direct, n'aurait pas eu de `.ncmd-txt`,
+     donc pas de points de suspension s'il venait à déborder. */
+  function poserLibelle(txt, pt) {
     if (!pastille) return;
-    var l = libelle();
     pastille.textContent = '';
-    if (l.pt) {
+    if (pt) {
       var d = document.createElement('span');
-      d.className = 'ncmd-dot ' + l.pt;
+      d.className = 'ncmd-dot ' + pt;
       pastille.appendChild(d);
     }
-    pastille.appendChild(document.createTextNode(l.txt));
-    pastille.setAttribute('aria-label', l.txt);
+    var t = document.createElement('span');
+    t.className = 'ncmd-txt';
+    t.textContent = txt;
+    pastille.appendChild(t);
+    pastille.setAttribute('aria-label', txt);
+  }
+
+  function peindrePastille() {
+    var l = libelle();
+    poserLibelle(l.txt, l.pt);
   }
 
   function htmlEtapes() {
@@ -385,9 +432,18 @@ var NattyCommande = (function () {
     if (profil) top.insertBefore(pastille, profil);
     else top.appendChild(pastille);
 
+    /* La barre bascule en mode « pastille centrée » (voir css()), et la
+       dernière icône en flux est renvoyée à droite. On la cherche depuis la
+       fin en sautant la pastille : c'est le profil sur tous les écrans
+       actuels, mais rien n'oblige une page future à en avoir un. */
+    top.classList.add('ncmd-bar');
+    for (var k = top.children.length - 1; k >= 0; k--) {
+      if (top.children[k] !== pastille) { top.children[k].classList.add('ncmd-fin'); break; }
+    }
+
     // Un libellé neutre le temps de la lecture : « Commander » d'emblée
     // mentirait à quelqu'un dont la commande est en cours de livraison.
-    pastille.textContent = 'Ma commande';
+    poserLibelle('Ma commande', '');
     await charger();
     peindrePastille();
   }

@@ -585,7 +585,15 @@ function setStep(n) {
   currentStep = n;
   var t = document.getElementById('ofrTitre');
   if (t) t.textContent = 'Étape ' + n + ' · ' + (ETAPES_NOMS[n-1] || '');
-  document.querySelectorAll(".step").forEach((s,i) => s.classList.toggle("active", i+1===n));
+  /* ⚠️ PAR IDENTIFIANT, JAMAIS PAR POSITION. Ces panneaux étaient désignés par
+     leur rang dans le document (`(s,i) => i+1===n`). L'ajout de `#stepUnite`
+     AVANT `#step1` a décalé tous les indices d'un cran : `setStep(2)` rallumait
+     `#step1`, le titre annonçait « Étape 2 » et l'écran ne bougeait pas — on
+     restait bloqué sur la première étape, sans le moindre message d'erreur.
+     Un `.step` ajouté n'importe où ne peut plus rien décaler. */
+  document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
+  var panneau = document.getElementById("step" + n);
+  if (panneau) panneau.classList.add("active");
   [1,2,3,4,5,6].forEach(i => {
     const dot=document.getElementById("dot"+i), lbl=document.getElementById("lbl"+i);
     if(!dot) return;
