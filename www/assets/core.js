@@ -134,6 +134,19 @@ var Natty = (function () {
     return s ? s.access_token : null;
   }
 
+  /* En-têtes pour NOS routes (`/api/claude`, …), à ne pas confondre avec
+     `entetes()` qui parle à Supabase et porte en plus `apikey`.
+     ⚠️ `/api/claude` relaie l'API Anthropic PAYANTE : depuis août 2026 elle
+     exige une session, sinon n'importe qui connaissant l'URL faisait tourner
+     le modèle aux frais de Natty. Tout appelant doit passer par ici — un appel
+     sans jeton repart en 401 et la fonctionnalité meurt en silence. */
+  async function enTetesIA() {
+    var h = { 'Content-Type': 'application/json' };
+    var j = await jeton();
+    if (j) h.Authorization = 'Bearer ' + j;
+    return h;
+  }
+
   function deconnecter(redirige) {
     SESSION = null;
     try {
@@ -824,7 +837,7 @@ var Natty = (function () {
     confirmer: confirmer, alerte: alerte,
     // Session : entetes() sert aux appels qui n'utilisent pas les helpers
     // ci-dessus (Cloudinary, /auth/v1, requêtes en return=minimal).
-    entetes: entetes, jeton: jeton, deconnecter: deconnecter,
+    entetes: entetes, enTetesIA: enTetesIA, jeton: jeton, deconnecter: deconnecter,
     estConnecte: function () { return !!SESSION; },
     ouvrirSession: ecrireSession,
     // Contenu du jeton courant (sub, email, user_metadata…). Relu à chaque

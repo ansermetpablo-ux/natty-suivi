@@ -4647,7 +4647,12 @@ async function analyserFacture(input) {
     const b64 = await fileToBase64(file);
     const res = await fetch('https://natty-suivi.vercel.app/api/claude', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      /* ⚠️ `/api/claude` exige une SESSION depuis août 2026 (c'était un proxy
+         ouvert vers l'API Anthropic payante). `jetonStaff()` retombe sur la clé
+         anon quand personne n'est connecté : ce n'est pas un JWT d'utilisateur,
+         la route répondra donc 401 et l'import de facture affichera son erreur.
+         C'est correct — lire une facture Metro suppose d'être connecté. */
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jetonStaff() },
       body: JSON.stringify({
         prompt: 'Tu es un expert en lecture de factures Metro France. Lis cette facture Metro et extrais TOUS les produits. Pour chaque produit retourne ce JSON (sans backticks): [{"ean":"numero_article","designation":"libelle","prix_unitaire":0.00,"quantite":1,"date_facture":"YYYY-MM-DD"}]. Le numero article est le code 7 chiffres. Ignore les lignes Total.',
         image_base64: b64,

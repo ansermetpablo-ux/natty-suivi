@@ -3428,7 +3428,7 @@ async function analyserAvecIA() {
 
     var res = await fetch(CLAUDE_API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await Natty.enTetesIA(),
       body: JSON.stringify({ prompt: prompt, max_tokens: 700, image: b64, media_type: photoIAFile.type })
     });
     var d = await res.json();
@@ -3999,7 +3999,7 @@ async function fetchAnalysePlat(meal, mac) {
     + ' Reponds UNIQUEMENT en JSON sans backticks: {"note":"Bon/Correct/A ameliorer","points_positifs":["..."],"points_negatifs":["..."],"conseils":["...","...","..."],"substitutions":[{"remplacer":"...","par":"...","pourquoi":"..."}]}';
   try {
     var res = await fetch(CLAUDE_API, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers: await Natty.enTetesIA(),
       body: JSON.stringify({prompt:prompt, max_tokens:700})
     });
     var d = await res.json();
@@ -4624,7 +4624,7 @@ async function buildMealDetail(meal) {
 
     var res = await fetch(CLAUDE_API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await Natty.enTetesIA(),
       body: JSON.stringify({ prompt: prompt, max_tokens: 700 })
     });
     var d = await res.json();

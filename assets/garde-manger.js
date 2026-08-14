@@ -297,7 +297,7 @@ var NattyGardeManger = (function () {
       + '{"items":[{"em":"🥦","nom":"Brocoli","qte":"500 g"}]}';
 
     var r = await fetch(CLAUDE_API, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: await Natty.enTetesIA(),
       body: JSON.stringify({ prompt: prompt, max_tokens: 1200, image: b64, media_type: file.type })
     });
     var d = await r.json();

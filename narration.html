@@ -2689,8 +2689,20 @@ function k_verifyDefiPhoto(file,label,hint,cb){
       +'Réponds UNIQUEMENT avec du JSON valide, sans texte autour : '
       +'{"correspond":true,"raison":""} si ça correspond, ou '
       +'{"correspond":false,"raison":"explication courte et bienveillante en français, 1 phrase"} sinon.';
+    /* ⚠️ `/api/claude` exige une session depuis août 2026 : c'était un proxy
+       OUVERT vers l'API Anthropic payante. Ce fichier ne charge pas
+       assets/core.js — il est volontairement autonome — donc on lit la session
+       là où core.js l'écrit, en localStorage. Aucun rafraîchissement : un jeton
+       périmé donne un 401 et, la vérification étant fail-open, la photo est
+       acceptée. C'est voulu, pas un oubli : un défi ne doit pas se bloquer sur
+       une histoire d'authentification. */
+    var enT = {'Content-Type':'application/json'};
+    try{
+      var sess = JSON.parse(localStorage.getItem('natty_session')||'null');
+      if(sess && sess.access_token) enT.Authorization = 'Bearer '+sess.access_token;
+    }catch(e){}
     fetch(NARR_API+'/api/claude',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',headers:enT,
       body:JSON.stringify({prompt:prompt,max_tokens:200,image:b64,media_type:file.type||'image/jpeg'})
     }).then(function(r){return r.json()}).then(function(d){
       if(!d||!d.text){cb(true);return}

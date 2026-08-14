@@ -272,7 +272,9 @@ var NattyReco = (function () {
   async function appelerClaude(prompt, maxTokens) {
     var r = await fetch(API_BASE + '/api/claude', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // `/api/claude` exige une session depuis août 2026 : c'était un proxy
+      // ouvert vers l'API Anthropic payante.
+      headers: await Natty.enTetesIA(),
       body: JSON.stringify({ prompt: prompt, max_tokens: maxTokens || 3000 })
     });
     if (!r.ok) throw new Error('api/claude ' + r.status);
