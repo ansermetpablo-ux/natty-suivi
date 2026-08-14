@@ -323,11 +323,27 @@ var NattySocial = (function () {
     }
 
     meals = meals.filter(function (m) { return m.user_id && !EXCLUS[m.user_id]; });
+
+    /* ── Pas de photo, pas de fil (demande de Pablo, 2026-08-14) ──
+       Le fil est un mur d'images : un plat sans photo y arrivait sous un emoji
+       étiré ou une illustration au trait, et c'était la carte qu'on sautait.
+       Le filtre est posé ICI, avant le relevé des membres, pour que `nbPlats`
+       compte ce qu'on peut VOIR — sans quoi l'annuaire annoncerait « 5 plats »
+       à côté d'un membre qui n'en montre que deux.
+       ⚠️ Conséquence assumée : un membre qui ne photographie jamais disparaît
+       du fil ET de l'annuaire. C'est cohérent — il n'a rien à y montrer.
+       ⚠️ La visionneuse et `visuel()` gardent leur repli emoji/illustration :
+       il ne sert plus aux plats sans photo, mais il rattrape une URL
+       Cloudinary qui ne répondrait pas. */
+    meals = meals.filter(function (m) { return !!m.photo_url; });
     if (!meals.length) return vues();
 
     var users = [];
     meals.forEach(function (m) { if (users.indexOf(m.user_id) < 0) users.push(m.user_id); });
     if (Natty.USER_ID && users.indexOf(Natty.USER_ID) < 0) users.push(Natty.USER_ID);
+    /* Un membre masqué qui ne montrerait plus aucune photo sortirait d'AUTEURS,
+       donc de l'annuaire — et on ne pourrait plus le réafficher. On le garde. */
+    Object.keys(BLOQUES).forEach(function (u) { if (users.indexOf(u) < 0) users.push(u); });
 
     // Les membres retirés du fil sortent avant tout le reste : inutile de
     // charger les ingrédients et les likes de plats qu'on n'affichera pas.
@@ -430,10 +446,12 @@ var NattySocial = (function () {
   }
 
   function vues() {
-    var avecPhoto = PLATS.filter(function (p) { return !!p.photo; });
-    var pool = avecPhoto.length >= 4 ? avecPhoto : PLATS;
-
-    var tendances = pool.slice().sort(function (a, b) {
+    /* `PLATS` ne contient plus QUE des plats photographiés (filtre de
+       `charger()`). L'ancien tri « les plats avec photo d'abord, sauf s'il y en
+       a moins de 4 » n'a donc plus d'objet : il ne pouvait que rendre PLATS
+       tout entier. Retiré plutôt que laissé — une condition qui ne peut plus
+       être fausse se lit comme un garde-fou actif. */
+    var tendances = PLATS.slice().sort(function (a, b) {
       var d = popularite(b) - popularite(a);
       if (d) return d;
       return new Date(b.cree || 0) - new Date(a.cree || 0);
