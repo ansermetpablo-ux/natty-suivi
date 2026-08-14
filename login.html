@@ -228,8 +228,18 @@
     .toast {
       position: fixed;
       bottom: 32px;
-      left: 50%;
-      transform: translateX(-50%) translateY(100px);
+      /* ⚠️ CENTRÉ PAR `left`+`right`+`margin:auto`, PAS par `left:50%` +
+         `translateX(-50%)`. Un élément `fixed` posé à `left:50%` sans `right`
+         calcule sa largeur sur la seule MOITIÉ DROITE de l'écran — la
+         translation n'arrive qu'après, elle ne rend pas la place. Tant que le
+         texte tenait sur une ligne (`nowrap`) ça ne se voyait pas ; dès qu'il
+         peut revenir à la ligne, la bulle se retrouvait large de 188 px et
+         haute de six lignes, débordant sous l'écran. Mesuré. */
+      left: 20px;
+      right: 20px;
+      width: fit-content;
+      margin: 0 auto;
+      transform: translateY(100px);
       background: var(--surface-ink);
       color: var(--on-ink);
       padding: 12px 20px;
@@ -238,9 +248,19 @@
       font-weight: 600;
       transition: transform .3s cubic-bezier(.34,1.56,.64,1);
       z-index: 999;
-      white-space: nowrap;
+      /* ⚠️ PAS de `white-space:nowrap`, qui était là. Une bulle centrée par
+         `left:50%` + `translateX(-50%)` et interdite de retour à la ligne
+         déborde des DEUX côtés dès que le texte dépasse la largeur de
+         l'écran : mesuré à 541 px sur 375, donc un message tronqué à gauche
+         ET à droite. Les messages existants passaient, mais de justesse
+         (« Vérifiez vos emails pour confirmer votre compte » : 342 px sur
+         375). Et certains textes ne viennent pas d'ici du tout — un
+         `error_description` renvoyé par Supabase est de longueur inconnue. */
+      white-space: normal;
+      text-align: center;
+      line-height: 1.4;
     }
-    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.show { transform: translateY(0); }
     .toast.err { background: #c0392b; }
     .toast.ok  { background: #2a9e4f; }
 
@@ -500,7 +520,7 @@ async function doSignup() {
     // confirmation d'email activée, l'inscription ne renvoie pas de session,
     // et une écriture dans `onboarding` serait impossible à cet instant.
     // reporterPrenom() le récupère à la première connexion.
-    var r = await fetch(SB_URL + '/auth/v1/signup', {
+    var r = await fetch(SB_URL + '/auth/v1/signup?redirect_to=' + encodeURIComponent(RETOUR_EMAIL), {
       method: 'POST',
       headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email, password: password, data: { prenom: prenom } })
@@ -540,7 +560,7 @@ async function doReset() {
 
   setLoading('btnReset', true);
   try {
-    var r = await fetch(SB_URL + '/auth/v1/recover', {
+    var r = await fetch(SB_URL + '/auth/v1/recover?redirect_to=' + encodeURIComponent(RETOUR_EMAIL), {
       method: 'POST',
       headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email })
@@ -557,6 +577,45 @@ async function doReset() {
 // Dans l'app native, l'URL de retour est un scheme custom capté par l'app
 // (voir CAP_REDIRECT) ; sur le web, c'est la page elle-même sur Vercel.
 var CAP_REDIRECT = 'com.nattynutrition.app://oauth-callback';
+
+/* ⚠️⚠️ UN LIEN REÇU PAR EMAIL N'ARRIVE JAMAIS DANS L'APP, et c'est ce qui
+   distingue cette URL de CAP_REDIRECT juste au-dessus.
+
+   Le bouton « Continuer avec Google » part d'un écran de l'app : elle est au
+   premier plan, elle a posé son écouteur, le scheme custom lui revient. Un
+   lien de confirmation d'inscription, lui, est cliqué dans un CLIENT MAIL —
+   souvent sur ordinateur, et Gmail le fait d'abord passer par
+   `google.com/url?q=…`. Un navigateur ne sait pas quoi faire d'un
+   `com.…://` : il affiche une PAGE NOIRE, et le compte reste non confirmé.
+
+   Ces deux appels n'envoyaient aucun `redirect_to` : GoTrue retombait donc
+   sur le **Site URL** de Supabase, réglé sur un scheme d'app — et sur
+   l'ANCIEN par-dessus le marché (`com.natty.app`, mort depuis le renommage
+   du 10 août, cf. CLAUDE.md §11). Deux défauts pour un seul symptôme.
+
+   Donc : toujours une URL **https**, et le domaine **EN DUR**. Surtout pas
+   `location.origin` — dans l'app native il vaut `capacitor://localhost`, qui
+   ne mène nulle part depuis une boîte mail.
+
+   Rien à écrire pour l'accueillir : `traiterRetourOAuth()` lit les jetons du
+   fragment à chaque chargement de cette page, d'où qu'ils viennent, et
+   affiche `error_description` quand le lien a expiré. C'est aussi pourquoi
+   le message dira « Connexion réussie » : confirmer son email OUVRE la
+   session, ce n'est pas qu'une case à cocher.
+
+   ⚠️⚠️ ET C'EST EXACTEMENT L'URL DE LA CONNEXION GOOGLE WEB, `?oauth=1`
+   compris — ne pas la « corriger » en `?confirme=1`, qui serait pourtant
+   plus parlant. Une valeur hors de la liste Authentication → URL
+   Configuration → Redirect URLs n'est pas refusée : elle est
+   **silencieusement remplacée** par le Site URL, donc par le bug qu'on vient
+   de corriger. Relevé le 2026-08-14 en sondant `/auth/v1/verify` avec un
+   jeton bidon (inoffensif, et c'est le chemin exact du lien d'un email) :
+   la liste ne contient QUE deux entrées, littérales —
+   `https://natty-suivi.vercel.app/login.html?oauth=1` et
+   `com.nattynutrition.app://oauth-callback`. Ni `/login.html` nu, ni
+   `?oauth=1&x=2`, ni la racine ne passent. Viser la seule URL https
+   autorisée est ce qui rend ce correctif effectif sans toucher à Supabase. */
+var RETOUR_EMAIL = 'https://natty-suivi.vercel.app/login.html?oauth=1';
 
 function estNatif() {
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
@@ -654,8 +713,19 @@ function traiterRetourOAuth(fragment) {
     return true;
   }
 
+  /* Supabase répond en anglais, et c'est le pire endroit pour tomber sur une
+     phrase qu'on ne comprend pas : le compte existe, il n'est juste pas
+     confirmé, et rien à l'écran ne dit quoi faire ensuite. On traduit les deux
+     seuls cas qu'un lien reçu par email produit vraiment, en gardant le texte
+     d'origine en repli — un message anglais vaut mieux qu'un message faux. */
   var errDesc = hash.get('error_description');
-  if (errDesc) toast(errDesc, 'err');
+  if (errDesc) {
+    var code = hash.get('error_code');
+    var msg = (code === 'otp_expired')
+      ? 'Ce lien a expiré ou a déjà servi. Connectez-vous, ou demandez un nouveau lien.'
+      : (code === 'access_denied' ? 'Ce lien n\'est plus valable.' : errDesc);
+    toast(msg, 'err');
+  }
   return false;
 }
 
