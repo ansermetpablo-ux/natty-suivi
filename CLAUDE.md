@@ -2366,9 +2366,19 @@ affiche l'écran. Si les deux divergeaient, ce sont les repas qui font foi.
 `bilan_jour` est dans `TABLES_USER` d'`api/supprimer-compte.js` — ce qu'on répond le soir sur
 sa motivation et ses difficultés est ce qu'il y a de plus personnel dans cette app.
 
-#### `signalements` et `membre_bloques` — 🔄 **`natty_moderation.sql` à exécuter**
-Modération du fil social (App Store Review Guideline 1.2, voir §11). Écrites le 2026-08-13,
-**le SQL n'a pas encore été passé par Pablo**.
+#### `signalements` et `membre_bloques` — ✅ **existent** (`natty_moderation.sql`, exécuté le 2026-08-14)
+Modération du fil social (App Store Review Guideline 1.2, voir §11).
+
+**Relevé à la clé anon le 2026-08-14**, quatre contrôles : les deux tables répondent `[]` (donc
+présentes, et non `PGRST205`) ; le témoin sur une colonne inventée répond `42703`, ce qui prouve
+que le test lit vraiment le schéma ; un INSERT anon est refusé en **`42501`**, donc la policy
+protège.
+> ⚠️ **Et la clé primaire est confirmée par la MÊME mesure.** Le POST portait
+> `?on_conflict=user_id,bloque_id` et répond `42501`, **pas `42P10`** (« no unique constraint
+> matching the ON CONFLICT specification ») : la requête a donc été **planifiée** avant d'être
+> refusée, ce qui prouve que la cible du `ON CONFLICT` s'est résolue. Sans cette clé, masquer
+> deux fois le même membre repartirait en **409**. Même raisonnement que pour `garde_manger` et
+> `bilan_jour`.
 
 | `signalements` | | `membre_bloques` | |
 |---|---|---|---|
@@ -4410,7 +4420,7 @@ un fil en opt-out alors que `assets/ajout.js` écrit `partage: false` depuis ao�
 
 **2. 🔴 Modération du fil social** (`8308791`) — LE blocage App Store, et il n'était documenté
 nulle part. Voir la section « Guideline 1.2 » du §11, le module en §3, les tables en §4.
-🔄 **`natty_moderation.sql` reste à exécuter.**
+✅ **`natty_moderation.sql` exécuté par Pablo le 2026-08-14.**
 
 **3. `api/claude.js` refermé** (`0e01d33`) — proxy ouvert vers l'API Anthropic payante. 14 sites
 d'appel à recenser d'abord, aucun n'envoyait de jeton. Mesuré de part et d'autre du
@@ -4433,7 +4443,12 @@ locaux, SHA-256 identiques à l'octet. **Pas sur Cloudinary**, et le §8 dit pou
   La preuve est venue en rechargeant la sauvegarde en base64 pur, qui ne référence aucune image
   externe et affichait les mêmes 404.
 
-**Ce qui reste avant d'envoyer**, et rien n'est du code : exécuter `natty_moderation.sql`,
-fournir un **compte de démonstration** à la revue (la connexion est obligatoire), et produire
-l'archive depuis **Xcode sur un Mac** — cette session tourne sous Windows, aucun build n'a pu
-être fait ici.
+**Ce qui reste avant d'envoyer**, et rien n'est du code : fournir un **compte de démonstration**
+à la revue (la connexion est obligatoire, un envoi sans identifiants est rejeté en 24 h), et
+produire l'archive depuis **Xcode sur un Mac** — cette session tourne sous Windows, aucun build
+n'a pu être fait ici.
+
+*Point d'étape du 14 août 2026, rapporté par Pablo : `natty_moderation.sql` **exécuté**
+(revérifié en base, quatre contrôles en §4), compte de démonstration **en cours**, build Xcode
+**à faire**. Ajouté le même jour : les plats sans photo ne paraissent plus dans le fil social
+(`0b3db71`).*
