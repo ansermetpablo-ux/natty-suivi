@@ -1640,6 +1640,33 @@ les deux thèmes, sans pendant à maintenir (règle 33).
 > sans eux, le cercle et ses méridiens se lisaient comme un globe surmonté d'ondes wifi
 > (constaté à l'écran sur la première version).
 
+**Modération — signaler, masquer** (2026-08-13, guideline 1.2 ; tables en §4).
+`MOTIFS`, `estBloque`, `basculerBloque`, `signaler`, `dejaSignale`, `moderationOk`.
+**Deux gestes distincts et c'est voulu** : masquer est une tranquillité, immédiate et muette
+pour l'autre ; signaler est une alerte adressée à l'équipe. Les fondre en un bouton ferait
+hésiter à faire l'un des deux.
+- ⚠️ **Le filtre des membres masqués est posé JUSTE AVANT `PLATS = meals.map(…)`**, et pas
+  plus haut. C'est le seul point qui couvre les cinq sections d'un coup — elles en dérivent
+  toutes — et plus haut on perdrait leur prénom, `AUTEURS` et `nbPlats` étant déjà calculés.
+  Sans ce prénom, l'annuaire ne pourrait plus proposer « Réafficher », et **un masquage sans
+  retour serait un piège, pas une protection**. D'où aussi le `|| BLOQUES[u]` de `membres()` :
+  un membre masqué reste listé même sans plat visible.
+- ⚠️ **Le repli du signalement n'est PAS un stockage local, c'est un email.** Un signalement
+  qui reste sur l'appareil de celui qui signale ne signale rien. Tant que
+  `natty_moderation.sql` n'est pas exécuté, `signaler()` rend un `mailto:` prérempli (plat,
+  auteur, motif, commentaire) et l'écran le dit. Le masquage, lui, se replie en `localStorage`
+  comme les abonnements — il n'a besoin de personne.
+- La feuille de motifs de `social.html` est en **z-index 950**, au-dessus de la visionneuse
+  (`#nvue` est à 880) d'où part le geste, et **retirée du DOM** à la fermeture : posée en
+  permanence, elle intercepterait les taps même invisible (le défaut `.map-screen` de
+  `narration.html`).
+- Côté équipe : onglet **🚩 Signalements** d'`admin.html`, réservé au rôle admin comme
+  « Équipe » — un signalement nomme deux membres. ⚠️ Il exige une **session d'équipe** : la
+  policy passe par `est_staff()`, donc avec le repli clé anon de `jetonStaff()` la requête rend
+  zéro ligne **en HTTP 200** — un écran d'apparence normale, vide de bout en bout. D'où trois
+  messages explicites (pas de session / table absente / rien à traiter) plutôt qu'une liste
+  vide.
+
 **Source du fil** : la table `meals` elle-même, `user_id=neq.<moi>`, 150 dernières lignes.
 Aucune table de posts : un plat enregistré depuis le bouton `+` est *déjà* un post. Les macros
 sont recalculées côté client par `Natty.calcMac` (les colonnes `calories`/`proteins_g`/… de
@@ -2339,6 +2366,41 @@ affiche l'écran. Si les deux divergeaient, ce sont les repas qui font foi.
 `bilan_jour` est dans `TABLES_USER` d'`api/supprimer-compte.js` — ce qu'on répond le soir sur
 sa motivation et ses difficultés est ce qu'il y a de plus personnel dans cette app.
 
+#### `signalements` et `membre_bloques` — 🔄 **`natty_moderation.sql` à exécuter**
+Modération du fil social (App Store Review Guideline 1.2, voir §11). Écrites le 2026-08-13,
+**le SQL n'a pas encore été passé par Pablo**.
+
+| `signalements` | | `membre_bloques` | |
+|---|---|---|---|
+| id | uuid PK | user_id | text, PK avec `bloque_id` |
+| meal_id | uuid → `meals` **on delete cascade** | bloque_id | text |
+| auteur_id | text — le membre signalé | created_at | timestamptz |
+| signaleur_id | text | | |
+| motif | text, `check` sur 5 valeurs | | |
+| commentaire | text | | |
+| statut | text — `nouveau`/`traite`/`rejete` | | |
+| traite_par / traite_at | text / timestamptz | | |
+
+> ⚠️ **Ces deux tables sont sous RLS AVEC policies**, contrairement à celles de
+> `natty_social.sql` (likes, vues, amis) qui ont la RLS désactivée. Ce n'est pas de la prudence
+> de principe : `signalements` contient des **accusations nominatives** et `membre_bloques` dit
+> **qui ne supporte plus qui**. Ouvertes à la clé anon publique, elles seraient l'endroit le
+> plus toxique de la base. On ne relit que SES propres signalements — assez pour afficher
+> « Déjà signalé », jamais assez pour savoir qui d'autre a signalé quoi. L'équipe voit tout,
+> via `est_staff()` (natty_staff.sql §2).
+> ⚠️ **Les deux contraintes sont VISÉES par un `?on_conflict=`** : `meal_id,signaleur_id` et la
+> clé primaire `user_id,bloque_id`. Sans elles, PostgREST résout sur la clé primaire et un
+> second geste repart en **409** — piège déjà payé sur `meal_likes`, `membre_amis` et
+> `notes_nutritionniste`.
+> ⚠️ **`on delete cascade` est un choix qui a un coût** : un membre qui supprime son plat
+> efface les signalements qui le visaient. Assumé — garder l'accusation sans la pièce qui
+> permettrait de la juger n'a pas de sens. Le compteur par membre de l'admin se lit donc
+> « signalements EN COURS », jamais « historique ».
+
+Les quatre colonnes qui désignent une personne sont effacées par `api/supprimer-compte.js` :
+`membre_bloques.user_id` dans la boucle, puis `bloque_id`, `signaleur_id` et `auteur_id` à
+part — n'en effacer qu'une laisserait un compte supprimé nommé dans une accusation.
+
 ### RLS — état actuel
 - `recettes`, `recettes_ingredients`, `recettes_etapes` : **RLS désactivé** (`DISABLE ROW LEVEL SECURITY`)
 - ⚠️ `profil_conseils` : **RLS ACTIVE, 4 policies** — mesuré en base le 2026-08-12
@@ -2770,6 +2832,24 @@ Vérifié en A/B sur 10 cas de non-régression (dont « Salade de poulet », « 
 ---
 
 ## 8. État d'avancement
+
+### ✅ PABLO A TESTÉ SUR IPHONE — 2026-08-13
+Rapporté tel quel : « j'ai testé sur iPhone, tout est ok ». Cette section existe pour ne pas
+avoir à corriger douze entrées une par une : **les mentions « 🔄 non vérifié sur téléphone »
+qui suivent, et qui portent sur le RENDU et les GESTES, sont levées** — rythme des
+cinématiques, zones sûres, glissements, `<select>` natif d'unité, thème et barre d'état,
+caméra depuis la WebView, arc du guide du jour, visionneuse, bilan, planification.
+
+⚠️ **Ce que ce test ne couvre PAS, et qu'il ne faut pas cocher au passage** — parce qu'aucun
+de ces points ne peut fonctionner aujourd'hui, quel que soit le téléphone :
+- le **push serveur** : la clé APNs n'existe pas encore, et un jeton APNs réel demande un
+  build signé (le `CODE_SIGNING_ALLOWED=NO` du simulateur empêche d'embarquer l'entitlement) ;
+- le **retour de paiement Stripe** par deep link : joué en doublure seulement, jamais en vrai
+  aller-retour Safari → app ;
+- le **tap sur une notification** vers `narration.html` ;
+- **Android**, jamais compilé — aucun JDK ni SDK sur la machine de développement ;
+- tout ce qui exige une **vraie session en base** : les bancs de cette session tournaient
+  contre des doublures de `fetch`, faute de mot de passe de compte.
 
 ### ✅ Fait (sessions suivi client / admin / conseils — sessions 10-11)
 
@@ -3281,16 +3361,32 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   > qui paie (défaut attrapé au test : 0 abonné détecté sur 2 réels).
 
 **Sécurité**
-- 🟠 **`api/claude.js` : plafonné, pas encore fermé** (2026-08-12). Reste un proxy OUVERT vers l'API Anthropic payante, mais un appel ne peut plus coûter arbitrairement cher : `max_tokens` borné à 16 000 (le plafond que `assets/reco.js` s'impose déjà), prompt à 80 000 caractères, image à 6 Mo. ~~Ancien état :~~ Aucune
-  authentification : un POST anonyme portant `{prompt, max_tokens}` est relayé tel quel avec
-  `ANTHROPIC_API_KEY`, et facturé à Natty. Relevé le 2026-08-12 en s'en servant pour valider la
-  règle 0 — trois générations complètes, ~9 400 jetons chacune, sans la moindre clé. N'importe
-  qui connaissant l'URL peut donc faire tourner le modèle aux frais du compte, et `max_tokens`
-  est celui de l'appelant.
-  ⚠️ Il est appelé par **beaucoup** d'écrans (analyse photo d'`assets/ajout.js`, garde-manger,
-  défis de `narration.html`, suggestions…), dont certains sans session : le fermer demande de
-  les recenser d'abord, comme pour `save-conseils`. Parade minimale en attendant : plafonner
-  `max_tokens` côté serveur au lieu d'accepter celui du client.
+- ✅ **`api/claude.js` REFERMÉ** (2026-08-13) : session obligatoire, jeton vérifié auprès de
+  GoTrue avec la clé service — jamais avec le jeton de l'appelant. On ne contrôle QUE l'existence
+  d'une session : il n'y a pas de `user_id` dans le corps, donc rien à faire correspondre.
+  **Mesuré en direct de part et d'autre du déploiement : 200 avant, 401 « Session requise »
+  après.** Les plafonds (16 000 jetons, 80 000 caractères, image 6 Mo) restent — une session
+  vole, et un compte légitime peut partir en boucle.
+  ~~Ancien état :~~ proxy OUVERT vers l'API Anthropic payante. Relevé le 2026-08-12 en s'en
+  servant pour valider la règle 0 — trois générations complètes, ~9 400 jetons chacune, sans la
+  moindre clé.
+  ⚠️ **Il y avait 14 sites d'appel, pas « quelques-uns »**, et aucun n'envoyait de jeton. Le
+  recensement était le vrai travail :
+  `assets/ajout.js` ×3, `assets/garde-manger.js`, `assets/reco.js`, `suivi.html` ×3 passent
+  désormais par **`Natty.enTetesIA()`** (nouveau dans `core.js`, il s'appuie sur `jeton()` donc
+  rafraîchit la session — sans quoi un jeton périmé aurait donné un 401 sur l'analyse photo,
+  c'est-à-dire sur le geste central de l'app) ; `narration.html` lit la session en
+  **localStorage** parce qu'il ne charge pas `core.js` (autonome par choix), et sa vérification
+  de photo étant fail-open un 401 accepte la photo ; `admin.html` envoie `jetonStaff()` ;
+  l'ancien `index.html` a **cinq** appels sans session qui repartent tous en 401 — même
+  arbitrage que `save-conseils`, cette page ne lit déjà plus rien sous RLS.
+  ⚠️ **`Authorization` ajouté à `Access-Control-Allow-Headers`** : sans lui le pré-vol CORS
+  rejette l'en-tête et l'appel arrive sans jeton depuis un navigateur, donc en 401 alors que
+  l'appelant l'avait bien envoyé. Vérifié en production, l'en-tête est bien annoncé.
+  ⚠️ **Fail-closed si `SUPABASE_SERVICE_KEY` manque**, ce qui couperait TOUTE l'IA de l'app.
+  Vérifié avant de s'y engager : `POST /api/save-conseils` avec un `user_id` bidon répond
+  « Session requise » (401) et non « clé manquante » (500) — la variable est donc posée. La
+  sonde fonctionne parce que `save-conseils` teste la clé **avant** le jeton.
 - ✅ **`api/save-conseils.js` REFERMÉ** (2026-08-12) : session obligatoire, jeton vérifié auprès de GoTrue avec la clé service, et refus si `auth.uid()` ne vaut pas le `user_id` demandé. Coût assumé : l'ancien `index.html` perd l'écriture — mais il ne lit déjà plus rien sous RLS. Détail dans l'en-tête du fichier. ~~Ancien état :~~ **n'était PAS authentifié, et écrivait avec la clé service.**
   Il accepte un POST anonyme portant n'importe quel `user_id` et écrase la ligne
   `profil_conseils` correspondante (la clé primaire étant `user_id`, l'upsert met à jour, il
@@ -3620,6 +3716,23 @@ Ce tableau est la réparation.
 > `git add` puis `git commit`**. Le premier ne dépend pas de l'état de l'index au moment du
 > commit — donc d'une autre session — et laisse intact ce qu'elle y avait déjà mis.
 
+### ⚠️ `4887623` : troisième du genre (2026-08-13)
+Le commit **`4887623` « iOS ignorait le meta viewport, donc le zoom n'a jamais été coupé »**
+porte **8 lignes qui ne sont pas à lui** : le paragraphe d'hébergement des CGU (Vercel Inc. et
+l'adresse de ses propres conditions), ramassé dans son `git add -A` pendant que je l'écrivais.
+Son message n'en dit rien ; le mien (`5bfd4dc`) le dit, et ce paragraphe aussi.
+
+Rien n'est perdu et **on ne réécrit pas**, pour les trois raisons déjà données : commit poussé
+sur `main` qui sert la production, autre session active sur le dépôt, contenu intact et
+vérifié. Le seul dommage est un `git log` qui attribue ces lignes à un commit parlant de zoom.
+
+> Ce qui a marché cette fois, et qui confirme la règle : les commits suivants sont passés en
+> `git commit --only <chemins>`, sans jamais toucher l'index global. Une session parallèle a
+> poussé `0d058f5` entre-temps — aucun conflit, rebase propre, aucun fichier en commun.
+> ⚠️ Seule exception nécessaire : un fichier **neuf** doit être `git add`é nommément avant que
+> `--only` puisse le voir. Le faire dans la MÊME commande que le commit, pour ne pas laisser
+> de fenêtre à une autre session.
+
 ## 11. Application native (Capacitor) — branche `app-native`
 
 > Section rédigée en juillet 2026, quand le portage est passé de « projet » à « app qui compile et tourne ». Le §10 ci-dessus reste valable comme liste de vigilance ; celle-ci décrit ce qui est **fait**.
@@ -3756,7 +3869,7 @@ L'outil réécrit `www/manifest.json` — repasser derrière : il met `type: ima
 - `repas.html` et la **liste de courses de `coaching.html`** ne font que **lire** ce cache. La liste de courses est **dérivée** des recettes (agrégation des ingrédients), donc jamais désynchronisée et sans appel IA.
 - Le **nombre de repas voulus** (1 à 7) est réglable dans `repas.html`. Préférence en `localStorage` (`natty_nb_repas_<userId>`) — donc **propre à l'appareil**, faute de colonne dédiée. La valeur réellement utilisée est conservée dans `conseils_json.nb_repas`.
 
-### 🔴 Guideline 4.8 — la connexion tierce, seul blocage dur qui reste (2026-08-12)
+### ✅ Guideline 4.8 — la connexion tierce (réglé le 2026-08-13)
 L'écran de connexion offrait **Google**, et à côté un bouton **Apple qui ne fonctionnait pas** :
 `APPLE_ACTIF = false`, parce que le provider n'est pas configuré côté Supabase. Il répondait
 « Connexion Apple bientôt disponible ». Cet état cumulait **deux** motifs de refus — la 4.8
@@ -3770,8 +3883,8 @@ l'intérêt :
 
 | `APPLE_ACTIF` | Ce que voit l'utilisateur | 4.8 |
 |---|---|---|
-| `false` (aujourd'hui) | email et mot de passe seuls | ne s'applique pas |
-| `true` | Google **et** Apple | satisfaite |
+| `false` | email et mot de passe seuls | ne s'applique pas |
+| `true` (**aujourd'hui**) | Google **et** Apple | satisfaite |
 
 L'état intermédiaire — celui d'avant — n'était ni l'un ni l'autre.
 ⚠️ Les boutons sont **retirés du DOM**, pas estompés : un bouton encore cliquable reste
@@ -3780,14 +3893,35 @@ Vérifié en navigateur dans les deux positions : à `false`, zéro bouton tiers
 « ou » part avec eux** (sans quoi il resterait un trait orphelin au-dessus de rien) ; à `true`,
 les deux reviennent, Apple dans son habillage imposé (fond noir mesuré).
 
-🔄 **CE QUI RESTE À DÉCIDER, ET C'EST À PABLO.** Publier en l'état est possible **tout de
-suite** : email/mot de passe seuls, aucun risque 4.8. Mais l'app perd la connexion Google, qui
-est le chemin le plus court pour un nouveau client. Rallumer les deux demande, côté Supabase →
-Authentication → Providers → Apple : un **Services ID**, le **Team ID** (`DJLW82GU5A`), un
-**Key ID** et une **clé .p8** — tous délivrés par le compte Apple Developer, qui est payé
-depuis le 2026-08-10. Une fois fait, **une seule ligne** à changer (`var APPLE_ACTIF = true`
-dans `login.html` **et** `www/login.html`).
-⚠️ Ne PAS rallumer Google seul en attendant : c'est précisément l'état qui fait refuser.
+✅ **RÉGLÉ — CE N'EST PLUS UN BLOCAGE (relevé le 2026-08-13).** Le provider Apple **est**
+configuré côté Supabase et `APPLE_ACTIF` vaut `true` dans `login.html` **et** `www/login.html`
+(les deux vérifiés identiques). Mesuré de l'extérieur, seule façon de le savoir sans accès au
+tableau de bord : `GET /auth/v1/authorize?provider=apple` répond **302 vers
+`appleid.apple.com`** avec le Services ID **`com.nattynutrition.app.signin`** — donc le Services
+ID, le Key ID et la clé .p8 sont bien en place. Google répond de même. Les deux options sont
+offertes, la 4.8 est satisfaite.
+> ⚠️ Le titre de cette section disait « seul blocage dur qui reste ». Ce n'est plus vrai, et
+> **le vrai blocage était ailleurs** : la modération du contenu des membres (guideline 1.2),
+> que personne n'avait vue — voir la section qui suit.
+⚠️ Reste valable si l'on y retouche un jour : ne PAS rallumer Google seul, c'est précisément
+l'état intermédiaire qui fait refuser.
+
+### 🔴 Guideline 1.2 — le contenu des membres, le blocage que personne n'avait vu (2026-08-13)
+Le fil social affiche les **photos et les prénoms d'autres personnes**. Apple exige alors
+quatre choses, et l'app n'en avait qu'une : la seule action offerte sur le plat de quelqu'un
+d'autre était **« Suivre »** (relevé dans `social.html`, aucune table de signalement dans le
+SQL du dépôt). C'est le motif de refus classique au premier envoi d'une app à contenu généré
+par les utilisateurs, et il n'apparaissait dans aucune note de ce fichier — d'où le fait qu'on
+se croyait prêt.
+
+| Exigence 1.2 | Avant | Maintenant |
+|---|---|---|
+| Signaler un contenu | ❌ | « Signaler » dans le tiroir de la visionneuse, 5 motifs |
+| Bloquer un membre | ❌ | « Masquer ce membre », réversible depuis l'annuaire |
+| Filtrer / traiter | ❌ | onglet **🚩 Signalements** d'`admin.html`, réservé à l'admin |
+| Contact publié | ✅ (email des CGU) | ✅ + le chemin dans l'app, écrit dans les CGU |
+
+Détail du code en §3 (`assets/social.js`), des tables en §4 (`natty_moderation.sql`).
 
 ### Conformité App Store — fait en août 2026
 Quatre choses qu'Apple vérifie à l'envoi, et qui n'existaient pas.
@@ -3871,7 +4005,23 @@ reste l'ancien `phx_join` — voir §7.
   et `PushNotifications.register()` échoue (« aucune autorisation *aps-environment* valide »).
   Ce n'est pas un défaut de configuration — et un simulateur ne peut de toute façon pas obtenir
   de jeton APNs utilisable. Le premier jeton réel viendra d'un iPhone. Voir §8.
-- `narration.html` pèse toujours ~2,4 Mo (images base64) — bascule Cloudinary prévue via `CLOUD_BASE`.
+- ✅ **`narration.html` est passé de 2,34 Mo à 250 Ko** (2026-08-13). Ses 62 photos étaient en
+  base64 dans le document ; ce sont des fichiers, dans `assets/img/narration/`, et `IMGDATA`
+  garde exactement les mêmes clés.
+  ⚠️ **PAS sur Cloudinary, et c'est un écart assumé avec la note d'origine.** En natif ce
+  fichier est LOCAL : ses images le sont donc aussi, et le parcours marche sans réseau — ce qui
+  en fait la partie la plus solide du portage. Un CDN aurait échangé du poids de bundle, qu'on
+  récupère ici autrement, contre une dépendance réseau sur le seul écran qui n'en avait aucune.
+  Le choix reste ouvert : une seule ligne (`IMGB`) suffit, et l'extraction en fichiers était de
+  toute façon le préalable. Chemin **relatif**, pour que l'ouverture en `file://` continue de
+  marcher.
+  Vérifié : 62/62 répondent, 62/62 se décodent, et le **SHA-256 de chaque fichier est identique
+  au décodage du base64 d'origine** — rien n'a été recompressé.
+  ⚠️ Piège de banc à retenir : les 404 de la console **persistent d'une navigation à l'autre**
+  dans le navigateur piloté. J'ai cru à 50 ressources manquantes alors que le journal réseau
+  était intégralement en 200 ; la preuve est venue de la sauvegarde en base64 pur, sans aucune
+  image externe, qui affichait les mêmes 404. Ne pas conclure d'une console sans vérifier le
+  réseau.
 
 ---
 
@@ -4221,8 +4371,10 @@ audit de soumission, deux correctifs, et quatre statuts périmés remis à jour 
   n'envoyait jamais `plateforme` : toute la machinerie de rebond n'avait **jamais servi**.
   Corrigé et vérifié avec une doublure Capacitor — détail en §8.
 - 🔴 **Un bouton « Continuer avec Apple » visible et mort**, à côté d'un bouton Google actif.
-  Un seul drapeau gouverne désormais les deux. C'est le **seul blocage dur qui reste**, et
-  c'est une décision de Pablo, pas du code — encadré dédié en §11.
+  Un seul drapeau gouverne désormais les deux. C'était alors présenté comme « le seul blocage
+  dur qui reste », et c'était faux deux fois : Pablo a configuré le provider Apple le
+  2026-08-13 (la 4.8 est satisfaite), et le vrai blocage était **la guideline 1.2** — la
+  modération du contenu des membres, que personne n'avait vue. Encadré dédié en §11.
 
 **Quatre statuts de §8 étaient périmés, tous mesurés faits :**
 `STRIPE_WEBHOOK_SECRET` posée sur Vercel (400 et non 500 sur signature bidon) ·
@@ -4245,3 +4397,43 @@ l'API Supabase.
 🔄 **Rien de tout cela n'a été vu sur un iPhone réel** : le passage Safari → app au retour de
 Stripe, la caméra, les notifications et les zones sûres n'ont pu être joués qu'en simulateur
 ou en doublure.
+
+---
+
+*Contribution session « les derniers chantiers avant l'App Store » (Claude Opus, 13 août 2026) —
+quatre chantiers, quatre commits, tous poussés :*
+
+**1. Documents légaux terminés** (`5bfd4dc`) — le médiateur (FEVAD, demande faite par Pablo),
+l'hébergeur qui manquait totalement alors que la LCEN l'exige, les bases juridiques RGPD, le
+stockage local, et **le partage décrit à l'envers** dans les deux documents : ils promettaient
+un fil en opt-out alors que `assets/ajout.js` écrit `partage: false` depuis août 2026.
+
+**2. 🔴 Modération du fil social** (`8308791`) — LE blocage App Store, et il n'était documenté
+nulle part. Voir la section « Guideline 1.2 » du §11, le module en §3, les tables en §4.
+🔄 **`natty_moderation.sql` reste à exécuter.**
+
+**3. `api/claude.js` refermé** (`0e01d33`) — proxy ouvert vers l'API Anthropic payante. 14 sites
+d'appel à recenser d'abord, aucun n'envoyait de jeton. Mesuré de part et d'autre du
+déploiement : **200 avant, 401 après**.
+
+**4. `narration.html` : 2,34 Mo → 250 Ko** (`f8dab56`) — 62 photos extraites en fichiers
+locaux, SHA-256 identiques à l'octet. **Pas sur Cloudinary**, et le §8 dit pourquoi.
+
+**Trois pièges de méthode, tous payés dans cette session :**
+- ⚠️ **Vérifier qu'un helper existe AVANT de l'utiliser, pas après.** J'ai appelé `escapeHtml`
+  62 fois dans `admin.html` puis grepé pour me rassurer : le grep comptait mes propres appels.
+  La fonction n'existait pas. Même famille que les trois jetons CSS inventés (`--nm-out`,
+  `--text`) — une variable CSS inconnue n'échoue pas, elle est ignorée en silence.
+- ⚠️ **`w.MA_VARIABLE = …` ne fait RIEN sur un `let`/`const` de haut niveau.** Ils vivent dans
+  l'environnement lexical global, pas sur `window` : l'affectation crée un homonyme que le code
+  ne lit jamais. Trois états d'un banc rendaient tous le même résultat avant que je le
+  comprenne. Passer par une fonction du module (ici `ecrireStaffSession()`).
+- ⚠️ **Les 404 de la console du navigateur piloté persistent d'une navigation à l'autre.**
+  J'ai cru à 50 ressources manquantes alors que le journal réseau était intégralement en 200.
+  La preuve est venue en rechargeant la sauvegarde en base64 pur, qui ne référence aucune image
+  externe et affichait les mêmes 404.
+
+**Ce qui reste avant d'envoyer**, et rien n'est du code : exécuter `natty_moderation.sql`,
+fournir un **compte de démonstration** à la revue (la connexion est obligatoire), et produire
+l'archive depuis **Xcode sur un Mac** — cette session tourne sous Windows, aucun build n'a pu
+être fait ici.
