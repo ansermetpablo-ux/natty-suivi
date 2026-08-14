@@ -624,6 +624,9 @@ input[type="file"] { display: none; }
         <button class="nav-tab" id="navChef" style="display:none;">👨‍🍳 Chef</button>
         <button class="nav-tab" id="navStocks" style="display:none;">📊 Stocks</button>
         <button class="nav-tab" id="navEquipe" style="display:none;">👤 Équipe</button>
+        <!-- Modération du fil social (App Store Review Guideline 1.2). Réservé à
+             l'admin, comme Équipe : un signalement nomme deux membres. -->
+        <button class="nav-tab" id="navSignalements" style="display:none;">🚩 Signalements<span class="nav-badge" id="navSignBadge" style="display:none">0</span></button>
       </div>
       <div class="content">
         <div class="tab-content active" id="tabClients">
@@ -949,6 +952,30 @@ input[type="file"] { display: none; }
             <div id="recalcOut" style="display:none;margin-top:14px;font-size:12px;line-height:1.6"></div>
           </div>
         </div>
+
+        <!-- ══ Signalements du fil social ══
+             App Store Review Guideline 1.2 : une app à contenu généré par les
+             utilisateurs doit offrir un moyen de signaler ET une réponse dans un
+             délai raisonnable. Le premier vit dans social.html, le second ici :
+             sans cet onglet, les signalements s'empileraient en base sans que
+             personne ne les voie, et la promesse faite dans l'app serait vide. -->
+        <div class="tab-content" id="tabSignalements">
+          <div class="equipe-header">
+            <div class="equipe-title">Signalements du fil</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-cancel-form" id="btnSignFiltre">Voir aussi les traités</button>
+              <button class="btn-add-nutri" id="btnSignRecharger">↻ Actualiser</button>
+            </div>
+          </div>
+          <div style="font-size:12.5px;line-height:1.6;color:#9a9aaa;margin:-6px 0 16px">
+            « Traité » = vous avez agi (contenu retiré, membre averti). « Rejeté » =
+            le signalement n'était pas fondé. Dans les deux cas le signalement
+            disparaît de la liste par défaut, mais reste en base.
+            <strong>Un plat supprimé emporte ses signalements</strong> (cascade) :
+            cette liste est celle des signalements EN COURS, pas un historique.
+          </div>
+          <div id="signContent"><div class="loading">Chargement...</div></div>
+        </div>
       </div>
     </div>
     <div class="fiche-screen" id="ficheView">
@@ -1107,6 +1134,13 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('navMenu').addEventListener('click', () => switchNav('menu'));
   document.getElementById('navCommandes').addEventListener('click', () => switchNav('commandes'));
   document.getElementById('navEquipe').addEventListener('click', () => switchNav('equipe'));
+  document.getElementById('navSignalements').addEventListener('click', () => switchNav('signalements'));
+  document.getElementById('btnSignRecharger').addEventListener('click', () => chargerSignalements());
+  document.getElementById('btnSignFiltre').addEventListener('click', function () {
+    SIGN_TOUT = !SIGN_TOUT;
+    this.textContent = SIGN_TOUT ? 'Voir les nouveaux seulement' : 'Voir aussi les traités';
+    chargerSignalements();
+  });
   // data-* + addEventListener, jamais d'onclick inline (règle §9 #8).
   document.getElementById('btnRecalcDry').addEventListener('click', function(){ lancerRecalc(true); });
   document.getElementById('btnRecalcGo').addEventListener('click', function(){ lancerRecalc(false); });
@@ -1186,23 +1220,179 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── NAV ──
+// ══════════════════════════════════════════════════════════
+// SIGNALEMENTS — modération du fil social (guideline 1.2)
+// ══════════════════════════════════════════════════════════
+// ⚠️ Cet onglet exige une SESSION D'ÉQUIPE, pas la clé anon : la policy
+// `signalements_staff` de natty_moderation.sql passe par `est_staff()`, qui lit
+// `auth.uid()`. Avec le repli clé anon de `jetonStaff()`, la requête ne renvoie
+// aucune ligne — en HTTP 200, donc sans erreur visible. C'est exactement le
+// piège du §8 (« un écran d'apparence normale, vide de bout en bout »), d'où le
+// message explicite plutôt qu'une liste vide.
+let SIGN_TOUT = false;
+
+/* ⚠️ PAS `escHtml` (ligne ~1078) : celui-ci transforme les retours à la ligne en
+   <br> et n'échappe pas les guillemets — donc inutilisable dans un attribut
+   (`data-sign-traiter="…"`) et fâcheux dans un <code>. Or une partie des valeurs
+   affichées ici vient des membres : le commentaire d'un signalement, et le
+   prénom lu dans `onboarding`. */
+function escSign(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+const SIGN_MOTIFS = {
+  inapproprie: 'Contenu inapproprié ou choquant',
+  personne:    'Personne identifiable sans accord',
+  trompeur:    'Information nutritionnelle trompeuse',
+  spam:        'Publicité ou spam',
+  autre:       'Autre raison'
+};
+
+async function chargerSignalements() {
+  const el = document.getElementById('signContent');
+  el.innerHTML = '<div class="loading">Chargement...</div>';
+
+  if (!STAFF_SESSION || !STAFF_SESSION.access_token) {
+    el.innerHTML = '<div class="empty-state">Connectez-vous avec un compte d\'équipe pour '
+      + 'voir les signalements. La clé publique ne donne accès à aucune ligne — la liste '
+      + 'paraîtrait vide alors qu\'elle ne l\'est peut-être pas.</div>';
+    return;
+  }
+
+  let rows;
+  try {
+    const filtre = SIGN_TOUT ? '' : '&statut=eq.nouveau';
+    rows = await sb('signalements?select=*' + filtre + '&order=created_at.desc&limit=200');
+  } catch (e) {
+    // Table absente = natty_moderation.sql pas encore exécuté. Le dire, plutôt
+    // que d'afficher « aucun signalement » et laisser croire que tout va bien.
+    const msg = String(e && e.message || e);
+    el.innerHTML = /does not exist|PGRST205|42P01/.test(msg)
+      ? '<div class="empty-state">La table <code>signalements</code> n\'existe pas encore. '
+        + 'Exécutez <strong>natty_moderation.sql</strong> dans Supabase → SQL Editor. '
+        + 'En attendant, les signalements des membres arrivent par email à '
+        + 'contact@natty-nutrition.com.</div>'
+      : '<div class="empty-state">Lecture impossible : ' + escSign(msg.slice(0, 200)) + '</div>';
+    majBadgeSignalements(0);
+    return;
+  }
+
+  majBadgeSignalements(rows.filter(r => r.statut === 'nouveau').length);
+
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty-state">' + (SIGN_TOUT
+      ? 'Aucun signalement, traité ou non.'
+      : 'Aucun signalement en attente. 🎉') + '</div>';
+    return;
+  }
+
+  // Combien de signalements EN COURS par membre : c'est ce qui distingue un
+  // contenu limite signalé une fois d'un membre qui pose problème en série.
+  const parAuteur = {};
+  rows.forEach(r => { parAuteur[r.auteur_id] = (parAuteur[r.auteur_id] || 0) + 1; });
+
+  // Les prénoms viennent de `onboarding` — même lecture que la liste clients.
+  // Un échec n'est pas bloquant : on retombe sur l'identifiant.
+  const ids = [...new Set(rows.flatMap(r => [r.auteur_id, r.signaleur_id]))];
+  const noms = {};
+  try {
+    const lots = [];
+    for (let i = 0; i < ids.length; i += 40) lots.push(ids.slice(i, i + 40));
+    for (const lot of lots) {
+      const p = await sb('onboarding?user_id=in.(' + lot.join(',') + ')&select=user_id,prenom');
+      p.forEach(x => { if (x.prenom && !noms[x.user_id]) noms[x.user_id] = x.prenom; });
+    }
+  } catch (e) { /* les identifiants suffiront */ }
+  const nom = u => escSign(noms[u] || String(u).slice(0, 8) + '…');
+
+  el.innerHTML = rows.map(r => {
+    const recid = parAuteur[r.auteur_id] > 1
+      ? '<span class="nav-badge" style="position:static;margin-left:6px">'
+        + parAuteur[r.auteur_id] + ' signalements en cours</span>' : '';
+    const dt = new Date(r.created_at).toLocaleString('fr-FR',
+      { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const traite = r.statut !== 'nouveau';
+    return '<div class="nutri-admin-card" style="margin-bottom:10px' + (traite ? ';opacity:.55' : '') + '">'
+      + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +   '<strong style="font-size:14px">' + escSign(SIGN_MOTIFS[r.motif] || r.motif) + '</strong>'
+      +   (traite ? '<span style="font-size:11px;color:#9a9aaa">· ' + escSign(r.statut) + '</span>' : '')
+      +   recid
+      + '</div>'
+      + '<div style="font-size:12.5px;color:#9a9aaa;margin-top:5px;line-height:1.6">'
+      +   'Plat de <strong>' + nom(r.auteur_id) + '</strong>, signalé par '
+      +   nom(r.signaleur_id) + ' le ' + dt + '<br>'
+      +   '<code style="font-size:11px">' + escSign(r.meal_id) + '</code>'
+      + '</div>'
+      + (r.commentaire
+          ? '<div style="font-size:12.5px;margin-top:8px;padding:9px 11px;background:#f0f0f3;'
+            + 'border-radius:10px;line-height:1.5">« ' + escSign(r.commentaire) + ' »</div>'
+          : '')
+      + (traite ? '' :
+          '<div class="form-actions" style="margin-top:11px">'
+          + '<button class="btn-cancel-form" data-sign-rejeter="' + escSign(r.id) + '">Non fondé</button>'
+          + '<button class="btn-submit" data-sign-traiter="' + escSign(r.id) + '">J\'ai traité</button>'
+          + '</div>')
+      + '</div>';
+  }).join('');
+}
+
+function majBadgeSignalements(n) {
+  const b = document.getElementById('navSignBadge');
+  if (!b) return;
+  b.textContent = n;
+  b.style.display = n > 0 ? '' : 'none';
+}
+
+async function statuerSignalement(id, statut) {
+  try {
+    await sb('signalements?id=eq.' + id, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        statut: statut,
+        traite_par: (STAFF_SESSION && STAFF_SESSION.user && STAFF_SESSION.user.email) || 'admin',
+        traite_at: new Date().toISOString()
+      })
+    });
+    toast(statut === 'traite' ? 'Signalement marqué traité.' : 'Signalement écarté.');
+    chargerSignalements();
+  } catch (e) {
+    toast('Enregistrement impossible.', 'err');
+  }
+}
+
+// Délégation : les cartes sont réécrites à chaque chargement, un listener par
+// bouton serait perdu au premier rafraîchissement (règle #8 du dépôt : jamais
+// d'onclick inline non plus).
+document.addEventListener('click', function (e) {
+  const t = e.target.closest && e.target.closest('[data-sign-traiter]');
+  if (t) { statuerSignalement(t.dataset.signTraiter, 'traite'); return; }
+  const r = e.target.closest && e.target.closest('[data-sign-rejeter]');
+  if (r) { statuerSignalement(r.dataset.signRejeter, 'rejete'); return; }
+});
+
 function switchNav(tab) {
   // All known tabs
-  const ALL_TABS = ['clients','repasAProg','messages','rdv','menu','commandes','chef','stocks','equipe'];
+  const ALL_TABS = ['clients','repasAProg','messages','rdv','menu','commandes','chef','stocks','equipe','signalements'];
   const NAV_IDS  = {
     clients:'navClients', repasAProg:'navRepasAProg', messages:'navMessages',
     rdv:'navRdv', menu:'navMenu', commandes:'navCommandes',
-    chef:'navChef', stocks:'navStocks', equipe:'navEquipe'
+    chef:'navChef', stocks:'navStocks', equipe:'navEquipe',
+    signalements:'navSignalements'
   };
   const TAB_IDS  = {
     clients:'tabClients', repasAProg:'tabRepasAProg', messages:'tabMessages',
     rdv:'tabRdv', menu:'tabMenu', commandes:'tabCommandes',
-    chef:'tabChef', stocks:'tabStocks', equipe:'tabEquipe'
+    chef:'tabChef', stocks:'tabStocks', equipe:'tabEquipe',
+    signalements:'tabSignalements'
   };
   const TITLES = {
     clients:'Mes clients', repasAProg:'Repas à programmer', messages:'Messages',
     rdv:'Rendez-vous', menu:'Menu', commandes:'Commandes',
-    chef:'Recettes & Production', stocks:'Stocks', equipe:'Équipe'
+    chef:'Recettes & Production', stocks:'Stocks', equipe:'Équipe',
+    signalements:'Signalements'
   };
 
   // Deactivate all
@@ -1239,6 +1429,7 @@ function switchNav(tab) {
   }
   if (tab === 'chef')   chargerRecettes();
   if (tab === 'stocks') chargerStocks('dashboard');
+  if (tab === 'signalements') chargerSignalements();
 }
 
 // ── CLIENTS ──
@@ -2628,7 +2819,7 @@ let currentRole = null;
 const ROLE_CONFIG = {
   admin: {
     logo:'🛡️', title:'Accès Administrateur',
-    tabs: ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navChef','navStocks','navEquipe'],
+    tabs: ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navChef','navStocks','navEquipe','navSignalements'],
     pwdOnly: true
   },
   nutritionniste: {
@@ -2832,7 +3023,7 @@ function demarrerAppAvecRole(deSecours) {
 
   // Show/hide tabs based on role
   const cfg = currentRole ? ROLE_CONFIG[currentRole] : ROLE_CONFIG.admin;
-  const allTabs = ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navChef','navStocks','navEquipe'];
+  const allTabs = ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navChef','navStocks','navEquipe','navSignalements'];
   allTabs.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = cfg.tabs.includes(id) ? 'block' : 'none';
@@ -2843,7 +3034,7 @@ function demarrerAppAvecRole(deSecours) {
   const tabMap = {
     navClients:'clients', navRepasAProg:'repasAProg', navMessages:'messages',
     navRdv:'rdv', navMenu:'menu', navCommandes:'commandes', navChef:'chef',
-    navStocks:'stocks', navEquipe:'equipe'
+    navStocks:'stocks', navEquipe:'equipe', navSignalements:'signalements'
   };
   switchNav(tabMap[firstTab] || 'clients');
 

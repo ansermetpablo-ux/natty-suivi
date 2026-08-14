@@ -23,11 +23,16 @@ var NattySocial = (function () {
   var VUES = {};         // meal_id → n
   var AMIS = {};         // ami_id → true (membres que l'on suit)
   var PREFS = {};        // user_id → false si le membre s'est retiré du fil
+  var BLOQUES = {};      // user_id → true (membres masqués, guideline 1.2)
+  var SIGNALES = {};     // meal_id → true (plats que J'AI signalés)
   var supportLikes = null;   // 'table' | 'local' — résolu au premier chargement
   var supportVues = null;
   var supportAmis = null;
   var supportPrefs = null;   // 'table' | 'absent'
   var supportPartage = null; // la colonne meals.partage existe-t-elle ?
+  var supportBloques = null; // 'table' | 'local'
+  var supportSignal = null;  // 'table' | 'email' — repli si natty_moderation.sql
+                             // n'a pas été exécuté
 
   /* Les comptes techniques ne doivent pas apparaître dans le fil. */
   var EXCLUS = { 'PLACEHOLDER': 1, 'anonymous': 1, 'null': 1, '': 1 };
@@ -212,6 +217,43 @@ var NattySocial = (function () {
     lireLocal('amis').forEach(function (id) { AMIS[id] = true; });
   }
 
+  /* ── Modération (App Store Review Guideline 1.2) ──────────────
+     Le fil montre les photos et les prénoms d'autres personnes :
+     Apple exige alors de pouvoir SIGNALER un contenu et MASQUER
+     un membre. Les deux vivent ici, avec le même repli local que
+     les abonnements — sauf que le repli du signalement n'est pas
+     un stockage mais un email, parce qu'un signalement qui reste
+     sur l'appareil de celui qui signale ne signale rien. */
+  async function chargerBloques() {
+    BLOQUES = {};
+    if (!Natty.USER_ID) return;
+    if (supportBloques !== 'local') {
+      try {
+        var rows = await Natty.sbFetch('membre_bloques?user_id=eq.' + Natty.USER_ID + '&select=bloque_id');
+        supportBloques = 'table';
+        (rows || []).forEach(function (r) { BLOQUES[r.bloque_id] = true; });
+        return;
+      } catch (e) { supportBloques = 'local'; }
+    }
+    lireLocal('bloques').forEach(function (id) { BLOQUES[id] = true; });
+  }
+
+  /* Mes propres signalements, et eux seuls : la policy ne rend que les lignes
+     dont je suis l'auteur. C'est ce qui permet d'écrire « Déjà signalé » sans
+     jamais révéler qui d'autre a signalé quoi. */
+  async function chargerMesSignalements() {
+    SIGNALES = {};
+    if (!Natty.USER_ID) return;
+    try {
+      var rows = await Natty.sbFetch('signalements?signaleur_id=eq.' + Natty.USER_ID + '&select=meal_id');
+      supportSignal = 'table';
+      (rows || []).forEach(function (r) { SIGNALES[r.meal_id] = true; });
+    } catch (e) {
+      supportSignal = 'email';
+      lireLocal('signales').forEach(function (id) { SIGNALES[id] = true; });
+    }
+  }
+
   /* ── Confidentialité ─────────────────────────────────────────
      Un membre peut retirer TOUS ses plats du fil. Volontairement
      sans repli localStorage : un réglage de confidentialité qui
@@ -259,7 +301,9 @@ var NattySocial = (function () {
   async function charger() {
     PLATS = []; AUTEURS = {}; LIKES = {}; VUES = {};
 
-    await chargerAmis();
+    // Les masqués sont connus AVANT le fil : c'est ce qui décide de ce qu'on
+    // affiche. Les trois lectures sont indépendantes, donc en parallèle.
+    await Promise.all([chargerAmis(), chargerBloques(), chargerMesSignalements()]);
     var meals = await chargerPlats('user_id=neq.' + Natty.USER_ID, 150);
 
     // Les 150 plats les plus récents ne contiennent pas forcément ceux des
@@ -343,6 +387,14 @@ var NattySocial = (function () {
     ingrs.forEach(function (i) {
       (parRepas[i.meal_id] = parRepas[i.meal_id] || []).push(i);
     });
+
+    /* Les membres masqués sortent du fil ICI, et pas plus haut : c'est le seul
+       point qui couvre les cinq sections d'un coup, puisqu'elles dérivent
+       toutes de PLATS. Plus haut, on perdrait aussi leur prénom — AUTEURS et
+       nbPlats sont déjà calculés — et l'annuaire ne pourrait plus proposer de
+       les réafficher. Un masquage irréversible serait un piège, pas une
+       protection. */
+    meals = meals.filter(function (m) { return !BLOQUES[m.user_id]; });
 
     PLATS = meals.map(function (m) {
       var ings = parRepas[m.id] || [];
@@ -458,16 +510,22 @@ var NattySocial = (function () {
 
   function membres() {
     return Object.keys(AUTEURS)
-      .filter(function (u) { return u !== Natty.USER_ID && AUTEURS[u].nbPlats > 0; })
+      // Un membre masqué reste listé, MÊME sans plat visible : c'est le seul
+      // endroit de l'app d'où l'on peut le réafficher.
+      .filter(function (u) {
+        return u !== Natty.USER_ID && (AUTEURS[u].nbPlats > 0 || BLOQUES[u]);
+      })
       .map(function (u) {
         var a = AUTEURS[u];
         return {
           user_id: u, prenom: a.prenom, anonyme: a.anonyme,
           nbPlats: a.nbPlats, jour: a.jour,
-          proximite: a.proximite || 0, ami: !!AMIS[u]
+          proximite: a.proximite || 0, ami: !!AMIS[u], bloque: !!BLOQUES[u]
         };
       })
       .sort(function (a, b) {
+        // Les masqués en dernier : on ne vient pas dans l'annuaire pour eux.
+        if (a.bloque !== b.bloque) return a.bloque ? 1 : -1;
         if (a.ami !== b.ami) return a.ami ? -1 : 1;
         if (Math.abs(b.proximite - a.proximite) > 0.01) return b.proximite - a.proximite;
         return b.nbPlats - a.nbPlats;
@@ -493,6 +551,102 @@ var NattySocial = (function () {
       ecrireLocal('amis', Object.keys(AMIS));
     }
     return suit;
+  }
+
+  /* ── Masquer un membre, signaler un plat ─────────────────────
+     Guideline 1.2. Volontairement DEUX gestes distincts et non un
+     seul : masquer est un geste de tranquillité, immédiat et sans
+     conséquence pour l'autre ; signaler est une alerte adressée à
+     l'équipe. Les confondre ferait hésiter à faire l'un des deux. */
+
+  /* Les motifs sont une liste FERMÉE, reprise à l'identique par la contrainte
+     `check` de natty_moderation.sql : un motif inventé côté écran ferait
+     échouer l'insertion, et l'utilisateur croirait avoir signalé. */
+  var MOTIFS = [
+    { cle: 'inapproprie', txt: 'Contenu inapproprié ou choquant' },
+    { cle: 'personne',    txt: 'Une personne identifiable sans son accord' },
+    { cle: 'trompeur',    txt: 'Information nutritionnelle trompeuse' },
+    { cle: 'spam',        txt: 'Publicité ou spam' },
+    { cle: 'autre',       txt: 'Autre raison' }
+  ];
+
+  function estBloque(userId) { return !!BLOQUES[userId]; }
+  function dejaSignale(mealId) { return !!SIGNALES[mealId]; }
+
+  /* « La modération est-elle synchronisée ? » — l'écran s'en sert pour dire la
+     vérité à l'utilisateur au lieu de laisser croire à un enregistrement en
+     base qui n'a pas lieu (même parti pris qu'assets/planning.js). */
+  function moderationOk() {
+    return supportBloques === 'table' && supportSignal === 'table';
+  }
+
+  /* Masquer / réafficher. Optimiste comme basculerAmi : l'écran réagit tout de
+     suite, l'écriture suit, et un échec réseau remet l'état d'avant plutôt que
+     de laisser l'affichage mentir. */
+  function basculerBloque(userId) {
+    if (!userId || userId === Natty.USER_ID) return false;
+    var masque = !BLOQUES[userId];
+    if (masque) BLOQUES[userId] = true; else delete BLOQUES[userId];
+
+    if (supportBloques === 'table' && Natty.USER_ID) {
+      // ⚠️ `?on_conflict=user_id,bloque_id` : sans lui PostgREST résout sur la
+      // clé primaire et un second masquage repartirait en 409 (piège documenté
+      // en §3 de CLAUDE.md, payé sur meal_likes et membre_amis).
+      var p = masque
+        ? Natty.sbPost('membre_bloques?on_conflict=user_id,bloque_id',
+            { user_id: Natty.USER_ID, bloque_id: userId },
+            'return=minimal,resolution=ignore-duplicates')
+        : sbDelete('membre_bloques?user_id=eq.' + Natty.USER_ID + '&bloque_id=eq.' + userId);
+      p.catch(function () { if (masque) delete BLOQUES[userId]; else BLOQUES[userId] = true; });
+    } else {
+      ecrireLocal('bloques', Object.keys(BLOQUES));
+    }
+
+    /* Le fil courant est purgé sur place : recharger depuis la base pour un
+       geste local ferait clignoter l'écran et perdrait la position de lecture.
+       Au prochain `charger()` le filtre s'appliquera de lui-même. */
+    if (masque) PLATS = PLATS.filter(function (p) { return p.user_id !== userId; });
+    return masque;
+  }
+
+  /* Signaler un plat. Rend `{ mode }` : 'table' quand c'est enregistré,
+     'email' avec un lien prérempli quand natty_moderation.sql n'a pas encore
+     été exécuté. Le repli n'est PAS un stockage local — un signalement qui
+     reste sur l'appareil de celui qui signale ne signale rien. */
+  async function signaler(mealId, motif, commentaire) {
+    var plat = platParId(mealId);
+    if (!plat) return { mode: 'echec' };
+    if (!MOTIFS.some(function (m) { return m.cle === motif; })) motif = 'autre';
+
+    if (supportSignal !== 'email' && Natty.USER_ID) {
+      try {
+        await Natty.sbPost('signalements?on_conflict=meal_id,signaleur_id', {
+          meal_id: mealId,
+          auteur_id: plat.user_id,
+          signaleur_id: Natty.USER_ID,
+          motif: motif,
+          commentaire: (commentaire || '').slice(0, 500) || null
+        }, 'return=minimal,resolution=ignore-duplicates');
+        supportSignal = 'table';
+        SIGNALES[mealId] = true;
+        return { mode: 'table' };
+      } catch (e) { supportSignal = 'email'; }
+    }
+
+    SIGNALES[mealId] = true;
+    ecrireLocal('signales', Object.keys(SIGNALES));
+    var m = MOTIFS.filter(function (x) { return x.cle === motif; })[0];
+    var corps = 'Plat signalé : ' + (plat.nom || '') + '\n'
+      + 'Identifiant : ' + mealId + '\n'
+      + 'Auteur : ' + plat.user_id + '\n'
+      + 'Motif : ' + (m ? m.txt : motif) + '\n'
+      + (commentaire ? 'Précision : ' + commentaire + '\n' : '');
+    return {
+      mode: 'email',
+      lien: 'mailto:contact@natty-nutrition.com'
+          + '?subject=' + encodeURIComponent('Signalement de contenu — Natty')
+          + '&body=' + encodeURIComponent(corps)
+    };
   }
 
   /* ── Réglage « mes plats dans le fil » (profil.html) ─────── */
@@ -596,6 +750,13 @@ var NattySocial = (function () {
     marquerVue: marquerVue,
     estAmi: estAmi,
     basculerAmi: basculerAmi,
+    // Modération (guideline 1.2)
+    MOTIFS: MOTIFS,
+    estBloque: estBloque,
+    basculerBloque: basculerBloque,
+    signaler: signaler,
+    dejaSignale: dejaSignale,
+    moderationOk: moderationOk,
     estPrefsDispo: estPrefsDispo,
     lireMaPref: lireMaPref,
     ecrireMaPref: ecrireMaPref,

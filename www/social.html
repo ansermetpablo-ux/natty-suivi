@@ -129,6 +129,45 @@ body{overflow-x:hidden}
 .follow:active{transform:scale(.96)}
 .mbr .follow{box-shadow:none}
 .mbr .follow.on{background:var(--bg)}
+/* Un membre masqué : la ligne s'éteint, mais le bouton reste franc — c'est le
+   seul endroit d'où l'on peut le réafficher, il ne doit pas s'effacer avec. */
+.mbr.masq{opacity:.5}
+.mbr.masq .av{filter:grayscale(1)}
+.mbr .follow.demasq{background:var(--card);color:var(--ink);box-shadow:var(--nm-in);opacity:1}
+
+/* ══ Signalement (guideline 1.2) ══
+   z-index 950 : AU-DESSUS de la visionneuse (#nvue est à 880), d'où part le
+   geste. En dessous, la feuille se serait ouverte derrière la photo — le défaut
+   .map-screen de narration.html, à l'identique. */
+#sgSheet{position:fixed;inset:0;z-index:950;display:flex;align-items:flex-end;
+  justify-content:center;background:rgba(0,0,0,.5);opacity:0;transition:opacity .2s ease;
+  padding:0 10px calc(14px + env(safe-area-inset-bottom))}
+#sgSheet.on{opacity:1}
+#sgSheet .sg-box{width:100%;max-width:var(--col);background:var(--bg);
+  border-radius:var(--r-xl);padding:20px 18px 16px;box-shadow:var(--nm-soft);
+  transform:translateY(14px);transition:transform .24s cubic-bezier(.22,1,.36,1)}
+#sgSheet.on .sg-box{transform:translateY(0)}
+#sgSheet .sg-ttl{font-weight:900;font-size:17px;letter-spacing:-.2px}
+#sgSheet .sg-sub{font-size:12px;color:var(--muted);margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sgSheet .sg-mots{display:flex;flex-direction:column;gap:7px;margin-top:15px}
+#sgSheet .sg-mot{text-align:left;background:var(--card);color:var(--ink);border:none;
+  border-radius:14px;padding:11px 13px;font-family:inherit;font-size:12.5px;
+  font-weight:600;cursor:pointer;box-shadow:var(--nm-in)}
+#sgSheet .sg-mot[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);
+  font-weight:800;box-shadow:none}
+#sgSheet .sg-txt{width:100%;box-sizing:border-box;margin-top:11px;background:var(--card);
+  color:var(--ink);border:none;border-radius:14px;padding:11px 13px;font-family:inherit;
+  font-size:12.5px;resize:none;box-shadow:var(--nm-in)}
+#sgSheet .sg-txt::placeholder{color:var(--muted)}
+#sgSheet .sg-btns{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+#sgSheet .sg-go{background:var(--ink);color:var(--on-ink);border:none;border-radius:var(--r-full);
+  padding:13px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
+#sgSheet .sg-go[disabled]{opacity:.6}
+#sgSheet .sg-no{background:none;border:none;color:var(--muted);font-family:inherit;
+  font-size:12.5px;font-weight:700;padding:6px;cursor:pointer}
+#sgSheet .sg-pied{font-size:11px;color:var(--muted);line-height:1.45;margin-top:10px;
+  text-align:center}
 
 /* Suggestions quand on ne suit encore personne */
 .sug-note{font-size:12.5px;color:var(--muted);line-height:1.5;margin:-4px 0 14px}
@@ -639,18 +678,25 @@ function rendreVedette(p){
 /* ══ Membres ══ */
 
 function boutonSuivre(m){
+  // Un membre masqué n'a pas à se faire suivre : le seul geste qui a du sens
+  // sur sa ligne, c'est de le réafficher.
+  if (m.bloque){
+    return '<button class="follow demasq" data-demasquer="' + esc(m.user_id) + '">'
+      + 'Réafficher</button>';
+  }
   return '<button class="follow' + (m.ami ? ' on' : '') + '" data-follow="' + m.user_id + '">'
     + (m.ami ? 'Suivi ✓' : 'Suivre') + '</button>';
 }
 
 function ligneMembre(m){
   var bouts = [];
+  if (m.bloque) bouts.push('Masqué');
   if (m.nbPlats) bouts.push(m.nbPlats + ' plat' + (m.nbPlats > 1 ? 's' : ''));
   if (m.jour && m.jour.c) bouts.push(m.jour.c + ' kcal/jour');
   if (m.proximite >= 0.85) bouts.push('profil proche');
   // La ligne entière mène au profil ; le bouton Suivre garde son propre geste
   // (il appelle stopPropagation, cf. le gestionnaire [data-follow]).
-  return '<div class="mbr" data-membre="' + esc(m.user_id) + '" style="cursor:pointer">'
+  return '<div class="mbr' + (m.bloque ? ' masq' : '') + '" data-membre="' + esc(m.user_id) + '" style="cursor:pointer">'
     + '<div class="av">' + esc(initiale(m.prenom)) + '</div>'
     + '<div class="mbr-body"><div class="mbr-nm">' + esc(m.prenom) + '</div>'
     + '<div class="mbr-sub">' + esc(bouts.join(' · ')) + '</div></div>'
@@ -836,14 +882,36 @@ function ouvrir(id, depuis){
     actions: function(it){
       var p = NattySocial.platParId(it.id);
       if (!p) return [];
+      var qui = (p.auteur && p.auteur.prenom) || 'ce membre';
+      /* Trois actions, dans cet ordre : celle qu'on vient chercher (suivre),
+         puis les deux de la guideline 1.2. Signaler et masquer sont deux gestes
+         DISTINCTS — l'un alerte l'équipe, l'autre ne concerne que soi — et les
+         fondre en un seul ferait hésiter à faire l'un des deux. */
       return [{
         txt: NattySocial.estAmi(p.user_id) ? 'Suivi ✓' : 'Suivre',
         on: function(){
           var suit = NattySocial.basculerAmi(p.user_id);
-          toast(suit ? 'Vous suivez ' + p.auteur.prenom
-                     : 'Vous ne suivez plus ' + p.auteur.prenom);
+          toast(suit ? 'Vous suivez ' + qui : 'Vous ne suivez plus ' + qui);
           majAmisPlusTard();
           return suit ? 'Suivi ✓' : 'Suivre';
+        }
+      }, {
+        txt: NattySocial.dejaSignale(p.id) ? 'Signalé ✓' : 'Signaler',
+        // `el` est le bouton du tiroir : l'envoi étant asynchrone, c'est le seul
+        // moyen de le relibeller au retour (la valeur rendue ici part avant).
+        on: function(it, el){
+          if (NattySocial.dejaSignale(p.id)){
+            toast('Vous avez déjà signalé ce plat. Nous le regardons.');
+            return 'Signalé ✓';
+          }
+          ouvrirSignalement(p, el);
+          return 'Signaler';
+        }
+      }, {
+        txt: 'Masquer ce membre',
+        on: function(){
+          demanderMasquage(p.user_id, qui);
+          return 'Masquer ce membre';
         }
       }];
     },
@@ -853,6 +921,104 @@ function ouvrir(id, depuis){
 }
 
 function fermer(){ if (window.NattyVisionneuse) NattyVisionneuse.fermer(); }
+
+/* ══ Modération : signaler, masquer ══
+   App Store Review Guideline 1.2. Le fil montre les photos et les prénoms
+   d'autres personnes : il faut pouvoir signaler un contenu et ne plus voir
+   quelqu'un. Les deux gestes partent du tiroir de la visionneuse.
+
+   ⚠️ La feuille est construite en JS et RETIRÉE à la fermeture, jamais
+   seulement masquée : posée dans le HTML, elle serait au-dessus de la
+   visionneuse (z-index 700 contre 900) et intercepterait ses taps même
+   invisible — le défaut déjà payé sur .map-screen de narration.html. */
+function ouvrirSignalement(p, btnTiroir){
+  var vieux = document.getElementById('sgSheet');
+  if (vieux && vieux.parentNode) vieux.parentNode.removeChild(vieux);
+
+  var d = document.createElement('div');
+  d.id = 'sgSheet';
+  d.innerHTML = '<div class="sg-box" role="dialog" aria-modal="true">'
+    + '<div class="sg-ttl">Signaler ce plat</div>'
+    + '<div class="sg-sub">' + esc(p.nom || 'Plat') + ' · '
+    +   esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div>'
+    + '<div class="sg-mots">' + NattySocial.MOTIFS.map(function(m, i){
+        return '<button class="sg-mot" data-motif="' + m.cle + '"'
+          + (i === 0 ? ' aria-pressed="true"' : '') + '>' + esc(m.txt) + '</button>';
+      }).join('') + '</div>'
+    + '<textarea class="sg-txt" id="sgTxt" rows="2" maxlength="500" '
+    +   'placeholder="Précisez si vous le souhaitez (facultatif)"></textarea>'
+    + '<div class="sg-btns">'
+    +   '<button class="sg-go" id="sgGo">Envoyer le signalement</button>'
+    +   '<button class="sg-no" id="sgNo">Annuler</button>'
+    + '</div>'
+    + '<div class="sg-pied">Nous regardons chaque signalement. Rien n\'est '
+    +   'communiqué à l\'auteur du plat.</div>'
+    + '</div>';
+  document.body.appendChild(d);
+  // rAF seule ne suffit pas quand la page ne peint pas : sans le minuteur, la
+  // feuille resterait invisible ET bloquante (même parade que Natty.confirmer).
+  requestAnimationFrame(function(){ d.classList.add('on'); });
+  setTimeout(function(){ d.classList.add('on'); }, 60);
+
+  var motif = NattySocial.MOTIFS[0].cle;
+  d.querySelector('.sg-mots').addEventListener('click', function(e){
+    var b = e.target.closest('[data-motif]');
+    if (!b) return;
+    motif = b.dataset.motif;
+    d.querySelectorAll('[data-motif]').forEach(function(x){
+      x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+    });
+  });
+
+  function ferme(){ if (d.parentNode) d.parentNode.removeChild(d); }
+  // Taper le fond annule — jamais n'envoie : un geste imprécis ne doit pas
+  // accuser quelqu'un.
+  d.addEventListener('click', function(e){ if (e.target === d) ferme(); });
+  d.querySelector('#sgNo').addEventListener('click', ferme);
+
+  d.querySelector('#sgGo').addEventListener('click', async function(){
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Envoi…';
+    var r = await NattySocial.signaler(p.id, motif, ($('sgTxt') || {}).value || '');
+    ferme();
+    if (r.mode === 'table'){
+      toast('Signalement envoyé. Merci — nous le regardons.');
+    } else if (r.mode === 'email'){
+      // La table n'existe pas encore : on ne fait PAS semblant. L'email part
+      // prérempli, et le signalement arrive quand même à quelqu'un.
+      toast('Ouverture de votre messagerie pour finir l\'envoi.');
+      window.location.href = r.lien;
+    } else {
+      toast('Signalement impossible pour l\'instant.', 'err');
+      return;
+    }
+    if (btnTiroir) btnTiroir.textContent = 'Signalé ✓';
+  });
+}
+
+function demanderMasquage(uid, qui){
+  if (NattySocial.estBloque(uid)){
+    NattySocial.basculerBloque(uid);
+    toast('Les plats de ' + qui + ' réapparaissent.');
+    majAmisPlusTard();
+    return;
+  }
+  Natty.confirmer('Masquer ' + qui + ' ?', {
+    detail: 'Vous ne verrez plus aucun de ses plats dans le fil. La personne '
+          + 'n\'en est pas informée, et vous pourrez la réafficher depuis '
+          + '« Vos amis › Gérer ».',
+    ok: 'Masquer'
+  }).then(function(oui){
+    if (!oui) return;
+    NattySocial.basculerBloque(uid);
+    // La visionneuse montre un plat de quelqu'un qu'on vient de masquer : la
+    // laisser ouverte serait absurde.
+    fermer();
+    toast('Les plats de ' + qui + ' sont masqués.');
+    rendre();
+  });
+}
 
 /* ══ Profil d'un membre ══
    Ouverte depuis un nom ou une photo, partout où ils apparaissent. On ne
@@ -922,6 +1088,20 @@ document.addEventListener('click', function(e){
     if (!NattySocial.estSynchronise()) toast('Enregistré sur cet appareil');
     return;
   }
+  /* ⚠️ AVANT [data-follow] ET [data-membre] : le bouton « Réafficher » est dans
+     la ligne du membre, donc testé après, c'est le profil qui s'ouvrirait. */
+  var dem = e.target.closest && e.target.closest('[data-demasquer]');
+  if (dem){
+    e.stopPropagation();
+    var uidD = dem.dataset.demasquer;
+    var quiD = NattySocial.auteurParId(uidD);
+    NattySocial.basculerBloque(uidD);
+    toast('Les plats de ' + (quiD ? quiD.prenom : 'ce membre') + ' réapparaissent.');
+    // Le fil courant n'a pas ses plats en mémoire (ils ont été écartés au
+    // chargement) : il faut vraiment recharger, pas seulement repeindre.
+    rechargerFil();
+    return;
+  }
   var fol = e.target.closest && e.target.closest('[data-follow]');
   if (fol){
     e.stopPropagation();
@@ -950,6 +1130,20 @@ document.addEventListener('click', function(e){
   // quelle section vient le plat, donc ce que le geste latéral parcourra.
   if (cible) ouvrir(cible.dataset.id, cible);
 });
+
+/* Réafficher un membre demande un VRAI rechargement, pas un repeint : ses plats
+   ont été écartés au chargement (voir le filtre BLOQUES de social.js), ils ne
+   sont donc pas en mémoire. C'est la seule action de l'écran dans ce cas —
+   suivre et masquer, eux, travaillent sur ce qui est déjà là. */
+async function rechargerFil(){
+  try{
+    await NattySocial.charger();
+    rendre();
+    // La feuille des membres reste ouverte : on la repeint pour que la ligne
+    // perde son état « Masqué » sous les yeux de l'utilisateur.
+    if ($('sheetMbr').classList.contains('on')) rendreMembres();
+  }catch(e){ toast('Rechargement impossible. Vérifiez votre connexion.', 'err'); }
+}
 
 /* Le fil se recompose après un abonnement, mais pas pendant que la feuille
    des membres est ouverte : on ne veut pas que la liste bouge sous le doigt. */

@@ -47,6 +47,11 @@ const TABLES_USER = [
   // une table qui n'existe pas encore, donc l'ordre entre le SQL et ce
   // déploiement n'a pas d'importance.
   'bilan_jour',
+  // Modération du fil (natty_moderation.sql). `signalements` est effacée par
+  // `signaleur_id` ET par `auteur_id` plus bas : les deux colonnes désignent
+  // une personne, et n'en effacer qu'une laisserait le compte supprimé nommé
+  // dans une accusation — la sienne ou celle qui le visait.
+  'membre_bloques',
   'garde_manger', 'abonnements', 'meals'
 ];
 
@@ -176,6 +181,13 @@ export default async function handler(req, res) {
   journal.push(await effacer('membre_amis', 'user_id=eq.' + uid, SERVICE_KEY));
   journal.push(await effacer('membre_amis', 'ami_id=eq.' + uid, SERVICE_KEY));
   journal.push(await effacer('notes_nutritionniste', 'client_id=eq.' + uid, SERVICE_KEY));
+
+  // Modération : quatre colonnes pointent vers une personne. `membre_bloques`
+  // est déjà traitée par `user_id` dans la boucle ; il reste le côté « je suis
+  // celui qu'on a masqué », et les deux extrémités d'un signalement.
+  journal.push(await effacer('membre_bloques', 'bloque_id=eq.' + uid, SERVICE_KEY));
+  journal.push(await effacer('signalements', 'signaleur_id=eq.' + uid, SERVICE_KEY));
+  journal.push(await effacer('signalements', 'auteur_id=eq.' + uid, SERVICE_KEY));
 
   // 4. Le compte Auth en dernier. C'est le seul échec qui fait échouer l'appel :
   //    sans lui la personne pourrait se reconnecter et croire que rien n'a été
