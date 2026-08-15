@@ -266,10 +266,33 @@ function afficherNb(n){
    maintenant la génération, une seule fois, et bascule ensuite en affichage —
    c'est exactement ce que le commentaire de `recettesDeLaSemaine()` dans
    assets/reco.js demandait aux pages de faire. */
+/* ⚠️ `?plat=<nom>` — ARRIVER SUR LE PLAT QU'ON EST VENU PRÉPARER.
+   Le guide du jour propose « Suivre la recette » sur le repas prévu à ce
+   créneau, puis appelait `repas.html` tout court : on atterrissait donc sur
+   PLATS[0], la première recette de la semaine, qui n'a aucune raison d'être
+   celle du dîner. Le bouton menait quelque part, mais pas là où il disait.
+   Le rapprochement se fait par NOM, comme le tap sur une case du calendrier
+   (`monterMaSemaine`) — un seul critère pour un seul geste. Une recette
+   introuvable ne fait rien de spécial : on reste sur la première, ce qui est
+   l'état d'avant, jamais un écran vide. */
+function indexDemande(){
+  var n = new URLSearchParams(window.location.search).get('plat');
+  if (!n) return 0;
+  n = n.trim().toLowerCase();
+  for (var i = 0; i < PLATS.length; i++){
+    if ((PLATS[i].nom || '').trim().toLowerCase() === n) return i;
+  }
+  return 0;
+}
+
 function rendreSemaine(){
   if (SEMAINE && SEMAINE.length){
     PLATS = SEMAINE.map(depuisRecette);
-    actif = 0;
+    /* Le paramètre n'est PAS retiré de l'URL, contrairement au `?repas=` de
+       `suivi.html` : celui-là rouvrait un éditeur à chaque passage, celui-ci
+       ne fait que choisir ce qu'on regarde. Le nettoyer ferait revenir la
+       page sur la première recette au moindre rechargement. */
+    actif = indexDemande();
     render();
     return;
   }
@@ -380,6 +403,12 @@ function visuelRecette(r, i){
     if (ph) return { photo: ph, photoWeek: NattyDecouverte.vignette(p), illu: null };
     return { photo: null, photoWeek: null, illu: NattyDecouverte.illu(p, { trait: .9 }) };
   }
+  /* La recette porte SA photo. C'est le cas d'un plat qui n'est pas au
+     catalogue mais qui a bien été photographié — le tzatziki de courgettes
+     ajouté à la main en août 2026. Sans cette ligne il retombait sur les deux
+     photos de démonstration, c'est-à-dire sur l'image d'un AUTRE plat : le
+     défaut que l'encadré ci-dessus décrit, à un cas près. */
+  if (r && r.photo) return { photo: r.photo, photoWeek: r.photoWeek || r.photo, illu: null };
   return { photo: DEMO_PHOTOS[i % DEMO_PHOTOS.length].hero,
            photoWeek: DEMO_PHOTOS[i % DEMO_PHOTOS.length].week, illu: null };
 }

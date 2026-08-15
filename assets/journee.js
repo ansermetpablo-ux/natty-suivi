@@ -319,7 +319,14 @@ window.NattyJournee = (function () {
         e.titre2 = prevu.nom;
         e.cta = 'Suivre la recette';
         e.sync = false;
-        e.action = function () { marquerEtape(e.cle); Natty.goto('repas.html'); };
+        /* ⚠️ ON DIT LEQUEL. Sans `?plat=`, on atterrissait sur la PREMIÈRE
+           recette de la semaine — celle du lundi, alors que le bouton venait
+           d'annoncer le dîner du samedi. Le nom suffit : c'est déjà la clé de
+           rapprochement du calendrier de `repas.html`. */
+        e.action = function () {
+          marquerEtape(e.cle);
+          Natty.goto('repas.html?plat=' + encodeURIComponent(prevu.nom || ''));
+        };
       }
 
       /* ── Revenir sur un repas déjà noté ───────────────────
