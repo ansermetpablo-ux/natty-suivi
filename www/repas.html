@@ -271,6 +271,9 @@ var SEMAINE = [];      // recettes de la semaine, telles que reco.js les rend
    n'afficher la pastille « quand » que sur ce plat-là : on peut taper une autre
    carte, et il ne faut pas qu'elle hérite du créneau d'un plat qu'on a quitté. */
 var MOMENT = null, idxMoment = -1;
+/* Le plan de la semaine, gardé sous la main : c'est lui qui dit quelle case du
+   calendrier correspond au plat affiché. `SEL_SEMAINE` est cette case. */
+var PLAN = null, SEL_SEMAINE = null;
 /* Ingrédients et préparation sont replies par défaut : le hero, les macros
    et « Démarrer » suffisent à décider. On garde le choix pendant la session
    — refermer le bloc à chaque changement de recette forcerait à le rouvrir
@@ -330,8 +333,13 @@ async function rendreSemaine(){
        un autre plat au moindre rechargement. */
     var moment = await choisirHero();
     var demande = indexDemande();
-    actif = demande >= 0 ? demande : moment;
-    render();
+    /* ⚠️ `poserActif` et non `actif = …; render();` : c'est lui qui pose
+       l'anneau sur la case du calendrier. Sans ça, le repas du moment était
+       bien en héros mais SA case n'était pas marquée — l'anneau n'apparaissait
+       qu'au premier tap, donc jamais au bon moment. `monterMaSemaine()` tourne
+       en parallèle, sans await : `selectionner()` retient la sélection même
+       avant que le calendrier soit monté, et `fiche()` l'applique en arrivant. */
+    poserActif(demande >= 0 ? demande : moment);
     return;
   }
   document.getElementById('content').innerHTML =
@@ -516,24 +524,61 @@ function depuisPlanRepas(r){
   };
 }
 
-/* Rend l'index du plat à mettre en héros, et arme la pastille « quand ».
-   Sans planification (ou sans plan pour cette semaine) : 0, comme avant. */
-async function choisirHero(){
-  MOMENT = null; idxMoment = -1;
-  if (!window.NattyPlanning || !NattyPlanning.repasDuMoment) return 0;
-  var plan = null;
-  try { plan = await NattyPlanning.lire(); } catch(e){}
-  var r = NattyPlanning.repasDuMoment(plan);
-  if (!r) return 0;
-
-  /* La `cle` du catalogue d'abord, le nom seulement ensuite : deux plats
-     peuvent porter des noms voisins, jamais la même clé. */
+/* L'index d'un repas du plan dans PLATS — la `cle` du catalogue d'abord, le nom
+   seulement ensuite : deux plats peuvent porter des noms voisins, jamais la même
+   clé. Rend -1 si le plat n'y est pas encore. */
+function indexPlat(r){
   var i = -1;
   if (r.cle) PLATS.forEach(function(p,k){ if (i<0 && p.cle && p.cle === r.cle) i = k; });
   if (i < 0) PLATS.forEach(function(p,k){ if (i<0 && normNom(p.nom) === normNom(r.nom)) i = k; });
-  if (i < 0){ PLATS.push(depuisPlanRepas(r)); i = PLATS.length - 1; }
+  return i;
+}
 
+/* Le repas du plan entre dans PLATS s'il n'y est pas, et rend sa place. C'est
+   ce qui permet de taper N'IMPORTE QUELLE case de la semaine et de voir son
+   repas en héros — y compris les trois plats macro, qui n'existent nulle part
+   ailleurs dans l'app. */
+function accueillirPlanRepas(r){
+  var i = indexPlat(r);
+  if (i < 0){ PLATS.push(depuisPlanRepas(r)); i = PLATS.length - 1; }
+  return i;
+}
+
+/* La case du calendrier qui porte ce plat, s'il y en a une. Sert à garder
+   l'anneau blanc du calendrier en face de ce qui est affiché en héros, quel que
+   soit le chemin par lequel on y est arrivé. */
+function caseDe(d){
+  if (!PLAN || !PLAN.repas || !d) return null;
+  var t = null;
+  if (d.cle) PLAN.repas.forEach(function(r){ if (!t && r.cle && r.cle === d.cle) t = r; });
+  if (!t) PLAN.repas.forEach(function(r){ if (!t && normNom(r.nom) === normNom(d.nom)) t = r; });
+  return t ? { jour:t.jour, creneau:t.creneau } : null;
+}
+
+/* Un seul chemin pour changer de plat affiché : l'index, la case du calendrier
+   qui va avec, le rendu. Il y avait trois endroits qui faisaient les deux
+   premiers à leur façon — c'est comme ça qu'un anneau finit par désigner un
+   plat qui n'est plus à l'écran. */
+function poserActif(i){
+  if (i < 0 || i >= PLATS.length) return;
+  actif = i; ingrOff = {};
+  SEL_SEMAINE = caseDe(PLATS[i]);
+  render();
+  if (window.NattyPlanning && NattyPlanning.selectionner) NattyPlanning.selectionner(SEL_SEMAINE);
+}
+
+/* Rend l'index du plat à mettre en héros, et arme la pastille « quand ».
+   Sans planification (ou sans plan pour cette semaine) : 0, comme avant. */
+async function choisirHero(){
+  MOMENT = null; idxMoment = -1; PLAN = null; SEL_SEMAINE = null;
+  if (!window.NattyPlanning || !NattyPlanning.repasDuMoment) return 0;
+  try { PLAN = await NattyPlanning.lire(); } catch(e){}
+  var r = NattyPlanning.repasDuMoment(PLAN);
+  if (!r) return 0;
+
+  var i = accueillirPlanRepas(r);
   MOMENT = r; idxMoment = i;
+  SEL_SEMAINE = { jour:r.jour, creneau:r.creneau };
   return i;
 }
 
@@ -607,7 +652,12 @@ function pastillesHero(d){
    Une recette entamée puis quittée est le cas le plus fréquent : on cuisine en
    vingt minutes, pendant lesquelles le téléphone se verrouille. */
 function libelleCta(d, suivie){
-  if (d.plan && !(d.steps && d.steps.length)) return 'Voir le détail';
+  /* Un repas placé par la planification n'a pas d'étapes : on ne le « suit »
+     pas, on le fait. Le bouton disait « Voir le détail » — donc trois repas de
+     la semaine sur cinq n'étaient que consultables. */
+  if (d.plan && !(d.steps && d.steps.length)) {
+    return estCuisinee(d) ? 'Repas validé ✓' : 'Réaliser ce repas';
+  }
   if (estCuisinee(d)) return 'Revoir les étapes';
   if (window.NattyRecette && d.src){
     var pr = NattyRecette.progres(d.src);
@@ -744,9 +794,11 @@ window.NattyOnRecetteSuivie = async function(r){
   // ⚠️ Tous les index glissent d'un cran : sans ça, la pastille « Aujourd'hui ·
   // Midi » se retrouverait sur le plat voisin de celui qu'elle décrit.
   if (idxMoment >= 0) idxMoment++;
-  actif = 0; ingrOff = {};
   suivies = {}; suivies[0] = true;
-  render();
+  // Une recette venue d'un mini-jeu n'est pas dans le plan : `poserActif` le
+  // constate et retire l'anneau du calendrier, au lieu de le laisser désigner
+  // le plat précédent.
+  poserActif(0);
   window.scrollTo({ top:0, behavior:'smooth' });
   // Suivie depuis un mini-jeu : même geste, donc même consommation
   // du garde-manger que par le bouton du hero.
@@ -781,11 +833,13 @@ function brancher(){
     var d = PLATS[actif];
     var dejaSuivie = !!suivies[actif];
 
-    /* Un plat placé par la planification n'a pas d'étapes : il est né du plan,
-       sa fiche est le seul écran qui le montre. Lui proposer « Démarrer » pour
-       n'afficher qu'un toast d'erreur serait une promesse en l'air. */
+    /* Un plat placé par la planification n'a pas d'étapes : il n'y a rien à
+       guider, mais il y a tout à valider. `realiser()` ouvre directement
+       l'écran photo — même contrat que pour une recette, rien ne compte sans
+       elle. Repli sur la fiche si le module n'est pas chargé. */
     if (d.plan && !(d.steps && d.steps.length)){
-      if (window.NattyPlanning) NattyPlanning.detail(d.plan);
+      if (window.NattyRecette && NattyRecette.realiser) NattyRecette.realiser(refRecette(d));
+      else if (window.NattyPlanning) NattyPlanning.detail(d.plan);
       else toast('Aucune étape détaillée pour ce plat');
       return;
     }
@@ -837,7 +891,10 @@ function brancher(){
 
   document.querySelectorAll('.week-card').forEach(function(el){
     el.addEventListener('click', function(){
-      actif = +el.dataset.i; ingrOff = {}; render();
+      // `poserActif` recale aussi l'anneau du calendrier : la recette qu'on
+      // choisit ici est souvent placée dans la semaine, et les deux doivent
+      // désigner le même plat.
+      poserActif(+el.dataset.i);
       window.scrollTo({ top:0, behavior:'smooth' });
     });
   });
@@ -879,19 +936,15 @@ async function monterMaSemaine(){
   var el = document.getElementById('planWrap');
   if (!el || !window.NattyPlanning) return;
   await NattyPlanning.monterFiche(el, function(repas){
-    /* Même appariement que `choisirHero()` — clé d'abord, nom ensuite — et
-       plus seulement pour les recettes : un plat macro déjà remonté au héros
-       est dans PLATS, y renvoyer vaut mieux que rouvrir sa fiche par-dessus. */
-    var i = -1;
-    if (repas.cle) PLATS.forEach(function(p,k){ if (i<0 && p.cle && p.cle === repas.cle) i = k; });
-    if (i < 0) PLATS.forEach(function(p,k){ if (i<0 && normNom(p.nom) === normNom(repas.nom)) i = k; });
-    if (i >= 0 && (repas.type === 'recette' || PLATS[i].plan)){
-      actif = i; ingrOff = {}; render();
-      window.scrollTo({ top:0, behavior:'smooth' });
-      return;
-    }
-    NattyPlanning.detail(repas);
-  });
+    /* ⚠️ TOUTE case pleine mène au héros, désormais — recette comme plat macro.
+       Avant, un plat macro ouvrait une feuille du bas (`NattyPlanning.detail`) :
+       on pouvait le lire, pas le faire. Or il n'y a aucune raison qu'un repas de
+       la semaine soit consultable et un autre réalisable, et la feuille ne
+       montrait rien que le héros ne montre déjà (macros, pourquoi, ingrédients
+       dans « Détails »). Demande de Pablo, 2026-08-15. */
+    poserActif(accueillirPlanRepas(repas));
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }, SEL_SEMAINE);
 }
 
 /* La séquence vient de se terminer sur un autre écran, ou ici même via

@@ -4,6 +4,7 @@
      NattyRecette.fiche(recette)        → le HTML des étapes détaillées
      NattyRecette.monter(el, recette)   → l'injecte et branche le bouton
      NattyRecette.suivre(recette)       → la cinématique plein écran
+     NattyRecette.realiser(repas)       → directement l'écran de validation
      NattyRecette.galerie()             → planche de contrôle des animations
      NattyRecette.progres(recette)      → où l'on en était : {i, total} ou null
      NattyRecette.estValidee(recette)   → cuisinée ET photographiée cette semaine
@@ -1098,6 +1099,10 @@ window.NattyRecette = (function () {
       return el;
     }
 
+    /* Un repas ouvert par `realiser()` n'a pas d'étapes : on ne vient pas de le
+       suivre, on vient dire qu'on l'a fait. « C'est prêt 🎉 » sonnerait faux au
+       bout d'un écran qui n'a rien accompagné. */
+    var sansEtapes = !etapes.length;
     el.innerHTML = photoUrl
       ? '<div class="nr-shotw"><img class="nr-shot" src="' + photoUrl + '" alt="">'
         + '<span class="nr-badge">' + CHECK + '</span></div>'
@@ -1106,9 +1111,10 @@ window.NattyRecette = (function () {
         + esc(nomCourant()) + ' dans votre semaine.</div>'
         + '<button class="nr-alt" type="button" data-nr="reprendre">Reprendre la photo</button>'
       : '<div class="nr-big">' + dessin('dresser', '🍽️') + '</div>'
-        + '<div class="nr-t">C’est prêt 🎉</div>'
-        + '<div class="nr-d">Photographiez votre plat pour valider la recette.'
-        + ' Sans photo, elle n’est pas validée.</div>'
+        + '<div class="nr-t">' + (sansEtapes ? 'Vous l’avez préparé ?' : 'C’est prêt 🎉') + '</div>'
+        + '<div class="nr-d">Photographiez votre plat pour '
+        + (sansEtapes ? 'valider ce repas' : 'valider la recette')
+        + '. Sans photo, il n’est pas validé.</div>'
         + '<button class="nr-alt" type="button" data-nr="galerie">Choisir dans la galerie</button>';
     return el;
   }
@@ -1196,15 +1202,21 @@ window.NattyRecette = (function () {
     bar.style.width = Math.round(((idx + 1) / (n + 1)) * 100) + '%';
     if (phase === 'photo') {
       num.textContent = '✓';
+      // « ma recette » sur un plat placé par la planification serait faux : il
+      // n'a pas d'étapes, on ne l'a pas suivi, on l'a fait.
       next.textContent = dejaValidee ? 'Terminer'
-        : (photoFile ? 'Valider ma recette ✓' : '📸 Prendre la photo');
+        : (photoFile ? (n ? 'Valider ma recette ✓' : 'Valider ce repas ✓')
+                     : '📸 Prendre la photo');
     } else {
       num.textContent = (idx + 1) + '/' + n;
       next.textContent = idx === n - 1 ? 'Dernière étape ✓' : 'Étape suivante →';
     }
-    // Depuis l'écran photo, ‹ ramène à la dernière étape : on peut vouloir
-    // relire la cuisson avant de photographier.
-    prev.style.visibility = (idx === 0 && phase !== 'photo') ? 'hidden' : 'visible';
+    /* Depuis l'écran photo, ‹ ramène à la dernière étape : on peut vouloir
+       relire la cuisson avant de photographier. Mais un repas SANS étape —
+       les plats placés par la planification, ouverts par `realiser()` — n'a
+       rien derrière lui : le bouton serait là, visible, et inerte. */
+    var peutReculer = n > 0 && (phase === 'photo' || idx > 0);
+    prev.style.visibility = peutReculer ? 'visible' : 'hidden';
   }
 
   function aller(n, reprise) {
@@ -1290,6 +1302,31 @@ window.NattyRecette = (function () {
     return true;
   }
 
+  /**
+   * Ouvre la cinématique DIRECTEMENT sur l'écran de validation.
+   *
+   * ⚠️ POURQUOI CETTE SECONDE ENTRÉE. La planification place 3 plats macro pour
+   * 2 recettes, et un plat macro n'a **pas d'étapes** : `suivre()` rend `false`
+   * et rend la main. Sans `realiser()`, trois repas de la semaine sur cinq ne
+   * pouvaient donc ni se valider, ni gagner d'XP, ni se cocher dans le
+   * calendrier — on pouvait les regarder, pas les faire.
+   *
+   * Le contrat est le MÊME que pour une recette : rien ne compte sans photo.
+   * @returns {boolean} toujours true — il y a toujours quelque chose à montrer.
+   */
+  function realiser(r) {
+    etapes = normaliser(r);
+    recCourante = r;
+    construire();
+    oublierPhoto();
+    dejaValidee = estValidee(r);
+    document.body.style.overflow = 'hidden';
+    ov.classList.add('on');
+    stage().innerHTML = '';
+    aller(etapes.length);          // = l'écran photo, quel que soit le nombre d'étapes
+    return true;
+  }
+
   function fermer() {
     stopTimer();
     if (!ov) return;
@@ -1310,6 +1347,7 @@ window.NattyRecette = (function () {
     fiche: fiche,
     monter: monter,
     suivre: suivre,
+    realiser: realiser,
     fermer: fermer,
     galerie: galerie,
     etapes: normaliser,

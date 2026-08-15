@@ -839,6 +839,18 @@ L'étape d'une cuisson n'a de sens que sur le téléphone posé à côté de la 
   sinon : deux calculs de semaine qui divergent, c'est une recette validée qui disparaît de la
   carte (le défaut déjà payé entre `suivi.html` et `assets/liste.js`).
 
+**`realiser(repas)` — valider sans avoir d'étapes à suivre** (2026-08-15). Seconde entrée de la
+cinématique, qui ouvre **directement** l'écran photo.
+> ⚠️ **Sans elle, trois repas de la semaine sur cinq étaient hors d'atteinte.** La
+> planification place 3 plats macro pour 2 recettes, et un plat macro n'a pas d'étapes :
+> `suivre()` rend `false` et rend la main. On pouvait donc les regarder, pas les faire — ni
+> les valider, ni gagner d'XP, ni les cocher dans le calendrier.
+> Le contrat est le **même** : rien ne compte sans photo. Ce qui change tient en trois
+> détails, et chacun corrige un contresens : le titre dit « Vous l'avez préparé ? » et non
+> « C'est prêt 🎉 » (on ne vient de suivre aucune étape), le bouton dit « Valider ce repas »
+> et non « ma recette », et **`‹` est masqué** — il n'y a rien derrière lui, et un bouton
+> visible et inerte est pire qu'un bouton absent.
+
 **La photo n'est pas envoyée**, et c'est assumé : elle sert de preuve à soi-même et
 d'illustration. Le bouton **« Noter ce repas dans mon suivi »** de l'écran de félicitation la
 repasse à `assets/ajout.js` — qui accepte désormais `start({file, nom})` et saute la prise de
@@ -1017,6 +1029,20 @@ validations d'`assets/recette.js` et `monterFiche` les fusionne avec `realises()
 > `cuisinees()` rend `{}` et la carte est exactement celle d'avant. Le module écoute
 > `natty:recette-validee` (sur **`document`**) et se repeint seul.
 
+**`selectionner({jour, creneau})` — la case dont le repas est en héros** (2026-08-15). Anneau
+blanc, distinct du vert « fait », et les deux se voient quand la case est les deux à la fois.
+Sans ce lien, on tape une case, quelque chose change plus bas, et rien ne dit que les deux
+vont ensemble.
+- ⚠️ **Elle ne repeint PAS** : elle bascule la classe sur le panneau déjà monté. Repasser par
+  `monterFiche()` à chaque tap relancerait `realises()`, donc **une requête réseau pour un
+  anneau blanc**.
+- ⚠️ **`monterFiche(el, cb, sel)` ne remet pas la sélection à zéro quand `sel` est omis.** Ses
+  propres rafraîchissements (un plat ajouté, une recette validée) l'appellent à **deux**
+  arguments : la remettre à `null` effacerait l'anneau sous les yeux de l'utilisateur, au
+  moment précis où il vient d'agir. D'où le test sur `undefined`, et non sur la véracité.
+- ⚠️ Coût mesuré : **0 px**. L'anneau est en `inset`, la case reste à 30 px et le panneau à
+  212 px — vérifié classe posée puis retirée.
+
 **`repasDuMoment(plan)` — ce que la semaine prévoit MAINTENANT** (2026-08-15). Rend l'entrée du
 créneau courant, et à défaut la **prochaine à venir** dans la semaine : la question « qu'est-ce
 que je cuisine ? » a toujours une réponse tant qu'il reste un repas placé. L'entrée porte
@@ -1051,8 +1077,27 @@ cinq**. Or ils n'existent nulle part ailleurs dans l'app — d'où `depuisPlanRe
 un plat affichable. Il porte `plan`, et ce drapeau commande tout le reste :
 - il est **exclu de la rangée « Recettes conseillées »** (compteur compris) : cette rangée ne
   parle que de recettes. Le filtre garde l'**index réel**, celui que porte `data-i` ;
-- son bouton dit **« Voir le détail »** et ouvre `NattyPlanning.detail()` : il n'a pas d'étapes,
-  lui proposer « Démarrer » pour n'afficher qu'un toast d'erreur serait une promesse en l'air.
+- son bouton dit **« Réaliser ce repas »** et appelle `NattyRecette.realiser()` : il n'a pas
+  d'étapes, mais il a tout à valider.
+
+**TOUTE case pleine du calendrier mène au héros** (2026-08-15, demande de Pablo : « pouvoir
+cliquer sur la semaine et voir les repas en héros, et réaliser celui qu'on veut »). Avant, une
+recette y menait mais un plat macro ouvrait une **feuille du bas** (`NattyPlanning.detail`) :
+on pouvait le lire, pas le faire. Il n'y a aucune raison qu'un repas de la semaine soit
+consultable et un autre réalisable — et la feuille ne montrait rien que le héros ne montre
+déjà (macros, « pourquoi », ingrédients dans « Détails »). `NattyPlanning.detail()` n'est donc
+plus appelé par cet écran que comme **repli** si `NattyRecette` manque.
+- `accueillirPlanRepas(r)` fait entrer le repas dans `PLATS` s'il n'y est pas, et rend sa
+  place — donc taper deux fois la même case ne le duplique pas.
+- ⚠️ **`poserActif(i)` est le SEUL chemin pour changer de plat affiché** : il pose l'index, la
+  case du calendrier qui va avec (`caseDe`), le rendu, et l'anneau. Trois endroits faisaient
+  les deux premiers à leur façon — c'est comme ça qu'un anneau finit par désigner un plat qui
+  n'est plus à l'écran.
+- ⚠️ **`rendreSemaine()` doit passer par lui aussi**, et ne le faisait pas : le repas du moment
+  était bien en héros, mais sa case n'était marquée qu'au **premier tap** — donc jamais au
+  moment où l'anneau sert à quelque chose. `monterMaSemaine()` tournant sans `await`,
+  `selectionner()` retient la sélection avant même que le calendrier soit monté, et `fiche()`
+  l'applique en arrivant.
 
 ⚠️ **L'appariement fait la `cle` d'abord, le nom ensuite** (`normNom`, sans accent ni ligature) :
 deux plats peuvent porter des noms voisins, jamais la même clé. Même règle dans le callback de
@@ -3284,6 +3329,10 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ **Rien ne valide sans photo**, puis félicitation + **50 XP** et total courant.
 - ✅ **La recette validée est cochée sur les DEUX cartes** : la rangée « Recettes conseillées »
   de `repas.html` et le calendrier « Ma semaine » d'`assets/planning.js`.
+- ✅ **Le calendrier se manipule** : taper n'importe laquelle des cases pleines amène SON repas
+  en héros — recette comme plat macro — et un anneau blanc dit laquelle est affichée. Le plat
+  macro se **réalise** (`NattyRecette.realiser()`, photo comprise) au lieu de s'ouvrir en
+  feuille de lecture : sans ça, trois repas de la semaine sur cinq n'étaient que consultables.
 - ✅ **Pont vers `assets/ajout.js`** : `start({file, nom})` saute la prise de vue et analyse la
   photo déjà prise, plutôt que de faire rephotographier la même assiette.
 - ✅ **Deux défauts trouvés au banc, aucun par `node --check`** : le bouton restait à
@@ -3291,6 +3340,10 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   compteur d'XP restait à « +0 XP » sur une page qui ne peint pas. Détail en §3.
 - ✅ **Un défaut préexistant corrigé au passage** : `.hero-foot` débordait de 45 px à 375 px et
   faisait défiler la page horizontalement. Voir l'encadré rouge de §3.
+- ✅ **Un troisième défaut trouvé au banc** : la case du repas du moment n'était marquée qu'au
+  premier tap — `rendreSemaine()` posait `actif` à la main au lieu de passer par
+  `poserActif()`. L'anneau n'apparaissait donc jamais à l'ouverture, c'est-à-dire au seul
+  moment où il explique quelque chose.
 - ✅ Vérifié en navigateur (375 × 812, thèmes clair ET sombre) sur deux bancs à doublures :
   49 contrôles sur les modules (identifiant, reprise, refus sans photo, validation, non-doublon,
   pas d'empilement de plans, coche du calendrier, repas du moment) et 30 sur `repas.html`

@@ -1419,6 +1419,13 @@ window.NattyPlanning = (function () {
       /* Fait = le repas prévu a bien eu lieu. Le vert est le seul accent de la
          carte : c'est lui qu'on doit voir en premier, et il suffit. */
       '.nplc-c.fait{box-shadow:inset 0 0 0 1.5px var(--green,#34c759)}',
+      /* La case dont le repas est en héros sur l'écran hôte. Sans ce lien
+         visible, on tape une case, quelque chose change plus bas, et rien ne
+         dit que les deux vont ensemble. Anneau blanc, distinct du vert
+         « fait » — et quand la case est les deux, les deux se voient. */
+      '.nplc-c.sel{box-shadow:inset 0 0 0 2px rgba(255,255,255,.9)}',
+      '.nplc-c.fait.sel{box-shadow:inset 0 0 0 2px rgba(255,255,255,.9),',
+      '0 0 0 2px var(--green,#34c759)}',
       '.nplc-c .ok{position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;',
       'background:var(--green,#34c759);color:#0b0c0e;font-size:7px;font-weight:900;display:flex;',
       'align-items:center;justify-content:center;line-height:1}',
@@ -1455,11 +1462,13 @@ window.NattyPlanning = (function () {
    * @param {object} plan  peut être null : on propose alors la planification.
    * @param {object} faits map `jour-creneau` → 1, des créneaux déjà mangés.
    * @param {object} [cuits] map identifiant → validation, cf. `cuisinees()`.
+   * @param {object} [sel] `{jour, creneau}` de la case à marquer sélectionnée.
    */
-  function fiche(plan, faits, cuits) {
+  function fiche(plan, faits, cuits, sel) {
     cssFiche();
     faits = faits || {};
     cuits = cuits || {};
+    sel = sel || null;
     if (!plan || !plan.repas || !plan.repas.length) {
       return '<div class="nplc"><div class="nplc-head"><div class="t">Ma semaine</div></div>'
         + '<div class="nplc-vide"><div class="d">Vos repas ne sont pas encore placés dans la semaine.'
@@ -1491,8 +1500,10 @@ window.NattyPlanning = (function () {
       for (var i = 0; i < 7; i++) {
         var r = carte[i + '-' + j], mange = !!faits[i + '-' + j], cuit = estCuite(r, cuits);
         var fait = mange || cuit;
+        var choisi = !!(sel && sel.jour === i && sel.creneau === j);
         h += r
-          ? '<div class="nplc-c plein' + (fait ? ' fait' : '') + '" data-nplc="repas" data-j="' + i
+          ? '<div class="nplc-c plein' + (fait ? ' fait' : '') + (choisi ? ' sel' : '')
+            + '" data-nplc="repas" data-j="' + i
             + '" data-c="' + j + '" title="' + esc(JOURS[i] + ' · ' + CRENEAUX[j].nom + ' — ' + r.nom)
             // Deux vérités différentes, deux mots différents : « mangé » vient
             // de la base, « cuisinée » de la validation photo.
@@ -1511,7 +1522,23 @@ window.NattyPlanning = (function () {
     return h;
   }
 
-  var ficheEl = null, ficheCb = null;
+  var ficheEl = null, ficheCb = null, ficheSel = null;
+
+  /**
+   * Marque la case dont le repas est actuellement en héros — SANS repeindre.
+   * ⚠️ C'est tout l'intérêt : repasser par `monterFiche()` à chaque tap
+   * relancerait `realises()`, donc une requête réseau pour un anneau blanc.
+   * @param {?object} sel `{jour, creneau}`, ou null pour tout désélectionner.
+   */
+  function selectionner(sel) {
+    ficheSel = sel || null;
+    if (!ficheEl || !ficheEl.isConnected) return;
+    ficheEl.querySelectorAll('.nplc-c.sel').forEach(function (c) { c.classList.remove('sel'); });
+    if (!ficheSel) return;
+    var c = ficheEl.querySelector('.nplc-c[data-j="' + ficheSel.jour
+      + '"][data-c="' + ficheSel.creneau + '"]');
+    if (c) c.classList.add('sel');
+  }
 
   /* Un plat vient d'être enregistré (bouton `+` d'assets/ajout.js) : la case du
      créneau se coche. L'événement ne porte rien — c'est `realises()` qui relit,
@@ -1533,14 +1560,19 @@ window.NattyPlanning = (function () {
    * Rend le panneau dans un élément et branche ses gestes.
    * @param {HTMLElement} el
    * @param {function} onRepas  reçoit le repas cliqué (facultatif)
+   * @param {object} [sel] `{jour, creneau}` à marquer. ⚠️ Omis, la sélection
+   *   courante est CONSERVÉE — les rafraîchissements internes (un plat ajouté,
+   *   une recette validée) appellent cette fonction à deux arguments, et
+   *   remettre à zéro effacerait l'anneau sous les yeux de l'utilisateur.
    */
-  async function monterFiche(el, onRepas) {
+  async function monterFiche(el, onRepas, sel) {
     if (!el) return null;
+    if (sel !== undefined) ficheSel = sel;
     var plan = await lire();
     // Seulement s'il y a un plan : sans plan il n'y a rien à cocher, et ce
     // serait une requête payée par tous ceux qui n'ont pas encore planifié.
     var faits = plan ? await realises() : {};
-    el.innerHTML = fiche(plan, faits, cuisinees());
+    el.innerHTML = fiche(plan, faits, cuisinees(), ficheSel);
     brancherVignettes(el);
     el.querySelectorAll('[data-nplc="ouvrir"]').forEach(function (b) {
       b.addEventListener('click', function () { ouvrir({ forcer: true }); });
@@ -1669,6 +1701,7 @@ window.NattyPlanning = (function () {
     lire: lire,
     fiche: fiche,
     monterFiche: monterFiche,
+    selectionner: selectionner,
     lundi: lundi,
     /* Le repas que la semaine prévoit maintenant — c'est lui que `repas.html`
        met en héros, plutôt que la première recette de la liste. */
