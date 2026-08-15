@@ -159,14 +159,36 @@ window.NattyJournee = (function () {
 
   /**
    * Ce qu'on met dans une bulle : la PHOTO DÉTOURÉE du plat prévu à ce créneau
-   * quand la planification en a un, l'illustration au trait sinon.
+   * quand la planification en a une, SON illustration au trait sinon, et
+   * seulement en dernier recours le pictogramme du créneau.
    *
    * Un plat reconnaissable vaut mieux qu'un pictogramme de repas : c'est la
    * différence entre « il y a un dîner » et « il y a CE dîner ».
+   *
+   * ⚠️ LE DEUXIÈME ÉTAGE MANQUAIT, et c'est ce qui rendait le premier presque
+   * invisible. `planning.js` range DEUX visuels par repas — `photo` pour ce qui
+   * est photographié, `illu` (le dessin de la forme du plat, `plats-illu.js`)
+   * pour le reste — et le calendrier de `repas.html` s'en sert déjà. Ici on
+   * jetait `illu` : un « Buddha bowl » prévu ce midi tombait sur l'icône du
+   * créneau, exactement celle qu'affiche un midi où RIEN n'est prévu. Les deux
+   * cas se ressemblaient donc trait pour trait — alors que le commentaire du
+   * CSS de `.hero` annonçait déjà l'illustration comme repli.
+   * Relevé sur la semaine réelle de Pablo (2026-08-15) : 3 des 6 repas sans
+   * photo portaient une illustration qui n'était jamais dessinée.
+   *
+   * ⚠️ `illu` est injecté tel quel, comme dans `vignette()` de `planning.js` et
+   * dans le hero de `repas.html` : c'est notre propre `<svg>`, produit par
+   * `plats-illu.js` au moment de la planification. Sa taille et son trait
+   * viennent du CSS (`.njsk .jal svg`, `.njsk .hero svg`), qui l'emporte sur le
+   * `stroke-width` inline — sinon le trait de 1,2 se peindrait en 7,8 px dans
+   * le hero de 156 px.
    */
   function figure(e) {
-    var ph = e && e.prevu && e.prevu.photo;
-    if (ph) return '<img src="' + esc(ph) + '" alt="" data-repli="' + esc(e.icone || 'midi') + '">';
+    var p = (e && e.prevu) || null;
+    if (p && p.photo) {
+      return '<img src="' + esc(p.photo) + '" alt="" data-repli="' + esc(e.icone || 'midi') + '">';
+    }
+    if (p && p.illu) return p.illu;
     return icone(e && e.icone ? e.icone : 'plus');
   }
 
