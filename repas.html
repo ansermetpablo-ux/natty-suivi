@@ -772,10 +772,33 @@ document.addEventListener('natty:planning-pret', function(){ monterMaSemaine(); 
 
     await chargerSemaineDepuisCache();
     rendreSemaine();
+    preparerSiDemande();
   }catch(e){
     document.getElementById('content').innerHTML = '<div class="empty">Impossible de charger les recettes.</div>';
   }
 })();
+
+/* ⚠️ `?preparer=1` — LE GUIDE ENVOIE CUISINER, PAS LIRE UNE FICHE.
+   « Suivre la recette » (assets/journee.js) s'arrêtait sur la carte du plat :
+   il fallait encore trouver « Démarrer » pour entrer dans la préparation. Le
+   bouton annonçait un geste et en demandait un second. Il ouvre maintenant la
+   cinématique directement. (Demande de Pablo, 2026-08-15.)
+
+   Appelé UNIQUEMENT au chargement, jamais depuis `rendreSemaine()` : celle-ci
+   tourne aussi quand la génération se termine en arrière-plan
+   (`natty:conseils-prets`), et lancer une préparation plein écran sous les
+   yeux de quelqu'un qui lisait autre chose serait un enlèvement.
+
+   Le repli est le comportement d'avant — la fiche, avec son « Démarrer » : on
+   ne rend pas la page inutilisable parce qu'une recette n'a pas d'étapes. */
+function preparerSiDemande(){
+  if (new URLSearchParams(window.location.search).get('preparer') !== '1') return;
+  var d = PLATS[actif];
+  if (!d || !d.src || !window.NattyRecette) return;
+  // `suivre()` rend `false` quand il n'y a aucune étape à jouer : on le laisse
+  // décider plutôt que de recompter nous-mêmes ce qu'il sait déjà compter.
+  NattyRecette.suivre(d.src);
+}
 </script>
 <!-- Les créneaux de repas (combien, lequel maintenant, ce qui y est déjà
      noté) : `assets/ajout.js` en a besoin pour dire ce qu'il RESTE sur le

@@ -314,18 +314,39 @@ window.NattyJournee = (function () {
          mangé, l'action utile est de la préparer. Un seul bouton, et pas de
          « j'ai mangé autre chose » : le `+` de la barre de navigation est
          toujours là, et un troisième bouton est un choix de plus à faire pour
-         un cas de bord. */
+         un cas de bord.
+
+         ⚠️ MAIS SEULEMENT S'IL Y A QUELQUE CHOSE À SUIVRE. Le plan range deux
+         sortes de repas : les recettes, qui portent leurs étapes dans `src`, et
+         les plats macro, qui n'en ont pas (relevé sur la semaine réelle : les
+         3 plats macro ont `src.steps` absent). Proposer « Suivre la recette »
+         sur un skyr-banane, c'est promettre une préparation qui n'existe nulle
+         part. Ces plats-là gardent « Ajouter mon plat » — on les note, on ne
+         les cuisine pas — tout en affichant leur nom, qui reste utile. */
+      var aPreparer = !!(prevu && prevu.src && (prevu.src.steps || []).length);
       if (prevu && deja === 0) {
         e.titre2 = prevu.nom;
+      }
+      if (aPreparer && deja === 0) {
         e.cta = 'Suivre la recette';
         e.sync = false;
-        /* ⚠️ ON DIT LEQUEL. Sans `?plat=`, on atterrissait sur la PREMIÈRE
-           recette de la semaine — celle du lundi, alors que le bouton venait
-           d'annoncer le dîner du samedi. Le nom suffit : c'est déjà la clé de
-           rapprochement du calendrier de `repas.html`. */
+        /* ⚠️ ON DIT LEQUEL, ET QU'ON VIENT CUISINER. Sans `?plat=` on
+           atterrissait sur la PREMIÈRE recette de la semaine — celle du lundi,
+           alors que le bouton venait d'annoncer le dîner du samedi. Le nom
+           suffit à la désigner : c'est déjà la clé de rapprochement du
+           calendrier de `repas.html`.
+           `preparer=1` enchaîne sur la préparation elle-même (demande de
+           Pablo, 2026-08-15). Sans lui, « Suivre la recette » s'arrêtait sur la
+           FICHE du plat, et il fallait encore trouver « Démarrer » : le bouton
+           annonçait un geste et en demandait un second.
+           ⚠️ Le déclenchement se fait dans `repas.html` et non ici : c'est la
+           SEULE page qui charge `assets/recette.js` (vérifié — ni `menu.html`,
+           ni `suivi.html`, ni les trois autres écrans porteurs du guide).
+           Appeler `NattyRecette` depuis le guide marcherait donc depuis Repas
+           et nulle part ailleurs, c'est-à-dire presque jamais. */
         e.action = function () {
           marquerEtape(e.cle);
-          Natty.goto('repas.html?plat=' + encodeURIComponent(prevu.nom || ''));
+          Natty.goto('repas.html?plat=' + encodeURIComponent(prevu.nom || '') + '&preparer=1');
         };
       }
 
@@ -1351,6 +1372,16 @@ window.NattyJournee = (function () {
       if (document.getElementById('nplan')) return;          // la planification est ouverte
       if (document.getElementById('nattyAjout')) return;      // un plat est en cours d'ajout
       if (window.NattyGeneration && NattyGeneration.enCours()) return;
+      /* ⚠️ Une préparation en cours, et c'est le cas qu'on vient de créer :
+         « Suivre la recette » ouvre `repas.html?preparer=1`, qui lance la
+         cinématique tout de suite — le guide ne doit pas venir se poser dessus
+         6,5 s plus tard, sur la page où l'on a envoyé l'utilisateur.
+         ⚠️ Tester la CLASSE et non l'existence : `recette.js` crée `#nrCine`
+         une fois pour toutes et le rouvre en lui reposant `.on`. Le seul
+         `getElementById` serait vrai même cinématique fermée, et le guide ne
+         s'ouvrirait alors plus jamais sur l'écran Repas. */
+      var nr = document.getElementById('nrCine');
+      if (nr && nr.classList.contains('on')) return;
 
       var premiere = !vuLong();
       if (premiere) { ouvrir(); return; }
