@@ -785,6 +785,67 @@ L'aliment **s'hérite** d'une étape à la suivante (« Enfourne 18 min » ne no
 ce qu'on vient de préparer qui part au four), sauf après `huiler` et `assaisonner` : sinon une
 olive finissait au four à la place du poulet.
 
+#### La mémoire, la photo et les XP (2026-08-15)
+La cinématique a désormais **trois temps** — `phase` vaut `'etapes'`, `'photo'` ou `'bravo'` —,
+parce qu'`idx` seul ne suffisait plus à dire ce que le bouton du bas doit faire. D'où
+`suivant()` plutôt qu'un `aller(idx+1)` en dur sur le clic.
+
+**On reprend où l'on s'était arrêté.** Une recette se cuisine en vingt minutes, pendant
+lesquelles le téléphone se verrouille et sonne. Sans mémoire, revenir voulait dire refaire
+défiler huit écrans pour retrouver le poulet déjà au four. L'étape atteinte est écrite **à
+chaque `aller()`**, jamais à la fermeture — une app tuée par le système ne passe par aucun
+`fermer()`. `suivre()` y reprend, un badge « ↩ Vous vous étiez arrêté ici » le dit (sans lui,
+ouvrir à l'étape 4 ressemble à un bug), et le bouton ‹ reste là pour revoir l'avant.
+- ⚠️ **La reprise n'a lieu que si `total` correspond.** Une recette régénérée depuis n'a plus
+  le même nombre d'étapes : reprendre à l'index 6 d'une recette qui n'en a plus que 4
+  afficherait n'importe quoi. `progres()` rend alors `null`.
+
+**RIEN NE VALIDE SANS PHOTO.** Le dernier écran ne dit plus « Bon appétit » : il réclame le
+plat en photo. C'est ce qui sépare « j'ai fait défiler les étapes » de « j'ai cuisiné » — un
+compteur qu'on peut avancer sans cuisiner ne compte rien. Photo posée → « Valider ma
+recette ✓ » → félicitation (coche verte tracée en deux temps, comme `.vok` d'`assets/planning.js`)
+et **+50 XP** (`XP_RECETTE`), avec le total courant en dessous.
+- ⚠️ **`inpCam.click()` est SYNCHRONE dans le geste**, comme partout ailleurs dans ce dépôt :
+  un `await` ou un `setTimeout` avant, et iOS n'ouvre plus la caméra. Les boutons secondaires
+  du plan passent par une **délégation** posée sur `.nr-c-stage` — le plan est reconstruit à
+  chaque changement, rebrancher à chaque rendu aurait fini par perdre le geste.
+- ⚠️ **`i.value = ''` dans le `change` de l'input** : reprendre DEUX fois la même photo
+  n'émettrait sinon qu'un seul événement (même fichier, même valeur), et le second tap sur
+  « Reprendre la photo » n'aurait aucun effet visible.
+- ⚠️ **`poserPhoto()` doit appeler `majBarre()`**, et il ne le faisait pas : le plan se
+  repeignait avec la photo pendant que le bouton du bas continuait d'annoncer « 📸 Prendre la
+  photo ». Le tap validait quand même — donc un bouton qui mentait sur ce qu'il allait faire.
+  Attrapé au banc, invisible à `node --check`.
+- ⚠️ **Le compteur d'XP a un filet.** Il monte en `requestAnimationFrame`, mais une page qui ne
+  peint pas (app en arrière-plan, onglet caché) n'en reçoit **aucune** : le chiffre restait
+  bloqué sur « +0 XP », c'est-à-dire qu'il annonçait le contraire de ce qui venait d'être
+  gagné. Un `setTimeout` de 1 s pose la valeur finale quoi qu'il arrive — même précaution que
+  la classe `on` de `Natty.confirmer`.
+- **Une seule ligne par recette et par semaine** : revalider le lendemain ne double pas les XP,
+  mais la même recette refaite la semaine suivante compte à nouveau. Rouverte une fois validée,
+  la cinématique se rejoue depuis le début et l'écran de fin dit « Déjà validée ✓ ».
+
+**Où ça vit.** Tout en `localStorage`, **donc par appareil** — ce module n'a aucune dépendance
+(ni core.js, ni réseau) et s'invite sur des pages qui ne parlent pas toutes à Supabase.
+L'étape d'une cuisson n'a de sens que sur le téléphone posé à côté de la casserole ; la
+**validation**, elle, gagnerait à suivre l'utilisateur, et c'est le seul manque de ce chantier
+(§8). Clés : `natty_recette_etape_<uid>_<id>` et `natty_recettes_faites_<uid>`.
+- ⚠️ **`identifiant(r)` est la clé partagée** avec `assets/planning.js` et `repas.html` : la
+  `cle` du catalogue quand elle existe, sinon le nom normalisé — **sans accent NI ligature**,
+  parce que `normalize('NFD')` ne décompose pas `œ` (le défaut qui a fait qu'aucun œuf n'était
+  reconnu dans toute l'app, §7). Comparer des noms plutôt que cette clé ferait diverger la
+  coche de la validation à la première majuscule.
+- ⚠️ **Le lundi vient de `NattyPlanning.lundi()` quand il est chargé**, repli local identique
+  sinon : deux calculs de semaine qui divergent, c'est une recette validée qui disparaît de la
+  carte (le défaut déjà payé entre `suivi.html` et `assets/liste.js`).
+
+**La photo n'est pas envoyée**, et c'est assumé : elle sert de preuve à soi-même et
+d'illustration. Le bouton **« Noter ce repas dans mon suivi »** de l'écran de félicitation la
+repasse à `assets/ajout.js` — qui accepte désormais `start({file, nom})` et saute la prise de
+vue. Sans ce chemin, le pont aurait redemandé de photographier une assiette déjà
+photographiée, donc personne ne l'aurait emprunté. L'événement `natty:recette-validee` porte
+`{recette, id, xp, xpTotal, nb, photo}`.
+
 ### `assets/liste.js` — liste de courses : cocher, masquer, copier
 Chargé par `coaching.html` (+ `www/`). `monter(el, items, opts)` où `opts.cle` est la clé
 localStorage — **fournie par l'appelant** parce que `coaching.html` avait déjà sa clé
@@ -941,6 +1002,28 @@ vide.
 > `natty:conseils-prets` / `natty:planning-pret` qui passent par `document`) et se recalcule ;
 > l'écran hôte n'a rien à faire.
 
+**Une recette CUISINÉE coche sa case, elle aussi** (2026-08-15) — `cuisinees()` lit les
+validations d'`assets/recette.js` et `monterFiche` les fusionne avec `realises()`.
+> ⚠️ **C'est la seule exception à l'encadré ci-dessus, et elle est délibérée.** « Ce créneau
+> a-t-il reçu un repas ? » a sa réponse en base ; « ai-je cuisiné CETTE recette-là ? » n'existe
+> nulle part ailleurs — on peut très bien cuisiner sans noter le repas. Sans cette lecture,
+> valider une recette photo à l'appui ne changerait rien au calendrier, et le geste n'aurait
+> servi à rien.
+> ⚠️ **Deux vérités, deux mots** : l'infobulle dit « (recette cuisinée ✓) » et non « (déjà
+> mangé) ». Le vert est le même — c'est le même repas, prouvé autrement — mais confondre les
+> deux ferait passer une lecture en base pour une déclaration, et l'inverse.
+> ⚠️ L'appariement passe par `NattyRecette.identifiant()`, jamais par une comparaison de noms.
+> Le module est **facultatif** (`menu.html` charge planning.js sans recette.js) : sans lui,
+> `cuisinees()` rend `{}` et la carte est exactement celle d'avant. Le module écoute
+> `natty:recette-validee` (sur **`document`**) et se repeint seul.
+
+**`repasDuMoment(plan)` — ce que la semaine prévoit MAINTENANT** (2026-08-15). Rend l'entrée du
+créneau courant, et à défaut la **prochaine à venir** dans la semaine : la question « qu'est-ce
+que je cuisine ? » a toujours une réponse tant qu'il reste un repas placé. L'entrée porte
+`.exact` — vrai si c'est bien maintenant —, et c'est ce qui permet à `repas.html` de dire
+« Aujourd'hui · Midi » sans mentir quand il montre un dîner de jeudi. `maintenant()` rend
+`{jour, creneau}` à partir des mêmes `jourIndex`/`creneauIndex` que le reste du module.
+
 **La carte « Ma semaine » est NOIRE et petite** (`--metal-black`, comme le panneau qui existait
 déjà dans `repas.html`). ⚠️ **Les jours sont en COLONNES, les créneaux en lignes** : la première
 version faisait l'inverse, sept rangées, une carte plus haute que le repas du jour lui-même —
@@ -955,6 +1038,60 @@ case pleine ouvre la recette dans le hero si c'en est une, sinon la fiche `detai
 (un plat macro n'existe nulle part ailleurs dans l'app, il est né de la planification). Le
 panneau qui listait les recettes s'appelle désormais **« Recettes conseillées »** : deux titres
 « Ma semaine » pour deux contenus différents faisaient passer l'un pour l'autre.
+
+### `repas.html` — le héros est le repas du moment
+Demande de Pablo (2026-08-15) : « si lundi 12 h 30 dans sa semaine c'est un buddha bowl, alors
+héros = buddha bowl, même s'il ne l'a pas validé ». L'écran s'ouvrait sur `PLATS[0]` — la
+première recette générée, sans aucun rapport avec l'heure qu'il est. `choisirHero()` lit le plan
+(`NattyPlanning.repasDuMoment`) et met en avant ce qui est prévu maintenant.
+
+⚠️ **Les plats MACRO comptent, et c'est ce qui rend la chose non triviale.** La planification
+place 3 plats macro pour 2 recettes : ignorer les macro, c'était rater le héros **trois fois sur
+cinq**. Or ils n'existent nulle part ailleurs dans l'app — d'où `depuisPlanRepas()`, qui en fait
+un plat affichable. Il porte `plan`, et ce drapeau commande tout le reste :
+- il est **exclu de la rangée « Recettes conseillées »** (compteur compris) : cette rangée ne
+  parle que de recettes. Le filtre garde l'**index réel**, celui que porte `data-i` ;
+- son bouton dit **« Voir le détail »** et ouvre `NattyPlanning.detail()` : il n'a pas d'étapes,
+  lui proposer « Démarrer » pour n'afficher qu'un toast d'erreur serait une promesse en l'air.
+
+⚠️ **L'appariement fait la `cle` d'abord, le nom ensuite** (`normNom`, sans accent ni ligature) :
+deux plats peuvent porter des noms voisins, jamais la même clé. Même règle dans le callback de
+`monterFiche` — sans quoi taper une case du calendrier et taper le héros ne menaient pas au même
+plat.
+
+**Les pastilles au-dessus du titre** disent QUAND (`📅 Aujourd'hui · Midi`, verte quand c'est le
+créneau courant, sourde quand c'est le prochain à venir) et si c'est déjà fait (`✓ Cuisinée`).
+Sans la première, un dîner de jeudi affiché un lundi matin ressemble à un tirage au sort.
+⚠️ Elle ne s'affiche que sur `idxMoment`, pas sur n'importe quelle carte tapée ensuite — et
+`idxMoment` est **décalé** quand `NattyOnRecetteSuivie` fait un `unshift` dans `PLATS`, sinon la
+pastille se retrouve sur le plat voisin de celui qu'elle décrit.
+
+
+⚠️ **DEUX FAÇONS DE CHOISIR LE PLAT AFFICHÉ, ET ELLES COHABITENT** (fusion du 15 août 2026,
+avec une session parallèle). `choisirHero()` passe **toujours en premier** — c'est lui qui
+arme la pastille « quand » et qui fait entrer un plat macro dans `PLATS` —, mais une demande
+EXPLICITE l'emporte : `?plat=<nom>` vient du guide du jour, et quelqu'un qui a tapé « Suivre
+la recette » sur son dîner ne doit pas atterrir sur le déjeuner parce qu'il est midi.
+`?preparer=1` ouvre la cinématique dans la foulée — et depuis l'étape mémorisée, les deux
+mécanismes se composant sans rien savoir l'un de l'autre.
+> ⚠️ **`indexDemande()` rend -1, et non 0, quand il n'y a rien à demander.** `0` est un index
+> valide : les confondre rendait `?plat=` **inopérant sur la première recette**, et empêchait le
+> repas du moment de prendre la main quand le nom demandé est introuvable. Défaut de la version
+> d'origine, corrigé à la fusion et vérifié au banc dans les deux sens.
+
+**Le bouton dit où l'on en est** : « Démarrer », « Reprendre · étape 3/4 », « Revoir les
+étapes », « Voir le détail ». Et la coche `.week-card.faite` remplace l'ancienne
+`.week-card.on` — la coche disait « carte sélectionnée », ce qui n'apprenait rien (la carte
+active est déjà soulevée) ; elle dit maintenant « cuisinée et validée », la seule chose qu'on
+ne peut pas deviner.
+
+> 🔴 ⚠️ **`.hero-foot` DOIT pouvoir passer à la ligne** (`flex-wrap:wrap` + `margin-left:auto`
+> sur `.hero-act`). Mesuré à 375 px : la ligne « 430 Kcal + ♡ + ✓ + bouton » débordait la
+> fenêtre de **45 px** dès que le bouton disait « Revoir les étapes », et la page partait en
+> défilement **horizontal**. Le défaut **préexistait** ; les libellés qui disent où l'on en est
+> (202 px pour « Reprendre · étape 3/4 ») le rendaient systématique. Les deux parties sont en
+> `flex-shrink:0` et doivent le rester — un nombre de calories tronqué ou un bouton coupé
+> seraient pires —, donc c'est la ligne qui cède. Vérifié sur les quatre libellés.
 
 ### `assets/journee.js` — « Ma journée », le guide cinématique des étapes du jour
 Plein écran noir qui s'invite à la **première ouverture de la journée**, puis à chaque
@@ -3138,6 +3275,40 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - 🔄 Le catalogue tient 14 appareils, choisis pour ce qui CHANGE une recette. En ajouter un ne
   réécrit pas les `resume` déjà en base — voir la contrepartie en §3.
 
+**Cuisiner une recette : le héros du moment, la mémoire, la photo, les XP (2026-08-15)**
+- ✅ **Le héros de `repas.html` est le repas planifié au moment où l'on regarde** — recette ou
+  plat macro, validé ou non. Pastilles « 📅 Aujourd'hui · Midi » et « ✓ Cuisinée ». Détail et
+  pièges en §3.
+- ✅ **La cinématique se souvient** : l'étape atteinte est retenue par recette, `suivre()` y
+  reprend, le badge « ↩ Vous vous étiez arrêté ici » l'annonce, et ‹ ramène à l'étape 1.
+- ✅ **Rien ne valide sans photo**, puis félicitation + **50 XP** et total courant.
+- ✅ **La recette validée est cochée sur les DEUX cartes** : la rangée « Recettes conseillées »
+  de `repas.html` et le calendrier « Ma semaine » d'`assets/planning.js`.
+- ✅ **Pont vers `assets/ajout.js`** : `start({file, nom})` saute la prise de vue et analyse la
+  photo déjà prise, plutôt que de faire rephotographier la même assiette.
+- ✅ **Deux défauts trouvés au banc, aucun par `node --check`** : le bouton restait à
+  « 📸 Prendre la photo » après la photo (il validait quand même — un bouton qui ment), et le
+  compteur d'XP restait à « +0 XP » sur une page qui ne peint pas. Détail en §3.
+- ✅ **Un défaut préexistant corrigé au passage** : `.hero-foot` débordait de 45 px à 375 px et
+  faisait défiler la page horizontalement. Voir l'encadré rouge de §3.
+- ✅ Vérifié en navigateur (375 × 812, thèmes clair ET sombre) sur deux bancs à doublures :
+  49 contrôles sur les modules (identifiant, reprise, refus sans photo, validation, non-doublon,
+  pas d'empilement de plans, coche du calendrier, repas du moment) et 30 sur `repas.html`
+  lui-même (héros recette, héros plat macro, rangée qui l'exclut, libellés du bouton, coche,
+  calendrier, pastilles, absence de plan, pont vers `NattyAjout` **appelé en 1 ms**, donc dans
+  le geste — la condition iOS pour la caméra).
+- 🔄 **Non vérifié sur téléphone ni avec une vraie session** : tout a tourné contre des
+  doublures de `Natty`, `NattyReco` et `NattyGardeManger`. Restent à juger sur un iPhone : la
+  vraie caméra depuis l'écran de fin, le rythme de la félicitation, et le rendu de la photo.
+- 🔄 **La validation vit en `localStorage`, donc par appareil.** Cuisiner sur son téléphone puis
+  ouvrir l'app sur un autre montrera une semaine non cochée. C'est le seul manque du chantier :
+  le porter en base demanderait soit une colonne dans `planning_semaine.plan` (synchronisée,
+  mais `assets/recette.js` n'aurait plus le droit d'être sans dépendance), soit une table de
+  plus. À trancher avec Pablo.
+- 🔄 **Les XP ne vivent que là.** `narration.html` a les siens, calculés depuis `maxIdx` du
+  parcours ; les deux compteurs ne se parlent pas. Les réunir est une décision produit, pas un
+  correctif.
+
 **Garde-manger & génération de recettes**
 - ✅ Panneau « Mon garde-manger » dans `repas.html` : scan des courses, du ticket de caisse ou
   d'une photo importée, plus saisie libre ; bouton « Générer mes repas avec ces ingrédients ».
@@ -3756,6 +3927,16 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
     bouge qu'à un endroit : `assets/materiel.js`. Ne jamais en écrire une seconde version côté
     Node — c'est le défaut d'`api/_nutrition.js`, qui a fini par annoncer d'autres macros que
     l'écran.
+39. **Une rangée qui mêle un chiffre et un bouton à libellé variable doit pouvoir passer à la
+    ligne.** `white-space:nowrap` + `flex-shrink:0` des deux côtés, c'est un débordement
+    horizontal garanti au premier libellé un peu long — et un débordement horizontal ne se voit
+    pas en lisant le code, seulement en mesurant `documentElement.scrollWidth` à 375 px. Le
+    réflexe est `flex-wrap:wrap` et une marge automatique pour recaler, jamais de tronquer un
+    nombre ou un verbe.
+40. **Un compteur animé en `requestAnimationFrame` a besoin d'un filet.** Une page qui ne peint
+    pas n'en reçoit aucune : le chiffre reste sur sa valeur de départ, c'est-à-dire qu'il annonce
+    le contraire de ce qu'il célèbre. Doubler d'un `setTimeout` qui pose la valeur finale — même
+    précaution que la classe `on` de `Natty.confirmer`.
 
 32. **Push automatique autorisé** (décidé le 2026-07-26) : une fois un commit créé sur ce repo, `git push origin main` peut être fait directement, **sans redemander confirmation à chaque fois**. Authentification via clé SSH dédiée (`~/.ssh/id_ed25519_github`, clé "Claude Accès" sur GitHub, remote `origin` en SSH). Cette autorisation est spécifique à ce repo — ne pas l'étendre à un autre dépôt ou à d'autres actions destructrices (force-push, reset, etc., qui restent soumises à confirmation).
 
@@ -4648,3 +4829,29 @@ n'a pu être fait ici.
 - ⚠️ Piège documenté au passage : le catalogue des appareils vit dans le module navigateur, et
   la ligne stocke la **phrase du prompt** à côté des clés plutôt que d'en tenir une copie côté
   Node — le défaut exact d'`api/_nutrition.js`, payé en macros fausses envoyées par notification.
+
+---
+
+*Contribution session « cuisiner une recette » (Claude Opus, 15 août 2026) — quatre demandes de
+Pablo, quatre fichiers :*
+- `repas.html` (+ `www/`) : **le héros est le repas que la semaine prévoit maintenant**, recette
+  ou plat macro, validé ou non. Pastilles « quand » et « cuisinée », libellé de bouton qui dit
+  où l'on en est, coche `.week-card.faite`. Détail et pièges en §3.
+- `assets/recette.js` (+ `www/`) : **mémoire de l'étape en cours**, **photo obligatoire** pour
+  valider, **félicitation + 50 XP**, et le pont vers le suivi. La cinématique passe de deux
+  temps à trois (`phase`).
+- `assets/planning.js` (+ `www/`) : `repasDuMoment()` / `maintenant()` / `cuisinees()`, et le
+  calendrier « Ma semaine » qui coche une recette validée — la seule exception assumée au
+  « aucun drapeau `fait` n'est stocké », et §3 dit pourquoi.
+- `assets/ajout.js` (+ `www/`) : `start({file, nom})`, pour ne pas faire rephotographier une
+  assiette déjà photographiée.
+- **Trois défauts trouvés en navigateur, aucun par `node --check`** : le bouton resté à
+  « 📸 Prendre la photo » après la photo (il validait quand même), le compteur d'XP bloqué à
+  « +0 XP » sur une page qui ne peint pas, et surtout `.hero-foot` qui **débordait de 45 px** à
+  375 px — défaut préexistant, que les nouveaux libellés rendaient systématique.
+- Bancs jetables `_test-recette.html` et `_test-repas.html` (préfixe `_`, donc hors dépôt) :
+  49 + 30 contrôles, thèmes clair et sombre, doublures de `Natty`, `NattyReco` et
+  `NattyGardeManger`. `_test-repas.html` recharge le VRAI `repas.html` en y glissant ses
+  doublures juste avant le script inline — c'est la seule façon de mesurer la page elle-même.
+- 🔄 Rien vu sur téléphone, ni avec une vraie session. Et la validation reste en `localStorage`,
+  donc par appareil : c'est le seul manque, il est en §8.

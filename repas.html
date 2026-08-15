@@ -45,6 +45,16 @@ body{overflow-x:hidden}
 .leaf.l3{top:-6px;right:34px;font-size:23px;transform:rotate(-8deg);animation-delay:.3s}
 @keyframes floatLeaf{0%,100%{translate:0 0}50%{translate:0 -8px}}
 
+/* Pastille « quand ». Elle explique POURQUOI c'est ce plat-là qui est en
+   héros : sans elle, un dîner de jeudi affiché un lundi matin ressemble à un
+   tirage au hasard. Verte quand c'est le repas du créneau courant, sourde
+   quand c'est le prochain à venir — deux situations, deux lectures. */
+.hero-when{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
+.hero-when span{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;
+  letter-spacing:.35px;text-transform:uppercase;padding:5px 11px;border-radius:var(--r-full);
+  background:var(--card);color:var(--muted);box-shadow:var(--nm-in)}
+.hero-when span.now{background:var(--green);color:#fff;box-shadow:none}
+.hero-when span.done{background:var(--green);color:#fff;box-shadow:none}
 .hero-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .hero-title{font-size:23px;font-weight:900;line-height:1.14;letter-spacing:-.2px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -54,8 +64,18 @@ body{overflow-x:hidden}
 .hero-macros{display:flex;gap:8px;margin-top:14px}
 .hero-macros .mp{flex:1;background:var(--card);border-radius:16px;padding:9px 0;
   text-align:center;font-weight:800;font-size:13px;box-shadow:var(--nm-in)}
-.hero-foot{display:flex;align-items:center;justify-content:space-between;margin-top:18px;gap:12px}
+/* ⚠️ `flex-wrap` OBLIGATOIRE, et ce n'était pas un luxe : mesuré à 375 px, la
+   ligne « 430 Kcal + ♡ + ✓ + bouton » débordait la fenêtre de 45 px dès que le
+   bouton disait « Revoir les étapes » — la page partait alors en défilement
+   HORIZONTAL. Le défaut préexistait ; les libellés qui disent où l'on en est
+   (« Reprendre · étape 3/4 », 202 px) le rendaient systématique. Les deux
+   parties ne peuvent pas rétrécir — un nombre de calories tronqué ou un bouton
+   coupé seraient pires —, donc c'est la LIGNE qui cède : le bouton passe
+   dessous, calé à droite par sa marge automatique. */
+.hero-foot{display:flex;align-items:center;justify-content:space-between;margin-top:18px;
+  gap:12px;flex-wrap:wrap}
 .hero-kcal{flex-shrink:0}
+.hero-act{margin-left:auto}
 .hero-kcal .k{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 .hero-kcal .v{font-size:21px;font-weight:900;margin-top:2px;white-space:nowrap}
 .hero-act{display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -87,7 +107,11 @@ body{overflow-x:hidden}
 .week-check{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;
   background:var(--green);color:#fff;font-size:9px;display:none;align-items:center;
   justify-content:center;font-weight:800}
-.week-card.on .week-check{display:flex}
+/* ⚠️ La coche disait « carte sélectionnée » (`.on`), ce qui n'apprenait rien —
+   la carte active se voit déjà, elle est soulevée. Elle dit maintenant
+   « recette cuisinée et validée », la seule chose qu'on ne peut pas deviner. */
+.week-card.faite .week-check{display:flex}
+.week-card.faite{box-shadow:inset 0 0 0 1.5px var(--green)}
 
 /* ══ Panneaux ingrédients / préparation ══ */
 .panel{background:var(--metal-white);border-radius:var(--r-lg);box-shadow:var(--sh-metal-light);padding:18px;margin-top:16px}
@@ -242,6 +266,11 @@ var actif = 0;         // index du plat au hero
 var suivies = {};      // recettes que l'utilisateur a choisi de suivre
 var ingrOff = {};      // ingrédients décochés du plat courant
 var SEMAINE = [];      // recettes de la semaine, telles que reco.js les rend
+/* Le repas que la planification prévoit MAINTENANT, et sa place dans PLATS.
+   C'est lui le héros — pas la première recette de la liste. `idxMoment` sert à
+   n'afficher la pastille « quand » que sur ce plat-là : on peut taper une autre
+   carte, et il ne faut pas qu'elle hérite du créneau d'un plat qu'on a quitté. */
+var MOMENT = null, idxMoment = -1;
 /* Ingrédients et préparation sont replies par défaut : le hero, les macros
    et « Démarrer » suffisent à décider. On garde le choix pendant la session
    — refermer le bloc à chaque changement de recette forcerait à le rouvrir
@@ -272,27 +301,36 @@ function afficherNb(n){
    PLATS[0], la première recette de la semaine, qui n'a aucune raison d'être
    celle du dîner. Le bouton menait quelque part, mais pas là où il disait.
    Le rapprochement se fait par NOM, comme le tap sur une case du calendrier
-   (`monterMaSemaine`) — un seul critère pour un seul geste. Une recette
-   introuvable ne fait rien de spécial : on reste sur la première, ce qui est
-   l'état d'avant, jamais un écran vide. */
+   (`monterMaSemaine`) — un seul critère pour un seul geste.
+   ⚠️ Rend -1, et non 0, quand il n'y a rien à demander : `0` est un index
+   valide, donc le confondre avec « aucune demande » rendait `?plat=` inopérant
+   sur la première recette — et empêchait le repas du moment de prendre la main
+   quand le nom demandé est introuvable. */
 function indexDemande(){
   var n = new URLSearchParams(window.location.search).get('plat');
-  if (!n) return 0;
+  if (!n) return -1;
   n = n.trim().toLowerCase();
   for (var i = 0; i < PLATS.length; i++){
     if ((PLATS[i].nom || '').trim().toLowerCase() === n) return i;
   }
-  return 0;
+  return -1;
 }
 
-function rendreSemaine(){
+async function rendreSemaine(){
   if (SEMAINE && SEMAINE.length){
     PLATS = SEMAINE.map(depuisRecette);
-    /* Le paramètre n'est PAS retiré de l'URL, contrairement au `?repas=` de
-       `suivi.html` : celui-là rouvrait un éditeur à chaque passage, celui-ci
-       ne fait que choisir ce qu'on regarde. Le nettoyer ferait revenir la
-       page sur la première recette au moindre rechargement. */
-    actif = indexDemande();
+    /* Deux façons de choisir ce qu'on regarde, et l'ordre compte. `choisirHero()`
+       passe TOUJOURS en premier — c'est lui qui arme la pastille « quand » et qui
+       fait entrer un plat macro dans PLATS —, mais une demande EXPLICITE
+       l'emporte : quelqu'un qui a tapé « Suivre la recette » sur son dîner ne
+       doit pas atterrir sur le déjeuner parce qu'il est midi.
+       Le paramètre n'est PAS retiré de l'URL, contrairement au `?repas=` de
+       `suivi.html` : celui-là rouvrait un éditeur à chaque passage, celui-ci ne
+       fait que choisir ce qu'on regarde. Le nettoyer ferait revenir la page sur
+       un autre plat au moindre rechargement. */
+    var moment = await choisirHero();
+    var demande = indexDemande();
+    actif = demande >= 0 ? demande : moment;
     render();
     return;
   }
@@ -335,7 +373,7 @@ async function genererSemaineMaintenant(){
     if (!row) throw new Error('non aboutie');
     await chargerSemaineDepuisCache();
     if (!SEMAINE || !SEMAINE.length) throw new Error('vide');
-    rendreSemaine();          // repasse en affichage, sans nouvel appel
+    await rendreSemaine();    // repasse en affichage, sans nouvel appel
     toast('Vos recettes sont prêtes');
   }catch(err){
     if (b){ b.disabled = false; b.textContent = '✨ Générer mes conseils repas'; }
@@ -436,6 +474,76 @@ function depuisRecette(r, i){
   };
 }
 
+/* ═══ Le héros = ce que la semaine prévoit maintenant ═══
+   Demande de Pablo : « si lundi 12 h 30 dans sa semaine c'est un buddha bowl,
+   alors héros = buddha bowl, même s'il ne l'a pas validé ». L'écran s'ouvrait
+   sur `PLATS[0]` — la première recette générée, sans rapport avec l'heure. */
+
+function normNom(s){
+  var t = String(s == null ? '' : s).toLowerCase().replace(/œ/g,'oe').replace(/æ/g,'ae');
+  try { t = t.normalize('NFD').replace(/[\u0300-\u036f]/g,''); } catch(e){}
+  return t.replace(/[^a-z0-9]+/g,' ').trim();
+}
+
+/* Un plat placé par la planification qui n'est PAS une recette de la semaine —
+   les trois plats macro. Il n'existe nulle part ailleurs dans l'app : sans
+   cette conversion, le créneau de midi n'aurait tout simplement pas de héros
+   trois fois sur cinq. Il porte `plan` : c'est ce qui le distingue d'une
+   recette (pas d'étapes à suivre, une fiche à ouvrir). */
+function depuisPlanRepas(r){
+  // `visuelRecette` sait déjà tout faire : la photo du catalogue, celle que la
+  // recette porte en propre, l'illustration au trait. Une seule voie, donc pas
+  // de second endroit à mettre à jour le jour où elle en apprend une de plus.
+  var v = visuelRecette({ cle:r.cle, photo:r.photo, photoWeek:r.photo }, 0);
+  /* ⚠️ `visuelRecette` finit sur les deux photos de démonstration. Sur un plat
+     du plan, ce serait l'assiette d'un AUTRE plat — exactement le défaut que
+     tout le reste de ce fichier s'emploie à corriger. Sans clé ni photo, son
+     illustration ou son emoji, et rien d'autre. */
+  if (!r.cle && !r.photo) v = { photo:null, photoWeek:null, illu:r.illu || null };
+  return {
+    cle: r.cle || null,
+    nom: r.nom || 'Repas',
+    desc: r.pourquoi || '',
+    temps: '',
+    kcal: Math.round(r.kcal||0),
+    p: Math.round(r.p||0), g: Math.round(r.g||0), l: Math.round(r.l||0),
+    emoji: r.em || '🍽️',
+    photo: v.photo, photoWeek: v.photoWeek, illu: v.illu,
+    ingr: (r.ingredients || []).map(function(x){ return { em:x.em||'🥄', nm:x.nom||'', qt:x.qte||'' }; }),
+    steps: [],
+    src: r.src || null,
+    plan: r
+  };
+}
+
+/* Rend l'index du plat à mettre en héros, et arme la pastille « quand ».
+   Sans planification (ou sans plan pour cette semaine) : 0, comme avant. */
+async function choisirHero(){
+  MOMENT = null; idxMoment = -1;
+  if (!window.NattyPlanning || !NattyPlanning.repasDuMoment) return 0;
+  var plan = null;
+  try { plan = await NattyPlanning.lire(); } catch(e){}
+  var r = NattyPlanning.repasDuMoment(plan);
+  if (!r) return 0;
+
+  /* La `cle` du catalogue d'abord, le nom seulement ensuite : deux plats
+     peuvent porter des noms voisins, jamais la même clé. */
+  var i = -1;
+  if (r.cle) PLATS.forEach(function(p,k){ if (i<0 && p.cle && p.cle === r.cle) i = k; });
+  if (i < 0) PLATS.forEach(function(p,k){ if (i<0 && normNom(p.nom) === normNom(r.nom)) i = k; });
+  if (i < 0){ PLATS.push(depuisPlanRepas(r)); i = PLATS.length - 1; }
+
+  MOMENT = r; idxMoment = i;
+  return i;
+}
+
+/* La recette telle que NattyRecette la reconnaît. Un plat macro n'a pas de
+   `src` : sa clé et son nom suffisent, et ce sont exactement ceux que lit
+   `assets/planning.js` pour cocher la case — donc une seule et même identité. */
+function refRecette(d){
+  return (d && d.src) || { cle: d && d.cle, nom: d && d.nom };
+}
+
 function depuisRepas(meal){
   var mac = Natty.calcMac(meal.meal_ingredients);
   return {
@@ -471,6 +579,43 @@ function heroVisuel(d){
   return '<div class="hero-dish">'+d.emoji+'</div>';
 }
 
+/* Cette recette a-t-elle été cuisinée et validée cette semaine ? Même clé que
+   `assets/planning.js` : la coche de la carte et celle du calendrier ne peuvent
+   donc pas se contredire. */
+function estCuisinee(d){
+  try { return !!(window.NattyRecette && NattyRecette.estValidee(refRecette(d))); }
+  catch(e){ return false; }
+}
+
+/* Les pastilles au-dessus du titre : QUAND ce plat est prévu, et s'il est déjà
+   cuisiné. Seul le plat du moment porte la première — les autres cartes de la
+   rangée sont consultées, pas programmées. */
+function pastillesHero(d){
+  var p = [];
+  if (MOMENT && actif === idxMoment && window.NattyPlanning){
+    var cre = NattyPlanning.CRENEAUX[MOMENT.creneau];
+    var auj = NattyPlanning.maintenant().jour;
+    var jour = MOMENT.jour === auj ? 'Aujourd’hui' : NattyPlanning.JOURS[MOMENT.jour];
+    p.push('<span class="'+(MOMENT.exact ? 'now' : '')+'">📅 '
+      + esc(jour + ' · ' + (cre ? cre.court : '')) + '</span>');
+  }
+  if (estCuisinee(d)) p.push('<span class="done">✓ Cuisinée</span>');
+  return p.length ? '<div class="hero-when">'+p.join('')+'</div>' : '';
+}
+
+/* Le bouton dit où l'on en est, au lieu de dire toujours « Démarrer ».
+   Une recette entamée puis quittée est le cas le plus fréquent : on cuisine en
+   vingt minutes, pendant lesquelles le téléphone se verrouille. */
+function libelleCta(d, suivie){
+  if (d.plan && !(d.steps && d.steps.length)) return 'Voir le détail';
+  if (estCuisinee(d)) return 'Revoir les étapes';
+  if (window.NattyRecette && d.src){
+    var pr = NattyRecette.progres(d.src);
+    if (pr) return 'Reprendre · étape ' + (pr.i + 1) + '/' + pr.total;
+  }
+  return suivie ? 'Revoir les étapes' : 'Démarrer';
+}
+
 function render(){
   var d = PLATS[actif];
   if (!d){
@@ -485,6 +630,7 @@ function render(){
     + '<div class="hero">'
       + heroVisuel(d)
       + '<span class="leaf l1">🌿</span><span class="leaf l2">🌿</span><span class="leaf l3">🌶️</span>'
+      + pastillesHero(d)
       + '<div class="hero-head">'
         + '<div class="hero-title">'+esc(d.nom)+'</div>'
         + (d.temps ? '<div class="hero-time">🕐 '+esc(d.temps)+'</div>' : '')
@@ -500,24 +646,32 @@ function render(){
         + '<div class="hero-act">'
           + '<button class="heart-btn" id="heartBtn">🤍</button>'
           + (suivie ? '<button class="heart-btn" id="unfollowBtn" aria-label="Retirer la recette">✓</button>' : '')
-          + '<button class="cta" id="ctaBtn">'+(suivie?'Revoir les étapes':'Démarrer')+'</button>'
+          + '<button class="cta" id="ctaBtn">'+esc(libelleCta(d, suivie))+'</button>'
         + '</div>'
       + '</div>'
     + '</div>';
 
-  if (PLATS.length > 1){
+  /* ⚠️ Les plats venus de la planification (les trois plats macro) sont dans
+     PLATS pour pouvoir être le héros du moment, mais PAS dans cette rangée :
+     elle s'appelle « Recettes conseillées » et ne doit contenir que des
+     recettes. On garde l'index réel — c'est lui que `data-i` porte. */
+  var cartes = PLATS.map(function(x,i){ return { x:x, i:i }; })
+                    .filter(function(o){ return !o.x.plan; });
+  if (cartes.length > 1){
     html += '<div class="week-panel">'
          /* « Ma semaine » nomme désormais le CALENDRIER, en haut de l'écran.
             Ce panneau-ci n'a jamais montré une semaine : il montre les
             recettes conseillées. Deux titres identiques pour deux contenus
             différents auraient fait passer l'un pour l'autre. */
          +  '<div class="sec-head"><span class="sec-title">Recettes conseillées</span>'
-         +  '<span class="sec-note">'+PLATS.length+' cette semaine</span></div>'
-         +  '<div class="week-row">' + PLATS.map(function(x,i){
+         +  '<span class="sec-note">'+cartes.length+' cette semaine</span></div>'
+         +  '<div class="week-row">' + cartes.map(function(o){
+              var x = o.x, i = o.i;
               var weekImg = x.photoWeek || x.photo;
               var vis = weekImg ? '<img src="'+esc(weekImg)+'" alt="">'
                       : (x.illu ? '<span class="wi">'+x.illu+'</span>' : x.emoji);
-              return '<div class="week-card'+(i===actif?' on':'')+'" data-i="'+i+'">'
+              return '<div class="week-card'+(i===actif?' on':'')+(estCuisinee(x)?' faite':'')
+                + '" data-i="'+i+'">'
                 + '<div class="week-check">✓</div>'
                 + '<div class="week-dish">'+vis+'</div>'
                 + '<div class="week-name">'+esc(x.nom)+'</div>'
@@ -587,6 +741,9 @@ window.NattyOnRecetteSuivie = async function(r){
   if (!r) return;
   var d = depuisRecette(r, PLATS.length);
   PLATS.unshift(d);
+  // ⚠️ Tous les index glissent d'un cran : sans ça, la pastille « Aujourd'hui ·
+  // Midi » se retrouverait sur le plat voisin de celui qu'elle décrit.
+  if (idxMoment >= 0) idxMoment++;
   actif = 0; ingrOff = {};
   suivies = {}; suivies[0] = true;
   render();
@@ -623,6 +780,15 @@ function brancher(){
   if (cta) cta.addEventListener('click', async function(){
     var d = PLATS[actif];
     var dejaSuivie = !!suivies[actif];
+
+    /* Un plat placé par la planification n'a pas d'étapes : il est né du plan,
+       sa fiche est le seul écran qui le montre. Lui proposer « Démarrer » pour
+       n'afficher qu'un toast d'erreur serait une promesse en l'air. */
+    if (d.plan && !(d.steps && d.steps.length)){
+      if (window.NattyPlanning) NattyPlanning.detail(d.plan);
+      else toast('Aucune étape détaillée pour ce plat');
+      return;
+    }
 
     function guider(){
       if (!window.NattyRecette || !NattyRecette.suivre(d.src || {})) {
@@ -713,14 +879,16 @@ async function monterMaSemaine(){
   var el = document.getElementById('planWrap');
   if (!el || !window.NattyPlanning) return;
   await NattyPlanning.monterFiche(el, function(repas){
-    if (repas.type === 'recette'){
-      var i = -1;
-      PLATS.forEach(function(p, k){ if (i < 0 && p.nom === repas.nom) i = k; });
-      if (i >= 0){
-        actif = i; ingrOff = {}; render();
-        window.scrollTo({ top:0, behavior:'smooth' });
-        return;
-      }
+    /* Même appariement que `choisirHero()` — clé d'abord, nom ensuite — et
+       plus seulement pour les recettes : un plat macro déjà remonté au héros
+       est dans PLATS, y renvoyer vaut mieux que rouvrir sa fiche par-dessus. */
+    var i = -1;
+    if (repas.cle) PLATS.forEach(function(p,k){ if (i<0 && p.cle && p.cle === repas.cle) i = k; });
+    if (i < 0) PLATS.forEach(function(p,k){ if (i<0 && normNom(p.nom) === normNom(repas.nom)) i = k; });
+    if (i >= 0 && (repas.type === 'recette' || PLATS[i].plan)){
+      actif = i; ingrOff = {}; render();
+      window.scrollTo({ top:0, behavior:'smooth' });
+      return;
     }
     NattyPlanning.detail(repas);
   });
@@ -729,6 +897,17 @@ async function monterMaSemaine(){
 /* La séquence vient de se terminer sur un autre écran, ou ici même via
    « Replanifier » : le calendrier se repeint sans recharger la page. */
 document.addEventListener('natty:planning-pret', function(){ monterMaSemaine(); });
+
+/* Une recette vient d'être validée (photo à l'appui) dans la cinématique : la
+   carte se coche et le bouton change de libellé, sans recharger la page.
+   Le calendrier « Ma semaine », lui, se repeint tout seul — `assets/planning.js`
+   écoute le même événement, et il vaut mieux qu'il en soit responsable que de
+   le lui demander d'ici. */
+document.addEventListener('natty:recette-validee', function(e){
+  render();
+  var xp = e && e.detail ? e.detail.xp : 0;
+  toast(xp ? '✓ Recette validée · +' + xp + ' XP' : '✓ Recette validée');
+});
 
 (async function(){
   if (!Natty.requireAuth()) return;
@@ -771,7 +950,7 @@ document.addEventListener('natty:planning-pret', function(){ monterMaSemaine(); 
     afficherNb(NattyReco.nbRepas());
 
     await chargerSemaineDepuisCache();
-    rendreSemaine();
+    await rendreSemaine();
     preparerSiDemande();
   }catch(e){
     document.getElementById('content').innerHTML = '<div class="empty">Impossible de charger les recettes.</div>';

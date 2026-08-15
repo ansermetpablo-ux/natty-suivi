@@ -2051,18 +2051,31 @@
       + '</div>';
   }
 
-  /* ═══════════════════ Point d'entrée ═══════════════════ */
-  function start() {
+  /* ═══════════════════ Point d'entrée ═══════════════════
+     @param {object} [opts]
+     @param {File}   [opts.file]  une photo DÉJÀ prise : on saute la prise de
+                                  vue et on part directement à l'analyse.
+
+     ⚠️ `opts.file` existe pour `assets/recette.js` : qui vient de photographier
+     son plat pour valider une recette ne doit pas rephotographier la même
+     assiette pour la noter. Sans ce chemin, le pont entre les deux écrans
+     aurait redemandé une photo — donc personne ne l'aurait emprunté. */
+  function start(opts) {
+    opts = opts || {};
     if (!dom) build();
     S = { plats: [], cur: -1, file: null, photoDataUrl: null };
     chargerCibles();           // en tâche de fond ; rappelle majAnneaux() en fin
-    // L'overlay s'ouvre sur la PRISE DE VUE : le cadre photo en héros, les
-    // anneaux réduits et les calories restantes visibles avant même la photo.
-    // Le récap n'arrive qu'une fois un plat reconnu ou saisi.
     dom.classList.add('on');
     document.body.style.overflow = 'hidden';   // jamais position:fixed (scroll iOS)
     majNoms();
     rendreDetail();
+    /* `analyser()` montre lui-même l'écran d'attente puis le récap. Passer par
+       `rendreCapture()` avant rallumerait la caméra pour rien — et laisserait
+       l'indicateur de caméra allumé sur un écran qui ne filme pas. */
+    if (opts.file) { analyser(opts.file); return; }
+    // L'overlay s'ouvre sur la PRISE DE VUE : le cadre photo en héros, les
+    // anneaux réduits et les calories restantes visibles avant même la photo.
+    // Le récap n'arrive qu'une fois un plat reconnu ou saisi.
     rendreCapture();
   }
 

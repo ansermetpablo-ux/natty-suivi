@@ -172,6 +172,56 @@ window.NattyPlanning = (function () {
     return faits;
   }
 
+  /* Les recettes CUISINÉES cette semaine — validées photo à l'appui dans la
+     cinématique d'`assets/recette.js`.
+
+     ⚠️ C'est la seule exception au « aucun drapeau `fait` n'est stocké » de
+     `realises()`, et elle est délibérée : « ce créneau a-t-il reçu un repas ? »
+     a sa réponse en base, mais « ai-je cuisiné cette recette-là ? » n'existe
+     nulle part ailleurs — on peut cuisiner sans noter le repas. Sans cette
+     lecture, valider une recette ne changerait rien au calendrier, et le geste
+     n'aurait servi à rien.
+     Le module est facultatif : `menu.html` charge planning.js sans recette.js. */
+  function cuisinees() {
+    var m = {};
+    try {
+      if (!window.NattyRecette || !window.NattyRecette.validees) return m;
+      window.NattyRecette.validees(lundi()).forEach(function (v) {
+        if (v && v.id) m[v.id] = v;
+      });
+    } catch (e) {}
+    return m;
+  }
+
+  /* ═══ 2 ter. Le repas du moment ══════════════════════════
+     Ce que la semaine prévoit MAINTENANT — c'est lui que l'écran Repas met en
+     héros. À défaut de créneau exact (on regarde à 15 h, rien n'est prévu à
+     15 h), le prochain à venir : la question « qu'est-ce que je cuisine ? » a
+     toujours une réponse tant qu'il reste un repas dans la semaine. */
+  function maintenant() {
+    var d = new Date();
+    return { jour: jourIndex(d), creneau: creneauIndex(d) };
+  }
+
+  /**
+   * @param {object} plan
+   * @returns {?object} l'entrée de `plan.repas` du créneau courant, sinon la
+   *   prochaine de la semaine. Porte `.exact` : vrai si c'est bien maintenant.
+   */
+  function repasDuMoment(plan) {
+    if (!plan || !plan.repas || !plan.repas.length) return null;
+    var m = maintenant();
+    var ici = plan.repas.filter(function (r) {
+      return r.jour === m.jour && r.creneau === m.creneau;
+    })[0];
+    if (ici) { ici.exact = true; return ici; }
+    var suite = plan.repas.filter(function (r) {
+      return r.jour > m.jour || (r.jour === m.jour && r.creneau > m.creneau);
+    }).sort(function (a, b) { return (a.jour - b.jour) || (a.creneau - b.creneau); })[0];
+    if (suite) { suite.exact = false; return suite; }
+    return null;
+  }
+
   /* ═══ 3. L'analyse — où manque quoi, et quand ════════════ */
 
   var REPAS_PAR_JOUR = { '1_2': 2, '3': 3, '3_collations': 4, 'grignotage': 4 };
@@ -1391,14 +1441,25 @@ window.NattyPlanning = (function () {
     document.head.appendChild(s);
   }
 
+  /* La recette d'une case a-t-elle été cuisinée et validée ? Le calcul passe par
+     `NattyRecette.identifiant()` et non par une comparaison de noms : c'est la
+     même clé des deux côtés, donc un accent ou une majuscule ne peut pas faire
+     diverger la coche de la validation. */
+  function estCuite(r, cuits) {
+    if (!r || !cuits || !window.NattyRecette || !window.NattyRecette.identifiant) return false;
+    try { return !!cuits[window.NattyRecette.identifiant(r)]; } catch (e) { return false; }
+  }
+
   /**
    * HTML du panneau « Ma semaine ».
    * @param {object} plan  peut être null : on propose alors la planification.
    * @param {object} faits map `jour-creneau` → 1, des créneaux déjà mangés.
+   * @param {object} [cuits] map identifiant → validation, cf. `cuisinees()`.
    */
-  function fiche(plan, faits) {
+  function fiche(plan, faits, cuits) {
     cssFiche();
     faits = faits || {};
+    cuits = cuits || {};
     if (!plan || !plan.repas || !plan.repas.length) {
       return '<div class="nplc"><div class="nplc-head"><div class="t">Ma semaine</div></div>'
         + '<div class="nplc-vide"><div class="d">Vos repas ne sont pas encore placés dans la semaine.'
@@ -1408,7 +1469,8 @@ window.NattyPlanning = (function () {
     var carte = {}, auj = jourIndex(new Date()), nFaits = 0;
     plan.repas.forEach(function (r) {
       carte[r.jour + '-' + r.creneau] = r;
-      if (faits[r.jour + '-' + r.creneau]) nFaits++;
+      // Cuisinée compte comme faite : c'est le même repas, prouvé autrement.
+      if (faits[r.jour + '-' + r.creneau] || estCuite(r, cuits)) nFaits++;
     });
 
     var h = '<div class="nplc"><div class="nplc-head"><div class="t">Ma semaine</div>'
@@ -1427,11 +1489,14 @@ window.NattyPlanning = (function () {
     for (var j = 0; j < 3; j++) {
       h += '<div class="nplc-r"><div class="cre">' + CRENEAUX[j].em + '</div>';
       for (var i = 0; i < 7; i++) {
-        var r = carte[i + '-' + j], fait = !!faits[i + '-' + j];
+        var r = carte[i + '-' + j], mange = !!faits[i + '-' + j], cuit = estCuite(r, cuits);
+        var fait = mange || cuit;
         h += r
           ? '<div class="nplc-c plein' + (fait ? ' fait' : '') + '" data-nplc="repas" data-j="' + i
             + '" data-c="' + j + '" title="' + esc(JOURS[i] + ' · ' + CRENEAUX[j].nom + ' — ' + r.nom)
-            + (fait ? ' (déjà mangé)' : '') + '">'
+            // Deux vérités différentes, deux mots différents : « mangé » vient
+            // de la base, « cuisinée » de la validation photo.
+            + (cuit ? ' (recette cuisinée ✓)' : (mange ? ' (déjà mangé)' : '')) + '">'
             + vignette(r) + (fait ? '<span class="ok">✓</span>' : '') + '</div>'
           // Un repas enregistré sur un créneau NON planifié se voit aussi : un
           // point discret. Sans lui, une semaine bien suivie hors du plan aurait
@@ -1457,6 +1522,13 @@ window.NattyPlanning = (function () {
     if (ficheEl && ficheEl.isConnected) monterFiche(ficheEl, ficheCb);
   });
 
+  /* Une recette vient d'être validée dans la cinématique : sa case se coche
+     tout de suite. Émis sur `document` (comme `natty:planning-pret`), et non
+     sur `window` — d'où deux écouteurs et pas un seul. */
+  document.addEventListener('natty:recette-validee', function () {
+    if (ficheEl && ficheEl.isConnected) monterFiche(ficheEl, ficheCb);
+  });
+
   /**
    * Rend le panneau dans un élément et branche ses gestes.
    * @param {HTMLElement} el
@@ -1468,7 +1540,7 @@ window.NattyPlanning = (function () {
     // Seulement s'il y a un plan : sans plan il n'y a rien à cocher, et ce
     // serait une requête payée par tous ceux qui n'ont pas encore planifié.
     var faits = plan ? await realises() : {};
-    el.innerHTML = fiche(plan, faits);
+    el.innerHTML = fiche(plan, faits, cuisinees());
     brancherVignettes(el);
     el.querySelectorAll('[data-nplc="ouvrir"]').forEach(function (b) {
       b.addEventListener('click', function () { ouvrir({ forcer: true }); });
@@ -1598,6 +1670,11 @@ window.NattyPlanning = (function () {
     fiche: fiche,
     monterFiche: monterFiche,
     lundi: lundi,
+    /* Le repas que la semaine prévoit maintenant — c'est lui que `repas.html`
+       met en héros, plutôt que la première recette de la liste. */
+    repasDuMoment: repasDuMoment,
+    maintenant: maintenant,
+    cuisinees: cuisinees,
     JOURS: JOURS, CRENEAUX: CRENEAUX,
     /** Le planning est-il synchronisé en base ? null tant qu'on n'a pas essayé. */
     estSynchronise: function () { return TABLE_OK; }

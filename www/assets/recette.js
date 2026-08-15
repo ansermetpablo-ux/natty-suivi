@@ -5,6 +5,10 @@
      NattyRecette.monter(el, recette)   → l'injecte et branche le bouton
      NattyRecette.suivre(recette)       → la cinématique plein écran
      NattyRecette.galerie()             → planche de contrôle des animations
+     NattyRecette.progres(recette)      → où l'on en était : {i, total} ou null
+     NattyRecette.estValidee(recette)   → cuisinée ET photographiée cette semaine
+     NattyRecette.validees(semaine)     → la liste, pour les cartes de la semaine
+     NattyRecette.identifiant(recette)  → la clé stable d'une recette
 
    POURQUOI CE MODULE. Les recettes produites par `assets/reco.js` tenaient
    en une ligne par étape (`{em, t, tip}`) : « Faire revenir le poulet ».
@@ -37,6 +41,25 @@
 
    Le thermostat n'est jamais demandé à l'IA : c'est une division par 30,
    la faire ici garantit qu'elle est juste.
+
+   ── LA MÉMOIRE, ET POURQUOI ELLE EST INDISPENSABLE ──
+   Une recette se cuisine en 25 minutes, pendant lesquelles le téléphone se
+   verrouille, sonne, ou sert à autre chose. Sans mémoire, revenir voulait dire
+   repartir de l'étape 1 et refaire défiler huit écrans pour retrouver le poulet
+   déjà au four. `progres()` retient donc l'étape atteinte, par recette, et
+   `suivre()` y reprend — le bouton ‹ restant là pour revoir ce qui précède.
+
+   ── LA VALIDATION SE PAIE D'UNE PHOTO ──
+   Le dernier écran ne dit plus « Bon appétit » : il demande le plat en photo, et
+   RIEN ne valide sans elle. C'est ce qui distingue « j'ai fait défiler les
+   étapes » de « j'ai cuisiné » — un compteur qu'on peut avancer sans cuisiner ne
+   compte rien. La photo validée déclenche la félicitation, les XP, et coche la
+   recette sur les deux cartes de la semaine (`repas.html`, `assets/planning.js`).
+
+   ⚠️ La photo n'est PAS envoyée : elle sert de preuve à soi-même et
+   d'illustration à l'écran de félicitation. Le bouton « Noter ce repas » la
+   repasse à `assets/ajout.js`, qui lui sait l'analyser et l'enregistrer — sans
+   redemander de photographier une assiette déjà photographiée.
 
    Aucune dépendance : ni core.js, ni réseau, ni image. Le CSS est injecté
    une fois, tout préfixé `nr-` et scellé sous `#nrCine` pour la cinématique
@@ -591,6 +614,40 @@ window.NattyRecette = (function () {
       '#nrCine .nr-timer.fini .nr-tval{color:#1e7a3a}',
       ':root[data-theme="dark"] #nrCine .nr-timer.fini .nr-tval{color:#7fe09b}',
 
+      /* Reprise. Sans ce mot, ouvrir une recette à l'étape 4 ressemble à un
+         bug : on croit avoir raté le début. */
+      '#nrCine .nr-repr{font-size:11.5px;font-weight:800;letter-spacing:.2px;padding:6px 13px;',
+      'border-radius:var(--r-full,999px);background:var(--card,#ececef);color:var(--muted,#7a7a86)}',
+
+      /* Photo du plat fini. Carrée et rognée : un cliché de téléphone est en
+         portrait, le laisser entier dans un écran qui porte aussi un titre, des
+         XP et deux boutons ne laisserait rien voir du plat. */
+      '#nrCine .nr-shot{width:196px;height:196px;object-fit:cover;border-radius:30px;flex-shrink:0;',
+      'box-shadow:0 16px 34px rgba(16,16,18,.24);display:block}',
+      '#nrCine .nr-shotw{position:relative;flex-shrink:0}',
+      '#nrCine .nr-shotw .nr-badge{position:absolute;right:-6px;bottom:-6px;width:46px;height:46px;',
+      'border-radius:50%;background:#34c759;color:#fff;display:flex;align-items:center;',
+      'justify-content:center;box-shadow:0 8px 18px rgba(52,199,89,.42);',
+      'animation:nrPop .5s cubic-bezier(.22,1,.36,1) .25s both}',
+      '@keyframes nrPop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}',
+      '#nrCine .nr-badge svg{width:24px;height:24px;stroke:#fff;stroke-width:3.4;fill:none;',
+      'stroke-linecap:round;stroke-linejoin:round}',
+      /* Deux tracés décalés, jamais un seul continu : un trait unique ne se lit
+         pas comme une validation (même recette que `.vok` d'assets/planning.js). */
+      '#nrCine .nr-badge path{stroke-dasharray:22;stroke-dashoffset:22;',
+      'animation:nrTrace .42s cubic-bezier(.22,1,.36,1) .5s forwards}',
+      '@keyframes nrTrace{to{stroke-dashoffset:0}}',
+
+      /* Bouton secondaire d'un plan (galerie, reprendre la photo, noter le
+         repas). Discret : le geste principal vit dans la barre du bas. */
+      '#nrCine .nr-alt{border:0;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:800;',
+      'background:var(--card,#ececef);color:var(--ink,#101014);border-radius:var(--r-full,999px);',
+      'padding:10px 17px}',
+
+      '#nrCine .nr-xp{font-size:42px;font-weight:900;letter-spacing:-1.4px;color:#34c759;',
+      'font-variant-numeric:tabular-nums;line-height:1}',
+      '#nrCine .nr-tot{font-size:12.5px;font-weight:700;color:var(--muted,#7a7a86)}',
+
       /* Entrées de plan — sobres, spring-like, et AUCUN flou sur du texte
          (décision de narration.html, juillet 2026 : le flou n'était pas
          assez « clean »). */
@@ -740,6 +797,111 @@ window.NattyRecette = (function () {
     }).join('') + '</div>';
   }
 
+  /* ── 5 bis. Mémoire : l'étape en cours, les recettes validées ──
+     Tout vit en `localStorage`, DONC PAR APPAREIL — et c'est assumé : ce module
+     n'a aucune dépendance (ni core.js, ni réseau), il s'invite sur des pages qui
+     ne parlent pas toutes à Supabase, et l'étape où l'on en est d'une cuisson
+     n'a de sens que sur le téléphone posé à côté de la casserole.
+     La validation, elle, gagnerait à suivre l'utilisateur : c'est noté en §8 de
+     CLAUDE.md comme le seul manque de ce chantier. */
+
+  var XP_RECETTE = 50;
+
+  function uid() {
+    try { return (window.Natty && window.Natty.USER_ID) || 'anon'; } catch (e) { return 'anon'; }
+  }
+
+  /**
+   * La clé stable d'une recette. La `cle` du catalogue quand elle existe (deux
+   * générations produisent alors le même identifiant), sinon le nom normalisé.
+   * ⚠️ Sans accent NI ligature : « bœuf » ne se décompose pas en NFD, c'est le
+   * défaut qui a fait qu'aucun œuf n'était reconnu dans toute l'app (§7).
+   */
+  function ident(r) {
+    if (r && r.cle) return String(r.cle);
+    var n = sansAccent(String((r && (r.nom || r.name || r.titre)) || ''))
+      .replace(/œ/g, 'oe').replace(/æ/g, 'ae')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return n || 'recette';
+  }
+
+  function lireJson(k, defaut) {
+    try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? defaut : v; }
+    catch (e) { return defaut; }
+  }
+  function ecrireJson(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+  }
+
+  /* Le lundi de la semaine, en LOCAL. `NattyPlanning.lundi()` fait foi quand il
+     est chargé — deux calculs de semaine qui divergent, c'est une recette
+     validée qui disparaît de la carte (le défaut déjà payé entre `suivi.html`
+     et `assets/liste.js`, §3). Le repli ne sert qu'aux pages sans planning.
+     ⚠️ Jamais `toISOString()` : en UTC, un lundi à 1 h du matin rend dimanche. */
+  function lundiCourant() {
+    if (window.NattyPlanning && window.NattyPlanning.lundi) {
+      try { return window.NattyPlanning.lundi(); } catch (e) {}
+    }
+    var d = new Date(), j = d.getDay();
+    d.setDate(d.getDate() - j + (j === 0 ? -6 : 1));
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+         + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function cleEtape(r) { return 'natty_recette_etape_' + uid() + '_' + ident(r); }
+  function cleFaites() { return 'natty_recettes_faites_' + uid(); }
+
+  /**
+   * Où en était-on de cette recette ?
+   * @returns {?{i:number,total:number}} null si rien de repris.
+   */
+  function progres(r) {
+    var p = lireJson(cleEtape(r), null);
+    if (!p || typeof p.i !== 'number' || !p.total) return null;
+    if (p.i <= 0 || p.i >= p.total) return null;     // au début ou au bout : rien à reprendre
+    return { i: p.i, total: p.total };
+  }
+  function noterProgres(r, i, total) {
+    ecrireJson(cleEtape(r), { i: i, total: total, maj: Date.now() });
+  }
+  function oublierProgres(r) {
+    try { localStorage.removeItem(cleEtape(r)); } catch (e) {}
+  }
+
+  /**
+   * Les recettes validées, les plus récentes d'abord.
+   * @param {string} [semaine] filtre sur un lundi ('2026-08-10') ; tout sinon.
+   */
+  function validees(semaine) {
+    var l = lireJson(cleFaites(), []);
+    if (!Array.isArray(l)) return [];
+    return semaine ? l.filter(function (v) { return v && v.semaine === semaine; }) : l;
+  }
+  /** Cette recette a-t-elle été cuisinée ET photographiée cette semaine ? */
+  function estValidee(r) {
+    var id = ident(r), s = lundiCourant();
+    return validees(s).some(function (v) { return v && v.id === id; });
+  }
+  /** Total d'XP gagnés en cuisinant, toutes semaines confondues. */
+  function xpTotal() {
+    return validees().reduce(function (s, v) { return s + (+v.xp || 0); }, 0);
+  }
+
+  /* Une seule ligne par recette et par semaine : revalider la même recette le
+     lendemain ne doit pas doubler les XP, mais une recette refaite la semaine
+     suivante compte à nouveau — c'est une autre semaine de cuisine. */
+  function enregistrerValidation(r) {
+    var id = ident(r), s = lundiCourant(), l = validees();
+    if (!l.some(function (v) { return v && v.id === id && v.semaine === s; })) {
+      l.unshift({ id: id, nom: (r && r.nom) || 'Recette', semaine: s,
+                  le: new Date().toISOString(), xp: XP_RECETTE });
+      // 120 lignes : deux ans de cuisine, et un localStorage qui ne gonfle pas.
+      ecrireJson(cleFaites(), l.slice(0, 120));
+    }
+    oublierProgres(r);
+    return { xp: XP_RECETTE, total: xpTotal(), nb: validees().length };
+  }
+
   /* ── 6. La cinématique ────────────────────────────────────
      Une étape = un plan. Le bouton vit dans une barre fixe (`.nr-c-cta`) et
      non dans le plan : dans narration.html, un bouton posé dans le plan
@@ -749,6 +911,55 @@ window.NattyRecette = (function () {
 
   var ENTREES = ['glide', 'parallax', 'reveal'];
   var ov = null, etapes = [], idx = 0, recCourante = null, tid = null;
+
+  /* La cinématique a trois temps, et `idx` seul ne suffisait plus à les dire :
+     'etapes' (idx < etapes.length), 'photo' (idx === etapes.length, l'écran qui
+     réclame le plat en photo) et 'bravo' (la félicitation). Le bouton du bas
+     change de sens à chacun — d'où `suivant()` plutôt qu'un `aller(idx+1)` en
+     dur sur le clic. */
+  var phase = 'etapes';
+  var photoFile = null, photoUrl = null, dejaValidee = false;
+  var inpCam = null, inpGal = null;
+
+  var CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.6 10 17.4 19.2 7.6"/></svg>';
+
+  function stage() { return ov ? ov.querySelector('.nr-c-stage') : null; }
+
+  /* ⚠️ `i.value = ''` avant de rendre la main : reprendre DEUX fois la même
+     photo n'émettrait sinon qu'un seul `change` (même fichier, même valeur), et
+     le second tap sur « Reprendre la photo » n'aurait aucun effet visible. */
+  function mkPhotoInput(camera) {
+    var i = document.createElement('input');
+    i.type = 'file';
+    i.accept = 'image/*';
+    if (camera) i.setAttribute('capture', 'environment');
+    i.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;opacity:0';
+    i.addEventListener('change', function () {
+      var f = this.files && this.files[0];
+      this.value = '';
+      if (f) poserPhoto(f);
+    });
+    document.body.appendChild(i);
+    return i;
+  }
+
+  /* ⚠️ `majBarre()` est OBLIGATOIRE ici, et il manquait : le plan se repeignait
+     avec la photo pendant que le bouton du bas continuait d'annoncer
+     « 📸 Prendre la photo ». Le tap validait quand même — donc un bouton qui
+     mentait sur ce qu'il allait faire, le pire des deux mondes. Attrapé au banc,
+     invisible à `node --check`. */
+  function poserPhoto(f) {
+    if (photoUrl) { try { URL.revokeObjectURL(photoUrl); } catch (e) {} }
+    photoFile = f;
+    photoUrl = URL.createObjectURL(f);
+    if (phase === 'photo') { repeindre(planPhoto()); majBarre(); }
+    vibrer(12);
+  }
+
+  function oublierPhoto() {
+    if (photoUrl) { try { URL.revokeObjectURL(photoUrl); } catch (e) {} }
+    photoFile = null; photoUrl = null;
+  }
 
   function vibrer(ms) {
     try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {}
@@ -787,14 +998,30 @@ window.NattyRecette = (function () {
       + '<button class="nr-next">Commencer</button>'
       + '</div>';
     document.body.appendChild(ov);
+    inpCam = mkPhotoInput(true);
+    inpGal = mkPhotoInput(false);
     ov.querySelector('.nr-x').addEventListener('click', fermer);
     ov.querySelector('.nr-prev').addEventListener('click', function () { aller(idx - 1); });
-    ov.querySelector('.nr-next').addEventListener('click', function () { aller(idx + 1); });
+    ov.querySelector('.nr-next').addEventListener('click', suivant);
+
+    /* Les boutons secondaires vivent DANS le plan, qui est reconstruit à chaque
+       changement : on délègue plutôt que de rebrancher à chaque rendu — et
+       surtout, le clic reste ainsi le geste de l'utilisateur, ce dont iOS a
+       besoin pour ouvrir la caméra (même règle que `sync` dans journee.js). */
+    stage().addEventListener('click', function (ev) {
+      var b = ev.target && ev.target.closest ? ev.target.closest('[data-nr]') : null;
+      if (!b) return;
+      var a = b.getAttribute('data-nr');
+      if (a === 'photo' || a === 'reprendre') inpCam.click();
+      else if (a === 'galerie') inpGal.click();
+      else if (a === 'noter') noterLeRepas();
+    });
+
     // Flèches clavier : indispensable pour tester au navigateur, gratuit pour
     // qui utilise l'app sur ordinateur.
     document.addEventListener('keydown', function (ev) {
       if (!ov || !ov.classList.contains('on')) return;
-      if (ev.key === 'ArrowRight') aller(idx + 1);
+      if (ev.key === 'ArrowRight') suivant();
       else if (ev.key === 'ArrowLeft') aller(idx - 1);
       else if (ev.key === 'Escape') fermer();
     });
@@ -830,12 +1057,13 @@ window.NattyRecette = (function () {
     });
   }
 
-  function planEtape(e) {
+  function planEtape(e, reprise) {
     var el = document.createElement('div');
     el.className = 'nr-plan';
     el.setAttribute('data-e', ENTREES[(e.n - 1) % ENTREES.length]);
     el.innerHTML =
-      '<div class="nr-big">' + dessin(e.action, e.aliment) + '</div>'
+      (reprise ? '<div class="nr-repr">↩ Vous vous étiez arrêté ici</div>' : '')
+      + '<div class="nr-big">' + dessin(e.action, e.aliment) + '</div>'
       + '<div class="nr-t">' + esc(e.titre) + '</div>'
       + (e.detail ? '<div class="nr-d">' + esc(e.detail) + '</div>' : '')
       + chipsHtml(e)
@@ -847,52 +1075,198 @@ window.NattyRecette = (function () {
     return el;
   }
 
-  function planFin() {
+  function nomCourant() {
+    return (recCourante && recCourante.nom) ? recCourante.nom : 'Votre plat';
+  }
+
+  /* L'écran qui ferme la cuisine — et le seul qui décide si la recette compte.
+     Trois états : déjà validée (on ne redemande rien), photo prise (on propose
+     de valider), rien encore (on demande la photo, et on le dit franchement).
+     Le bouton principal reste en bas, dans `.nr-c-cta` : posé ici, l'animation
+     de sortie l'emporterait sous le doigt — la leçon de narration.html. */
+  function planPhoto() {
     var el = document.createElement('div');
     el.className = 'nr-plan';
     el.setAttribute('data-e', 'parallax');
-    el.innerHTML =
-      '<div class="nr-big">' + dessin('dresser', '🍽️') + '</div>'
-      + '<div class="nr-t">Bon appétit 🎉</div>'
-      + '<div class="nr-d">' + esc(recCourante && recCourante.nom ? recCourante.nom : 'Recette')
-      + ' — toutes les étapes sont passées.</div>';
+
+    if (dejaValidee) {
+      el.innerHTML =
+        '<div class="nr-big">' + dessin('dresser', '🍽️') + '</div>'
+        + '<div class="nr-t">Déjà validée ✓</div>'
+        + '<div class="nr-d">' + esc(nomCourant()) + ' compte déjà pour cette semaine.'
+        + ' Vous pouvez la refaire, elle ne sera pas comptée deux fois.</div>';
+      return el;
+    }
+
+    el.innerHTML = photoUrl
+      ? '<div class="nr-shotw"><img class="nr-shot" src="' + photoUrl + '" alt="">'
+        + '<span class="nr-badge">' + CHECK + '</span></div>'
+        + '<div class="nr-t">Beau travail 👏</div>'
+        + '<div class="nr-d">Validez pour ajouter ' + XP_RECETTE + ' XP et cocher '
+        + esc(nomCourant()) + ' dans votre semaine.</div>'
+        + '<button class="nr-alt" type="button" data-nr="reprendre">Reprendre la photo</button>'
+      : '<div class="nr-big">' + dessin('dresser', '🍽️') + '</div>'
+        + '<div class="nr-t">C’est prêt 🎉</div>'
+        + '<div class="nr-d">Photographiez votre plat pour valider la recette.'
+        + ' Sans photo, elle n’est pas validée.</div>'
+        + '<button class="nr-alt" type="button" data-nr="galerie">Choisir dans la galerie</button>';
     return el;
   }
 
-  function aller(n) {
-    if (!ov || n < 0) return;
-    if (n > etapes.length) { fermer(); return; }
-    stopTimer();
+  /* La félicitation. Le chiffre monte plutôt que d'apparaître : c'est ce qui
+     fait qu'on le regarde. `requestAnimationFrame`, jamais un `setInterval` —
+     le compteur suit alors le rythme réel de l'écran.
 
-    /* TOUS les plans présents sortent, pas seulement le premier.
-       Avec `querySelector`, deux taps rapprochés (moins que la durée de
-       l'animation de sortie) laissaient un plan orphelin sous le nouveau, et
-       c'est ce plan-là que le tap suivant faisait sortir — le contenu affiché
-       et l'étape courante se désynchronisaient. Mesuré : 4 plans empilés après
-       3 clics rapides. C'est le chevauchement déjà rencontré dans
-       narration.html, et il n'apparaît qu'en tapant vite : d'où le test. */
-    var stage = ov.querySelector('.nr-c-stage');
-    [].forEach.call(stage.querySelectorAll('.nr-plan'), function (p) {
+     ⚠️ Avec un filet, et il n'est pas théorique : une page qui ne peint pas
+     (app passée en arrière-plan, onglet caché) ne reçoit AUCUNE `rAF`, et le
+     compteur reste bloqué sur « +0 XP » — c'est-à-dire qu'il annonce le
+     contraire de ce qui vient d'être gagné. Au bout d'une seconde on pose la
+     valeur finale, quoi qu'il arrive. Même précaution que la classe `on` de
+     `Natty.confirmer`, doublée d'un `setTimeout` pour la même raison. */
+  function compter(el, jusqua) {
+    var t0 = null, fini = false;
+    function poser(v) { el.textContent = '+' + v + ' XP'; }
+    function pas(ts) {
+      if (fini) return;
+      if (!t0) t0 = ts;
+      var p = Math.min(1, (ts - t0) / 850);
+      poser(Math.round(jusqua * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(pas); else fini = true;
+    }
+    requestAnimationFrame(pas);
+    setTimeout(function () { if (!fini) { fini = true; poser(jusqua); } }, 1000);
+  }
+
+  function planBravo(bilan) {
+    var el = document.createElement('div');
+    el.className = 'nr-plan';
+    el.setAttribute('data-e', 'glide');
+    el.innerHTML =
+      (photoUrl
+        ? '<div class="nr-shotw"><img class="nr-shot" src="' + photoUrl + '" alt="">'
+          + '<span class="nr-badge">' + CHECK + '</span></div>'
+        : '<div class="nr-big">' + dessin('dresser', '🍽️') + '</div>')
+      + '<div class="nr-t">Bravo 🎉</div>'
+      + '<div class="nr-d">' + esc(nomCourant()) + ' — cuisiné et validé.</div>'
+      + '<div class="nr-xp">+0 XP</div>'
+      + '<div class="nr-tot">' + bilan.nb + ' recette' + (bilan.nb > 1 ? 's' : '')
+      + ' cuisinée' + (bilan.nb > 1 ? 's' : '') + ' · ' + bilan.total + ' XP au total</div>'
+      /* Le seul endroit de l'app où cette photo peut encore servir. Sans ce
+         bouton elle est jetée à la fermeture, et la journée ne compte pas le
+         repas qu'on vient pourtant de cuisiner. Proposé, jamais imposé :
+         valider une recette et noter un repas sont deux gestes distincts. */
+      + (window.NattyAjout
+          ? '<button class="nr-alt" type="button" data-nr="noter">Noter ce repas dans mon suivi →</button>'
+          : '');
+    var n = el.querySelector('.nr-xp');
+    if (n) compter(n, bilan.xp);
+    return el;
+  }
+
+  /* Le plan sortant et le plan entrant, en un seul endroit.
+     ⚠️ TOUS les plans présents sortent, pas seulement le premier. Avec
+     `querySelector`, deux taps rapprochés (moins que la durée de l'animation de
+     sortie) laissaient un plan orphelin sous le nouveau, et c'est ce plan-là que
+     le tap suivant faisait sortir — le contenu affiché et l'étape courante se
+     désynchronisaient. Mesuré : 4 plans empilés après 3 clics rapides. C'est le
+     chevauchement déjà rencontré dans narration.html. */
+  function repeindre(plan) {
+    var st = stage();
+    if (!st) return;
+    [].forEach.call(st.querySelectorAll('.nr-plan'), function (p) {
       p.classList.add('out');
       setTimeout(function () { if (p.parentNode) p.parentNode.removeChild(p); }, 360);
     });
+    st.appendChild(plan);
+  }
 
+  function majBarre() {
+    if (!ov) return;
+    var bar = ov.querySelector('.nr-c-bar i'), num = ov.querySelector('.nr-c-num'),
+        next = ov.querySelector('.nr-next'), prev = ov.querySelector('.nr-prev');
+    var n = etapes.length;
+
+    if (phase === 'bravo') {
+      bar.style.width = '100%';
+      num.textContent = '★';
+      next.textContent = 'Terminer';
+      prev.style.visibility = 'hidden';
+      return;
+    }
+    bar.style.width = Math.round(((idx + 1) / (n + 1)) * 100) + '%';
+    if (phase === 'photo') {
+      num.textContent = '✓';
+      next.textContent = dejaValidee ? 'Terminer'
+        : (photoFile ? 'Valider ma recette ✓' : '📸 Prendre la photo');
+    } else {
+      num.textContent = (idx + 1) + '/' + n;
+      next.textContent = idx === n - 1 ? 'Dernière étape ✓' : 'Étape suivante →';
+    }
+    // Depuis l'écran photo, ‹ ramène à la dernière étape : on peut vouloir
+    // relire la cuisson avant de photographier.
+    prev.style.visibility = (idx === 0 && phase !== 'photo') ? 'hidden' : 'visible';
+  }
+
+  function aller(n, reprise) {
+    if (!ov || n < 0 || n > etapes.length) return;
+    stopTimer();
     idx = n;
-    var fin = idx === etapes.length;
-    stage.appendChild(fin ? planFin() : planEtape(etapes[idx]));
-
-    ov.querySelector('.nr-c-bar i').style.width =
-      Math.round(((idx + 1) / (etapes.length + 1)) * 100) + '%';
-    ov.querySelector('.nr-c-num').textContent = fin ? '✓' : (idx + 1) + '/' + etapes.length;
-    ov.querySelector('.nr-next').textContent = fin ? 'Terminer'
-      : (idx === etapes.length - 1 ? 'Dernière étape ✓' : 'Étape suivante →');
-    ov.querySelector('.nr-prev').style.visibility = idx === 0 ? 'hidden' : 'visible';
+    phase = (idx === etapes.length) ? 'photo' : 'etapes';
+    repeindre(phase === 'photo' ? planPhoto() : planEtape(etapes[idx], reprise));
+    // La mémoire se pose à chaque étape, pas à la fermeture : une app tuée par
+    // le système ne passe par aucun `fermer()`.
+    if (phase === 'etapes' && recCourante) noterProgres(recCourante, idx, etapes.length);
+    majBarre();
     vibrer(10);
+  }
+
+  /** Le bouton du bas — son sens dépend du temps où l'on est. */
+  function suivant() {
+    if (!ov) return;
+    if (phase === 'bravo') { fermer(); return; }
+    if (phase === 'photo') {
+      if (dejaValidee) { fermer(); return; }
+      // ⚠️ Appel SYNCHRONE dans le geste : iOS n'ouvre la caméra que là. Un
+      // `await` ou un `setTimeout` avant, et plus rien ne s'ouvre.
+      if (!photoFile) { inpCam.click(); return; }
+      valider();
+      return;
+    }
+    aller(idx + 1);
+  }
+
+  function valider() {
+    if (!photoFile || dejaValidee || !recCourante) return;
+    var bilan = enregistrerValidation(recCourante);
+    dejaValidee = true;
+    phase = 'bravo';
+    repeindre(planBravo(bilan));
+    majBarre();
+    vibrer([18, 70, 18]); bip();
+    try {
+      document.dispatchEvent(new CustomEvent('natty:recette-validee', {
+        detail: {
+          recette: recCourante, id: ident(recCourante),
+          xp: bilan.xp, xpTotal: bilan.total, nb: bilan.nb, photo: photoFile
+        }
+      }));
+    } catch (e) {}
+  }
+
+  /* Le pont vers `assets/ajout.js` : la photo déjà prise part à l'analyse, donc
+     personne ne rephotographie une assiette qu'il vient de photographier. */
+  function noterLeRepas() {
+    if (!window.NattyAjout || !photoFile) return;
+    var f = photoFile;
+    fermer();
+    try { window.NattyAjout.start({ file: f, nom: nomCourant() }); }
+    catch (e) {}
   }
 
   /**
    * Ouvre la cinématique. Sans étape exploitable, ne fait rien et le dit :
    * un plein écran vide serait pire que pas d'écran.
+   * Reprend là où l'on s'était arrêté (voir §5 bis).
    * @returns {boolean} true si elle s'est ouverte
    */
   function suivre(r) {
@@ -900,20 +1274,31 @@ window.NattyRecette = (function () {
     if (!etapes.length) return false;
     recCourante = r;
     construire();
+    oublierPhoto();
+    dejaValidee = estValidee(r);
+
+    /* ⚠️ `total` doit correspondre : une recette régénérée depuis n'a plus le
+       même nombre d'étapes, et reprendre à l'index 6 d'une recette qui n'en a
+       plus que 4 afficherait n'importe quoi. `progres()` rend alors null. */
+    var p = progres(r);
+    var depart = (p && p.total === etapes.length) ? p.i : 0;
+
     document.body.style.overflow = 'hidden';   // jamais position:fixed (casse le scroll iOS)
     ov.classList.add('on');
-    ov.querySelector('.nr-c-stage').innerHTML = '';
-    aller(0);
+    stage().innerHTML = '';
+    aller(depart, depart > 0);
     return true;
   }
 
   function fermer() {
     stopTimer();
     if (!ov) return;
-    var termine = idx >= etapes.length;
+    var termine = phase !== 'etapes';
     ov.classList.remove('on');
-    ov.querySelector('.nr-c-stage').innerHTML = '';
+    stage().innerHTML = '';
     document.body.style.overflow = '';
+    oublierPhoto();
+    phase = 'etapes';
     try {
       document.dispatchEvent(new CustomEvent('natty:recette-fermee', {
         detail: { recette: recCourante, termine: termine, etape: idx }
@@ -929,6 +1314,15 @@ window.NattyRecette = (function () {
     galerie: galerie,
     etapes: normaliser,
     dessin: dessin,
+    /* Mémoire — lue par `repas.html` (libellé du bouton, coche de la semaine)
+       et par `assets/planning.js` (cases du calendrier). */
+    identifiant: ident,
+    progres: progres,
+    oublierProgres: oublierProgres,
+    estValidee: estValidee,
+    validees: validees,
+    xpTotal: xpTotal,
+    XP_RECETTE: XP_RECETTE,
     actions: function () { return Object.keys(ACTIONS); },
     thermostat: thermostat,
     libTemp: libTemp,
