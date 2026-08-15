@@ -52,6 +52,9 @@ const TABLES_USER = [
   // une personne, et n'en effacer qu'une laisserait le compte supprimé nommé
   // dans une accusation — la sienne ou celle qui le visait.
   'membre_bloques',
+  // Ce qu'on a dans sa cuisine (natty_materiel.sql) dit l'équipement, donc le
+  // logement et les moyens — au même titre que le garde-manger juste après.
+  'materiel',
   'garde_manger', 'abonnements', 'meals'
 ];
 

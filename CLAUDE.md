@@ -307,6 +307,89 @@ Page de connexion standalone — `natty-suivi.vercel.app/login.html`
 **Flux dans index.html sans token** :
 - Timeout 2000ms → si pas de USER_ID → `afficherOnboardingCTA()` → bouton "Commencer →" → redirige vers `login.html`
 
+### `assets/materiel.js` — ce avec quoi il peut cuisiner
+Module partagé (`NattyMateriel`), chargé par les **six écrans porteurs de la nav** — partout où
+`assets/generation.js` l'est, puisque c'est lui qui pose la question (+ copies `www/`). Dépend
+d'`assets/core.js`.
+
+**Le défaut qu'il corrige.** La génération savait tout de ce qu'il MANGE — allergies, régime,
+goûts, garde-manger — et rien de ce avec quoi il CUISINE. Elle écrivait donc « enfourne 18 min
+à 200 °C » à quelqu'un sans four. Ce n'est pas une recette mal adaptée, c'est une recette
+**infaisable** : elle est sautée, la semaine perd un repas, et rien à l'écran ne l'explique.
+
+**Quand la question est posée** : **une seule fois**, à la première génération, **avant** celle
+du garde-manger (`assets/generation.js` → `lancer()`). Ensuite plus jamais — un four ne change
+pas toutes les semaines — mais le résultat repart **à chaque** génération, dans le corps de la
+requête. L'ordre n'est pas indifférent : savoir qu'il reste des pommes de terre ne sert à rien
+si on ignore qu'il n'y a pas de four, et commencer par la question la plus longue, c'est finir
+sur un abandon.
+
+**Où elle se rattrape** : panneau **« Mon matériel »**, en bas de l'écran Repas
+(`#matWrap`, voisin de « Mes préférences »). ⚠️ Ce panneau n'est pas un confort : sans lui, un
+« je n'ai pas de four » répondu un jour serait un **verrou à vie**, et déménager ou s'acheter
+un mixeur n'aurait aucun effet.
+
+⚠️ **LES CASES SONT PRÉ-COCHÉES** (feux, poêle, casserole, four, micro-ondes, couteau,
+congélateur) : on décoche ce qu'on n'a pas. Partir d'une grille vide donnait le pire résultat
+possible — une question à moitié remplie devient un profil « il n'a rien », donc des recettes
+crues, alors qu'une question à moitié remplie devrait ne rien changer du tout.
+
+⚠️ **CE SONT LES ABSENCES QUI PORTENT L'INFORMATION.** `pourPrompt()` écrit les deux listes,
+mais un modèle à qui l'on dit seulement « il a une poêle » n'en déduit pas qu'il n'a pas de
+four — il en suppose un, parce que la plupart des recettes en ont un.
+
+⚠️ **`gestesInterdits()` nomme des clés `illu` d'`assets/recette.js`**, pas des appareils. Sans
+ça, une étape `enfourner` chez quelqu'un sans four **dessine un four à l'écran** pendant la
+cinématique de recette — pire qu'une consigne inadaptée. Règles : pas de four ni d'air fryer →
+`enfourner` ; ni mixeur ni robot → `mixer` ; pas (poêle ET feux) → `saisir` ; pas (casserole ET
+feux) ni autocuiseur ni cuiseur vapeur → `bouillir`, `mijoter`.
+
+**Persistance** : table `materiel` (`natty_materiel.sql`, §4), repli `localStorage` tant qu'elle
+n'existe pas — et le panneau **le dit** (« Gardé sur cet appareil uniquement ») plutôt que de
+laisser croire à une synchronisation qui n'a pas lieu. Même contrat que `garde_manger`, `user_id`
+en clé primaire comprise (`sauver()` écrit en `merge-duplicates` **sans** `?on_conflict=`).
+
+> ⚠️⚠️ **LA LIGNE PORTE `items` ET `resume`, ET CE N'EST PAS UNE REDONDANCE.** Le catalogue des
+> 14 appareils vit dans ce fichier et nulle part ailleurs : le serveur ne peut pas l'importer
+> (IIFE navigateur), et en recopier une version côté Node est **exactement** ce qui a fait
+> diverger `api/_nutrition.js` de `assets/core.js` pendant des semaines — une divergence payée
+> en macros fausses envoyées par notification. Le navigateur compose donc la phrase du prompt,
+> la range à côté de la réponse, et le serveur n'a plus qu'à la lire.
+> Contrepartie assumée : un appareil ajouté au catalogue ne réécrit pas les `resume` déjà en
+> base. Ils resteront justes, mais muets sur le nouvel appareil tant que la personne n'est pas
+> repassée par le panneau.
+
+⚠️ **Jetons `--nt-*`, pas ceux d'`assets/style.css`.** Le module s'invite sur `suivi.html`, dont
+le jeu de variables est plus ancien et n'a **ni `--card` ni `--ink`** : les jetons de la feuille
+partagée auraient été un pari perdu sur au moins un écran. `theme.js` est le seul fichier que
+toutes les pages chargent.
+
+**Côté prompt** — section `ÉQUIPEMENT DE CUISINE` + quatre règles, dans `api/_generation.js`
+(génération de la semaine, cron compris) **et** `assets/reco.js` (tirages « Découvrir » : un plat
+au four y est tout aussi infaisable). L'équipement y est **bloquant comme une allergie**, et la
+consigne demande une **variante** (four → poêle, cocotte ou air fryer ; mixeur → écrasé à la
+fourchette) annoncée dans le `tip` de l'étape — pas un autre plat, sauf si aucune variante
+honnête n'existe.
+- ⚠️ **La numérotation des règles est passée à un compteur** (`nr`) dans les deux fichiers :
+  elles sont conditionnelles, et une liste qui saute de 5 à 8 se lit comme une liste amputée.
+- ⚠️ La règle « pas de balance → donne un repère mesurable sans peser » porte sa condition
+  **dans la phrase**, pas dans un `if` : le serveur ne reçoit que le résumé, pas les clés, et
+  tester « a-t-il une balance » y demanderait de fouiller une chaîne de texte — cassé au premier
+  libellé retouché.
+- ✅ **Aucune régression quand rien n'a été répondu** : vérifié en A/B contre `HEAD`, le prompt
+  est **identique au caractère près** (16 444 et 16 910 caractères, avec et sans garde-manger).
+  Une question sans réponse ne contraint rien.
+
+**Vérifié en navigateur** (375 × 812, thèmes clair ET sombre), avec des doublures de `Natty`,
+`NattyGardeManger` et `fetch` : la grille et ses 14 tuiles, les 7 pré-cochées, le bouton
+principal atteignable sans défiler, la bascule d'une tuile, l'enregistrement, le panneau qui se
+repeint, le repli local (aucun `sbPost`) **et** le chemin table (POST portant bien `resume`), le
+cas extrême « je n'ai rien » (les cinq gestes interdits), et surtout l'enchaînement complet :
+matériel → garde-manger → envoi portant `materiel`, puis **une seconde génération qui ne
+repose pas la question** tout en transmettant la réponse.
+
+🔄 **Non vérifié avec une vraie session ni sur téléphone** : tout a tourné contre des doublures.
+
 ### `assets/garde-manger.js` — les ingrédients dont l'utilisateur dispose
 Module partagé (`NattyGardeManger`), chargé par `repas.html` et `suivi.html` (+ copies `www/`).
 Dépend de `assets/core.js`.
@@ -2366,6 +2449,32 @@ affiche l'écran. Si les deux divergeaient, ce sont les repas qui font foi.
 `bilan_jour` est dans `TABLES_USER` d'`api/supprimer-compte.js` — ce qu'on répond le soir sur
 sa motivation et ses difficultés est ce qu'il y a de plus personnel dans cette app.
 
+#### `materiel` — 🔄 **à créer** (`natty_materiel.sql`)
+Le matériel de cuisine (`assets/materiel.js`, §3).
+
+| Colonne | Type | Notes |
+|---|---|---|
+| user_id | text | **PK** — voir ci-dessous, c'est structurel |
+| items | jsonb | les clés du catalogue possédées (`["four","poele",…]`) |
+| resume | text | la phrase prête pour le prompt, composée par le navigateur |
+| updated_at | timestamptz | |
+
+RLS activée, policy « soi seulement » : ce qu'on a dans sa cuisine dit l'équipement, donc le
+logement et les moyens. `materiel` est dans `TABLES_USER` d'`api/supprimer-compte.js`.
+
+> ⚠️ **`user_id` en clé primaire, et c'est structurel** : `sauver()` écrit en
+> `resolution=merge-duplicates` **sans** `?on_conflict=`, PostgREST résout donc sur la clé
+> primaire. Avec un `id` uuid, chaque enregistrement repartirait en **409** — piège déjà payé
+> sur `meal_likes`, `membre_amis` et `notes_nutritionniste`.
+> ⚠️ **Ce que la créer débloque vraiment, c'est le CRON DU LUNDI.** Sans navigateur, il n'a pas
+> de `localStorage` à interroger : tant que la table manque, la génération automatique
+> continuera de proposer un gratin au four à quelqu'un qui n'en a pas, alors que la même
+> génération lancée à la main, elle, en tiendra compte. Deux comportements pour la même semaine
+> selon qui a appuyé — c'est le seul vrai coût du retard sur ce SQL.
+> ⚠️ **`items` ET `resume` : pas une redondance.** Voir l'encadré de §3 — le catalogue vit dans
+> le module navigateur, et en tenir une copie côté Node est exactement ce qui a fait diverger
+> `api/_nutrition.js` de `core.js`.
+
 #### `signalements` et `membre_bloques` — ✅ **existent** (`natty_moderation.sql`, exécuté le 2026-08-14)
 Modération du fil social (App Store Review Guideline 1.2, voir §11).
 
@@ -3011,6 +3120,22 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   des scènes n'ont pu être jugés qu'en navigateur, avec des doublures de `NattyCreneaux`,
   `NattyPlanning`, `NattyNav` et `NattyBilan`.
 
+**Matériel de cuisine (2026-08-15)**
+- ✅ **Livré** — `assets/materiel.js` (+ `www/`), détail et pièges en §3. Question plein écran
+  posée **une seule fois**, à la première génération, avant celle du garde-manger ; panneau
+  « Mon matériel » en bas de l'écran Repas pour la corriger ensuite ; section `ÉQUIPEMENT DE
+  CUISINE` et quatre règles dans `api/_generation.js` **et** `assets/reco.js`.
+- ✅ **Aucune régression sans réponse** : A/B contre `HEAD`, prompt identique au caractère près.
+- ✅ Vérifié en navigateur (375 × 812, clair et sombre) : grille, pré-cochage, repli local
+  **et** chemin table, enchaînement matériel → garde-manger → envoi, et la seconde génération
+  qui ne repose pas la question.
+- 🔄 **`natty_materiel.sql` reste à exécuter.** Sans lui tout fonctionne, mais la réponse ne vit
+  que sur l'appareil — et **le cron du lundi ne la voit pas** (voir §4). C'est le seul écart de
+  comportement que le retard sur ce SQL produit.
+- 🔄 **Non vérifié avec une vraie session ni sur téléphone** : bancs à doublures uniquement.
+- 🔄 Le catalogue tient 14 appareils, choisis pour ce qui CHANGE une recette. En ajouter un ne
+  réécrit pas les `resume` déjà en base — voir la contrepartie en §3.
+
 **Garde-manger & génération de recettes**
 - ✅ Panneau « Mon garde-manger » dans `repas.html` : scan des courses, du ticket de caisse ou
   d'une photo importée, plus saisie libre ; bouton « Générer mes repas avec ces ingrédients ».
@@ -3588,6 +3713,13 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
     est juste. Voir §5 et §7.
 34. **Toute page nouvelle charge `assets/theme.js` dans le `<head>`**, avant
     sa feuille de style — sinon elle clignote en blanc à chaque ouverture.
+38. **Tout prompt qui produit une RECETTE reçoit le matériel de cuisine** (`NattyMateriel.pourPrompt()`,
+    ou `materiel.resume` côté serveur). Une recette qui demande un appareil absent n'est pas
+    « moins bien adaptée », elle est infaisable — donc sautée, donc un repas de moins dans la
+    semaine, sans que rien à l'écran ne l'explique. Et si le catalogue d'appareils bouge, il ne
+    bouge qu'à un endroit : `assets/materiel.js`. Ne jamais en écrire une seconde version côté
+    Node — c'est le défaut d'`api/_nutrition.js`, qui a fini par annoncer d'autres macros que
+    l'écran.
 
 32. **Push automatique autorisé** (décidé le 2026-07-26) : une fois un commit créé sur ce repo, `git push origin main` peut être fait directement, **sans redemander confirmation à chaque fois**. Authentification via clé SSH dédiée (`~/.ssh/id_ed25519_github`, clé "Claude Accès" sur GitHub, remote `origin` en SSH). Cette autorisation est spécifique à ce repo — ne pas l'étendre à un autre dépôt ou à d'autres actions destructrices (force-push, reset, etc., qui restent soumises à confirmation).
 
@@ -4452,3 +4584,28 @@ n'a pu être fait ici.
 (revérifié en base, quatre contrôles en §4), compte de démonstration **en cours**, build Xcode
 **à faire**. Ajouté le même jour : les plats sans photo ne paraissent plus dans le fil social
 (`0b3db71`).*
+
+---
+
+*Contribution session « matériel de cuisine » (Claude Opus, 15 août 2026) :*
+- **Nouveau** `assets/materiel.js` (+ copie `www/`) : la question « qu'as-tu dans ta cuisine ? »,
+  posée **une seule fois**, avant la première génération de la semaine — et le panneau
+  « Mon matériel » de l'écran Repas, qui la rend rattrapable. Détail et pièges en §3.
+- **Nouveau** `natty_materiel.sql` : table `materiel`, RLS + policy « soi seulement ». 🔄 Reste
+  à exécuter — c'est ce qui donne la contrainte au **cron du lundi**, seul chemin qui n'a pas de
+  navigateur (§4).
+- `assets/generation.js` : la question passe **avant** celle du garde-manger, et le matériel
+  part dans le corps de `/api/generer-conseils` à chaque génération.
+- `api/_generation.js` : `collecterProfil` lit `materiel.resume`, `construirePrompt` ajoute la
+  section `ÉQUIPEMENT DE CUISINE` et quatre règles, les trois plats macro sont contraints eux
+  aussi. `api/generer-conseils.js` accepte `body.materiel`. `assets/reco.js` fait de même pour
+  « Découvrir » — un plat au four y est tout aussi infaisable.
+- `api/supprimer-compte.js` : `materiel` ajoutée à `TABLES_USER`.
+- Les 13 écrans porteurs de la nav (+ `www/`) chargent le module, `repas.html` porte le panneau.
+- **Numérotation des règles passée à un compteur** dans les deux prompts : elles sont
+  conditionnelles, et une liste qui saute de 5 à 8 se lit comme une liste amputée.
+- ✅ **A/B contre `HEAD` : sans réponse, le prompt est identique au caractère près**
+  (16 444 / 16 910 caractères). Une question sans réponse ne contraint rien.
+- ⚠️ Piège documenté au passage : le catalogue des appareils vit dans le module navigateur, et
+  la ligne stocke la **phrase du prompt** à côté des clés plutôt que d'en tenir une copie côté
+  Node — le défaut exact d'`api/_nutrition.js`, payé en macros fausses envoyées par notification.

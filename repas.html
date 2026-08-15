@@ -198,6 +198,14 @@ body{overflow-x:hidden}
      que ces réglages pilotent. -->
 <div class="wrap" id="prefWrap"></div>
 
+<!-- « Mon matériel » — ce avec quoi il peut cuisiner. Hors de `#content`
+     pour la même raison que ses deux voisins : render() le remplace en
+     entier à chaque changement de recette.
+     ⚠️ Sa présence ici n'est pas décorative : la question n'est posée
+     QU'UNE FOIS, avant la première génération. Sans ce panneau, un « je
+     n'ai pas de four » répondu un jour serait un verrou à vie. -->
+<div class="wrap" id="matWrap"></div>
+
 <div class="toast" id="toast"></div>
 
 <script src="/assets/core.js"></script>
@@ -216,6 +224,10 @@ body{overflow-x:hidden}
 <script src="/assets/plats-illu.js"></script>
 <script src="/assets/decouverte.js"></script>
 <script src="/assets/planning.js"></script>
+<!-- Le matériel de cuisine : la question posée une seule fois, avant la
+     première génération. Chargé partout où generation.js l'est — c'est lui
+     qui pose la question, depuis n'importe lequel de ces écrans. -->
+<script src="/assets/materiel.js"></script>
 <script src="/assets/garde-manger.js"></script>
 <!-- Préférences alimentaires : ce que reco.js injecte dans le prompt de la
      génération. Modifiables ici, plutôt que figées au questionnaire. -->
@@ -706,6 +718,7 @@ document.addEventListener('natty:planning-pret', function(){ monterMaSemaine(); 
      suit : celui-ci rend la main plus haut quand la page est ouverte sur un
      repas précis (?id=), et le panneau ne serait alors jamais peint. */
   if (window.NattyPreferences) NattyPreferences.monter(document.getElementById('prefWrap'));
+  if (window.NattyMateriel) NattyMateriel.monter(document.getElementById('matWrap'));
 
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');

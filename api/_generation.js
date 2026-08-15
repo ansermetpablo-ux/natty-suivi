@@ -85,7 +85,22 @@ async function sbGet(SB_URL, SB_KEY, chemin) {
    la colonne — et le profil retombe alors silencieusement sur ses valeurs par
    défaut. Le nombre de repas par jour vit dans `questionnaire_alim.nb_repas`. */
 export async function collecterProfil(SB_URL, SB_KEY, uid, onboarding) {
-  const out = { onboarding: onboarding || null, questionnaire: null, semaine: [] };
+  const out = { onboarding: onboarding || null, questionnaire: null, semaine: [], materiel: '' };
+
+  /* Le matériel de cuisine (`natty_materiel.sql`). On lit `resume` et non
+     `items` : la phrase est composée par `assets/materiel.js`, qui détient le
+     catalogue, et la recopier ici en donnerait une seconde version à tenir à
+     jour — le défaut exact d'`api/_nutrition.js`, qui a fini par annoncer
+     d'autres macros que l'écran.
+     ⚠️ C'est ce qui fait exister la contrainte pour le CRON DU LUNDI : il n'a
+     pas de navigateur, donc pas de localStorage à interroger. Sans cette
+     lecture, la génération automatique proposerait un gratin à quelqu'un sans
+     four, là où la même génération lancée à la main l'éviterait.
+     Table absente : `sbGet` rend [], et le prompt est celui d'avant. */
+  try {
+    const m = await sbGet(SB_URL, SB_KEY, `materiel?user_id=eq.${uid}&select=resume&limit=1`);
+    if (Array.isArray(m) && m[0] && typeof m[0].resume === 'string') out.materiel = m[0].resume;
+  } catch (e) { out.materiel = ''; }
 
   if (!out.onboarding) {
     const lignes = await sbGet(SB_URL, SB_KEY, `onboarding?user_id=eq.${uid}`
@@ -233,6 +248,19 @@ export function construirePrompt(profil, nb, garde) {
     p += "\nINGRÉDIENTS DISPONIBLES (garde-manger de l'utilisateur)\n- " + garde + '\n';
   }
 
+  /* ÉQUIPEMENT — répondu une fois, à la première génération
+     (`assets/materiel.js`). La phrase arrive toute faite : elle nomme ce qu'il
+     a, ce qu'il n'a PAS, et les clés `illu` devenues impossibles.
+     ⚠️ Ce sont les ABSENCES qui portent l'information. Ne lister que ce qu'il
+     possède laisserait le modèle libre de supposer le reste — et il suppose un
+     four, parce que la plupart des recettes en ont un. Absent (jamais
+     répondu), rien n'est écrit et le prompt est celui d'avant : une question
+     sans réponse ne doit rien contraindre. */
+  const materiel = profil.materiel || '';
+  if (materiel) {
+    p += '\nÉQUIPEMENT DE CUISINE\n- ' + materiel + '\n';
+  }
+
   /* ⚠️ LES RECETTES SE CHOISISSENT DANS LE CATALOGUE, elles ne s'inventent
      plus. Raison directe : chaque plat du catalogue a une photo (ou une
      illustration), alors qu'un nom inventé n'en a aucune — `repas.html` et
@@ -255,9 +283,27 @@ export function construirePrompt(profil, nb, garde) {
   p += "   Si la liste des goûts contredit le régime (ex. régime vegan mais viande citée dans les aliments aimés), le RÉGIME l'emporte toujours : propose l'équivalent compatible, jamais l'aliment interdit.\n";
   p += '4. Respecte le temps de cuisine disponible.\n';
   p += '5. Écris en français, ton direct et concret (tutoiement).\n';
+  /* Numérotation continue : les règles qui suivent sont conditionnelles, et
+     une liste qui saute de 5 à 8 se lit comme une liste amputée. */
+  let nr = 6;
   if (garde) {
-    p += "6. Pars des INGRÉDIENTS DISPONIBLES : chaque recette doit en utiliser plusieurs, et l'ensemble des recettes doit écouler ce stock en priorité. N'ajoute d'ingrédient absent de la liste que si la recette ne tient pas debout sans lui, et garde ces ajouts courants et peu nombreux.\n";
-    p += '7. Sur chaque ingrédient, mets "dispo":true s\'il figure dans les INGRÉDIENTS DISPONIBLES, false s\'il faut l\'acheter.\n';
+    p += (nr++) + ". Pars des INGRÉDIENTS DISPONIBLES : chaque recette doit en utiliser plusieurs, et l'ensemble des recettes doit écouler ce stock en priorité. N'ajoute d'ingrédient absent de la liste que si la recette ne tient pas debout sans lui, et garde ces ajouts courants et peu nombreux.\n";
+    p += (nr++) + '. Sur chaque ingrédient, mets "dispo":true s\'il figure dans les INGRÉDIENTS DISPONIBLES, false s\'il faut l\'acheter.\n';
+  }
+  if (materiel) {
+    /* Bloquant au même titre que les allergies, et pour la même raison : une
+       recette qui demande un appareil absent n'est pas « moins bien adaptée »,
+       elle est infaisable — donc sautée, donc un repas de moins dans la
+       semaine, sans que rien à l'écran ne l'explique. */
+    p += (nr++) + ". L'ÉQUIPEMENT est bloquant, comme les allergies : aucune étape ne doit demander un appareil qu'il n'a pas, et n'écris JAMAIS une étape dont \"illu\" est l'un des gestes impossibles listés.\n";
+    p += (nr++) + ". Si le plat du catalogue se prépare habituellement avec un appareil qu'il n'a pas, ne le remplace pas par un autre plat : donne-en la VARIANTE réalisable chez lui (four → poêle, cocotte ou air fryer ; mixeur → écrasé à la fourchette ; etc.), et dis-le en une phrase dans le \"tip\" de l'étape concernée, pour qu'il comprenne que c'est un choix et pas une approximation.\n";
+    p += (nr++) + ". Si aucune variante honnête n'existe, choisis un autre plat du catalogue plutôt que de proposer une recette qu'il ne peut pas faire.\n";
+    /* Condition portée par la PHRASE et non par un `if` : le serveur ne reçoit
+       que le résumé, pas les clés du catalogue — tester « a-t-il une balance »
+       ici demanderait de fouiller une chaîne de texte, ce qui casserait au
+       premier libellé retouché. Le modèle, lui, a le bloc ÉQUIPEMENT sous les
+       yeux et résout la condition tout seul. */
+    p += (nr++) + ". S'il n'a PAS de balance de cuisine, double chaque quantité d'un repère mesurable sans peser (cuillères, verre, pièce, moitié de paquet) dans le \"detail\" de l'étape.\n";
   }
 
   /* ÉTAPES DÉTAILLÉES — ces consignes existent parce qu'`assets/recette.js` en
@@ -284,6 +330,11 @@ export function construirePrompt(profil, nb, garde) {
   p += '\nTROIS PLATS MACRO\n';
   p += '- En plus des recettes, propose EXACTEMENT trois plats, un par macronutriment, dans cet ordre : "p" (protéines), "g" (glucides), "l" (lipides).\n';
   p += '- Chacun corrige SA macro sans faire exploser les deux autres, se prépare en moins de 30 minutes, et reste courant en France.\n';
+  if (materiel) {
+    // Ils n'ont pas d'étapes détaillées, donc rien ne rattraperait un appareil
+    // manquant à la lecture : c'est ici, au choix du plat, que ça se joue.
+    p += "- Ils se préparent AVEC SON ÉQUIPEMENT, sans exception : un plat qui suppose un appareil qu'il n'a pas est à remplacer par un autre.\n";
+  }
   p += "- Ils prolongent les conseils ci-dessus : le plat \"p\" doit répondre au conseil protéines, et ainsi de suite.\n";
   p += '- Ils seront PLACÉS dans la semaine là où ses apports flanchent. Ils sont donc plus simples que les recettes : pas d\'étapes détaillées.\n';
   p += '- Ils doivent différer des ' + nb + ' recettes ci-dessus.\n';
@@ -477,9 +528,11 @@ export function normaliserPlatsMacro(liste) {
  * @param {string} semaine   lundi de la semaine, 'YYYY-MM-DD'
  * @param {boolean} forcer   ignore le « déjà fait cette semaine »
  * @param {string} garde     garde-manger transmis par la page (facultatif)
+ * @param {string} materiel  matériel de cuisine transmis par la page (facultatif ;
+ *                           à défaut, il est lu dans la table `materiel`)
  * @returns {Promise<{recettes:number}|null>} null si rien n'était à faire
  */
-export async function processUser(user, semaine, SB_URL, SB_KEY, CLAUDE_API, CLAUDE_KEY, forcer, garde) {
+export async function processUser(user, semaine, SB_URL, SB_KEY, CLAUDE_API, CLAUDE_KEY, forcer, garde, materiel) {
   // Déjà fait cette semaine ? Le cron passe son chemin.
   // ⚠️ `forcer` existe pour la demande explicite depuis l'app : sans lui, le
   // bouton « Générer mes conseils » ne ferait rien du tout — en silence — dès
@@ -500,6 +553,11 @@ export async function processUser(user, semaine, SB_URL, SB_KEY, CLAUDE_API, CLA
   }
 
   const profil = await collecterProfil(SB_URL, SB_KEY, user.user_id, user.poids && user.tdee ? user : null);
+  /* La page l'emporte sur la table quand elle en donne un : tant que
+     `materiel` n'existe pas en base, elle est la SEULE à le connaître (il vit
+     dans son localStorage). Une chaîne vide n'écrase rien — c'est « je n'ai
+     rien à dire », pas « il n'a rien ». */
+  if (typeof materiel === 'string' && materiel) profil.materiel = materiel;
   const prompt = construirePrompt(profil, NB_RECETTES, garde);
 
   const claudeRes = await fetch(CLAUDE_API, {

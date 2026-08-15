@@ -577,6 +577,23 @@ window.NattyGeneration = (function () {
          « Générer mes repas avec ces ingrédients ». Reposer la question juste
          après serait une étape pour rien. Une chaîne vide reste une réponse
          valable (« génère sans »), d'où le test sur `undefined`. */
+      /* ⚠️ LE MATÉRIEL PASSE AVANT LE GARDE-MANGER, et une seule fois dans la
+         vie du compte. Deux raisons de le poser en premier : il conditionne ce
+         qu'on peut faire de ce qu'on a (savoir qu'il reste des pommes de terre
+         ne sert à rien si on ignore qu'il n'y a pas de four), et c'est la
+         question la plus courte — commencer par la plus longue, c'est finir sur
+         un abandon.
+         Elle ne revient plus ensuite : un four ne change pas toutes les
+         semaines. Elle reste modifiable dans le panneau « Mon matériel » de
+         l'écran Repas — sans quoi une réponse donnée une fois serait un verrou
+         à vie, et déménager ou s'acheter un mixeur n'aurait aucun effet. */
+      if (!opts.discret && window.NattyMateriel) {
+        try {
+          await NattyMateriel.charger();
+          if (!NattyMateriel.repondu()) await NattyMateriel.demander();
+        } catch (e) { /* une question ratée ne doit pas empêcher la génération */ }
+      }
+
       var garde = '';
       if (opts.garde !== undefined) garde = opts.garde;
       else if (!opts.discret && window.NattyGardeManger) garde = await demanderGardeManger();
@@ -636,6 +653,23 @@ window.NattyGeneration = (function () {
         }
       } catch (e) {}
     }
+
+    /* Le matériel de cuisine — LU, jamais demandé ici : la question a déjà eu
+       lieu dans `lancer()`, et il n'y a pas de choix « avec / sans » à faire
+       comme pour le garde-manger. Ne pas avoir de four n'est pas une option
+       qu'on retient ou non, c'est un fait.
+       On le transmet quand même dans le corps alors que le serveur sait le
+       lire : tant que `materiel` n'existe pas en base, la réponse ne vit que
+       dans le localStorage de cet appareil, et le serveur n'a aucun moyen de
+       l'atteindre. Une chaîne vide (jamais répondu) n'est pas envoyée — sinon
+       elle écraserait ce que la table sait déjà. */
+    try {
+      if (window.NattyMateriel) {
+        await NattyMateriel.charger();
+        var mat = NattyMateriel.pourPrompt();
+        if (mat) corps.materiel = mat;
+      }
+    } catch (e) {}
 
     var jeton = null;
     try { jeton = await Natty.jeton(); } catch (e) {}

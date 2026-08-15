@@ -106,10 +106,16 @@ export default async function handler(req, res) {
     // `garde_manger` n'existe pas encore) : seule la page peut nous le donner.
     const garde = typeof body.garde === 'string' ? body.garde.slice(0, 1200) : '';
 
+    // Le matériel de cuisine. Il EST en base (`natty_materiel.sql`) et
+    // `collecterProfil` sait le lire — mais tant que la table n'existe pas, la
+    // réponse ne vit que dans le localStorage de l'appareil, et la page est
+    // alors le seul chemin. Absent ici, la table reprend la main.
+    const materiel = typeof body.materiel === 'string' ? body.materiel.slice(0, 600) : '';
+
     // 4. `forcer` = true : c'est une demande explicite. Sans lui, `processUser`
     //    s'arrête dès qu'une ligne pleine existe pour la semaine en cours.
     const bilan = await processUser(user, semaine, SB_URL, SB_KEY,
-      'https://api.anthropic.com/v1/messages', CLAUDE_KEY, true, garde);
+      'https://api.anthropic.com/v1/messages', CLAUDE_KEY, true, garde, materiel);
 
     return res.status(200).json({ ok: true, semaine, recettes: (bilan && bilan.recettes) || 0 });
   } catch (err) {

@@ -84,6 +84,17 @@ var NattyReco = (function () {
       try { await NattyGardeManger.charger(); out.garde = NattyGardeManger.pourPrompt(); }
       catch (e) { out.garde = ''; }
     }
+
+    // Matériel de cuisine : même contrat que le garde-manger — optionnel, et
+    // sans lui les recettes sont proposées comme avant. Un tirage
+    // « Découvrir » qui demande un four à quelqu'un qui n'en a pas est aussi
+    // infaisable qu'une recette de la semaine ; il n'y a pas de raison que la
+    // contrainte s'arrête à la génération hebdomadaire.
+    out.materiel = '';
+    if (typeof NattyMateriel !== 'undefined') {
+      try { await NattyMateriel.charger(); out.materiel = NattyMateriel.pourPrompt(); }
+      catch (e) { out.materiel = ''; }
+    }
     return out;
   }
 
@@ -209,6 +220,13 @@ var NattyReco = (function () {
       p += "- " + profil.garde + "\n";
     }
 
+    // Ce sont les ABSENCES qui contraignent : sans elles, le modèle suppose un
+    // four, parce que la plupart des recettes en ont un. La phrase est composée
+    // par `assets/materiel.js`, qui détient le catalogue.
+    if (profil.materiel) {
+      p += "\nÉQUIPEMENT DE CUISINE\n- " + profil.materiel + "\n";
+    }
+
     if (contrainte) {
       p += "\nCONTRAINTE DU TIRAGE (impérative)\n- " + contrainte + "\n";
     }
@@ -220,9 +238,18 @@ var NattyReco = (function () {
     p += "   Si la liste des goûts contredit le régime (ex. régime vegan mais viande citée dans les aliments aimés), le RÉGIME l'emporte toujours : propose l'équivalent compatible, jamais l'aliment interdit.\n";
     p += "4. Respecte le temps de cuisine disponible.\n";
     p += "5. Écris en français, ton direct et concret (tutoiement).\n";
+    // Numérotation continue : ce qui suit est conditionnel, et une liste qui
+    // saute de 5 à 8 se lit comme une liste amputée.
+    var nr = 6;
     if (profil.garde) {
-      p += "6. Pars des INGRÉDIENTS DISPONIBLES : chaque recette doit en utiliser plusieurs, et l'ensemble des recettes doit écouler ce stock en priorité. N'ajoute d'ingrédient absent de la liste que si la recette ne tient pas debout sans lui, et garde ces ajouts courants et peu nombreux.\n";
-      p += "7. Sur chaque ingrédient, mets \"dispo\":true s'il figure dans les INGRÉDIENTS DISPONIBLES, false s'il faut l'acheter.\n";
+      p += (nr++) + ". Pars des INGRÉDIENTS DISPONIBLES : chaque recette doit en utiliser plusieurs, et l'ensemble des recettes doit écouler ce stock en priorité. N'ajoute d'ingrédient absent de la liste que si la recette ne tient pas debout sans lui, et garde ces ajouts courants et peu nombreux.\n";
+      p += (nr++) + ". Sur chaque ingrédient, mets \"dispo\":true s'il figure dans les INGRÉDIENTS DISPONIBLES, false s'il faut l'acheter.\n";
+    }
+    if (profil.materiel) {
+      // Bloquant au même titre que les allergies : une recette qui demande un
+      // appareil absent n'est pas moins bien adaptée, elle est infaisable.
+      p += (nr++) + ". L'ÉQUIPEMENT est bloquant, comme les allergies : aucune étape ne doit demander un appareil qu'il n'a pas, et n'écris JAMAIS une étape dont \"illu\" est l'un des gestes impossibles listés.\n";
+      p += (nr++) + ". Si le plat se prépare habituellement avec un appareil qu'il n'a pas, donne-en la VARIANTE réalisable chez lui (four → poêle, cocotte ou air fryer ; mixeur → écrasé à la fourchette) et dis-le dans le \"tip\" de l'étape concernée.\n";
     }
 
     /* ÉTAPES DÉTAILLÉES — les consignes ci-dessous existent parce que

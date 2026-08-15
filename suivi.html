@@ -1971,6 +1971,10 @@ html.no-scroll {
      derrière un `if (window.NattyGardeManger)` : sans le module, la question
      est silencieusement sautée, et l'option n'existait donc que depuis
      l'écran Repas — le seul qui le chargeait. -->
+<!-- Le matériel de cuisine : la question posée une seule fois, avant la
+     première génération. Chargé partout où generation.js l'est — c'est lui
+     qui pose la question, depuis n'importe lequel de ces écrans. -->
+<script src="/assets/materiel.js"></script>
 <script src="/assets/garde-manger.js"></script>
 <!-- La génération de la semaine (conseils + recettes + liste de courses) part
      d'ici, et ne vit PLUS dans cette page : elle est côté serveur, et ce module
