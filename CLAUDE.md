@@ -2961,8 +2961,10 @@ caméra depuis la WebView, arc du guide du jour, visionneuse, bilan, planificati
 
 ⚠️ **Ce que ce test ne couvre PAS, et qu'il ne faut pas cocher au passage** — parce qu'aucun
 de ces points ne peut fonctionner aujourd'hui, quel que soit le téléphone :
-- le **push serveur** : la clé APNs n'existe pas encore, et un jeton APNs réel demande un
-  build signé (le `CODE_SIGNING_ALLOWED=NO` du simulateur empêche d'embarquer l'entitlement) ;
+- le **push serveur** : un jeton APNs réel demande un build signé (le
+  `CODE_SIGNING_ALLOWED=NO` du simulateur empêche d'embarquer l'entitlement), et `appareils`
+  est encore vide — recompté le 2026-08-15. La clé Apple, elle, est donnée pour posée depuis
+  cette date (§8, point 1) : ce n'est donc plus elle qui bloque, c'est le jeton ;
 - le **retour de paiement Stripe** par deep link : joué en doublure seulement, jamais en vrai
   aller-retour Safari → app ;
 - le **tap sur une notification** vers `narration.html` ;
@@ -3365,7 +3367,9 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   notifications du simulateur n'a pas réagi aux taps synthétiques. À confirmer sur un téléphone.
 - 🔄 **Android jamais compilé** (comme le reste du projet) : le canal, l'icône de statut et
   la permission `POST_NOTIFICATIONS` n'ont pas pu être testés.
-- ✅ **Push serveur — code écrit et testé aussi loin que possible sans la clé Apple.**
+- ✅ **Push serveur — code écrit et testé aussi loin que possible sans un iPhone signé.**
+  (La clé Apple est donnée pour posée depuis le 2026-08-15 ; ce qui bloque maintenant est
+  le jeton, pas la clé — voir le point 1 ci-dessous.)
   `assets/push.js`, `api/_apns.js`, `api/_nutrition.js`, `api/push-test.js`,
   `api/rappel-macros.js`, `api/push-amis.js`, `natty_push.sql`, plugin installé,
   capability + entitlement iOS en place, `AppDelegate` complété. Détail en §3.
@@ -3376,10 +3380,40 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   (`xcrun simctl push`).
 
   🔄 **Ce qui manque, et qui n'est PAS du code :**
-  1. **La clé APNs** (Apple Developer → Keys → Apple Push Notifications service, Team
-     **`DJLW82GU5A`** — l'équipe **Natty**, depuis l'achat de la licence Apple Developer
-     Program le 2026-08-10 ; l'ancien `SAZQ9AFAMZ` était le compte **individuel** de Pablo
-     et ne sert plus).
+  1. 📣 **La clé APNs — POSÉE, dit Pablo (2026-08-15). NON VÉRIFIÉE, ET ELLE NE PEUT PAS
+     L'ÊTRE D'ICI.** Cette ligne est un rapport, pas une mesure, et il faut la lire comme
+     telle jusqu'à ce que quelqu'un lance la commande ci-dessous.
+     > ⚠️ **Pourquoi c'est invérifiable de l'extérieur, et c'est voulu.** Le seul endpoint
+     > qui rend compte de la configuration APNs est `api/push-test`, et il commence par
+     > `autorise(req)` : sans `CRON_SECRET` il répond **401**, exactement comme avec un
+     > mauvais secret. Mesuré le 2026-08-15 sur la prod — `/api/push-test`,
+     > `/api/push-test?secret=faux` et `/api/rappel-macros?dry=1` répondent **tous les trois
+     > 401 `Unauthorized`**. C'est la bonne nouvelle sur le fail-closed (cf. l'encadré des
+     > crons), et c'est précisément ce qui empêche de distinguer « clé posée » de « clé
+     > absente » sans le secret. Ne pas conclure d'un 401 : il ne dit rien de la clé.
+     > **La commande qui tranche**, à lancer avec le `CRON_SECRET` lu dans Vercel →
+     > Settings → Environment Variables :
+     > ```
+     > curl "https://natty-suivi.vercel.app/api/push-test?secret=<CRON_SECRET>"
+     > ```
+     > Elle rend `cle_apns`, `equipe`, `topic`, `environnement`, `cle_supabase` et le nombre
+     > d'appareils. ⚠️ **`equipe` et `topic` ont un DÉFAUT dans le code** (`DJLW82GU5A` et
+     > `com.nattynutrition.app`) : les voir affichés ne prouve donc pas que les variables
+     > existent — le libellé « (défaut — …) » est là pour ça, et c'est lui qu'il faut lire.
+     > `cle_apns`, elle, n'a pas de défaut : c'est la seule des cinq qui répond vraiment à la
+     > question.
+     ⚠️ **Et une clé posée ne suffit pas à envoyer quoi que ce soit.** Relevé en base le
+     2026-08-15 : `appareils` est **toujours à 0 ligne** (`push_etat` à 0 aussi,
+     `push_config` à 1). Il n'existe donc **aucun jeton APNs**, donc aucune notification ne
+     peut atteindre qui que ce soit, quelle que soit la clé. Le point 3 (build signé sur un
+     vrai iPhone) est ce qui produit le premier jeton — c'est lui le vrai blocage
+     aujourd'hui, pas la clé. Le jour où `appareils` passe à 1, l'envoi est testable pour de
+     bon.
+
+     Rappel de ce que la clé doit être (Apple Developer → Keys → Apple Push Notifications
+     service, Team **`DJLW82GU5A`** — l'équipe **Natty**, depuis l'achat de la licence Apple
+     Developer Program le 2026-08-10 ; l'ancien `SAZQ9AFAMZ` était le compte **individuel**
+     de Pablo et ne sert plus).
      > ⚠️ **Une clé `.p8` appartient à UNE équipe.** Si une clé avait été créée sous le
      > compte individuel, elle ne peut pas signer pour l'app de l'équipe Natty : il en faut
      > une **nouvelle**, donc `APNS_KEY_ID` **et** `APNS_P8` changent avec `APNS_TEAM_ID`.
@@ -3397,8 +3431,10 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      `SECURITY DEFINER`). `push_config` porte **1 ligne**, donc le secret y a bien été semé et
      le `REMPLACER_PAR_LE_CRON_SECRET` du fichier a été remplacé. `appareils` est à **0 ligne**,
      ce qui est normal et attendu : aucun jeton APNs réel ne peut exister tant que l'app n'a
-     pas tourné sur un iPhone signé (un simulateur n'en produit pas). Il ne reste donc, de
-     toute cette liste, que la clé Apple et le build signé.
+     pas tourné sur un iPhone signé (un simulateur n'en produit pas). Recompté le
+     2026-08-15 : **toujours 0**. Il ne reste donc, de toute cette liste, que la clé Apple
+     (donnée pour posée, à confirmer par la commande du point 1) et le build signé — et
+     c'est le build qui commande, puisque c'est lui qui produit le premier jeton.
   3. **Un build signé.** ⚠️ Le `CODE_SIGNING_ALLOWED=NO` documenté en §11 empêche l'embarquement
      de l'entitlement : l'enregistrement échoue alors avec « aucune autorisation
      *aps-environment* valide » (constaté). L'entitlement lui-même est correct — le
@@ -4143,6 +4179,9 @@ reste l'ancien `phx_join` — voir §7.
   > ⚠️ **On ne travaille plus sur le compte individuel `SAZQ9AFAMZ`.** Tout ce qui est
   > rattaché à une équipe est à refaire sous la nouvelle : identifiant d'app, profils, et
   > surtout la **clé APNs** — une `.p8` n'est pas transférable d'une équipe à l'autre.
+  > Pablo a posé une clé le **2026-08-15** ; qu'elle ait bien été créée sous `DJLW82GU5A`
+  > est la première chose à contrôler si un envoi revient en **403 InvalidProviderToken**,
+  > puisque c'est le symptôme exact d'un `iss` qui ne correspond pas à l'équipe signataire.
   ⚠️ **Sauf pour le push** : sans signature, l'entitlement `aps-environment` n'est pas embarqué
   et `PushNotifications.register()` échoue (« aucune autorisation *aps-environment* valide »).
   Ce n'est pas un défaut de configuration — et un simulateur ne peut de toute façon pas obtenir
