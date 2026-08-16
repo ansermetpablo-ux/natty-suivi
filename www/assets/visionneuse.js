@@ -37,6 +37,12 @@ var NattyVisionneuse = (function () {
 
   var racine = null, piste = null, jauge = null;
   var ITEMS = [], INDEX = 0, OPTS = {}, scrollBloque = '';
+  /* La série qui vient après celle qu'on regarde — `null` s'il n'y en a pas.
+     Calculée à l'ouverture et après chaque passage, JAMAIS à la volée : elle
+     décide de la présence d'une diapositive dans la piste, et une piste dont
+     le nombre d'éléments changerait pendant un glissement se recalerait sur
+     la mauvaise. */
+  var SUITE = null, enPassage = false;
 
   function esc(s) {
     return String(s == null ? '' : s)
@@ -91,6 +97,41 @@ var NattyVisionneuse = (function () {
     '#nvue .nv-sl{position:relative;flex:0 0 100%;width:100%;height:100%;',
       'scroll-snap-align:center;scroll-snap-stop:always;display:flex;flex-direction:column;',
       'padding:0 18px}',
+
+    /* ── Le carton de passage vers la cuisine suivante ──────────
+       Volontairement NU : ni photo, ni bulle, ni bouton. C'est un
+       intertitre — la respiration entre deux séries — et tout ce qu'on y
+       ajouterait donnerait envie de s'y arrêter, alors qu'il ne dure
+       qu'une seconde. */
+    '#nvue .nv-pass{align-items:center;justify-content:center;text-align:center}',
+    '#nvue .nv-pass-in{display:flex;flex-direction:column;align-items:center;gap:2px}',
+    '#nvue .nv-pass-k{font-size:11.5px;font-weight:800;letter-spacing:1.4px;',
+      'text-transform:uppercase;color:var(--v-mut);margin-bottom:14px}',
+    /* Le drapeau donne le pays avant même qu'on ait lu son nom. */
+    '#nvue .nv-pass-em{font-size:74px;line-height:1;',
+      'animation:nvPassEm .62s cubic-bezier(.22,1,.36,1) both}',
+    '#nvue .nv-pass-t{font-size:32px;font-weight:900;letter-spacing:-.9px;color:var(--v-ink);',
+      'margin-top:16px;animation:nvPassT .62s .08s cubic-bezier(.22,1,.36,1) both}',
+    '#nvue .nv-pass-n{font-size:13px;font-weight:700;color:var(--v-mut);margin-top:7px;',
+      'animation:nvPassT .62s .16s cubic-bezier(.22,1,.36,1) both}',
+    /* Le filet ne se remplit QUE sur `.go`, c'est-à-dire une fois le carton
+       atteint : il mesure l'attente avant la bascule, il ne la précède pas. */
+    '#nvue .nv-pass-l{width:104px;height:2.5px;border-radius:2px;margin-top:26px;',
+      'background:var(--v-jauge);opacity:.34;overflow:hidden}',
+    '#nvue .nv-pass-l i{display:block;width:100%;height:100%;background:var(--v-ink);',
+      'transform:scaleX(0);transform-origin:left center}',
+    '#nvue .nv-pass.go .nv-pass-l i{animation:nvPassL .72s linear both}',
+    '#nvue .nv-pass.go .nv-pass-in{animation:nvPassOut .72s cubic-bezier(.4,0,1,1) both}',
+    '@keyframes nvPassEm{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:none}}',
+    '@keyframes nvPassT{from{opacity:0;transform:translateY(13px)}to{opacity:1;transform:none}}',
+    '@keyframes nvPassL{from{transform:scaleX(0)}to{transform:scaleX(1)}}',
+    '@keyframes nvPassOut{0%,58%{opacity:1;transform:none}',
+      '100%{opacity:0;transform:scale(1.09)}}',
+    /* L'arrivée dans la nouvelle série : le premier plat monte en fondu.
+       C'est la seconde moitié de la cinématique — sans elle, la piste est
+       réécrite d'un coup et le passage a l'air d'un saut. */
+    '#nvue .nv-sl.arrive{animation:nvArrive .58s cubic-bezier(.22,1,.36,1) both}',
+    '@keyframes nvArrive{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:none}}',
 
     /* ── Le haut ── */
     '#nvue .nv-jauge{display:flex;gap:4px;flex:none;margin-bottom:11px;',
@@ -284,6 +325,9 @@ var NattyVisionneuse = (function () {
         var i = Math.round(piste.scrollLeft / Math.max(1, piste.clientWidth));
         if (i !== INDEX) { INDEX = i; majBarre(); }
         if (piste.scrollLeft > 12) cacherIndice();
+        // Un glissement de plus après le dernier plat : on est sur le carton
+        // de passage, et c'est lui qui enchaîne sur la série suivante.
+        if (SUITE && i >= ITEMS.length) passer();
       });
     }, { passive: true });
 
@@ -309,7 +353,9 @@ var NattyVisionneuse = (function () {
            tap qui suit de près un glissement partirait donc de l'avant-
            dernière valeur, et sauterait au mauvais plat. */
         var i = Math.round(piste.scrollLeft / Math.max(1, piste.clientWidth));
-        aller(i + 1 < ITEMS.length ? i + 1 : 0);
+        // Le tap suit le même chemin que le doigt : après le dernier plat il
+        // passe par le carton (quand il y en a un), et sinon il reboucle.
+        aller(i + 1 <= ITEMS.length - (SUITE ? 0 : 1) ? i + 1 : 0);
       }
     });
   }
@@ -482,6 +528,77 @@ var NattyVisionneuse = (function () {
       + '</div>';
   }
 
+  /* ── Le passage d'une série à la suivante ──────────────────
+     Demande de Pablo (2026-08-15) : « quand le swipe d'un pays est fini, si on
+     swipe une fois de plus on passe au pays suivant avec une cinématique ».
+
+     ⚠️ C'EST UNE DIAPOSITIVE, PAS UN GESTE ÉCOUTÉ. Le premier réflexe est de
+     guetter le doigt au bord de la piste — sauf qu'en `scroll-snap-type:x
+     mandatory` avec `overscroll-behavior-x:contain`, arrivé au dernier plat le
+     défilement est BUTÉ : il n'y a plus un pixel de course, donc rien à
+     mesurer. Il faudrait retomber sur `touchmove`/`pointermove` et refaire à la
+     main un seuil, une inertie et une annulation — exactement le `setPointerCapture`
+     qui a coûté une session entière au jeu « Tier list » (§7).
+     En ajoutant une diapositive de plus, le navigateur fait tout : le geste,
+     l'inertie, l'arrêt net dessus. On se contente de reconnaître qu'on y est.
+
+     ⚠️ Et elle n'existe QUE s'il y a une suite (`SUITE`), sinon le dernier plat
+     d'une liste sans lendemain se terminerait sur un carton qui ne mène nulle
+     part. */
+  function diapoPassage(s) {
+    return '<div class="nv-sl nv-pass" data-i="' + ITEMS.length + '">'
+      + '<div class="nv-pass-in">'
+      +   '<div class="nv-pass-k">Cuisine suivante</div>'
+      +   '<div class="nv-pass-em">' + esc(s.embleme || '🍽️') + '</div>'
+      /* ⚠️ `nom` et NON `titre` : celui-ci porte déjà le drapeau, parce qu'il
+         sert à la barre du haut où il n'y a pas la place d'un emblème séparé.
+         Écrit ici, on lisait « 🇬🇷 🇬🇷 Grèce » — le drapeau en grand, puis le
+         même en petit collé au nom. Vu à l'écran, invisible à la lecture. */
+      +   '<div class="nv-pass-t">' + esc(s.nom || s.titre || '') + '</div>'
+      +   '<div class="nv-pass-n">' + s.items.length + ' plat'
+      +     (s.items.length > 1 ? 's' : '') + '</div>'
+      +   '<div class="nv-pass-l"><i></i></div>'
+      + '</div></div>';
+  }
+
+  /**
+   * On vient de s'arrêter sur le carton : on l'anime, puis on remplace la
+   * série. La bascule est DIFFÉRÉE (760 ms) pour deux raisons — laisser
+   * l'animation se voir, et laisser le `scroll-snap` finir de se caler avant
+   * qu'on ne réécrive la piste sous lui.
+   */
+  function passer() {
+    if (enPassage || !SUITE) return;
+    enPassage = true;
+    var s = SUITE;
+    var el = piste.querySelector('.nv-pass');
+    if (el) el.classList.add('go');
+    setTimeout(function () {
+      // Fermée entre-temps : on ne repeint pas un écran que personne ne regarde.
+      if (!racine || !racine.classList.contains('on')) { enPassage = false; return; }
+      ITEMS = s.items;
+      OPTS.titre = s.titre;
+      if (OPTS.surSerie) OPTS.surSerie(s);
+      SUITE = OPTS.suite ? OPTS.suite(s) : null;
+      INDEX = 0;
+      peindrePiste();
+      /* ⚠️ `scrollLeft` sec, jamais `scrollTo({behavior:'smooth'})` : la piste
+         vient d'être réécrite, un défilement animé partirait de l'ancienne
+         position et traverserait toute la nouvelle série sous les yeux. */
+      piste.scrollLeft = 0;
+      majBarre();
+      // Le premier plat entre en fondu : c'est la fin de la cinématique, pas
+      // une apparition sèche.
+      var p = piste.firstElementChild;
+      if (p) { p.classList.add('arrive'); setTimeout(function () { p.classList.remove('arrive'); }, 620); }
+      enPassage = false;
+    }, 760);
+  }
+
+  function peindrePiste() {
+    piste.innerHTML = ITEMS.map(diapo).join('') + (SUITE ? diapoPassage(SUITE) : '');
+  }
+
   function majBarre() {
     var it = ITEMS[INDEX];
     // La jauge et le compteur vivent DANS chaque diapositive : chacune peint
@@ -493,8 +610,13 @@ var NattyVisionneuse = (function () {
     if (it && OPTS.surVue) OPTS.surVue(it);
   }
 
+  /* ⚠️ La borne haute est `ITEMS.length` INCLUS quand une suite existe : le
+     carton de passage est une diapositive comme les autres, et la flèche du
+     clavier comme le tap sur la photo doivent pouvoir l'atteindre — sinon le
+     passage ne serait offert qu'au doigt. */
   function aller(i) {
-    if (i < 0 || i >= ITEMS.length) return;
+    var max = ITEMS.length - (SUITE ? 0 : 1);
+    if (i < 0 || i > max) return;
     cacherIndice();
     piste.scrollTo({ left: i * piste.clientWidth, behavior: 'smooth' });
   }
@@ -519,15 +641,23 @@ var NattyVisionneuse = (function () {
    *               compteur « 3/9 » prend la place du cœur
    *   surVue(it)  appelé à chaque diapositive affichée
    *   surMembre(id)
+   *   suite(cour) rend la série d'APRÈS — {titre, embleme, items} — ou null.
+   *               `cour` est la série qu'on vient de finir (null au premier
+   *               appel). Avec elle, un glissement de plus après le dernier
+   *               plat enchaîne sur la suivante ; sans elle, la liste s'arrête
+   *               où elle s'arrête.
+   *   surSerie(s) appelé quand on vient de basculer sur une nouvelle série
    */
   function ouvrir(o) {
     OPTS = o || {};
     ITEMS = OPTS.items || [];
     if (!ITEMS.length) return;
     INDEX = Math.max(0, Math.min(ITEMS.length - 1, OPTS.index || 0));
+    enPassage = false;
+    SUITE = OPTS.suite ? OPTS.suite(null) : null;
     monter();
 
-    piste.innerHTML = ITEMS.map(diapo).join('');
+    peindrePiste();
 
     var deja = false;
     try { deja = !!localStorage.getItem('natty_vue_geste'); } catch (e) {}
@@ -552,12 +682,24 @@ var NattyVisionneuse = (function () {
     // On vide la piste : un aller-retour ne doit pas cumuler douze plein écran
     // d'images en mémoire.
     piste.innerHTML = '';
+    /* ⚠️ Et on désarme le passage. Sans ça, un `passer()` déjà programmé
+       (760 ms) repeindrait la piste d'une visionneuse fermée, et la
+       réouverture suivante hériterait de la série d'un autre pays. */
+    SUITE = null; enPassage = false;
     if (OPTS.surFermeture) OPTS.surFermeture();
   }
 
   return {
     ouvrir: ouvrir,
     fermer: fermer,
+    /* ⚠️ EXPOSÉ PARCE QUE LES MESSAGES DE L'HÔTE PASSAIENT DESSOUS. `#nvue` est
+       en z-index 880 et le toast de `social.html` en 800 : « Vous suivez
+       Hélène » et « Ajouté à votre semaine · Dimanche · Midi » se peignaient
+       DERRIÈRE le plein écran, donc nulle part. Mesuré, pas supposé.
+       L'appelant n'a pas à connaître ces valeurs ni à en inventer une
+       troisième : il demande à la visionneuse de parler, et elle parle chez
+       elle. Sans effet si elle est fermée — c'est alors à l'hôte de le faire. */
+    toast: function (m) { if (racine && racine.classList.contains('on')) toast(m); },
     estOuverte: function () { return !!racine && racine.classList.contains('on'); }
   };
 })();

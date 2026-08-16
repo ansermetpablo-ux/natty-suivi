@@ -1694,9 +1694,99 @@ window.NattyPlanning = (function () {
     setTimeout(function () { d.classList.add('on'); }, 60);
   }
 
+  /* ═══ 12. Poser un plat venu d'ailleurs dans la semaine ══════
+     Le fil social et « Découvrir » montrent des plats qu'on a envie de manger,
+     et jusqu'ici on ne pouvait rien en faire d'autre que copier leurs
+     ingrédients dans ses courses. `ajouter()` les pose dans la semaine.
+     (Demande de Pablo, 2026-08-15.)
+
+     ⚠️ AU PROCHAIN CRÉNEAU LIBRE, JAMAIS À UNE PLACE CHOISIE PAR NOUS. Le
+     placement automatique de `placer()` compare les manques macro sur 28 jours ;
+     il n'a pas de sens ici, où l'utilisateur ne demande pas « équilibre ma
+     semaine » mais « je veux manger ÇA ». Le premier créneau disponible à
+     partir de maintenant est la réponse la plus proche de sa demande, et la
+     seule qu'on puisse lui annoncer d'une phrase (« Jeudi soir »).
+
+     ⚠️ On ne prend QUE les créneaux « je prépare ». Poser un plat sur un
+     créneau que la personne a marqué « j'achète », c'est planifier une cuisine
+     qu'elle a dit ne pas vouloir faire — et le calendrier afficherait alors un
+     repas dans une case qui annonce le contraire.
+
+     ⚠️ Et JAMAIS dans le passé. Sans ce départ à `maintenant`, un plat ajouté
+     le samedi atterrissait au lundi précédent : planifié pour un jour déjà
+     écoulé, donc invisible dans le guide du jour et jamais cuisiné.
+
+     Rend {ok, jour, creneau, quand} ou {ok:false, raison} — `sans-plan` si la
+     semaine n'est pas planifiée (on ne va pas en inventer une dans le dos de
+     l'utilisateur), `complet` s'il ne reste plus un créneau libre, `doublon`
+     si ce plat y est déjà. */
+  async function ajouter(r) {
+    if (!r || !r.nom) return { ok: false, raison: 'vide' };
+    var plan = await lire();
+    if (!plan || !plan.repas || !plan.prepare) return { ok: false, raison: 'sans-plan' };
+
+    var nom = String(r.nom).trim().toLowerCase();
+    var deja = plan.repas.filter(function (x) {
+      return String(x.nom || '').trim().toLowerCase() === nom;
+    })[0];
+    if (deja) {
+      return { ok: false, raison: 'doublon', jour: deja.jour, creneau: deja.creneau,
+               quand: JOURS[deja.jour] + ' · ' + CRENEAUX[deja.creneau].nom };
+    }
+
+    var pris = {};
+    plan.repas.forEach(function (x) { pris[x.jour + '-' + x.creneau] = 1; });
+
+    /* ⚠️ ON PART DU CRÉNEAU EN COURS, PAS DU SUIVANT. Le réflexe est de
+       l'exclure (« il est entamé »), et c'est faux ici : à 19 h le dîner n'a
+       pas eu lieu, et quelqu'un qui vient de voir un plat veut justement le
+       manger CE SOIR. Mesuré au banc avec l'ancienne règle : un samedi 19 h,
+       le soir libre était sauté et le plat atterrissait dimanche midi — la
+       seule chose qu'il ne fallait pas faire. S'il est déjà pris, la boucle
+       passe au suivant d'elle-même. */
+    var maintenant = new Date();
+    var j0 = jourIndex(maintenant), c0 = creneauIndex(maintenant);
+    var place = null;
+    for (var j = j0; j < 7 && !place; j++) {
+      for (var c = (j === j0 ? c0 : 0); c < 3; c++) {
+        if (!plan.prepare[j] || !plan.prepare[j][c]) continue;
+        if (pris[j + '-' + c]) continue;
+        place = { j: j, c: c };
+        break;
+      }
+    }
+    if (!place) return { ok: false, raison: 'complet' };
+
+    plan.repas.push({
+      jour: place.j, creneau: place.c, type: 'recette', macro: null,
+      nom: r.nom, em: r.em || '🍽️',
+      photo: r.photo || null, illu: r.illu || null, cle: r.cle || null,
+      pourquoi: r.pourquoi || '', kcal: Math.round(r.kcal || 0),
+      p: Math.round(r.p || 0), g: Math.round(r.g || 0), l: Math.round(r.l || 0),
+      ingredients: r.ingredients || [],
+      src: r.src || null,
+      /* ⚠️ Le manque vaut 0 et n'est PAS calculé : il dit « à quel point ce
+         créneau manquait de ça », et ce plat n'a pas été placé pour combler
+         quoi que ce soit. Lui inventer un score le ferait passer pour une
+         recommandation de l'app alors que c'est un choix de l'utilisateur. */
+      manque: 0,
+      /* D'où il vient — pour que la fiche puisse le dire, et pour qu'on sache
+         plus tard lesquels des repas de la semaine ont été choisis à la main. */
+      source: r.source || 'ajout'
+    });
+    plan.repas.sort(function (a, b) { return (a.jour - b.jour) || (a.creneau - b.creneau); });
+
+    await enregistrer(plan);
+    // Les deux calendriers et le guide du jour se repeignent sans rechargement.
+    document.dispatchEvent(new CustomEvent('natty:planning-pret', { detail: plan }));
+    return { ok: true, jour: place.j, creneau: place.c,
+             quand: JOURS[place.j] + ' · ' + CRENEAUX[place.c].nom };
+  }
+
   return {
     ouvrir: ouvrir,
     detail: detail,
+    ajouter: ajouter,
     proposerSiNecessaire: proposerSiNecessaire,
     lire: lire,
     fiche: fiche,

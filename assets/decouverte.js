@@ -879,9 +879,53 @@ var NattyDecouverte = (function () {
     };
   }
 
+  /* ── Le pays d'après ────────────────────────────────────────
+     Quand on ouvre la visionneuse SUR UNE CUISINE, finir ses plats ne doit pas
+     être un cul-de-sac : un glissement de plus passe à la cuisine suivante
+     (demande de Pablo, 2026-08-15). La visionneuse ne connaît rien aux pays —
+     elle réclame juste « la série d'après » — et c'est ici qu'on la lui donne,
+     comme `versItem` lui donne un plat.
+
+     ⚠️ L'ordre est celui de `CUISINES`, donc « Le quotidien » puis les pays par
+     ordre alphabétique — le même que la rangée du haut de `social.html`. En
+     inventer un autre ici (au hasard, par proximité géographique) ferait que
+     le geste ne mènerait pas là où l'œil vient de lire.
+     ⚠️ Ça BOUCLE, et c'est voulu : après le Vietnam on revient au quotidien.
+     S'arrêter net sur la dernière cuisine ferait du hasard de l'alphabet une
+     fin de parcours, alors qu'il n'y en a pas.
+     ⚠️ Et seulement si on est ENTRÉ par une cuisine : ouvert depuis une envie
+     (« léger »), depuis la sélection du jour ou depuis une recherche, il n'y a
+     pas de « pays suivant » qui veuille dire quelque chose. */
+  function suiteDesCuisines(cleDepart) {
+    var i = -1;
+    CUISINES.forEach(function (c, k) { if (c.cle === cleDepart) i = k; });
+    if (i < 0) return null;
+    var vue = i;
+    return function (serie) {
+      // `serie` est celle qu'on vient de finir : au premier appel elle est
+      // nulle, et le point de départ est la cuisine ouverte.
+      if (serie && serie.cle) {
+        CUISINES.forEach(function (c, k) { if (c.cle === serie.cle) vue = k; });
+      }
+      var c = CUISINES[(vue + 1) % CUISINES.length];
+      if (!c || !c.plats.length) return null;
+      return {
+        cle: c.cle,
+        // `titre` va dans la barre du haut, où le drapeau tient sur la même
+        // ligne ; `nom` et `embleme` vont sur le carton, où ils sont séparés.
+        titre: c.drapeau + ' ' + c.nom,
+        nom: c.nom,
+        embleme: c.drapeau,
+        items: c.plats.map(versItem)
+      };
+    };
+  }
+
   /**
    * Ouvre la visionneuse sur une liste de plats du catalogue.
-   * @param {Object} o {plats:[], index:0, titre:''}
+   * @param {Object} o {plats:[], index:0, titre:'', cuisine:'cle'}
+   *   `cuisine` — la clé du pays d'où l'on part. Elle seule arme l'enchaînement
+   *   d'un pays au suivant ; sans elle la liste s'arrête à son dernier plat.
    */
   function ouvrir(o) {
     o = o || {};
@@ -891,6 +935,7 @@ var NattyDecouverte = (function () {
       items: plats.map(versItem),
       index: o.index || 0,
       titre: o.titre || '',
+      suite: o.cuisine ? suiteDesCuisines(o.cuisine) : null,
       courses: listeDispo() ? {
         contient: function (nom) { return NattyListe.contientExtra(uid(), nom); },
         basculer: function (nom, em) { return NattyListe.basculerExtra(uid(), nom, em); }

@@ -445,6 +445,13 @@ body{overflow-x:hidden}
      liste. Sans ce module, les pastilles sont désactivées et le bouton
      « Tout ajouter » disparaît, plutôt que de promettre un geste sans effet. -->
 <script src="/assets/liste.js"></script>
+<!-- Uniquement pour `NattyPlanning.ajouter` : un plat du fil se pose dans la
+     semaine, au prochain créneau libre. Ce module ne se DÉCLENCHE pas ici (sa
+     séquence de planification ne s'arme que sur l'écran d'arrivée) — il est
+     chargé pour être appelé, comme `suivi.html` le charge pour être lu.
+     Sans lui, l'action n'apparaît pas dans le tiroir, plutôt que d'y figurer
+     sans effet. -->
+<script src="/assets/planning.js"></script>
 <script>
 var VUE = null;      // dernier rendu de NattySocial.vues()
 
@@ -452,7 +459,19 @@ function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 var toastT;
+/* ⚠️ QUAND LA VISIONNEUSE EST OUVERTE, C'EST ELLE QUI PARLE. Le toast de cette
+   page est en z-index 800, `#nvue` en 880 : tout message émis depuis le tiroir
+   — « Vous suivez Hélène », « Ajouté à votre semaine · Dimanche · Midi » — se
+   peignait DERRIÈRE le plein écran. Il partait bien, il ne se voyait pas, et
+   le geste avait l'air sans effet. Mesuré (800 contre 880), pas supposé.
+   Monter le z-index d'ici aurait marché, et aurait été le mauvais correctif :
+   il faudrait le remonter à chaque nouveau plein écran, et l'un des deux
+   finirait par repasser devant. Chaque écran affiche ses propres messages. */
 function toast(msg){
+  if (window.NattyVisionneuse && NattyVisionneuse.estOuverte()){
+    NattyVisionneuse.toast(msg);
+    return;
+  }
   var t = $('toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove('show'); }, 2200);
 }
@@ -606,7 +625,11 @@ document.addEventListener('click', function(e){
   var c = e.target.closest && e.target.closest('[data-pays]');
   if (c){
     var cu = NattyDecouverte.cuisine(c.dataset.pays);
-    NattyDecouverte.ouvrir({ plats: cu.plats, index: 0, titre: cu.drapeau + ' ' + cu.nom });
+    // `cuisine:` est ce qui arme le passage au pays suivant en fin de série.
+    // Les deux autres entrées (une envie, la sélection du jour) ne le passent
+    // pas : « le pays d'après » n'y veut rien dire.
+    NattyDecouverte.ouvrir({ plats: cu.plats, index: 0,
+                             titre: cu.drapeau + ' ' + cu.nom, cuisine: cu.cle });
     return;
   }
   var t = e.target.closest && e.target.closest('[data-envie]');
@@ -883,11 +906,47 @@ function ouvrir(id, depuis){
       var p = NattySocial.platParId(it.id);
       if (!p) return [];
       var qui = (p.auteur && p.auteur.prenom) || 'ce membre';
-      /* Trois actions, dans cet ordre : celle qu'on vient chercher (suivre),
-         puis les deux de la guideline 1.2. Signaler et masquer sont deux gestes
-         DISTINCTS — l'un alerte l'équipe, l'autre ne concerne que soi — et les
-         fondre en un seul ferait hésiter à faire l'un des deux. */
-      return [{
+      /* Quatre actions, dans cet ordre : celle qu'on vient chercher en
+         regardant le plat de quelqu'un d'autre (le manger soi-même), puis
+         suivre, puis les deux de la guideline 1.2. Signaler et masquer sont
+         deux gestes DISTINCTS — l'un alerte l'équipe, l'autre ne concerne que
+         soi — et les fondre en un seul ferait hésiter à faire l'un des deux. */
+      var actes = [];
+      /* ⚠️ « Dans ma semaine » n'apparaît QUE si `assets/planning.js` est là.
+         Un bouton qui ne peut rien faire est pire qu'un bouton absent — c'est
+         la même règle que « Tout ajouter à mes courses », désactivé quand
+         `NattyListe` manque. */
+      if (window.NattyPlanning && NattyPlanning.ajouter) {
+        actes.push({
+          txt: 'Dans ma semaine',
+          /* `el` est le bouton du tiroir : l'écriture étant asynchrone, c'est
+             le seul moyen de le relibeller au retour — la valeur rendue ici
+             part avant que la base ait répondu. Même raison que « Signaler ». */
+          on: function(item, el){
+            NattyPlanning.ajouter(platVersRepas(p)).then(function(r){
+              if (r.ok){
+                toast('Ajouté à votre semaine · ' + r.quand);
+                if (el){ el.textContent = 'Dans ma semaine ✓'; el.disabled = true; }
+                return;
+              }
+              if (r.raison === 'doublon'){
+                toast('Déjà dans votre semaine · ' + r.quand);
+                if (el){ el.textContent = 'Dans ma semaine ✓'; el.disabled = true; }
+                return;
+              }
+              /* Les deux refus légitimes se DISENT, ils ne se taisent pas : la
+                 semaine n'est pas planifiée, ou elle est pleine. Dans les deux
+                 cas l'utilisateur peut agir — c'est pour ça qu'on le nomme. */
+              toast(r.raison === 'sans-plan'
+                ? 'Planifiez d’abord votre semaine, depuis l’accueil'
+                : r.raison === 'complet'
+                  ? 'Votre semaine est complète — libérez un créneau'
+                  : 'Ajout impossible pour le moment');
+            }).catch(function(){ toast('Ajout impossible pour le moment'); });
+          }
+        });
+      }
+      actes.push({
         txt: NattySocial.estAmi(p.user_id) ? 'Suivi ✓' : 'Suivre',
         on: function(){
           var suit = NattySocial.basculerAmi(p.user_id);
@@ -913,11 +972,40 @@ function ouvrir(id, depuis){
           demanderMasquage(p.user_id, qui);
           return 'Masquer ce membre';
         }
-      }];
+      });
+      return actes;
     },
     // Les compteurs ont pu bouger pendant la consultation.
     surFermeture: rendre
   });
+}
+
+/* Un plat du fil, tel que la planification l'attend.
+   ⚠️ LES MACROS SONT CELLES DU PLAT DE L'AUTRE, et elles sont recopiées telles
+   quelles — `Natty.calcMac` les a déjà calculées à partir de SES ingrédients et
+   de SES quantités. On ne les met pas à l'échelle de qui ajoute : ce serait
+   inventer une portion que personne n'a pesée, et le plat cesserait d'être
+   celui qu'on a vu. C'est un point de départ, pas une prescription.
+   ⚠️ Pas de `src` : un repas du fil n'a pas d'étapes, donc le guide du jour
+   proposera « Ajouter mon plat » et non « Suivre la recette » — exactement ce
+   qu'on veut, il n'y a aucune recette à suivre. */
+function platVersRepas(p){
+  return {
+    nom: p.nom || 'Plat',
+    em: p.emoji || '🍽️',
+    photo: p.photo || null,
+    kcal: (p.macros && p.macros.c) || 0,
+    p: (p.macros && p.macros.p) || 0,
+    g: (p.macros && p.macros.g) || 0,
+    l: (p.macros && p.macros.l) || 0,
+    pourquoi: 'Repéré dans le fil, chez '
+      + ((p.auteur && p.auteur.prenom) || 'un membre Natty') + '.',
+    ingredients: (p.ingredients || []).map(function(i){
+      return { em: '🛒', nom: i.name || '',
+               qte: i.quantity_g ? Math.round(i.quantity_g) + ' g' : '' };
+    }),
+    source: 'social'
+  };
 }
 
 function fermer(){ if (window.NattyVisionneuse) NattyVisionneuse.fermer(); }
