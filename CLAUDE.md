@@ -2235,6 +2235,18 @@ déménagé avec elle.
   premier glissement. Il est dans le **tiers haut** : centré, il tombait pile sur le nom du
   plat, puisque la fiche occupe le bas de l'écran.
 
+**Ajouter un plat au catalogue** (2026-08-16, « Pita au saumon et feta ») : une entrée dans
+`CUISINES`, puis **`node scripts/gen-catalogue.mjs`** — `api/_catalogue.js` est régénéré, jamais
+édité (c'est la leçon d'`api/_nutrition.js`, §3). Un plat porte **soit `svg:` soit une photo**,
+jamais les deux : sans photo, il faut `assets/img/decouverte/<cle>.jpg` **et** `<cle>-t.jpg`,
+sinon `img()` rend un chemin qui n'existe pas. Les plats du groupe `quo` (« Le quotidien »)
+portent tous un `svg` — personne ne les a photographiés, et on ne va pas en chercher sur le web
+(règle §9 #24).
+> ⚠️ **Une `cle` au catalogue, c'est aussi ce qui donne son image à un repas PLACÉ.**
+> `visuelRecette()` de `repas.html` et `placer()` d'`assets/planning.js` passent tous deux par
+> `platParCle()` : sans clé, le plat retombe sur les deux photos de démonstration, c'est-à-dire
+> sur l'assiette d'un **autre** plat.
+
 **Le seul geste qui écrit quelque chose** : les pastilles d'ingrédients et « Tout ajouter à mes
 courses » passent par `NattyListe.basculerExtra` — **la même clé localStorage** que les aliments
 à privilégier de `coaching.html`, donc une seule liste de courses. Sans `assets/liste.js`, les

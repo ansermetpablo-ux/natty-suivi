@@ -164,7 +164,12 @@ var NattyDecouverte = (function () {
           d:'Une escalope poêlée deux minutes par face, du riz, un brocoli vapeur.',
           i:'🦃 Dinde|🍚 Riz|🥦 Brocoli|🍋 Citron|🌿 Herbes',
           t:['Protéiné','Léger'],
-          nu:'L\'assiette la plus sobre du lot : c\'est celle qu\'on refait sans y penser.' }
+          nu:'L\'assiette la plus sobre du lot : c\'est celle qu\'on refait sans y penser.' },
+        { cle:'quo-pita-saumon-feta', n:'Pita au saumon et feta', svg:'sandwich',
+          d:'Un pain pita tiédi, du saumon, de la feta émiettée et des crudités en bâtonnets, avec une crème au yaourt et aux herbes.',
+          i:'🐟 Saumon|🧀 Feta|🫓 Pain pita|🥒 Concombre|🥕 Carotte|🌿 Aneth|🥛 Yaourt|🍋 Citron',
+          t:['Protéiné','Rapide','Léger'],
+          nu:'Saumon et feta apportent les protéines, le yaourt remplace la sauce grasse : on garde le moelleux sans le poids.' }
       ]
     },
     {

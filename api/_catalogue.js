@@ -43,6 +43,7 @@ export const CATALOGUE = [
   {"cle":"quo-cabillaud-poele","n":"Cabillaud poêlé et écrasé de pommes de terre","pays":"Le quotidien","i":"Cabillaud, Pommes de terre, Citron, Aneth, Huile d'olive","t":"Protéiné, Léger"},
   {"cle":"quo-buddha-bowl","n":"Buddha bowl","pays":"Le quotidien","i":"Quinoa, Pois chiches, Avocat, Carotte, Épinards, Graines","t":"Végétarien, Riche en fibres"},
   {"cle":"quo-escalope-dinde","n":"Escalope de dinde, riz et brocoli","pays":"Le quotidien","i":"Dinde, Riz, Brocoli, Citron, Herbes","t":"Protéiné, Léger"},
+  {"cle":"quo-pita-saumon-feta","n":"Pita au saumon et feta","pays":"Le quotidien","i":"Saumon, Feta, Pain pita, Concombre, Carotte, Aneth, Yaourt, Citron","t":"Protéiné, Rapide, Léger"},
   {"cle":"bre-feijoada","n":"Feijoada","pays":"Brésil","i":"Haricots noirs, Porc, Chorizo, Riz, Chou kale, Orange","t":"Protéiné, Riche en fibres, Réconfortant"},
   {"cle":"bre-acai-bowl","n":"Açaí bowl","pays":"Brésil","i":"Açaí, Banane, Fraise, Myrtille, Granola, Miel","t":"Végétarien, Riche en fibres"},
   {"cle":"bre-bobo-de-camarao","n":"Bobó de camarão","pays":"Brésil","i":"Crevettes, Manioc, Lait de coco, Tomate, Oignon, Coriandre","t":"Protéiné, Réconfortant"},
