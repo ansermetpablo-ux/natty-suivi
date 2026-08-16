@@ -1080,6 +1080,42 @@ un plat affichable. Il porte `plan`, et ce drapeau commande tout le reste :
 - son bouton dit **« Réaliser ce repas »** et appelle `NattyRecette.realiser()` : il n'a pas
   d'étapes, mais il a tout à valider.
 
+🔴 ⚠️ **`depuisPlanRepas()` JETAIT LES ÉTAPES DE LA RECETTE** (corrigé le 2026-08-16, signalé
+par Pablo : « quand je clique sur les autres repas de mon calendrier, je ne peux pas lancer la
+recette »). `placer()` range la recette entière sous `plan.repas[].src`, et cette fonction
+écrivait `steps: []` en dur. Conséquence : une recette **placée dans la semaine mais absente de
+la liste courante** — parce que la génération a été refaite depuis la planification, ou parce
+qu'elle dépasse `NB_MAX` — arrivait au héros sans étapes. `libelleCta()` la prenait alors pour
+un plat macro, affichait « Réaliser ce repas » et menait droit à la photo : **la recette était
+inlançable**. Elle récupère désormais ses `steps`, son `temps_min` et, à défaut, ses
+`ingredients` depuis `src`.
+
+**LE HÉROS SE FAIT DÉFILER AU DOIGT** (2026-08-16, demande de Pablo : « fais le héros
+swippable, sans devoir cliquer, comme ça on peut choisir le repas qu'on veut faire peu importe
+quand »). Le geste parcourt `PLATS` en boucle — les recettes conseillées **et** les repas
+placés dans la semaine — avec une entrée par la gauche ou par la droite selon le sens.
+- ⚠️ **`choisirHero()` fait entrer TOUS les repas du plan dans `PLATS`**, plus seulement celui
+  du moment. Sans ça, glisser n'atteignait que les recettes conseillées et les quatre autres
+  repas de la semaine restaient derrière un tap sur la bonne case du calendrier. Ils arrivent
+  dans l'ordre du plan (jour puis créneau, déjà trié par `placer()`) : glisser, c'est parcourir
+  sa semaine.
+- ⚠️ **Détection d'un geste, PAS un suivi de pointeur.** On ne lit que le départ et l'arrivée
+  (`touchstart`/`touchend`), comme l'arc d'`assets/journee.js` — `narration.html` a coûté une
+  session entière à `setPointerCapture` et ses gestes inachevés (§7). Seuil de 42 px, et
+  **l'axe le plus marqué gagne**, sinon un défilement vertical un peu de travers change de plat.
+  `touchcancel` désarme : sans lui, le geste suivant repartirait d'un point de départ périmé.
+- **Les points sous la carte sont l'affordance** : un carrousel sans repère de position ne se
+  devine pas. Zone tactile de 22 px pour un point de 6 — viser 6 px au doigt est une promesse
+  qu'on ne tient pas. Plus un indice « ← Glissez pour changer de repas → » montré **une fois**
+  (`natty_repas_geste_<uid>`), effacé au premier geste, comme le « Glissez → » de
+  `assets/decouverte.js`.
+- ⚠️ **Rien ne dépend de l'animation d'entrée pour son état final.** Sur une page qui ne peint
+  pas, elle est « running » avec une horloge à **0** : mesuré au banc, le héros tient sa
+  première image (opacité 0, décalé de 28 px, 28 px de débordement horizontal), et un
+  `finish()` forcé rend aussitôt `transform:none` / `opacity:1` / `scrollWidth:375`. C'est donc
+  l'état naturel qui doit être le bon — d'où l'absence de `fill-mode`. Même famille que le
+  compteur d'XP d'`assets/recette.js`.
+
 **TOUTE case pleine du calendrier mène au héros** (2026-08-15, demande de Pablo : « pouvoir
 cliquer sur la semaine et voir les repas en héros, et réaliser celui qu'on veut »). Avant, une
 recette y menait mais un plat macro ouvrait une **feuille du bas** (`NattyPlanning.detail`) :
@@ -3333,6 +3369,16 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   en héros — recette comme plat macro — et un anneau blanc dit laquelle est affichée. Le plat
   macro se **réalise** (`NattyRecette.realiser()`, photo comprise) au lieu de s'ouvrir en
   feuille de lecture : sans ça, trois repas de la semaine sur cinq n'étaient que consultables.
+- ✅ **Le héros se fait défiler au doigt** (2026-08-16) : tous les repas de la semaine sont dans
+  `PLATS`, le geste les parcourt en boucle, des points disent où l'on est. Détail en §3.
+- 🔴 ✅ **Et le vrai blocage était ailleurs** : `depuisPlanRepas()` jetait les étapes portées par
+  `plan.repas[].src`, donc une recette planifiée absente de la liste courante était **impossible
+  à lancer** — c'est ce que Pablo a constaté. Voir l'encadré rouge de §3.
+- ✅ Vérifié en navigateur (375 × 812, les deux thèmes), avec de vrais `TouchEvent` : la recette
+  orpheline retrouve ses 6 étapes et sa cinématique, les 5 repas de la semaine atteignables au
+  doigt, le tour complet dans les deux sens, un geste trop court (20 px) et un geste vertical
+  qui ne changent rien, l'anneau du calendrier et le point actif qui suivent, un plat macro
+  atteint au doigt toujours réalisable, et les deux replis (aucun plan, un seul plat).
 - ✅ **Pont vers `assets/ajout.js`** : `start({file, nom})` saute la prise de vue et analyse la
   photo déjà prise, plutôt que de faire rephotographier la même assiette.
 - ✅ **Deux défauts trouvés au banc, aucun par `node --check`** : le bouton restait à

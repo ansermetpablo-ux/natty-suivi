@@ -88,6 +88,38 @@ body{overflow-x:hidden}
   font-size:14px;cursor:pointer;white-space:nowrap;box-shadow:4px 6px 14px rgba(20,20,22,.28)}
 .cta:active{transform:scale(.97)}
 
+/* ══ Le héros se fait défiler au doigt ══
+   Entrée par la gauche ou par la droite selon le sens du geste : sans elle, le
+   plat suivant apparaît d'un coup et on ne sait pas de quel côté on est allé. */
+@keyframes heroInD{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes heroInG{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+/* ⚠️ RIEN NE DOIT DÉPENDRE DE CETTE ANIMATION POUR SON ÉTAT FINAL. Sur une
+   page qui ne peint pas (app en arrière-plan, onglet caché), l'animation est
+   bien « running » mais son horloge reste à 0 : mesuré au banc, le héros tient
+   alors sa première image — opacité 0, décalé de 28 px, et 28 px de débordement
+   horizontal. Le forcer à `finish()` rend `transform:none`, `opacity:1`,
+   `scrollWidth:375`. C'est donc l'état NATUREL qui doit être le bon, et
+   l'animation ne fait que le rejoindre — d'où l'absence de `fill-mode`, et
+   d'où le fait qu'aucune donnée ne se lit ici (piège §7, même famille que le
+   compteur d'XP d'assets/recette.js). */
+.hero.inD{animation:heroInD .28s cubic-bezier(.22,1,.36,1)}
+.hero.inG{animation:heroInG .28s cubic-bezier(.22,1,.36,1)}
+.hero.sort{opacity:.3;transition:opacity .13s ease,transform .13s ease}
+@media (prefers-reduced-motion:reduce){
+  .hero.inD,.hero.inG{animation:none}
+  .hero.sort{transition:none;opacity:1;transform:none!important}
+}
+
+/* Les points. Ils sont l'affordance du geste : un carrousel sans repère de
+   position ne se devine pas. La zone tactile fait 22 px de haut, le point 6 —
+   viser un point de 6 px au doigt est une promesse qu'on ne tient pas. */
+.hero-dots{display:flex;justify-content:center;align-items:center;gap:2px;margin-top:14px}
+.hero-dots b{display:flex;align-items:center;justify-content:center;width:20px;height:22px;cursor:pointer}
+.hero-dots b::before{content:'';width:6px;height:6px;border-radius:var(--r-full);
+  background:var(--muted);opacity:.32;transition:width .22s ease,opacity .22s ease,background .22s ease}
+.hero-dots b.on::before{width:18px;opacity:1;background:var(--ink)}
+.hero-hint{text-align:center;font-size:11px;font-weight:700;color:var(--muted);margin-top:6px}
+
 /* ══ Ma semaine : carte noire métallisée ══ */
 .week-panel{background:var(--metal-black);border-radius:var(--r-lg);box-shadow:var(--sh-metal);
   padding:18px 16px 16px;margin-top:18px}
@@ -508,18 +540,30 @@ function depuisPlanRepas(r){
      tout le reste de ce fichier s'emploie à corriger. Sans clé ni photo, son
      illustration ou son emoji, et rien d'autre. */
   if (!r.cle && !r.photo) v = { photo:null, photoWeek:null, illu:r.illu || null };
+  /* 🔴 ⚠️ LA RECETTE COMPLÈTE EST DANS `r.src`, ET ELLE ÉTAIT JETÉE.
+     `placer()` (assets/planning.js) range la recette entière sous `src` pour
+     les entrées de type « recette ». Ce `steps: []` écrit en dur la perdait :
+     une recette placée dans la semaine mais absente de la liste courante —
+     parce que la génération a été refaite depuis, ou parce qu'elle dépasse
+     `NB_MAX` — arrivait au héros SANS étapes. Le bouton disait alors
+     « Réaliser ce repas » et menait droit à la photo : impossible de lancer la
+     recette. C'est exactement ce que Pablo a constaté le 2026-08-16. */
+  var src = r.src || null;
   return {
     cle: r.cle || null,
     nom: r.nom || 'Repas',
-    desc: r.pourquoi || '',
-    temps: '',
+    desc: r.pourquoi || (src && src.pourquoi) || '',
+    temps: (src && src.temps_min) ? src.temps_min + ' min' : '',
     kcal: Math.round(r.kcal||0),
     p: Math.round(r.p||0), g: Math.round(r.g||0), l: Math.round(r.l||0),
     emoji: r.em || '🍽️',
     photo: v.photo, photoWeek: v.photoWeek, illu: v.illu,
-    ingr: (r.ingredients || []).map(function(x){ return { em:x.em||'🥄', nm:x.nom||'', qt:x.qte||'' }; }),
-    steps: [],
-    src: r.src || null,
+    ingr: ((r.ingredients && r.ingredients.length ? r.ingredients : (src && src.ingredients)) || [])
+      .map(function(x){ return { em:x.em||'🥄', nm:x.nom||'', qt:x.qte||'' }; }),
+    steps: ((src && src.steps) || []).map(function(s){
+      return { em:s.em||'👉', t:s.t||'', tip:s.tip||'' };
+    }),
+    src: src,
     plan: r
   };
 }
@@ -559,12 +603,87 @@ function caseDe(d){
    qui va avec, le rendu. Il y avait trois endroits qui faisaient les deux
    premiers à leur façon — c'est comme ça qu'un anneau finit par désigner un
    plat qui n'est plus à l'écran. */
-function poserActif(i){
+function poserActif(i, sens){
   if (i < 0 || i >= PLATS.length) return;
   actif = i; ingrOff = {};
+  SENS_ENTREE = sens || 0;
   SEL_SEMAINE = caseDe(PLATS[i]);
   render();
+  SENS_ENTREE = 0;
   if (window.NattyPlanning && NattyPlanning.selectionner) NattyPlanning.selectionner(SEL_SEMAINE);
+}
+
+/* ═══ Glisser d'un repas à l'autre ═══
+   Demande de Pablo (2026-08-16) : « fais le héros swippable, sans devoir
+   cliquer, comme ça on peut choisir le repas qu'on veut faire peu importe
+   quand. » Le geste parcourt PLATS — les recettes conseillées ET les repas
+   placés dans la semaine.
+
+   ⚠️ DÉTECTION D'UN GESTE, PAS UN SUIVI DE POINTEUR. `narration.html` a coûté
+   une session entière à `setPointerCapture` et ses gestes inachevés (§7) :
+   ici on ne lit que le départ et l'arrivée, comme l'arc d'`assets/journee.js`.
+   Rien à tenir entre les deux, donc rien à laisser dans un état bâtard. */
+var SEUIL_GESTE = 42;   // px ; en dessous, c'est un tap qui a bougé
+var SENS_ENTREE = 0;
+
+function glisserVers(sens){
+  if (PLATS.length < 2) return;
+  oublierIndice();
+  var i = (actif + sens + PLATS.length) % PLATS.length;
+  var h = document.querySelector('.hero');
+  if (h){
+    h.classList.add('sort');
+    h.style.transform = 'translateX(' + (sens > 0 ? -22 : 22) + 'px)';
+  }
+  // On laisse la sortie se jouer, puis on repeint : le plan suivant entre du
+  // côté d'où vient le doigt. 130 ms — la transition en dure 130.
+  setTimeout(function(){ poserActif(i, sens); }, 130);
+}
+
+function brancherGesteHero(el){
+  if (!el) return;
+  var x0 = 0, y0 = 0, arme = false;
+
+  function debut(x, y){ x0 = x; y0 = y; arme = true; }
+  function fin(x, y){
+    if (!arme) return;
+    arme = false;
+    var dx = x - x0, dy = y - y0;
+    /* ⚠️ L'axe le plus marqué gagne. Sans ce test, un défilement vertical un
+       peu de travers changerait de plat — le piège déjà corrigé sur l'arc de
+       `assets/journee.js`. */
+    if (Math.abs(dx) < SEUIL_GESTE || Math.abs(dx) <= Math.abs(dy)) return;
+    glisserVers(dx < 0 ? 1 : -1);
+  }
+
+  el.addEventListener('touchstart', function(e){
+    // Deux doigts = un zoom ou un défilement, jamais un changement de plat.
+    if (e.touches.length !== 1){ arme = false; return; }
+    debut(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive:true });
+  el.addEventListener('touchend', function(e){
+    var t = e.changedTouches && e.changedTouches[0];
+    if (t) fin(t.clientX, t.clientY);
+  }, { passive:true });
+  // ⚠️ `touchcancel` : le système reprend le geste (défilement, appel entrant).
+  // Sans ce désarmement, le `touchend` d'un geste suivant partirait d'un point
+  // de départ périmé.
+  el.addEventListener('touchcancel', function(){ arme = false; }, { passive:true });
+
+  // Souris : gratuit sur ordinateur, et c'est ce qui rend le geste testable.
+  el.addEventListener('mousedown', function(e){ debut(e.clientX, e.clientY); });
+  el.addEventListener('mouseup', function(e){ fin(e.clientX, e.clientY); });
+}
+
+/* L'indice ne s'affiche qu'une fois — après, il n'apprend plus rien et occupe
+   une ligne au-dessus du calendrier. Même parti pris que « Glissez → » de
+   `assets/decouverte.js`. */
+function cleIndice(){ return 'natty_repas_geste_' + ((window.Natty && Natty.USER_ID) || 'anon'); }
+function indiceVu(){ try { return !!localStorage.getItem(cleIndice()); } catch(e){ return true; } }
+function oublierIndice(){
+  try { localStorage.setItem(cleIndice(), '1'); } catch(e){}
+  var h = document.querySelector('.hero-hint');
+  if (h && h.parentNode) h.parentNode.removeChild(h);
 }
 
 /* Rend l'index du plat à mettre en héros, et arme la pastille « quand ».
@@ -573,6 +692,16 @@ async function choisirHero(){
   MOMENT = null; idxMoment = -1; PLAN = null; SEL_SEMAINE = null;
   if (!window.NattyPlanning || !NattyPlanning.repasDuMoment) return 0;
   try { PLAN = await NattyPlanning.lire(); } catch(e){}
+  if (!PLAN || !PLAN.repas || !PLAN.repas.length) return 0;
+
+  /* ⚠️ TOUS les repas de la semaine entrent dans PLATS, pas seulement celui du
+     moment. C'est ce qui permet de les faire défiler au doigt et d'en choisir
+     un « peu importe quand » (demande de Pablo, 2026-08-16) : n'ajouter que le
+     repas courant enfermait les quatre autres derrière un tap sur la bonne case
+     du calendrier. Ils arrivent dans l'ordre du plan — jour puis créneau, déjà
+     trié par `placer()` — donc glisser, c'est parcourir sa semaine. */
+  PLAN.repas.forEach(function(r){ accueillirPlanRepas(r); });
+
   var r = NattyPlanning.repasDuMoment(PLAN);
   if (!r) return 0;
 
@@ -676,8 +805,9 @@ function render(){
   }
 
   var suivie = !!suivies[actif];
+  var entree = SENS_ENTREE > 0 ? ' inD' : (SENS_ENTREE < 0 ? ' inG' : '');
   var html = ''
-    + '<div class="hero">'
+    + '<div class="hero' + entree + '">'
       + heroVisuel(d)
       + '<span class="leaf l1">🌿</span><span class="leaf l2">🌿</span><span class="leaf l3">🌶️</span>'
       + pastillesHero(d)
@@ -700,6 +830,16 @@ function render(){
         + '</div>'
       + '</div>'
     + '</div>';
+
+  /* Les points de position, juste sous le héros. Ils disent combien de repas
+     on peut atteindre et où l'on est — c'est ce qui fait deviner le geste. */
+  if (PLATS.length > 1){
+    html += '<div class="hero-dots">' + PLATS.map(function(x,i){
+              return '<b class="' + (i===actif?'on':'') + '" data-dot="' + i
+                + '" title="' + esc(x.nom) + '"></b>';
+            }).join('') + '</div>'
+         + (indiceVu() ? '' : '<div class="hero-hint">← Glissez pour changer de repas →</div>');
+  }
 
   /* ⚠️ Les plats venus de la planification (les trois plats macro) sont dans
      PLATS pour pouvoir être le héros du moment, mais PAS dans cette rangée :
@@ -815,6 +955,16 @@ window.NattyOnRecetteSuivie = async function(r){
 };
 
 function brancher(){
+  brancherGesteHero(document.querySelector('.hero'));
+  document.querySelectorAll('[data-dot]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var i = +b.dataset.dot;
+      if (i === actif) return;
+      oublierIndice();
+      poserActif(i, i > actif ? 1 : -1);
+    });
+  });
+
   var dh = document.getElementById('detH');
   if (dh) dh.addEventListener('click', function(){
     detailsOuverts = !detailsOuverts;
