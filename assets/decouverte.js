@@ -165,7 +165,11 @@ var NattyDecouverte = (function () {
           i:'🦃 Dinde|🍚 Riz|🥦 Brocoli|🍋 Citron|🌿 Herbes',
           t:['Protéiné','Léger'],
           nu:'L\'assiette la plus sobre du lot : c\'est celle qu\'on refait sans y penser.' },
-        { cle:'quo-pita-saumon-feta', n:'Pita au saumon et feta', svg:'sandwich',
+        /* ⚠️ Le seul plat de ce groupe SANS `svg` — il a été photographié
+           (photo fournie par Pablo, 2026-08-16), et un plat porte soit une
+           photo soit une illustration, jamais les deux : `img()` rend `null`
+           dès qu'un `svg` est là, donc laisser la clé aurait masqué la photo. */
+        { cle:'quo-pita-saumon-feta', n:'Pita au saumon et feta',
           d:'Un pain pita tiédi, du saumon, de la feta émiettée et des crudités en bâtonnets, avec une crème au yaourt et aux herbes.',
           i:'🐟 Saumon|🧀 Feta|🫓 Pain pita|🥒 Concombre|🥕 Carotte|🌿 Aneth|🥛 Yaourt|🍋 Citron',
           t:['Protéiné','Rapide','Léger'],

@@ -346,6 +346,19 @@ Page de connexion standalone — `natty-suivi.vercel.app/login.html`
 >   **Redirect URLs** : `doReset()` l'envoie en `redirect_to`, et une URL hors liste fait
 >   retomber le lien sur le Site URL — réglé sur un scheme d'app, donc une page noire.
 
+> 🔴 ⚠️ **ET LE LIEN ARRIVE SOUS DEUX FORMES** (corrigé le 2026-08-16, « le lien redirige juste
+> vers la connexion »). Selon la version des gabarits d'email du projet, GoTrue renvoie soit une
+> redirection portant les jetons dans le **fragment** (`#access_token=…&type=recovery`), soit un
+> lien qui arrive ici avec **`?token_hash=…&type=recovery`** à vérifier soi-même via
+> `POST /auth/v1/verify`. Le code ne connaissait que la première : avec la seconde il ne
+> trouvait ni jeton ni erreur, et affichait donc le **formulaire de connexion**, sans un mot.
+> - `traiterRetourOAuth()` lit désormais **le fragment ET la query** (`lire()`), prend en charge
+>   le `token_hash`, et retire le jeton de l'URL dans les deux cas.
+> - ⚠️ **Et surtout, il ne se tait plus.** Arriver sur cet écran avec une URL qui vient
+>   manifestement d'un lien email (`type`, `token_hash`, `token` ou `code`) sans avoir su la
+>   lire affiche maintenant « Ce lien n'a pas pu être lu (…) ». Un écran de connexion muet ne
+>   dit pas où regarder — c'est ce qui a coûté deux allers-retours sur ce défaut.
+
 **Config Supabase Auth requise** :
 - Site URL : `https://natty-suivi.vercel.app`
 - Redirect URLs : `https://natty-suivi.vercel.app/login.html?oauth=1`
@@ -5061,3 +5074,26 @@ Pablo, quatre fichiers :*
   doublures juste avant le script inline — c'est la seule façon de mesurer la page elle-même.
 - 🔄 Rien vu sur téléphone, ni avec une vraie session. Et la validation reste en `localStorage`,
   donc par appareil : c'est le seul manque, il est en §8.
+
+---
+
+*Contribution session « pita, mot de passe, photo » (Claude Opus, 16 août 2026) :*
+- `assets/decouverte.js` (+ `www/`) : **« Pita au saumon et feta »** entre au catalogue dans
+  « Le quotidien » (`quo-pita-saumon-feta`), **avec sa photo** — le seul plat de ce groupe qui
+  en ait une. `api/_catalogue.js` régénéré par `node scripts/gen-catalogue.mjs`, jamais édité.
+- **Nouveau** `natty_pita_saumon_feta.sql` : pose ce plat comme prochain repas d'un compte
+  donné. En SQL parce que `planning_semaine` est sous RLS « soi seulement » — écrire dans la
+  semaine de quelqu'un demande la clé service, absente de cette machine. 🔄 À exécuter par Pablo.
+- `login.html` (+ `www/`) : le lien de récupération arrive sous **deux formes** (fragment ou
+  `?token_hash=`), les deux sont désormais prises en charge — et un lien illisible est **nommé**
+  au lieu de retomber sur un formulaire de connexion muet. Voir les encadrés rouges de §3.
+- `scripts/serveur-local.js` : route **`POST /__ecrire`**, bornée à `assets/img/`. Cette machine
+  n'a ni sharp ni ImageMagick (le seul `convert` du PATH est l'utilitaire Windows de conversion
+  de système de fichiers — **ne jamais l'invoquer**) ; le navigateur sait redimensionner et
+  encoder, il ne savait pas rendre le résultat au disque. Sans elle, il fallait faire transiter
+  185 000 caractères de base64 pour une seule image.
+  > C'est le chemin à reprendre pour toute nouvelle photo de plat : la page recompose les deux
+  > tailles du catalogue (860 px et 400 px, qualité 0,72) sur un **fond blanc** — un PNG détouré
+  > rendrait sa transparence en NOIR une fois en JPEG — et les POSTe.
+- 🔄 **Non vérifié** : que l'email de récupération arrive réellement. Le code ne peut pas le
+  garantir ; les journaux d'authentification de Supabase, si.

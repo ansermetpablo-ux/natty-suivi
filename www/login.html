@@ -817,21 +817,63 @@ async function doNouveauMdp() {
   }
 }
 
+/* Échange un `token_hash` (ou `token`) de lien email contre une session.
+   ⚠️ POURQUOI CE SECOND CHEMIN. Selon la version des gabarits d'email du
+   projet, GoTrue renvoie soit une redirection portant les jetons dans le
+   FRAGMENT (`#access_token=…&type=recovery`), soit un lien qui arrive ici avec
+   `?token_hash=…&type=recovery` à vérifier soi-même. Le code ne connaissait que
+   le premier : avec le second, il ne trouvait pas de jeton, ne trouvait pas
+   d'erreur non plus, et affichait donc… le formulaire de connexion. C'est
+   exactement ce que Pablo décrit — « le lien redirige juste vers la
+   connexion ». */
+async function verifierLienEmail(tokenHash, type) {
+  var r = await fetch(SB_URL + '/auth/v1/verify', {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: type, token_hash: tokenHash })
+  });
+  var d = await r.json().catch(function () { return {}; });
+  if (!r.ok || !d.access_token) {
+    throw new Error(d.msg || d.error_description || 'Ce lien a expiré ou a déjà servi.');
+  }
+  return d;
+}
+
 function traiterRetourOAuth(fragment) {
   var hash = new URLSearchParams(String(fragment || '').replace(/^#/, ''));
+  // ⚠️ Les mêmes informations arrivent tantôt dans le fragment, tantôt dans la
+  // query : on lit les deux, en donnant la priorité au fragment.
+  var q = new URLSearchParams(window.location.search);
+  function lire(k) { return hash.get(k) || q.get(k); }
 
-  var accessToken = hash.get('access_token');
+  /* Lien à vérifier soi-même (`?token_hash=…&type=recovery`). Asynchrone, donc
+     on rend `true` tout de suite : il n'y a plus rien à tenter après. */
+  var th = q.get('token_hash') || q.get('token');
+  if (th && (q.get('type') || '').indexOf('recovery') === 0) {
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    verifierLienEmail(th, 'recovery').then(function (d) {
+      RECUPERATION = {
+        access_token: d.access_token,
+        refresh_token: d.refresh_token || '',
+        expires_in: d.expires_in || 3600
+      };
+      montrerNouveauMdp();
+    }, function (e) { toast(e.message, 'err'); });
+    return true;
+  }
+
+  var accessToken = lire('access_token');
 
   /* ⚠️ UN LIEN DE RÉCUPÉRATION N'EST PAS UNE CONNEXION. Il porte le même
      `access_token` qu'un retour Google, mais avec `type=recovery` : le prendre
      pour une connexion, c'était entrer dans l'app avec l'ancien mot de passe
      toujours en place, donc ne rien réinitialiser du tout. On garde les jetons
      de côté — ils autorisent le PUT — et on demande le nouveau mot de passe. */
-  if (accessToken && hash.get('type') === 'recovery') {
+  if (accessToken && (lire('type') || '').indexOf('recovery') === 0) {
     RECUPERATION = {
       access_token: accessToken,
-      refresh_token: hash.get('refresh_token') || '',
-      expires_in: parseInt(hash.get('expires_in') || '3600', 10)
+      refresh_token: lire('refresh_token') || '',
+      expires_in: parseInt(lire('expires_in') || '3600', 10)
     };
     /* ⚠️ Le fragment porte un jeton de session en clair. Il reste sinon dans
        la barre d'adresse et dans l'historique du navigateur, et un simple
@@ -863,13 +905,24 @@ function traiterRetourOAuth(fragment) {
      confirmé, et rien à l'écran ne dit quoi faire ensuite. On traduit les deux
      seuls cas qu'un lien reçu par email produit vraiment, en gardant le texte
      d'origine en repli — un message anglais vaut mieux qu'un message faux. */
-  var errDesc = hash.get('error_description');
+  var errDesc = lire('error_description') || lire('error');
   if (errDesc) {
-    var code = hash.get('error_code');
+    var code = lire('error_code');
     var msg = (code === 'otp_expired')
       ? 'Ce lien a expiré ou a déjà servi. Connectez-vous, ou demandez un nouveau lien.'
       : (code === 'access_denied' ? 'Ce lien n\'est plus valable.' : errDesc);
     toast(msg, 'err');
+    return false;
+  }
+
+  /* ⚠️ ARRIVER ICI SANS RIEN, C'EST LE DÉFAUT QU'ON VIENT DE CHASSER. Le
+     formulaire de connexion s'affichait alors sans un mot, et un lien de
+     récupération qui « redirige juste vers la connexion » ne dit pas où
+     regarder. On ne le laisse plus muet : si l'URL vient manifestement d'un
+     lien email, on le nomme. */
+  if (q.get('type') || q.get('token_hash') || q.get('token') || q.get('code')) {
+    toast('Ce lien n’a pas pu être lu (' + (q.get('type') || 'format inattendu')
+      + '). Demandez-en un nouveau.', 'err');
   }
   return false;
 }

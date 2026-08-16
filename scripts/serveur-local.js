@@ -37,7 +37,44 @@ const TYPES = {
   '.woff2':'font/woff2'
 };
 
+/* ── Écriture d'une image recompressée par le navigateur ──────────────────────
+   POST /__ecrire  { chemin: 'assets/img/decouverte/xxx.jpg', b64: '…' }
+
+   ⚠️ POURQUOI CETTE ROUTE EXISTE. Le catalogue veut ses photos en deux tailles
+   (860 px et 400 px), et cette machine n'a NI sharp NI ImageMagick — le seul
+   `convert` du PATH est l'utilitaire Windows de conversion de système de
+   fichiers, à ne surtout pas invoquer. Le navigateur, lui, sait redimensionner
+   et encoder en JPEG ; il ne savait simplement pas rendre le résultat au
+   disque. Sans cette route, il fallait faire transiter 185 000 caractères de
+   base64 à la main pour UNE image.
+
+   ⚠️ Elle n'écrit que sous `assets/img/`, et ce serveur ne quitte jamais la
+   machine de développement : il n'est ni dans `www/` (le bundle natif) ni dans
+   `api/` (les routes déployées). */
+const ECRITURE_OK = path.join(ROOT, 'assets', 'img');
+
+function ecrire(req, res) {
+  let corps = '';
+  req.on('data', c => { corps += c; if (corps.length > 40e6) req.destroy(); });
+  req.on('end', () => {
+    try {
+      const { chemin, b64 } = JSON.parse(corps);
+      const f = path.resolve(ROOT, chemin);
+      if (!f.startsWith(ECRITURE_OK)) { res.writeHead(403).end('hors assets/img'); return; }
+      fs.mkdirSync(path.dirname(f), { recursive: true });
+      const buf = Buffer.from(b64, 'base64');
+      fs.writeFileSync(f, buf);
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+         .end(JSON.stringify({ ok: true, chemin, octets: buf.length }));
+    } catch (e) {
+      res.writeHead(400).end(String(e.message));
+    }
+  });
+}
+
 http.createServer((req, res) => {
+  if (req.method === 'POST' && req.url.split('?')[0] === '/__ecrire') { ecrire(req, res); return; }
+
   let rel = decodeURIComponent(req.url.split('?')[0]);
   if (rel === '/') rel = '/menu.html';
 
