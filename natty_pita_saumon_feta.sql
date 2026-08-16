@@ -70,7 +70,9 @@ begin
     'nom', 'Pita au saumon et feta',
     'em', '🥙',
     'cle', 'quo-pita-saumon-feta',
-    'photo', null,
+    -- La vignette du catalogue, comme `placer()` la range : le guide du jour lit
+    -- ce champ pour dessiner le plat dans son arc.
+    'photo', '/assets/img/decouverte/quo-pita-saumon-feta-t.jpg',
     'illu', null,
     'pourquoi', 'Des protéines complètes sans lourdeur : le saumon et la feta portent le plat, le yaourt remplace la sauce.',
     'kcal', 600, 'p', 42, 'g', 43, 'l', 28,

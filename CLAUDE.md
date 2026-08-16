@@ -1296,6 +1296,21 @@ sans que personne ne s'en aperçoive — exactement ce qui est arrivé aux ombre
 des besoins qui n'existent nulle part ailleurs (une lueur, un creux sur fond noir, un relief de
 pastille).
 
+🔴 ⚠️ **ET UN TROISIÈME ÉTAGE MANQUAIT ENCORE** (corrigé le 2026-08-16, « je ne vois toujours
+pas la photo du plat dans la cinématique du guide »). `photo` et `illu` sont un **instantané**
+pris au moment de la planification : ils valent ce que `visuelRecette()` savait rendre ce
+jour-là. Deux cas très ordinaires les laissent vides alors que le plat a bel et bien une image —
+une semaine planifiée **avant** que la génération n'ancre ses recettes au catalogue, et un repas
+posé autrement que par `placer()` (à la main, par l'admin, par SQL). Le guide retombait alors
+sur l'icône du créneau, celle qu'il affiche quand **rien** n'est prévu : « il y a un dîner » à
+la place de « il y a CE dîner » — le défaut même que `figure()` était censé corriger.
+`visuelPrevu()` résout donc la **`cle` du catalogue** en dernier recours. Elle, elle ne périme
+pas. Les quatre pages qui montrent le guide chargent déjà `assets/decouverte.js` (vérifié :
+menu, suivi, repas, `www/index`), et sans le module on retombe exactement sur le comportement
+d'avant. Vignette (400 px) et non image pleine : la bulle fait 62 px, le plat du titre 156.
+⚠️ `figure()` est exporté depuis cette date — c'est la seule façon de vérifier les trois étages
+sans jouer la séquence entière.
+
 **Ce qu'il y a DANS les bulles** (9 août 2026) — la **photo détourée du plat prévu** à ce
 créneau quand la planification en a un, l'illustration au trait sinon. Chaque bulle porte celle
 de SON étape, y compris celles à venir : le « + » de la maquette d'origine ne disait rien de ce

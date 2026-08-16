@@ -183,12 +183,43 @@ window.NattyJournee = (function () {
    * `stroke-width` inline — sinon le trait de 1,2 se peindrait en 7,8 px dans
    * le hero de 156 px.
    */
+  /* ⚠️ TROISIÈME ÉTAGE : LA CLÉ DU CATALOGUE.
+     `photo` et `illu` sont un INSTANTANÉ pris au moment de la planification —
+     ils valent ce que `visuelRecette()` savait rendre ce jour-là. Deux cas très
+     ordinaires les laissent vides alors que le plat a bel et bien une image :
+     une semaine planifiée avant que la génération n'ancre ses recettes au
+     catalogue, et un repas posé autrement que par `placer()` (à la main, par
+     l'admin, par SQL). Le guide retombait alors sur l'icône du créneau — celle
+     qu'il affiche quand RIEN n'est prévu : « il y a un dîner » à la place de
+     « il y a CE dîner », le défaut même que `figure()` était censé corriger.
+     La `cle`, elle, ne périme pas. Toutes les pages qui montrent le guide
+     chargent déjà `assets/decouverte.js` (vérifié : menu, suivi, repas et
+     `www/index`), donc la résolution est toujours possible — et si le module
+     manquait, on retombe simplement sur le comportement d'avant.
+     La VIGNETTE (400 px) et non l'image pleine : la bulle fait 62 px, le plat
+     du titre 156 px. C'est aussi ce que range `planning.js`. */
+  function visuelPrevu(p) {
+    if (!p) return null;
+    if (p.photo) return { photo: p.photo };
+    if (p.illu) return { illu: p.illu };
+    if (!p.cle || !window.NattyDecouverte) return null;
+    try {
+      var plat = window.NattyDecouverte.platParCle(p.cle);
+      if (!plat) return null;
+      var ph = window.NattyDecouverte.vignette(plat);
+      if (ph) return { photo: ph };
+      var il = window.NattyDecouverte.illu(plat, { trait: 1.2 });
+      if (il) return { illu: il };
+    } catch (e) {}
+    return null;
+  }
+
   function figure(e) {
-    var p = (e && e.prevu) || null;
-    if (p && p.photo) {
-      return '<img src="' + esc(p.photo) + '" alt="" data-repli="' + esc(e.icone || 'midi') + '">';
+    var v = visuelPrevu((e && e.prevu) || null);
+    if (v && v.photo) {
+      return '<img src="' + esc(v.photo) + '" alt="" data-repli="' + esc(e.icone || 'midi') + '">';
     }
-    if (p && p.illu) return p.illu;
+    if (v && v.illu) return v.illu;
     return icone(e && e.icone ? e.icone : 'plus');
   }
 
@@ -1613,6 +1644,10 @@ window.NattyJournee = (function () {
     proposerSiNecessaire: proposerSiNecessaire,
     /** Le déroulé calculé — pour vérifier, sans ouvrir quoi que ce soit. */
     etapes: async function () { return (await construire()).etapes; },
+    /** Le visuel d'une étape — exposé pour pouvoir le vérifier sans jouer la
+        séquence entière : c'est la seule façon de contrôler les trois étages
+        (photo figée, clé du catalogue, repli) d'un banc. */
+    figure: figure,
     courante: courante,
     libHeure: libHeure
   };
