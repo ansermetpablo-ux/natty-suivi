@@ -325,6 +325,27 @@ Page de connexion standalone — `natty-suivi.vercel.app/login.html`
 >   retour Google **entre toujours dans l'app** (non-régression), un lien périmé affichant son
 >   message français.
 
+> 🔴 ⚠️ **ET « LIEN ENVOYÉ ! » ÉTAIT UN MENSONGE** (corrigé le 2026-08-16, « le bouton n'envoie
+> aucun mail »). GoTrue répond **200 dans presque tous les cas**, y compris quand l'adresse n'a
+> aucun compte — c'est délibéré, ça empêche de découvrir qui est inscrit en essayant des
+> emails. `doReset()` affichait « Lien envoyé ! Vérifiez vos emails » sur ce 200 : il affirmait
+> un envoi qu'il n'avait jamais constaté. Et quand l'appel échouait vraiment, le `catch`
+> écrasait le message de Supabase par « Erreur — vérifiez votre email », qui envoie chercher
+> une faute de frappe là où le problème est côté serveur. **Le défaut était donc invisible des
+> deux côtés à la fois.**
+> Désormais la réponse est lue, le message de Supabase est affiché **tel quel**, le 429 sort son
+> délai réel (« réessayez dans 51 s »), et le succès s'énonce au conditionnel — « si un compte
+> existe pour cet email » — ce qui est exactement ce que le 200 permet d'affirmer.
+> - ⚠️ **Le code ne peut pas faire arriver un email.** Si rien n'arrive malgré un 200, la cause
+>   est dans le tableau de bord Supabase, pas ici : **Authentication → Logs** dit si l'envoi a
+>   été tenté et pourquoi il a échoué. Les deux causes habituelles sont le **quota de l'envoi
+>   par défaut** (quelques emails par heure, et souvent réservé aux adresses de l'équipe) et
+>   l'**absence de SMTP personnalisé** — c'est ce dernier qu'il faut configurer pour de vrais
+>   utilisateurs (Authentication → Emails → SMTP Settings).
+> - ⚠️ Vérifier aussi que `https://natty-suivi.vercel.app/login.html?oauth=1` est bien dans les
+>   **Redirect URLs** : `doReset()` l'envoie en `redirect_to`, et une URL hors liste fait
+>   retomber le lien sur le Site URL — réglé sur un scheme d'app, donc une page noire.
+
 **Config Supabase Auth requise** :
 - Site URL : `https://natty-suivi.vercel.app`
 - Redirect URLs : `https://natty-suivi.vercel.app/login.html?oauth=1`

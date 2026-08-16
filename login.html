@@ -576,9 +576,24 @@ async function doSignup() {
   }
 }
 
+/* ⚠️⚠️ « LIEN ENVOYÉ ! » ÉTAIT UN MENSONGE, ET C'EST CE QUI RENDAIT LE DÉFAUT
+   INTROUVABLE (corrigé le 2026-08-16, « le bouton n'envoie aucun mail »).
+
+   GoTrue répond **200 dans presque tous les cas** — y compris quand l'adresse
+   n'a aucun compte : c'est délibéré, ça empêche de savoir qui est inscrit en
+   essayant des emails. Annoncer « Lien envoyé ! » sur ce 200, c'était donc
+   affirmer un envoi qu'on n'a jamais constaté. Et quand l'appel échouait
+   vraiment — quota d'emails atteint, SMTP absent —, le `catch` écrasait le
+   message de Supabase par « Erreur — vérifiez votre email », qui envoie
+   chercher une faute de frappe là où le problème est côté serveur.
+
+   Désormais : la réponse est LUE, son message est affiché tel quel, et le
+   succès s'énonce au conditionnel — la seule chose qu'on sache vraiment. */
 async function doReset() {
   var email = document.getElementById('resetEmail').value.trim();
   if (!email) { toast('Entrez votre email', 'err'); return; }
+  // Un aller-retour réseau pour une adresse sans « @ » n'apprend rien à personne.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Adresse email invalide', 'err'); return; }
 
   setLoading('btnReset', true);
   try {
@@ -587,11 +602,28 @@ async function doReset() {
       headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email })
     });
-    if (!r.ok) throw new Error('Erreur');
-    toast('Lien envoyé ! Vérifiez vos emails.', 'ok');
-    setTimeout(function(){ hideReset(); }, 2000);
+    var d = await r.json().catch(function () { return {}; });
+
+    if (!r.ok) {
+      var brut = d.msg || d.message || d.error_description || d.error || '';
+      /* Le quota est le cas le plus fréquent, et le seul où l'utilisateur peut
+         faire quelque chose : attendre. Sans ce message il réappuie, ce qui
+         rallonge le délai à chaque fois. */
+      if (r.status === 429) {
+        var s = (brut.match(/(\d+)\s*seconds?/) || [])[1];
+        throw new Error(s ? 'Trop de demandes — réessayez dans ' + s + ' s'
+                          : 'Trop de demandes — réessayez dans une minute');
+      }
+      throw new Error(brut || ('Envoi refusé par le serveur (' + r.status + ')'));
+    }
+
+    /* « Si un compte existe » : c'est exactement ce que le 200 permet
+       d'affirmer, ni plus ni moins. Et le rappel des indésirables, parce que
+       c'est là que finissent la moitié de ces messages. */
+    toast('Si un compte existe pour cet email, le lien vient de partir. Pensez aux indésirables.', 'ok');
+    setTimeout(function(){ hideReset(); }, 3200);
   } catch(e) {
-    toast('Erreur — vérifiez votre email', 'err');
+    toast(e.message || 'Envoi impossible — réessayez', 'err');
   }
   setLoading('btnReset', false);
 }
