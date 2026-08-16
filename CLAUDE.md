@@ -296,8 +296,34 @@ Page de connexion standalone — `natty-suivi.vercel.app/login.html`
 - `doLogin()` : POST sur `/auth/v1/token?grant_type=password` Supabase → user_id → encode hex → redirige vers `index.html?token=HEX`
 - `doSignup()` : POST sur `/auth/v1/signup` + sauvegarde prénom dans `onboarding`
 - `doReset()` : POST sur `/auth/v1/recover`
+- `doNouveauMdp()` : PUT sur `/auth/v1/user` avec le jeton du lien reçu par email — voir
+  l'encadré rouge ci-dessous
 - `doGoogle()` : redirect vers `SB_URL/auth/v1/authorize?provider=google&redirect_to=https://natty-suivi.vercel.app/login.html?oauth=1`
 - Callback OAuth : token dans URL hash → fetch `/auth/v1/user` → redirectToApp
+
+> 🔴 ⚠️ **« MOT DE PASSE OUBLIÉ » NE RÉINITIALISAIT RIEN** (corrigé le 2026-08-16, signalé par
+> Pablo). Le lien de récupération revient avec un `access_token` dans le fragment, **exactement
+> comme un retour Google** — à ceci près qu'il porte `type=recovery`. `traiterRetourOAuth()` ne
+> regardait que le jeton : il annonçait « Connexion réussie ! » et entrait dans l'app. On se
+> retrouvait donc connecté **avec l'ancien mot de passe toujours en place**, sans avoir jamais
+> vu de formulaire pour en choisir un autre. Le lien « marchait » et ne servait à rien.
+> Désormais `type=recovery` ouvre le panneau **« Nouveau mot de passe »** (`#panelNouveauMdp`),
+> et l'app n'est atteinte qu'une fois le `PUT /auth/v1/user` accepté.
+> - ⚠️ **Aucune session n'est ouverte tant que le mot de passe n'a pas changé.** Les jetons
+>   restent dans `RECUPERATION`, en mémoire : ils autorisent le PUT, rien de plus. Écrire la
+>   session tout de suite, c'était refaire le bug sous une autre forme — entrer dans l'app.
+> - ⚠️ **Le fragment est effacé de l'URL** (`history.replaceState`) : il porte un jeton de
+>   session en clair, il resterait dans la barre d'adresse et dans l'historique, et un simple
+>   rechargement rejouerait la récupération avec un lien déjà consommé.
+> - ⚠️ **`currentTab` passe à `'recuperation'`** : laissé à `'login'`, la touche Entrée
+>   soumettait le formulaire de connexion — vide — depuis cet écran. Le même défaut existait
+>   sur le panneau de réinitialisation (Entrée y appelait `doLogin()`), corrigé au passage en
+>   testant le panneau visible **avant** l'onglet courant.
+> - Vérifié au banc : le panneau s'affiche, aucune session n'est écrite, le jeton disparaît de
+>   l'URL, les trois refus (champs vides, moins de 8 caractères, confirmation différente), le
+>   PUT part avec `Authorization: Bearer <jeton du lien>` et le bon mot de passe — et un vrai
+>   retour Google **entre toujours dans l'app** (non-régression), un lien périmé affichant son
+>   message français.
 
 **Config Supabase Auth requise** :
 - Site URL : `https://natty-suivi.vercel.app`
@@ -857,6 +883,46 @@ repasse à `assets/ajout.js` — qui accepte désormais `start({file, nom})` et 
 vue. Sans ce chemin, le pont aurait redemandé de photographier une assiette déjà
 photographiée, donc personne ne l'aurait emprunté. L'événement `natty:recette-validee` porte
 `{recette, id, xp, xpTotal, nb, photo}`.
+
+### `assets/prechauffe.js` — l'attente entre le guide et la première étape
+Écran plein (`#npchauffe`, tout préfixé `npc-`) chargé **en synchrone dans le `<head>`** de
+`repas.html` (+ `www/`), comme `theme.js` et `zoom.js`. `ouvrir({sous})` / `fermer()` /
+`ouverte()`. **Aucune dépendance** : ni core.js, ni réseau, ni image.
+
+**Ce qu'il corrige.** « Suivre la recette » du guide du jour envoie sur
+`repas.html?plat=…&preparer=1`. Entre les deux il y a une **navigation** : la cinématique du
+guide se termine, l'écran Repas se compose d'un coup avec ses recettes, son calendrier et ses
+panneaux, puis la préparation s'ouvre par-dessus. Trois images sans rapport en moins d'une
+seconde — « pas fluide, voire pas du tout » (Pablo, 2026-08-16).
+
+**Cinq scènes SVG qui alternent** (~1,2 s chacune, en boucle) : préchauffage du four, aiguisage
+des couteaux, les ingrédients sortent, la poêle chauffe, réglage du minuteur. Un rond qui tourne
+dit « attends » et rien d'autre ; celles-ci disent ce qu'on est en train de faire, donc l'attente
+appartient à la recette au lieu de s'y ajouter. Même vocabulaire graphique
+qu'`assets/recette.js` (boîte de 64, trait `currentColor` de 2,4, bouts arrondis) — les deux se
+suivent à l'écran, ils doivent se ressembler. Les seize gestes de `recette.js` ne sont **pas**
+réutilisés : ils dessinent une action sur un aliment, pas une cuisine qui se prépare.
+
+> ⚠️⚠️ **Z-INDEX 12500, AU-DESSUS DE LA CINÉMATIQUE** (`#nrCine`, 12000) — c'est tout le
+> mécanisme. La préparation se monte **dessous** pendant que l'écran de chargement est encore
+> là, puis celui-ci s'efface et découvre l'étape 1 déjà en place. À 11500 — la première valeur
+> essayée — c'était l'inverse : la cinématique surgissait par-dessus l'écran de chargement,
+> exactement l'à-coup qu'on venait supprimer. **Mesuré au banc**, invisible à la lecture.
+> Reste sous les plein écran de `planning.js` (99990) et de sa fiche (100000).
+
+- ⚠️ **Il s'ouvre en tête de `<body>`**, avant la première ligne de l'écran Repas : c'est ce qui
+  fait qu'on ne voit jamais le hero, le calendrier et les panneaux se composer.
+- ⚠️ **Un minimum de 1,5 s** : en dessous il clignote au lieu d'informer. Et un **filet de 9 s**,
+  parce que rien ne doit pouvoir laisser un plein écran définitif — `preparerSiDemande()` ferme
+  dans un `finally`, et le `finally` du chargement de la page ferme aussi (le chemin `?id=` rend
+  la main plus haut, et le `catch` ne passe jamais par `preparerSiDemande`).
+- ⚠️ **Aucune donnée ne se lit ici et rien ne dépend d'une animation pour son état final** : sur
+  une page qui ne peint pas, une animation CSS reste à sa première image (§7). Les scènes sont
+  donc **complètes à l'arrêt** — ce qui bouge s'ajoute à un dessin déjà lisible — et la fermeture
+  est pilotée par un minuteur, jamais par la fin d'une animation. Même précaution que
+  `Natty.confirmer` pour la classe `on` (rAF **et** `setTimeout`).
+- Couleurs par les jetons `--nt-*` d'`assets/theme.js`. Vérifié dans les deux thèmes : fond
+  `#0e0e11` / trait `#f4f4f7` en sombre, `#fff` / `#101014` en clair.
 
 ### `assets/liste.js` — liste de courses : cocher, masquer, copier
 Chargé par `coaching.html` (+ `www/`). `monter(el, items, opts)` où `opts.cle` est la clé
@@ -3371,6 +3437,14 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   feuille de lecture : sans ça, trois repas de la semaine sur cinq n'étaient que consultables.
 - ✅ **Le héros se fait défiler au doigt** (2026-08-16) : tous les repas de la semaine sont dans
   `PLATS`, le geste les parcourt en boucle, des points disent où l'on est. Détail en §3.
+- ✅ **La transition guide → recette ne saute plus** (2026-08-16, demande de Pablo : « après la
+  cinématique la page repas se charge brusquement… le mieux serait une petite animation de
+  chargement, style préchauffage du four, aiguisage des couteaux, en SVG qui alternent »).
+  `assets/prechauffe.js` couvre le trajet : cinq scènes SVG qui tournent, l'écran Repas ne se
+  compose jamais sous les yeux, et on arrive directement sur l'étape 1. Détail et pièges en §3.
+- ✅ **« Mot de passe oublié » réinitialise enfin quelque chose** : le lien reçu par email
+  ouvrait l'app en annonçant « Connexion réussie », avec l'ancien mot de passe intact. Voir
+  l'encadré rouge de §3, `login.html`.
 - 🔴 ✅ **Et le vrai blocage était ailleurs** : `depuisPlanRepas()` jetait les étapes portées par
   `plan.repas[].src`, donc une recette planifiée absente de la liste courante était **impossible
   à lancer** — c'est ce que Pablo a constaté. Voir l'encadré rouge de §3.

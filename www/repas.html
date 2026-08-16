@@ -12,6 +12,12 @@
 <link rel="apple-touch-icon" href="/natty-icon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="/assets/theme.js"></script>
+<!-- L'écran « on prépare la cuisine », qui couvre le trajet entre le guide du
+     jour et la première étape de la recette. Chargé DANS le <head> et en
+     synchrone, comme theme.js : il doit pouvoir se peindre AVANT que la page ne
+     compose ses recettes, son calendrier et ses panneaux — c'est tout son
+     intérêt. -->
+<script src="/assets/prechauffe.js"></script>
 <link rel="stylesheet" href="/assets/style.css">
 <style>
 .top button{background:none;border:none;display:flex;align-items:center;justify-content:center;color:var(--icon-mut);cursor:pointer;padding:0}
@@ -211,6 +217,23 @@ body{overflow-x:hidden}
 </style>
 </head>
 <body>
+
+<script>
+/* ⚠️ EN TÊTE DE <body>, ET C'EST LE POINT. On vient de « Suivre la recette » :
+   l'écran de pré-chauffage doit se peindre AVANT la première ligne de l'écran
+   Repas, sinon on voit le hero, le calendrier et les panneaux se composer une
+   seconde avant que la préparation ne s'ouvre par-dessus — les trois images
+   sans rapport que Pablo a décrites. Lancé ici, il n'y a rien à voir entre le
+   guide et l'étape 1. `preparerSiDemande()` le referme. */
+(function () {
+  try {
+    var p = new URLSearchParams(window.location.search);
+    if (p.get('preparer') === '1' && window.NattyPrechauffe) {
+      NattyPrechauffe.ouvrir({ sous: p.get('plat') || 'On prépare la cuisine…' });
+    }
+  } catch (e) {}
+})();
+</script>
 
 <div class="top">
   <button id="backBtn" aria-label="Retour">
@@ -1157,6 +1180,12 @@ document.addEventListener('natty:recette-validee', function(e){
     preparerSiDemande();
   }catch(e){
     document.getElementById('content').innerHTML = '<div class="empty">Impossible de charger les recettes.</div>';
+  }finally{
+    /* ⚠️ Le chemin `?id=` rend la main plus haut, et le `catch` ci-dessus ne
+       passe jamais par `preparerSiDemande()` : sans ce `finally`, un échec de
+       chargement laissait l'écran de pré-chauffage devant un message d'erreur
+       que personne ne pouvait lire. */
+    if (window.NattyPrechauffe && NattyPrechauffe.ouverte()) NattyPrechauffe.fermer();
   }
 })();
 
@@ -1175,11 +1204,24 @@ document.addEventListener('natty:recette-validee', function(e){
    ne rend pas la page inutilisable parce qu'une recette n'a pas d'étapes. */
 function preparerSiDemande(){
   if (new URLSearchParams(window.location.search).get('preparer') !== '1') return;
-  var d = PLATS[actif];
-  if (!d || !d.src || !window.NattyRecette) return;
-  // `suivre()` rend `false` quand il n'y a aucune étape à jouer : on le laisse
-  // décider plutôt que de recompter nous-mêmes ce qu'il sait déjà compter.
-  NattyRecette.suivre(d.src);
+  try{
+    var d = PLATS[actif];
+    if (!d || !window.NattyRecette) return;
+    /* La cinématique s'ouvre SOUS l'écran de pré-chauffage, qui se retire
+       ensuite en fondu : on passe donc du guide à l'étape 1 sans jamais voir
+       l'écran Repas se composer entre les deux.
+       `suivre()` rend `false` quand il n'y a aucune étape à jouer — on le laisse
+       décider plutôt que de recompter nous-mêmes ce qu'il sait déjà compter ;
+       un repas placé sans étapes se valide alors au lieu de se suivre. */
+    if (d.src && NattyRecette.suivre(d.src)) return;
+    if (d.plan && NattyRecette.realiser) NattyRecette.realiser(refRecette(d));
+  } finally {
+    /* ⚠️ Dans un `finally` : une exception ici laisserait un plein écran
+       définitif par-dessus une page parfaitement utilisable. Le module a bien
+       son propre filet de sécurité, mais neuf secondes d'écran bloqué sont
+       déjà neuf secondes de trop. */
+    if (window.NattyPrechauffe) NattyPrechauffe.fermer();
+  }
 }
 </script>
 <!-- Les créneaux de repas (combien, lequel maintenant, ce qui y est déjà

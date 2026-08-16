@@ -387,6 +387,28 @@
     </div>
     <button class="btn-submit" id="btnReset" onclick="doReset()">Envoyer le lien</button>
   </div>
+
+  <!-- Nouveau mot de passe — l'écran d'arrivée du lien reçu par email.
+       ⚠️ Il n'existait pas. Le lien de récupération porte un `access_token` :
+       `traiterRetourOAuth()` le prenait pour un retour Google, annonçait
+       « Connexion réussie » et entrait dans l'app. On se retrouvait donc
+       connecté avec l'ANCIEN mot de passe, sans avoir jamais pu en choisir un
+       autre — d'où « le lien de mot de passe oublié ne fonctionne pas »,
+       constaté par Pablo le 2026-08-16. -->
+  <div id="panelNouveauMdp" style="display:none;">
+    <p style="font-size:13px;line-height:1.6;color:var(--muted);margin:0 0 18px;">
+      Choisissez votre nouveau mot de passe. Il remplacera l’ancien dès que vous validez.
+    </p>
+    <div class="form-group">
+      <div class="form-lbl">Nouveau mot de passe</div>
+      <input class="form-inp" type="password" id="mdpNouveau" placeholder="8 caractères minimum" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <div class="form-lbl">Confirmation</div>
+      <input class="form-inp" type="password" id="mdpConfirme" placeholder="le même, pour être sûr" autocomplete="new-password">
+    </div>
+    <button class="btn-submit" id="btnNouveauMdp" onclick="doNouveauMdp()">Enregistrer et continuer</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -705,10 +727,88 @@ function doApple() {
 
 // Traite le retour OAuth, que les jetons viennent du hash de la page (web)
 // ou de l'URL du deep link (natif). Renvoie true si un jeton a été trouvé.
+/* La session ouverte par un lien de récupération : elle ne sert qu'à autoriser
+   le changement de mot de passe, et n'entre dans l'app qu'une fois celui-ci
+   enregistré. */
+var RECUPERATION = null;
+
+function montrerNouveauMdp() {
+  ['panelLogin', 'panelSignup', 'panelReset', 'authTabs', 'msgReconnexion'].forEach(function (id) {
+    var e = document.getElementById(id);
+    if (e) e.style.display = 'none';
+  });
+  document.getElementById('panelNouveauMdp').style.display = '';
+  var s = document.querySelector('.logo-sub');
+  if (s) s.textContent = 'Choisissez un nouveau mot de passe';
+  // `currentTab` commande la touche Entrée : laissé à 'login', elle
+  // soumettrait le formulaire de connexion, vide, depuis cet écran.
+  currentTab = 'recuperation';
+  var champ = document.getElementById('mdpNouveau');
+  if (champ) champ.focus();
+}
+
+/* PUT /auth/v1/user avec le jeton du lien : c'est la seule route qui change un
+   mot de passe sans connaître l'ancien, et elle exige exactement la session
+   que le lien vient d'ouvrir. */
+async function doNouveauMdp() {
+  var a = document.getElementById('mdpNouveau').value;
+  var b = document.getElementById('mdpConfirme').value;
+  if (!a || !b) { toast('Remplissez les deux champs', 'err'); return; }
+  if (a.length < 8) { toast('Mot de passe trop court (8 car. min)', 'err'); return; }
+  if (a !== b) { toast('Les deux mots de passe diffèrent', 'err'); return; }
+  if (!RECUPERATION || !RECUPERATION.access_token) {
+    toast('Lien expiré — demandez-en un nouveau', 'err');
+    return;
+  }
+
+  setLoading('btnNouveauMdp', true);
+  try {
+    var r = await fetch(SB_URL + '/auth/v1/user', {
+      method: 'PUT',
+      headers: {
+        'apikey': SB_KEY,
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + RECUPERATION.access_token
+      },
+      body: JSON.stringify({ password: a })
+    });
+    var d = await r.json().catch(function () { return {}; });
+    if (!r.ok) throw new Error(d.msg || d.error_description || 'Erreur');
+    toast('Mot de passe modifié !', 'ok');
+    // ⚠️ On entre dans l'app AVEC les jetons du lien : ils restent valables
+    // après le changement, et repasser par le formulaire obligerait à
+    // ressaisir le mot de passe qu'on vient tout juste de choisir.
+    setTimeout(function () { entrerDansApp(RECUPERATION); }, 600);
+  } catch (e) {
+    toast(e.message === 'Erreur' ? 'Impossible d’enregistrer — réessayez' : e.message, 'err');
+    setLoading('btnNouveauMdp', false);
+  }
+}
+
 function traiterRetourOAuth(fragment) {
   var hash = new URLSearchParams(String(fragment || '').replace(/^#/, ''));
 
   var accessToken = hash.get('access_token');
+
+  /* ⚠️ UN LIEN DE RÉCUPÉRATION N'EST PAS UNE CONNEXION. Il porte le même
+     `access_token` qu'un retour Google, mais avec `type=recovery` : le prendre
+     pour une connexion, c'était entrer dans l'app avec l'ancien mot de passe
+     toujours en place, donc ne rien réinitialiser du tout. On garde les jetons
+     de côté — ils autorisent le PUT — et on demande le nouveau mot de passe. */
+  if (accessToken && hash.get('type') === 'recovery') {
+    RECUPERATION = {
+      access_token: accessToken,
+      refresh_token: hash.get('refresh_token') || '',
+      expires_in: parseInt(hash.get('expires_in') || '3600', 10)
+    };
+    /* ⚠️ Le fragment porte un jeton de session en clair. Il reste sinon dans
+       la barre d'adresse et dans l'historique du navigateur, et un simple
+       rechargement rejouerait la récupération avec un lien déjà consommé. */
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    montrerNouveauMdp();
+    return true;
+  }
+
   if (accessToken) {
     // Le fragment porte déjà les deux jetons — inutile d'aller redemander
     // l'utilisateur à /auth/v1/user, son identifiant est dans le JWT. Et
@@ -765,9 +865,10 @@ function traiterRetourOAuth(fragment) {
   // Enter key on inputs
   document.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter') return;
-    if (currentTab === 'login') doLogin();
-    else if (currentTab === 'signup') doSignup();
+    if (currentTab === 'recuperation') doNouveauMdp();
     else if (document.getElementById('panelReset').style.display !== 'none') doReset();
+    else if (currentTab === 'login') doLogin();
+    else if (currentTab === 'signup') doSignup();
   });
 })();
 </script>
