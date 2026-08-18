@@ -808,9 +808,15 @@ function libelleCta(d, suivie){
      pas, on le fait. Le bouton disait « Voir le détail » — donc trois repas de
      la semaine sur cinq n'étaient que consultables. */
   if (d.plan && !(d.steps && d.steps.length)) {
-    return estCuisinee(d) ? 'Repas validé ✓' : 'Réaliser ce repas';
+    return estCuisinee(d) ? 'Refaire ce repas' : 'Réaliser ce repas';
   }
-  if (estCuisinee(d)) return 'Revoir les étapes';
+  /* ⚠️ UN PLAT VALIDÉ SE REFAIT (2026-08-18). Le bouton disait « Repas validé ✓ »
+     et « Revoir les étapes » — deux libellés qui annoncent une consultation
+     alors que l'écran de fin sait désormais reprendre une photo et revalider.
+     L'état, lui, n'est pas perdu : la pastille « ✓ Cuisinée » juste au-dessus
+     le porte, et c'est sa place — un bouton dit ce qu'il fait, pas où l'on en
+     est. */
+  if (estCuisinee(d)) return 'Refaire la recette';
   if (window.NattyRecette && d.src){
     var pr = NattyRecette.progres(d.src);
     if (pr) return 'Reprendre · étape ' + (pr.i + 1) + '/' + pr.total;

@@ -890,17 +890,28 @@ window.NattyRecette = (function () {
 
   /* Une seule ligne par recette et par semaine : revalider la même recette le
      lendemain ne doit pas doubler les XP, mais une recette refaite la semaine
-     suivante compte à nouveau — c'est une autre semaine de cuisine. */
+     suivante compte à nouveau — c'est une autre semaine de cuisine.
+
+     ⚠️ REFAIRE LAISSE UNE TRACE, MÊME SANS XP. La ligne existante compte ses
+     `fois` et rafraîchit sa date : sans ça, la deuxième fois ne s'inscrivait
+     nulle part et l'écran de fin n'avait rien de vrai à annoncer. Et c'est
+     `xp` — ce que CE geste a rapporté, 0 sur une répétition — qui lui dit de
+     ne pas fêter un gain qui n'a pas eu lieu. */
   function enregistrerValidation(r) {
-    var id = ident(r), s = lundiCourant(), l = validees();
-    if (!l.some(function (v) { return v && v.id === id && v.semaine === s; })) {
+    var id = ident(r), s = lundiCourant(), l = validees(), ligne = null;
+    l.forEach(function (v) { if (v && v.id === id && v.semaine === s) ligne = v; });
+    if (ligne) {
+      ligne.fois = (+ligne.fois || 1) + 1;
+      ligne.le = new Date().toISOString();
+    } else {
       l.unshift({ id: id, nom: (r && r.nom) || 'Recette', semaine: s,
-                  le: new Date().toISOString(), xp: XP_RECETTE });
-      // 120 lignes : deux ans de cuisine, et un localStorage qui ne gonfle pas.
-      ecrireJson(cleFaites(), l.slice(0, 120));
+                  le: new Date().toISOString(), xp: XP_RECETTE, fois: 1 });
     }
+    // 120 lignes : deux ans de cuisine, et un localStorage qui ne gonfle pas.
+    ecrireJson(cleFaites(), l.slice(0, 120));
     oublierProgres(r);
-    return { xp: XP_RECETTE, total: xpTotal(), nb: validees().length };
+    return { xp: ligne ? 0 : XP_RECETTE, total: xpTotal(),
+             nb: validees().length, fois: ligne ? ligne.fois : 1 };
   }
 
   /* ── 6. La cinématique ────────────────────────────────────
@@ -1090,25 +1101,44 @@ window.NattyRecette = (function () {
     el.className = 'nr-plan';
     el.setAttribute('data-e', 'parallax');
 
-    if (dejaValidee) {
+    /* ⚠️ « DÉJÀ VALIDÉE » N'EST PLUS UNE IMPASSE (2026-08-18, demande de
+       Pablo : « il faut pouvoir refaire la recette même si le plat est
+       validé »). Cet écran disait « vous pouvez la refaire » et n'en donnait
+       aucun moyen : ni caméra, ni galerie, et le bouton du bas fermait tout.
+       On pouvait donc redérouler les étapes sans jamais pouvoir dire qu'on
+       avait recuisiné — et surtout « Noter ce repas dans mon suivi » devenait
+       hors d'atteinte, alors que le plat, lui, se mange une seconde fois et
+       compte une seconde fois dans la journée. */
+    /* Un repas ouvert par `realiser()` n'a pas d'étapes : on ne vient pas de le
+       suivre, on vient dire qu'on l'a fait. Le genre suit — « refait » pour un
+       repas, « refaite » pour une recette. */
+    var sansEtapes = !etapes.length;
+
+    if (dejaValidee && !photoUrl) {
       el.innerHTML =
         '<div class="nr-big">' + dessin('dresser', '🍽️') + '</div>'
-        + '<div class="nr-t">Déjà validée ✓</div>'
-        + '<div class="nr-d">' + esc(nomCourant()) + ' compte déjà pour cette semaine.'
-        + ' Vous pouvez la refaire, elle ne sera pas comptée deux fois.</div>';
+        + '<div class="nr-t">' + (sansEtapes ? 'Vous le refaites ✓' : 'Vous la refaites ✓') + '</div>'
+        + '<div class="nr-d">' + esc(nomCourant()) + ' compte déjà pour cette semaine —'
+        + ' pas de nouveaux XP. Photographiez votre plat pour le noter dans'
+        + ' votre suivi.</div>'
+        + '<button class="nr-alt" type="button" data-nr="galerie">Choisir dans la galerie</button>';
       return el;
     }
 
-    /* Un repas ouvert par `realiser()` n'a pas d'étapes : on ne vient pas de le
-       suivre, on vient dire qu'on l'a fait. « C'est prêt 🎉 » sonnerait faux au
-       bout d'un écran qui n'a rien accompagné. */
-    var sansEtapes = !etapes.length;
+    /* « C'est prêt 🎉 » sonnerait faux au bout d'un écran qui n'a rien
+       accompagné : sans étape, on n'a rien suivi. */
     el.innerHTML = photoUrl
       ? '<div class="nr-shotw"><img class="nr-shot" src="' + photoUrl + '" alt="">'
         + '<span class="nr-badge">' + CHECK + '</span></div>'
-        + '<div class="nr-t">Beau travail 👏</div>'
-        + '<div class="nr-d">Validez pour ajouter ' + XP_RECETTE + ' XP et cocher '
-        + esc(nomCourant()) + ' dans votre semaine.</div>'
+        + '<div class="nr-t">' + (dejaValidee ? (sansEtapes ? 'Refait 👏' : 'Refaite 👏')
+                                               : 'Beau travail 👏') + '</div>'
+        // Promettre des XP déjà gagnés serait un mensonge sur le seul écran
+        // dont le rôle est de dire ce que le geste va produire.
+        + '<div class="nr-d">' + (dejaValidee
+            ? 'Déjà compté cette semaine : validez pour noter ce plat dans votre'
+              + ' suivi, sans XP supplémentaires.'
+            : 'Validez pour ajouter ' + XP_RECETTE + ' XP et cocher '
+              + esc(nomCourant()) + ' dans votre semaine.') + '</div>'
         + '<button class="nr-alt" type="button" data-nr="reprendre">Reprendre la photo</button>'
       : '<div class="nr-big">' + dessin('dresser', '🍽️') + '</div>'
         + '<div class="nr-t">' + (sansEtapes ? 'Vous l’avez préparé ?' : 'C’est prêt 🎉') + '</div>'
@@ -1144,6 +1174,7 @@ window.NattyRecette = (function () {
   }
 
   function planBravo(bilan) {
+    var repete = !bilan.xp;
     var el = document.createElement('div');
     el.className = 'nr-plan';
     el.setAttribute('data-e', 'glide');
@@ -1152,9 +1183,16 @@ window.NattyRecette = (function () {
         ? '<div class="nr-shotw"><img class="nr-shot" src="' + photoUrl + '" alt="">'
           + '<span class="nr-badge">' + CHECK + '</span></div>'
         : '<div class="nr-big">' + dessin('dresser', '🍽️') + '</div>')
-      + '<div class="nr-t">Bravo 🎉</div>'
-      + '<div class="nr-d">' + esc(nomCourant()) + ' — cuisiné et validé.</div>'
-      + '<div class="nr-xp">+0 XP</div>'
+      + '<div class="nr-t">' + (repete ? (etapes.length ? 'Refaite 🎉' : 'Refait 🎉')
+                                        : 'Bravo 🎉') + '</div>'
+      + '<div class="nr-d">' + esc(nomCourant())
+      + (repete ? ' — ' + bilan.fois + 'ᵉ fois cette semaine.' : ' — cuisiné et validé.')
+      + '</div>'
+      /* ⚠️ Pas de compteur d'XP sur une répétition. Le laisser afficherait
+         « +0 XP » en gros et en vert au moment de féliciter — soit exactement
+         l'écran du défaut corrigé en août (un compteur bloqué à zéro), mais
+         cette fois sans rien qui cloche. */
+      + (repete ? '' : '<div class="nr-xp">+0 XP</div>')
       + '<div class="nr-tot">' + bilan.nb + ' recette' + (bilan.nb > 1 ? 's' : '')
       + ' cuisinée' + (bilan.nb > 1 ? 's' : '') + ' · ' + bilan.total + ' XP au total</div>'
       /* Le seul endroit de l'app où cette photo peut encore servir. Sans ce
@@ -1204,9 +1242,9 @@ window.NattyRecette = (function () {
       num.textContent = '✓';
       // « ma recette » sur un plat placé par la planification serait faux : il
       // n'a pas d'étapes, on ne l'a pas suivi, on l'a fait.
-      next.textContent = dejaValidee ? 'Terminer'
-        : (photoFile ? (n ? 'Valider ma recette ✓' : 'Valider ce repas ✓')
-                     : '📸 Prendre la photo');
+      next.textContent = !photoFile ? '📸 Prendre la photo'
+        : (dejaValidee ? 'Valider à nouveau ✓'
+                       : (n ? 'Valider ma recette ✓' : 'Valider ce repas ✓'));
     } else {
       num.textContent = (idx + 1) + '/' + n;
       next.textContent = idx === n - 1 ? 'Dernière étape ✓' : 'Étape suivante →';
@@ -1237,7 +1275,6 @@ window.NattyRecette = (function () {
     if (!ov) return;
     if (phase === 'bravo') { fermer(); return; }
     if (phase === 'photo') {
-      if (dejaValidee) { fermer(); return; }
       // ⚠️ Appel SYNCHRONE dans le geste : iOS n'ouvre la caméra que là. Un
       // `await` ou un `setTimeout` avant, et plus rien ne s'ouvre.
       if (!photoFile) { inpCam.click(); return; }
@@ -1248,7 +1285,7 @@ window.NattyRecette = (function () {
   }
 
   function valider() {
-    if (!photoFile || dejaValidee || !recCourante) return;
+    if (!photoFile || !recCourante) return;
     var bilan = enregistrerValidation(recCourante);
     dejaValidee = true;
     phase = 'bravo';
