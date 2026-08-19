@@ -438,6 +438,13 @@ body{overflow-x:hidden}
      `decouverte.js`, dont `illu()` s'en sert : sans elle, ces plats
      s'afficheraient sur un fond vide, sans un mot. -->
 <script src="/assets/plats-illu.js"></script>
+<!-- Uniquement pour `NattyRecette.suivre` : un plat du catalogue qui porte
+     une recette se cuisine depuis le tiroir de la visionneuse, étape par
+     étape puis photo. Le module n'a aucune dépendance et ne se déclenche pas
+     tout seul. AVANT `decouverte.js`, qui teste sa présence pour décider
+     d'afficher le bouton — sans lui, il n'apparaît pas, plutôt que de
+     promettre un geste sans effet. -->
+<script src="/assets/recette.js"></script>
 <script src="/assets/decouverte.js"></script>
 <!-- Uniquement pour `NattyListe.basculerExtra` : les ingrédients d'un plat du
      monde s'ajoutent à la liste de courses, exactement comme les aliments à

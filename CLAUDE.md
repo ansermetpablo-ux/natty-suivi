@@ -2294,13 +2294,59 @@ de `social.html` le rend tel quel : une cuisine ajoutée à la fin donnerait une
   La liste de correspondance nom de fichier → slug vit dans le message du commit
   d'intégration ; les slugs, eux, sont dans `CUISINES`.
 
-> ⚠️ **AUCUNE MACRO N'EST ANNONCÉE, ET C'EST UNE DÉCISION.** Écrire « 620 kcal » sous un pad
-> thaï supposerait une recette et des grammages que personne n'a pesés : ce serait un chiffre
-> inventé, exactement ce que le reste de l'app refuse (règle 12, et le « un manque visible vaut
-> mieux qu'un total silencieusement faux » d'`assets/ajout.js`). On montre donc ce qui est vrai
-> — les ingrédients — et une phrase factuelle sur ce que le plat apporte. Le jour où ces plats
-> deviendront des recettes avec des grammages, `Natty.calcMac` fera le calcul, sans rien
-> changer au reste.
+> ⚠️ **AUCUNE MACRO N'EST ANNONCÉE TANT QU'IL N'Y A PAS DE GRAMMAGES.** Écrire « 620 kcal »
+> sous un pad thaï supposerait une recette et des quantités que personne n'a pesées : ce serait
+> un chiffre inventé, exactement ce que le reste de l'app refuse (règle 12, et le « un manque
+> visible vaut mieux qu'un total silencieusement faux » d'`assets/ajout.js`). On montre donc ce
+> qui est vrai — les ingrédients — et une phrase factuelle sur ce que le plat apporte.
+> ✅ **Et c'est arrivé, pour un plat** (2026-08-19, voir « Un plat qui se cuisine » ci-dessous) :
+> le ceviche porte des grammages pesés, ses macros sont donc calculées avec la table de
+> `assets/core.js` et affichées. La règle n'est pas levée, elle est appliquée : les 113 autres
+> plats n'ont toujours pas de quantités, et continuent d'afficher « Macros non estimées ».
+
+#### `rec` — un plat du catalogue qui se cuisine vraiment (2026-08-19)
+Demande de Pablo : « ajoute les étapes de ce plat que je puisse la réaliser dans
+l'application ». « Découvrir » montrait 114 plats appétissants dont **pas un seul** ne pouvait
+être cuisiné : on copiait leurs ingrédients dans ses courses, et c'était tout.
+
+Un plat peut désormais porter un champ **`rec`** — facultatif — au **schéma exact de la
+génération de la semaine** (`api/_generation.js`) : `{temps_min, portions, macros:{p,g,l,kcal},
+ingredients:[{em,nom,qte}], steps:[{illu,t,detail,qte,duree_min,tip}]}`. `NattyDecouverte.recette(cle)`
+le traduit, et **`assets/recette.js` comme `assets/planning.js` n'ont RIEN eu à apprendre** :
+une recette du catalogue et une recette générée sont le même objet. En inventer un format ici
+aurait demandé un traducteur, donc un second endroit où les deux peuvent diverger — le défaut
+d'`api/_nutrition.js`, encore.
+
+Deux boutons apparaissent alors dans le tiroir de la visionneuse, chacun **conditionné à la
+présence de son module** (un bouton qui ne peut rien faire est pire qu'un bouton absent) :
+- **« 👨‍🍳 Cuisiner ce plat »** → `NattyRecette.suivre()`, donc les étapes une par une, la photo
+  obligatoire, les 50 XP et la coche de la semaine. Il **ferme la visionneuse d'abord** : la
+  cinématique est en z-index 12000 et passerait par-dessus, mais `#nvue` resterait monté
+  dessous, avec son `overflow:hidden` sur le body et sa piste de photos en mémoire.
+- **« 📅 Dans ma semaine »** → `NattyPlanning.ajouter()`, au prochain créneau libre.
+  ⚠️ **La recette entière part sous `src`**, et c'est le point : c'est de là que
+  `depuisPlanRepas()` (`repas.html`) récupère les étapes. Sans elle, le plat arriverait au héros
+  de la semaine sans rien à dérouler — le défaut du 2026-08-16.
+
+⚠️ **`memeIngredient()` n'exige pas l'égalité stricte** entre le nom court du catalogue
+(« Piment ») et celui de la recette (« Piment rouge ») : sans ça, cinq pastilles portaient leur
+quantité et la sixième non, ce qui se lit comme une donnée manquante. Mais **pas une
+sous-chaîne non plus** — « ail » se trouve dans « volaille » (§7) : on n'accepte qu'un préfixe
+terminé par une espace, donc un mot entier.
+
+🔄 **Un seul plat en porte une** (`mex-ceviche-cabillaud`). Les 113 autres se comportent
+exactement comme avant, ce qui a été vérifié plutôt que supposé.
+
+> 🔴 ⚠️ **ET LA RANGÉE D'ACTIONS DE LA VISIONNEUSE DÉBORDAIT — DÉFAUT PRÉEXISTANT.**
+> `.nv-acts` était en `flex` sans `wrap`, boutons en `flex:none` : au-delà d'UNE action
+> secondaire elle sortait de l'écran. Mesuré à 375 px sur le cas réel de `social.html`
+> (4 actions), **720 px demandés pour 335 disponibles** — « Signaler » à x=456 et « Masquer ce
+> membre » à x=562, donc **les deux gestes de la guideline 1.2** hors champ, atteignables
+> seulement par un défilement HORIZONTAL dans un tiroir vertical que rien n'annonce. Et le
+> bouton principal écrasé à **86 × 96 px**, un rond où « Tout ajouter à mes courses » tenait sur
+> quatre lignes. Corrigé (`flex-wrap:wrap`, principal en `1 1 100%`, secondaires en `0 1 auto`) :
+> remesuré, **335 = 335, zéro débordement** à 2 comme à 4 actions. Même leçon que `.hero-foot`
+> (règle 39) — un débordement horizontal ne se lit pas dans le code, il se mesure.
 
 **La visionneuse a quitté ce fichier** (août 2026) : elle vit dans `assets/visionneuse.js`,
 partagée avec le fil social. `ouvrir({plats, index, titre})` ne fait plus que traduire un plat

@@ -269,10 +269,26 @@ var NattyVisionneuse = (function () {
     '#nvue .nv-ing:active{transform:scale(.95)}',
     '#nvue .nv-ing.on{box-shadow:var(--v-si);color:var(--v-mut)}',
     '#nvue .nv-ing .q{font-weight:600;color:var(--v-mut)}',
-    '#nvue .nv-acts{display:flex;gap:9px;margin-top:18px}',
-    '#nvue .nv-p{flex:1;background:var(--v-ink);color:var(--nt-on-ink,#fff);border-radius:999px;',
+    /* 🔴 ⚠️ LA RANGÉE D'ACTIONS DOIT POUVOIR PASSER À LA LIGNE (2026-08-19).
+       Elle était en `flex` sans `wrap`, avec des boutons en `flex:none` : au
+       delà d'UNE action secondaire, elle débordait. Mesuré à 375 px sur le cas
+       réel de `social.html` (4 actions) — la rangée réclamait **720 px pour
+       335 disponibles** : « Signaler » commençait à x=456 et « Masquer ce
+       membre » à x=562, donc hors d'un écran de 375. Et le bouton principal
+       se retrouvait écrasé à **86 px de large sur 96 de haut** : un rond
+       illisible où « Tout ajouter à mes courses » tenait sur quatre lignes.
+       Le tiroir étant en `overflow-x:auto`, ils restaient atteignables — par un
+       défilement HORIZONTAL à l'intérieur d'un tiroir vertical, que rien
+       n'annonce. Autant dire invisibles, et ce sont les deux gestes de la
+       guideline 1.2 qui étaient dans ce cas.
+       Le principal prend donc sa ligne (`flex:1 1 100%`) et les secondaires
+       s'enroulent dessous. Ils peuvent rétrécir (`0 1 auto`) : un libellé long
+       replie son texte plutôt que de sortir de l'écran. Même leçon que
+       `.hero-foot` de `repas.html` (règle 39). */
+    '#nvue .nv-acts{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}',
+    '#nvue .nv-p{flex:1 1 100%;background:var(--v-ink);color:var(--nt-on-ink,#fff);border-radius:999px;',
       'padding:16px;font-size:13.5px;font-weight:800}',
-    '#nvue .nv-s{flex:none;background:var(--v-bg);color:var(--v-ink);border-radius:999px;',
+    '#nvue .nv-s{flex:0 1 auto;background:var(--v-bg);color:var(--v-ink);border-radius:999px;',
       'padding:16px 20px;font-size:13.5px;font-weight:800;box-shadow:var(--v-so)}',
     '#nvue .nv-p:active,#nvue .nv-s:active{transform:scale(.98)}',
     '#nvue .nv-p[disabled]{opacity:.45}',

@@ -531,7 +531,62 @@ var NattyDecouverte = (function () {
           d:'Du poisson cru coupé en dés, « cuit » par le jus de citron vert, avec oignon rouge, coriandre et piment.',
           i:'🐟 Cabillaud|🍋 Citron vert|🧅 Oignon rouge|🌿 Coriandre|🌶️ Piment|🥑 Avocat',
           t:['Protéiné','Léger'],
-          nu:'Aucune cuisson, aucune matière grasse ajoutée : le plat le plus léger de cette page.' },
+          nu:'Aucune cuisson, aucune matière grasse ajoutée : le plat le plus léger de cette page.',
+          /* ⚠️ LE PREMIER PLAT DU CATALOGUE QUI PORTE UNE VRAIE RECETTE (2026-08-19,
+             demande de Pablo : « que je puisse la réaliser dans l'application »).
+             Voir l'encadré « Un plat qui se cuisine » plus bas : `rec` est
+             facultatif, et les 92 autres plats se comportent exactement comme
+             avant. Schéma identique à celui que rend la génération de la semaine
+             (`api/_generation.js`), pour que `assets/recette.js` et
+             `assets/planning.js` n'aient rien de particulier à apprendre.
+             Les macros sont PAR PORTION et calculées avec la table de
+             `assets/core.js` sur ces grammages-là — pas estimées à vue. */
+          rec:{
+            temps_min:40, portions:2,
+            macros:{ p:29, g:14, l:11, kcal:258 },
+            ingredients:[
+              { em:'🐟', nom:'Cabillaud',   qte:'300 g (dos extra-frais)' },
+              { em:'🍋', nom:'Citron vert', qte:'4 (≈ 120 ml de jus)' },
+              { em:'🧅', nom:'Oignon rouge', qte:'60 g (½)' },
+              { em:'🌶️', nom:'Piment',       qte:'10 g (1 petit)' },
+              { em:'🌿', nom:'Coriandre',   qte:'10 g (½ bouquet)' },
+              { em:'🥑', nom:'Avocat',      qte:'130 g (1)' },
+              { em:'🧂', nom:'Sel',         qte:'1 c. à café' }
+            ],
+            steps:[
+              { illu:'rincer', t:'Prépare le poisson', duree_min:3,
+                detail:'Rince le cabillaud à l\'eau froide, éponge-le au papier absorbant, puis passe le doigt à contre-sens de la chair pour repérer les arêtes.',
+                qte:[{ nom:'Cabillaud', qte:'300 g' }],
+                tip:'Il ne sera jamais chauffé : prends-le extra-frais du jour, ou surgelé décongelé la veille au réfrigérateur. Et sèche-le bien — un poisson mouillé dilue le jus et le ceviche devient fade.' },
+              { illu:'couper', t:'Détaille le poisson en dés', duree_min:7,
+                detail:'Des cubes réguliers d\'environ 1 cm, coupés à contre-fibre avec un couteau bien aiguisé.',
+                qte:[{ nom:'Cabillaud', qte:'300 g' }],
+                tip:'La taille des dés fixe le temps de marinade : 1 cm, c\'est un quart d\'heure. Plus gros, le cœur reste cru.' },
+              { illu:'couper', t:'Émince l\'oignon et le piment', duree_min:4,
+                detail:'Oignon rouge en lamelles les plus fines possibles, piment épépiné et haché menu.',
+                qte:[{ nom:'Oignon rouge', qte:'60 g' }, { nom:'Piment rouge', qte:'10 g' }],
+                tip:'Oignon trop mordant ? Cinq minutes dans l\'eau froide lui retirent son piquant sans lui retirer son croquant.' },
+              { illu:'assaisonner', t:'Presse les citrons et sale', duree_min:3,
+                detail:'Presse les citrons verts pour obtenir environ 120 ml de jus, ajoute le sel et remue jusqu\'à ce qu\'il fonde.',
+                qte:[{ nom:'Citron vert', qte:'4' }, { nom:'Sel', qte:'1 c. à café' }],
+                tip:'Le sel n\'est pas là pour le goût : c\'est lui qui fait rendre son eau au poisson et qui raffermit la chair.' },
+              { illu:'melanger', t:'Réunis tout dans un bol', duree_min:1,
+                detail:'Verse le jus sur les dés de poisson, ajoute l\'oignon et le piment, mélange pour que chaque morceau soit recouvert.',
+                qte:[{ nom:'Cabillaud', qte:'300 g' }, { nom:'Citron vert', qte:'120 ml' }],
+                tip:'Un bol en verre ou en inox, jamais en aluminium : le jus l\'attaque et laisse un goût métallique.' },
+              { illu:'refrigerer', t:'Laisse « cuire » au frais', duree_min:15,
+                detail:'Couvre le bol et mets-le au réfrigérateur. La chair passe de translucide à blanc opaque : c\'est ça, la cuisson.',
+                tip:'15 minutes pour un cœur encore nacré, 30 pour une chair cuite à cœur. Au-delà d\'une heure elle se dessèche et devient farineuse.' },
+              { illu:'couper', t:'Coupe l\'avocat au dernier moment', duree_min:3,
+                detail:'Dénoyaute l\'avocat et détaille-le en dés d\'1 cm, pendant que le poisson finit de mariner.',
+                qte:[{ nom:'Avocat', qte:'130 g' }],
+                tip:'Coupé trop tôt il noircit. Une cuillère du jus du bol suffit à l\'en empêcher si tu dois attendre.' },
+              { illu:'dresser', t:'Dresse et sers aussitôt', duree_min:2,
+                detail:'Retire une partie du jus, ajoute l\'avocat et la coriandre ciselée, mélange une dernière fois et sers bien frais.',
+                qte:[{ nom:'Avocat', qte:'130 g' }, { nom:'Coriandre', qte:'10 g' }],
+                tip:'Laisse deux cuillères de jus au fond de l\'assiette : c\'est la leche de tigre, et c\'est la meilleure partie.' }
+            ]
+          } },
         { cle:'mex-chili', n:'Chili con carne',
           d:'Bœuf haché, haricots rouges et tomates mijotés longuement avec cumin et piment, servis avec du riz.',
           i:'🥩 Bœuf haché|🫘 Haricots rouges|🍅 Tomate|🧅 Oignon|🌶️ Piment|🍚 Riz',
@@ -871,6 +926,132 @@ var NattyDecouverte = (function () {
   function uid() { return (window.Natty && Natty.USER_ID) || 'anon'; }
   function listeDispo() { return !!window.NattyListe && !!NattyListe.basculerExtra; }
 
+  /* ── Un plat qui se cuisine ─────────────────────────────────
+     Demande de Pablo (2026-08-19) : « ajoute les étapes de ce plat que je
+     puisse la réaliser dans l'application ». Jusqu'ici « Découvrir » montrait
+     93 plats appétissants dont pas un seul ne pouvait être cuisiné : on
+     pouvait copier leurs ingrédients dans ses courses, et rien d'autre.
+
+     ⚠️ `rec` EST FACULTATIF, ET C'EST TOUT LE MONTAGE. Un plat qui n'en porte
+     pas se comporte exactement comme avant — pas de macros annoncées, pas de
+     bouton en plus. La règle de ce fichier (« aucune macro n'est annoncée »)
+     n'est donc pas levée : elle tenait à l'absence de grammages, et elle
+     continue de valoir pour les 92 plats qui n'en ont pas. Un plat qui porte
+     une recette a, lui, des quantités pesées — les taire serait cacher une
+     donnée vraie.
+
+     ⚠️ LE SCHÉMA EST CELUI DE LA GÉNÉRATION (`api/_generation.js`), au champ
+     près : `{cle, nom, em, temps_min, macros:{p,g,l,kcal}, ingredients:[{em,
+     nom,qte}], steps:[{illu,t,detail,qte,duree_min,tip}]}`. C'est ce qui fait
+     qu'`assets/recette.js` et `assets/planning.js` n'ont RIEN eu à apprendre :
+     une recette du catalogue et une recette générée sont le même objet. En
+     inventer un ici aurait demandé un traducteur de plus, donc un second
+     endroit où les deux formats peuvent diverger. */
+  /* Le même ingrédient, écrit des deux côtés — la liste courte du catalogue
+     (« Piment ») et celle de la recette (« Piment rouge »).
+     ⚠️ UNE ÉGALITÉ STRICTE NE SUFFIT PAS, et c'est le premier défaut qu'a
+     rendu le banc : cinq pastilles portaient leur quantité, la sixième non,
+     ce qui se lit comme une donnée manquante alors que la recette l'avait.
+     ⚠️ MAIS PAS UNE SOUS-CHAÎNE NON PLUS : « ail » se trouve dans « volaille »
+     — le piège que `getNutri` a mis des mois à corriger (CLAUDE.md §7). On
+     n'accepte qu'un préfixe terminé par une espace, donc un mot entier. */
+  function memeIngredient(a, b) {
+    a = String(a || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    b = String(b || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    if (!a || !b) return false;
+    return a === b || a.indexOf(b + ' ') === 0 || b.indexOf(a + ' ') === 0;
+  }
+
+  function recette(p) {
+    if (typeof p === 'string') p = platParCle(p);
+    if (!p || !p.rec) return null;
+    var r = p.rec;
+    return {
+      /* La `cle` du catalogue est l'identifiant que `NattyRecette.identifiant()`
+         retiendra : c'est elle qui fait que la validation, les XP et la coche du
+         calendrier désignent bien CE plat, et pas un homonyme. */
+      cle: p.cle,
+      nom: p.n,
+      em: (p.ingr[0] && p.ingr[0].e) || '🍽️',
+      photo: img(p),
+      illu: illu(p),
+      pourquoi: p.d,
+      avantages: p.nu,
+      temps_min: r.temps_min || 0,
+      portions: r.portions || 1,
+      macros: r.macros || null,
+      ingredients: r.ingredients || [],
+      steps: r.steps || []
+    };
+  }
+
+  /* Les boutons du tiroir de la visionneuse, pour un plat qui a une recette.
+     ⚠️ Chacun est conditionné à la présence de SON module. Un bouton qui ne
+     peut rien faire est pire qu'un bouton absent — même règle que « Tout
+     ajouter à mes courses », éteint quand `NattyListe` manque. */
+  function actionsPour(it) {
+    var p = platParCle(it && it.cle);
+    if (!p || !p.rec) return [];
+    var actes = [];
+
+    if (window.NattyRecette && window.NattyRecette.suivre) {
+      actes.push({
+        txt: '👨‍🍳 Cuisiner ce plat',
+        on: function () {
+          var r = recette(p);
+          /* ⚠️ ON FERME LA VISIONNEUSE D'ABORD. La cinématique est en z-index
+             12000 et passerait donc par-dessus — mais `#nvue` resterait monté
+             sous elle, avec son `overflow:hidden` posé sur le body et sa piste
+             de photos en mémoire. Fermer rend le défilement, `suivre()` le
+             reprend aussitôt : les deux sont synchrones, dans cet ordre. */
+          fermer();
+          window.NattyRecette.suivre(r);
+        }
+      });
+    }
+
+    if (window.NattyPlanning && window.NattyPlanning.ajouter) {
+      actes.push({
+        txt: '📅 Dans ma semaine',
+        /* `el` est le bouton lui-même : l'écriture est asynchrone, c'est le
+           seul moyen de le relibeller au retour — la valeur rendue par `on()`
+           part avant que la base ait répondu. Même raison que dans
+           `social.html`, d'où ce chemin est repris. */
+        on: function (item, el) {
+          var r = recette(p);
+          window.NattyPlanning.ajouter({
+            nom: r.nom, em: r.em, photo: r.photo, illu: r.illu, cle: r.cle,
+            pourquoi: 'Repéré dans « Découvrir » — ' + p.paysNom + '.',
+            kcal: (r.macros && r.macros.kcal) || 0,
+            p: (r.macros && r.macros.p) || 0,
+            g: (r.macros && r.macros.g) || 0,
+            l: (r.macros && r.macros.l) || 0,
+            ingredients: r.ingredients,
+            /* ⚠️ LA RECETTE ENTIÈRE SOUS `src`, ET C'EST LE POINT. C'est de là
+               que `depuisPlanRepas()` (repas.html) récupère les étapes : sans
+               elle, le plat arriverait au héros de la semaine sans rien à
+               dérouler, le bouton dirait « Réaliser ce repas » et mènerait
+               droit à la photo — exactement le défaut du 2026-08-16. */
+            src: r,
+            source: 'decouverte'
+          }).then(function (res) {
+            if (!el) return;
+            if (res && res.ok) { el.textContent = 'Dans ma semaine ✓ · ' + res.quand; el.disabled = true; return; }
+            var raison = res && res.raison;
+            el.textContent = raison === 'doublon' ? 'Déjà prévu · ' + res.quand
+              : raison === 'sans-plan' ? 'Planifiez d\'abord votre semaine'
+              : raison === 'complet' ? 'Plus un créneau libre cette semaine'
+              : 'Impossible pour le moment';
+          }).catch(function () {
+            if (el) el.textContent = 'Impossible pour le moment';
+          });
+        }
+      });
+    }
+
+    return actes;
+  }
+
   function versItem(p) {
     return {
       cle: p.cle,
@@ -881,10 +1062,28 @@ var NattyDecouverte = (function () {
       emoji: '🍽️',
       kicker: p.drapeau + ' ' + p.paysNom,
       desc: p.d,
-      macros: null,
+      /* Les macros d'un plat SANS recette restent nulles — la visionneuse
+         affiche alors « Macros non estimées », ce qui est la vérité. Avec une
+         recette, elles sont calculées sur des grammages réels : `c` et non
+         `kcal`, c'est le vocabulaire de la visionneuse. */
+      macros: (p.rec && p.rec.macros)
+        ? { p: p.rec.macros.p, g: p.rec.macros.g, l: p.rec.macros.l, c: p.rec.macros.kcal }
+        : null,
       tags: p.t,
       note: p.nu,
-      ingredients: p.ingr.map(function (g) { return { nom: g.n, emoji: g.e }; })
+      /* Les quantités de la recette quand il y en a une : la pastille les
+         affiche (`q`), et on ne fait pas ses courses sans savoir combien
+         acheter. Le nom reste celui du catalogue, donc la clé de la liste de
+         courses ne change pas. */
+      ingredients: p.ingr.map(function (g) {
+        var q = '';
+        if (p.rec) {
+          (p.rec.ingredients || []).forEach(function (x) {
+            if (!q && memeIngredient(x.nom, g.n)) q = x.qte || '';
+          });
+        }
+        return { nom: g.n, emoji: g.e, q: q };
+      })
     };
   }
 
@@ -945,6 +1144,7 @@ var NattyDecouverte = (function () {
       index: o.index || 0,
       titre: o.titre || '',
       suite: o.cuisine ? suiteDesCuisines(o.cuisine) : null,
+      actions: actionsPour,
       courses: listeDispo() ? {
         contient: function (nom) { return NattyListe.contientExtra(uid(), nom); },
         basculer: function (nom, em) { return NattyListe.basculerExtra(uid(), nom, em); }
@@ -959,6 +1159,10 @@ var NattyDecouverte = (function () {
     cuisines: cuisines, cuisine: cuisine, parCuisine: parCuisine,
     tous: tous, parTag: parTag, tags: tags, selection: selection,
     platParCle: platParCle, img: img, vignette: vignette, illu: illu,
+    /* La recette d'un plat au schéma de `assets/recette.js`, ou null. Exposée
+       parce que c'est la seule façon de vérifier la conversion sans dérouler
+       la visionneuse — et parce qu'un autre écran voudra la lancer un jour. */
+    recette: recette,
     ouvrir: ouvrir, fermer: fermer,
     estOuverte: function () { return !!window.NattyVisionneuse && NattyVisionneuse.estOuverte(); }
   };
