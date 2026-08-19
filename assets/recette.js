@@ -586,7 +586,13 @@ window.NattyRecette = (function () {
       '#nrCine .nr-c-bar{flex:1;height:5px;border-radius:99px;background:var(--card,#ececef);overflow:hidden}',
       '#nrCine .nr-c-bar i{display:block;height:100%;background:var(--ink,#101014);border-radius:99px;',
       'transition:width .5s cubic-bezier(.22,1,.36,1)}',
-      '#nrCine .nr-c-num{font-size:11.5px;font-weight:800;color:var(--muted,#9d9da8);flex-shrink:0}',
+      /* Le compteur d'étapes est un BOUTON : c'est la seule affordance qui dit
+         qu'on peut revenir en arrière, sauter en avant ou tout reprendre. Sans
+         elle, `‹` et `→` sont les deux seuls chemins et il faut les deviner. */
+      '#nrCine .nr-c-num{font-size:11.5px;font-weight:800;color:var(--ink,#101014);flex-shrink:0;',
+      'border:0;cursor:pointer;font-family:inherit;background:var(--card,#ececef);',
+      'border-radius:var(--r-full,999px);padding:7px 11px;white-space:nowrap}',
+      '#nrCine .nr-c-num[hidden]{display:none}',
       '#nrCine .nr-c-stage{flex:1;position:relative;overflow:hidden}',
       '#nrCine .nr-plan{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;',
       'justify-content:center;gap:13px;padding:8px 26px 12px;text-align:center;overflow-y:auto;',
@@ -644,6 +650,35 @@ window.NattyRecette = (function () {
       '#nrCine .nr-alt{border:0;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:800;',
       'background:var(--card,#ececef);color:var(--ink,#101014);border-radius:var(--r-full,999px);',
       'padding:10px 17px}',
+
+      /* ── Le sommaire des étapes ──
+         Posé sur `#nrCine` et non dans `.nr-c-stage` : il doit couvrir AUSSI la
+         barre du bas, sinon on peut taper « Étape suivante » derrière lui. */
+      '#nrCine .nr-sum{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;',
+      'justify-content:flex-end}',
+      '#nrCine .nr-sum[hidden]{display:none}',
+      '#nrCine .nr-sum-bg{position:absolute;inset:0;background:rgba(10,10,14,.42)}',
+      '#nrCine .nr-sum-p{position:relative;max-height:78%;overflow-y:auto;-webkit-overflow-scrolling:touch;',
+      'background:var(--bg,#fff);border-radius:26px 26px 0 0;',
+      'padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 14px);',
+      'box-shadow:0 -14px 40px rgba(16,16,18,.22);',
+      'animation:nrSumUp .34s cubic-bezier(.22,1,.36,1) both}',
+      '@keyframes nrSumUp{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}',
+      '#nrCine .nr-sum-h{display:flex;align-items:center;justify-content:space-between;gap:10px;',
+      'margin:0 2px 12px}',
+      '#nrCine .nr-sum-t{font-size:15px;font-weight:800}',
+      '#nrCine .nr-sum-i{display:flex;width:100%;gap:11px;align-items:center;text-align:left;',
+      'border:0;cursor:pointer;font-family:inherit;background:var(--card,#f1f1f4);',
+      'border-radius:var(--r-md,18px);padding:11px 12px;margin-bottom:8px;color:var(--ink,#101014)}',
+      '#nrCine .nr-sum-i.on{background:var(--ink,#101014);color:var(--on-ink,#fff)}',
+      '#nrCine .nr-sum-i.on .nr-sum-d{color:inherit;opacity:.75}',
+      '#nrCine .nr-sum-i .nr-illu{width:30px;height:30px;color:inherit}',
+      '#nrCine .nr-sum-n{width:22px;flex-shrink:0;font-size:11.5px;font-weight:800;opacity:.6;',
+      'font-variant-numeric:tabular-nums}',
+      '#nrCine .nr-sum-c{flex:1;min-width:0}',
+      '#nrCine .nr-sum-l{font-size:13.5px;font-weight:800;line-height:1.35}',
+      '#nrCine .nr-sum-d{font-size:11.5px;font-weight:700;color:var(--muted,#8a8a95);margin-top:2px}',
+      '#nrCine .nr-sum-i.done .nr-sum-n{opacity:1;color:#34c759}',
 
       '#nrCine .nr-xp{font-size:42px;font-weight:900;letter-spacing:-1.4px;color:#34c759;',
       'font-variant-numeric:tabular-nums;line-height:1}',
@@ -924,12 +959,22 @@ window.NattyRecette = (function () {
   var ENTREES = ['glide', 'parallax', 'reveal'];
   var ov = null, etapes = [], idx = 0, recCourante = null, tid = null;
 
-  /* La cinématique a trois temps, et `idx` seul ne suffisait plus à les dire :
-     'etapes' (idx < etapes.length), 'photo' (idx === etapes.length, l'écran qui
-     réclame le plat en photo) et 'bravo' (la félicitation). Le bouton du bas
-     change de sens à chacun — d'où `suivant()` plutôt qu'un `aller(idx+1)` en
-     dur sur le clic. */
-  var phase = 'etapes';
+  /* La cinématique a QUATRE temps, et `idx` seul ne suffisait plus à les dire :
+     'intro' (la présentation du plat, avant toute étape), 'etapes'
+     (idx < etapes.length), 'photo' (idx === etapes.length, l'écran qui réclame
+     le plat en photo) et 'bravo' (la félicitation). Le bouton du bas change de
+     sens à chacun — d'où `suivant()` plutôt qu'un `aller(idx+1)` en dur.
+
+     🔴 ⚠️ 'intro' EXISTE PARCE QUE `realiser()` OUVRAIT SUR LA VALIDATION
+     (corrigé le 2026-08-19, signalé par Pablo : « quand je clique sur les
+     recettes il me demande de la valider alors que je l'ai pas encore
+     réalisée »). Un repas placé dans la semaine sans étapes — les trois plats
+     macro, et tout plat ajouté à la main depuis « Découvrir », dont `src` est
+     nul — arrivait droit sur « Photographiez votre plat pour valider ». On
+     ouvrait un repas pour le préparer, l'app demandait de le certifier fait.
+     La validation est maintenant TOUJOURS un second geste, jamais l'écran
+     d'accueil de quoi que ce soit. */
+  var phase = 'intro';
   var photoFile = null, photoUrl = null, dejaValidee = false;
   var inpCam = null, inpGal = null;
 
@@ -1002,19 +1047,34 @@ window.NattyRecette = (function () {
       '<div class="nr-c-top">'
       + '<button class="nr-x" aria-label="Fermer">✕</button>'
       + '<div class="nr-c-bar"><i style="width:0%"></i></div>'
-      + '<div class="nr-c-num">–</div>'
+      + '<button class="nr-c-num" type="button" aria-label="Toutes les étapes">–</button>'
       + '</div>'
       + '<div class="nr-c-stage"></div>'
       + '<div class="nr-c-cta">'
       + '<button class="nr-prev" aria-label="Étape précédente">‹</button>'
       + '<button class="nr-next">Commencer</button>'
-      + '</div>';
+      + '</div>'
+      + '<div class="nr-sum" hidden><div class="nr-sum-bg"></div>'
+      + '<div class="nr-sum-p"></div></div>';
     document.body.appendChild(ov);
     inpCam = mkPhotoInput(true);
     inpGal = mkPhotoInput(false);
     ov.querySelector('.nr-x').addEventListener('click', fermer);
     ov.querySelector('.nr-prev').addEventListener('click', function () { aller(idx - 1); });
     ov.querySelector('.nr-next').addEventListener('click', suivant);
+    ov.querySelector('.nr-c-num').addEventListener('click', ouvrirSommaire);
+    ov.querySelector('.nr-sum-bg').addEventListener('click', fermerSommaire);
+    /* Même délégation que pour les boutons d'un plan : le sommaire est
+       reconstruit à chaque ouverture (l'étape en cours change), rebrancher à
+       chaque fois finirait par oublier un bouton. */
+    ov.querySelector('.nr-sum-p').addEventListener('click', function (ev) {
+      var b = ev.target && ev.target.closest ? ev.target.closest('[data-nr-go]') : null;
+      if (!b) return;
+      var v = b.getAttribute('data-nr-go');
+      fermerSommaire();
+      if (v === 'photo') aller(etapes.length);
+      else aller(+v);
+    });
 
     /* Les boutons secondaires vivent DANS le plan, qui est reconstruit à chaque
        changement : on délègue plutôt que de rebrancher à chaque rendu — et
@@ -1027,17 +1087,55 @@ window.NattyRecette = (function () {
       if (a === 'photo' || a === 'reprendre') inpCam.click();
       else if (a === 'galerie') inpGal.click();
       else if (a === 'noter') noterLeRepas();
+      else if (a === 'revoir') aller(0);
+      else if (a === 'valider') aller(etapes.length);
     });
 
     // Flèches clavier : indispensable pour tester au navigateur, gratuit pour
     // qui utilise l'app sur ordinateur.
     document.addEventListener('keydown', function (ev) {
       if (!ov || !ov.classList.contains('on')) return;
+      if (ev.key === 'Escape') { if (sommaireOuvert()) fermerSommaire(); else fermer(); return; }
+      if (sommaireOuvert()) return;
       if (ev.key === 'ArrowRight') suivant();
       else if (ev.key === 'ArrowLeft') aller(idx - 1);
-      else if (ev.key === 'Escape') fermer();
     });
     return ov;
+  }
+
+  /* ── Le sommaire : revoir les étapes à sa guise ──────────────────────
+     ⚠️ IL EXISTE PARCE QUE `‹` ET `→` NE SUFFISENT PAS. Revenir de l'étape 8 à
+     la 2 demandait six taps, et rien à l'écran ne disait que c'était possible.
+     On cuisine en levant les yeux de la casserole : le chemin le plus court
+     vers « c'était quoi, déjà, la marinade ? » doit être un seul geste.
+     « Recommencer » y vit aussi — c'est le mot de Pablo, et il veut dire
+     re-suivre les étapes une à une, pas revalider. */
+  function sommaireOuvert() { return !!(ov && !ov.querySelector('.nr-sum').hidden); }
+
+  function fermerSommaire() { if (ov) ov.querySelector('.nr-sum').hidden = true; }
+
+  function ouvrirSommaire() {
+    if (!ov || !etapes.length) return;
+    var p = ov.querySelector('.nr-sum-p');
+    p.innerHTML =
+      '<div class="nr-sum-h"><div class="nr-sum-t">Les étapes</div>'
+      + '<button class="nr-alt" type="button" data-nr-go="0">↻ Recommencer</button></div>'
+      + etapes.map(function (e, i) {
+          var etat = (phase === 'etapes' && i === idx) ? ' on'
+                   : (i < idx || phase !== 'etapes' ? ' done' : '');
+          return '<button class="nr-sum-i' + etat + '" type="button" data-nr-go="' + i + '">'
+            + '<div class="nr-sum-n">' + (i < idx || phase !== 'etapes' ? '✓' : e.n) + '</div>'
+            + '<div class="nr-illu">' + dessin(e.action, e.aliment) + '</div>'
+            + '<div class="nr-sum-c"><div class="nr-sum-l">' + esc(e.titre) + '</div>'
+            + (e.duree_s ? '<div class="nr-sum-d">⏱ ' + libDuree(e.duree_s) + '</div>' : '')
+            + '</div></button>';
+        }).join('')
+      + '<button class="nr-sum-i" type="button" data-nr-go="photo">'
+      + '<div class="nr-sum-n">✓</div>'
+      + '<div class="nr-illu">' + dessin('dresser', '🍽️') + '</div>'
+      + '<div class="nr-sum-c"><div class="nr-sum-l">Valider avec une photo</div>'
+      + '<div class="nr-sum-d">Le dernier écran</div></div></button>';
+    ov.querySelector('.nr-sum').hidden = false;
   }
 
   function stopTimer() { if (tid) { clearInterval(tid); tid = null; } }
@@ -1087,8 +1185,51 @@ window.NattyRecette = (function () {
     return el;
   }
 
+  /* Rien ne doit être un cul-de-sac : depuis la photo comme depuis la
+     félicitation, on peut redérouler la recette étape par étape. C'est ce que
+     Pablo appelle « refaire » — re-suivre les étapes une à une, et non
+     revalider. Masqué s'il n'y a aucune étape : un bouton visible et inerte
+     est pire qu'un bouton absent. */
+  function boutonRevoir(libelle) {
+    if (!etapes.length) return '';
+    return '<button class="nr-alt" type="button" data-nr="revoir">' + libelle + '</button>';
+  }
+
   function nomCourant() {
     return (recCourante && recCourante.nom) ? recCourante.nom : 'Votre plat';
+  }
+
+  /* La présentation du plat : ce qu'on va faire, avec quoi, et un bouton qui
+     dit lequel des deux gestes suit — suivre les étapes, ou déclarer qu'on l'a
+     préparé. Voir l'encadré rouge de `phase` pour le défaut qu'il corrige. */
+  function planIntro() {
+    var el = document.createElement('div');
+    el.className = 'nr-plan';
+    el.setAttribute('data-e', 'glide');
+    var n = etapes.length, r = recCourante || {};
+    var ing = (r.ingredients || []).filter(function (x) { return x && (x.nom || x.name); });
+    var dur = n ? dureeTotale(etapes) : 0;
+
+    el.innerHTML =
+      '<div class="nr-big">' + dessin(n ? 'melanger' : 'dresser', r.em || r.emoji || '🍽️') + '</div>'
+      + (dejaValidee ? '<div class="nr-repr">✓ Déjà validée cette semaine</div>' : '')
+      + '<div class="nr-t">' + esc(nomCourant()) + '</div>'
+      + '<div class="nr-d">' + (n
+          ? n + ' étape' + (n > 1 ? 's' : '') + ', une par une'
+            + (dur ? ' · ' + libDuree(dur) + ' de cuisine' : '') + '.'
+          : 'Pas d’étapes détaillées pour ce repas : préparez-le à votre façon,'
+            + ' puis revenez le valider en photo.') + '</div>'
+      + (ing.length
+          ? '<div class="nr-chips">' + ing.slice(0, 12).map(function (x) {
+              return '<span class="nr-chip q">' + (x.em ? esc(x.em) + ' ' : '')
+                + esc(x.nom || x.name) + (x.qte ? ' · ' + esc(x.qte) : '') + '</span>';
+            }).join('') + '</div>'
+          : '')
+      /* Sans étapes, le seul geste est la validation — et il est déjà dans la
+         barre du bas. Avec des étapes, on peut vouloir sauter directement à la
+         photo : on a cuisiné hier soir et on vient juste cocher la case. */
+      + (n ? '<button class="nr-alt" type="button" data-nr="valider">Je l’ai déjà préparé ✓</button>' : '');
+    return el;
   }
 
   /* L'écran qui ferme la cuisine — et le seul qui décide si la recette compte.
@@ -1121,7 +1262,8 @@ window.NattyRecette = (function () {
         + '<div class="nr-d">' + esc(nomCourant()) + ' compte déjà pour cette semaine —'
         + ' pas de nouveaux XP. Photographiez votre plat pour le noter dans'
         + ' votre suivi.</div>'
-        + '<button class="nr-alt" type="button" data-nr="galerie">Choisir dans la galerie</button>';
+        + '<button class="nr-alt" type="button" data-nr="galerie">Choisir dans la galerie</button>'
+        + boutonRevoir('↻ Refaire les étapes');
       return el;
     }
 
@@ -1140,12 +1282,14 @@ window.NattyRecette = (function () {
             : 'Validez pour ajouter ' + XP_RECETTE + ' XP et cocher '
               + esc(nomCourant()) + ' dans votre semaine.') + '</div>'
         + '<button class="nr-alt" type="button" data-nr="reprendre">Reprendre la photo</button>'
+        + boutonRevoir('↻ Refaire les étapes')
       : '<div class="nr-big">' + dessin('dresser', '🍽️') + '</div>'
         + '<div class="nr-t">' + (sansEtapes ? 'Vous l’avez préparé ?' : 'C’est prêt 🎉') + '</div>'
         + '<div class="nr-d">Photographiez votre plat pour '
         + (sansEtapes ? 'valider ce repas' : 'valider la recette')
         + '. Sans photo, il n’est pas validé.</div>'
-        + '<button class="nr-alt" type="button" data-nr="galerie">Choisir dans la galerie</button>';
+        + '<button class="nr-alt" type="button" data-nr="galerie">Choisir dans la galerie</button>'
+        + boutonRevoir('↻ Refaire les étapes');
     return el;
   }
 
@@ -1201,7 +1345,8 @@ window.NattyRecette = (function () {
          valider une recette et noter un repas sont deux gestes distincts. */
       + (window.NattyAjout
           ? '<button class="nr-alt" type="button" data-nr="noter">Noter ce repas dans mon suivi →</button>'
-          : '');
+          : '')
+      + boutonRevoir('↻ Refaire les étapes');
     var n = el.querySelector('.nr-xp');
     if (n) compter(n, bilan.xp);
     return el;
@@ -1230,6 +1375,16 @@ window.NattyRecette = (function () {
         next = ov.querySelector('.nr-next'), prev = ov.querySelector('.nr-prev');
     var n = etapes.length;
 
+    /* Le compteur ouvre le sommaire : sans étape, il n'a rien à lister. */
+    num.hidden = !n;
+
+    if (phase === 'intro') {
+      bar.style.width = '3%';
+      num.textContent = n + ' étape' + (n > 1 ? 's' : '');
+      next.textContent = n ? 'Commencer les étapes →' : 'Je l’ai préparé ✓';
+      prev.style.visibility = 'hidden';
+      return;
+    }
     if (phase === 'bravo') {
       bar.style.width = '100%';
       num.textContent = '★';
@@ -1260,6 +1415,7 @@ window.NattyRecette = (function () {
   function aller(n, reprise) {
     if (!ov || n < 0 || n > etapes.length) return;
     stopTimer();
+    fermerSommaire();
     idx = n;
     phase = (idx === etapes.length) ? 'photo' : 'etapes';
     repeindre(phase === 'photo' ? planPhoto() : planEtape(etapes[idx], reprise));
@@ -1274,6 +1430,11 @@ window.NattyRecette = (function () {
   function suivant() {
     if (!ov) return;
     if (phase === 'bravo') { fermer(); return; }
+    /* Sans étape, `aller(0)` tombe sur `idx === etapes.length` : c'est donc
+       l'écran photo, et le bouton l'annonce (« Je l'ai préparé ✓ »). Une seule
+       ligne pour les deux cas, plutôt qu'un test qui pourrait diverger du
+       libellé — c'est exactement comme ça qu'un bouton finit par mentir. */
+    if (phase === 'intro') { aller(0); return; }
     if (phase === 'photo') {
       // ⚠️ Appel SYNCHRONE dans le geste : iOS n'ouvre la caméra que là. Un
       // `await` ou un `setTimeout` avant, et plus rien ne s'ouvre.
@@ -1316,9 +1477,13 @@ window.NattyRecette = (function () {
    * Ouvre la cinématique. Sans étape exploitable, ne fait rien et le dit :
    * un plein écran vide serait pire que pas d'écran.
    * Reprend là où l'on s'était arrêté (voir §5 bis).
+   * @param {Object} [opts] {recommencer:true} pour repartir de l'étape 1 —
+   *   c'est ce que veut dire « refaire la recette » : re-suivre les étapes une
+   *   à une, pas revenir là où on s'était arrêté la dernière fois.
    * @returns {boolean} true si elle s'est ouverte
    */
-  function suivre(r) {
+  function suivre(r, opts) {
+    opts = opts || {};
     etapes = normaliser(r);
     if (!etapes.length) return false;
     recCourante = r;
@@ -1329,11 +1494,13 @@ window.NattyRecette = (function () {
     /* ⚠️ `total` doit correspondre : une recette régénérée depuis n'a plus le
        même nombre d'étapes, et reprendre à l'index 6 d'une recette qui n'en a
        plus que 4 afficherait n'importe quoi. `progres()` rend alors null. */
-    var p = progres(r);
+    var p = opts.recommencer ? null : progres(r);
     var depart = (p && p.total === etapes.length) ? p.i : 0;
+    if (opts.recommencer) oublierProgres(r);
 
     document.body.style.overflow = 'hidden';   // jamais position:fixed (casse le scroll iOS)
     ov.classList.add('on');
+    fermerSommaire();
     stage().innerHTML = '';
     aller(depart, depart > 0);
     return true;
@@ -1349,6 +1516,12 @@ window.NattyRecette = (function () {
    * calendrier — on pouvait les regarder, pas les faire.
    *
    * Le contrat est le MÊME que pour une recette : rien ne compte sans photo.
+   *
+   * 🔴 ⚠️ ELLE N'OUVRE PLUS SUR L'ÉCRAN DE VALIDATION (2026-08-19). Le
+   * `aller(etapes.length)` qui était ici posait la question « vous l'avez
+   * préparé ? » à quelqu'un qui venait tout juste d'ouvrir le repas — voir
+   * l'encadré rouge de `phase`. On présente le plat, et la validation attend
+   * qu'on la demande.
    * @returns {boolean} toujours true — il y a toujours quelque chose à montrer.
    */
   function realiser(r) {
@@ -1359,20 +1532,25 @@ window.NattyRecette = (function () {
     dejaValidee = estValidee(r);
     document.body.style.overflow = 'hidden';
     ov.classList.add('on');
+    fermerSommaire();
     stage().innerHTML = '';
-    aller(etapes.length);          // = l'écran photo, quel que soit le nombre d'étapes
+    phase = 'intro';
+    idx = 0;
+    repeindre(planIntro());
+    majBarre();
     return true;
   }
 
   function fermer() {
     stopTimer();
     if (!ov) return;
-    var termine = phase !== 'etapes';
+    var termine = phase === 'photo' || phase === 'bravo';
+    fermerSommaire();
     ov.classList.remove('on');
     stage().innerHTML = '';
     document.body.style.overflow = '';
     oublierPhoto();
-    phase = 'etapes';
+    phase = 'intro';
     try {
       document.dispatchEvent(new CustomEvent('natty:recette-fermee', {
         detail: { recette: recCourante, termine: termine, etape: idx }

@@ -735,10 +735,23 @@ async function choisirHero(){
 }
 
 /* La recette telle que NattyRecette la reconnaît. Un plat macro n'a pas de
-   `src` : sa clé et son nom suffisent, et ce sont exactement ceux que lit
-   `assets/planning.js` pour cocher la case — donc une seule et même identité. */
+   `src` : sa clé et son nom suffisent à l'IDENTIFIER, et ce sont exactement ceux
+   que lit `assets/planning.js` pour cocher la case — donc une seule et même
+   identité.
+   ⚠️ Mais identifier ne suffit plus à l'AFFICHER : depuis que la cinématique
+   s'ouvre sur une présentation du plat (et non plus sur « photographiez-le pour
+   valider »), elle a besoin de quoi la remplir. Sans ces trois champs, l'écran
+   d'accueil d'un plat macro serait un titre seul au milieu du vide. */
 function refRecette(d){
-  return (d && d.src) || { cle: d && d.cle, nom: d && d.nom };
+  if (d && d.src) return d.src;
+  return {
+    cle: d && d.cle, nom: d && d.nom,
+    em: d && d.emoji,
+    pourquoi: (d && d.desc) || '',
+    ingredients: ((d && d.ingr) || []).map(function(x){
+      return { em:x.em, nom:x.nm, qte:x.qt };
+    })
+  };
 }
 
 function depuisRepas(meal){
@@ -816,11 +829,16 @@ function libelleCta(d, suivie){
      L'état, lui, n'est pas perdu : la pastille « ✓ Cuisinée » juste au-dessus
      le porte, et c'est sa place — un bouton dit ce qu'il fait, pas où l'on en
      est. */
-  if (estCuisinee(d)) return 'Refaire la recette';
+  /* ⚠️ LA REPRISE PASSE AVANT « REFAIRE », ET L'ORDRE N'EST PAS COSMÉTIQUE
+     (2026-08-19). Testée après, une recette validée puis relancée et quittée en
+     cours de route annonçait « Refaire la recette » — donc « on repart de
+     l'étape 1 » — pendant que `suivre()` reprenait à l'étape 6. Le bouton
+     décrivait le contraire de ce qu'il faisait. */
   if (window.NattyRecette && d.src){
     var pr = NattyRecette.progres(d.src);
     if (pr) return 'Reprendre · étape ' + (pr.i + 1) + '/' + pr.total;
   }
+  if (estCuisinee(d)) return 'Refaire la recette';
   return suivie ? 'Revoir les étapes' : 'Démarrer';
 }
 
@@ -1013,9 +1031,11 @@ function brancher(){
     var dejaSuivie = !!suivies[actif];
 
     /* Un plat placé par la planification n'a pas d'étapes : il n'y a rien à
-       guider, mais il y a tout à valider. `realiser()` ouvre directement
-       l'écran photo — même contrat que pour une recette, rien ne compte sans
-       elle. Repli sur la fiche si le module n'est pas chargé. */
+       guider, mais il y a tout à préparer. `realiser()` ouvre la présentation
+       du plat — ce qu'il contient, et un bouton « Je l'ai préparé ✓ » qui mène
+       à la photo. ⚠️ Elle ouvrait l'écran de validation DIRECTEMENT jusqu'au
+       2026-08-19 : on tapait pour cuisiner, l'app demandait de certifier que
+       c'était fait. Repli sur la fiche si le module n'est pas chargé. */
     if (d.plan && !(d.steps && d.steps.length)){
       if (window.NattyRecette && NattyRecette.realiser) NattyRecette.realiser(refRecette(d));
       else if (window.NattyPlanning) NattyPlanning.detail(d.plan);
@@ -1218,7 +1238,7 @@ function preparerSiDemande(){
        l'écran Repas se composer entre les deux.
        `suivre()` rend `false` quand il n'y a aucune étape à jouer — on le laisse
        décider plutôt que de recompter nous-mêmes ce qu'il sait déjà compter ;
-       un repas placé sans étapes se valide alors au lieu de se suivre. */
+       un repas placé sans étapes s'ouvre alors sur sa présentation. */
     if (d.src && NattyRecette.suivre(d.src)) return;
     if (d.plan && NattyRecette.realiser) NattyRecette.realiser(refRecette(d));
   } finally {

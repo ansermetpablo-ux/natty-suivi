@@ -899,8 +899,55 @@ L'étape d'une cuisson n'a de sens que sur le téléphone posé à côté de la 
   sinon : deux calculs de semaine qui divergent, c'est une recette validée qui disparaît de la
   carte (le défaut déjà payé entre `suivi.html` et `assets/liste.js`).
 
+#### 🔴 La validation n'est plus la porte d'entrée (2026-08-19)
+Signalé par Pablo : « quand je clique sur les recettes il me demande de la valider alors que je
+l'ai pas encore réalisée », puis « quand j'entends le refaire c'est pouvoir ressuivre les étapes
+1 à 1 ». Deux défauts distincts, et le premier était structurel.
+
+**1. `realiser()` ouvrait sur l'écran photo.** Un repas placé dans la semaine **sans étapes**
+arrivait droit sur « Photographiez votre plat pour valider ce repas ». Et ce n'est pas un cas de
+bord : la planification place **3 plats macro pour 2 recettes**, et `NattyPlanning.ajouter()`
+range `src: r.src || null` — donc **tout plat ajouté à la main depuis « Découvrir » n'a pas
+d'étapes non plus**. On ouvrait un repas pour le préparer, l'app demandait de certifier qu'il
+l'était.
+La cinématique a donc un quatrième temps, **`phase === 'intro'`** : nom du plat, ce qu'il
+contient, le nombre d'étapes s'il y en a, et **un bouton qui dit lequel des deux gestes suit** —
+« Commencer les étapes → » ou « Je l'ai préparé ✓ ». La validation est désormais **toujours un
+second geste**, jamais l'écran d'accueil de quoi que ce soit.
+> ⚠️ **`refRecette()` de `repas.html` devait grossir avec.** Elle ne rendait que `{cle, nom}` —
+> assez pour IDENTIFIER un plat macro (c'est ce que lit `assets/planning.js` pour cocher sa
+> case), pas pour l'AFFICHER. L'écran d'accueil aurait été un titre seul au milieu du vide,
+> d'où `em`, `pourquoi` et `ingredients` (traduits de `{em,nm,qt}` vers `{em,nom,qte}`).
+> ⚠️ **Sans étape, `aller(0)` tombe sur `idx === etapes.length`, donc sur l'écran photo.** Une
+> seule ligne couvre les deux cas dans `suivant()`, plutôt qu'un test qui pourrait diverger du
+> libellé du bouton — c'est exactement comme ça qu'un bouton finit par mentir (le défaut
+> « 📸 Prendre la photo » de 2026-08-15).
+
+**2. « Refaire » veut dire re-suivre les étapes une à une**, pas revalider. Trois manques :
+- l'écran photo et la félicitation étaient des **culs-de-sac** — on ne pouvait plus redérouler
+  la recette. Ils portent maintenant **« ↻ Refaire les étapes »** (`data-nr="revoir"` → `aller(0)`),
+  masqué quand il n'y a aucune étape : un bouton visible et inerte est pire qu'un bouton absent ;
+- revenir de l'étape 8 à la 2 demandait **six taps**, et rien ne disait que c'était possible. Le
+  compteur de la barre du haut est devenu un **bouton** qui ouvre **le sommaire** : toutes les
+  étapes, celle du moment mise en avant, les faites cochées, « ↻ Recommencer » et « Valider avec
+  une photo ». Un seul geste vers n'importe quel point de la recette — on cuisine en levant les
+  yeux de la casserole ;
+- `suivre(r, {recommencer:true})` repart de l'étape 1 en oubliant la reprise.
+> ⚠️ **LA REPRISE PASSE AVANT « REFAIRE » DANS `libelleCta()`, ET CE N'EST PAS COSMÉTIQUE.**
+> Testée après, une recette validée puis relancée et quittée en route annonçait « Refaire la
+> recette » — donc « on repart de l'étape 1 » — pendant que `suivre()` reprenait à l'étape 6.
+> Vérifié au banc sur les quatre états : Démarrer · Revoir les étapes · Refaire la recette ·
+> **Reprendre · étape 3/4**.
+> ⚠️ Le sommaire est posé sur **`#nrCine`**, pas dans `.nr-c-stage` : il doit couvrir AUSSI la
+> barre du bas, sinon on tape « Étape suivante » derrière lui. Et `aller()` le referme lui-même
+> — trois chemins y mènent, un seul endroit doit le fermer.
+> ⚠️ **Piège de banc** : mesurer `.nr-t` juste après un changement de plan lit le plan
+> **sortant** (360 ms d'animation) — et le panneau paraît translucide si la capture tombe
+> pendant `nrSumUp`. Lire le **dernier** `.nr-plan`, et recapturer.
+
 **`realiser(repas)` — valider sans avoir d'étapes à suivre** (2026-08-15). Seconde entrée de la
-cinématique, qui ouvre **directement** l'écran photo.
+cinématique, qui ouvrait **directement** l'écran photo (voir l'encadré ci-dessus : elle ouvre
+maintenant l'intro).
 > ⚠️ **Sans elle, trois repas de la semaine sur cinq étaient hors d'atteinte.** La
 > planification place 3 plats macro pour 2 recettes, et un plat macro n'a pas d'étapes :
 > `suivre()` rend `false` et rend la main. On pouvait donc les regarder, pas les faire — ni
@@ -3534,6 +3581,16 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - 🔄 **Non vérifié sur téléphone ni avec une vraie session** : tout a tourné contre des
   doublures de `Natty`, `NattyReco` et `NattyGardeManger`. Restent à juger sur un iPhone : la
   vraie caméra depuis l'écran de fin, le rythme de la félicitation, et le rendu de la photo.
+- ✅ **La validation n'est plus la porte d'entrée** (2026-08-19) : `realiser()` ouvre une
+  présentation du plat, « ↻ Refaire les étapes » figure sur la photo et sur la félicitation, et
+  le compteur de la barre du haut ouvre un **sommaire** qui mène à n'importe quelle étape, à
+  « Recommencer » ou à la validation. Détail et pièges en §3.
+  Vérifié en navigateur (375 × 812, thèmes clair ET sombre), deux bancs : le module — intro d'un
+  plat sans étapes avec ses ingrédients, bouton « Je l'ai préparé ✓ », sommaire (saut à l'étape
+  3, états cochés/en cours, saut à la validation), « Refaire les étapes » depuis la photo ET
+  depuis la félicitation, validation réelle (+50 XP) puis réouverture qui repart de l'étape 1 ;
+  et `repas.html` — `refRecette` et `libelleCta` **extraits du vrai fichier** (une copie ne
+  prouverait que la copie), quatre libellés sur quatre états.
 - 🔄 **La validation vit en `localStorage`, donc par appareil.** Cuisiner sur son téléphone puis
   ouvrir l'app sur un autre montrera une semaine non cochée. C'est le seul manque du chantier :
   le porter en base demanderait soit une colonne dans `planning_semaine.plan` (synchronisée,
