@@ -481,6 +481,11 @@ window.NattyJournee = (function () {
       'font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;opacity:0;',
       'transition:opacity .5s ease;overflow:hidden;-webkit-font-smoothing:antialiased}',
       '#njour.on{opacity:1}',
+      /* ⚠️ UN PLEIN ÉCRAN QUI S'EFFACE EN OPACITÉ AVALE ENCORE LES TAPS.
+         `fermer()` retire `.on` puis ne détache le nœud qu'à la fin du fondu : il
+         reste plein écran, invisible et cliquable pendant 0,2 à 0,5 s. C'est la
+         demi-seconde où « j'appuie et il ne se passe rien » (2026-08-25). */
+      '#njour:not(.on){pointer-events:none}',
       '#njour *,.njb *{box-sizing:border-box}',
       '#njour button{font-family:inherit;cursor:pointer;border:none;',
       '-webkit-tap-highlight-color:transparent;transition:transform .16s ease}',
@@ -1400,19 +1405,16 @@ window.NattyJournee = (function () {
     if (!window.Natty || !Natty.USER_ID) return;
     setTimeout(async function () {
       if (ouvert) return;
-      if (document.getElementById('nplan')) return;          // la planification est ouverte
-      if (document.getElementById('nattyAjout')) return;      // un plat est en cours d'ajout
+      /* ⚠️ UN SEUL TEST, ET IL VIT DANS `assets/core.js`. Cette garde énumérait
+         `#nplan`, `#nattyAjout` et `#nrCine` à la main — elle ignorait donc la
+         question du matériel et celle du garde-manger, toutes deux posées AVANT
+         que la génération ne pose son marqueur : le guide s'ouvrait par-dessus,
+         le tap partait dans le mauvais écran, et il fallait recommencer.
+         Elle testait aussi `#nattyAjout` par sa présence, alors que le module le
+         construit une fois et le réutilise : dès le premier plat ajouté, le
+         guide ne se proposait plus de la journée. */
+      if (Natty.ecranOccupe()) return;
       if (window.NattyGeneration && NattyGeneration.enCours()) return;
-      /* ⚠️ Une préparation en cours, et c'est le cas qu'on vient de créer :
-         « Suivre la recette » ouvre `repas.html?preparer=1`, qui lance la
-         cinématique tout de suite — le guide ne doit pas venir se poser dessus
-         6,5 s plus tard, sur la page où l'on a envoyé l'utilisateur.
-         ⚠️ Tester la CLASSE et non l'existence : `recette.js` crée `#nrCine`
-         une fois pour toutes et le rouvre en lui reposant `.on`. Le seul
-         `getElementById` serait vrai même cinématique fermée, et le guide ne
-         s'ouvrirait alors plus jamais sur l'écran Repas. */
-      var nr = document.getElementById('nrCine');
-      if (nr && nr.classList.contains('on')) return;
 
       var premiere = !vuLong();
       if (premiere) { ouvrir(); return; }

@@ -127,9 +127,16 @@ var Natty = (function () {
     return refreshEnCours;
   }
 
-  async function jeton() {
+  /**
+   * @param {boolean} [forcer] renouveler AVANT d'avoir l'air périmé. Sert
+   *   après un 401 de nos propres routes : elles n'ont pas le tri
+   *   `PGRST301` / `42501` de `appel()`, elles ne peuvent que constater le
+   *   refus. Sans ce chemin, un jeton mort d'une minute faisait échouer la
+   *   génération, et seul un second appui la faisait passer.
+   */
+  async function jeton(forcer) {
     if (!SESSION) return null;
-    if (!expireBientot(SESSION)) return SESSION.access_token;
+    if (!forcer && !expireBientot(SESSION)) return SESSION.access_token;
     var s = await rafraichirSession();
     return s ? s.access_token : null;
   }
@@ -730,6 +737,11 @@ var Natty = (function () {
       '-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;',
       'transition:opacity .2s ease;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif}',
       '#nconf.on{opacity:1}',
+      /* ⚠️ UN PLEIN ÉCRAN QUI S'EFFACE EN OPACITÉ AVALE ENCORE LES TAPS.
+         `fermer()` retire `.on` puis ne détache le nœud qu'à la fin du fondu : il
+         reste plein écran, invisible et cliquable pendant 0,2 à 0,5 s. C'est la
+         demi-seconde où « j'appuie et il ne se passe rien » (2026-08-25). */
+      '#nconf:not(.on){pointer-events:none}',
       '#nconf .box{width:100%;max-width:320px;background:var(--nt-bg,#fff);border-radius:22px;',
       'padding:24px 22px 18px;text-align:center;transform:scale(.94);',
       'transition:transform .24s cubic-bezier(.22,1,.36,1);',
@@ -827,12 +839,61 @@ var Natty = (function () {
     return false;
   }
 
+  /* ═══ Qui possède l'écran en ce moment ? ══════════════════════
+     Trois modules s'invitent seuls après l'arrivée sur un écran — la
+     planification (5 s), le guide du jour (6,5 s), le bilan du soir (9 s) — et
+     chacun tenait SA liste des plein écran devant lesquels il doit se taire.
+     Trois listes, donc trois qui divergent : le guide ne connaissait ni la
+     question du matériel ni celle du garde-manger, la planification ne
+     connaissait pas le guide, aucun ne connaissait la cinématique de recette.
+     Un plein écran s'ouvrait donc par-dessus une question déjà posée, le tap
+     partait dans le mauvais, et il fallait s'y reprendre à plusieurs fois.
+     La liste vit ici, et nulle part ailleurs.
+
+     ⚠️ LA PRÉSENCE DANS LE DOM NE DIT RIEN. `#nattyAjout`, `#nvue`, `#nrCine`,
+     `#ncmd`, `#nmcf` sont construits UNE fois et réutilisés : refermés, ils
+     restent dans la page en `display:none`. Les trois gardes les testaient par
+     `getElementById` — donc, dès le premier plat ajouté, elles se croyaient
+     occupées à vie et plus rien ne se proposait de la journée. On lit le style
+     calculé, pas la présence.
+
+     ⚠️ Un écran EN TRAIN DE S'EFFACER compte encore comme occupé : son opacité
+     est intermédiaire pendant le fondu, et s'ouvrir dedans donnerait deux
+     plein écran qui se croisent. */
+  var PLEIN_ECRAN = [
+    'nplan', 'njour', 'nbil', 'nattyAjout', 'nvue', 'ndec', 'ngen', 'ngenQ',
+    'nmat', 'nconf', 'nrCine', 'npchauffe', 'nplf', 'ncmd', 'nmcf',
+    'mjOverlay', 'nnotifInv'
+  ];
+
+  function estVisible(el) {
+    if (!el) return false;
+    var s = window.getComputedStyle(el);
+    if (s.display === 'none' || s.visibility === 'hidden') return false;
+    var o = parseFloat(s.opacity);
+    return isNaN(o) ? true : o > 0.01;
+  }
+
+  /**
+   * @returns {string|null} l'identifiant du plein écran ouvert, ou null si
+   *          l'écran est libre. Rend une chaîne plutôt qu'un booléen : quand
+   *          un déclencheur se tait, on veut pouvoir dire devant quoi.
+   */
+  function ecranOccupe() {
+    for (var i = 0; i < PLEIN_ECRAN.length; i++) {
+      if (estVisible(document.getElementById(PLEIN_ECRAN[i]))) return PLEIN_ECRAN[i];
+    }
+    return null;
+  }
+
   return {
     SB_URL: SB_URL, SB_KEY: SB_KEY, CLD_CLD: CLD_CLD, CLD_PRE: CLD_PRE, API: API,
     TOKEN: TOKEN, USER_ID: USER_ID,
     sbFetch: sbFetch, sbPost: sbPost, sbPatch: sbPatch,
     calcMac: calcMac, getNutri: getNutri, goto: goto, requireAuth: requireAuth,
     jour: jour, aMinuit: aMinuit,
+    // Un plein écran est-il déjà ouvert ? (voir l'encadré ci-dessus)
+    ecranOccupe: ecranOccupe,
     // Questions et avertissements, sans dialogue natif (voir plus haut).
     confirmer: confirmer, alerte: alerte,
     // Session : entetes() sert aux appels qui n'utilisent pas les helpers

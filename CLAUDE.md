@@ -3382,6 +3382,58 @@ dominant — il ne désigne jamais l'ingrédient secondaire d'un plat, seulement
 Vérifié en A/B sur 10 cas de non-régression (dont « Salade de poulet », « Pâte de campagne »,
 « Riz au lait », « chocolat noir »).
 
+### 🔴 UN PLEIN ÉCRAN REFERMÉ AVALAIT ENCORE LES TAPS — ✅ corrigé (2026-08-25)
+Signalé par Pablo : « quelquefois il faut s'y reprendre à plusieurs fois pour ajouter un plat,
+et surtout pour générer les conseils et planifier ». Ce n'était **pas** trois bugs, c'en était
+un seul, et il était dans le CSS.
+
+Tous les plein écran de l'app se referment en **retirant `.on`**, donc en fondu d'opacité, et
+ne détachent leur nœud qu'à la **fin** du fondu (220 à 520 ms plus tard). Pendant ce temps
+l'élément est `opacity:0` — invisible — mais toujours `position:fixed;inset:0` et
+**parfaitement cliquable**. C'est la demi-seconde où l'on appuie et où il ne se passe rien.
+**Mesuré en A/B dans le navigateur** : règle retirée → `opacity:0`, `pointer-events:auto`, et
+`elementFromPoint` au centre de l'écran rend **`npchauffe`** ; règle en place → le tap passe.
+
+Neuf écrans étaient concernés — `#nconf`, `#ngen`, `#ngenQ`, `#njour`, `#nplan`, `#nplf`,
+`#nmat`, `#npchauffe`, `#nnotifInv`. **Un seul l'avait déjà : `#nbil`**, qui portait
+`pointer-events:none` dès l'origine. Correctif : `'#xxx:not(.on){pointer-events:none}'`.
+> ⚠️ **`#npchauffe` sort en AJOUTANT `.part`, pas en retirant `.on`** : le seul `:not(.on)` ne
+> l'aurait jamais couvert — c'est-à-dire pas le cas qui compte, celui où l'on découvre l'étape 1
+> de la recette. Sa règle est `'#npchauffe:not(.on),#npchauffe.part{pointer-events:none}'`.
+> ⚠️ Toute nouvelle règle `#xxx.on{opacity:1}` doit venir avec la sienne — voir règle 41 (§9).
+
+### 🔴 Trois gardes « un écran est-il déjà ouvert ? », donc trois qui divergent — ✅ corrigé
+Même signalement, seconde cause. La planification (5 s), le guide du jour (6,5 s) et le bilan
+du soir (9 s) s'invitent seuls après l'arrivée sur un écran, et **chacun tenait sa liste** des
+plein écran devant lesquels se taire. Deux défauts en sont sortis :
+- **Aucune des trois ne connaissait `#nmat` ni `#ngenQ`** — les questions du matériel et du
+  garde-manger, posées par `NattyGeneration.lancer()` **AVANT** qu'il ne pose son marqueur.
+  `enCours()` répondait donc « non » pendant tout ce temps, et un guide plein écran venait se
+  poser par-dessus la question. Le tap partait dans le mauvais écran, la génération ne
+  démarrait jamais, et il fallait recommencer.
+- **Elles testaient `getElementById`, or la moitié de ces nœuds sont RÉUTILISÉS.**
+  `#nattyAjout`, `#nvue`, `#nrCine`, `#ncmd`, `#nmcf` sont construits une fois et restent dans
+  la page en `display:none` une fois refermés : dès le premier plat ajouté, les trois gardes se
+  croyaient occupées **à vie** et plus rien ne se proposait de la journée. (`journee.js` avait
+  déjà appris la leçon pour `#nrCine` — et pour lui seul.)
+
+La liste vit désormais dans **`Natty.ecranOccupe()`** (`assets/core.js`), qui lit le **style
+calculé** et non la présence. Un écran en train de s'effacer compte encore comme occupé.
+
+### 🔴 `NattyPlanning.ouvrir()` pouvait rester coincé — ✅ corrigé (2026-08-25)
+`ouvert = true` était posé, puis quatre `await` réseau s'enchaînaient **sans filet**. La moindre
+exception laissait le drapeau levé ET `#nplan` monté sur sa scène d'attente : `ouvrir()` sortait
+alors par son `if (ouvert) return` **à vie**, jusqu'au rechargement de la page. « Je clique sur
+Planifier et il ne se passe rien », définitivement. Le corps est sous `try/catch`, qui referme.
+
+### `/api/generer-conseils` n'avait aucun recours sur un 401 — ✅ corrigé (2026-08-25)
+`Natty.appel()` sait renouveler la session quand PostgREST refuse un jeton (§7, le tri
+`PGRST301` / `42501`). **Nos propres routes, elles, ne pouvaient que constater le refus** : un
+jeton mort depuis une minute — l'app rouverte après une nuit, typiquement — sortait « Le serveur
+a répondu 401 », et le seul remède connu de l'utilisateur était d'appuyer une seconde fois, ce
+qui marchait puisque le renouvellement avait eu lieu entre-temps. `envoyer()` force désormais le
+renouvellement (`Natty.jeton(true)`, nouveau paramètre) et rejoue **une** fois.
+
 ### Icône PWA cassée (`/icon-192.png` inexistant)
 **Problème** : `manifest.json`, `suivi.html` et `onboarding.html` référencent `/icon-192.png`, fichier absent de la racine (seuls `icon-512.png` et les `natty-icon-*.png` existent).
 **Solution** : soit ajouter un `icon-192.png` à la racine, soit faire pointer ces références vers `/natty-icon-192.png` (qui existe déjà).
@@ -4274,6 +4326,16 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
     pas n'en reçoit aucune : le chiffre reste sur sa valeur de départ, c'est-à-dire qu'il annonce
     le contraire de ce qu'il célèbre. Doubler d'un `setTimeout` qui pose la valeur finale — même
     précaution que la classe `on` de `Natty.confirmer`.
+41. **Un plein écran qui se referme en opacité DOIT porter `pointer-events:none`.** Le nœud
+    survit à son fondu : invisible et cliquable, il avale les taps pendant 0,2 à 0,5 s — et
+    c'est exactement « j'appuie et il ne se passe rien ». Toute règle `#xxx.on{opacity:1}`
+    vient avec son `#xxx:not(.on){pointer-events:none}` (et sa variante si la sortie se fait
+    en ajoutant une classe plutôt qu'en retirant `.on`).
+42. **« Un écran est-il déjà ouvert ? » se demande à `Natty.ecranOccupe()`, jamais à
+    `getElementById`.** La moitié des plein écran sont construits une fois et réutilisés : ils
+    restent dans la page, en `display:none`. Les tester par leur présence, c'est se croire
+    occupé à vie dès le premier usage. Et un module qui s'invite tout seul ne tient pas sa
+    propre liste — trois listes, c'est trois qui divergent.
 
 32. **Push automatique autorisé** (décidé le 2026-07-26) : une fois un commit créé sur ce repo, `git push origin main` peut être fait directement, **sans redemander confirmation à chaque fois**. Authentification via clé SSH dédiée (`~/.ssh/id_ed25519_github`, clé "Claude Accès" sur GitHub, remote `origin` en SSH). Cette autorisation est spécifique à ce repo — ne pas l'étendre à un autre dépôt ou à d'autres actions destructrices (force-push, reset, etc., qui restent soumises à confirmation).
 

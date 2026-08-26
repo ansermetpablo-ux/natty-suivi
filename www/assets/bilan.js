@@ -1523,9 +1523,10 @@ window.NattyBilan = (function () {
     if (!duSemaine && !duJour) return;
 
     setTimeout(function () {
-      if (document.getElementById('nbil')) return;
-      if (document.getElementById('nplan') || document.getElementById('njour')
-          || document.getElementById('nattyAjout') || document.getElementById('ndec')) return;
+      // Même garde que le guide du jour et la planification, au même endroit
+      // (`assets/core.js`) : trois listes tenues à la main, c'est trois listes
+      // qui divergent — celle-ci ignorait les deux questions de la génération.
+      if (Natty.ecranOccupe()) return;
       if (window.NattyGeneration && NattyGeneration.enCours && NattyGeneration.enCours()) return;
       lancer(duSemaine);
     }, delai == null ? 9000 : delai);

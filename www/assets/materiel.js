@@ -391,6 +391,11 @@ var NattyMateriel = (function () {
       'padding-top:calc(30px + env(safe-area-inset-top,0px));opacity:0;',
       'transition:opacity .4s ease;overflow-y:auto;-webkit-overflow-scrolling:touch}',
       '#nmat.on{opacity:1}',
+      /* ⚠️ UN PLEIN ÉCRAN QUI S'EFFACE EN OPACITÉ AVALE ENCORE LES TAPS.
+         `fermer()` retire `.on` puis ne détache le nœud qu'à la fin du fondu : il
+         reste plein écran, invisible et cliquable pendant 0,2 à 0,5 s. C'est la
+         demi-seconde où « j'appuie et il ne se passe rien » (2026-08-25). */
+      '#nmat:not(.on){pointer-events:none}',
       '#nmat .nmat-em{font-size:52px;text-align:center;margin-bottom:16px}',
       '#nmat h2{font-size:25px;font-weight:900;color:var(--nt-ink,#1a1a2e);text-align:center;',
       'letter-spacing:-.6px;line-height:1.2;margin:0}',

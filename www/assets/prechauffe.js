@@ -120,6 +120,14 @@ window.NattyPrechauffe = (function () {
       'font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;',
       'opacity:0;transition:opacity .22s ease}',
       '#npchauffe.on{opacity:1}',
+      /* ⚠️ UN PLEIN ÉCRAN QUI S'EFFACE EN OPACITÉ AVALE ENCORE LES TAPS.
+         `fermer()` retire `.on` puis ne détache le nœud qu'à la fin du fondu : il
+         reste plein écran, invisible et cliquable pendant 0,2 à 0,5 s. C'est la
+         demi-seconde où « j'appuie et il ne se passe rien » (2026-08-25).
+         ⚠️ Et ici la sortie se fait en AJOUTANT `.part`, pas en retirant `.on` :
+         le seul `:not(.on)` ne l'aurait jamais couverte — c'est-à-dire pas le
+         cas qui compte, celui où l'on découvre l'étape 1 de la recette. */
+      '#npchauffe:not(.on),#npchauffe.part{pointer-events:none}',
       // La sortie fond vers la cinématique déjà montée dessous : on ne voit
       // donc jamais l'écran Repas, seulement la première étape qui apparaît.
       '#npchauffe.part{opacity:0;transition:opacity .3s ease}',

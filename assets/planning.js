@@ -465,6 +465,11 @@ window.NattyPlanning = (function () {
       'font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;opacity:0;',
       'transition:opacity .5s ease;overflow:hidden;-webkit-font-smoothing:antialiased}',
       '#nplan.on{opacity:1}',
+      /* ⚠️ UN PLEIN ÉCRAN QUI S'EFFACE EN OPACITÉ AVALE ENCORE LES TAPS.
+         `fermer()` retire `.on` puis ne détache le nœud qu'à la fin du fondu : il
+         reste plein écran, invisible et cliquable pendant 0,2 à 0,5 s. C'est la
+         demi-seconde où « j'appuie et il ne se passe rien » (2026-08-25). */
+      '#nplan:not(.on){pointer-events:none}',
       '#nplan *{box-sizing:border-box}',
 
       /* Une scène = un plan. Elle occupe tout, elle défile si elle déborde, et
@@ -1352,11 +1357,26 @@ window.NattyPlanning = (function () {
     etat = { prenom: '', conseils: null, recettes: [], global: null, prepare: null, plan: null };
     monter();
     scene({ html: illu('aube'), auto: 60000 });     // le temps de charger le prénom
-    etat.prenom = await prenom();
-    try { etat.conseils = window.NattyGeneration ? await NattyGeneration.dejaPrete() : null; } catch (e) {}
-    if (etat.conseils) etat.recettes = recettesDe(etat.conseils);
-    if (opts.depuis === 'calendrier' && await lire()) { etat.plan = await lire(); }
-    scBonjour();
+    /* ⚠️ `ouvert` NE DOIT PAS POUVOIR RESTER COINCÉ À `true`. Il était posé
+       ici, puis quatre `await` réseau s'enchaînaient sans filet : la moindre
+       exception (session refusée, table absente, coupure) laissait le drapeau
+       levé ET `#nplan` monté sur sa scène d'attente. `ouvrir()` sortait alors
+       par son `if (ouvert) return` À VIE — donc « je clique sur Planifier et
+       il ne se passe rien », jusqu'au rechargement de la page. Un second
+       appui doit toujours pouvoir repartir. */
+    try {
+      etat.prenom = await prenom();
+      try { etat.conseils = window.NattyGeneration ? await NattyGeneration.dejaPrete() : null; } catch (e) {}
+      if (etat.conseils) etat.recettes = recettesDe(etat.conseils);
+      if (opts.depuis === 'calendrier') {
+        var p = await lire();
+        if (p) etat.plan = p;
+      }
+      scBonjour();
+    } catch (e) {
+      fermer();
+      ouvert = false;
+    }
   }
 
   /**
@@ -1370,8 +1390,10 @@ window.NattyPlanning = (function () {
     if (dejaVu()) return;
     setTimeout(async function () {
       if (ouvert || dejaVu()) return;
+      // Un plein écran déjà ouvert — la liste vit dans `assets/core.js`, pour
+      // qu'elle ne diverge pas de celles du guide et du bilan.
+      if (Natty.ecranOccupe()) return;
       if (window.NattyGeneration && NattyGeneration.enCours()) return;
-      if (document.getElementById('nattyAjout')) return;   // un plat est en cours d'ajout
       var plan = await lire();
       if (plan) { marquerVu(); return; }
       ouvrir();
@@ -1610,6 +1632,7 @@ window.NattyPlanning = (function () {
       '-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);',
       'transition:opacity .22s ease;font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif}',
       '#nplf.on{opacity:1}',
+      '#nplf:not(.on){pointer-events:none}',
       '#nplf .sh{width:100%;max-width:var(--col,480px);background:var(--metal-black,#0b0c0e);',
       'border-radius:28px 28px 0 0;padding:10px 20px calc(26px + env(safe-area-inset-bottom,0px));',
       'transform:translateY(24px);transition:transform .28s cubic-bezier(.22,1,.36,1);',

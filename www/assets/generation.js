@@ -65,6 +65,11 @@ window.NattyGeneration = (function () {
       'padding-top:calc(32px + env(safe-area-inset-top,0px));',
       'padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}',
       '#ngen.on{opacity:1}',
+      /* ⚠️ UN PLEIN ÉCRAN QUI S'EFFACE EN OPACITÉ AVALE ENCORE LES TAPS.
+         `fermer()` retire `.on` puis ne détache le nœud qu'à la fin du fondu : il
+         reste plein écran, invisible et cliquable pendant 0,2 à 0,5 s. C'est la
+         demi-seconde où « j'appuie et il ne se passe rien » (2026-08-25). */
+      '#ngen:not(.on){pointer-events:none}',
 
       /* L'anneau : une seule forme, qui tourne lentement, avec l'emoji de
          l'étape en cours au centre. Signe de vie, sans agitation. */
@@ -122,6 +127,7 @@ window.NattyGeneration = (function () {
       'padding-top:calc(30px + env(safe-area-inset-top,0px));transition:opacity .4s ease;',
       'overflow-y:auto;-webkit-overflow-scrolling:touch}',
       '#ngenQ.on{opacity:1}',
+      '#ngenQ:not(.on){pointer-events:none}',
       '#ngenQ .qem{font-size:52px;text-align:center;margin-bottom:16px;',
       'animation:ngenPulse 3s ease-in-out infinite}',
       '#ngenQ h2{font-size:25px;font-weight:900;color:var(--nt-ink,#1a1a2e);text-align:center;',
@@ -675,16 +681,38 @@ window.NattyGeneration = (function () {
     try { jeton = await Natty.jeton(); } catch (e) {}
     if (!jeton) { echec('Session expirée — reconnectez-vous, puis réessayez.'); return; }
 
-    fetch(Natty.API + '/api/generer-conseils', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jeton },
-      body: JSON.stringify(corps)
-    }).then(function (r) {
-      if (r.ok) return;
-      // Erreur explicite du serveur : elle, on peut la dire précisément.
-      return r.json().catch(function () { return {}; }).then(function (d) {
-        echec(d.error || ('Le serveur a répondu ' + r.status + '.'));
+    /* ⚠️ UN 401 SE REJOUE UNE FOIS, ET C'EST CE QUI MANQUAIT POUR QUE ÇA MARCHE
+       DU PREMIER COUP. `Natty.appel()` sait renouveler la session quand
+       PostgREST refuse un jeton ; nos propres routes, elles, n'avaient aucun
+       recours : un jeton mort depuis une minute — l'app rouverte après une
+       nuit, typiquement — sortait « Le serveur a répondu 401 », et le seul
+       remède connu de l'utilisateur était d'appuyer une seconde fois, ce qui
+       marchait puisque le renouvellement avait eu lieu entre-temps. On force
+       donc le renouvellement et on rejoue, une fois. Une seule : si le
+       deuxième refus tombe, c'est que la session est vraiment finie, et le
+       dire vaut mieux que boucler. */
+    function envoi(j) {
+      return fetch(Natty.API + '/api/generer-conseils', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + j },
+        body: JSON.stringify(corps)
       });
+    }
+
+    envoi(jeton).then(async function (r) {
+      if (r.ok) return;
+      if (r.status === 401 || r.status === 403) {
+        var neuf = null;
+        try { neuf = await Natty.jeton(true); } catch (e) {}
+        if (neuf && neuf !== jeton) {
+          var r2 = await envoi(neuf);
+          if (r2.ok) return;
+          r = r2;
+        }
+      }
+      // Erreur explicite du serveur : elle, on peut la dire précisément.
+      var d = await r.json().catch(function () { return {}; });
+      echec(d.error || ('Le serveur a répondu ' + r.status + '.'));
     }).catch(function () {
       /* Requête coupée (60 s de WebView) ou connexion perdue : le serveur, lui,
          continue. On ne déclare donc PAS l'échec ici — la surveillance tranche. */

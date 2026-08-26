@@ -315,6 +315,11 @@ var NattyNotifs = (function () {
     '#nnotifInv{position:fixed;inset:0;z-index:900;display:flex;align-items:flex-end;justify-content:center;' +
       'background:rgba(16,16,20,.42);opacity:0;transition:opacity .22s}' +
     '#nnotifInv.on{opacity:1}' +
+    /* ⚠️ UN PLEIN ÉCRAN QUI S'EFFACE EN OPACITÉ AVALE ENCORE LES TAPS.
+       `fermer()` retire `.on` puis ne détache le nœud qu'à la fin du fondu : il
+       reste plein écran, invisible et cliquable pendant 0,2 à 0,5 s. C'est la
+       demi-seconde où « j'appuie et il ne se passe rien » (2026-08-25). */
+    '#nnotifInv:not(.on){pointer-events:none}' +
     '#nnotifInv .ni-sheet{width:100%;max-width:480px;background:#fff;border-radius:28px 28px 0 0;' +
       'padding:26px 22px calc(26px + env(safe-area-inset-bottom,0px));text-align:center;' +
       'transform:translateY(100%);transition:transform .28s cubic-bezier(.22,1,.36,1)}' +
