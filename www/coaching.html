@@ -163,7 +163,9 @@ async function loadRdv(){
   var labels = {onboarding:'Rendez-vous onboarding', suivi:'Rendez-vous de suivi'};
   if (next){
     var d = new Date(next.date_rdv);
-    var MOIS=['janv.','fevr.','mars','avr.','mai','juin','juil.','aout','sept.','oct.','nov.','dec.'];
+    // ⚠️ Les abréviations françaises portent leurs accents : « fevr. » et « aout »
+    //    se lisent comme des fautes de frappe, pas comme des abréviations.
+    var MOIS=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
     document.getElementById('rdvBadge').textContent = d.getDate()+' '+MOIS[d.getMonth()]+' '+(next.heure||'');
     document.getElementById('rdvTitle').textContent = labels[next.type_rdv] || 'Consultation';
   } else {
@@ -175,7 +177,10 @@ async function loadRdv(){
 
 function renderWeek(rdvs){
   var lu = getWeekStart(weekOffset), di = new Date(lu); di.setDate(lu.getDate()+6);
-  var MC=['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'];
+  // ⚠️ PAS de coupe à trois lettres : « 10 aou - 16 aou 2026 » se lit comme un bug
+  //    d'affichage. Les abréviations françaises usuelles ont un point, et les mois
+  //    courts s'écrivent en entier.
+  var MC=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
   document.getElementById('wkTitle').textContent = lu.getDate()+' '+MC[lu.getMonth()]+' - '+di.getDate()+' '+MC[di.getMonth()]+' '+di.getFullYear();
   var today = new Date(); today.setHours(0,0,0,0);
   var jN = ['Lu','Ma','Me','Je','Ve','Sa','Di'], html = '';
