@@ -4752,17 +4752,23 @@ elle atteint `login.html`, Google **et** Apple affichés.
 > porte `arm64`** — quelque chose le réécrit à la construction. Vérifier sur le binaire, jamais
 > sur la source.
 
-**🔴 Trois blocages restants, aucun n'est du code** (runbook complet : voir l'artefact
+✅ **Le retour de la connexion Apple est en place**, et c'était le risque n° 1 :
+`com.nattynutrition.app://oauth-callback` est **rendu tel quel** par
+`/auth/v1/verify`, tandis que deux adresses témoins retombent sur le Site URL. Le retour web
+(`/login.html?oauth=1`) passe aussi.
+> ⚠️ **Sonder sur `/auth/v1/verify`, JAMAIS sur `/auth/v1/authorize`.** Ce dernier renvoie 302
+> vers le fournisseur et **recopie n'importe quelle adresse**, y compris `com.autreapp://x` :
+> il ne discrimine rien et fait conclure « invérifiable » à tort — erreur commise ici avant de
+> relire la note de mémoire qui le disait déjà.
+> ℹ️ Le **Site URL est repassé en `https://natty-suivi.vercel.app`** (il valait le scheme mort
+> `com.natty.app://` le 14 août) : les emails d'auth sans `redirect_to` propre ne tombent plus
+> sur une page noire.
+
+**🔴 Deux blocages restants, aucun n'est du code** (runbook complet : voir l'artefact
 « Natty passe en revue », 2026-08-26) :
-1. **`com.nattynutrition.app://oauth-callback` doit être dans les Redirect URLs de Supabase.**
-   Sans lui, « Continuer avec Apple » — le bouton que l'examinateur teste en premier depuis la
-   4.8 — revient sur le Site URL, en silence. ⚠️ **Invérifiable de l'extérieur** :
-   `/auth/v1/authorize` renvoie 302 vers le fournisseur et **recopie telle quelle** n'importe
-   quelle adresse demandée, y compris une adresse manifestement hors liste (mesuré sur quatre
-   adresses, dont `com.autreapp://x`). La validation n'a lieu qu'au retour.
-2. **Un compte de démonstration garni** (semaine générée, repas photographiés) dans *App Review
+1. **Un compte de démonstration garni** (semaine générée, repas photographiés) dans *App Review
    Information* : la connexion est obligatoire, un envoi sans identifiants revient sous 24 h.
-3. **Les captures 1320 × 2868** — elles dépendent du compte de démonstration.
+2. **Les captures 1320 × 2868** — elles dépendent du compte de démonstration.
 
 **Deux réponses à préparer** : pourquoi Stripe et non l'achat intégré (l'abonnement paie des
 **repas livrés**, donc 3.1.3(e) ; à écrire dans les notes d'examen, sinon la 3.1.1 tombe), et le
