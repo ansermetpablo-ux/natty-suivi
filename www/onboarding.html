@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<title>Natty · Bienvenue</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <!-- Aucun zoom : ni pincée, ni double-tap (le <meta viewport> ne suffit pas,
      iOS l'ignore). Synchrone et dans le <head>, comme theme.js. -->
@@ -465,8 +466,35 @@ function tdee(b) {
   return Math.round(b * ({ sedentaire:1.2, leger:1.375, modere:1.55, actif:1.725 }[A.activite] || 1.375));
 }
 
+/* ⚠️ « Continuer sans abonnement » NE FERMAIT QUE LA FEUILLE, et il n'y avait
+   RIEN DERRIÈRE : le profil est enregistré, `save()` a masqué le CTA
+   « Terminer → » et la flèche de retour, et la feuille d'offre était donc la
+   dernière chose cliquable de la page. Sur le web on s'en sortait par la
+   flèche du navigateur ; dans la WebView native il n'y en a pas — la toute
+   première inscription se terminait sur un écran mort.
+   Le CTA est donc RENDU à la fermeture, en « Entrer dans Natty → », et il est
+   aussi remis en place à l'ouverture de la feuille : si quoi que ce soit
+   empêchait ce clic d'arriver, la sortie serait déjà là. */
 function skipOffre() {
   document.getElementById('offreOverlay').classList.remove('on');
+  rendreLaSortie();
+  entrerDansApp();
+}
+
+function rendreLaSortie() {
+  var b = document.getElementById('btnC');
+  if (!b) return;
+  b.style.display = '';
+  b.disabled = false;
+  b.textContent = 'Entrer dans Natty →';
+  b.onclick = entrerDansApp;
+}
+
+/* menu.html existe des deux côtés : à la racine c'est le fichier lui-même,
+   dans le bundle natif c'est le relais vers index.html. */
+function entrerDansApp() {
+  if (window.Natty && Natty.goto) Natty.goto('menu.html');
+  else window.location.href = 'menu.html';
 }
 
 async function save() {
@@ -568,7 +596,10 @@ async function save() {
       }).catch(function(){});
     } catch(emailErr) {}
 
-    setTimeout(() => { document.getElementById('offreOverlay').classList.add('on'); }, 1000);
+    setTimeout(() => {
+      document.getElementById('offreOverlay').classList.add('on');
+      rendreLaSortie();
+    }, 1000);
 
   } catch(e) {
     toast('Erreur : ' + e.message, 'err');
