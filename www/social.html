@@ -582,20 +582,27 @@ var ENVIES = {
   'Épicé':'🌶️', 'Réconfortant':'🍲', 'Riche en fibres':'🌾'
 };
 
-/* ⚠️ Un plat du quotidien n'a pas de photo : `vignette()` rend `null`, et une
-   `<img src="null">` poserait l'icône cassée du navigateur au milieu de la
-   rangée. On teste donc la vignette AVANT de poser la balise, et on retombe sur
-   l'illustration au trait de `assets/plats-illu.js`. */
+/* ⚠️ AUCUN PLAT SANS PHOTO DANS CET ÉCRAN (demande de Pablo, 2026-08-25).
+   Le tri se fait en amont, dans `assets/decouverte.js` : ses fonctions de
+   parcours (`tous`, `cuisines`, `parTag`, `selection`) ne rendent plus que les
+   plats photographiés. Le test ci-dessous est le filet du bout de la chaîne —
+   une vignette `null` ne pose AUCUNE carte, plutôt qu'une `<img src="null">`
+   qui afficherait l'icône cassée du navigateur au milieu de la rangée.
+   ⚠️ `illu()` n'est donc plus appelé ici. Il continue de servir ailleurs — le
+   calendrier de `assets/planning.js` et l'arc de `assets/journee.js` doivent
+   bien montrer QUELQUE CHOSE pour un plat placé qui n'a pas de photo. */
 function fondDish(p){
   var v = NattyDecouverte.vignette(p);
-  if (v) return '<img src="' + v + '" alt="" loading="lazy"'
+  if (!v) return '';
+  return '<img src="' + v + '" alt="" loading="lazy"'
     + ' onload="this.classList.add(\'vu\')">';
-  return '<div class="di">' + (NattyDecouverte.illu(p) || '') + '</div>';
 }
 
 function carteDish(p){
+  var f = fondDish(p);
+  if (!f) return '';
   return '<div class="dish" data-plat="' + esc(p.cle) + '">'
-    + fondDish(p)
+    + f
     + '<span class="fl">' + p.drapeau + '</span><div class="sh"></div>'
     + '<div class="nm">' + esc(p.n) + '</div></div>';
 }
@@ -611,12 +618,16 @@ function rendreDecouverte(){
   $('railPays').innerHTML = pays.map(function(c){
     // La photo de couverture est celle du premier plat : un choix, pas un
     // hasard — la liste est ordonnée, la vignette ne changera donc jamais
-    // d'un chargement à l'autre.
+    // d'un chargement à l'autre. Et depuis que les plats sans photo sont
+    // masqués, ce premier plat en a forcément une.
+    // ⚠️ Le pluriel se décide : « Le quotidien » n'a plus qu'un seul plat
+    // photographié, et « 1 plats » se lit comme un bug de gabarit.
+    var n = c.plats.length;
     return '<div class="pays" data-pays="' + esc(c.cle) + '">'
       + fondDish(c.plats[0])
       + '<div class="vo"><div class="fl">' + c.drapeau + '</div>'
       + '<div class="nm">' + esc(c.nom) + '</div>'
-      + '<div class="nb">' + c.plats.length + ' plats</div></div></div>';
+      + '<div class="nb">' + n + (n > 1 ? ' plats' : ' plat') + '</div></div></div>';
   }).join('');
 
   $('envies').innerHTML = NattyDecouverte.tags().map(function(t){
@@ -1256,8 +1267,10 @@ function majAmisPlusTard(){
 /* Plus de clic sur le fond : une page pleine n'a pas de fond. Le retour est
    dans la barre collante en haut. */
 
-/* « Tout voir » : les 66 plats à la suite, dans l'ordre du catalogue —
-   donc pays par pays, ce qui reste un parcours et non un sac. */
+/* « Tout voir » : tous les plats PHOTOGRAPHIÉS à la suite, dans l'ordre du
+   catalogue — donc pays par pays, ce qui reste un parcours et non un sac.
+   Le compte n'est pas écrit ici : `tous()` le donne, et il a déjà changé
+   trois fois. */
 $('btnMonde').addEventListener('click', function(){
   if (window.NattyDecouverte) NattyDecouverte.ouvrir({ plats: NattyDecouverte.tous(), titre: 'Tous les plats' });
 });

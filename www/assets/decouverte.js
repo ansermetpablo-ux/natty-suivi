@@ -855,14 +855,41 @@ var NattyDecouverte = (function () {
     return window.NattyPlatsIllu.svg(p.svg, o);
   }
 
-  function cuisines() { return CUISINES; }
+  /* ⚠️ CE QUI SE PARCOURT N'EST PAS TOUT LE CATALOGUE (demande de Pablo,
+     2026-08-25 : « dans Social il ne doit y avoir aucune recette sans photo,
+     celles qui n'en ont pas doivent être masquées »).
+     Les 20 plats du quotidien portent une illustration au trait faute d'avoir
+     été photographiés (règle §9 #24 : on ne va pas chercher d'images sur le
+     web). Ils RESTENT au catalogue — la génération de la semaine y pioche ses
+     plats macro, et `api/_catalogue.js` en dépend — mais ils ne se montrent
+     plus : une rangée où un plat sur cinq est un dessin ne se lit pas comme un
+     catalogue de cuisine, elle se lit comme des images qui n'ont pas chargé.
+
+     ⚠️ `platParCle()` CHERCHE TOUJOURS DANS `TOUS`, ET C'EST STRUCTUREL. Un
+     plat déjà placé dans une semaine, ou choisi par la génération, doit rester
+     résolvable : sans lui, `visuelRecette()` et `assets/planning.js`
+     retomberaient sur les deux photos de démonstration — donc sur l'assiette
+     d'un AUTRE plat (le défaut du 2026-08-16). Masquer n'est pas supprimer.
+
+     ⚠️ Une cuisine qui n'a plus un seul plat photographié disparaît de la
+     rangée du haut : un carton de pays qui s'ouvre sur rien serait pire que
+     son absence. « Le quotidien » n'y garde donc qu'un plat, le pita — le seul
+     du groupe qui ait été photographié. */
+  var VUS = TOUS.filter(function (p) { return !p.svg; });
+  var CUISINES_VUES = CUISINES.map(function (c) {
+    var pl = c.plats.filter(function (p) { return !p.svg; });
+    if (pl.length === c.plats.length) return c;
+    return { cle: c.cle, nom: c.nom, drapeau: c.drapeau, accroche: c.accroche, plats: pl };
+  }).filter(function (c) { return c.plats.length > 0; });
+
+  function cuisines() { return CUISINES_VUES; }
   function cuisine(cle) {
-    return CUISINES.filter(function (c) { return c.cle === cle; })[0] || null;
+    return CUISINES_VUES.filter(function (c) { return c.cle === cle; })[0] || null;
   }
-  function tous() { return TOUS; }
+  function tous() { return VUS; }
   function parCuisine(cle) { var c = cuisine(cle); return c ? c.plats : []; }
   function parTag(tag) {
-    return TOUS.filter(function (p) { return p.t.indexOf(tag) > -1; });
+    return VUS.filter(function (p) { return p.t.indexOf(tag) > -1; });
   }
   function tags() { return TAGS; }
   function platParCle(cle) {
@@ -887,7 +914,7 @@ var NattyDecouverte = (function () {
 
   function selection(n) {
     var h = graine((window.Natty && Natty.jour) ? Natty.jour() : 'natty');
-    var suite = TOUS.map(function (p, i) {
+    var suite = VUS.map(function (p, i) {
       h = (h * 1103515245 + 12345 + i) >>> 0;
       return { p: p, r: h };
     }).sort(function (a, b) { return a.r - b.r; });
@@ -1105,17 +1132,20 @@ var NattyDecouverte = (function () {
      (« léger »), depuis la sélection du jour ou depuis une recherche, il n'y a
      pas de « pays suivant » qui veuille dire quelque chose. */
   function suiteDesCuisines(cleDepart) {
+    // `CUISINES_VUES` et non `CUISINES` : l'enchaînement doit suivre l'ordre de
+    // la rangée du haut, qui ne montre plus les cuisines sans photo. Sur
+    // `CUISINES` il aurait ouvert une série vide au passage du quotidien.
     var i = -1;
-    CUISINES.forEach(function (c, k) { if (c.cle === cleDepart) i = k; });
+    CUISINES_VUES.forEach(function (c, k) { if (c.cle === cleDepart) i = k; });
     if (i < 0) return null;
     var vue = i;
     return function (serie) {
       // `serie` est celle qu'on vient de finir : au premier appel elle est
       // nulle, et le point de départ est la cuisine ouverte.
       if (serie && serie.cle) {
-        CUISINES.forEach(function (c, k) { if (c.cle === serie.cle) vue = k; });
+        CUISINES_VUES.forEach(function (c, k) { if (c.cle === serie.cle) vue = k; });
       }
-      var c = CUISINES[(vue + 1) % CUISINES.length];
+      var c = CUISINES_VUES[(vue + 1) % CUISINES_VUES.length];
       if (!c || !c.plats.length) return null;
       return {
         cle: c.cle,
@@ -1137,7 +1167,7 @@ var NattyDecouverte = (function () {
    */
   function ouvrir(o) {
     o = o || {};
-    var plats = (o.plats && o.plats.length) ? o.plats : TOUS;
+    var plats = (o.plats && o.plats.length) ? o.plats : VUS;
     if (!window.NattyVisionneuse) return;
     NattyVisionneuse.ouvrir({
       items: plats.map(versItem),
