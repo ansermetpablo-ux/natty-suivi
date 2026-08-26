@@ -4732,6 +4732,48 @@ l'écran est caché**, une seule socket vivante, et au retour à l'écran on rep
 en rechargeant la conversation (le temps réel a pu manquer des messages). Le protocole, lui,
 reste l'ancien `phx_join` — voir §7.
 
+### ✅ La première archive App Store — faite et vérifiée (2026-08-26)
+Produite sur le Mac de Pablo, Xcode 26.3 : `ARCHIVE SUCCEEDED` puis `EXPORT SUCCEEDED` en
+méthode `app-store-connect`. L'IPA (15 Mo) est sur le bureau — `~/Desktop/Natty-1.0-build1.ipa`.
+
+**Relevé sur le binaire exporté, pas sur le dépôt** : signature `Apple Distribution: Natty
+(DJLW82GU5A)`, profil *iOS Team Store*, `aps-environment: production`, `get-task-allow 0`,
+`beta-reports-active 1` (donc TestFlight), `com.nattynutrition.app` 1.0 (1), arm64,
+`MinimumOSVersion 15.0`, iPhone seul, portrait seul, `ITSAppUsesNonExemptEncryption 0`,
+`PrivacyInfo.xcprivacy` embarqué, icône 1024 RVB **sans couche alpha** (la cause n° 1 des
+`ITMS-90717`). Le bundle web de l'IPA est identique à `www/`. Lancée sur iPhone 17 Pro simulé :
+elle atteint `login.html`, Google **et** Apple affichés.
+
+> ⚠️ **Le certificat de distribution n'apparaît PAS dans `security find-identity -p codesigning`**
+> (seuls les deux « Apple Development » y sont) et pourtant `codesign` le trouve : ne pas
+> conclure de cette liste qu'il manque, comme je l'ai fait pendant dix minutes. C'est
+> l'**export** qui tranche, et lui seul.
+> ⚠️ **`ios/App/App/Info.plist` déclare `UIRequiredDeviceCapabilities: armv7`, mais l'IPA
+> porte `arm64`** — quelque chose le réécrit à la construction. Vérifier sur le binaire, jamais
+> sur la source.
+
+**🔴 Trois blocages restants, aucun n'est du code** (runbook complet : voir l'artefact
+« Natty passe en revue », 2026-08-26) :
+1. **`com.nattynutrition.app://oauth-callback` doit être dans les Redirect URLs de Supabase.**
+   Sans lui, « Continuer avec Apple » — le bouton que l'examinateur teste en premier depuis la
+   4.8 — revient sur le Site URL, en silence. ⚠️ **Invérifiable de l'extérieur** :
+   `/auth/v1/authorize` renvoie 302 vers le fournisseur et **recopie telle quelle** n'importe
+   quelle adresse demandée, y compris une adresse manifestement hors liste (mesuré sur quatre
+   adresses, dont `com.autreapp://x`). La validation n'a lieu qu'au retour.
+2. **Un compte de démonstration garni** (semaine générée, repas photographiés) dans *App Review
+   Information* : la connexion est obligatoire, un envoi sans identifiants revient sous 24 h.
+3. **Les captures 1320 × 2868** — elles dépendent du compte de démonstration.
+
+**Deux réponses à préparer** : pourquoi Stripe et non l'achat intégré (l'abonnement paie des
+**repas livrés**, donc 3.1.3(e) ; à écrire dans les notes d'examen, sinon la 3.1.1 tombe), et le
+questionnaire *App Privacy* — huit types déclarés par le manifeste : Name, Email Address, UserID,
+Health, Fitness, PhotosorVideos, PurchaseHistory, OtherUserContent, tous liés à l'identité, tous
+« fonctionnement de l'app », **aucun** pour le suivi publicitaire.
+
+**Ce qui n'empêche pas de soumettre** : le push ne fonctionne toujours pas (aucun jeton en base,
+clé APNs non vérifiable d'ici) — mais l'autorisation est dans le binaire et l'App ID a la
+capacité. Le premier jeton réel viendra de TestFlight.
+
 ### Reste à faire
 - **Android n'a jamais été compilé** — et ne peut pas l'être ici : **aucun JDK**
   (`java -version` → « Unable to locate a Java Runtime »), aucun SDK Android, pas de
