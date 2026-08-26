@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<title>Natty · Souscription</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <!-- Aucun zoom : ni pincée, ni double-tap (le <meta viewport> ne suffit pas,
      iOS l'ignore). Synchrone et dans le <head>, comme theme.js. -->
@@ -912,10 +913,16 @@ function afficherNutris(nutris) {
     const bM=(b.objectifs_cibles||[]).includes(selectedObjectif)?1:0;
     return bM-aM;
   });
-  const em=["👨‍⚕️","👩‍⚕️","🧑‍⚕️"];
+  /* ⚠️ L'AVATAR SUIVAIT LE RANG, PAS LA PERSONNE. Le tableau était indexé par
+     position dans une liste RETRIÉE selon l'objectif choisi : « Sophie Martin »
+     se retrouvait derrière 👨‍⚕️ et « Lucas Bernard » derrière 👩‍⚕️, l'un ou
+     l'autre selon l'écran précédent. Un prénom ne dit d'ailleurs pas le genre
+     de quelqu'un : à défaut de photo, la silhouette neutre ne se trompe sur
+     personne. */
+  const EM_NEUTRE = "🧑‍⚕️";
   document.getElementById("nutriCardsList").innerHTML=sorted.map((n,i)=>{
     const isRec=(n.objectifs_cibles||[]).includes(selectedObjectif)&&i===0;
-    const av=n.photo_url?`<div class="nutri-avatar"><img src="${n.photo_url}" alt=""></div>`:`<div class="nutri-avatar">${em[i%3]}</div>`;
+    const av=n.photo_url?`<div class="nutri-avatar"><img src="${n.photo_url}" alt=""></div>`:`<div class="nutri-avatar">${EM_NEUTRE}</div>`;
     const specs=(n.specialites||[]).slice(0,3).map(s=>`<span class="nutri-spec">${s}</span>`).join("");
     const sel=selectedNutriId===String(n.id);
     return `<div class="nutri-card${isRec?" recommended":""}${sel?" selected":""}" id="nc_${n.id}" onclick="choisirNutri('${n.id}','${n.nom}')">
