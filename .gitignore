@@ -15,3 +15,10 @@ _test-*.html
 # la range sous son propre nom dans `design/images menu/`.
 design/**/*_files/
 design/**/*Feijoada.html
+
+# Secrets et configuration locale Vercel : `.env.local` porte les clés en clair
+# (Stripe, Anthropic, service Supabase) et `.vercel/` l'identifiant du projet.
+# Ils sont apparus non suivis dans l'arbre de travail — un `git add` distrait
+# suffirait à les publier sur un dépôt public.
+.env*
+.vercel/
