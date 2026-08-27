@@ -942,17 +942,48 @@ var PH={
   t_courgette:IMGDATA.t_courgette, t_tenders:IMGDATA.t_tenders, t_emmental:IMGDATA.t_emmental,
   t_burgercheese:IMGDATA.t_burgercheese, t_huiletournesol:IMGDATA.t_huiletournesol, t_rizblanc:IMGDATA.t_rizblanc};
 
+/* ═══ QUI EST DEVANT L'ÉCRAN ═══
+   ⚠️ « Bonjour Pablo » ÉTAIT ÉCRIT EN DUR, et pas seulement à l'accueil : les
+   trois félicitations de palier nommaient Pablo elles aussi. Tout le monde
+   était donc salué du prénom du fondateur.
+   Ce fichier est volontairement autonome (pas de core.js) : on lit le prénom
+   là où core.js range la session, dans le localStorage, en décodant la charge
+   utile du JWT — la même source que les en-têtes d'appel à /api/claude plus
+   bas. Sans session, on ne devine rien : la phrase se passe du prénom plutôt
+   que d'en inventer un. */
+function prenomUtilisateur() {
+  try {
+    var sess = JSON.parse(localStorage.getItem('natty_session') || 'null');
+    if (!sess || !sess.access_token) return '';
+    var charge = sess.access_token.split('.')[1];
+    if (!charge) return '';
+    var json = decodeURIComponent(atob(charge.replace(/-/g, '+').replace(/_/g, '/'))
+      .split('').map(function (c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+    var m = (JSON.parse(json) || {}).user_metadata || {};
+    var brut = m.prenom || m.given_name || m.name || m.full_name || '';
+    return String(brut).trim().split(/\s+/)[0] || '';
+  } catch (e) { return ''; }
+}
+var PRENOM = prenomUtilisateur();
+/* « Bonjour Camille » / « Bonjour » : la virgule et l'espace disparaissent
+   avec le prénom, sinon il reste « Chapeau, . » à l'écran. */
+function avecPrenom(avant, apres) {
+  return PRENOM ? avant + PRENOM + (apres || '') : avant.replace(/[,\s]+$/, '') + (apres || '');
+}
+
 /* ═══ SCÉNARIO ═══ */
 var STORY=[
-  {type:'say',anim:'zoom',title:'Bonjour Pablo',sub:'Prêt à apprendre à bien manger ?',cta:'Oui ! 🚀',
+  {type:'say',anim:'zoom',title:avecPrenom('Bonjour '),sub:'Prêt à apprendre à bien manger ?',cta:'Oui ! 🚀',
   cine:[
     {enter:'pop', hold:1400, illo:'👋', illoAnim:'float', size:'sm', outPrev:'up'},
-    {enter:'glide', hold:1900, size:'xl', lines:[[{t:'Bonjour '},{t:'Pablo',fx:'hl'}]], fxDelay:1000, outPrev:'lift'},
+    {enter:'glide', hold:1900, size:'xl', lines:PRENOM?[[{t:'Bonjour '},{t:PRENOM,fx:'hl'}]]:[[{t:'Bonjour',fx:'hl'}]], fxDelay:1000, outPrev:'lift'},
     {enter:'rise', hold:0, size:'med', lines:[[{t:'Prêt à '},{t:'bien manger',fx:'hlY'},{t:' ?'}]], fxDelay:800, outPrev:'up', cta:'Oui ! 🚀'}
   ]},
   {type:'choice',anim:'slide',title:'Quel est ton niveau ?',options:[
     {t:'Je mange pour <b>survivre</b> 🥒'},{t:'Je sais faire les <b>basiques</b> 🍝'},{t:"J'ai un <b>bon niveau</b> 🧑‍🍳"}]},
-  {type:'say',anim:'up',title:'La première notion à maîtriser sont les',hl:'macronutriments',em:'🥑',cta:'Découvrir',
+  {type:'say',anim:'up',title:'La première notion à maîtriser, ce sont les',hl:'macronutriments',em:'🥑',cta:'Découvrir',
   cine:[
     {enter:'parallax', hold:1700, size:'big', lines:[[{t:'Tout part'}],[{t:'d\'une '},{t:'seule',fx:'zoom'},{t:' notion'}]], fxDelay:900, outPrev:'lift'},
     {enter:'reveal', hold:2000, size:'xl', lines:[[{t:'Les '},{t:'macros',fx:'hl'}]], fxDelay:1000, outPrev:'settle'},
@@ -1288,7 +1319,7 @@ var STORY=[
     {em:'📸',t:'Photographie ton poulet curry !'}
   ]},
   {type:'reward',anim:'zoom',em:'🎊',xp:150,label:'Palier 1 terminé — tu sais cuisiner !'},
-  {type:'say',anim:'up',title:'Chapeau, Pablo.',sub:'Tu es passé de « je mange pour survivre » à une vraie base solide. Place au palier 2.',cta:'Continuer'},
+  {type:'say',anim:'up',title:avecPrenom('Chapeau, ','.'),sub:'Tu es passé de « je mange pour survivre » à une vraie base solide. Place au palier 2.',cta:'Continuer'},
 
   /* ═══════════════════════════════════════════════════════════
      PALIER 2 — RÉPONDRE À SES PROPRES BESOINS
@@ -1328,7 +1359,7 @@ var STORY=[
   {type:'defiCompose',anim:'zoom',announceEm:'🧪',title:'Défi : ta recette parfaite',
    intro:'Compose une recette qui atteint TES besoins. Ajoute des ingrédients, regarde tes diagrammes se remplir, vise l\'équilibre.'},
   {type:'reward',anim:'zoom',em:'🏆',xp:200,label:'Palier 2 terminé — tu es autonome !'},
-  {type:'say',anim:'up',title:'Bravo Pablo.',sub:'Tu sais calculer tes besoins et composer pour les atteindre. Place au palier 3 : créer.',cta:'Continuer'},
+  {type:'say',anim:'up',title:avecPrenom('Bravo ','.'),sub:'Tu sais calculer tes besoins et composer pour les atteindre. Place au palier 3 : créer.',cta:'Continuer'},
 
   /* ═══════════════════════════════════════════════════════════
      PALIER 3 — RECONNAÎTRE LES QUANTITÉS & CRÉER SES RECETTES
@@ -1372,7 +1403,7 @@ var STORY=[
   {type:'defiCreation',anim:'zoom',announceEm:'🧑‍🍳',title:'Défi : ta création',
    intro:'Invente une recette complète, de A à Z. Nomme-la, choisis tes ingrédients, équilibre le goût et les macros, puis photographie-la ou décris-la.'},
   {type:'reward',anim:'zoom',em:'🌟',xp:250,label:'Palier 3 terminé — tu es un vrai cuisinier !'},
-  {type:'say',anim:'up',title:'Incroyable, Pablo.',sub:'Tu es passé de la survie à la création. Tu sais nourrir ton corps ET te faire plaisir. Bienvenue chez les autonomes.',cta:'Terminer 🎉'}
+  {type:'say',anim:'up',title:avecPrenom('Incroyable, ','.'),sub:'Tu es passé de la survie à la création. Tu sais nourrir ton corps ET te faire plaisir. Bienvenue chez les autonomes.',cta:'Terminer 🎉'}
 ];
 
 /* ═══ PALIERS ═══
