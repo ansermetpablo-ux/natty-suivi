@@ -4334,9 +4334,9 @@ function renderPopupConseils() {
   var nbPlats = _pcState.nbPlats, onbOk = _pcState.onbOk, qaOk = _pcState.qaOk;
   var platsRestants = Math.max(0, 3 - nbPlats);
   var steps = [
-    {done:onbOk,  titre:"Completer l'onboarding",     sub:onbOk?'Profil cree':'Repondez aux questions de depart', action:'onboarding'},
-    {done:qaOk,   titre:'Questionnaire alimentaire',   sub:qaOk?'Preferences enregistrees':'Vos gouts et preferences', action:'questionnaire'},
-    {done:nbPlats>=3, titre:'Ajouter '+(platsRestants>0?platsRestants+' repas':'3 repas'), sub:nbPlats+'/3 repas - encore '+platsRestants+' a ajouter', action:'repas'}
+    {done:onbOk,  titre:"Compléter mon profil",         sub:onbOk?'Profil créé':'Répondez aux questions de départ', action:'onboarding'},
+    {done:qaOk,   titre:'Questionnaire alimentaire',   sub:qaOk?'Préférences enregistrées':'Vos goûts et préférences', action:'questionnaire'},
+    {done:nbPlats>=3, titre:'Ajouter '+(platsRestants>0?platsRestants+' repas':'3 repas'), sub:nbPlats+'/3 repas — encore '+platsRestants+' à ajouter', action:'repas'}
   ];
   var stepsHtml = steps.map(function(s,i){
     return '<div class="pc-popup-step'+(s.done?' done':'')+'">'
@@ -4348,8 +4348,8 @@ function renderPopupConseils() {
   document.getElementById('pcStepsList').innerHTML = stepsHtml;
   var btn = document.getElementById('pcActionBtn');
   var next = steps.find(function(s){ return !s.done; });
-  if (!next) { btn.textContent = 'Generer mes conseils'; btn.dataset.action = 'generate'; }
-  else if (next.action==='onboarding') { btn.textContent = 'Completer mon profil'; btn.dataset.action = 'onboarding'; }
+  if (!next) { btn.textContent = 'Générer mes conseils'; btn.dataset.action = 'generate'; }
+  else if (next.action==='onboarding') { btn.textContent = 'Compléter mon profil'; btn.dataset.action = 'onboarding'; }
   else if (next.action==='questionnaire') { btn.textContent = 'Remplir le questionnaire'; btn.dataset.action = 'questionnaire'; }
   else { btn.textContent = 'Ajouter un repas ('+_pcState.nbPlats+'/3)'; btn.dataset.action = 'repas'; }
 }

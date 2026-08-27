@@ -358,7 +358,12 @@ var NattyCommande = (function () {
     var titre, sous;
     if (enCours)      { titre = 'Votre commande'; sous = 'Où elle en est, et ce qu\'elle contient.'; }
     else if (a)       { titre = 'Votre abonnement'; sous = 'Aucune commande en cours cette semaine.'; }
-    else              { titre = 'Commander'; sous = 'Des repas livrés chaque semaine, ou des plats à l\'unité.'; }
+    /* ⚠️ « ou des plats à l'unité » s'affichait même quand le bouton
+       correspondant est masqué (`STRIPE_PRICE_UNITE` non configurée) : la
+       feuille annonçait alors un choix qu'elle n'offrait pas. */
+    else              { titre = 'Commander'; sous = etat.unite
+                          ? "Des repas livrés chaque semaine, ou des plats à l'unité."
+                          : 'Des repas livrés chaque semaine.'; }
 
     var alerte = (c && c.statut === 'annulee')
       ? '<div class="alerte">Cette commande a été annulée. Vous pouvez en passer une nouvelle.</div>'

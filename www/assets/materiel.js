@@ -261,8 +261,12 @@ var NattyMateriel = (function () {
           + '<h2>' + (o.premiere ? 'Qu’as-tu dans ta cuisine ?' : 'Mon matériel') + '</h2>'
           + '<div class="nmat-sub">'
           + (o.premiere
-              ? 'On ne te proposera que des recettes que tu peux vraiment faire. Décoche ce que tu n’as pas — le reste est déjà coché.'
-              : 'Décoche ce que tu n’as pas. Tes prochaines recettes s’y adapteront.')
+              /* ⚠️ « le reste est déjà coché » laissait croire que TOUT était
+                 coché, et n'invitait donc qu'à décocher : seuls 7 des 14
+                 appareils le sont au départ (les basiques), et personne ne
+                 pensait à cocher son mixeur ou son air fryer. */
+              ? 'On ne te proposera que des recettes que tu peux vraiment faire. Les basiques sont cochés : ajoute ce que tu as en plus, retire ce qui te manque.'
+              : 'Coche ce que tu as, retire ce qui te manque. Tes prochaines recettes s’y adapteront.')
           + '</div>'
           + '<div class="nmat-grid">' + CATALOGUE.map(function (x) {
               var on = travail.indexOf(x.cle) > -1;
