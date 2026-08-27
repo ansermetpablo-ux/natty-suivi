@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<title>Natty · Questionnaire alimentaire</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <!-- Aucun zoom : ni pincée, ni double-tap (le <meta viewport> ne suffit pas,
      iOS l'ignore). Synchrone et dans le <head>, comme theme.js. -->
@@ -138,26 +139,26 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
   <div class="step-screen active" id="s1">
     <div class="card">
       <span class="q-emoji">&#9888;&#65039;</span>
-      <div class="q-label">Securite alimentaire</div>
-      <div class="q-title">Avez-vous des allergies ou intolerances ?</div>
-      <div class="q-sub">Vos repas seront adaptes en consequence.</div>
+      <div class="q-label">Sécurité alimentaire</div>
+      <div class="q-title">Avez-vous des allergies ou intolérances ?</div>
+      <div class="q-sub">Vos repas seront adaptés en conséquence.</div>
       <div class="chips" id="allergyChips">
         <div class="chip bad" data-v="gluten">Gluten</div>
         <div class="chip bad" data-v="lactose">Lactose</div>
         <div class="chip bad" data-v="noix">Noix</div>
-        <div class="chip bad" data-v="oeufs">Oeufs</div>
+        <div class="chip bad" data-v="oeufs">Œufs</div>
         <div class="chip bad" data-v="poisson">Poisson</div>
         <div class="chip bad" data-v="fruits_mer">Fruits de mer</div>
         <div class="chip bad" data-v="soja">Soja</div>
-        <div class="chip bad" data-v="sesame">Sesame</div>
+        <div class="chip bad" data-v="sesame">Sésame</div>
         <div class="chip bad" data-v="sulfites">Sulfites</div>
         <div class="chip bad" data-v="aucun" id="chipAucun">Aucune allergie</div>
       </div>
     </div>
     <div class="card">
-      <div class="sec-div">Regime particulier</div>
+      <div class="sec-div">Régime particulier</div>
       <div class="chips" id="regimeChips">
-        <div class="chip" data-v="vegetarien">Vegetarien</div>
+        <div class="chip" data-v="vegetarien">Végétarien</div>
         <div class="chip" data-v="vegan">Vegan</div>
         <div class="chip" data-v="halal">Halal</div>
         <div class="chip" data-v="casher">Casher</div>
@@ -173,28 +174,28 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
   <div class="step-screen" id="s2">
     <div class="card">
       <span class="q-emoji">&#127829;</span>
-      <div class="q-label">Vos preferences</div>
-      <div class="q-title">Quels aliments aimez-vous ou evitez-vous ?</div>
-      <div class="q-sub">Selectionnez une categorie puis indiquez ce que vous aimez ou evitez.</div>
+      <div class="q-label">Vos préférences</div>
+      <div class="q-title">Quels aliments aimez-vous ou évitez-vous ?</div>
+      <div class="q-sub">Sélectionnez une catégorie puis indiquez ce que vous aimez ou évitez.</div>
       <div class="mode-toggle">
         <button class="mode-btn active-like" id="modeGood" onclick="setMode('like')">J'aime</button>
-        <button class="mode-btn" id="modeBad" onclick="setMode('dislike')">J'evite</button>
+        <button class="mode-btn" id="modeBad" onclick="setMode('dislike')">J'évite</button>
       </div>
       <div class="cat-grid" id="foodCatGrid">
-        <div class="cat-block" data-cat="fruits" onclick="openFoodCat('fruits')"><span class="cat-icon">&#127822;</span><div class="cat-name">Fruits</div><div class="cat-count" id="cnt-fruits">0 selectionne</div></div>
-        <div class="cat-block" data-cat="legumes" onclick="openFoodCat('legumes')"><span class="cat-icon">&#129382;</span><div class="cat-name">Legumes</div><div class="cat-count" id="cnt-legumes">0 selectionne</div></div>
-        <div class="cat-block" data-cat="proteines" onclick="openFoodCat('proteines')"><span class="cat-icon">&#129385;</span><div class="cat-name">Proteines</div><div class="cat-count" id="cnt-proteines">0 selectionne</div></div>
-        <div class="cat-block" data-cat="feculents" onclick="openFoodCat('feculents')"><span class="cat-icon">&#127834;</span><div class="cat-name">Feculents</div><div class="cat-count" id="cnt-feculents">0 selectionne</div></div>
-        <div class="cat-block" data-cat="laitiers" onclick="openFoodCat('laitiers')"><span class="cat-icon">&#129472;</span><div class="cat-name">Produits laitiers</div><div class="cat-count" id="cnt-laitiers">0 selectionne</div></div>
-        <div class="cat-block" data-cat="herbes" onclick="openFoodCat('herbes')"><span class="cat-icon">&#127807;</span><div class="cat-name">Herbes et epices</div><div class="cat-count" id="cnt-herbes">0 selectionne</div></div>
+        <div class="cat-block" data-cat="fruits" onclick="openFoodCat('fruits')"><span class="cat-icon">&#127822;</span><div class="cat-name">Fruits</div><div class="cat-count" id="cnt-fruits">0 sélectionné</div></div>
+        <div class="cat-block" data-cat="legumes" onclick="openFoodCat('legumes')"><span class="cat-icon">&#129382;</span><div class="cat-name">Légumes</div><div class="cat-count" id="cnt-legumes">0 sélectionné</div></div>
+        <div class="cat-block" data-cat="proteines" onclick="openFoodCat('proteines')"><span class="cat-icon">&#129385;</span><div class="cat-name">Protéines</div><div class="cat-count" id="cnt-proteines">0 sélectionné</div></div>
+        <div class="cat-block" data-cat="feculents" onclick="openFoodCat('feculents')"><span class="cat-icon">&#127834;</span><div class="cat-name">Féculents</div><div class="cat-count" id="cnt-feculents">0 sélectionné</div></div>
+        <div class="cat-block" data-cat="laitiers" onclick="openFoodCat('laitiers')"><span class="cat-icon">&#129472;</span><div class="cat-name">Produits laitiers</div><div class="cat-count" id="cnt-laitiers">0 sélectionné</div></div>
+        <div class="cat-block" data-cat="herbes" onclick="openFoodCat('herbes')"><span class="cat-icon">&#127807;</span><div class="cat-name">Herbes et épices</div><div class="cat-count" id="cnt-herbes">0 sélectionné</div></div>
       </div>
       <div class="food-panel" id="foodPanel">
         <div class="search-wrap"><span>&#128269;</span><input type="text" id="foodSearch" placeholder="Rechercher un aliment..." oninput="filterFoods()"></div>
         <div class="food-grid" id="foodGrid"></div>
-        <button style="width:100%;padding:12px;background:var(--bg);border:none;border-radius:12px;box-shadow:var(--shadow-sm);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:10px;" onclick="closeFoodCat()">Retour aux categories</button>
+        <button style="width:100%;padding:12px;background:var(--bg);border:none;border-radius:12px;box-shadow:var(--shadow-sm);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;margin-top:10px;" onclick="closeFoodCat()">Retour aux catégories</button>
       </div>
       <div id="foodSummary" style="margin-top:14px;display:none;">
-        <div class="sec-div">Mes selections</div>
+        <div class="sec-div">Mes sélections</div>
         <div class="sel-summary" id="likedSummary"></div>
         <div style="margin-top:8px;"><div class="sel-summary" id="dislikedSummary"></div></div>
       </div>
@@ -206,13 +207,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
   <div class="step-screen" id="s3">
     <div class="card">
       <span class="q-emoji">&#127757;</span>
-      <div class="q-label">Decouvertes et curiosites</div>
+      <div class="q-label">Découvertes et curiosités</div>
       <div class="q-title">Qu'aimeriez-vous explorer ?</div>
-      <div class="q-sub">Plusieurs reponses possibles.</div>
+      <div class="q-sub">Plusieurs réponses possibles.</div>
       <div class="disco-tabs" id="discoTabs">
         <div class="disco-tab active" onclick="switchDisco('monde', this)">Cuisines du monde</div>
         <div class="disco-tab" onclick="switchDisco('styles', this)">Styles culinaires</div>
-        <div class="disco-tab" onclick="switchDisco('ingredients', this)">Ingredients</div>
+        <div class="disco-tab" onclick="switchDisco('ingredients', this)">Ingrédients</div>
         <div class="disco-tab" onclick="switchDisco('variantes', this)">Variantes</div>
       </div>
       <div class="disco-content active" id="disco-monde"><div class="disco-chips">
@@ -221,11 +222,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
         <div class="disco-chip" data-disco="monde" data-v="marocaine">Marocaine</div>
         <div class="disco-chip" data-disco="monde" data-v="mexicaine">Mexicaine</div>
         <div class="disco-chip" data-disco="monde" data-v="grecque">Grecque</div>
-        <div class="disco-chip" data-disco="monde" data-v="thailandaise">Thailandaise</div>
-        <div class="disco-chip" data-disco="monde" data-v="coreenne">Coreenne</div>
+        <div class="disco-chip" data-disco="monde" data-v="thailandaise">Thaïlandaise</div>
+        <div class="disco-chip" data-disco="monde" data-v="coreenne">Coréenne</div>
         <div class="disco-chip" data-disco="monde" data-v="libanaise">Libanaise</div>
-        <div class="disco-chip" data-disco="monde" data-v="ethiopienne">Ethiopienne</div>
-        <div class="disco-chip" data-disco="monde" data-v="peruvienne">Peruvienne</div>
+        <div class="disco-chip" data-disco="monde" data-v="ethiopienne">Éthiopienne</div>
+        <div class="disco-chip" data-disco="monde" data-v="peruvienne">Péruvienne</div>
         <div class="disco-chip" data-disco="monde" data-v="vietnamienne">Vietnamienne</div>
         <div class="disco-chip" data-disco="monde" data-v="turque">Turque</div>
       </div></div>
@@ -235,7 +236,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
         <div class="disco-chip" data-disco="styles" data-v="grill">Grill</div>
         <div class="disco-chip" data-disco="styles" data-v="bowl">Bowl</div>
         <div class="disco-chip" data-disco="styles" data-v="street_food">Street food</div>
-        <div class="disco-chip" data-disco="styles" data-v="marche">Cuisine du marche</div>
+        <div class="disco-chip" data-disco="styles" data-v="marche">Cuisine du marché</div>
         <div class="disco-chip" data-disco="styles" data-v="batch_cooking">Batch cooking</div>
         <div class="disco-chip" data-disco="styles" data-v="bento">Bento</div>
         <div class="disco-chip" data-disco="styles" data-v="cru">Cuisine crue</div>
@@ -260,19 +261,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
         <div class="disco-chip" data-disco="ingredients" data-v="sumac">Sumac</div>
       </div></div>
       <div class="disco-content" id="disco-variantes"><div class="disco-chips">
-        <div class="disco-chip" data-disco="variantes" data-v="pates_variees">Pates variees</div>
+        <div class="disco-chip" data-disco="variantes" data-v="pates_variees">Pâtes variées</div>
         <div class="disco-chip" data-disco="variantes" data-v="poulet_monde">Poulet du monde</div>
-        <div class="disco-chip" data-disco="variantes" data-v="oeufs_autrement">Oeufs autrement</div>
+        <div class="disco-chip" data-disco="variantes" data-v="oeufs_autrement">Œufs autrement</div>
         <div class="disco-chip" data-disco="variantes" data-v="salades_repas">Salades-repas</div>
         <div class="disco-chip" data-disco="variantes" data-v="soupes_copieuses">Soupes copieuses</div>
-        <div class="disco-chip" data-disco="variantes" data-v="burger_revisite">Burgers revisites</div>
+        <div class="disco-chip" data-disco="variantes" data-v="burger_revisite">Burgers revisités</div>
         <div class="disco-chip" data-disco="variantes" data-v="tacos_wraps">Tacos et wraps</div>
         <div class="disco-chip" data-disco="variantes" data-v="riz_monde">Riz du monde</div>
-        <div class="disco-chip" data-disco="variantes" data-v="pizza_revisite">Pizza revisitee</div>
+        <div class="disco-chip" data-disco="variantes" data-v="pizza_revisite">Pizza revisitée</div>
         <div class="disco-chip" data-disco="variantes" data-v="porridge_bowl">Porridge et bowls</div>
       </div></div>
-      <div class="sec-div" style="margin-top:20px;">Une envie particuliere ?</div>
-      <textarea class="q-textarea" id="curiositeLibre" placeholder="Ex: j'aimerais apprendre a faire des sushis..." style="min-height:70px;" oninput="countChars(this,'charCurio')"></textarea>
+      <div class="sec-div" style="margin-top:20px;">Une envie particulière ?</div>
+      <textarea class="q-textarea" id="curiositeLibre" placeholder="Ex: j'aimerais apprendre à faire des sushis..." style="min-height:70px;" oninput="countChars(this,'charCurio')"></textarea>
       <div class="char-count" id="charCurio">0 / 200</div>
     </div>
     <button class="btn-c" id="btn3">Continuer</button>
@@ -284,8 +285,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
       <span class="q-emoji">&#128336;</span>
       <div class="q-label">Rythme et habitudes</div>
       <div class="q-title">Comment mangez-vous au quotidien ?</div>
-      <div class="q-sub">Aucune bonne ou mauvaise reponse.</div>
-      <div class="sec-div">Frequence de cuisine</div>
+      <div class="q-sub">Aucune bonne ou mauvaise réponse.</div>
+      <div class="sec-div">Fréquence de cuisine</div>
       <div class="chips" id="cuisineChips">
         <div class="chip" data-v="jamais">Jamais ou presque</div>
         <div class="chip" data-v="parfois">Parfois (2-3x/sem)</div>
@@ -304,14 +305,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
         <div class="chip" data-v="non">Non, jamais</div>
         <div class="chip" data-v="soir">Le soir</div>
         <div class="chip" data-v="bureau">Au bureau 16h</div>
-        <div class="chip" data-v="stress">Quand je suis stresse(e)</div>
+        <div class="chip" data-v="stress">Quand je suis stressé(e)</div>
         <div class="chip" data-v="weekend">Le week-end</div>
       </div>
-      <div class="sec-div">Repas sautes</div>
+      <div class="sec-div">Repas sautés</div>
       <div class="chips" id="sautesChips">
         <div class="chip" data-v="jamais">Jamais</div>
-        <div class="chip" data-v="petit_dej">Petit-dejeuner souvent</div>
-        <div class="chip" data-v="dejeuner">Dejeuner parfois</div>
+        <div class="chip" data-v="petit_dej">Petit-déjeuner souvent</div>
+        <div class="chip" data-v="dejeuner">Déjeuner parfois</div>
         <div class="chip" data-v="souvent_repas">Souvent par manque de temps</div>
       </div>
     </div>
@@ -322,23 +323,23 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
   <div class="step-screen" id="s5">
     <div class="card">
       <span class="q-emoji">&#128173;</span>
-      <div class="q-label">Ressenti et energie</div>
-      <div class="q-title">Comment vous sentez-vous apres un repas ?</div>
-      <div class="q-sub">En general, pas forcement a chaque fois.</div>
+      <div class="q-label">Ressenti et énergie</div>
+      <div class="q-title">Comment vous sentez-vous après un repas ?</div>
+      <div class="q-sub">En général, pas forcément à chaque fois.</div>
       <div class="feeling-grid" id="feelingGrid">
-        <div class="feeling-card" data-v="fatigue"><span class="feeling-icon">&#128564;</span><div class="feeling-label">Souvent fatigue(e)</div></div>
-        <div class="feeling-card" data-v="bien"><span class="feeling-icon">&#128522;</span><div class="feeling-label">Bien en general</div></div>
+        <div class="feeling-card" data-v="fatigue"><span class="feeling-icon">&#128564;</span><div class="feeling-label">Souvent fatigué(e)</div></div>
+        <div class="feeling-card" data-v="bien"><span class="feeling-icon">&#128522;</span><div class="feeling-label">Bien en général</div></div>
         <div class="feeling-card" data-v="lourd"><span class="feeling-icon">&#129314;</span><div class="feeling-label">Lourd / ballonnements</div></div>
-        <div class="feeling-card" data-v="energie"><span class="feeling-icon">&#9889;</span><div class="feeling-label">Plein(e) d'energie</div></div>
+        <div class="feeling-card" data-v="energie"><span class="feeling-icon">&#9889;</span><div class="feeling-label">Plein(e) d'énergie</div></div>
         <div class="feeling-card" data-v="variable"><span class="feeling-icon">&#127906;</span><div class="feeling-label">Variable selon les jours</div></div>
-        <div class="feeling-card" data-v="fringale"><span class="feeling-icon">&#127851;</span><div class="feeling-label">Fringales frequentes</div></div>
+        <div class="feeling-card" data-v="fringale"><span class="feeling-icon">&#127851;</span><div class="feeling-label">Fringales fréquentes</div></div>
       </div>
       <div class="sec-div">Moment de craquage</div>
       <div class="chips" id="craquageChips">
         <div class="chip" data-v="soir_tv">Le soir devant la TV</div>
         <div class="chip" data-v="bureau_16h">Au bureau vers 16h</div>
         <div class="chip" data-v="weekend">Le week-end</div>
-        <div class="chip" data-v="stress">Quand stresse(e)</div>
+        <div class="chip" data-v="stress">Quand stressé(e)</div>
         <div class="chip" data-v="rarement">Rarement</div>
       </div>
       <div class="sec-div">Satisfaction de votre alimentation actuelle</div>
@@ -358,7 +359,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
     <div class="card">
       <span class="q-emoji">&#9997;&#65039;</span>
       <div class="q-label">En vos propres mots</div>
-      <div class="q-title">Comment decririez-vous votre alimentation actuelle ?</div>
+      <div class="q-title">Comment décririez-vous votre alimentation actuelle ?</div>
       <div class="q-sub">Quelques mots suffisent.</div>
       <textarea class="q-textarea" id="commentaireLibre" placeholder="Ex: Je mange souvent sur le pouce..." oninput="countChars(this,'charComment')"></textarea>
       <div class="char-count" id="charComment">0 / 400</div>
@@ -366,16 +367,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
     <div class="card">
       <span class="q-emoji">&#127919;</span>
       <div class="q-label">Votre objectif alimentaire</div>
-      <div class="q-title">Quel est votre principal defi alimentaire ?</div>
+      <div class="q-title">Quel est votre principal défi alimentaire ?</div>
       <div class="chips" id="defiChips">
         <div class="chip" data-v="temps">Manque de temps pour cuisiner</div>
-        <div class="chip" data-v="variete">Manger plus varie</div>
-        <div class="chip" data-v="portions">Controler les portions</div>
-        <div class="chip" data-v="sucre">Reduire le sucre</div>
-        <div class="chip" data-v="proteines">Augmenter les proteines</div>
-        <div class="chip" data-v="legumes">Manger plus de legumes</div>
+        <div class="chip" data-v="variete">Manger plus varié</div>
+        <div class="chip" data-v="portions">Contrôler les portions</div>
+        <div class="chip" data-v="sucre">Réduire le sucre</div>
+        <div class="chip" data-v="proteines">Augmenter les protéines</div>
+        <div class="chip" data-v="legumes">Manger plus de légumes</div>
         <div class="chip" data-v="hydratation">Mieux m'hydrater</div>
-        <div class="chip" data-v="equilibre">Trouver l'equilibre</div>
+        <div class="chip" data-v="equilibre">Trouver l'équilibre</div>
       </div>
     </div>
     <button class="btn-c" id="btn6">Continuer</button>
@@ -385,14 +386,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
   <div class="step-screen" id="s7">
     <div class="card">
       <span class="q-emoji">&#127881;</span>
-      <div class="q-label">Questionnaire termine</div>
-      <div class="q-title">Votre profil alimentaire est pret !</div>
+      <div class="q-label">Questionnaire terminé</div>
+      <div class="q-title">Votre profil alimentaire est prêt !</div>
       <div class="q-sub">Votre nutritionniste les recevra et personnalisera votre suivi.</div>
     </div>
-    <div class="recap-bloc"><div class="recap-label">Allergies et regime</div><div class="recap-tags" id="recapAllergies"></div></div>
-    <div class="recap-bloc"><div class="recap-label">Aliments aimes</div><div class="recap-tags" id="recapLiked"></div></div>
-    <div class="recap-bloc"><div class="recap-label">Aliments evites</div><div class="recap-tags" id="recapDisliked"></div></div>
-    <div class="recap-bloc"><div class="recap-label">Envies de decouverte</div><div class="recap-tags" id="recapDisco"></div></div>
+    <div class="recap-bloc"><div class="recap-label">Allergies et régime</div><div class="recap-tags" id="recapAllergies"></div></div>
+    <div class="recap-bloc"><div class="recap-label">Aliments aimés</div><div class="recap-tags" id="recapLiked"></div></div>
+    <div class="recap-bloc"><div class="recap-label">Aliments évités</div><div class="recap-tags" id="recapDisliked"></div></div>
+    <div class="recap-bloc"><div class="recap-label">Envies de découverte</div><div class="recap-tags" id="recapDisco"></div></div>
     <div class="recap-bloc"><div class="recap-label">Habitudes et ressenti</div><div class="recap-tags" id="recapHabitudes"></div></div>
     <button class="btn-c" id="btn7">Enregistrer mon profil</button>
   </div>
@@ -440,36 +441,36 @@ if (window.Natty && Natty.USER_ID) USER_ID = Natty.USER_ID;
 const FOODS = {
   fruits: [
     {e:'🍎',n:'Pomme'},{e:'🍌',n:'Banane'},{e:'🍓',n:'Fraise'},{e:'🍇',n:'Raisin'},{e:'🍊',n:'Orange'},
-    {e:'🥭',n:'Mangue'},{e:'🍑',n:'Peche'},{e:'🍒',n:'Cerise'},{e:'🥝',n:'Kiwi'},{e:'🍍',n:'Ananas'},
+    {e:'🥭',n:'Mangue'},{e:'🍑',n:'Pêche'},{e:'🍒',n:'Cerise'},{e:'🥝',n:'Kiwi'},{e:'🍍',n:'Ananas'},
     {e:'🫐',n:'Myrtille'},{e:'🍋',n:'Citron'},{e:'🍐',n:'Poire'},{e:'🥥',n:'Coco'},{e:'🍈',n:'Melon'},
-    {e:'🍉',n:'Pasteque'},{e:'🍏',n:'Pomme verte'},{e:'🫒',n:'Olive'}
+    {e:'🍉',n:'Pastèque'},{e:'🍏',n:'Pomme verte'},{e:'🫒',n:'Olive'}
   ],
   legumes: [
     {e:'🥦',n:'Brocoli'},{e:'🥕',n:'Carotte'},{e:'🍅',n:'Tomate'},{e:'🥒',n:'Concombre'},{e:'🫑',n:'Poivron'},
-    {e:'🧅',n:'Oignon'},{e:'🧄',n:'Ail'},{e:'🥬',n:'Salade'},{e:'🌽',n:'Mais'},{e:'🥑',n:'Avocat'},
+    {e:'🧅',n:'Oignon'},{e:'🧄',n:'Ail'},{e:'🥬',n:'Salade'},{e:'🌽',n:'Maïs'},{e:'🥑',n:'Avocat'},
     {e:'🍆',n:'Aubergine'},{e:'🫛',n:'Petits pois'},{e:'🥔',n:'Pomme de terre'},{e:'🍠',n:'Patate douce'},
-    {e:'🧅',n:'Echalote'},{e:'🌿',n:'Epinards'},{e:'🥗',n:'Roquette'},{e:'🫚',n:'Courgette'}
+    {e:'🧅',n:'Échalote'},{e:'🌿',n:'Épinards'},{e:'🥗',n:'Roquette'},{e:'🫚',n:'Courgette'}
   ],
   proteines: [
-    {e:'🥩',n:'Boeuf'},{e:'🍗',n:'Poulet'},{e:'🥓',n:'Lardons'},{e:'🐟',n:'Saumon'},{e:'🐠',n:'Thon'},
-    {e:'🥚',n:'Oeufs'},{e:'🫘',n:'Lentilles'},{e:'🫘',n:'Pois chiches'},{e:'🌱',n:'Tofu'},{e:'🦐',n:'Crevettes'},
+    {e:'🥩',n:'Bœuf'},{e:'🍗',n:'Poulet'},{e:'🥓',n:'Lardons'},{e:'🐟',n:'Saumon'},{e:'🐠',n:'Thon'},
+    {e:'🥚',n:'Œufs'},{e:'🫘',n:'Lentilles'},{e:'🫘',n:'Pois chiches'},{e:'🌱',n:'Tofu'},{e:'🦐',n:'Crevettes'},
     {e:'🐟',n:'Cabillaud'},{e:'🥩',n:'Agneau'},{e:'🍗',n:'Dinde'},{e:'🐖',n:'Porc'},{e:'🦑',n:'Calamars'},
     {e:'🦞',n:'Homard'},{e:'🧈',n:'Tempeh'},{e:'🫙',n:'Sardines'}
   ],
   feculents: [
-    {e:'🍚',n:'Riz blanc'},{e:'🍝',n:'Pates'},{e:'🍞',n:'Pain'},{e:'🥔',n:'Pomme de terre'},{e:'🌽',n:'Polenta'},
-    {e:'🌾',n:'Quinoa'},{e:'🌾',n:'Boulgour'},{e:'🌾',n:'Sarrasin'},{e:'🌾',n:'Epeautre'},{e:'🥖',n:'Baguette'},
+    {e:'🍚',n:'Riz blanc'},{e:'🍝',n:'Pâtes'},{e:'🍞',n:'Pain'},{e:'🥔',n:'Pomme de terre'},{e:'🌽',n:'Polenta'},
+    {e:'🌾',n:'Quinoa'},{e:'🌾',n:'Boulgour'},{e:'🌾',n:'Sarrasin'},{e:'🌾',n:'Épeautre'},{e:'🥖',n:'Baguette'},
     {e:'🫓',n:'Pain complet'},{e:'🍠',n:'Patate douce'},{e:'🌾',n:'Riz basmati'},{e:'🌾',n:'Avoine'}
   ],
   laitiers: [
-    {e:'🥛',n:'Lait'},{e:'🧀',n:'Fromage'},{e:'🥛',n:'Yaourt nature'},{e:'🧈',n:'Beurre'},{e:'🍦',n:'Creme fraiche'},
-    {e:'🧀',n:'Feta'},{e:'🧀',n:'Parmesan'},{e:'🧀',n:'Mozzarella'},{e:'🥛',n:'Kefir'},{e:'🧀',n:'Gruyere'},
+    {e:'🥛',n:'Lait'},{e:'🧀',n:'Fromage'},{e:'🥛',n:'Yaourt nature'},{e:'🧈',n:'Beurre'},{e:'🍦',n:'Crème fraîche'},
+    {e:'🧀',n:'Feta'},{e:'🧀',n:'Parmesan'},{e:'🧀',n:'Mozzarella'},{e:'🥛',n:'Kéfir'},{e:'🧀',n:'Gruyère'},
     {e:'🍮',n:'Fromage blanc'},{e:'🥛',n:'Lait de coco'},{e:'🥛',n:"Lait d'amande"}
   ],
   herbes: [
     {e:'🌿',n:'Basilic'},{e:'🌿',n:'Persil'},{e:'🌿',n:'Coriandre'},{e:'🌿',n:'Thym'},{e:'🌿',n:'Romarin'},
     {e:'🌿',n:'Menthe'},{e:'🌿',n:'Estragon'},{e:'🧄',n:'Ciboulette'},{e:'🌶️',n:'Piment'},{e:'🫚',n:'Cumin'},
-    {e:'🟡',n:'Curcuma'},{e:'🟠',n:'Paprika'},{e:'🟤',n:'Cannelle'},{e:'⭐',n:'Anis etoile'},
+    {e:'🟡',n:'Curcuma'},{e:'🟠',n:'Paprika'},{e:'🟤',n:'Cannelle'},{e:'⭐',n:'Anis étoile'},
     {e:'🌿',n:'Zaatar'},{e:'🔴',n:'Sumac'},{e:'🟡',n:'Safran'},{e:'🌿',n:'Curry'}
   ]
 };
@@ -486,8 +487,13 @@ function goTo(step) {
 }
 
 document.getElementById('btnBack').addEventListener('click', function() {
-  if (currentStep > 1) goTo(currentStep - 1);
-  else window.location.href = '/index.html?token=' + token;
+  if (currentStep > 1) { goTo(currentStep - 1); return; }
+  /* ⚠️ La flèche menait à `/index.html`, l'ANCIEN tableau de bord web. Il ne
+     lit plus rien depuis l'activation de la RLS (il parle à Supabase avec la
+     seule clé anon) : quitter le questionnaire déposait donc l'utilisateur sur
+     un écran vide, et le bundle natif ne l'embarque même pas. */
+  if (window.Natty && Natty.goto) Natty.goto('suivi.html');
+  else window.location.href = 'suivi.html';
 });
 
 document.getElementById('allergyChips').addEventListener('click', function(e) {
@@ -569,7 +575,7 @@ function updateCatCounts() {
   Object.keys(FOODS).forEach(cat => {
     const total = (A.liked[cat] || []).length + (A.disliked[cat] || []).length;
     const el = document.getElementById('cnt-' + cat);
-    if (el) el.textContent = total > 0 ? total + ' selectionne' + (total > 1 ? 's' : '') : '0 selectionne';
+    if (el) el.textContent = total > 0 ? total + ' sélectionné' + (total > 1 ? 's' : '') : '0 sélectionné';
     const block = document.querySelector('[data-cat="' + cat + '"]');
     if (block) block.classList.toggle('active', total > 0);
   });
@@ -658,17 +664,58 @@ document.getElementById('defiChips').addEventListener('click', function(e) {
 });
 document.getElementById('btn6').addEventListener('click', function() { goTo(7); });
 
+/* ⚠️ LE RÉCAPITULATIF MONTRAIT LES VALEURS DE LA BASE, pas les libellés.
+   Le dernier écran du questionnaire — celui qu'on relit avant de valider —
+   affichait « japonaise », « souvent », « 3 », « proteines » : des clés, sans
+   accent ni majuscule, là où l'utilisateur venait de toucher « Japonaise »,
+   « Souvent (5x/sem+) », « 3 repas classiques », « Augmenter les protéines ».
+   Le libellé est repris de la pastille elle-même plutôt que d'une table à
+   maintenir en double : elle porte déjà le bon texte, et il ne peut donc plus
+   diverger de ce qui a été touché.
+   ⚠️ LA PORTÉE COMPTE : `jamais` existe dans DEUX groupes (« Jamais ou
+   presque » pour la fréquence de cuisine, « Jamais » pour les repas sautés),
+   et `stress` dans deux autres. On préfixe donc le sélecteur. */
+function libelle(v, prefixe) {
+  const cles = [].concat(prefixe || ['']);
+  for (const p of cles) {
+    try {
+      const el = document.querySelector(p + '[data-v="' + v + '"]');
+      if (el) {
+        const t = (el.querySelector('.feeling-label') || el).textContent.trim();
+        if (t) return t;
+      }
+    } catch (e) {}
+  }
+  return String(v).replace(/_/g, ' ');
+}
+
 function buildRecap() {
+  const tag = t => '<span class="recap-tag">' + t + '</span>';
+  const vide = '<span class="recap-tag" style="color:var(--muted)">Non renseigné</span>';
+
   const allergiesTags = [...A.allergies, ...A.regime].filter(v => v !== 'aucun' && v !== 'aucun_regime');
-  document.getElementById('recapAllergies').innerHTML = allergiesTags.length ? allergiesTags.map(t => '<span class="recap-tag">' + t.replace(/_/g, ' ') + '</span>').join('') : '<span class="recap-tag" style="color:var(--muted)">Aucune restriction</span>';
+  document.getElementById('recapAllergies').innerHTML = allergiesTags.length
+    ? allergiesTags.map(t => tag(libelle(t, ['#allergyChips ', '#regimeChips ']))).join('')
+    : '<span class="recap-tag" style="color:var(--muted)">Aucune restriction</span>';
+
   const allLiked = Object.values(A.liked).flat().slice(0, 10);
   const allDisliked = Object.values(A.disliked).flat().slice(0, 10);
-  document.getElementById('recapLiked').innerHTML = allLiked.length ? allLiked.map(n => '<span class="recap-tag">' + n + '</span>').join('') : '<span class="recap-tag" style="color:var(--muted)">Non renseigne</span>';
-  document.getElementById('recapDisliked').innerHTML = allDisliked.length ? allDisliked.map(n => '<span class="recap-tag">' + n + '</span>').join('') : '<span class="recap-tag" style="color:var(--muted)">Non renseigne</span>';
+  document.getElementById('recapLiked').innerHTML = allLiked.length ? allLiked.map(tag).join('') : vide;
+  document.getElementById('recapDisliked').innerHTML = allDisliked.length ? allDisliked.map(tag).join('') : vide;
+
   const discoAll = [...A.disco_monde, ...A.disco_styles, ...A.disco_ingredients, ...A.disco_variantes];
-  document.getElementById('recapDisco').innerHTML = discoAll.length ? discoAll.slice(0, 8).map(v => '<span class="recap-tag">' + v.replace(/_/g, ' ') + '</span>').join('') : '<span class="recap-tag" style="color:var(--muted)">Non renseigne</span>';
-  const habitudes = [A.frequence_cuisine, A.nb_repas, A.repas_sautes, ...(A.ressenti || []), ...(A.defi || [])].filter(Boolean);
-  document.getElementById('recapHabitudes').innerHTML = habitudes.length ? habitudes.map(v => '<span class="recap-tag">' + v.replace(/_/g, ' ') + '</span>').join('') : '<span class="recap-tag" style="color:var(--muted)">Non renseigne</span>';
+  document.getElementById('recapDisco').innerHTML = discoAll.length
+    ? discoAll.slice(0, 8).map(v => tag(libelle(v, '.disco-chip'))).join('') : vide;
+
+  const habitudes = [
+    [A.frequence_cuisine, '#cuisineChips '],
+    [A.nb_repas, '#repasChips '],
+    [A.repas_sautes, '#sautesChips ']
+  ].concat((A.ressenti || []).map(v => [v, '#feelingGrid ']))
+   .concat((A.defi || []).map(v => [v, '#defiChips ']))
+   .filter(x => x[0]);
+  document.getElementById('recapHabitudes').innerHTML = habitudes.length
+    ? habitudes.map(x => tag(libelle(x[0], x[1]))).join('') : vide;
 }
 
 document.getElementById('btn7').addEventListener('click', async function() {
