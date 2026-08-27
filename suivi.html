@@ -5674,21 +5674,34 @@ function checkShowOnbPopup() {
      par-dessus se retrouverait à moitié caché, et le bouton qu'il propose
      déclencherait une seconde génération. */
   if (window.NattyGeneration && NattyGeneration.enCours()) return;
-  var key = 'natty_onb_popup_' + USER_ID;
-  if (!localStorage.getItem(key)) {
-    setTimeout(function() {
-      onbCurrent = 0;
-      onbAnimated = [false, false, false, false];
-      var track = document.getElementById('onbTrack');
-      if (track) track.style.transform = 'translateX(0)';
-      for (var i = 0; i < onbTotal; i++) {
-        var d = document.getElementById('onbD' + i);
-        if (d) d.classList.toggle('active', i === 0);
-      }
-      lockScroll(); var onbEl = document.getElementById('onbPopup'); if (onbEl) onbEl.style.display = 'flex';
-      setTimeout(function(){ onbAnimateSlide(0); }, 600);
-    }, 1500);
+  if (localStorage.getItem('natty_onb_popup_' + USER_ID)) return;
+  setTimeout(function () { montrerOnbPopup(0); }, 1500);
+}
+
+/* ⚠️ Le guide « Ma journée » occupe déjà tout l'écran quand il a quelque chose
+   à dire, et il monte plus haut que ce carrousel (z 99988 contre 400) :
+   affiché en même temps, celui-ci passait DESSOUS sans jamais être vu.
+   Constaté sur un compte neuf : `njour` et `onbPopup` tous deux affichés.
+   Comme la liste d'étapes, il n'est pas urgent — il attend que la place soit
+   libre, et renonce pour cette session au bout de 30 s plutôt que de couper la
+   personne dans ce qu'elle fait. */
+function montrerOnbPopup(essai) {
+  if (!USER_ID || localStorage.getItem('natty_onb_popup_' + USER_ID)) return;
+  if (unePleinEcranOuverte('onbPopup')) {
+    if (essai > 40) return;
+    setTimeout(function () { montrerOnbPopup(essai + 1); }, 750);
+    return;
   }
+  onbCurrent = 0;
+  onbAnimated = [false, false, false, false];
+  var track = document.getElementById('onbTrack');
+  if (track) track.style.transform = 'translateX(0)';
+  for (var i = 0; i < onbTotal; i++) {
+    var d = document.getElementById('onbD' + i);
+    if (d) d.classList.toggle('active', i === 0);
+  }
+  lockScroll(); var onbEl = document.getElementById('onbPopup'); if (onbEl) onbEl.style.display = 'flex';
+  setTimeout(function(){ onbAnimateSlide(0); }, 600);
 }
 
 function closeOnbPopup() {
@@ -5887,9 +5900,39 @@ async function verifierEtMontrerPopupConseils() {
 
   _pcState = {nbPlats:nbPlats, onbOk:onbOk, qaOk:qaOk};
   renderPopupConseils();
-  lockScroll();
+  afficherPopupConseilsQuandLibre();
+}
+
+/* ⚠️ TROIS PLEIN-ÉCRAN EN MÊME TEMPS, AU PREMIER LANCEMENT. Le carrousel de
+   découverte s'ouvre à t+1,5 s, le guide « Ma journée » quand il a quelque
+   chose à dire, et cette liste d'étapes à t+4 s — par-dessus les deux autres,
+   qui restaient ouverts dessous. Constaté sur un compte neuf : `#popupConseils`
+   (z 500) et `#onbPopup` (z 400) tous deux en `display:flex`.
+   Aucun de ces écrans n'est urgent : celui-ci attend simplement que la place
+   soit libre. Au bout de 30 s sans créneau, on renonce pour cette session
+   plutôt que d'interrompre ce que la personne est en train de faire. */
+var PLEIN_ECRAN = ['onbPopup', 'popupConseils', 'njour', 'nmat', 'ngenQ', 'ngen',
+                  'nplan', 'nrCine', 'nattyAjout'];
+
+function unePleinEcranOuverte(sauf) {
+  return PLEIN_ECRAN.some(function (id) {
+    if (id === sauf) return false;
+    var e = document.getElementById(id);
+    return e && getComputedStyle(e).display !== 'none';
+  });
+}
+
+function afficherPopupConseilsQuandLibre(essai) {
+  essai = essai || 0;
   var pcEl = document.getElementById('popupConseils');
-  if (pcEl) pcEl.style.display = 'flex';
+  if (!pcEl) return;
+  if (unePleinEcranOuverte('popupConseils')) {
+    if (essai > 40) { console.log('[Popup] → place jamais libre, abandon pour cette session'); return; }
+    setTimeout(function () { afficherPopupConseilsQuandLibre(essai + 1); }, 750);
+    return;
+  }
+  lockScroll();
+  pcEl.style.display = 'flex';
   console.log('[Popup] → Popup affiché');
 }
 function renderPopupConseils() {
@@ -5897,9 +5940,9 @@ function renderPopupConseils() {
   var nbPlats = _pcState.nbPlats, onbOk = _pcState.onbOk, qaOk = _pcState.qaOk;
   var platsRestants = Math.max(0, 3 - nbPlats);
   var steps = [
-    {done:onbOk,  titre:"Completer l'onboarding",     sub:onbOk?'Profil cree':'Repondez aux questions de depart', action:'onboarding'},
-    {done:qaOk,   titre:'Questionnaire alimentaire',   sub:qaOk?'Preferences enregistrees':'Vos gouts et preferences', action:'questionnaire'},
-    {done:nbPlats>=3, titre:'Ajouter '+(platsRestants>0?platsRestants+' repas':'3 repas'), sub:nbPlats+'/3 repas - encore '+platsRestants+' a ajouter', action:'repas'}
+    {done:onbOk,  titre:"Compléter mon profil",         sub:onbOk?'Profil créé':'Répondez aux questions de départ', action:'onboarding'},
+    {done:qaOk,   titre:'Questionnaire alimentaire',   sub:qaOk?'Préférences enregistrées':'Vos goûts et préférences', action:'questionnaire'},
+    {done:nbPlats>=3, titre:'Ajouter '+(platsRestants>0?platsRestants+' repas':'3 repas'), sub:nbPlats+'/3 repas — encore '+platsRestants+' à ajouter', action:'repas'}
   ];
   var stepsHtml = steps.map(function(s,i){
     return '<div class="pc-popup-step'+(s.done?' done':'')+'">'
@@ -5911,8 +5954,8 @@ function renderPopupConseils() {
   document.getElementById('pcStepsList').innerHTML = stepsHtml;
   var btn = document.getElementById('pcActionBtn');
   var next = steps.find(function(s){ return !s.done; });
-  if (!next) { btn.textContent = 'Generer mes conseils'; btn.dataset.action = 'generate'; }
-  else if (next.action==='onboarding') { btn.textContent = 'Completer mon profil'; btn.dataset.action = 'onboarding'; }
+  if (!next) { btn.textContent = 'Générer mes conseils'; btn.dataset.action = 'generate'; }
+  else if (next.action==='onboarding') { btn.textContent = 'Compléter mon profil'; btn.dataset.action = 'onboarding'; }
   else if (next.action==='questionnaire') { btn.textContent = 'Remplir le questionnaire'; btn.dataset.action = 'questionnaire'; }
   else { btn.textContent = 'Ajouter un repas ('+_pcState.nbPlats+'/3)'; btn.dataset.action = 'repas'; }
 }

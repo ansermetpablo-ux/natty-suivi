@@ -1416,6 +1416,21 @@ window.NattyJournee = (function () {
       if (Natty.ecranOccupe()) return;
       if (window.NattyGeneration && NattyGeneration.enCours()) return;
 
+      /* ⚠️ Et tout le reste de ce qui prend l'écran entier. La liste ci-dessus
+         avait été écrite au cas par cas, en oubliant les écrans du premier
+         lancement : sur un compte neuf, le carrousel de découverte de
+         `suivi.html` s'ouvrait à t+1,5 s et le guide venait se poser dessus à
+         t+6,5 s — au-dessus (z 99988 contre 400), donc le carrousel était
+         purement et simplement escamoté. Les questions du matériel et du
+         garde-manger sont dans le même cas.
+         `display` plutôt que la classe : ces écrans-là s'affichent en
+         `style.display`, pas en `.on`. */
+      var occupe = ['onbPopup', 'popupConseils', 'nmat', 'ngenQ'].some(function (id) {
+        var e = document.getElementById(id);
+        return e && getComputedStyle(e).display !== 'none';
+      });
+      if (occupe) return;
+
       var premiere = !vuLong();
       if (premiere) { ouvrir(); return; }
 
