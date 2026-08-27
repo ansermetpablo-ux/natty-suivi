@@ -445,16 +445,46 @@ export function versAffichage(recettes) {
    désynchronisée des recettes affichées, et sans second appel à payer. */
 export function listeDeCourses(recettes) {
   const par = {};
+  /* ⚠️ LA LISTE REDEMANDAIT D'ACHETER CE QU'ON VENAIT DE DÉCLARER. L'écran qui
+     réclame le garde-manger promet mot pour mot que « la liste de courses ne
+     portera que le reste » ; or tout ingrédient marqué `dispo:true` par la
+     génération y figurait quand même. Constaté sur un compte de test : poulet,
+     riz basmati, tomates, yaourt grec et huile d'olive — les cinq entrées du
+     garde-manger — étaient tous à racheter.
+     Le repli existe pour le cas où la personne aurait TOUT : une liste vide
+     ressemble à une panne, mieux vaut alors la liste complète. */
+  const garde = new Set();
+  (recettes || []).forEach(r => {
+    (r.ingredients || []).forEach(x => {
+      const nom = ((x && (x.nom || x.name)) || '').trim();
+      if (nom && x && x.dispo === true) garde.add(nom.toLowerCase());
+    });
+  });
+
   (recettes || []).forEach(r => {
     (r.ingredients || []).forEach(x => {
       const nom = ((x && (x.nom || x.name)) || '').trim();
       if (!nom) return;
       const cle = nom.toLowerCase();
+      if (garde.has(cle)) return;
       if (!par[cle]) par[cle] = { emoji: (x && x.em) || '🛒', nom, qtes: [], plats: [] };
       if (x.qte) par[cle].qtes.push(String(x.qte));
       if (r.nom && par[cle].plats.indexOf(r.nom) === -1) par[cle].plats.push(r.nom);
     });
   });
+
+  if (!Object.keys(par).length && garde.size) {
+    (recettes || []).forEach(r => {
+      (r.ingredients || []).forEach(x => {
+        const nom = ((x && (x.nom || x.name)) || '').trim();
+        if (!nom) return;
+        const cle = nom.toLowerCase();
+        if (!par[cle]) par[cle] = { emoji: (x && x.em) || '🛒', nom, qtes: [], plats: [] };
+        if (x.qte) par[cle].qtes.push(String(x.qte));
+        if (r.nom && par[cle].plats.indexOf(r.nom) === -1) par[cle].plats.push(r.nom);
+      });
+    });
+  }
 
   const items = Object.keys(par).map(cle => {
     const it = par[cle];
