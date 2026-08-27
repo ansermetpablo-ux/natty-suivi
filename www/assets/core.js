@@ -528,12 +528,33 @@ var Natty = (function () {
     for (i = 0; i < NT_FORTS.length && !t; i++) {
       if (tousPresents(NT_FORTS[i].mots, n) || tousPresents(NT_FORTS[i].motsS, nS)) t = NT[NT_FORTS[i].k];
     }
-    for (i = 0; i < NT_CLES.length && !t; i++) {
-      if (tousPresents(NT_CLES[i].mots, n)) t = NT[NT_CLES[i].k];
-    }
+    /* ⚠️ LA PASSE EXACTE COURT-CIRCUITAIT LA PASSE SINGULIER, ET C'EST CE QUI
+       COMPTAIT LE BLANC D'ŒUF COMME UN ŒUF ENTIER. « Blancs d'œufs » tombe au
+       pluriel : la clé « oeufs » (un mot) correspond exactement, la passe 1
+       s'arrête là, et « blanc d'oeuf » (trois mots) — qui n'aurait été trouvé
+       qu'au singulier — n'est jamais essayée. Mesuré : 155 kcal et 11 g de
+       lipides pour 100 g, contre 52 kcal et 0,2 g. Au singulier, la même
+       chaîne rendait la bonne valeur. Vu à l'écran : une suggestion
+       « protéines pures sans lipides » affichant 22 g de lipides.
+       La passe singulier ne PRIME toujours pas — elle ne sert qu'à trouver
+       PLUS PRÉCIS, c'est-à-dire une clé de strictement plus de mots. Le pâté
+       reste donc du pâté : « pate de campagne » est résolu exactement, et les
+       clés d'un seul mot (« pates ») ne repassent jamais devant. */
+    /* ⚠️ La passe 0 reste ABSOLUE : si un complément a été reconnu, on n'y
+       touche plus. Sans ce garde, la passe singulier ci-dessous reprenait la
+       main et « Whey isolate chocolat » redevenait du chocolat — le défaut
+       même que la passe 0 avait été écrite pour réparer (mesuré : 546 kcal et
+       5 g de protéines au lieu de 373 et 90). */
     if (!t) {
+      var motsExacts = 0;
       for (i = 0; i < NT_CLES.length && !t; i++) {
-        if (tousPresents(NT_CLES[i].motsS, nS)) t = NT[NT_CLES[i].k];
+        if (tousPresents(NT_CLES[i].mots, n)) { t = NT[NT_CLES[i].k]; motsExacts = NT_CLES[i].mots.length; }
+      }
+      // NT_CLES est trié par nombre de mots décroissant : dès qu'on descend au
+      // niveau de la clé déjà trouvée, il n'y a plus rien de plus précis.
+      for (i = 0; i < NT_CLES.length; i++) {
+        if (NT_CLES[i].motsS.length <= motsExacts) break;
+        if (tousPresents(NT_CLES[i].motsS, nS)) { t = NT[NT_CLES[i].k]; break; }
       }
     }
     if (!t) return null;

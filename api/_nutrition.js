@@ -151,8 +151,54 @@ const NT = {
   'steack':{c:250,p:26,l:15,g:0},'amendes':{c:579,p:21,l:50,g:22},
   'basilique':{c:23,p:3.2,l:0.6,g:2.7},'pouivron':{c:31,p:1,l:0.3,g:6},
   'teriaki':{c:89,p:1.5,l:0,g:20},
-  'petits poids':{c:81,p:5,l:0.4,g:14},'poids chiche':{c:164,p:9,l:2.6,g:27}
-};
+  'petits poids':{c:81,p:5,l:0.4,g:14},'poids chiche':{c:164,p:9,l:2.6,g:27},
+  /* ── Compléments et nutrition sportive ─────────────────────────
+     Ils manquaient entièrement, et c'est le pire cas possible pour cette
+     table : une dose de whey, c'est ~24 g de protéines — soit un quart de la
+     cible d'une journée — et elle comptait pour **zéro**. Quelqu'un qui
+     prend deux shakers voyait donc ses anneaux stagner en ayant bien mangé.
+     Valeurs pour 100 g de poudre (étiquetage usuel), pas par dose : la dose
+     est une affaire d'unité de saisie, et elle vit dans `assets/unites.js`.
+
+     ⚠️ AUCUNE CLÉ « proteine » TOUTE SEULE, et c'est délibéré. Le libellé le
+     plus long gagnant, « Poulet riche en protéines » serait tombé sur elle et
+     aurait compté 400 kcal aux 100 g. Les clés restent donc composées.
+     ⚠️ Et les deux orthographes de « protéiné(e) » : la seconde passe ne
+     singularise que les `s`/`x` finaux, donc « barre proteine » ne rattrape
+     PAS « barre protéinée ». Vérifié — l'une sans l'autre laisse la moitié
+     des saisies non reconnues. */
+  'whey':{c:400,p:80,l:7,g:6},'proteine en poudre':{c:400,p:80,l:7,g:6},
+  'poudre proteine':{c:400,p:80,l:7,g:6},'poudre proteinee':{c:400,p:80,l:7,g:6},
+  'isolat':{c:373,p:90,l:1,g:2},'caseine':{c:370,p:80,l:2,g:8},
+  'collagene':{c:360,p:90,l:0,g:0},'proteine vegetale':{c:380,p:75,l:6,g:8},
+  'gainer':{c:380,p:20,l:4,g:65},'maltodextrine':{c:380,p:0,l:0,g:95},
+  'creatine':{c:0,p:0,l:0,g:0},'bcaa':{c:400,p:100,l:0,g:0},
+  'acides amines':{c:400,p:100,l:0,g:0},'glutamine':{c:400,p:100,l:0,g:0},
+  'barre proteinee':{c:370,p:32,l:12,g:33},'barre proteine':{c:370,p:32,l:12,g:33},
+  'boisson proteinee':{c:47,p:10,l:0.5,g:1},'boisson proteine':{c:47,p:10,l:0.5,g:1},
+  'shaker proteine':{c:47,p:10,l:0.5,g:1},
+  'gel energetique':{c:250,p:0,l:0,g:62},'boisson isotonique':{c:26,p:0,l:0,g:6.4},
+  'spiruline':{c:290,p:57,l:8,g:24},'levure de biere':{c:325,p:42,l:6,g:19},
+  'omega 3':{c:900,p:0,l:100,g:0},'huile de poisson':{c:900,p:0,l:100,g:0},
+  /* ⚠️ LES POTS SONT ÉTIQUETÉS EN ANGLAIS, et c'est ce qui se tape. Relevé au
+     banc sur des libellés réels : « Isolate vanille » et « Protein powder »
+     n'étaient PAS reconnus — donc zéro protéine sur la source la plus
+     concentrée qui soit. « Whey protein » passait déjà, mais par `whey`
+     seulement, ce qui est un hasard heureux et non une règle.
+     ⚠️ Toujours pas de clé `protein` seule, pour la raison donnée plus haut :
+     elle happerait n'importe quel aliment « riche en protein(e)s ». */
+  'isolate':{c:373,p:90,l:1,g:2},'protein powder':{c:400,p:80,l:7,g:6},
+  /* Un pré-workout est édulcoré : sans calories, comme la créatine. Le chiffre
+     n'est pas inventé, il est lu sur l'étiquette — mais il vaut mieux le dire
+     ici, parce qu'un 0 ressemble toujours à un oubli. */
+  'pre workout':{c:0,p:0,l:0,g:0},'preworkout':{c:0,p:0,l:0,g:0},
+  /* Le blanc et le jaune, séparés. « Blanc d'œuf » tombait sur `oeuf` et
+     comptait 143 kcal au lieu de 52 — presque trois fois trop — alors que
+     c'est justement l'aliment qu'on prend POUR ses protéines sans le reste.
+     ⚠️ Clé en deux mots : elle exige `blanc` ET `oeuf`, donc « blanc de
+     poulet » ne peut pas l'attraper, et elle bat `oeuf` seul (plus de mots). */
+  'blanc oeuf':{c:52,p:10.9,l:0.2,g:0.7},'jaune oeuf':{c:322,p:16,l:27,g:3.6}
+}
 /* ⚠️ APPARIEMENT IDENTIQUE À core.js, au caractère près. Un appariement
    différent d'un côté ou de l'autre donnerait des grammes différents de ceux
    affichés à l'écran.
@@ -184,26 +230,60 @@ const NT_CLES = Object.keys(NT)
   .map(k => { const mots = normNom(k).trim().split(' '); return { k, mots, motsS: mots.map(sing) }; })
   .sort((a, b) => b.mots.length - a.mots.length || b.k.length - a.k.length);
 
+/* ⚠️ Les libellés qui l'emportent sur tout le reste du nom — copie de `FORTS`
+   d'assets/core.js, et pour la même raison : « Whey isolate chocolat » était
+   compté comme du CHOCOLAT (546 kcal, 5 g de protéines pour une dose qui en
+   apporte 90). Sans cette passe ici, le rappel du soir annoncerait d'autres
+   grammes que l'écran — la divergence exacte contre laquelle l'en-tête met
+   en garde. */
+const FORTS = ['whey', 'isolat', 'caseine', 'collagene', 'gainer', 'maltodextrine',
+  'creatine', 'bcaa', 'acides amines', 'glutamine', 'spiruline', 'levure de biere',
+  'proteine en poudre', 'poudre proteine', 'poudre proteinee', 'proteine vegetale',
+  'barre proteinee', 'barre proteine', 'boisson proteinee', 'boisson proteine',
+  'shaker proteine', 'gel energetique', 'boisson isotonique', 'omega 3',
+  'huile de poisson', 'isolate', 'protein powder', 'pre workout', 'preworkout'];
+const NT_FORTS = NT_CLES.filter(x => FORTS.indexOf(x.k) > -1);
+
 function tousPresents(mots, n) {
   return mots.every(m => n.indexOf(' ' + m + ' ') > -1);
 }
 
 function r1(v) { return Math.round(v * 10) / 10; }
 
-/* ⚠️ DEUX PASSES, ET L'ORDRE EST TOUT L'INTÉRÊT. La première est l'ancienne,
-   mot à mot exact : rien de ce qui correspondait avant ne peut changer de
-   valeur. La seconde ne tourne que si la première n'a rien trouvé.
+/* ⚠️ DEUX PASSES, ET L'ORDRE EST TOUT L'INTÉRÊT. La première est mot à mot
+   exact. La seconde, au singulier, ne sert qu'à trouver PLUS PRÉCIS : une clé
+   de strictement plus de mots que celle déjà retenue.
 
-   Collapser en UNE passe aurait été une régression : « pates » et « pate » (le
+   Collapser en UNE passe serait une régression : « pates » et « pate » (le
    pâté, 320 kcal) se réduisent au même mot, et le plus long libellé gagnant, un
-   pâté de campagne serait compté comme des pâtes à 131 kcal. */
+   pâté de campagne serait compté comme des pâtes à 131 kcal. Le seuil « plus de
+   mots » l'évite : « pate de campagne » est résolu exactement, et rien d'un
+   seul mot ne repasse devant.
+
+   ⚠️ Et la seconde ne peut plus être court-circuitée : c'est ce qui comptait
+   « blancs d'œufs » (pluriel) comme des œufs entiers — la clé « oeufs » d'un
+   seul mot correspondait exactement, la passe s'arrêtait là, et « blanc
+   d'oeuf » (trois mots) n'était jamais essayée. 155 kcal au lieu de 52.
+   Même correctif dans `assets/core.js`, dont ce fichier est la copie. */
 export function getNutri(name, qty) {
   const n = normNom(name);
   let t = null;
-  for (const e of NT_CLES) { if (tousPresents(e.mots, n)) { t = NT[e.k]; break; } }
-  if (!t) {
-    const nS = ' ' + n.trim().split(' ').map(sing).join(' ') + ' ';
-    for (const e of NT_CLES) { if (tousPresents(e.motsS, nS)) { t = NT[e.k]; break; } }
+  const nF = ' ' + n.trim().split(' ').map(sing).join(' ') + ' ';
+  for (const e of NT_FORTS) {
+    if (tousPresents(e.mots, n) || tousPresents(e.motsS, nF)) { t = NT[e.k]; break; }
+  }
+  if (t) {
+    const f0 = (parseFloat(qty) || 0) / 100;
+    return { c: Math.round(t.c * f0), p: r1(t.p * f0), l: r1(t.l * f0), g: r1(t.g * f0) };
+  }
+  let motsExacts = 0;
+  for (const e of NT_CLES) { if (tousPresents(e.mots, n)) { t = NT[e.k]; motsExacts = e.mots.length; break; } }
+  // NT_CLES est trié par nombre de mots décroissant : dès qu'on descend au
+  // niveau de la clé déjà retenue, il n'y a plus rien de plus précis.
+  const nS = ' ' + n.trim().split(' ').map(sing).join(' ') + ' ';
+  for (const e of NT_CLES) {
+    if (e.motsS.length <= motsExacts) break;
+    if (tousPresents(e.motsS, nS)) { t = NT[e.k]; break; }
   }
   if (!t) return null;
   const f = (parseFloat(qty) || 0) / 100;
@@ -218,10 +298,18 @@ export function getNutri(name, qty) {
  *  pouvoir dire CE QU'IL a reconnu et non seulement combien il a compté. */
 export function cleNutri(name) {
   const n = normNom(name);
-  for (const e of NT_CLES) { if (tousPresents(e.mots, n)) return e.k; }
+  const nF = ' ' + n.trim().split(' ').map(sing).join(' ') + ' ';
+  for (const e of NT_FORTS) {
+    if (tousPresents(e.mots, n) || tousPresents(e.motsS, nF)) return e.k;
+  }
+  let cle = null, motsExacts = 0;
+  for (const e of NT_CLES) { if (tousPresents(e.mots, n)) { cle = e.k; motsExacts = e.mots.length; break; } }
   const nS = ' ' + n.trim().split(' ').map(sing).join(' ') + ' ';
-  for (const e of NT_CLES) { if (tousPresents(e.motsS, nS)) return e.k; }
-  return null;
+  for (const e of NT_CLES) {
+    if (e.motsS.length <= motsExacts) break;
+    if (tousPresents(e.motsS, nS)) return e.k;
+  }
+  return cle;
 }
 
 /**
