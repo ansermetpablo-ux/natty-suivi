@@ -4507,6 +4507,45 @@ vérifié. Le seul dommage est un `git log` qui attribue ces lignes à un commit
 > `--only` puisse le voir. Le faire dans la MÊME commande que le commit, pour ne pas laisser
 > de fenêtre à une autre session.
 
+### ✅ La branche avait divergé neuf jours, et rien n'a été perdu (2026-08-27)
+Le dépôt local et `origin/main` se sont séparés le **19 août** (base commune `cb11b7f`) et ont
+travaillé en parallèle sans le savoir&nbsp;:
+
+| | Contenu |
+|---|---|
+| **local, non poussé** | 3 commits (avatar, inscription, clés de production) **et 22 fichiers jamais commités** |
+| **distant, absent du local** | 6 commits, dont **la première archive App Store** (`66e2973`), le bundle repassé en français, le retour Apple vérifié |
+
+⚠️ **C'est le pire moment pour une divergence&nbsp;: l'archive a été produite depuis l'état
+DISTANT.** Construire depuis le dossier local aurait livré une app sans les correctifs de la
+veille — dont les mois écrits en entier, qui se voient sur les captures de l'App Store.
+
+**Réconcilié par rebase**, et tout survit. Les deux lignes ne touchaient presque pas les mêmes
+fichiers, et là où elles touchaient le même c'était à des endroits différents&nbsp;: `merge-tree`
+annonçait 0 conflit avant de commencer, et le rebase des 4 commits est passé sans un.
+- ⚠️ **Deux conflits au retour du stash**, sur `coaching.html` et sa copie&nbsp;: les deux sessions
+  avaient corrigé **le même bug** (les mois abrégés « aou », « fevr. ») et produit des tableaux
+  **identiques**. Seul le distant portait les commentaires d'explication&nbsp;: on garde son côté,
+  et git voit alors ces deux fichiers rigoureusement identiques à `origin/main` — la résolution
+  n'ajoute donc rien, ce qui est la preuve que rien n'a été perdu non plus.
+- Les 22 fichiers sont devenus **8 commits par sujet** plutôt qu'un bloc&nbsp;: blanc d'œuf compté
+  comme œuf entier, photo dont l'extension mentait, liste de courses qui redemandait le
+  garde-manger, semaine planifiée dans le passé, trois plein-écran en même temps, « Bonjour
+  Pablo » écrit en dur, récapitulatif du questionnaire en clés de base, trois libellés faux.
+
+> ⚠️ **Ces 8 commits portent la date du 27 août mais le code a été écrit le 26 par une autre
+> session.** Je n'en suis pas l'auteur&nbsp;: je l'ai relu, vérifié et rangé. C'est l'inverse des
+> trois épisodes ci-dessus — là un `git add -A` emportait le travail d'autrui sans le dire, ici
+> le travail d'autrui était sur le point d'être perdu et il est repris en le disant.
+> ⚠️ **Filet laissé en place**&nbsp;: la branche `sauvegarde-avant-fusion-27aout` pointe sur l'état
+> local d'avant, et le stash n'a pas été jeté. À supprimer une fois la soumission passée.
+
+**Vérifié après coup**, et pas seulement compilé&nbsp;: les 6 commits distants sont tous ancêtres de
+`HEAD`, chaque ligne qu'ils ajoutaient est encore dans les 4 fichiers touchés des deux côtés,
+les 73 fichiers JS et les 67 blocs inline des 38 HTML passent, les 155 références du bundle
+résolvent, `www/index.html` est toujours identique à `www/menu.html`, et l'A/B
+`core.js` ↔ `api/_nutrition.js` rend **0 écart sur 32 cas**.
+
 ## 11. Application native (Capacitor) — branche `app-native`
 
 > Section rédigée en juillet 2026, quand le portage est passé de « projet » à « app qui compile et tourne ». Le §10 ci-dessus reste valable comme liste de vigilance ; celle-ci décrit ce qui est **fait**.
