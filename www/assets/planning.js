@@ -331,13 +331,27 @@ window.NattyPlanning = (function () {
   function placer(analyse, prepare, platsMacro, recettes) {
     var pris = {}, sortie = [];
 
-    function libres() {
+    /* ⚠️ ON PLANIFIAIT DANS LE PASSÉ. Les cases étaient parcourues du lundi au
+       dimanche, et à manque égal c'est le créneau le plus tôt qui gagnait :
+       planifier un mercredi posait donc des repas le lundi et le mardi. Mesuré
+       le 26 août (un mercredi) : trois des cinq repas tombaient sur des jours
+       déjà passés, impossibles à cuisiner. Et comme l'inscription a lieu
+       n'importe quel jour, c'est le cas le plus courant, pas un cas limite.
+       Le créneau EN COURS reste éligible : il est encore devant nous. */
+    var m = maintenant();
+
+    function libres(toutesLesCases) {
       var l = [];
       for (var i = 0; i < 7; i++) for (var j = 0; j < 3; j++) {
         if (!prepare[i][j]) continue;                 // il achète : on ne planifie pas
         if (pris[i + '-' + j]) continue;
+        if (!toutesLesCases && (i < m.jour || (i === m.jour && j < m.creneau))) continue;
         l.push({ j: i, c: j, case: analyse.cases[i][j] });
       }
+      /* Un dimanche soir, il ne reste rien devant : plutôt que de ne rien
+         proposer, on reprend la semaine entière. Une semaine placée trop tôt
+         vaut mieux qu'une semaine vide. */
+      if (!l.length && !toutesLesCases) return libres(true);
       return l;
     }
 
