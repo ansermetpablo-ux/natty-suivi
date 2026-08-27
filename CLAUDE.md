@@ -2887,8 +2887,22 @@ affiche l'écran. Si les deux divergeaient, ce sont les repas qui font foi.
 `bilan_jour` est dans `TABLES_USER` d'`api/supprimer-compte.js` — ce qu'on répond le soir sur
 sa motivation et ses difficultés est ce qu'il y a de plus personnel dans cette app.
 
-#### `materiel` — 🔄 **à créer** (`natty_materiel.sql`)
+#### `materiel` — ✅ **existe** (`natty_materiel.sql`, exécuté)
 Le matériel de cuisine (`assets/materiel.js`, §3).
+
+**Relevé à la clé anon le 2026-08-27**, quatre contrôles : la table répond `[]` (donc présente,
+et non `PGRST205`) ; le témoin sur une colonne inventée répond `42703`, ce qui prouve que le test
+lit vraiment le schéma ; les quatre colonnes ci-dessous sont là ; un INSERT anon est refusé en
+**`42501`**, donc la policy protège.
+> ⚠️ **Et la clé primaire est confirmée par la MÊME mesure.** Le POST portait
+> `Prefer: resolution=merge-duplicates` **sans** `?on_conflict=` et répond `42501`, **pas `42P10`**
+> (« no unique constraint matching the ON CONFLICT specification ») : la requête a donc été
+> **planifiée** avant d'être refusée, ce qui prouve que la cible du `ON CONFLICT` s'est résolue,
+> donc que la clé primaire sur `user_id` est en place. Même raisonnement que pour `garde_manger`,
+> `bilan_jour` et `membre_bloques`.
+> ⚠️ **Conséquence directe : le CRON DU LUNDI tient enfin compte du matériel.** C'était le
+> seul écart de comportement que le retard sur ce SQL produisait (voir l'encadré ci-dessous, qui
+> décrit l'état d'avant).
 
 | Colonne | Type | Notes |
 |---|---|---|
@@ -3621,9 +3635,11 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ Vérifié en navigateur (375 × 812, clair et sombre) : grille, pré-cochage, repli local
   **et** chemin table, enchaînement matériel → garde-manger → envoi, et la seconde génération
   qui ne repose pas la question.
-- 🔄 **`natty_materiel.sql` reste à exécuter.** Sans lui tout fonctionne, mais la réponse ne vit
-  que sur l'appareil — et **le cron du lundi ne la voit pas** (voir §4). C'est le seul écart de
-  comportement que le retard sur ce SQL produit.
+- ✅ **`natty_materiel.sql` EXÉCUTÉ** — vérifié à la clé anon le 2026-08-27 (quatre contrôles,
+  dont la preuve de la clé primaire par `42501` plutôt que `42P10` — voir §4). La réponse suit donc
+  la personne d'un appareil à l'autre, et **le cron du lundi en tient compte** : c'était le seul
+  écart de comportement que le retard sur ce SQL produisait. Cette entrée le réclamait depuis
+  plusieurs sessions ; il était fait.
 - 🔄 **Non vérifié avec une vraie session ni sur téléphone** : bancs à doublures uniquement.
 - 🔄 Le catalogue tient 14 appareils, choisis pour ce qui CHANGE une recette. En ajouter un ne
   réécrit pas les `resume` déjà en base — voir la contrepartie en §3.
@@ -5258,9 +5274,9 @@ n'a pu être fait ici.
 - **Nouveau** `assets/materiel.js` (+ copie `www/`) : la question « qu'as-tu dans ta cuisine ? »,
   posée **une seule fois**, avant la première génération de la semaine — et le panneau
   « Mon matériel » de l'écran Repas, qui la rend rattrapable. Détail et pièges en §3.
-- **Nouveau** `natty_materiel.sql` : table `materiel`, RLS + policy « soi seulement ». 🔄 Reste
-  à exécuter — c'est ce qui donne la contrainte au **cron du lundi**, seul chemin qui n'a pas de
-  navigateur (§4).
+- **Nouveau** `natty_materiel.sql` : table `materiel`, RLS + policy « soi seulement ». ✅ Exécuté
+  depuis (vérifié le 2026-08-27, §4). ~~Restait à exécuter — c'est ce qui donne la contrainte au
+  cron du lundi, seul chemin qui n'a pas de navigateur.~~
 - `assets/generation.js` : la question passe **avant** celle du garde-manger, et le matériel
   part dans le corps de `/api/generer-conseils` à chaque génération.
 - `api/_generation.js` : `collecterProfil` lit `materiel.resume`, `construirePrompt` ajoute la
