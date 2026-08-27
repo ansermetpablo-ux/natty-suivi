@@ -123,10 +123,27 @@ module.exports = async function handler(req, res) {
     ? Math.min(Math.floor(demande), MAX_TOKENS_PLAFOND)
     : 800;
 
+  /* ⚠️ NE PAS CROIRE `media_type` SUR PAROLE. Il vient de `file.type`, donc du
+     système : une photo dont l'extension ment (un JPEG nommé `.png`, cas
+     courant d'une image renommée ou d'une galerie Android) arrive annoncée en
+     `image/png`. Anthropic compare alors l'annonce aux octets et répond 400
+     « the image appears to be a image/jpeg image ». Mesuré : l'ajout de plat
+     répondait « Plat non reconnu » sur une photo parfaitement lisible.
+     Les premiers octets, eux, ne mentent pas — le base64 les porte en clair
+     dans ses premiers caractères. */
+  function typeReel(b64, annonce) {
+    const t = String(b64 || '').slice(0, 16);
+    if (t.startsWith('/9j/')) return 'image/jpeg';
+    if (t.startsWith('iVBORw0KGgo')) return 'image/png';
+    if (t.startsWith('R0lGOD')) return 'image/gif';
+    if (t.startsWith('UklGR')) return 'image/webp';
+    return annonce || 'image/jpeg';
+  }
+
   let content;
   if (image) {
     content = [
-      { type: 'image', source: { type: 'base64', media_type: media_type || 'image/jpeg', data: image } },
+      { type: 'image', source: { type: 'base64', media_type: typeReel(image, media_type), data: image } },
       { type: 'text', text: prompt }
     ];
   } else {
