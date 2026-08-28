@@ -521,7 +521,7 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
           <!-- Le lien était mort (href="#") : une case RGPD qui renvoie vers rien
                ne vaut pas consentement éclairé. stopPropagation, sinon le clic
                sur le lien décoche aussi la case (la ligne entière est cliquable). -->
-          <div class="rgpd-text">J'accepte que mes données soient utilisées pour le suivi de mon programme, conformément à la <a href="/confidentialite.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">politique de confidentialité</a> de Natty. Je reconnais avoir lu les <a href="/cgv.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">conditions de vente</a>.</div>
+          <div class="rgpd-text">J'accepte que mes données soient utilisées pour le suivi de mon programme, conformément à la <a href="/confidentialite.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">politique de confidentialité</a> de Natty. Je reconnais avoir lu les <a href="/cgv.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">conditions de vente</a> et les <a href="/cgu.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">conditions d’utilisation</a>.</div>
         </div>
       </div>
     </div>
@@ -987,6 +987,28 @@ function toggleRGPD(){
    Sans ce champ — et il n'était pas envoyé — Stripe renvoyait sur le site
    Vercel : toute la machinerie de rebond existait sans jamais servir. */
 var CAP_CHECKOUT = 'com.nattynutrition.app://checkout';
+
+/* ⚠️ LES LIENS LÉGAUX NE DOIVENT PAS PARTIR DANS LA WEBVIEW. En `target="_blank"`
+   depuis le bundle, on quitte l'écran d'offre sans barre d'adresse ni bouton
+   retour&nbsp;: le `history.back()` des pages légales ne peut rien rattraper quand la
+   navigation a ouvert une nouvelle vue sans historique. C'est le piège décrit en
+   §11, et l'examinateur d'Apple clique justement ces liens (règle 3.1.2).
+   On passe donc par le navigateur système, qui a son propre bouton Terminé — et
+   le formulaire déjà rempli reste intact derrière, ce qu'une navigation aurait
+   perdu. Sur le web, on ne touche à rien&nbsp;: `target="_blank"` y fait le bon travail. */
+var SITE_LEGAL = 'https://natty-suivi.vercel.app';
+document.addEventListener('click', function (ev) {
+  var a = ev.target && ev.target.closest && ev.target.closest('a[href$=".html"]');
+  if (!a) return;
+  var chemin = a.getAttribute('href') || '';
+  if (!/^\/(cgu|cgv|confidentialite)\.html$/.test(chemin)) return;
+  if (!estNatif()) return;
+  var Browser = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+  if (!Browser) return;                      // sans le plugin, on laisse le comportement d'avant
+  ev.preventDefault();
+  ev.stopPropagation();                      // la ligne entière coche la case RGPD
+  Browser.open({ url: SITE_LEGAL + chemin, presentationStyle: 'popover' });
+}, true);
 
 function estNatif() {
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());

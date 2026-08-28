@@ -38,9 +38,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Natty utilise l'appareil photo pour analyser vos plats et scanner vos courses.</string>
+	<string>Natty utilise l’appareil photo pour photographier vos repas et vos tickets de courses. La photo est analysée pour reconnaître les aliments et estimer les calories et les macronutriments — par exemple, prendre votre déjeuner en photo remplit automatiquement votre suivi du jour. L’analyse est faite par un service d’intelligence artificielle (Anthropic Claude) et la photo est conservée dans votre historique de repas.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Natty accède à vos photos pour analyser un plat ou un ticket de caisse déjà pris en photo.</string>
+	<string>Natty accède à vos photos pour que vous puissiez choisir un repas ou un ticket de courses déjà photographié au lieu d’en reprendre un — par exemple, ajouter à votre suivi le dîner pris en photo hier soir. Seule l’image que vous sélectionnez est lue ; elle est analysée par un service d’intelligence artificielle (Anthropic Claude) pour reconnaître les aliments.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
