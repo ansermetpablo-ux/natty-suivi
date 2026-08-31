@@ -447,7 +447,7 @@ async function genererSemaineMaintenant(){
 
 /* Lecture pure du cache hebdomadaire — aucun appel à l'IA, jamais. */
 async function chargerSemaineDepuisCache(){
-  try { SEMAINE = await NattyReco.recettesDeLaSemaine(NattyReco.NB_MAX) || []; }
+  try { SEMAINE = filtrerAvecPhoto(await NattyReco.recettesDeLaSemaine(NattyReco.NB_MAX)); }
   catch(e){ SEMAINE = []; }
   return SEMAINE;
 }
@@ -478,40 +478,51 @@ function toast(msg){
    On les ramène à une forme unique pour que le rendu n'ait qu'un seul cas. */
 
 var EMOJIS = ['🍛','🐟','🍲','🥗','🍝','🍜'];
-// Les recettes conseillées par NattyReco n'ont pas de vraie photo (pas encore
-// photographiées). En attendant, on fait tourner quelques photos de plats
-// réelles et détourées plutôt que de retomber sur un simple emoji.
-var DEMO_PHOTOS = [
-  { hero:'/assets/img/plat-demo1-hero.png', week:'/assets/img/plat-demo1-week.png' },
-  { hero:'/assets/img/plat-demo2-hero.png', week:'/assets/img/plat-demo2-week.png' }
-];
 
-/* La photo d'une recette de la semaine, ou son illustration.
-   ⚠️ C'ÉTAIT LE DÉFAUT SIGNALÉ PAR PABLO : `DEMO_PHOTOS[i % 2]` faisait
-   tourner DEUX photos de démonstration, donc la même image revenait tous les
-   deux plats — alors que 93 vraies photos dorment dans le catalogue. Depuis
-   que la génération choisit ses plats DANS le catalogue (`api/_generation.js`,
-   règle 0), chaque recette porte une `cle` et donc son image.
-   Repli, dans l'ordre : la photo du catalogue, l'illustration au trait pour
-   les plats jamais photographiés, et seulement en dernier les deux photos de
-   démonstration — pour les lignes générées AVANT ce changement, qui n'ont pas
-   de clé et qu'on ne va pas régénérer pour une image. */
+/* ⚠️ LES DEUX PHOTOS DE DÉMONSTRATION ONT DISPARU D'ICI (2026-08-31, demande de
+   Pablo : « pour toute l'application supprimer absolument les repas qui n'ont
+   pas d'image »). `DEMO_PHOTOS[i % 2]` les faisait tourner sur les recettes
+   sans clé : la même image revenait tous les deux plats, et surtout c'était
+   l'assiette d'un AUTRE plat que celui annoncé. Un écran qui a l'air complet en
+   montrant autre chose que ce qu'il nomme est pire qu'un écran qui manque.
+
+   La photo d'une recette a donc exactement deux sources, et plus aucun repli :
+   celle du catalogue quand la recette porte une `cle` (c'est le cas depuis que
+   la génération y choisit ses plats — `api/_generation.js`, règle 0), et celle
+   que la recette porte en propre. Sinon `null`, et `filtrerAvecPhoto()` ci-
+   dessous l'écarte de la liste. */
 function visuelRecette(r, i){
   var p = (r && r.cle && window.NattyDecouverte)
     ? NattyDecouverte.platParCle(r.cle) : null;
   if (p) {
     var ph = NattyDecouverte.img(p);
     if (ph) return { photo: ph, photoWeek: NattyDecouverte.vignette(p), illu: null };
+    /* Le plat existe au catalogue mais n'a jamais été photographié (les 20
+       plats du quotidien). Son illustration au trait est rendue pour les
+       appelants qui savent s'en servir, mais elle ne vaut PAS une photo : la
+       recette n'entrera pas dans la liste. */
     return { photo: null, photoWeek: null, illu: NattyDecouverte.illu(p, { trait: .9 }) };
   }
-  /* La recette porte SA photo. C'est le cas d'un plat qui n'est pas au
-     catalogue mais qui a bien été photographié — le tzatziki de courgettes
-     ajouté à la main en août 2026. Sans cette ligne il retombait sur les deux
-     photos de démonstration, c'est-à-dire sur l'image d'un AUTRE plat : le
-     défaut que l'encadré ci-dessus décrit, à un cas près. */
+  /* La recette porte SA photo — un plat hors catalogue mais photographié, comme
+     le tzatziki de courgettes ajouté à la main en août 2026. */
   if (r && r.photo) return { photo: r.photo, photoWeek: r.photoWeek || r.photo, illu: null };
-  return { photo: DEMO_PHOTOS[i % DEMO_PHOTOS.length].hero,
-           photoWeek: DEMO_PHOTOS[i % DEMO_PHOTOS.length].week, illu: null };
+  return { photo: null, photoWeek: null, illu: null };
+}
+
+/* ⚠️ LE FILTRE EST APPLIQUÉ À `SEMAINE`, PAS AU RENDU. Masquer une carte à
+   l'affichage laisserait les index de `PLATS` décalés de ceux du carrousel, et
+   c'est `data-i` qui les relie — le héros aurait fini par montrer le voisin du
+   plat tapé. On écarte donc en amont, une fois, et tout ce qui suit compte
+   juste : le compteur, les points du carrousel, le geste de glissement.
+
+   ⚠️ Conséquence assumée : une semaine peut afficher moins de recettes que la
+   génération n'en a produit — et zéro, sur une ligne générée avant que les
+   plats ne soient choisis dans le catalogue. L'écran propose alors de générer,
+   ce qui est la seule chose à faire. */
+function filtrerAvecPhoto(recettes){
+  return (recettes || []).filter(function(r){
+    return !!visuelRecette(r, 0).photo;
+  });
 }
 
 function depuisRecette(r, i){
@@ -558,11 +569,12 @@ function depuisPlanRepas(r){
   // recette porte en propre, l'illustration au trait. Une seule voie, donc pas
   // de second endroit à mettre à jour le jour où elle en apprend une de plus.
   var v = visuelRecette({ cle:r.cle, photo:r.photo, photoWeek:r.photo }, 0);
-  /* ⚠️ `visuelRecette` finit sur les deux photos de démonstration. Sur un plat
-     du plan, ce serait l'assiette d'un AUTRE plat — exactement le défaut que
-     tout le reste de ce fichier s'emploie à corriger. Sans clé ni photo, son
-     illustration ou son emoji, et rien d'autre. */
-  if (!r.cle && !r.photo) v = { photo:null, photoWeek:null, illu:r.illu || null };
+  /* Le garde-fou qui neutralisait ici les deux photos de démonstration n'a plus
+     d'objet : `visuelRecette` ne les rend plus (voir son encadré). L'illustration
+     que porte le repas reste le dernier recours d'affichage — et un repas sans
+     image n'arrive de toute façon plus jusqu'ici, `nettoyerPlan()`
+     (assets/planning.js) l'ayant écarté du plan à la lecture. */
+  if (!v.photo && !v.illu && r.illu) v = { photo:null, photoWeek:null, illu:r.illu };
   /* 🔴 ⚠️ LA RECETTE COMPLÈTE EST DANS `r.src`, ET ELLE ÉTAIT JETÉE.
      `placer()` (assets/planning.js) range la recette entière sous `src` pour
      les entrées de type « recette ». Ce `steps: []` écrit en dur la perdait :

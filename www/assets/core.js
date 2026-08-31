@@ -884,6 +884,12 @@ var Natty = (function () {
   var PLEIN_ECRAN = [
     'nplan', 'njour', 'nbil', 'nattyAjout', 'nvue', 'ndec', 'ngen', 'ngenQ',
     'nmat', 'nconf', 'nrCine', 'npchauffe', 'nplf', 'ncmd', 'nmcf',
+    /* `nplw` la semaine en grand, `nplr` la liste des repas enregistrés qui
+       s'ouvre depuis elle (assets/planning.js §12). Sans elles, le guide du
+       jour et le bilan du soir viendraient se poser par-dessus au bout de
+       leurs 6,5 et 9 secondes — on modifie sa semaine, un autre plein écran
+       surgit, et le tap part dans le mauvais. */
+    'nplw', 'nplr',
     'mjOverlay', 'nnotifInv'
   ];
 

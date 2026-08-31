@@ -52,25 +52,38 @@ window.NattyPlanning = (function () {
     l: { nom: 'Lipides',   em: '🥑', cle: 'conseil_lip'  }
   };
 
-  /* ⚠️ Ces deux photos ne sont plus que le DERNIER repli. Elles tournaient sur
-     toutes les recettes (`PHOTOS[k % 2]`), donc la même image revenait tous les
-     deux plats — le défaut signalé par Pablo. Depuis que la génération choisit
-     ses plats dans le catalogue (`api/_generation.js`, règle 0), chaque recette
-     porte une `cle` et donc sa vraie image. Elles ne servent plus qu'aux lignes
-     générées AVANT ce changement, qui n'ont pas de clé. */
-  var PHOTOS = ['/assets/img/plat-demo1-week.png', '/assets/img/plat-demo2-week.png'];
+  /* ⚠️ LES DEUX PHOTOS DE DÉMONSTRATION ONT DISPARU D'ICI (2026-08-31).
+     Elles tournaient sur toutes les recettes (`PHOTOS[k % 2]`), donc la même
+     image revenait tous les deux plats — le défaut signalé par Pablo. Elles
+     n'ont ensuite servi qu'aux lignes générées avant que la génération ne
+     choisisse ses plats dans le catalogue, et c'était déjà de trop : montrer
+     l'assiette d'un AUTRE plat, c'est un calendrier qui a l'air complet en
+     mentant sur ce qu'il contient. Un plat sans photo n'est plus placé du
+     tout. Elles restent utilisées par `repas.html`, qui a la sienne.        */
 
-  /* La vignette d'une recette : sa photo du catalogue, sinon son illustration,
-     sinon les photos de démonstration. Rend {photo, illu} — jamais les deux. */
-  function visuelRecette(r, k) {
-    var p = (r && r.cle && window.NattyDecouverte)
-      ? window.NattyDecouverte.platParCle(r.cle) : null;
-    if (p) {
-      var ph = window.NattyDecouverte.vignette(p);
-      if (ph) return { photo: ph, illu: null };
-      return { photo: null, illu: window.NattyDecouverte.illu(p, { trait: 1.2 }) };
-    }
-    return { photo: PHOTOS[k % PHOTOS.length], illu: null };
+  /* ⚠️ LA SEULE PHOTO QUI COMPTE EST CELLE DU PLAT LUI-MÊME (demande de Pablo,
+     2026-08-31 : « retirer tous les plats de la planification qui n'ont pas de
+     photo »). Rend l'URL, ou `null` — et `null` veut dire « ne le place pas ».
+
+     Les deux autres visuels qu'on savait rendre ne sont PAS des photos de ce
+     plat-là, et c'est pour ça qu'ils ne suffisent plus :
+     - l'illustration au trait des 20 plats du quotidien, qui dit « voici un
+       poisson » là où le reste du calendrier montre des assiettes ;
+     - et surtout les deux images de démonstration, qui sont l'assiette d'un
+       AUTRE plat — donc un calendrier qui a l'air complet en montrant autre
+       chose que ce qu'il annonce.
+
+     ⚠️ On demande la VIGNETTE, pas l'image pleine : c'est celle que la case du
+     calendrier et la bulle du guide du jour affichent. Les deux sont posées
+     ensemble dans le catalogue, tester l'une revient à tester l'autre.
+
+     ⚠️ Sans `NattyDecouverte`, rien ne se place. C'est voulu : le module est
+     chargé partout où la planification l'est, et le supposer absent
+     reviendrait à replanifier une semaine entière de plats sans image. */
+  function photoDe(r) {
+    if (!r || !r.cle || !window.NattyDecouverte) return null;
+    var p = window.NattyDecouverte.platParCle(r.cle);
+    return (p && window.NattyDecouverte.vignette(p)) || null;
   }
 
   var TOTAL_CASES = 21;          // 7 jours × 3 créneaux
@@ -128,8 +141,58 @@ window.NattyPlanning = (function () {
         if (l && l.semaine === s) trouve = l;
       } catch (e) {}
     }
-    planCache = trouve;
-    return trouve;
+    planCache = nettoyerPlan(trouve);
+    return planCache;
+  }
+
+  /* ⚠️ AUCUN REPAS SANS IMAGE DANS LA SEMAINE, Y COMPRIS DANS LES PLANS DÉJÀ
+     ÉCRITS (demande de Pablo, 2026-08-31 : « pour toute l'application supprimer
+     absolument les repas qui n'ont pas d'image »).
+
+     `placer()` applique déjà la règle à ce qu'il place, mais ça ne dit rien des
+     semaines composées AVANT : elles dorment en base et se réaffichent telles
+     quelles. Deux cas y vivent, et le second est le plus trompeur :
+     - un plat sans photo, qui s'affiche sous son dessin au trait au milieu
+       d'assiettes photographiées ;
+     - un plat portant `plat-demo1-week.png` ou `plat-demo2-week.png` — les deux
+       images de démonstration que `placer()` faisait tourner. Celui-là a bien
+       « une image », mais c'est l'assiette d'un AUTRE plat : un calendrier qui a
+       l'air complet en mentant sur ce qu'il contient. Pire qu'une absence.
+
+     ⚠️ ON RÉPARE AVANT DE RETIRER. Un plat dont la photo stockée est une image
+     de démonstration mais qui porte une `cle` de catalogue a sa vraie photo à
+     un appel de `photoDe()` : le jeter serait perdre un repas qu'on sait
+     illustrer. Seul ce qui reste sans image après réparation sort.
+
+     ⚠️ RIEN N'EST RÉÉCRIT EN BASE ICI. Le nettoyage vit en mémoire, dans le
+     cache : une lecture ne doit pas modifier ce qu'elle lit — une session qui
+     ouvre l'app avec `NattyDecouverte` mal chargé effacerait sinon des repas
+     parfaitement valides, définitivement. La version propre est persistée à la
+     première écriture volontaire (`ajouter`, `remplacer`, `retirer`).
+
+     ⚠️ Et pour la même raison, quand `NattyDecouverte` manque on ne garde que
+     ce qui porte déjà une vraie photo, sans conclure que le reste est mauvais :
+     `photoDe()` rend `null` faute d'avoir pu regarder, pas faute d'image. */
+  var DEMO = ['plat-demo1', 'plat-demo2'];
+
+  function nettoyerPlan(plan) {
+    if (!plan || !plan.repas || !plan.repas.length) return plan;
+    var gardes = [];
+    plan.repas.forEach(function (r) {
+      if (!r) return;
+      var ph = String(r.photo || '');
+      for (var i = 0; i < DEMO.length; i++) {
+        if (ph.indexOf(DEMO[i]) > -1) { r.photo = null; break; }
+      }
+      if (!r.photo) r.photo = photoDe(r);
+      if (!r.photo) return;
+      // Une image et un dessin au trait pour le même plat : les consommateurs
+      // testent la photo d'abord, mais laisser les deux invite au doute.
+      r.illu = null;
+      gardes.push(r);
+    });
+    plan.repas = gardes;
+    return plan;
   }
 
   async function enregistrer(plan) {
@@ -326,8 +389,21 @@ window.NattyPlanning = (function () {
   }
 
   /* Le placement lui-même. Trois plats macro d'abord — ce sont eux qui portent
-     l'intention —, puis les deux recettes dans les cases qui manquent le plus
-     globalement. Une case ne reçoit qu'un plat. */
+     l'intention —, puis les recettes dans les cases qui manquent le plus
+     globalement. Une case ne reçoit qu'un plat.
+
+     ⚠️ ET RIEN N'EST PLACÉ SANS PHOTO (demande de Pablo, 2026-08-31). Le
+     calendrier est une planche de vignettes : un plat qui n'y met qu'un
+     dessin au trait, ou pire l'assiette d'un autre plat, casse la seule chose
+     que cet écran sert à faire — reconnaître d'un coup d'œil ce qu'on mange
+     cette semaine. Le test est `photoDe()`, et il tombe AVANT la réservation
+     du créneau : sinon un plat écarté aurait quand même mangé une case, et le
+     calendrier compterait un repas qu'il n'affiche pas.
+
+     ⚠️ Conséquence assumée : une semaine peut compter moins de cinq repas — et
+     zéro sur une génération ancienne, faite avant que les plats ne soient
+     choisis dans le catalogue. C'est ce que veut dire la règle, et la
+     génération suivante (le cron du lundi, ou « ↻ ») la remplit à nouveau. */
   function placer(analyse, prepare, platsMacro, recettes) {
     var pris = {}, sortie = [];
 
@@ -358,6 +434,9 @@ window.NattyPlanning = (function () {
     ['p', 'g', 'l'].forEach(function (m, k) {
       var plat = platsMacro[k];
       if (!plat) return;
+      // Pas de photo, pas de place — voir `photoDe()`.
+      var phm = photoDe(plat);
+      if (!phm) return;
       var dispo = libres();
       if (!dispo.length) return;
       dispo.sort(function (a, b) {
@@ -369,13 +448,12 @@ window.NattyPlanning = (function () {
       var v = dispo[0];
       pris[v.j + '-' + v.c] = 1;
       /* Le plat macro vient lui aussi du catalogue depuis août 2026 : il a donc
-         une photo, ou une illustration. C'étaient les trois dernières cases du
-         calendrier à n'avoir qu'un emoji au milieu de plats photographiés. */
-      var vm = visuelRecette(plat, 0);
+         une photo. C'étaient les trois dernières cases du calendrier à n'avoir
+         qu'un emoji au milieu de plats photographiés. */
       sortie.push({
         jour: v.j, creneau: v.c, type: 'macro', macro: m,
         nom: plat.nom, em: plat.em || MACROS[m].em,
-        photo: plat.cle ? vm.photo : null, illu: plat.cle ? vm.illu : null,
+        photo: phm, illu: null,
         cle: plat.cle || null,
         pourquoi: plat.pourquoi || '', kcal: plat.kcal || 0,
         p: plat.p || 0, g: plat.g || 0, l: plat.l || 0,
@@ -385,6 +463,8 @@ window.NattyPlanning = (function () {
     });
 
     (recettes || []).forEach(function (r, k) {
+      var phr = photoDe(r);
+      if (!phr) return;
       var dispo = libres();
       if (!dispo.length) return;
       dispo.sort(function (a, b) {
@@ -397,7 +477,7 @@ window.NattyPlanning = (function () {
       sortie.push({
         jour: v.j, creneau: v.c, type: 'recette', macro: null,
         nom: r.nom || 'Recette', em: '🍲',
-        photo: visuelRecette(r, k).photo, illu: visuelRecette(r, k).illu,
+        photo: phr, illu: null,
         cle: r.cle || null,
         pourquoi: r.pourquoi || '', kcal: Math.round(mac.kcal || 0),
         p: Math.round(mac.p || 0), g: Math.round(mac.g || 0), l: Math.round(mac.l || 0),
@@ -422,37 +502,30 @@ window.NattyPlanning = (function () {
      conseils disant une chose, les plats placés en illustrant une autre.
      Désormais la séquence ne fait que lire et placer : elle est immédiate.
 
-     Le trio de repli reste, pour les lignes générées AVANT ce changement : elles
-     n'ont pas de `plats_macro`, et une semaine déjà payée ne doit pas être
-     régénérée pour trois plats. */
-  var REPLI = [
-    { macro: 'p', nom: 'Poulet rôti, quinoa et brocoli', em: '🍗', p: 46, g: 38, l: 11, kcal: 445,
-      pourquoi: 'Une base simple qui apporte l’essentiel des protéines du créneau.',
-      ingredients: [{ em: '🍗', nom: 'Poulet', qte: '150 g' }, { em: '🌾', nom: 'Quinoa', qte: '80 g' }, { em: '🥦', nom: 'Brocoli', qte: '150 g' }] },
-    { macro: 'g', nom: 'Patate douce, pois chiches et feta', em: '🍠', p: 19, g: 62, l: 14, kcal: 460,
-      pourquoi: 'Des glucides lents pour tenir jusqu’au repas suivant.',
-      ingredients: [{ em: '🍠', nom: 'Patate douce', qte: '250 g' }, { em: '🫘', nom: 'Pois chiches', qte: '120 g' }, { em: '🧀', nom: 'Feta', qte: '40 g' }] },
-    { macro: 'l', nom: 'Saumon, avocat et riz vinaigré', em: '🐟', p: 32, g: 45, l: 26, kcal: 530,
-      pourquoi: 'De bons lipides, ceux qui manquent le plus souvent.',
-      ingredients: [{ em: '🐟', nom: 'Saumon', qte: '130 g' }, { em: '🥑', nom: 'Avocat', qte: '80 g' }, { em: '🍚', nom: 'Riz', qte: '90 g' }] }
-  ];
+     ⚠️ LE TRIO DE REPLI LOCAL A ÉTÉ RETIRÉ (2026-08-31). Il servait aux lignes
+     générées AVANT ce changement, qui n'ont pas de `plats_macro` — mais ses
+     trois plats étaient écrits en dur, donc sans clé de catalogue, donc sans
+     photo : depuis que la planification ne place plus que des plats
+     photographiés (`photoDe()`), ils étaient systématiquement écartés. Les
+     garder n'aurait été qu'un cul-de-sac de plus à relire. Une macro sans plat
+     rend `null`, et `placer()` passe simplement au suivant. */
 
   /**
    * Les trois plats de la ligne `profil_conseils`, dans l'ordre p → g → l.
    * @param {object} ligne  la ligne de la semaine
-   * @returns {Array} trois plats ; le repli local si la génération n'en a pas.
+   * @returns {Array} trois entrées ; `null` là où la génération n'a rien donné.
    */
   function platsMacro(ligne) {
     var j = ligne && ligne.conseils_json;
     if (typeof j === 'string') { try { j = JSON.parse(j); } catch (e) { j = null; } }
     var liste = j && j.plats_macro;
-    if (!Array.isArray(liste) || !liste.length) return REPLI.slice();
+    if (!Array.isArray(liste) || !liste.length) return [null, null, null];
     // Le serveur range déjà p/g/l, mais le placement s'y FIE : on ne suppose
-    // pas, on remet dans l'ordre, et un trou est comblé par le repli plutôt que
-    // de décaler les deux autres macros d'un cran.
-    return ['p', 'g', 'l'].map(function (m, k) {
+    // pas, on remet dans l'ordre, et un trou reste un trou plutôt que de
+    // décaler les deux autres macros d'un cran.
+    return ['p', 'g', 'l'].map(function (m) {
       var t = liste.filter(function (x) { return x && x.macro === m; })[0];
-      if (!t || !t.nom) return REPLI[k];
+      if (!t || !t.nom) return null;
       return {
         macro: m, cle: t.cle || null,
         nom: t.nom, em: t.em || MACROS[m].em, pourquoi: t.pourquoi || '',
@@ -1187,10 +1260,15 @@ window.NattyPlanning = (function () {
     }
   }
 
-  /* Combien de repas la génération donne à placer : ses recettes, plus les
-     trois plats macro (`placer()` en pose toujours trois, repli compris). */
+  /* Combien de repas la génération donne à placer : ses recettes, plus ses
+     plats macro — mais SEULEMENT ceux qui ont une photo, puisque ce sont les
+     seuls que `placer()` retiendra. Annoncer « 5 repas » pour en poser 3
+     serait la promesse qu'on ne tient pas, et c'est la phrase qui donne son
+     sens à l'écran d'invitation. */
   function nbAPlacer() {
-    return recettesDe(etat && etat.conseils).length + 3;
+    var ligne = etat && etat.conseils;
+    return recettesDe(ligne).filter(photoDe).length
+         + platsMacro(ligne).filter(photoDe).length;
   }
 
   function recettesDe(ligne) {
@@ -1202,7 +1280,7 @@ window.NattyPlanning = (function () {
 
   /* La génération de la semaine n'a pas abouti : sans elle il n'y a ni conseils,
      ni recettes, ni plats macro — donc rien à placer. On le dit, plutôt que de
-     planifier trois plats de repli en faisant croire que c'est personnalisé. */
+     poser des plats génériques en faisant croire que c'est personnalisé. */
   function scEchecGeneration() {
     scene({
       html: '<div class="illu"><div style="font-size:54px;line-height:132px">🗓️</div></div>'
@@ -1432,10 +1510,42 @@ window.NattyPlanning = (function () {
     s.textContent = [
       '.nplc{background:var(--metal-black,#0b0c0e);border-radius:var(--r-lg,24px);',
       'box-shadow:var(--sh-metal,0 10px 24px rgba(0,0,0,.5));padding:15px 14px 13px;margin-top:16px}',
+      /* ⚠️ `width:100%` et `text-align:left` : un <button> se rétracte sur son
+         contenu et centre son texte, donc sans ces deux lignes le titre se
+         retrouvait au milieu de la carte et la zone tapable ne couvrait plus la
+         largeur — c'est-à-dire plus la moitié du geste.
+
+         🔴 ⚠️ ET LA ZONE TAPABLE NE FAISAIT QUE 17 PX DE HAUT. Un <button> en
+         `flex` sans remplissage prend la hauteur de sa ligne de texte : mesuré à
+         375 px, 17 px — la moitié du minimum d'Apple, pour le geste qui ouvre
+         toute cette fonctionnalité. On l'agrandit vers l'EXTÉRIEUR : les marges
+         négatives lui font absorber le remplissage de la carte (15 px en haut,
+         14 px de chaque côté), le remplissage le lui rend, donc le texte ne
+         bouge pas d'un pixel et la cible passe à 44 px sur toute la largeur.
+         ⚠️ Ne pas « simplifier » en ajoutant simplement du padding : le titre
+         descendrait de 15 px et la carte grandirait d'autant, alors qu'elle est
+         volontairement dense (§3, « petit, dense, muet tant qu'on ne le touche
+         pas »). */
+      /* ⚠️ `width:calc(100% + 28px)`, ET LES DEUX AUTRES VALEURS SONT FAUSSES —
+         les deux ont été mesurées à l'écran avant d'arriver à celle-ci :
+         · `width:100%` résout sur la boîte de CONTENU du parent (315 px) sans
+           tenir compte des marges négatives : le bouton s'arrêtait à 331 px là
+           où le contenu de la carte va jusqu'à 345, donc le chevron ne tombait
+           pas dans l'axe du bouton « Replanifier » juste en dessous ;
+         · sans largeur du tout, un <button> se rétracte sur son contenu quoi
+           qu'en dise `display:flex` — 194 px, et `space-between` n'avait plus
+           rien à répartir : le chevron venait se coller au titre.
+         Les 28 px sont les deux marges négatives (2 × 14). Ils vont ensemble :
+         changer le remplissage de `.nplc` demande de changer les trois. */
       '.nplc-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;',
-      'margin-bottom:12px}',
+      'width:calc(100% + 28px);border:none;background:none;text-align:left;',
+      'cursor:pointer;font-family:inherit;color:#fff;',
+      'margin:-15px -14px 0;padding:15px 14px 12px}',
       '.nplc-head .t{font-size:14.5px;font-weight:900;color:#fff;letter-spacing:-.2px}',
-      '.nplc-head .n{font-size:10px;font-weight:700;color:rgba(255,255,255,.42)}',
+      '.nplc-head .n{font-size:10px;font-weight:700;color:rgba(255,255,255,.42);',
+      'white-space:nowrap}',
+      '.nplc-head .fl{font-size:13px;font-weight:700;color:rgba(255,255,255,.42)}',
+      '.nplc-head:active{opacity:.6}',
 
       '.nplc-cols{display:grid;' + COLS + ';margin-bottom:5px}',
       '.nplc-cols div{font-size:8px;font-weight:800;color:rgba(255,255,255,.34);text-align:center;',
@@ -1518,11 +1628,22 @@ window.NattyPlanning = (function () {
       if (faits[r.jour + '-' + r.creneau] || estCuite(r, cuits)) nFaits++;
     });
 
-    var h = '<div class="nplc"><div class="nplc-head"><div class="t">Ma semaine</div>'
-      + '<div class="n">' + (nFaits
+    /* ⚠️ L'EN-TÊTE EST UN BOUTON, ET LES CASES N'ONT PAS CHANGÉ DE SENS.
+       Demande de Pablo (2026-08-31) : cliquer sur le planning ouvre la semaine
+       en grand. Mais taper une CASE amène son repas en héros depuis le
+       2026-08-15 (« pouvoir cliquer sur la semaine et réaliser celui qu'on
+       veut »), et c'est le chemin de la cuisine — on ne le lui prend pas pour
+       lui rendre un chemin de lecture. L'en-tête porte donc le geste « voir et
+       modifier toute la semaine », les cases gardent le geste « préparer
+       celui-là ». Le chevron est l'affordance : sans lui, rien ne dit qu'un
+       titre s'ouvre. */
+    var h = '<div class="nplc">'
+      + '<button class="nplc-head" data-nplc="semaine" aria-label="Ouvrir et modifier ma semaine">'
+      + '<span class="t">Ma semaine</span>'
+      + '<span class="n">' + (nFaits
           ? nFaits + ' sur ' + plan.repas.length + ' déjà faits'
           : plan.repas.length + ' repas placés')
-      + '</div></div>'
+      + ' <span class="fl">›</span></span></button>'
       // En-tête : les sept jours. Aujourd'hui en blanc, c'est le seul repère
       // dont on a besoin pour se situer dans la grille.
       + '<div class="nplc-cols"><div></div>'
@@ -1612,6 +1733,13 @@ window.NattyPlanning = (function () {
     brancherVignettes(el);
     el.querySelectorAll('[data-nplc="ouvrir"]').forEach(function (b) {
       b.addEventListener('click', function () { ouvrir({ forcer: true }); });
+    });
+    /* L'en-tête ouvre la semaine en grand (§12). Aucune sélection n'est passée :
+       on arrive sur la grille entière, qui est ce qu'on est venu voir — pré-
+       sélectionner une case reviendrait à répondre à une question qui n'a pas
+       été posée. */
+    el.querySelectorAll('[data-nplc="semaine"]').forEach(function (b) {
+      b.addEventListener('click', function () { ouvrirSemaine(); });
     });
     // On retient où l'on est monté : un plat enregistré doit cocher sa case
     // tout de suite, sans que l'écran hôte ait à s'en occuper.
@@ -1756,9 +1884,16 @@ window.NattyPlanning = (function () {
      Rend {ok, jour, creneau, quand} ou {ok:false, raison} — `sans-plan` si la
      semaine n'est pas planifiée (on ne va pas en inventer une dans le dos de
      l'utilisateur), `complet` s'il ne reste plus un créneau libre, `doublon`
-     si ce plat y est déjà. */
+     si ce plat y est déjà, `sans-photo` s'il n'a pas d'image. */
   async function ajouter(r) {
     if (!r || !r.nom) return { ok: false, raison: 'vide' };
+    /* ⚠️ Même règle que `placer()` : aucun plat sans photo dans la semaine.
+       Ici la photo peut venir de deux endroits — celle du catalogue pour un
+       plat de « Découvrir », celle du membre pour un plat du fil — d'où les
+       deux tests. En pratique les deux écrans ne montrent QUE des plats
+       photographiés, donc ce filet ne se déclenche pas ; il est là pour que
+       la règle vive à un seul endroit, et non dans chaque appelant. */
+    if (!r.photo && !photoDe(r)) return { ok: false, raison: 'sans-photo' };
     var plan = await lire();
     if (!plan || !plan.repas || !plan.prepare) return { ok: false, raison: 'sans-plan' };
 
@@ -1820,10 +1955,581 @@ window.NattyPlanning = (function () {
              quand: JOURS[place.j] + ' · ' + CRENEAUX[place.c].nom };
   }
 
+  /* ═══ 12. LA SEMAINE EN GRAND, ET LA MODIFICATION D'UN REPAS ═══════════
+     Demande de Pablo (2026-08-31) : « la possibilité de modifier les repas
+     planifiés à sa guise → quand on clique sur le planning, fenêtre complète
+     du planning avec bouton modifier → ouvre une page défilante avec tous les
+     repas enregistrés ».
+
+     Ce qui manquait, exactement : le plan était en LECTURE SEULE. Les 21 cases
+     se composaient une fois par semaine, et le seul geste offert ensuite était
+     « Replanifier » — c'est-à-dire tout refaire, y compris les quatre repas qui
+     convenaient. Changer un seul dîner demandait donc de perdre la semaine.
+
+     ⚠️ TROIS ÉCRANS EMPILÉS, ET L'ORDRE COMPTE. `#nplw` (la semaine en grand)
+     est à 99995 : au-dessus de la séquence de planification (`#nplan`, 99990)
+     et en dessous de la fiche d'un repas (`#nplf`, 100000). `#nplr` (la page
+     des repas enregistrés) est à 99997 — elle s'ouvre DEPUIS la fenêtre, donc
+     elle doit la couvrir. Dans l'autre sens, on obtiendrait une liste cachée
+     derrière le calendrier qui vient de la demander.
+
+     ⚠️ Les deux portent `pointer-events:none` hors de `.on` (règle 41) : un
+     plein écran refermé en opacité survit à son fondu et avale les taps pendant
+     220 ms — c'est exactement « j'appuie et il ne se passe rien ».
+
+     ⚠️ Et les deux sont déclarés dans `PLEIN_ECRAN` d'`assets/core.js`
+     (règle 42), sinon le guide du jour et le bilan du soir viendraient se poser
+     par-dessus au bout de leurs 6,5 et 9 secondes.
+
+     ⚠️ NOIR, comme tout ce qui touche à la planification (§5) : la carte « Ma
+     semaine », la fiche d'un repas et la séquence le sont déjà. Une fenêtre
+     claire ouverte depuis une carte noire se lirait comme un autre écran. */
+
+  var SEM_EL = null, SEM_SEL = null, SEM_PLAN = null;
+
+  function cssSemaine() {
+    if (document.getElementById('nplw-css')) return;
+    var s = document.createElement('style');
+    s.id = 'nplw-css';
+    /* 26 px pour la colonne des créneaux : l'emoji seul. Le nom du créneau
+       tiendrait en vertical, mais il volerait la largeur des sept cases — et
+       c'est la lisibilité des vignettes qui fait tout l'intérêt de cet écran. */
+    var COLS = 'grid-template-columns:26px repeat(7,1fr);gap:5px';
+    s.textContent = [
+      '#nplw,#nplr{position:fixed;inset:0;background:var(--metal-black,#0b0c0e);',
+      'opacity:0;transition:opacity .22s ease;display:flex;flex-direction:column;',
+      'font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;color:#fff}',
+      '#nplw{z-index:99995}',
+      '#nplr{z-index:99997}',
+      '#nplw.on,#nplr.on{opacity:1}',
+      '#nplw:not(.on),#nplr:not(.on){pointer-events:none}',
+
+      /* L'en-tête ne défile pas : le titre dit de quelle semaine on parle et la
+         croix est le seul moyen de sortir. Les deux doivent rester là. */
+      '#nplw .tete,#nplr .tete{flex-shrink:0;display:flex;align-items:center;gap:12px;',
+      'padding:calc(14px + env(safe-area-inset-top,0px)) 18px 12px}',
+      '#nplw .tete .x,#nplr .tete .x{width:34px;height:34px;flex-shrink:0;border:none;',
+      'border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font-size:16px;',
+      'font-family:inherit;cursor:pointer;line-height:1}',
+      '#nplw .tete .tt,#nplr .tete .tt{flex:1;min-width:0}',
+      '#nplw .tete h2,#nplr .tete h2{font-size:19px;font-weight:900;letter-spacing:-.4px}',
+      '#nplw .tete .sub,#nplr .tete .sub{font-size:11.5px;font-weight:700;',
+      'color:rgba(255,255,255,.45);margin-top:3px}',
+
+      /* Le corps défile, pas la fenêtre : sur un écran de 667 px la grille plus
+         la fiche du repas dépassent, et c'est l'en-tête qu'on perdrait. */
+      '#nplw .corps,#nplr .corps{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;',
+      'padding:4px 18px calc(22px + env(safe-area-inset-bottom,0px))}',
+
+      /* ── La grille, en grand ────────────────────────────
+         42 px de haut au lieu des 30 de la carte : c'est la différence entre
+         « il y a quelque chose » et « c'est ce plat-là ». */
+      '#nplw .cols{display:grid;' + COLS + ';margin-bottom:6px}',
+      '#nplw .cols div{font-size:9.5px;font-weight:800;text-align:center;',
+      'text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.34)}',
+      '#nplw .cols div.auj{color:#fff}',
+      '#nplw .r{display:grid;' + COLS + ';margin-bottom:5px;align-items:center}',
+      '#nplw .r .cre{font-size:14px;text-align:center;opacity:.5;line-height:1}',
+      '#nplw .c{height:42px;border-radius:12px;background:rgba(255,255,255,.045);',
+      'display:flex;align-items:center;justify-content:center;overflow:hidden;',
+      'font-size:17px;position:relative;cursor:pointer;padding:0;border:none;',
+      'font-family:inherit;color:#fff}',
+      '#nplw .c.plein{background:rgba(255,255,255,.13);',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}',
+      '#nplw .c img{width:100%;height:100%;object-fit:cover}',
+      '#nplw .c.fait{box-shadow:inset 0 0 0 1.5px var(--green,#34c759)}',
+      '#nplw .c.sel{box-shadow:inset 0 0 0 2.5px rgba(255,255,255,.92)}',
+      '#nplw .c.fait.sel{box-shadow:inset 0 0 0 2.5px rgba(255,255,255,.92),',
+      '0 0 0 2px var(--green,#34c759)}',
+      '#nplw .c .ok{position:absolute;top:3px;right:3px;width:13px;height:13px;',
+      'border-radius:50%;background:var(--green,#34c759);color:#0b0c0e;font-size:8px;',
+      'font-weight:900;display:flex;align-items:center;justify-content:center;line-height:1}',
+      /* Un créneau que la personne s'est réservé mais qui n'a rien reçu : un
+         « + » discret. Sans lui, on ne devine pas qu'une case vide se remplit. */
+      '#nplw .c.libre::after{content:"+";font-size:15px;font-weight:400;',
+      'color:rgba(255,255,255,.26)}',
+      /* Un créneau qu'elle a dit acheter : on ne propose pas d'y cuisiner. */
+      '#nplw .c.achat{cursor:default;background:transparent;',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}',
+
+      '#nplw .aide{font-size:11px;color:rgba(255,255,255,.4);text-align:center;',
+      'line-height:1.5;margin:14px 6px 0}',
+
+      /* ── La fiche du créneau choisi ─────────────────────
+         Elle est SOUS la grille et non dans une feuille par-dessus : on change
+         de case et on relit aussitôt, sans refermer quoi que ce soit. */
+      '#nplw .sel-box{margin-top:16px;background:rgba(255,255,255,.055);',
+      'border-radius:22px;padding:15px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.09)}',
+      '#nplw .sel-quand{font-size:10.5px;font-weight:800;text-transform:uppercase;',
+      'letter-spacing:.6px;color:rgba(255,255,255,.45)}',
+      '#nplw .sel-h{display:flex;align-items:center;gap:13px;margin-top:11px}',
+      '#nplw .sel-vig{width:58px;height:58px;flex-shrink:0;border-radius:18px;',
+      'background:rgba(255,255,255,.08);display:flex;align-items:center;',
+      'justify-content:center;font-size:27px;overflow:hidden;',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}',
+      '#nplw .sel-vig img{width:100%;height:100%;object-fit:cover}',
+      '#nplw .sel-nom{font-size:15.5px;font-weight:900;line-height:1.25}',
+      '#nplw .sel-mac{font-size:11.5px;font-weight:700;color:rgba(255,255,255,.5);',
+      'margin-top:5px}',
+      '#nplw .sel-pq{font-size:12.5px;color:rgba(255,255,255,.55);line-height:1.55;',
+      'margin-top:12px}',
+      '#nplw .sel-act{display:flex;gap:8px;margin-top:15px}',
+      '#nplw .sel-act button{flex:1;padding:13px 8px;border:none;border-radius:16px;',
+      'font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}',
+      '#nplw .sel-act .pri{background:#f2f2f5;color:#101014}',
+      '#nplw .sel-act .sec{background:rgba(255,255,255,.1);color:#fff;flex:0 0 46px;',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);font-size:15px}',
+      '#nplw .pied{margin-top:18px}',
+      '#nplw .pied button{width:100%;padding:13px;border:none;border-radius:16px;',
+      'background:rgba(255,255,255,.09);color:rgba(255,255,255,.75);font-family:inherit;',
+      'font-size:12.5px;font-weight:800;cursor:pointer;',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}',
+
+      /* ── La page défilante des repas enregistrés ────────
+         Une liste, pas une grille : le nom du plat compte autant que sa photo,
+         et à trois colonnes il se réduit à deux mots coupés. */
+      '#nplr .item{display:flex;align-items:center;gap:13px;width:100%;text-align:left;',
+      'background:rgba(255,255,255,.055);border:none;border-radius:20px;padding:10px;',
+      'margin-bottom:9px;cursor:pointer;font-family:inherit;color:#fff;',
+      'box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}',
+      '#nplr .item:active{background:rgba(255,255,255,.1)}',
+      '#nplr .item img{width:62px;height:62px;flex-shrink:0;border-radius:17px;',
+      'object-fit:cover;display:block;background:rgba(255,255,255,.06)}',
+      /* 🔴 ⚠️ `display:block` SUR LES TROIS LIGNES, ET SUR LEUR CONTENEUR.
+         Ce sont des <span> — un <div> dans un <button> est légal mais fragile
+         selon les moteurs —, donc ils sont EN LIGNE par défaut : sans ces
+         déclarations, le nom, les macros et la date se suivaient sur une seule
+         ligne (« Bowl poulet grillé & quinoa344 kcal · 50 g prot.Noté le 28
+         août »), et l'ellipse de `.mc` n'avait rien à tronquer puisqu'un span
+         en ligne n'a pas de largeur propre. Vu à l'écran, invisible à la
+         lecture comme à `node --check`. */
+      '#nplr .item .inf{flex:1;min-width:0;display:block}',
+      '#nplr .item .nm{display:block;font-size:14px;font-weight:800;line-height:1.25;',
+      'letter-spacing:-.2px}',
+      '#nplr .item .mc{display:block;font-size:11px;font-weight:700;',
+      'color:rgba(255,255,255,.48);margin-top:4px;overflow:hidden;',
+      'text-overflow:ellipsis;white-space:nowrap}',
+      '#nplr .item .qd{display:block;font-size:10px;color:rgba(255,255,255,.32);',
+      'margin-top:3px}',
+      '#nplr .item .fl{flex-shrink:0;color:rgba(255,255,255,.3);font-size:17px;padding-right:4px}',
+      '#nplr .etat{text-align:center;padding:44px 20px;font-size:13px;line-height:1.6;',
+      'color:rgba(255,255,255,.5)}',
+      '#nplr .etat b{display:block;color:#fff;font-size:15px;font-weight:800;',
+      'margin-bottom:8px}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+
+  /* ── Les repas enregistrés, ceux qui ont une photo ────────────────────────
+     ⚠️ LA PHOTO EST OBLIGATOIRE, et ce n'est pas un filtre de confort. Cette
+     liste alimente un calendrier de vignettes : un repas sans image y arriverait
+     sous un emoji au milieu d'assiettes, et c'est précisément ce que la règle du
+     31 août supprime partout ailleurs. Un repas saisi à la main (« Écrire »,
+     dans `assets/ajout.js`) n'est donc pas proposé ici — il reste entier dans
+     l'historique et dans les anneaux, il n'est simplement pas planifiable.
+
+     ⚠️ `photo_url=not.is.null` NE SUFFIT PAS : la colonne peut porter une chaîne
+     vide, et PostgREST la rend telle quelle. D'où le second test côté client —
+     sans lui, la liste offrirait des cartes à l'image cassée.
+
+     ⚠️ On demande les QUATRE colonnes de macros à `meal_ingredients`. Une
+     colonne non demandée arrive `undefined`, donc « rien d'écrit », donc
+     `Natty.calcMac` retombe en silence sur la table locale — le défaut
+     d'`api/rappel-macros` (§3), et ici il annoncerait d'autres macros que
+     l'historique pour le même plat.
+
+     ⚠️ Dédoublonnage par NOM normalisé, le plus récent gagnant. Quelqu'un qui
+     mange son bowl au poulet trois fois par semaine aurait sinon une liste où
+     le même plat occupe les six premières places. La normalisation traduit `œ`
+     avant de retirer les accents : `normalize('NFD')` ne décompose pas la
+     ligature, et un « bœuf » compterait comme deux plats différents (§7). */
+  function normRepas(s) {
+    var t = String(s == null ? '' : s).toLowerCase().replace(/œ/g, 'oe').replace(/æ/g, 'ae');
+    try { t = t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    return t.replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  async function repasEnregistres() {
+    if (!Natty.USER_ID) return [];
+    var lignes = [];
+    try {
+      lignes = await Natty.sbFetch('meals?user_id=eq.' + Natty.USER_ID
+        + '&photo_url=not.is.null&order=created_at.desc&limit=200'
+        + '&select=id,name,photo_url,created_at,'
+        + 'meal_ingredients(name,quantity_g,calories,proteins_g,carbs_g,fats_g)') || [];
+    } catch (e) { return []; }
+
+    var vus = {}, out = [];
+    lignes.forEach(function (m) {
+      var ph = String(m.photo_url || '').trim();
+      if (!ph) return;
+      var k = normRepas(m.name);
+      if (!k || vus[k]) return;
+      vus[k] = 1;
+      var mac = Natty.calcMac(m.meal_ingredients || []);
+      out.push({
+        id: m.id, nom: m.name || 'Repas', photo: ph, quand: m.created_at,
+        kcal: mac.c, p: mac.p, g: mac.g, l: mac.l,
+        ingredients: (m.meal_ingredients || []).map(function (x) {
+          return { em: '🥄', nom: x.name || '', qte: x.quantity_g ? Math.round(x.quantity_g) + ' g' : '' };
+        })
+      });
+    });
+    return out;
+  }
+
+  /**
+   * Remplace (ou pose) le repas d'un créneau. C'est le seul écrivain d'une
+   * case, `ajouter()` mis à part — et il partage sa règle : pas de photo, pas
+   * de place.
+   * @param {number} jour 0-6  @param {number} creneau 0-2
+   * @param {object} r repas au format de `plan.repas`, ou de `repasEnregistres()`
+   */
+  async function remplacer(jour, creneau, r) {
+    if (!r || !r.nom) return { ok: false, raison: 'vide' };
+    if (!r.photo && !photoDe(r)) return { ok: false, raison: 'sans-photo' };
+    var plan = await lire();
+    if (!plan || !plan.repas) return { ok: false, raison: 'sans-plan' };
+
+    /* ⚠️ On retire l'ancien AVANT de tester le doublon, et dans cet ordre : le
+       repas déjà en place sur CE créneau n'est pas un doublon, c'est celui qu'on
+       vient remplacer. Tester d'abord ferait échouer tout remplacement d'un plat
+       par lui-même — donc le geste le plus anodin de l'écran. */
+    plan.repas = plan.repas.filter(function (x) {
+      return !(x.jour === jour && x.creneau === creneau);
+    });
+
+    var nom = normRepas(r.nom);
+    var deja = plan.repas.filter(function (x) { return normRepas(x.nom) === nom; })[0];
+    if (deja) {
+      return { ok: false, raison: 'doublon', jour: deja.jour, creneau: deja.creneau,
+               quand: JOURS[deja.jour] + ' · ' + CRENEAUX[deja.creneau].nom };
+    }
+
+    plan.repas.push({
+      jour: jour, creneau: creneau, type: 'recette', macro: null,
+      nom: r.nom, em: r.em || '🍽️',
+      photo: r.photo || photoDe(r), illu: null, cle: r.cle || null,
+      pourquoi: r.pourquoi || '',
+      kcal: Math.round(r.kcal || 0),
+      p: Math.round(r.p || 0), g: Math.round(r.g || 0), l: Math.round(r.l || 0),
+      ingredients: r.ingredients || [],
+      src: r.src || null,
+      /* Le manque vaut 0 : ce plat n'a pas été placé pour combler quoi que ce
+         soit, c'est un choix. Lui inventer un score le ferait passer pour une
+         recommandation de l'app — même raison que dans `ajouter()`. */
+      manque: 0,
+      source: r.source || 'choix'
+    });
+    plan.repas.sort(function (a, b) { return (a.jour - b.jour) || (a.creneau - b.creneau); });
+
+    await enregistrer(plan);
+    document.dispatchEvent(new CustomEvent('natty:planning-pret', { detail: plan }));
+    return { ok: true, jour: jour, creneau: creneau,
+             quand: JOURS[jour] + ' · ' + CRENEAUX[creneau].nom };
+  }
+
+  /** Vide un créneau. @param {number} jour @param {number} creneau */
+  async function retirer(jour, creneau) {
+    var plan = await lire();
+    if (!plan || !plan.repas) return { ok: false, raison: 'sans-plan' };
+    var avant = plan.repas.length;
+    plan.repas = plan.repas.filter(function (x) {
+      return !(x.jour === jour && x.creneau === creneau);
+    });
+    if (plan.repas.length === avant) return { ok: false, raison: 'vide' };
+    await enregistrer(plan);
+    document.dispatchEvent(new CustomEvent('natty:planning-pret', { detail: plan }));
+    return { ok: true };
+  }
+
+  /* ── La page défilante des repas enregistrés ───────────────────────────── */
+
+  function fermerRepas() {
+    var el = document.getElementById('nplr');
+    if (!el) return;
+    el.classList.remove('on');
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 240);
+  }
+
+  /**
+   * Ouvre la liste des repas enregistrés pour un créneau donné. Le choix
+   * remplace la case et referme les deux écrans.
+   */
+  async function choisirRepas(jour, creneau) {
+    cssSemaine();
+    fermerRepas();
+    var el = document.createElement('div');
+    el.id = 'nplr';
+    el.innerHTML = '<div class="tete"><button class="x" data-nplr="x" aria-label="Fermer">✕</button>'
+      + '<div class="tt"><h2>Vos repas</h2><div class="sub">'
+      + esc(JOURS[jour] + ' · ' + CRENEAUX[creneau].nom) + '</div></div></div>'
+      + '<div class="corps"><div class="etat">Chargement de vos repas…</div></div>';
+    document.body.appendChild(el);
+    /* rAF ET minuteur : sur une page qui ne peint pas, la seule
+       `requestAnimationFrame` ne se déclenche pas et l'écran resterait
+       transparent tout en interceptant les taps (même parade que
+       `Natty.confirmer`). */
+    requestAnimationFrame(function () { el.classList.add('on'); });
+    setTimeout(function () { el.classList.add('on'); }, 60);
+
+    el.querySelector('[data-nplr="x"]').addEventListener('click', fermerRepas);
+
+    var repas = await repasEnregistres();
+    var corps = el.querySelector('.corps');
+    if (!corps) return;
+
+    if (!repas.length) {
+      /* Un manque se DIT, et il se dit avec sa raison : « aucun repas » sur un
+         compte qui en a trente, mais tous saisis à la main, ferait chercher une
+         panne là où il n'y a qu'une règle. */
+      corps.innerHTML = '<div class="etat"><b>Aucun repas photographié</b>'
+        + 'Seuls les repas dont vous avez pris la photo peuvent entrer dans la semaine —'
+        + ' le calendrier est une planche de vignettes.<br><br>'
+        + 'Ajoutez un plat avec le bouton <b style="display:inline;font-size:13px">+</b>'
+        + ' de la barre du bas, photo comprise, et il apparaîtra ici.</div>';
+      return;
+    }
+
+    corps.innerHTML = repas.map(function (r, i) {
+      var mac = [r.kcal ? Math.round(r.kcal) + ' kcal' : null,
+                 r.p ? Math.round(r.p) + ' g prot.' : null].filter(Boolean).join(' · ');
+      var d = r.quand ? new Date(r.quand) : null;
+      return '<button class="item" data-nplr="pick" data-i="' + i + '">'
+        + '<img src="' + esc(r.photo) + '" alt="" loading="lazy">'
+        + '<span class="inf"><span class="nm">' + esc(r.nom) + '</span>'
+        + (mac ? '<span class="mc">' + esc(mac) + '</span>' : '')
+        + (d ? '<span class="qd">Noté le ' + d.getDate() + ' '
+              + ['janvier','février','mars','avril','mai','juin','juillet','août',
+                 'septembre','octobre','novembre','décembre'][d.getMonth()] + '</span>' : '')
+        + '</span><span class="fl">›</span></button>';
+    }).join('');
+
+    /* ⚠️ UNE PHOTO QUI NE CHARGE PAS RETIRE SA LIGNE. `meals.photo_url` pointe
+       sur Cloudinary : l'URL peut être en base et l'image avoir disparu. Sans
+       ce filet, la liste offrirait une carte à l'icône cassée, et la choisir
+       poserait cette icône au milieu du calendrier — exactement ce que la règle
+       du 31 août supprime. On retire au CHARGEMENT, avant que la liste ait été
+       lue, plutôt que de désactiver une ligne morte qu'il faudrait expliquer.
+       ⚠️ `complete && !naturalWidth` couvre l'échec survenu AVANT qu'on écoute
+       l'événement — le cas d'une image insérée par innerHTML (même parade que
+       `brancherVignettes`). */
+    corps.querySelectorAll('[data-nplr="pick"] img').forEach(function (im) {
+      function jeter() {
+        var li = im.closest('[data-nplr="pick"]');
+        if (li && li.parentNode) li.parentNode.removeChild(li);
+        if (!corps.querySelector('[data-nplr="pick"]')) {
+          corps.innerHTML = '<div class="etat"><b>Aucune photo disponible</b>'
+            + 'Les photos de vos repas n’ont pas pu être chargées. Vérifiez votre'
+            + ' connexion, puis rouvrez cette liste.</div>';
+        }
+      }
+      im.addEventListener('error', jeter);
+      if (im.complete && !im.naturalWidth) jeter();
+    });
+
+    corps.querySelectorAll('[data-nplr="pick"]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        var r = repas[+b.dataset.i];
+        if (!r) return;
+        b.disabled = true;
+        var res = await remplacer(jour, creneau, r);
+        if (res.ok) { fermerRepas(); await peindreSemaine({ jour: jour, creneau: creneau }); return; }
+        b.disabled = false;
+        /* Le refus se dit SUR le bouton et non dans un toast : la liste peut
+           faire trente lignes, et un message en bas d'écran ne dit pas de quelle
+           ligne il parle. */
+        var nm = b.querySelector('.nm');
+        if (nm) nm.textContent = res.raison === 'doublon'
+          ? 'Déjà prévu · ' + res.quand
+          : res.raison === 'sans-plan' ? 'Planifiez d’abord votre semaine'
+          : 'Impossible de placer ce repas';
+      });
+    });
+  }
+
+  /* ── La semaine en grand ───────────────────────────────────────────────── */
+
+  function fermerSemaine() {
+    fermerRepas();
+    var el = document.getElementById('nplw');
+    if (!el) return;
+    el.classList.remove('on');
+    SEM_EL = null;
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 240);
+  }
+
+  /* Le corps de la fenêtre : la grille, puis la fiche du créneau choisi.
+     ⚠️ Repeint le CORPS seulement, jamais l'en-tête — sinon la croix se
+     reconstruit à chaque tap sur une case et perd son écouteur. */
+  function htmlSemaine(plan, faits, cuits, sel) {
+    var carte = {}, auj = jourIndex(new Date());
+    (plan && plan.repas || []).forEach(function (r) { carte[r.jour + '-' + r.creneau] = r; });
+    var prepare = (plan && plan.prepare) || [];
+
+    var h = '<div class="cols"><div></div>'
+      + JOURS3.map(function (j, i) {
+          return '<div class="' + (i === auj ? 'auj' : '') + '">' + j + '</div>';
+        }).join('') + '</div>';
+
+    for (var c = 0; c < 3; c++) {
+      h += '<div class="r"><div class="cre" title="' + esc(CRENEAUX[c].nom) + '">'
+        + CRENEAUX[c].em + '</div>';
+      for (var j = 0; j < 7; j++) {
+        var r = carte[j + '-' + c];
+        var fait = !!faits[j + '-' + c] || estCuite(r, cuits);
+        var choisi = !!(sel && sel.jour === j && sel.creneau === c);
+        /* Un créneau que la personne a dit ACHETER n'est pas une case libre :
+           lui proposer un repas à préparer contredirait la réponse qu'elle
+           vient de donner dans la séquence. Elle reste tapable pour être lue,
+           mais elle ne se remplit pas. */
+        var achete = !r && prepare[j] && prepare[j][c] === false;
+        var cls = 'c' + (r ? ' plein' : (achete ? ' achat' : ' libre'))
+          + (fait ? ' fait' : '') + (choisi ? ' sel' : '');
+        h += '<button class="' + cls + '" data-nplw="case" data-j="' + j + '" data-c="' + c
+          + '" title="' + esc(JOURS[j] + ' · ' + CRENEAUX[c].nom + (r ? ' — ' + r.nom : ''))
+          + '">' + (r ? vignette(r) + (fait ? '<span class="ok">✓</span>' : '') : '')
+          + '</button>';
+      }
+      h += '</div>';
+    }
+
+    if (!sel) {
+      h += '<div class="aide">Touchez une case pour voir le repas prévu,'
+        + ' le remplacer ou le retirer.</div>';
+    } else {
+      var r2 = carte[sel.jour + '-' + sel.creneau];
+      var quand = JOURS[sel.jour] + ' · ' + CRENEAUX[sel.creneau].nom;
+      h += '<div class="sel-box"><div class="sel-quand">' + esc(quand) + '</div>';
+      if (r2) {
+        var mac = [r2.kcal ? r2.kcal + ' kcal' : null, r2.p ? r2.p + ' g prot.' : null]
+          .filter(Boolean).join(' · ');
+        h += '<div class="sel-h"><div class="sel-vig">' + vignette(r2) + '</div>'
+          + '<div><div class="sel-nom">' + esc(r2.nom) + '</div>'
+          + (mac ? '<div class="sel-mac">' + esc(mac) + '</div>' : '') + '</div></div>'
+          + (r2.pourquoi ? '<div class="sel-pq">' + esc(r2.pourquoi) + '</div>' : '')
+          + '<div class="sel-act">'
+          + '<button class="pri" data-nplw="modifier">✏️ Modifier ce repas</button>'
+          + '<button class="sec" data-nplw="retirer" aria-label="Retirer ce repas"'
+          + ' title="Retirer ce repas">🗑</button></div>';
+      } else {
+        h += '<div class="sel-pq" style="margin-top:9px">'
+          + (prepare[sel.jour] && prepare[sel.jour][sel.creneau] === false
+              ? 'Vous avez prévu d’acheter ce repas. Vous pouvez quand même y placer un plat.'
+              : 'Aucun repas prévu à ce créneau.')
+          + '</div><div class="sel-act">'
+          + '<button class="pri" data-nplw="modifier">＋ Choisir un repas</button></div>';
+      }
+      h += '</div>';
+    }
+
+    h += '<div class="pied"><button data-nplw="replanifier">↻ Replanifier toute la semaine'
+      + '</button></div>';
+    return h;
+  }
+
+  /* Repeint le corps de la fenêtre ouverte. ⚠️ Relit `realises()` : un repas
+     enregistré depuis un autre écran doit cocher sa case ici aussi, et c'est la
+     base qui répond — jamais un drapeau (voir l'encadré de `realises()`). */
+  async function peindreSemaine(sel) {
+    if (!SEM_EL || !SEM_EL.isConnected) return;
+    if (sel !== undefined) SEM_SEL = sel;
+    SEM_PLAN = await lire(true);
+    var faits = SEM_PLAN ? await realises() : {};
+    var corps = SEM_EL.querySelector('.corps');
+    if (!corps) return;
+    corps.innerHTML = htmlSemaine(SEM_PLAN, faits, cuisinees(), SEM_SEL);
+    brancherVignettes(corps);
+
+    var n = (SEM_PLAN && SEM_PLAN.repas || []).length;
+    var sub = SEM_EL.querySelector('.tete .sub');
+    if (sub) sub.textContent = n + ' repas placé' + (n > 1 ? 's' : '') + ' sur ' + TOTAL_CASES;
+
+    corps.querySelectorAll('[data-nplw="case"]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var j = +b.dataset.j, c = +b.dataset.c;
+        /* Retaper la case choisie la déselectionne : c'est le seul moyen de
+           refermer la fiche sans quitter l'écran. */
+        var meme = SEM_SEL && SEM_SEL.jour === j && SEM_SEL.creneau === c;
+        peindreSemaine(meme ? null : { jour: j, creneau: c });
+      });
+    });
+    var mod = corps.querySelector('[data-nplw="modifier"]');
+    if (mod) mod.addEventListener('click', function () {
+      if (SEM_SEL) choisirRepas(SEM_SEL.jour, SEM_SEL.creneau);
+    });
+    var ret = corps.querySelector('[data-nplw="retirer"]');
+    if (ret) ret.addEventListener('click', async function () {
+      if (!SEM_SEL) return;
+      ret.disabled = true;
+      await retirer(SEM_SEL.jour, SEM_SEL.creneau);
+      /* On GARDE la sélection : la case devient vide et propose aussitôt
+         « Choisir un repas ». Tout désélectionner renverrait à la grille et
+         ferait chercher où l'on en était. */
+      await peindreSemaine(SEM_SEL);
+    });
+    var rep = corps.querySelector('[data-nplw="replanifier"]');
+    if (rep) rep.addEventListener('click', function () {
+      /* ⚠️ On referme AVANT d'ouvrir la séquence. `ouvrir()` monte `#nplan` à
+         99990, donc SOUS cette fenêtre : sans cette fermeture, on lancerait une
+         planification invisible derrière un calendrier figé. */
+      fermerSemaine();
+      setTimeout(function () { ouvrir({ forcer: true }); }, 260);
+    });
+  }
+
+  /**
+   * La semaine en grand, plein écran. Point d'entrée du geste « je clique sur
+   * le planning ».
+   * @param {object} [sel] `{jour, creneau}` à ouvrir déjà sélectionné.
+   */
+  async function ouvrirSemaine(sel) {
+    cssSemaine();
+    var vieux = document.getElementById('nplw');
+    if (vieux && vieux.parentNode) vieux.parentNode.removeChild(vieux);
+
+    var el = document.createElement('div');
+    el.id = 'nplw';
+    var s = lundi(), d = new Date(s + 'T12:00:00');
+    var f = new Date(d.getTime() + 6 * 86400000);
+    var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août',
+                'septembre','octobre','novembre','décembre'];
+    el.innerHTML = '<div class="tete">'
+      + '<button class="x" data-nplw="x" aria-label="Fermer">✕</button>'
+      + '<div class="tt"><h2>Ma semaine</h2><div class="sub">Du ' + d.getDate()
+      + ' au ' + f.getDate() + ' ' + MOIS[f.getMonth()] + '</div></div></div>'
+      + '<div class="corps"></div>';
+    document.body.appendChild(el);
+    requestAnimationFrame(function () { el.classList.add('on'); });
+    setTimeout(function () { el.classList.add('on'); }, 60);
+
+    el.querySelector('[data-nplw="x"]').addEventListener('click', fermerSemaine);
+    SEM_EL = el;
+    SEM_SEL = sel || null;
+    await peindreSemaine(SEM_SEL);
+    return el;
+  }
+
+  /* Un plat vient d'être enregistré, ou une recette validée, pendant que la
+     fenêtre est ouverte : elle se repeint. Deux écouteurs et non un seul —
+     `natty:repas-ajoute` est émis sur `window`, les deux autres sur `document`
+     (voir l'encadré de `selectionner()`). */
+  window.addEventListener('natty:repas-ajoute', function () { peindreSemaine(); });
+  document.addEventListener('natty:recette-validee', function () { peindreSemaine(); });
+
   return {
     ouvrir: ouvrir,
     detail: detail,
     ajouter: ajouter,
+    /* La semaine en grand, et la modification d'un repas placé (§12).
+       `ouvrirSemaine` est le geste « je clique sur le planning » ;
+       `remplacer`/`retirer` sont exposés pour que le jour où un autre
+       écran veut poser un plat sur un créneau précis, il n'ait pas à
+       rouvrir la fenêtre pour le faire. */
+    ouvrirSemaine: ouvrirSemaine,
+    remplacer: remplacer,
+    retirer: retirer,
+    repasEnregistres: repasEnregistres,
     proposerSiNecessaire: proposerSiNecessaire,
     lire: lire,
     fiche: fiche,
