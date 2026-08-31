@@ -930,13 +930,13 @@ function ouvrir(id, depuis){
          deux gestes DISTINCTS — l'un alerte l'équipe, l'autre ne concerne que
          soi — et les fondre en un seul ferait hésiter à faire l'un des deux. */
       var actes = [];
-      /* ⚠️ « Dans ma semaine » n'apparaît QUE si `assets/planning.js` est là.
+      /* ⚠️ « Planifier » n'apparaît QUE si `assets/planning.js` est là.
          Un bouton qui ne peut rien faire est pire qu'un bouton absent — c'est
          la même règle que « Tout ajouter à mes courses », désactivé quand
          `NattyListe` manque. */
       if (window.NattyPlanning && NattyPlanning.ajouter) {
         actes.push({
-          txt: 'Dans ma semaine',
+          txt: 'Planifier',
           /* `el` est le bouton du tiroir : l'écriture étant asynchrone, c'est
              le seul moyen de le relibeller au retour — la valeur rendue ici
              part avant que la base ait répondu. Même raison que « Signaler ». */
@@ -944,12 +944,12 @@ function ouvrir(id, depuis){
             NattyPlanning.ajouter(platVersRepas(p)).then(function(r){
               if (r.ok){
                 toast('Ajouté à votre semaine · ' + r.quand);
-                if (el){ el.textContent = 'Dans ma semaine ✓'; el.disabled = true; }
+                if (el){ el.textContent = 'Planifié ✓'; el.disabled = true; }
                 return;
               }
               if (r.raison === 'doublon'){
                 toast('Déjà dans votre semaine · ' + r.quand);
-                if (el){ el.textContent = 'Dans ma semaine ✓'; el.disabled = true; }
+                if (el){ el.textContent = 'Planifié ✓'; el.disabled = true; }
                 return;
               }
               /* Les deux refus légitimes se DISENT, ils ne se taisent pas : la

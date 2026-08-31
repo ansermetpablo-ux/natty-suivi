@@ -22,6 +22,12 @@ const src = fs.readFileSync(SRC, 'utf8');
 const sandbox = { window: {} };
 const D = new Function('window', src + '; return NattyDecouverte;')(sandbox.window);
 
+/* ⚠️ `D.cuisines()` NE REND QUE LES PLATS PHOTOGRAPHIÉS, et c'est voulu : la
+   génération de la semaine place ses plats dans un calendrier de vignettes, un
+   plat sans image y arriverait sous un dessin au trait au milieu d'assiettes
+   (demande de Pablo, 2026-08-31). Les plats illustrés restent au catalogue du
+   navigateur — `platParCle()` doit continuer de les résoudre pour les semaines
+   déjà planifiées — mais ils ne sont plus proposés au modèle. */
 const cuisines = D.cuisines();
 const plats = [];
 cuisines.forEach(c => {
@@ -79,5 +85,4 @@ const corps = 'export const CATALOGUE = '
 fs.writeFileSync(OUT, entete + corps);
 
 console.log(`api/_catalogue.js régénéré — ${plats.length} plats, ${cuisines.length} cuisines`);
-console.log(`  illustrés (sans photo) : ${D.tous().filter(p => p.svg).length}`);
 console.log(`  taille du fichier      : ${fs.statSync(OUT).size} octets`);

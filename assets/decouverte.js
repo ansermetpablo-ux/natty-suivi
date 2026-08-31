@@ -960,12 +960,15 @@ var NattyDecouverte = (function () {
      pouvait copier leurs ingrédients dans ses courses, et rien d'autre.
 
      ⚠️ `rec` EST FACULTATIF, ET C'EST TOUT LE MONTAGE. Un plat qui n'en porte
-     pas se comporte exactement comme avant — pas de macros annoncées, pas de
-     bouton en plus. La règle de ce fichier (« aucune macro n'est annoncée »)
-     n'est donc pas levée : elle tenait à l'absence de grammages, et elle
-     continue de valoir pour les 92 plats qui n'en ont pas. Un plat qui porte
-     une recette a, lui, des quantités pesées — les taire serait cacher une
-     donnée vraie.
+     pas n'annonce aucune macro et n'offre pas « Cuisiner ce plat » — il n'a
+     pas d'étapes à dérouler. La règle de ce fichier (« aucune macro n'est
+     annoncée ») n'est donc pas levée : elle tenait à l'absence de grammages,
+     et elle continue de valoir pour les 93 plats qui n'en ont pas. Un plat qui
+     porte une recette a, lui, des quantités pesées — les taire serait cacher
+     une donnée vraie.
+     ⚠️ « Planifier », lui, ne dépend PAS de `rec` (2026-08-31) : mettre un plat
+     dans sa semaine ne demande pas de savoir le cuisiner pas à pas. C'est
+     `versRepas()` qui fait le pont, avec ou sans recette.
 
      ⚠️ LE SCHÉMA EST CELUI DE LA GÉNÉRATION (`api/_generation.js`), au champ
      près : `{cle, nom, em, temps_min, macros:{p,g,l,kcal}, ingredients:[{em,
@@ -1012,16 +1015,60 @@ var NattyDecouverte = (function () {
     };
   }
 
-  /* Les boutons du tiroir de la visionneuse, pour un plat qui a une recette.
-     ⚠️ Chacun est conditionné à la présence de SON module. Un bouton qui ne
-     peut rien faire est pire qu'un bouton absent — même règle que « Tout
-     ajouter à mes courses », éteint quand `NattyListe` manque. */
+  /* Ce qu'un plat du catalogue devient pour `NattyPlanning.ajouter()`.
+     ⚠️ ELLE MARCHE AUSSI SANS RECETTE, et c'est tout l'objet de la passe du
+     2026-08-31 : « Planifier » ne concernait qu'un plat sur 94, le seul qui
+     porte des étapes. On regardait 93 plats appétissants sans pouvoir en
+     mettre un seul dans sa semaine.
+     ⚠️ SANS `rec`, `src` VAUT `null` — jamais un objet à moitié rempli. C'est
+     ce que lit `depuisPlanRepas()` (repas.html) pour décider si le plat se
+     DÉROULE (« Suivre la recette ») ou se VALIDE en photo (« Réaliser ce
+     repas ») : lui donner une coquille sans `steps` ferait dire au bouton
+     qu'il y a des étapes à suivre, et mènerait droit à l'écran photo — le
+     défaut du 2026-08-16, dans l'autre sens.
+     ⚠️ Et AUCUNE macro n'est inventée : sans grammages, elles restent à zéro,
+     exactement comme la visionneuse écrit « Macros non estimées ». La fiche du
+     calendrier affiche alors « – g », qui est un manque visible. */
+  function versRepas(p) {
+    var r = p.rec ? recette(p) : null;
+    var mac = (p.rec && p.rec.macros) || null;
+    return {
+      nom: p.n,
+      em: (p.ingr[0] && p.ingr[0].e) || '🍽️',
+      photo: img(p),
+      illu: illu(p),
+      cle: p.cle,
+      pourquoi: 'Repéré dans « Découvrir » — ' + p.paysNom + '.',
+      kcal: (mac && mac.kcal) || 0,
+      p: (mac && mac.p) || 0,
+      g: (mac && mac.g) || 0,
+      l: (mac && mac.l) || 0,
+      /* Les ingrédients pesés de la recette quand il y en a ; sinon la liste
+         courte du catalogue, sans quantité — le plat se lit quand même dans la
+         fiche du calendrier, et une quantité inventée serait pire que rien. */
+      ingredients: r ? r.ingredients : p.ingr.map(function (x) {
+        return { em: x.e, nom: x.n, qte: '' };
+      }),
+      /* ⚠️ LA RECETTE ENTIÈRE SOUS `src`, ET C'EST LE POINT. C'est de là que
+         `depuisPlanRepas()` (repas.html) récupère les étapes : sans elle, un
+         plat QUI EN A arriverait au héros de la semaine sans rien à dérouler
+         — exactement le défaut du 2026-08-16. */
+      src: r,
+      source: 'decouverte'
+    };
+  }
+
+  /* Les boutons du tiroir de la visionneuse.
+     ⚠️ Chacun est conditionné à la présence de SON module, et « Cuisiner »
+     l'est en plus à la présence d'étapes. Un bouton qui ne peut rien faire est
+     pire qu'un bouton absent — même règle que « Tout ajouter à mes courses »,
+     éteint quand `NattyListe` manque. */
   function actionsPour(it) {
     var p = platParCle(it && it.cle);
-    if (!p || !p.rec) return [];
+    if (!p) return [];
     var actes = [];
 
-    if (window.NattyRecette && window.NattyRecette.suivre) {
+    if (p.rec && window.NattyRecette && window.NattyRecette.suivre) {
       actes.push({
         txt: '👨‍🍳 Cuisiner ce plat',
         on: function () {
@@ -1039,31 +1086,15 @@ var NattyDecouverte = (function () {
 
     if (window.NattyPlanning && window.NattyPlanning.ajouter) {
       actes.push({
-        txt: '📅 Dans ma semaine',
+        txt: '📅 Planifier',
         /* `el` est le bouton lui-même : l'écriture est asynchrone, c'est le
            seul moyen de le relibeller au retour — la valeur rendue par `on()`
            part avant que la base ait répondu. Même raison que dans
            `social.html`, d'où ce chemin est repris. */
         on: function (item, el) {
-          var r = recette(p);
-          window.NattyPlanning.ajouter({
-            nom: r.nom, em: r.em, photo: r.photo, illu: r.illu, cle: r.cle,
-            pourquoi: 'Repéré dans « Découvrir » — ' + p.paysNom + '.',
-            kcal: (r.macros && r.macros.kcal) || 0,
-            p: (r.macros && r.macros.p) || 0,
-            g: (r.macros && r.macros.g) || 0,
-            l: (r.macros && r.macros.l) || 0,
-            ingredients: r.ingredients,
-            /* ⚠️ LA RECETTE ENTIÈRE SOUS `src`, ET C'EST LE POINT. C'est de là
-               que `depuisPlanRepas()` (repas.html) récupère les étapes : sans
-               elle, le plat arriverait au héros de la semaine sans rien à
-               dérouler, le bouton dirait « Réaliser ce repas » et mènerait
-               droit à la photo — exactement le défaut du 2026-08-16. */
-            src: r,
-            source: 'decouverte'
-          }).then(function (res) {
+          window.NattyPlanning.ajouter(versRepas(p)).then(function (res) {
             if (!el) return;
-            if (res && res.ok) { el.textContent = 'Dans ma semaine ✓ · ' + res.quand; el.disabled = true; return; }
+            if (res && res.ok) { el.textContent = 'Planifié ✓ · ' + res.quand; el.disabled = true; return; }
             var raison = res && res.raison;
             el.textContent = raison === 'doublon' ? 'Déjà prévu · ' + res.quand
               : raison === 'sans-plan' ? 'Planifiez d\'abord votre semaine'
