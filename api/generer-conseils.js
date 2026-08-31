@@ -32,7 +32,12 @@ import { processUser, getLundiSemaine } from './_generation.js';
 // 120 avait été choisi. 120 laissait 35 s de marge à un appel qui varie de
 // plusieurs dizaines de secondes selon la charge d'Anthropic. Mesuré sur ce
 // déploiement : une fonction a tenu 204 s sans être coupée.
-export const maxDuration = 180;
+/* Porté à 260 s (2026-08-31) : le compte de test (5 recettes au lieu de 2,
+   voir `nbRecettesPour` dans _generation.js) prend mécaniquement plus
+   longtemps qu'avant — la marge de 180 s a été mesurée pour 2 recettes, pas 5.
+   `api/conseils-hebdo.js` tourne déjà à 300 s sur le même déploiement : rester
+   en dessous. À revérifier avec un vrai chronomètre au premier essai réel. */
+export const maxDuration = 260;
 
 const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';

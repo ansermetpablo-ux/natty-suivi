@@ -52,6 +52,30 @@ export const MODELE = 'claude-sonnet-4-5';
    ce que les écrans affichent. */
 export const NB_RECETTES = 2;
 
+/* Compte(s) autorisés à sortir du plafond par défaut, pour remplir tout le
+   calendrier (7 jours x 3 créneaux = 21 repas) au lieu des 2 recettes + 3
+   plats macro habituels (= 5 repas). Demandé par Pablo le 2026-08-31, pour
+   son propre compte.
+   ⚠️ PAS 21 D'UN COUP. L'avertissement au-dessus est mesuré : à 7 recettes
+   complètes (~25 000 jetons de sortie), la réponse frôlait déjà la limite et
+   revenait tronquée sur CE modèle, SANS l'en-tête bêta de sortie étendue (pas
+   posé ici — voir plus bas). 21 recettes complètes en un seul appel
+   (~70 000 jetons) échouerait quasi certainement, et une génération qui
+   échoue n'écrit RIEN — ni conseils, ni recettes, ni plats macro : pire que
+   la limite de départ. 5 reste sous le seuil déjà mesuré comme risqué (7) ;
+   à vérifier en conditions réelles (bouton « Générer mes conseils ») avant de
+   pousser plus loin. Passer au-delà exigerait de fractionner la génération en
+   plusieurs appels Claude successifs (voir la note dans processUser) — pas
+   fait ici, changement plus profond. */
+const NB_RECETTES_PAR_EMAIL = {
+  'ansermet.pablo@gmail.com': 5
+};
+
+export function nbRecettesPour(email) {
+  const e = String(email || '').trim().toLowerCase();
+  return NB_RECETTES_PAR_EMAIL[e] || NB_RECETTES;
+}
+
 /* Plafond de sortie. ⚠️ MESURÉ, pas estimé — et c'est LE défaut qui faisait
    répondre « Échec » à l'écran Repas. L'ancien budget (1300 jetons par recette
    + 800) donnait 3400 jetons pour deux recettes : la réponse était coupée en
@@ -65,7 +89,9 @@ export const NB_RECETTES = 2;
    recette — pas d'étapes — mais un plafond trop juste tronque le JSON entier,
    et c'est la fin de la réponse qui saute : on perdrait précisément ce qu'on
    vient d'ajouter. */
-const MAX_TOKENS = 3200 * NB_RECETTES + 1600 + 1400;
+function maxTokensPour(nb) {
+  return 3200 * nb + 1600 + 1400;
+}
 
 /* ── Accès Supabase (clé service : ce module tourne côté serveur) ─────────── */
 
@@ -588,7 +614,8 @@ export async function processUser(user, semaine, SB_URL, SB_KEY, CLAUDE_API, CLA
      dans son localStorage). Une chaîne vide n'écrase rien — c'est « je n'ai
      rien à dire », pas « il n'a rien ». */
   if (typeof materiel === 'string' && materiel) profil.materiel = materiel;
-  const prompt = construirePrompt(profil, NB_RECETTES, garde);
+  const nb = nbRecettesPour(user.email);
+  const prompt = construirePrompt(profil, nb, garde);
 
   const claudeRes = await fetch(CLAUDE_API, {
     method: 'POST',
@@ -599,7 +626,7 @@ export async function processUser(user, semaine, SB_URL, SB_KEY, CLAUDE_API, CLA
     },
     body: JSON.stringify({
       model: MODELE,
-      max_tokens: MAX_TOKENS,
+      max_tokens: maxTokensPour(nb),
       messages: [{ role: 'user', content: prompt }]
     })
   });
@@ -619,7 +646,7 @@ export async function processUser(user, semaine, SB_URL, SB_KEY, CLAUDE_API, CLA
     throw new Error('Réponse illisible (' + txt.length + ' caractères, JSON incomplet ?)');
   }
 
-  const recettes = ancrerAuCatalogue((out.recettes || []).slice(0, NB_RECETTES));
+  const recettes = ancrerAuCatalogue((out.recettes || []).slice(0, nb));
   const conseils = out.conseils || {};
   const platsMacro = normaliserPlatsMacro(out.plats_macro);
   if (!recettes.length && !conseils.conseil_amelioration && !conseils.conseil_prot) {
@@ -649,7 +676,7 @@ export async function processUser(user, semaine, SB_URL, SB_KEY, CLAUDE_API, CLA
       // génération, même colonne, même semaine. `assets/planning.js` les lit
       // ici et n'appelle plus l'IA du tout.
       plats_macro: platsMacro,
-      nb_repas: NB_RECETTES,
+      nb_repas: nb,
       conseils,
       genere_le: new Date().toISOString()
     }),
