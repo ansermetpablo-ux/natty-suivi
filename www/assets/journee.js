@@ -410,7 +410,16 @@ window.NattyJournee = (function () {
       cle: 'defi', nom: 'Le palier du jour', icone: 'defi', h: H_DEFI,
       fait: ongletVu('defis'),
       cta: 'Ouvrir le parcours',
-      action: function () { marquerEtape('defi'); Natty.goto('narration.html'); }
+      /* ⚠️ `marquerVu('defis')` EST OBLIGATOIRE ICI depuis que la barre du bas
+         ne porte plus l'onglet Défis (assets/nav.js) : c'était elle qui posait
+         la clé. Sans ce marquage, `ongletVu('defis')` ci-dessus resterait faux
+         pour toujours — l'étape ne se cocherait jamais, et le rappel du soir
+         d'assets/notifs.js partirait même après un parcours ouvert. */
+      action: function () {
+        marquerEtape('defi');
+        if (window.NattyNav && NattyNav.marquerVu) NattyNav.marquerVu('defis');
+        Natty.goto('narration.html');
+      }
     });
 
     /* ── Le point du soir ─────────────────────────────────

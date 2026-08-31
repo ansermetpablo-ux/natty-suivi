@@ -19,21 +19,33 @@
 :root{
   /* Neumorphisme : un relief clair + un creux gris. Une valeur par opacité
      rencontrée dans le fichier, pour que le thème clair reste EXACTEMENT ce
-     qu'il était — normaliser les alphas aurait retouché un écran qui marche. */
-  --relief-80:var(--relief-80);
-  --relief-85:var(--relief-85);
-  --relief-88:var(--relief-88);
-  --relief-90:var(--relief-90);
-  --creux-18:var(--creux-18);
-  --creux-20:var(--creux-20);
-  --creux-25:var(--creux-25);
-  --creux-30:var(--creux-30);
-  --creux-35:var(--creux-35);
-  --creux-38:var(--creux-38);
-  --creux-40:var(--creux-40);
-  --creux-42:var(--creux-42);
-  --creux-50:var(--creux-50);
-  --creux-60:var(--creux-60);
+     qu'il était — normaliser les alphas aurait retouché un écran qui marche.
+
+     🔴 ⚠️ CES QUATORZE JETONS SE RÉFÉRENÇAIENT EUX-MÊMES
+     (`--creux-42:var(--creux-42)`), depuis la passe qui a introduit le thème
+     sombre. Un cycle rend la variable INVALIDE : toute déclaration qui s'en
+     sert est alors jetée en silence. Mesuré au navigateur avant correction —
+     en thème CLAIR, `.neu-card` calculait `box-shadow: none`, et il en allait
+     de même de TOUTES les ombres de l'écran : le neumorphisme de cette page
+     n'existait plus du tout, seul le thème sombre (qui, lui, portait de vraies
+     valeurs) l'affichait encore.
+     Les alphas sont ceux d'avant la passe, relevés un par un dans l'historique
+     du fichier — le nom de chaque jeton EST son alpha, c'est ce qui a permis de
+     les retrouver tous les quatorze sans en inventer un seul. */
+  --relief-80:rgba(255,255,255,0.8);
+  --relief-85:rgba(255,255,255,0.85);
+  --relief-88:rgba(255,255,255,0.88);
+  --relief-90:rgba(255,255,255,0.9);
+  --creux-18:rgba(174,174,192,0.18);
+  --creux-20:rgba(174,174,192,0.2);
+  --creux-25:rgba(174,174,192,0.25);
+  --creux-30:rgba(174,174,192,0.3);
+  --creux-35:rgba(174,174,192,0.35);
+  --creux-38:rgba(174,174,192,0.38);
+  --creux-40:rgba(174,174,192,0.4);
+  --creux-42:rgba(174,174,192,0.42);
+  --creux-50:rgba(174,174,192,0.5);
+  --creux-60:rgba(174,174,192,0.6);
   --bg:#f0f0f3;
   --card:#ffffff;
   --ink:#1a1a2e;      /* surfaces sombres */
@@ -41,8 +53,10 @@
   --txt:#3a3a4a;      /* texte courant */
   --muted:#aaaaaa;
   --muted2:#888888;
-  --vert:var(--vert);
-  --vert-clair:var(--vert-clair);
+  /* Même défaut, mêmes conséquences : `--vert` invalide rendait la pastille
+     d'une étape franchie transparente et son trait de progression incolore. */
+  --vert:#5a9e6f;
+  --vert-clair:#eaf4ee;
 }
 :root[data-theme="dark"]{
   --obj-o1:#3a2c14; --obj-o2:#4d3a17;
@@ -82,9 +96,40 @@ body { font-family: "DM Sans", sans-serif; background:var(--bg); min-height: 100
    qu'en le terminant. Retour, accueil et profil restent donc à l'écran pendant
    tout le scroll (`sticky`, comme le `.top` des autres écrans), et la marge
    haute inclut la safe-area. */
-.ofr-top { position: sticky; top: 0; z-index: 40; max-width: 480px; margin: 0 auto;
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: calc(14px + env(safe-area-inset-top, 0px)) 0 10px; background:var(--bg); }
+/* ⚠️ C'EST `.ofr-head` QUI COLLE EN HAUT, PLUS `.ofr-top`. L'interrupteur
+   « Nos plats / Notre offre » doit rester atteignable pendant tout le
+   défilement, exactement comme le retour et l'accueil : deux éléments
+   `sticky` frères se seraient chevauchés au premier pixel de scroll, l'un
+   se calant sur `top:0` par-dessus l'autre. Un seul conteneur colle, les
+   deux rangées voyagent avec lui. */
+.ofr-head { position: sticky; top: 0; z-index: 40; max-width: 480px; margin: 0 auto;
+  background:var(--bg); }
+.ofr-top { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 0 10px; }
+
+/* ═══ L'INTERRUPTEUR DU HEADER ═══════════════════════════════════════════
+   Deux moitiés d'un même écran : le menu de la semaine, et la formule. C'est
+   un segmented control d'iOS — un creux, et un galet noir qui GLISSE d'un
+   côté à l'autre. Le glissement n'est pas un ornement : c'est lui qui dit que
+   les deux vues sont côte à côte et qu'on ne quitte pas la page. Un simple
+   changement de couleur laisserait croire à une navigation.
+   ⚠️ Le galet est en `position:absolute` DERRIÈRE les deux boutons (z-index),
+   jamais un fond posé sur le bouton actif : sinon il n'y a rien à animer, et
+   la transition de couleur du texte ne peut pas croiser le mouvement. */
+.ofr-seg { position: relative; display: flex; gap: 4px; padding: 5px; margin-bottom: 12px;
+  -webkit-user-select: none; user-select: none;
+  border-radius: 999px; background:var(--bg);
+  box-shadow: inset 3px 3px 7px var(--creux-40), inset -3px -3px 7px var(--relief-90); }
+.ofr-seg-galet { position: absolute; z-index: 0; top: 5px; bottom: 5px; left: 5px;
+  width: calc(50% - 5px); border-radius: 999px; background:var(--ink);
+  box-shadow: 0 4px 12px var(--creux-50);
+  transition: transform .3s cubic-bezier(.22,1,.36,1); }
+.ofr-seg.sur-offre .ofr-seg-galet { transform: translateX(100%); }
+.ofr-seg button { position: relative; z-index: 1; flex: 1; border: none; background: none;
+  cursor: pointer; padding: 11px 6px; border-radius: 999px; font-family: inherit;
+  font-size: 13px; font-weight: 600; letter-spacing: -.15px; color:var(--muted2);
+  transition: color .22s; }
+.ofr-seg button.on { color:var(--on-ink); }
 .ofr-top button, .ofr-top a { display: flex; align-items: center; justify-content: center;
   width: 38px; height: 38px; border-radius: 50%; background:var(--bg); border: none; cursor: pointer;
   color:var(--muted2); text-decoration: none;
@@ -94,6 +139,12 @@ body { font-family: "DM Sans", sans-serif; background:var(--bg); min-height: 100
   text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bg-pattern { position: fixed; inset: 0; background-color:var(--bg); background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0); background-size: 26px 26px; z-index: 0; }
 .wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+/* ⚠️ On ne dégage QUE la barre d'action, et seulement dans la vue « offre » :
+   `assets/nav.js` pose déjà les 104 px de la barre d'onglets sur <body>, et
+   les additionner des deux côtés donnait un demi-écran de vide sous le menu.
+   La vue « nos plats » n'a pas de barre d'action — son récapitulatif est dans
+   le flux —, donc elle n'a rien de plus à réserver. */
+body:not(.vue-plats) .wrapper { padding-bottom: 96px; }
 
 .etapes-row { display: flex; align-items: center; }
 .etape-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
@@ -236,33 +287,108 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 .recap-price-val { font-size: 24px; font-weight: 700; color:var(--txt); letter-spacing: -1px; }
 .recap-price-per { font-size: 11px; color:var(--muted); font-weight: 400; text-align: right; }
 
-/* ═══ COMMANDE À L'UNITÉ ═══ */
-.unite-liste { display: flex; flex-direction: column; gap: 10px; }
-.unite-vide { text-align: center; color:var(--muted); font-size: 13px; padding: 28px 10px; }
+/* ═══ NOS PLATS — le menu de la semaine ═════════════════════════════════
+   Refonte demandée par Pablo : ce menu n'est plus un parcours d'achat rangé
+   au bout d'un lien, c'est l'une des deux moitiés d'un écran de la barre du
+   bas. Il est donc écrit dans le vocabulaire de l'app — pastille noire en
+   capitales, superellipse, relief neumorphique — et non plus en liste plate.
+
+   ⚠️ LES IDENTIFIANTS NE CHANGENT PAS (#uniteListe, #uniteTotal, #uniteNb,
+   #unitePrix, #unitePayer, #uq_<id>, [data-plus], [data-moins]) : cinq
+   fonctions plus bas les lisent, et `assets/commande.js` mène ici par
+   `?mode=unite`. Seule la présentation change ; renommer aurait cassé le
+   paiement pour un nom de classe. */
+/* ⚠️ NI PASTILLE NOIRE, NI GRAND TITRE « NOS PLATS ». Les deux ont été
+   essayés puis retirés en regardant l'écran : la pastille faisait un second
+   galet noir à 40 px sous celui de l'interrupteur, et le titre répétait mot
+   pour mot le bouton juste au-dessus. À eux deux ils prenaient 40 % du premier
+   écran — sur une page dont le contenu est une liste de plats. */
+.pl-tete { display: flex; flex-direction: column; align-items: center; gap: 6px;
+  text-align: center; margin-bottom: 2px; }
+.pl-tete h1 { font-size: 22px; font-weight: 700; letter-spacing: -.7px; color:var(--txt); }
+.pl-tete p { font-size: 12px; color:var(--muted); line-height: 1.5; }
+
+.unite-liste { display: flex; flex-direction: column; gap: 12px; }
+.unite-vide { text-align: center; color:var(--muted); font-size: 13px; padding: 34px 14px; line-height: 1.6; }
+
 .unite-plat { display: flex; align-items: center; gap: 12px; background:var(--bg);
-  border-radius: 18px; padding: 12px 14px; box-shadow: 4px 4px 10px var(--creux-40),-4px -4px 10px var(--relief-88); }
-.unite-img { width: 52px; height: 52px; border-radius: 14px; object-fit: cover; flex-shrink: 0; background:var(--creux-30); }
+  border: 1.5px solid transparent; border-radius: 24px; padding: 11px 12px;
+  box-shadow: 6px 6px 14px var(--creux-40), -6px -6px 14px var(--relief-88);
+  transition: border-color .2s, box-shadow .2s; }
+/* Un plat retenu se voit à l'anneau, pas seulement au compteur : le compteur
+   est à droite, hors du regard quand on parcourt les noms. */
+.unite-plat.pris { border-color:var(--ink);
+  box-shadow: 4px 4px 10px var(--creux-30), -4px -4px 10px var(--relief-85); }
+/* ⚠️ En sombre, `--ink` est une SURFACE (#202128), pas une encre : l'anneau
+   d'un plat retenu s'y confondait avec le fond de la page. Il prend donc le
+   gris de texte secondaire — assez pour se voir, trop peu pour crier. */
+:root[data-theme="dark"] .unite-plat.pris { border-color:var(--muted2); }
+
+.unite-img { width: 62px; height: 62px; flex-shrink: 0; border-radius: 20px; overflow: hidden;
+  object-fit: cover; display: block; background:var(--card);
+  box-shadow: inset 2px 2px 6px var(--creux-25); }
+/* Le repli d'un plat sans photo : le couvert au trait, jamais un carré plein.
+   Un aplat de couleur au milieu d'une liste se lit comme une image qui n'a pas
+   fini de charger — donc comme une panne.
+   ⚠️ C'est le dessin de l'onglet « Repas » d'assets/nav.js, au trait près :
+   c'est déjà ce qui veut dire « plat » dans cette application. Un rond dans un
+   rond avait été essayé — vu à l'écran, ça se lit comme une cible, pas comme
+   une assiette. */
+.unite-img.vide { display: flex; align-items: center; justify-content: center;
+  background:var(--bg); }
+.unite-img.vide svg { width: 26px; height: 26px; stroke:var(--muted); fill: none;
+  stroke-width: 1.7; }
+
 .unite-inf { flex: 1; min-width: 0; }
-.unite-nom { font-size: 13.5px; font-weight: 700; color:var(--txt); line-height: 1.3; }
-.unite-mac { font-size: 11px; color:var(--muted); margin-top: 3px; }
+.unite-nom { font-size: 14.5px; font-weight: 700; color:var(--txt); line-height: 1.25;
+  letter-spacing: -.2px; }
+/* Une seule ligne, coupée : à cette largeur (≈145 px entre la photo et le
+   pas-à-pas), deux lignes de description repoussent les macros hors de la
+   carte et c'est la seule information chiffrée de la ligne. */
+.unite-des { font-size: 11.5px; color:var(--muted); line-height: 1.35; margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Du texte, pas des pastilles : à cette largeur, « 620 kcal » et « 38 g de
+   protéines » en pastilles passaient l'une sous l'autre et la carte grandissait
+   d'une ligne pour deux nombres. */
+.unite-mac { font-size: 11px; font-weight: 600; color:var(--muted2); margin-top: 5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Le pas-à-pas plutôt qu'un champ libre : sur mobile, ouvrir un clavier
    numérique pour taper « 2 » est une étape de trop, et un champ accepte 999. */
-.unite-pas { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.unite-pas button { width: 30px; height: 30px; border-radius: 50%; border: none; cursor: pointer;
+/* ⚠️ Chaque pixel pris ici est pris au NOM DU PLAT. Mesuré à 375 px : avec une
+   photo de 66, des boutons de 30 et des écarts de 8, il restait 137 px de
+   texte et la ligne de macros se coupait à « 44 g de protéi… » — c'est-à-dire
+   qu'on tronquait la seule donnée chiffrée de la carte. */
+.unite-pas { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.unite-pas button { width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer;
   background:var(--bg); box-shadow: 3px 3px 7px var(--creux-40),-3px -3px 7px var(--relief-88);
   font-size: 17px; font-weight: 700; color:var(--txt); font-family: inherit; line-height: 1;
   display: flex; align-items: center; justify-content: center; }
 .unite-pas button:disabled { opacity: .34; cursor: default; }
 .unite-pas button:active:not(:disabled) { box-shadow: inset 2px 2px 5px var(--creux-40),inset -2px -2px 5px var(--relief-88); }
-.unite-qte { font-size: 14px; font-weight: 800; color:var(--txt); min-width: 16px; text-align: center; }
-.unite-total { margin-top: 20px; }
+.unite-qte { font-size: 14px; font-weight: 800; color:var(--txt); min-width: 13px; text-align: center; }
+
+/* ⚠️ LE RÉCAPITULATIF COLLE AU BAS DE LA FENÊTRE (`sticky`), au-dessus de la
+   barre d'onglets. Le menu fait jusqu'à trente plats : un total posé tout en
+   bas du flux obligeait à redescendre pour savoir ce qu'on a pris et ce que ça
+   fait.
+   ⚠️ IL NE CONTIENT QUE LE TOTAL ET LE BOUTON. La mention de livraison y était
+   d'abord ; mesuré à l'écran, le bloc faisait alors ~380 px et recouvrait la
+   moitié de la liste — un panier qui cache ce qu'on est en train de choisir.
+   Elle est passée EN DESSOUS, dans le flux, où on la lit une fois. */
+.unite-total { position: sticky; z-index: 15;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  margin-top: 18px; padding: 13px; border-radius: 24px; background:var(--bg);
+  box-shadow: 6px 6px 18px var(--creux-42), -6px -6px 18px var(--relief-88); }
 .unite-total-l { display: flex; justify-content: space-between; align-items: baseline;
-  padding: 0 4px 12px; font-size: 13px; color:var(--muted); }
-.unite-total-l strong { font-size: 22px; font-weight: 800; color:var(--txt); }
-.unite-payer { width: 100%; padding: 16px; border: none; border-radius: 16px; cursor: pointer;
-  background:var(--ink); color:var(--on-ink); font-family: inherit; font-size: 15px; font-weight: 700; }
-.unite-payer:disabled { opacity: .45; cursor: default; }
-.unite-note { font-size: 11px; color:var(--muted); line-height: 1.5; margin-top: 12px; text-align: center; }
+  padding: 2px 6px 12px; font-size: 12.5px; color:var(--muted); }
+.unite-total-l strong { font-size: 24px; font-weight: 800; color:var(--txt); letter-spacing: -.8px; }
+.unite-payer { width: 100%; padding: 16px; border: none; border-radius: 18px; cursor: pointer;
+  background:var(--ink); color:var(--on-ink); font-family: inherit; font-size: 15px; font-weight: 700;
+  box-shadow: 0 6px 16px var(--creux-50); transition: transform .15s; }
+.unite-payer:active:not(:disabled) { transform: scale(.985); }
+.unite-payer:disabled { opacity: .45; cursor: default; box-shadow: none; }
+.unite-note { font-size: 11px; color:var(--muted); line-height: 1.5; margin: 16px 6px 0; text-align: center; }
 /* Sans cette règle, le lien tel: prend le bleu souligné du navigateur — la
    seule tache de bleu de toute l'application, juste sous le bouton de paiement. */
 .unite-note a { color:var(--txt); font-weight: 700; text-decoration: none; border-bottom: 1px solid var(--creux-30); }
@@ -286,17 +412,26 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 .rgpd-text a { color:var(--txt); }
 
 /* CTA */
-.cta-fixed { position: fixed; bottom: 0; left: 0; right: 0; padding: 14px 16px 32px; background: linear-gradient(to top, var(--bg) 70%, transparent); z-index: 20; }
+/* ⚠️ LA BARRE D'ACTION S'ARRÊTE AU-DESSUS DE LA BARRE D'ONGLETS. Depuis que
+   cet écran est une destination de la nav (assets/nav.js), il y a un second
+   élément fixe tout en bas : à `bottom:0`, « Payer → » passait DERRIÈRE le
+   galet noir du « + ». Les 84 px sont la hauteur de la barre (14 px de marge
+   + 70 px de pilule), la zone sûre en plus. */
+.cta-fixed { position: fixed; bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  left: 0; right: 0; padding: 14px 16px 12px; z-index: 20;
+  background: linear-gradient(to top, var(--bg) 74%, transparent); }
 .cta-btn { width: 100%; max-width: 480px; margin: 0 auto; display: block; background: linear-gradient(135deg,#1a1a2e,#0d0d1a); color: white; border: none; border-radius: 16px; padding: 17px; font-family: "DM Sans", sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 4px 4px 14px rgba(26,26,46,0.35); transition: transform 0.15s, opacity 0.2s; }
 .cta-btn:active { transform: scale(0.98); }
 .cta-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 .cta-btn-back { width: 100%; max-width: 480px; margin: 4px auto 0; display: block; background: transparent; border: none; font-family: "DM Sans", sans-serif; font-size: 13px; color:var(--muted); cursor: pointer; padding: 8px; text-align: center; }
-.toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(40px); background:var(--txt); color:var(--bg); padding: 11px 22px; border-radius: 20px; font-size: 13px; z-index: 3000; transition: transform 0.3s, opacity 0.3s; pointer-events: none; opacity: 0; }
+/* Le toast passe au-dessus des DEUX barres, sinon il s'affiche derrière. */
+.toast { position: fixed; bottom: calc(178px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(40px); background:var(--txt); color:var(--bg); padding: 11px 22px; border-radius: 20px; font-size: 13px; z-index: 3000; transition: transform 0.3s, opacity 0.3s; pointer-events: none; opacity: 0; }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 </style>
 </head>
 <body>
 <div class="bg-pattern"></div>
+<div class="ofr-head">
 <div class="ofr-top">
   <!-- Retour : l'étape précédente s'il y en a une, sinon le menu. Un tunnel de
        six étapes sans marche arrière fait abandonner. -->
@@ -310,6 +445,16 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
   <a href="profil.html" aria-label="Profil">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
   </a>
+</div>
+
+<!-- Les deux moitiés de l'écran, dans le header, comme demandé : le menu de la
+     semaine d'un côté, la formule de l'autre. `aria-pressed` plutôt qu'un rôle
+     d'onglet — on ne change pas de page, on change de vue. -->
+<div class="ofr-seg sur-offre" id="ofrSeg">
+  <span class="ofr-seg-galet"></span>
+  <button type="button" id="segPlats" aria-pressed="false">Nos plats</button>
+  <button type="button" id="segOffre" class="on" aria-pressed="true">Notre offre</button>
+</div>
 </div>
 
 <div class="wrapper">
@@ -341,17 +486,22 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
        `creerSession` d'api/checkout.js, partagée avec l'abonnement pour que le
        retour natif ne soit pas corrigé d'un côté et oublié de l'autre. -->
   <div class="step" id="stepUnite">
-    <div class="page-header"><h1>Commander à l'unité</h1><p>Sans engagement · 10,50 € le plat</p></div>
+    <div class="pl-tete">
+      <h1>Le menu de la semaine</h1>
+      <p>Sans engagement · 10,50 € le plat</p>
+    </div>
     <div id="uniteListe" class="unite-liste">
       <div class="unite-vide">Chargement du menu…</div>
     </div>
     <div class="unite-total" id="uniteTotal" style="display:none">
       <div class="unite-total-l"><span id="uniteNb">0 plat</span><strong id="unitePrix">0 €</strong></div>
-      <button class="unite-payer" id="unitePayer" disabled>Choisissez au moins un plat</button>
-      <p class="unite-note">Livraison à Paris, au même jour et à la même adresse que votre
-        abonnement. Sans abonnement, nous vous contactons pour convenir de la livraison —
-        une question&nbsp;? <a href="tel:+33770242964">07&nbsp;70&nbsp;24&nbsp;29&nbsp;64</a>.</p>
+      <button class="unite-payer" id="unitePayer">Payer →</button>
     </div>
+    <!-- Hors du bloc collant, et affichée dès l'arrivée : c'est ce qu'on veut
+         savoir AVANT de choisir, pas au moment de payer. -->
+    <p class="unite-note" id="uniteNote" style="display:none">Livraison à Paris, au même jour et à la même
+      adresse que votre abonnement. Sans abonnement, nous vous contactons pour convenir de la
+      livraison — une question&nbsp;? <a href="tel:+33770242964">07&nbsp;70&nbsp;24&nbsp;29&nbsp;64</a>.</p>
   </div>
 
   <!-- STEP 1 FORMULE -->
@@ -578,6 +728,12 @@ const NUTRI_DEMO = [
    ferait perdre les réponses déjà données. */
 var ETAPES_NOMS = ['Formule', 'Objectif', 'Durée', 'Nutritionniste', 'Livraison', 'Récapitulatif'];
 document.getElementById('ofrBack').addEventListener('click', function(){
+  /* ⚠️ Depuis le menu, le retour va au MENU D'ACCUEIL, pas à l'offre : « Nos
+     plats » est une vue de plein droit, atteignable directement depuis la
+     barre d'onglets. Reculer d'un cran vers le tunnel ferait remonter
+     quelqu'un qui n'y est jamais entré. L'interrupteur du header, lui, reste
+     à un tap. */
+  if (VUE === 'plats') { Natty.goto('menu.html'); return; }
   if (currentStep > 1) { setStep(currentStep - 1); window.scrollTo({ top:0, behavior:'smooth' }); return; }
   Natty.goto('menu.html');
 });
@@ -856,7 +1012,10 @@ function drawSliderGraph(weeks) {
     const mx=(points[i-1].x+points[i].x)/2;
     ctx.bezierCurveTo(mx,points[i-1].y,mx,points[i].y,points[i].x,points[i].y);
   }
-  ctx.strokeStyle="var(--vert)"; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.stroke();
+  /* ⚠️ `ctx.strokeStyle = "var(--vert)"` NE FONCTIONNE PAS : un contexte 2D
+     n'est pas du CSS, il ne résout aucune variable et garde alors sa couleur
+     précédente — la courbe se traçait en noir. On lit donc le jeton. */
+  ctx.strokeStyle=jeton("--vert"); ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.stroke();
 
   // Ligne de base pointillée
   ctx.beginPath();
@@ -886,7 +1045,7 @@ function drawSliderGraph(weeks) {
   ctx.beginPath(); ctx.arc(last.x,last.y,12,0,Math.PI*2);
   ctx.fillStyle="rgba(90,158,111,0.15)"; ctx.fill();
   ctx.beginPath(); ctx.arc(last.x,last.y,6,0,Math.PI*2);
-  ctx.fillStyle="var(--vert)"; ctx.fill();
+  ctx.fillStyle=jeton("--vert"); ctx.fill();
   ctx.beginPath();
   ctx.moveTo(last.x-3,last.y+0.5);
   ctx.lineTo(last.x-0.5,last.y+3);
@@ -1119,21 +1278,92 @@ function uniteActif() {
   return new URLSearchParams(location.search).get('mode') === 'unite';
 }
 
-async function uniteDemarrer() {
-  /* Le tunnel entier disparaît : sa barre d'étapes, ses six panneaux, ET sa
-     barre d'action fixe.
-     ⚠️ Cette dernière est facile à oublier — elle vit HORS des `.step`, en
-     `position:fixed` tout en bas. Vue à l'écran : « Choisir mon objectif → »
-     restait collé sous le récapitulatif à l'unité, et il menait à l'étape 2 de
-     l'abonnement. Le bouton de paiement à l'unité, lui, est dans le flux. */
-  document.querySelectorAll('.step').forEach(function(s){ s.classList.remove('active'); });
-  const row = document.querySelector('.etapes-row');
-  if (row) row.style.display = 'none';
-  const barre = document.querySelector('.cta-fixed');
-  if (barre) barre.style.display = 'none';
-  const t = document.getElementById('ofrTitre');
-  if (t) t.textContent = 'Commande à l\'unité';
-  document.getElementById('stepUnite').classList.add('active');
+/* ═══ LES DEUX VUES ═══════════════════════════════════════════════════════
+   « Nos plats » et « Notre offre » vivent dans le même document, et
+   `afficherVue()` est le SEUL endroit qui bascule de l'une à l'autre.
+
+   ⚠️ ELLE VA DANS LES DEUX SENS, et c'est ce qui a changé. La version d'avant
+   (`uniteDemarrer`) était un aller simple : on entrait dans le menu par
+   `?mode=unite` et rien ne savait remettre en place la barre d'étapes, les six
+   panneaux et la barre d'action. Avec un interrupteur dans le header, un
+   aller simple aurait laissé l'écran vide au premier retour vers l'offre.
+
+   ⚠️ La barre d'action est facile à oublier — elle vit HORS des `.step`, en
+   `position:fixed`. Vue à l'écran avant correction : « Choisir mon objectif → »
+   restait collé sous le récapitulatif du menu, et il menait à l'étape 2 de
+   l'abonnement. */
+var VUE = 'offre';
+
+function afficherVue(v, opts) {
+  opts = opts || {};
+  if (v !== 'plats') v = 'offre';
+  VUE = v;
+
+  var seg = document.getElementById('ofrSeg');
+  if (seg) seg.classList.toggle('sur-offre', v === 'offre');
+  [['segPlats', 'plats'], ['segOffre', 'offre']].forEach(function (paire) {
+    var b = document.getElementById(paire[0]);
+    if (!b) return;
+    b.classList.toggle('on', v === paire[1]);
+    b.setAttribute('aria-pressed', v === paire[1] ? 'true' : 'false');
+  });
+
+  /* La réserve de bas de page suit la vue : la barre d'action n'existe que
+     dans le tunnel (cf. la règle `body:not(.vue-plats) .wrapper`). */
+  document.body.classList.toggle('vue-plats', v === 'plats');
+
+  var row = document.querySelector('.etapes-row');
+  var barre = document.querySelector('.cta-fixed');
+  var titre = document.getElementById('ofrTitre');
+
+  if (v === 'plats') {
+    document.querySelectorAll('.step').forEach(function (x) { x.classList.remove('active'); });
+    if (row) row.style.display = 'none';
+    if (barre) barre.style.display = 'none';
+    /* Vide, et pas « Nos plats » : l'interrupteur nomme la vue 20 px plus bas,
+       un titre qui le répète est du bruit. */
+    if (titre) titre.textContent = '';
+    document.getElementById('stepUnite').classList.add('active');
+    uniteCharger();
+  } else {
+    document.getElementById('stepUnite').classList.remove('active');
+    if (row) row.style.display = '';
+    if (barre) barre.style.display = '';
+    setStep(currentStep);   // repose le bon panneau, le titre et le CTA
+  }
+
+  /* L'URL suit la vue, avec le paramètre qui existait déjà — `assets/commande.js`
+     mène ici en `?mode=unite`, et en inventer un second aurait donné deux
+     vocabulaires pour une seule chose. `replaceState` et non `pushState` : un
+     interrupteur n'est pas une navigation, et empiler une entrée par bascule
+     rendrait le bouton retour du téléphone imprévisible. */
+  if (!opts.silencieux) {
+    try {
+      var u = new URL(location.href);
+      if (v === 'plats') u.searchParams.set('mode', 'unite');
+      else u.searchParams.delete('mode');
+      history.replaceState(null, '', u.toString());
+    } catch (e) {}
+  }
+  if (!opts.silencieux) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* Une assiette au trait pour les plats sans photo. Un carré gris se lit comme
+   une image qui n'a pas fini de charger, donc comme une panne. */
+var PL_ASSIETTE = '<span class="unite-img vide">'
+  + '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">'
+  + '<path d="M7 2v7a2 2 0 0 1-2 2v0a2 2 0 0 1-2-2V2M5 11v11M12 2v19'
+  + 'M19 2c-1.7 0-3 2-3 5s1.3 5 3 5v9"/></svg></span>';
+
+/* ⚠️ CHARGÉ UNE SEULE FOIS. Cette fonction pose deux écouteurs (la délégation
+   sur la liste, et le bouton de paiement) : rappelée à chaque bascule de
+   l'interrupteur, elle les aurait empilés — un tap sur « + » aurait ajouté
+   deux plats à la troisième visite, et le paiement serait parti en double. */
+var uniteCharge = false;
+
+async function uniteCharger() {
+  if (uniteCharge) return;
+  uniteCharge = true;
 
   const liste = document.getElementById('uniteListe');
   try {
@@ -1148,20 +1378,25 @@ async function uniteDemarrer() {
     // Un menu vide se DIT. Une liste blanche laisserait croire à un chargement
     // qui n'aboutit pas, et on attendrait pour rien.
     liste.innerHTML = '<div class="unite-vide">Le menu de la semaine n\'est pas encore publié.<br>'
-      + 'Revenez d\'ici peu, ou souscrivez une formule hebdomadaire.</div>';
+      + 'Revenez d\'ici peu, ou composez votre formule dans « Notre offre ».</div>';
+    // Rien à totaliser : le récapitulatif resterait à « 0 plat · 0 € » au-dessus
+    // d'une liste vide, ce qui donne à lire un compteur pour rien.
     return;
   }
 
   liste.innerHTML = unitePlats.map(function(p){
     const img = p.photo_url
-      ? '<img class="unite-img" src="' + ech(p.photo_url) + '" alt="">'
-      : '<span class="unite-img"></span>';
+      ? '<img class="unite-img" src="' + ech(p.photo_url) + '" alt="" loading="lazy">'
+      : PL_ASSIETTE;
     const mac = [
       p.calories ? Math.round(p.calories) + ' kcal' : null,
-      p.proteines ? Math.round(p.proteines) + ' g de protéines' : null
+      // « g prot. » et non « g de protéines » : la ligne fait 150 px, et un
+      // libellé qui déborde se coupe sur le CHIFFRE — voir la règle .unite-pas.
+      p.proteines ? Math.round(p.proteines) + ' g prot.' : null
     ].filter(Boolean).join(' · ');
-    return '<div class="unite-plat">' + img
+    return '<div class="unite-plat" id="up_' + ech(p.id) + '">' + img
       + '<div class="unite-inf"><div class="unite-nom">' + ech(p.nom || 'Plat') + '</div>'
+      + (p.description ? '<div class="unite-des">' + ech(p.description) + '</div>' : '')
       + (mac ? '<div class="unite-mac">' + mac + '</div>' : '') + '</div>'
       + '<div class="unite-pas">'
       + '<button data-moins="' + ech(p.id) + '" aria-label="Retirer" disabled>−</button>'
@@ -1177,9 +1412,20 @@ async function uniteDemarrer() {
     if (moins) uniteChanger(moins.getAttribute('data-moins'), -1);
   });
 
-  document.getElementById('uniteTotal').style.display = 'block';
+  /* ⚠️ Le récapitulatif reste caché tant que rien n'est choisi — c'est
+     `uniteMaj()` qui l'allume. Un panier flottant annonçant « 0 plat · 0 € »
+     au-dessus d'un bouton éteint, ça recouvre la liste pour ne rien dire. */
+  document.getElementById('uniteNote').style.display = 'block';
   document.getElementById('unitePayer').addEventListener('click', unitePayer);
   uniteMaj();
+}
+
+/* La valeur d'une variable CSS, pour les endroits qui ne sont pas du CSS —
+   le canvas du graphique de durée, qui ne résout pas `var()` tout seul.
+   Elle est relue à chaque appel, donc le graphique suit le thème. */
+function jeton(nom){
+  var v = getComputedStyle(document.documentElement).getPropertyValue(nom).trim();
+  return v || '#5a9e6f';
 }
 
 function ech(s){
@@ -1204,6 +1450,8 @@ function uniteChanger(id, d){
   if (el) el.textContent = String(n);
   const mo = document.querySelector('[data-moins="' + id + '"]');
   if (mo) mo.disabled = n === 0;
+  const carte = document.getElementById('up_' + id);
+  if (carte) carte.classList.toggle('pris', n > 0);
   uniteMaj();
 }
 
@@ -1211,10 +1459,10 @@ function uniteMaj(){
   const n = uniteTotalQte();
   document.getElementById('uniteNb').textContent = n + ' plat' + (n > 1 ? 's' : '');
   document.getElementById('unitePrix').textContent = euros(n * PRIX_UNITE_AFFICHE);
+  document.getElementById('uniteTotal').style.display = n === 0 ? 'none' : 'block';
   const b = document.getElementById('unitePayer');
   b.disabled = n === 0;
-  b.textContent = n === 0 ? 'Choisissez au moins un plat'
-    : 'Payer ' + euros(n * PRIX_UNITE_AFFICHE) + ' →';
+  b.textContent = 'Payer ' + euros(n * PRIX_UNITE_AFFICHE) + ' →';
 }
 
 async function unitePayer(){
@@ -1255,7 +1503,19 @@ async function unitePayer(){
   }
 }
 
-if (uniteActif()) uniteDemarrer();
+/* L'interrupteur du header. Les deux boutons appellent la même fonction — un
+   seul chemin pour changer de vue, sinon les deux moitiés divergent. */
+document.getElementById('segPlats').addEventListener('click', function(){ afficherVue('plats'); });
+document.getElementById('segOffre').addEventListener('click', function(){ afficherVue('offre'); });
+
+/* ⚠️ LA VUE D'ARRIVÉE RESTE « NOTRE OFFRE » quand rien ne la précise, et c'est
+   délibéré : trois entrées existantes mènent ici sans paramètre en attendant le
+   tunnel (la bannière de menu.html, « commander à la semaine » de la feuille
+   d'assets/commande.js, et l'onglet Offre lui-même). Seul `?mode=unite` ouvre
+   sur le menu — c'est le paramètre qu'assets/commande.js envoyait déjà.
+   `silencieux` : à l'amorçage on ne réécrit pas l'URL (elle est déjà juste) et
+   on ne fait pas défiler une page qui vient de s'ouvrir. */
+afficherVue(uniteActif() ? 'plats' : 'offre', { silencieux: true });
 
 function showToast(msg){
   const t=document.getElementById("toast");
@@ -1264,5 +1524,9 @@ function showToast(msg){
 }
 updateCTA();
 </script>
+<!-- La barre d'onglets : cet écran en est une destination depuis qu'« Offre » a
+     pris la place de « Défis ». Sans elle, le seul moyen de repartir serait
+     l'icône maison du header — un cul-de-sac au milieu d'une barre d'onglets. -->
+<script src="/assets/nav.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   Natty — Barre de navigation partagée (Suivi / Menu / + / Coaching / Défis)
+   Natty — Barre de navigation partagée (Suivi / Repas / + / Social / Offre)
    Composant unique injecté sur chaque écran — ne pas dupliquer/modifier
    séparément par page. Toute évolution de la nav se fait ici uniquement.
    ═══════════════════════════════════════════════════════════ */
@@ -28,7 +28,10 @@
     menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v7a2 2 0 0 1-2 2v0a2 2 0 0 1-2-2V2M5 11v11M12 2v19M19 2c-1.7 0-3 2-3 5s1.3 5 3 5v9"/></svg>',
     coaching: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>',
     social: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c0-3.6 2.9-5.8 6.5-5.8s6.5 2.2 6.5 5.8"/><path d="M16.5 4.7a3.4 3.4 0 0 1 0 6.6M18 14.6c2.1.6 3.5 2.3 3.5 4.6"/></svg>',
-    defis: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 3-2 4-2 7a3 3 0 0 0 6 0c1.5 1.5 2 3.3 2 5a6 6 0 1 1-12 0c0-4 2-7 6-12Z"/></svg>',
+    /* Un sac de courses, au même gabarit que les autres (grille de 24, trait de
+       2, bouts arrondis) : c'est ce qui dit « commander » sans un mot. Une
+       flamme y disait « défi » — la page n'en parle plus. */
+    offre: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.6 8h12.8l.9 11.2a2 2 0 0 1-2 2.16H6.7a2 2 0 0 1-2-2.16L5.6 8Z"/><path d="M9 8V5.9a3 3 0 0 1 6 0V8"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
   };
 
@@ -39,7 +42,14 @@
     // Coaching a laissé sa place au fil social ; la page reste accessible
     // depuis la carte « Coaching » de menu.html.
     { key: 'social', label: 'Social', href: 'social.html', icon: ICONS.social },
-    { key: 'defis', label: 'Défis', href: 'narration.html', icon: ICONS.defis }
+    /* Défis a laissé sa place à l'offre : le parcours reste accessible depuis
+       l'onglet « Progression » de suivi.html et depuis l'étape « Le palier du
+       jour » du guide (assets/journee.js).
+       ⚠️ CES DEUX ENTRÉES MARQUENT DÉSORMAIS LA CLÉ 'defis' ELLES-MÊMES. La
+       barre était le seul endroit qui la posait ; sans elle, le rappel du soir
+       (assets/notifs.js) serait parti tous les soirs, y compris après un
+       parcours ouvert, et l'étape du guide ne se serait jamais cochée. */
+    { key: 'offre', label: 'Offre', href: 'offre.html', icon: ICONS.offre }
   ];
 
   function currentKey() {
