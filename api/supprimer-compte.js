@@ -47,6 +47,12 @@ const TABLES_USER = [
   // une table qui n'existe pas encore, donc l'ordre entre le SQL et ce
   // déploiement n'a pas d'importance.
   'bilan_jour',
+  // Le journal des séances (natty_seances.sql) : ce que la personne soulève, à
+  // quelle fréquence, et quels jours elle ne vient pas. C'est un relevé de sa
+  // forme physique — il part avec le compte. La route ignore sans broncher une
+  // table qui n'existe pas encore, donc l'ordre entre le SQL et ce déploiement
+  // n'a pas d'importance.
+  'seances',
   // Modération du fil (natty_moderation.sql). `signalements` est effacée par
   // `signaleur_id` ET par `auteur_id` plus bas : les deux colonnes désignent
   // une personne, et n'en effacer qu'une laisserait le compte supprimé nommé

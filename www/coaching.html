@@ -106,6 +106,15 @@
     <div class="cal-grid" id="calGrid"></div>
   </div>
 
+  <!-- « Mes séances » — la semaine d'entraînement en sept cases, et l'entrée
+       du calendrier complet. Le rendu appartient à `assets/seance.js` : cet
+       écran ne fournit que l'hôte.
+       ⚠️ SA PLACE ICI N'EST PAS DÉCORATIVE. Sans elle, la seule porte d'entrée
+       du journal serait le bilan du soir — donc rien avant 21 h, alors qu'on
+       note une séance en sortant de la salle. -->
+  <div class="sec-title">Entraînement</div>
+  <div id="seaWrap"></div>
+
   <div class="sec-title">Chat</div>
   <div class="msg-list" id="msgList"><div class="empty">Chargement…</div></div>
 
@@ -130,6 +139,10 @@
 <script src="/assets/core.js"></script>
 <script src="/assets/reco.js"></script>
 <script src="/assets/liste.js"></script>
+<!-- Le journal des séances : le panneau ci-dessus, et le plein écran
+     (calendrier + saisie) qu'il ouvre. C'est aussi lui que le bilan du soir
+     interroge pour rendre le muscle et la graisse exacts. -->
+<script src="/assets/seance.js"></script>
 <!-- ⚠️ Le garde-manger doit être chargé PARTOUT où une génération peut être
      lancée. `assets/generation.js` demande « on part de ton garde-manger ? »
      derrière un `if (window.NattyGardeManger)` : sans le module, la question
@@ -527,6 +540,10 @@ function allerAuxConseils() {
 
 (async function(){
   if (!Natty.requireAuth()) return;
+  /* Le panneau des séances part SANS `await` et hors du `Promise.all` : il lit
+     d'abord le localStorage, donc il se peint tout de suite, et sa requête
+     n'a aucune raison de retarder le rendez-vous ou la liste de courses. */
+  if (window.NattySeance) NattySeance.monterPanneau('seaWrap');
   await Promise.all([loadRdv(), loadMessages(), loadConseils(), loadCourses(), loadAliments()]);
   allerAuxConseils();
 })();

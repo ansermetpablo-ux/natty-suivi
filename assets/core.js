@@ -890,6 +890,12 @@ var Natty = (function () {
        leurs 6,5 et 9 secondes — on modifie sa semaine, un autre plein écran
        surgit, et le tap part dans le mauvais. */
     'nplw', 'nplr',
+    /* `nsea` — le journal des séances (assets/seance.js). Il s'ouvre depuis le
+       panneau de Coaching aussi bien que depuis le bilan du soir, et une saisie
+       de six exercices prend plusieurs minutes : sans cette entrée, le guide du
+       jour et le bilan viendraient se poser par-dessus au bout de leurs 6,5 et
+       9 secondes, en plein réglage des séries. */
+    'nsea',
     'mjOverlay', 'nnotifInv'
   ];
 
