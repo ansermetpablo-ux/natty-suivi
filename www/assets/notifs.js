@@ -49,6 +49,26 @@ var NattyNotifs = (function () {
     b: 'Ajoutez votre premier plat de la journée'
   };
 
+  /* ── Le rappel du SOIR : le bilan (demande de Pablo, 2026-09-02) ──
+     « Brancher le bilan sur les notifications, pour qu'il réclame la séance le
+     soir sans qu'on ouvre l'app. » C'est le manque le plus visible du bilan :
+     il ne s'ouvre QUE si l'on ouvre l'app après 21 h, or c'est justement
+     l'heure où on ne l'ouvre pas.
+
+     ⚠️ TROISIÈME SÉRIE D'IDS, ET `annuler()` DOIT LA CONNAÎTRE. Le piège est
+     déjà documenté pour midi : « tout annuler puis tout replanifier » ne
+     protège que ce qu'il connaît, et une série oubliée s'empile silencieusement
+     à chaque ouverture de l'app.
+     ⚠️ Heure FIXE, comme midi, et volontairement 21 h 15 : c'est l'heure à
+     partir de laquelle `assets/bilan.js` accepte de s'ouvrir (`H_BILAN`), et un
+     rappel qui arrive avant mènerait à un écran qui refuse de se montrer. */
+  var ID_BILAN = 4300;       // ids 4301..4307
+  var H_BILAN  = 21, M_BILAN = 15;
+  var TEXTE_BILAN = {
+    t: 'Votre bilan du soir',
+    b: 'Deux minutes : votre journée, votre séance, et ce que votre corps en a fait.'
+  };
+
   function user() { return (window.Natty && Natty.USER_ID) ? Natty.USER_ID : 'anon'; }
   function cle(k) { return 'natty_notif_' + k + '_' + user(); }
 
@@ -146,6 +166,17 @@ var NattyNotifs = (function () {
     } catch (e) { return false; }
   }
 
+  /* ⚠️ LA MÊME CLÉ QUE `assets/bilan.js`, au caractère près (`cle('vu')` y vaut
+     `natty_bilan_vu_<uid>`). C'est ce qui relie les deux : le bilan écrit qu'il
+     a été fait, le rappel ne part pas. Une clé recopiée de travers ne se
+     signalerait pas — elle enverrait simplement un rappel de trop, tous les
+     soirs, pour quelque chose de déjà fait. */
+  function bilanFaitAujourdhui() {
+    try {
+      return localStorage.getItem('natty_bilan_vu_' + user()) === jourCle(new Date());
+    } catch (e) { return false; }
+  }
+
   /* Les `at` à planifier, du plus proche au plus lointain. Le créneau du jour
      n'est retenu que s'il est encore à venir ET que le parcours n'a pas déjà
      été ouvert aujourd'hui. */
@@ -156,6 +187,19 @@ var NattyNotifs = (function () {
       d.setDate(d.getDate() + i);
       d.setHours(h, 0, 0, 0);
       if (i === 0 && (d <= now || defisVuAujourdhui())) continue;
+      out.push(d);
+    }
+    return out;
+  }
+
+  /* Mêmes règles pour le bilan du soir. */
+  function creneauxBilan() {
+    var out = [], now = new Date();
+    for (var i = 0; i < JOURS; i++) {
+      var d = new Date();
+      d.setDate(d.getDate() + i);
+      d.setHours(H_BILAN, M_BILAN, 0, 0);
+      if (i === 0 && (d <= now || bilanFaitAujourdhui())) continue;
       out.push(d);
     }
     return out;
@@ -185,7 +229,9 @@ var NattyNotifs = (function () {
     var ids = [];
     // Les DEUX séries : n'annuler que la première laisserait les rappels de midi
     // de la planification précédente s'empiler avec les nouveaux.
-    for (var i = 1; i <= JOURS; i++) { ids.push({ id: ID_BASE + i }); ids.push({ id: ID_MIDI + i }); }
+    for (var i = 1; i <= JOURS; i++) {
+      ids.push({ id: ID_BASE + i }); ids.push({ id: ID_MIDI + i }); ids.push({ id: ID_BILAN + i });
+    }
     try { await LN.cancel({ notifications: ids }); } catch (e) {}
   }
 
@@ -235,6 +281,21 @@ var NattyNotifs = (function () {
         schedule: { at: midis[k], allowWhileIdle: true },
         channelId: CANAL,
         extra: { route: 'suivi.html', jour: jourCle(midis[k]) }
+      });
+    }
+
+    var soirs = creneauxBilan();
+    for (var b = 0; b < soirs.length; b++) {
+      liste.push({
+        id: ID_BILAN + b + 1,
+        title: TEXTE_BILAN.t,
+        body: TEXTE_BILAN.b,
+        schedule: { at: soirs[b], allowWhileIdle: true },
+        channelId: CANAL,
+        /* `action` et non une route à rallonge : la destination reste dans la
+           liste blanche, et c'est nous qui composons l'URL. Une notification est
+           une entrée externe — on ne suit jamais une adresse qu'elle dicte. */
+        extra: { route: 'suivi.html', action: 'bilan', jour: jourCle(soirs[b]) }
       });
     }
 
@@ -288,6 +349,9 @@ var NattyNotifs = (function () {
      `extra.route` est comparé à une liste blanche : une notification est une
      entrée externe, on ne suit jamais une destination qu'elle dicterait. */
   var ROUTES = { 'narration.html': 1, 'suivi.html': 1 };
+  /* Les actions autorisées, et ce qu'elles ajoutent à l'URL. Même principe que
+     `ROUTES` : rien de ce que porte la notification n'est concaténé tel quel. */
+  var ACTIONS = { bilan: 'bilan=1' };
 
   function ecouterOuverture() {
     var LN = plugin();
@@ -295,10 +359,21 @@ var NattyNotifs = (function () {
     window._nattyNotifsRoute = true;
     try {
       LN.addListener('localNotificationActionPerformed', function (ev) {
-        var r = ev && ev.notification && ev.notification.extra && ev.notification.extra.route;
+        var x = (ev && ev.notification && ev.notification.extra) || {};
+        var r = x.route;
         if (!r || !ROUTES[r]) return;
-        if (location.pathname.split('/').pop() === r) return;
-        location.href = '/' + r + (location.search || '');
+        var q = ACTIONS[x.action] || '';
+        /* ⚠️ Sur la bonne page, on ne recharge pas — mais s'il y a une action à
+           exécuter, il faut bien qu'elle parte : sans ça, taper le rappel du
+           soir depuis Suivi ne faisait RIEN, c'est-à-dire précisément le cas où
+           l'app est déjà ouverte sur le bon écran. */
+        if (location.pathname.split('/').pop() === r) {
+          if (q === 'bilan=1' && window.NattyBilan && NattyBilan.ouvrirJour) NattyBilan.ouvrirJour();
+          return;
+        }
+        var sep = (location.search || '') ? (location.search + (q ? '&' + q : ''))
+                                          : (q ? '?' + q : '');
+        location.href = '/' + r + sep;
       });
     } catch (e) {}
   }
@@ -354,9 +429,9 @@ var NattyNotifs = (function () {
         // La feuille doit annoncer les DEUX rendez-vous : promettre « rien
         // d'autre » puis en envoyer deux serait un mensonge, et c'est la seule
         // occasion de demander la permission sur iOS.
-        '<p>Deux rappels par jour, pas plus : à midi pour noter ton premier plat, ' +
-          'et à ' + heure() + ' h si tu n\'as pas encore fait ton palier. ' +
-          'Tu peux couper ça dans ton profil.</p>' +
+        '<p>Trois rappels par jour, pas plus : à midi pour noter ton premier plat, ' +
+          'à ' + heure() + ' h si tu n\'as pas encore fait ton palier, et à ' + H_BILAN +
+          ' h 15 pour ton bilan du soir. Tu peux couper ça dans ton profil.</p>' +
         '<button class="ni-ok" id="niOk">Oui, me rappeler</button>' +
         '<button class="ni-no" id="niNo">Plus tard</button>' +
       '</div>';
