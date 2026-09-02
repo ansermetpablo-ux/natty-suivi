@@ -2889,12 +2889,12 @@ de `social.html` le rend tel quel : une cuisine ajoutée à la fin donnerait une
 > ⚠️ **AUCUNE MACRO N'EST ANNONCÉE TANT QU'IL N'Y A PAS DE GRAMMAGES.** Écrire « 620 kcal »
 > sous un pad thaï supposerait une recette et des quantités que personne n'a pesées : ce serait
 > un chiffre inventé, exactement ce que le reste de l'app refuse (règle 12, et le « un manque
-> visible vaut mieux qu'un total silencieusement faux » d'`assets/ajout.js`). On montre donc ce
-> qui est vrai — les ingrédients — et une phrase factuelle sur ce que le plat apporte.
-> ✅ **Et c'est arrivé, pour un plat** (2026-08-19, voir « Un plat qui se cuisine » ci-dessous) :
-> le ceviche porte des grammages pesés, ses macros sont donc calculées avec la table de
-> `assets/core.js` et affichées. La règle n'est pas levée, elle est appliquée : les 113 autres
-> plats n'ont toujours pas de quantités, et continuent d'afficher « Macros non estimées ».
+> visible vaut mieux qu'un total silencieusement faux » d'`assets/ajout.js`).
+> ✅ **LES 114 PLATS ONT DÉSORMAIS LEURS GRAMMAGES** (2026-09-03) — la règle n'est pas levée,
+> elle est SATISFAITE. Les macros affichées sont calculées à partir des quantités écrites juste
+> au-dessus, avec la table de `assets/core.js`, celle-là même qui compte les repas de l'app.
+> « Macros non estimées » ne s'affiche plus nulle part, et c'est parce qu'il n'y a plus rien
+> qui ne soit estimable — pas parce qu'on a cessé de vérifier.
 
 #### `rec` — un plat du catalogue qui se cuisine vraiment (2026-08-19)
 Demande de Pablo : « ajoute les étapes de ce plat que je puisse la réaliser dans
@@ -2926,8 +2926,44 @@ quantité et la sixième non, ce qui se lit comme une donnée manquante. Mais **
 sous-chaîne non plus** — « ail » se trouve dans « volaille » (§7) : on n'accepte qu'un préfixe
 terminé par une espace, donc un mot entier.
 
-🔄 **Un seul plat en porte une** (`mex-ceviche-cabillaud`). Les 113 autres se comportent
-exactement comme avant, ce qui a été vérifié plutôt que supposé.
+✅ **LES 114 PLATS EN PORTENT UNE** (2026-09-03) — 623 étapes, 862 ingrédients. Chaque étape a
+son geste, son détail et son conseil ; chaque ingrédient son grammage.
+
+#### `scripts/injecter-recettes.mjs` — pourquoi les recettes ne s'écrivent pas à la main
+Les recettes sont AUTHORÉES dans `scripts/recettes-catalogue.json` (grammages compris) et
+INJECTÉES dans `assets/decouverte.js` par une commande. Ce qui compte, c'est ce que le script
+fait au passage :
+- **il CALCULE les macros par portion** avec la table de `assets/core.js`. Un chiffre tapé à la
+  main dériverait de ses ingrédients à la première retouche sans que rien ne le signale — le
+  défaut d'`api/_nutrition.js`, et il était trop facile à reproduire ici ;
+- **il refuse les gestes que `assets/recette.js` ne sait pas dessiner.** Une clé `illu`
+  inconnue ne plante pas : elle retombe en silence sur `melanger`, donc on dessinerait un
+  saladier pour une cuisson au four. Sur 623 étapes, ça ne se voit qu'en les déroulant toutes ;
+- **il liste les ingrédients que la table ne sait pas chiffrer.** C'est ce relevé qui a fait
+  ajouter une trentaine d'aliments — gochujang, kimchi, manioc, teff, berbéré, kashk, mélasse
+  de grenade, açaí, pak choï, ciboule, céleri, cumin, origan… — tous rencontrés en écrivant,
+  aucun imaginé.
+
+> ⚠️⚠️ **LE CHAMP `g` EST LE POIDS QUE LA TABLE ATTEND, ET POUR LES FÉCULENTS C'EST LE POIDS
+> **CUIT**. `riz`, `pates`, `lentilles`, `quinoa`, `boulgour` y valent leurs valeurs APRÈS
+> cuisson (riz 130 kcal/100 g, pâtes 131). Écrire `g:400` pour « 400 g de pâtes sèches »
+> comptait 524 kcal au lieu de 1 400 — un plat pour quatre sous-compté de moitié, et personne
+> pour le signaler. Le `qte` AFFICHÉ dit le poids cru (c'est ce qu'on pèse) et mentionne le
+> cuit entre parenthèses ; `g` porte le cuit. Facteurs dans l'en-tête du script.
+> ⚠️ `getNutri(nom, grammes)` **applique déjà la quantité** — appelé sans son second argument il
+> rend des zéros SANS LE DIRE (l'objet est là, tous ses champs à 0), et les 114 recettes
+> sortaient à « 0 kcal ». Vu au banc, pas à la lecture.
+> 🔄 **`assets/decouverte.js` pèse maintenant 419 Ko** (95 avant). Chargé par `social.html` et
+> `repas.html` ; local dans le bundle natif, ~80 Ko gzippés sur le web. Si le poids devient un
+> sujet, le champ `rec` peut partir dans un fichier compagnon — mais `recette()` est appelée de
+> façon SYNCHRONE par la visionneuse pour décider d'afficher « Cuisiner ce plat », donc un
+> chargement paresseux demanderait de rendre ce chemin asynchrone.
+> ✅ **`api/_catalogue.js` est INCHANGÉ** : le générateur ne copie que `cle`, `n`, `pays`, `i` et
+> `t`. Les recettes ne gonflent donc pas le prompt de la génération — vérifié, 17 482 octets
+> avant comme après.
+> ⚠️ `scripts/gen-catalogue.mjs` a eu besoin d'une doublure de `document` : depuis que le module
+> pose sa propre délégation de clic (2026-09-02), le script mourait — et c'est le seul endroit
+> d'où `api/_catalogue.js` peut être régénéré.
 
 > 🔴 ⚠️ **ET LA RANGÉE D'ACTIONS DE LA VISIONNEUSE DÉBORDAIT — DÉFAUT PRÉEXISTANT.**
 > `.nv-acts` était en `flex` sans `wrap`, boutons en `flex:none` : au-delà d'UNE action
@@ -4447,9 +4483,19 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ **L'objectif s'ajoute et se modifie depuis Suivi** (feuille `#ovObjectif`), et deux
   défauts silencieux corrigés : la modification existante écrivait avec la **clé anon** sous
   un « mis à jour ✓ » mensonger, et le `tdee` restait figé. Détail en §3.
-- 🔄 **La base des macros ne somme pas à 100 % des calories** (~95 %) — défaut PRÉEXISTANT,
-  volontairement non corrigé : rééquilibrer changerait l'objectif de tous les comptes du jour
-  au lendemain. À trancher.
+- ✅ **LA BASE DES MACROS FAIT MAINTENANT LE COMPTE** (2026-09-03, sur décision de Pablo).
+  Elle posait trois valeurs indépendantes dont la somme ne tombait à 100 % que par accident :
+  mesuré à 80 kg pour 3 200 kcal, les trois anneaux n'en faisaient que **3 041** — 5 %
+  manquants, donc quelqu'un qui remplissait exactement ses anneaux n'atteignait jamais ses
+  calories. Les protéines restent une cible de poids de corps, le RESTE des calories se
+  partage entre lipides et glucides dans le même rapport 1:2 qu'avant. Ce que ça déplace, à
+  80 kg / 3 200 kcal : lipides 89 → 95 g, glucides 400 → 427 g, protéines et calories
+  inchangées. Plafond à 40 % des calories pour les protéines, sans quoi un profil lourd à
+  dépense basse n'aurait plus que 7 g de lipides.
+- ✅ **LES 114 PLATS DU CATALOGUE SE CUISINENT** (2026-09-03) — 623 étapes, 862 ingrédients,
+  macros calculées et non estimées. Détail et pièges en §3.
+- 🔄 **`assets/decouverte.js` pèse 419 Ko** (95 avant). Acceptable en natif (fichier local),
+  ~80 Ko gzippés sur le web. Un fichier compagnon chargé à la demande est possible — voir §3.
 - 🔄 **Le programme de la semaine vit en `localStorage`** : même contrat que les séances tant
   que `natty_seances.sql` n'est pas exécuté.
 - 🔄 **Le nouveau modèle de nutrition change les chiffres de tous les comptes**, séances ou
@@ -6349,3 +6395,56 @@ mangé ce qu'il fallait.
 
 🔄 **Rien n'est vérifié sur téléphone ni avec une vraie session** : bancs Node (3 fichiers,
 ~60 contrôles) et navigateur avec doublures, dans les deux thèmes.
+
+---
+
+*Cinquième passage de la même session (3 septembre 2026) — les deux derniers points de la
+liste :*
+
+**1. Les 114 plats du catalogue se cuisinent.** Un seul en portait les étapes ; les 113 autres
+se regardaient sans pouvoir se faire. 623 étapes, 862 ingrédients, chacune avec son geste, son
+détail et son conseil — et chaque ingrédient avec son grammage, ce qui permet enfin d'afficher
+les macros d'un plat du monde sans rien inventer.
+
+**Ce qui rend ce travail vérifiable, c'est le script.** `scripts/injecter-recettes.mjs` lit les
+grammages, les passe dans la table de `assets/core.js` — celle qui compte les repas de l'app —
+et écrit les macros par portion. Il refuse aussi les gestes que `assets/recette.js` ne sait pas
+dessiner : une clé inconnue ne plante pas, elle dessine un saladier pour une cuisson au four, et
+sur 623 étapes ça ne se voit qu'en les déroulant toutes. Il liste enfin les ingrédients que la
+table ignore — c'est ce relevé, et non l'imagination, qui a dicté la trentaine d'aliments
+ajoutés.
+
+**Deux erreurs de table trouvées en chiffrant, toutes deux anciennes :**
+- 🔴 « pâte brisée » tombait sur `pate`, **c'est-à-dire le pâté de campagne** : une quiche
+  comptait 320 kcal et 2 g de glucides pour 100 g de pâte ;
+- 🔴 « lait de coco » n'avait aucune clé et tombait sur `lait` — 61 kcal, le prix d'un lait de
+  vache, pour un ingrédient qui en vaut 185. Un curry pour quatre était sous-compté de plus de
+  400 kcal.
+
+⚠️ **Et une convention qui manquait** : la table tient les féculents en poids CUIT. Écrire 400
+pour « 400 g de pâtes sèches » comptait 524 kcal au lieu de 1 400. Le `qte` affiché dit le cru,
+le champ `g` porte le cuit, et l'en-tête du script donne les facteurs.
+
+⚠️ **`7a756b0` PORTE AUSSI LE RÉÉQUILIBRAGE DE LA BASE**, et son message n'en dit rien : les
+deux chantiers touchaient `assets/core.js` et le second a été commité avec le premier. Rien
+n'est perdu, le contenu est vérifié — mais `git log` attribue le rééquilibrage à un commit qui
+parle de pâte brisée. Ce paragraphe est la réparation ; on ne réécrit pas un commit déjà poussé
+sur `main` qui sert la production (même raison qu'`e01e20b` et `3d0a0ae`).
+
+**2. La base des macros fait le compte.** Elle posait trois valeurs indépendantes — 2 g/kg de
+protéines, 25 % de lipides, 50 % de glucides — dont la somme ne tombait à 100 % que par
+accident : mesuré, les trois anneaux ne faisaient que 3 041 kcal sur 3 200 annoncées. Quelqu'un
+qui les remplissait exactement n'atteignait jamais ses calories, sans comprendre pourquoi. Les
+protéines restent une cible de poids de corps ; le reste des calories se partage entre lipides
+et glucides dans le même rapport 1:2 qu'avant. Rien ne change dans l'esprit, tout tombe juste
+dans les chiffres.
+
+⚠️ **`scripts/gen-nutrition.mjs` remplace la consigne manuelle.** L'en-tête d'`api/_nutrition.js`
+demandait de recoller la table à la main depuis un bout de Python en commentaire : c'est
+exactement la manœuvre qui a laissé les deux tables diverger pendant des mois. Une commande le
+fait, et compare les deux `getNutri` sur 37 cas × 2 quantités.
+
+🔄 **`assets/decouverte.js` est passé de 95 à 419 Ko.** Local dans le bundle natif, ~80 Ko
+gzippés sur le web. Si le poids devient un sujet, `rec` peut partir dans un fichier compagnon —
+mais `recette()` est appelée de façon synchrone par la visionneuse, donc il faudrait rendre ce
+chemin asynchrone.
