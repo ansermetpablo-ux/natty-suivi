@@ -1,0 +1,7394 @@
+[
+ {
+  "cle": "quo-poulet-roti",
+  "temps": 80,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "1 poulet fermier (1,4 kg, ≈ 850 g de chair)",
+    "g": 850,
+    "nu": "poulet"
+   },
+   {
+    "em": "🥔",
+    "nom": "Pommes de terre",
+    "qte": "600 g",
+    "g": 600,
+    "nu": "pomme de terre"
+   },
+   {
+    "em": "🥕",
+    "nom": "Carottes",
+    "qte": "300 g (4)",
+    "g": 300,
+    "nu": "carotte"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "150 g (1 gros)",
+    "g": 150,
+    "nu": "oignon"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "1 tête",
+    "g": 30,
+    "nu": "ail"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "2 c. à soupe",
+    "g": 25,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🌿",
+    "nom": "Thym",
+    "qte": "4 branches"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "attendre",
+    "t": "Sors le poulet du froid",
+    "min": 20,
+    "detail": "Pose-le sur le plan de travail, à couvert, le temps que le four chauffe.",
+    "tip": "Un poulet à cœur froid met vingt minutes de plus, et sa peau brunit avant que l'intérieur soit cuit. C'est le geste le plus rentable de toute la recette."
+   },
+   {
+    "illu": "enfourner",
+    "t": "Préchauffe le four",
+    "min": 10,
+    "detail": "À 200 °C, chaleur tournante, avec la grille au tiers bas.",
+    "tip": "Enfourner dans un four pas encore chaud, c'est cuire à la vapeur de sa propre eau : la peau ne croustille jamais."
+   },
+   {
+    "illu": "couper",
+    "t": "Taille les légumes",
+    "min": 10,
+    "detail": "Pommes de terre en gros quartiers, carottes en tronçons de 4 cm, oignon en six. La tête d'ail se coupe en deux en travers, sans l'éplucher.",
+    "tip": "Gros, c'est délibéré : ils cuisent une heure. Coupés petits, ils seraient en purée avant que le poulet soit prêt.",
+    "qte": [
+     [
+      "Pommes de terre",
+      "600 g"
+     ],
+     [
+      "Carottes",
+      "300 g"
+     ],
+     [
+      "Oignon",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Huile et sale le poulet",
+    "min": 4,
+    "detail": "Frotte toute la peau d'huile d'olive, sale généreusement dessus ET dans la cavité, poivre, glisse le thym à l'intérieur.",
+    "tip": "Le sel sur la peau la déshydrate un peu : c'est exactement ce qui la rend croustillante. Sale plus que tu ne crois — la moitié tombe dans le plat.",
+    "qte": [
+     [
+      "Huile d'olive",
+      "1 c. à soupe"
+     ],
+     [
+      "Sel",
+      "2 c. à café"
+     ]
+    ]
+   },
+   {
+    "illu": "enfourner",
+    "t": "Enfourne poulet et légumes ensemble",
+    "min": 60,
+    "detail": "Poulet au centre, légumes autour, arrosés du reste d'huile. Une heure à 200 °C, en arrosant du jus deux fois.",
+    "tip": "Compte 20 min par 500 g. Le jus qui coule d'une cuisse piquée doit être clair : rosé, il reste un quart d'heure.",
+    "qte": [
+     [
+      "Poulet",
+      "1,4 kg"
+     ]
+    ]
+   },
+   {
+    "illu": "reposer",
+    "t": "Laisse-le reposer",
+    "min": 15,
+    "detail": "Sors le plat, couvre le poulet d'aluminium sans serrer, et attends un quart d'heure avant de découper.",
+    "tip": "Découpé à la sortie du four, il perd son jus dans l'assiette et la chair devient sèche. Quinze minutes suffisent à le laisser se répartir."
+   },
+   {
+    "illu": "dresser",
+    "t": "Découpe et sers",
+    "min": 5,
+    "detail": "Cuisses d'abord, puis les blancs le long du bréchet. Presse l'ail rôti sur les pommes de terre.",
+    "tip": "L'ail confit sous sa peau se presse comme un tube : c'est la meilleure sauce du plat, et elle ne coûte rien."
+   }
+  ]
+ },
+ {
+  "cle": "quo-steak-haricots",
+  "temps": 35,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🥩",
+    "nom": "Steak",
+    "qte": "2 pièces de 150 g",
+    "g": 300,
+    "nu": "steak"
+   },
+   {
+    "em": "🫛",
+    "nom": "Haricots verts",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "haricots verts"
+   },
+   {
+    "em": "🥔",
+    "nom": "Pommes de terre",
+    "qte": "500 g",
+    "g": 500,
+    "nu": "pomme de terre"
+   },
+   {
+    "em": "🥛",
+    "nom": "Lait",
+    "qte": "100 ml",
+    "g": 100,
+    "nu": "lait"
+   },
+   {
+    "em": "🧈",
+    "nom": "Beurre",
+    "qte": "30 g",
+    "g": 30,
+    "nu": "beurre"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Épluche et coupe les pommes de terre",
+    "min": 7,
+    "detail": "En morceaux d'environ 4 cm, tous de la même taille.",
+    "tip": "Même taille = même cuisson. Un gros morceau encore ferme suffit à faire une purée grumeleuse.",
+    "qte": [
+     [
+      "Pommes de terre",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis-les à l'eau salée",
+    "min": 20,
+    "detail": "Départ à l'eau FROIDE salée, puis 20 min à petits bouillons dès l'ébullition. La pointe d'un couteau doit entrer sans résistance.",
+    "tip": "Départ à froid, c'est ce qui fait qu'elles cuisent de la même façon du bord au centre. Jetées dans l'eau bouillante, l'extérieur se délite avant que le cœur soit cuit.",
+    "qte": [
+     [
+      "Pommes de terre",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis les haricots à côté",
+    "min": 8,
+    "detail": "Grand volume d'eau bouillante bien salée, 8 min à découvert. Ils doivent rester fermes sous la dent.",
+    "tip": "À découvert et à gros bouillons : c'est ce qui leur garde leur vert. Un couvercle emprisonne les acides qui les font virer au kaki.",
+    "qte": [
+     [
+      "Haricots verts",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Saisis les steaks",
+    "min": 6,
+    "detail": "Poêle très chaude, à sec ou avec une goutte d'huile. 2 min par face pour un cœur rosé, sans les bouger.",
+    "tip": "Sale APRÈS la cuisson, jamais avant : le sel fait perler l'eau à la surface, et une viande mouillée bout au lieu de saisir.",
+    "qte": [
+     [
+      "Steak",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Écrase la purée",
+    "min": 5,
+    "detail": "Égoutte, écrase au presse-purée, incorpore le lait chaud puis le beurre. Sale, poivre, muscade si tu en as.",
+    "tip": "Jamais au mixeur : il fait éclater l'amidon et la purée devient élastique, comme de la colle. Le presse-purée ou la fourchette, rien d'autre.",
+    "qte": [
+     [
+      "Lait",
+      "100 ml"
+     ],
+     [
+      "Beurre",
+      "30 g"
+     ]
+    ]
+   },
+   {
+    "illu": "reposer",
+    "t": "Laisse reposer la viande",
+    "min": 4,
+    "detail": "Pose les steaks sur une assiette chaude pendant que tu dresses le reste.",
+    "tip": "Trois minutes de repos valent mieux qu'une minute de cuisson en plus : le jus se répartit au lieu de couler dans l'assiette."
+   },
+   {
+    "illu": "dresser",
+    "t": "Dresse",
+    "min": 2,
+    "detail": "Purée, haricots, steak par-dessus, et le jus de la poêle versé dessus.",
+    "tip": "Déglace la poêle d'une cuillère d'eau : ce qui est collé au fond est la moitié du goût."
+   }
+  ]
+ },
+ {
+  "cle": "quo-omelette-champignons",
+  "temps": 18,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🥚",
+    "nom": "Œufs",
+    "qte": "6",
+    "g": 330,
+    "nu": "oeuf"
+   },
+   {
+    "em": "🍄",
+    "nom": "Champignons de Paris",
+    "qte": "250 g",
+    "g": 250,
+    "nu": "champignon"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "80 g (1 petit)",
+    "g": 80,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌿",
+    "nom": "Persil",
+    "qte": "10 g"
+   },
+   {
+    "em": "🧈",
+    "nom": "Beurre",
+    "qte": "25 g",
+    "g": 25,
+    "nu": "beurre"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Émince champignons et oignon",
+    "min": 6,
+    "detail": "Champignons en lamelles de 4 mm, oignon finement.",
+    "tip": "Ne les lave pas sous l'eau : ils la boivent et rendront tout dans la poêle. Un coup de brosse ou de papier humide suffit.",
+    "qte": [
+     [
+      "Champignons",
+      "250 g"
+     ],
+     [
+      "Oignon",
+      "80 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais-les suer à feu vif",
+    "min": 7,
+    "detail": "Poêle bien chaude, la moitié du beurre, les champignons SANS les toucher pendant deux minutes. Puis remue, ajoute l'oignon, sale.",
+    "tip": "Feu vif et poêle pas trop chargée : entassés, ils rendent leur eau et bouillent. Cuis-les en deux fois plutôt qu'en une.",
+    "qte": [
+     [
+      "Champignons",
+      "250 g"
+     ],
+     [
+      "Beurre",
+      "12 g"
+     ]
+    ]
+   },
+   {
+    "illu": "fouetter",
+    "t": "Bats les œufs",
+    "min": 2,
+    "detail": "À la fourchette, juste assez pour mêler blancs et jaunes. Sale, poivre.",
+    "tip": "Battre longtemps incorpore de l'air : l'omelette gonfle puis retombe en caoutchouc. Dix secondes suffisent."
+   },
+   {
+    "illu": "saisir",
+    "t": "Cuis l'omelette",
+    "min": 4,
+    "detail": "Reste du beurre à feu moyen, verse les œufs, ramène les bords vers le centre à la spatule et laisse le liquide couler dessous.",
+    "tip": "Feu MOYEN. C'est ici que tout se joue : à feu vif le dessous brunit et le dessus reste cru.",
+    "qte": [
+     [
+      "Œufs",
+      "6"
+     ],
+     [
+      "Beurre",
+      "13 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Garnis et plie",
+    "min": 2,
+    "detail": "Quand le dessus est encore baveux, répartis les champignons et le persil sur une moitié, puis replie.",
+    "tip": "On la sort baveuse : la chaleur résiduelle finit la cuisson dans l'assiette. Attendre qu'elle soit sèche, c'est déjà trop tard.",
+    "qte": [
+     [
+      "Persil",
+      "10 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "quo-pates-bolognaise",
+  "temps": 95,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍝",
+    "nom": "Pâtes",
+    "qte": "400 g sèches (≈ 960 g cuites)",
+    "g": 960,
+    "nu": "pates"
+   },
+   {
+    "em": "🥩",
+    "nom": "Bœuf haché",
+    "qte": "500 g",
+    "g": 500,
+    "nu": "boeuf hache"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates concassées",
+    "qte": "800 g (2 boîtes)",
+    "g": 800,
+    "nu": "tomate"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "oignon"
+   },
+   {
+    "em": "🥕",
+    "nom": "Carotte",
+    "qte": "120 g",
+    "g": 120,
+    "nu": "carotte"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "3 gousses",
+    "g": 12,
+    "nu": "ail"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "2 c. à soupe",
+    "g": 25,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Taille le soffritto",
+    "min": 8,
+    "detail": "Oignon, carotte et ail hachés très finement, presque en poudre.",
+    "tip": "Plus c'est fin, plus ça fond dans la sauce. Des morceaux visibles resteront des morceaux même après deux heures.",
+    "qte": [
+     [
+      "Oignon",
+      "150 g"
+     ],
+     [
+      "Carotte",
+      "120 g"
+     ],
+     [
+      "Ail",
+      "3 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais-les fondre à l'huile",
+    "min": 8,
+    "detail": "Feu doux, huile d'olive, remue jusqu'à ce que l'oignon soit translucide et la carotte tendre.",
+    "tip": "Feu doux et patience : c'est la base sucrée qui équilibrera l'acidité de la tomate. Coloré trop vite, ça devient amer.",
+    "qte": [
+     [
+      "Huile d'olive",
+      "2 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Colore la viande",
+    "min": 8,
+    "detail": "Monte le feu, ajoute le bœuf, écrase-le à la cuillère et laisse-le BRUNIR avant de remuer.",
+    "tip": "Une viande grise n'a pas de goût : il lui faut le contact d'une poêle chaude. Si elle rend de l'eau, laisse-la s'évaporer avant de continuer.",
+    "qte": [
+     [
+      "Bœuf haché",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Mijote longuement",
+    "min": 70,
+    "detail": "Ajoute les tomates, sale, baisse au minimum et laisse à couvert entrouvert au moins une heure, en remuant de temps en temps.",
+    "tip": "Une bolognaise d'une demi-heure est une sauce tomate à la viande. C'est le temps qui la rend onctueuse — au-delà d'une heure, tout est gagné.",
+    "qte": [
+     [
+      "Tomates",
+      "800 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis les pâtes",
+    "min": 10,
+    "detail": "Grand volume d'eau bouillante salée, une minute de moins que le paquet.",
+    "tip": "Un litre d'eau pour 100 g, et 10 g de sel par litre. Trop peu d'eau, l'amidon les colle entre elles.",
+    "qte": [
+     [
+      "Pâtes",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Réunis dans la poêle",
+    "min": 3,
+    "detail": "Égoutte en gardant une louche d'eau de cuisson, verse les pâtes dans la sauce et remue une minute à feu vif avec un peu de cette eau.",
+    "tip": "L'eau de cuisson est chargée d'amidon : c'est elle qui fait que la sauce accroche aux pâtes au lieu de tomber au fond de l'assiette."
+   }
+  ]
+ },
+ {
+  "cle": "quo-saumon-riz",
+  "temps": 30,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🐟",
+    "nom": "Saumon",
+    "qte": "2 pavés de 150 g",
+    "g": 300,
+    "nu": "saumon"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "150 g cru (≈ 390 g cuit)",
+    "g": 390,
+    "nu": "riz"
+   },
+   {
+    "em": "🥦",
+    "nom": "Brocoli",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "brocoli"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "1",
+    "g": 60,
+    "nu": "citron"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "rincer",
+    "t": "Rince le riz",
+    "min": 3,
+    "detail": "À l'eau froide, jusqu'à ce qu'elle ressorte presque claire.",
+    "tip": "L'amidon de surface est ce qui rend le riz collant. Trois rinçages suffisent — au-delà on rince le goût.",
+    "qte": [
+     [
+      "Riz",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis le riz",
+    "min": 12,
+    "detail": "Une part de riz pour une part et demie d'eau salée, à couvert, feu très doux, 11 min sans jamais soulever le couvercle.",
+    "tip": "Le couvercle soulevé fait chuter la vapeur, et le riz du dessus reste dur. On regarde à la fin, pas avant.",
+    "qte": [
+     [
+      "Riz",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "couper",
+    "t": "Détaille le brocoli",
+    "min": 4,
+    "detail": "En petits bouquets réguliers ; le tronc s'épluche et se coupe en rondelles, il est aussi bon.",
+    "tip": "Le tronc jeté, c'est un tiers du brocoli à la poubelle. Épluché, il est plus doux que les fleurettes.",
+    "qte": [
+     [
+      "Brocoli",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis-le à la vapeur",
+    "min": 7,
+    "detail": "Panier vapeur ou passoire au-dessus d'une casserole d'eau bouillante, 6 à 7 min. Il doit rester bien vert et ferme.",
+    "tip": "À l'eau, il perd la moitié de sa vitamine C dans la casserole. À la vapeur, elle reste dedans.",
+    "qte": [
+     [
+      "Brocoli",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis le saumon à la vapeur",
+    "min": 9,
+    "detail": "Pose les pavés côté peau sur le panier, sale, poivre, une rondelle de citron dessus. 8 min pour un cœur juste nacré.",
+    "tip": "Le saumon est cuit quand la chair se sépare en lamelles sous la fourchette. Une minute de plus et il devient sec et blanchâtre.",
+    "qte": [
+     [
+      "Saumon",
+      "300 g"
+     ],
+     [
+      "Citron",
+      "1 rondelle"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Dresse et assaisonne",
+    "min": 2,
+    "detail": "Riz, brocoli, saumon, un filet d'huile d'olive et le reste du citron pressé dessus.",
+    "tip": "L'huile se met à la fin, à froid : chauffée, une bonne huile d'olive perd ce qu'on lui achète.",
+    "qte": [
+     [
+      "Huile d'olive",
+      "1 c. à soupe"
+     ],
+     [
+      "Citron",
+      "1"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "quo-cesar-poulet",
+  "temps": 25,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🥬",
+    "nom": "Salade romaine",
+    "qte": "1 (300 g)",
+    "g": 300,
+    "nu": "salade"
+   },
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "2 filets (300 g)",
+    "g": 300,
+    "nu": "poulet"
+   },
+   {
+    "em": "🧀",
+    "nom": "Parmesan",
+    "qte": "40 g",
+    "g": 40,
+    "nu": "parmesan"
+   },
+   {
+    "em": "🍞",
+    "nom": "Croûtons",
+    "qte": "60 g de pain rassis",
+    "g": 60,
+    "nu": "pain"
+   },
+   {
+    "em": "🥚",
+    "nom": "Œuf",
+    "qte": "1 jaune",
+    "g": 20,
+    "nu": "oeuf"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "3 c. à soupe",
+    "g": 35,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "½",
+    "g": 30,
+    "nu": "citron"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "saisir",
+    "t": "Cuis le poulet",
+    "min": 12,
+    "detail": "Poêle chaude, un filet d'huile, 5 à 6 min par face selon l'épaisseur. Sale à la fin.",
+    "tip": "Aplatis le filet au poing avant de le cuire : une épaisseur régulière, c'est une cuisson régulière et pas de bord sec.",
+    "qte": [
+     [
+      "Poulet",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "enfourner",
+    "t": "Fais les croûtons",
+    "min": 8,
+    "detail": "Pain en cubes, une cuillère d'huile, 8 min à 180 °C en remuant à mi-parcours.",
+    "tip": "Du pain de la veille, jamais du frais : le frais rend son eau et devient mou en refroidissant.",
+    "qte": [
+     [
+      "Pain",
+      "60 g"
+     ]
+    ]
+   },
+   {
+    "illu": "fouetter",
+    "t": "Monte la sauce",
+    "min": 5,
+    "detail": "Jaune d'œuf, jus de citron, sel, poivre, puis l'huile en filet en fouettant. Ajoute la moitié du parmesan râpé.",
+    "tip": "L'huile VERSÉE EN FILET, sinon ça ne prend pas. Et un jaune à température ambiante monte, un jaune froid tranche.",
+    "qte": [
+     [
+      "Œuf",
+      "1 jaune"
+     ],
+     [
+      "Huile d'olive",
+      "3 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "couper",
+    "t": "Prépare la salade et le poulet",
+    "min": 4,
+    "detail": "Romaine lavée, essorée, coupée en larges morceaux. Poulet en tranches épaisses, une fois reposé.",
+    "tip": "Essorée à fond : une goutte d'eau sur une feuille, et la sauce glisse au lieu d'accrocher.",
+    "qte": [
+     [
+      "Salade romaine",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Assemble",
+    "min": 2,
+    "detail": "Mélange la salade et la sauce à la main, ajoute le poulet, les croûtons et le reste de parmesan en copeaux.",
+    "tip": "À la main : c'est le seul moyen d'enrober chaque feuille sans les casser. Et on assemble au dernier moment."
+   }
+  ]
+ },
+ {
+  "cle": "quo-gratin-courgettes",
+  "temps": 55,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🥒",
+    "nom": "Courgettes",
+    "qte": "900 g",
+    "g": 900,
+    "nu": "courgette"
+   },
+   {
+    "em": "🧀",
+    "nom": "Fromage râpé",
+    "qte": "100 g",
+    "g": 100,
+    "nu": "gruyere"
+   },
+   {
+    "em": "🥛",
+    "nom": "Crème",
+    "qte": "150 ml",
+    "g": 150,
+    "nu": "creme"
+   },
+   {
+    "em": "🥚",
+    "nom": "Œufs",
+    "qte": "2",
+    "g": 110,
+    "nu": "oeuf"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "2 gousses",
+    "g": 8,
+    "nu": "ail"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel, poivre, muscade",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Coupe les courgettes",
+    "min": 6,
+    "detail": "En rondelles de 5 mm, sans les éplucher.",
+    "tip": "La peau tient le légume à la cuisson et porte l'essentiel des fibres. Épluchées, les rondelles finissent en bouillie.",
+    "qte": [
+     [
+      "Courgettes",
+      "900 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais-les dégorger à la poêle",
+    "min": 12,
+    "detail": "Feu vif, à sec ou avec très peu d'huile, jusqu'à ce qu'elles rendent leur eau et qu'elle s'évapore. Ail à la fin.",
+    "tip": "C'EST L'ÉTAPE QU'ON SAUTE, et c'est celle qui rate le gratin : une courgette, c'est 95 % d'eau. Crue au four, elle inonde le plat et le gratin ne prend jamais.",
+    "qte": [
+     [
+      "Courgettes",
+      "900 g"
+     ],
+     [
+      "Ail",
+      "2 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "fouetter",
+    "t": "Prépare l'appareil",
+    "min": 3,
+    "detail": "Bats les œufs avec la crème, sale, poivre, râpe un peu de muscade.",
+    "tip": "La muscade n'est pas une coquetterie : elle relève un plat où tout est doux, et une pincée suffit."
+   },
+   {
+    "illu": "melanger",
+    "t": "Assemble dans le plat",
+    "min": 4,
+    "detail": "Courgettes égouttées dans le plat, verse l'appareil, mélange, couvre de fromage râpé.",
+    "tip": "Le fromage sur le dessus SEULEMENT : mélangé dedans, il file et l'appareil ne prend pas.",
+    "qte": [
+     [
+      "Fromage râpé",
+      "100 g"
+     ]
+    ]
+   },
+   {
+    "illu": "enfourner",
+    "t": "Enfourne",
+    "min": 30,
+    "detail": "30 min à 180 °C, jusqu'à ce que le dessus soit doré et le centre ferme au toucher.",
+    "tip": "Si le dessus dore trop vite, une feuille d'aluminium par-dessus les dix dernières minutes."
+   },
+   {
+    "illu": "reposer",
+    "t": "Laisse-le tiédir",
+    "min": 5,
+    "detail": "Cinq minutes hors du four avant de couper.",
+    "tip": "Sorti brûlant, il s'affaisse dans l'assiette. Tiède, il se tient et il a plus de goût."
+   }
+  ]
+ },
+ {
+  "cle": "quo-soupe-legumes",
+  "temps": 40,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🥕",
+    "nom": "Carottes",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "carotte"
+   },
+   {
+    "em": "🥔",
+    "nom": "Pommes de terre",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "pomme de terre"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "oignon"
+   },
+   {
+    "em": "🥬",
+    "nom": "Poireau",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "poireau"
+   },
+   {
+    "em": "🌿",
+    "nom": "Thym",
+    "qte": "2 branches"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "huile olive"
+   },
+   {
+    "em": "💧",
+    "nom": "Eau",
+    "qte": "1,2 l"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Émince tout",
+    "min": 10,
+    "detail": "Poireau en rondelles, oignon émincé, carottes et pommes de terre en cubes de 2 cm.",
+    "tip": "Le vert du poireau se mange : bien lavé et coupé fin, il donne plus de goût que le blanc.",
+    "qte": [
+     [
+      "Poireau",
+      "200 g"
+     ],
+     [
+      "Carottes",
+      "300 g"
+     ],
+     [
+      "Pommes de terre",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais suer oignon et poireau",
+    "min": 7,
+    "detail": "Feu doux, l'huile, à couvert, jusqu'à ce qu'ils soient fondants sans avoir coloré.",
+    "tip": "SUER, pas rissoler : c'est cette étape qui fait la différence entre une soupe de légumes et de l'eau de légumes. Colorés, ils donnent un goût de brûlé au bouillon.",
+    "qte": [
+     [
+      "Oignon",
+      "150 g"
+     ],
+     [
+      "Huile d'olive",
+      "1 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Ajoute le reste et couvre d'eau",
+    "min": 22,
+    "detail": "Carottes, pommes de terre, thym, l'eau à hauteur, sel. 20 min à petits bouillons.",
+    "tip": "À hauteur, pas plus : on peut toujours allonger à la fin, on ne peut pas retirer de l'eau.",
+    "qte": [
+     [
+      "Eau",
+      "1,2 l"
+     ]
+    ]
+   },
+   {
+    "illu": "mixer",
+    "t": "Mixe",
+    "min": 3,
+    "detail": "Retire le thym, mixe jusqu'à ce que ce soit lisse, en ajoutant de l'eau chaude si c'est trop épais.",
+    "tip": "Mixe à chaud mais pas bouillant, et ne remplis le bol qu'aux deux tiers : la vapeur fait sauter le couvercle."
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Rectifie",
+    "min": 2,
+    "detail": "Goûte, resale, poivre. Un filet d'huile d'olive crue au moment de servir.",
+    "tip": "Une soupe se sale à la fin : l'eau s'est réduite pendant la cuisson, et ce qui était juste au départ est devenu trop."
+   }
+  ]
+ },
+ {
+  "cle": "quo-croque-monsieur",
+  "temps": 25,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🍞",
+    "nom": "Pain de mie",
+    "qte": "4 tranches",
+    "g": 120,
+    "nu": "pain de mie"
+   },
+   {
+    "em": "🥓",
+    "nom": "Jambon",
+    "qte": "2 tranches (100 g)",
+    "g": 100,
+    "nu": "jambon"
+   },
+   {
+    "em": "🧀",
+    "nom": "Gruyère",
+    "qte": "80 g râpé",
+    "g": 80,
+    "nu": "gruyere"
+   },
+   {
+    "em": "🥛",
+    "nom": "Lait",
+    "qte": "200 ml",
+    "g": 200,
+    "nu": "lait"
+   },
+   {
+    "em": "🧈",
+    "nom": "Beurre",
+    "qte": "25 g",
+    "g": 25,
+    "nu": "beurre"
+   },
+   {
+    "em": "🌾",
+    "nom": "Farine",
+    "qte": "20 g",
+    "g": 20,
+    "nu": "farine"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel, poivre, muscade",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "melanger",
+    "t": "Fais un roux",
+    "min": 4,
+    "detail": "Beurre fondu à feu moyen, farine d'un coup, remue une minute jusqu'à ce que ça mousse sans colorer.",
+    "tip": "Une minute de cuisson au moins : c'est ce qui retire le goût de farine crue. Mais sans colorer, sinon la sauce sera beige.",
+    "qte": [
+     [
+      "Beurre",
+      "25 g"
+     ],
+     [
+      "Farine",
+      "20 g"
+     ]
+    ]
+   },
+   {
+    "illu": "fouetter",
+    "t": "Monte la béchamel",
+    "min": 6,
+    "detail": "Lait FROID en trois fois, en fouettant à chaque ajout, jusqu'à épaississement. Sel, poivre, muscade.",
+    "tip": "Lait froid sur roux chaud (ou l'inverse) : c'est le contraste qui empêche les grumeaux. Tout à la même température, ça grumelle.",
+    "qte": [
+     [
+      "Lait",
+      "200 ml"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Monte les croques",
+    "min": 5,
+    "detail": "Une fine couche de béchamel sur chaque tranche, jambon et la moitié du gruyère au milieu, referme, le reste de béchamel et de gruyère sur le dessus.",
+    "tip": "De la béchamel À L'INTÉRIEUR aussi : c'est elle qui garde le pain moelleux là où le jambon le dessécherait.",
+    "qte": [
+     [
+      "Jambon",
+      "100 g"
+     ],
+     [
+      "Gruyère",
+      "80 g"
+     ]
+    ]
+   },
+   {
+    "illu": "enfourner",
+    "t": "Enfourne",
+    "min": 12,
+    "detail": "12 min à 200 °C, puis 2 min sous le gril pour la croûte.",
+    "tip": "Le gril à la fin, jamais depuis le début : il dorerait le dessus avant que le cœur soit chaud."
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers aussitôt",
+    "min": 1,
+    "detail": "Coupe en deux en diagonale et mange chaud.",
+    "tip": "Un croque qui attend ramollit : le fromage fige et le pain boit la béchamel."
+   }
+  ]
+ },
+ {
+  "cle": "quo-quiche-lorraine",
+  "temps": 60,
+  "portions": 6,
+  "ing": [
+   {
+    "em": "🥧",
+    "nom": "Pâte brisée",
+    "qte": "1 rouleau (250 g)",
+    "g": 250,
+    "nu": "pate brisee"
+   },
+   {
+    "em": "🥓",
+    "nom": "Lardons",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "lardons"
+   },
+   {
+    "em": "🥚",
+    "nom": "Œufs",
+    "qte": "4",
+    "g": 220,
+    "nu": "oeuf"
+   },
+   {
+    "em": "🥛",
+    "nom": "Crème",
+    "qte": "200 ml",
+    "g": 200,
+    "nu": "creme"
+   },
+   {
+    "em": "🥛",
+    "nom": "Lait",
+    "qte": "100 ml",
+    "g": 100,
+    "nu": "lait"
+   },
+   {
+    "em": "🧀",
+    "nom": "Gruyère",
+    "qte": "80 g",
+    "g": 80,
+    "nu": "gruyere"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel, poivre, muscade",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "enfourner",
+    "t": "Précuis la pâte",
+    "min": 15,
+    "detail": "Étale la pâte dans le moule, pique le fond à la fourchette, couvre de papier cuisson et de légumes secs, 12 min à 190 °C.",
+    "tip": "La cuisson à blanc est ce qui sépare une quiche d'une quiche à fond mou. Les légumes secs empêchent la pâte de gonfler et se gardent des années pour ça.",
+    "qte": [
+     [
+      "Pâte brisée",
+      "250 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais rissoler les lardons",
+    "min": 6,
+    "detail": "À sec dans une poêle chaude, jusqu'à ce qu'ils soient dorés. Égoutte-les sur du papier.",
+    "tip": "Sans matière grasse : ils rendent la leur. Et on jette ce gras, sinon la migaine se sépare à la cuisson.",
+    "qte": [
+     [
+      "Lardons",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "fouetter",
+    "t": "Prépare la migaine",
+    "min": 4,
+    "detail": "Bats les œufs, ajoute crème et lait, sale peu (les lardons salent déjà), poivre, muscade.",
+    "tip": "Un œuf pour 75 ml de liquide : moins, la quiche est sèche ; plus, elle ne prend pas.",
+    "qte": [
+     [
+      "Œufs",
+      "4"
+     ],
+     [
+      "Crème",
+      "200 ml"
+     ],
+     [
+      "Lait",
+      "100 ml"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Garnis",
+    "min": 3,
+    "detail": "Lardons et gruyère sur le fond précuit, puis verse la migaine.",
+    "tip": "La garniture d'abord, le liquide ensuite : versé sur la garniture, il la répartit tout seul.",
+    "qte": [
+     [
+      "Gruyère",
+      "80 g"
+     ]
+    ]
+   },
+   {
+    "illu": "enfourner",
+    "t": "Cuis",
+    "min": 32,
+    "detail": "30 à 35 min à 180 °C. Le centre doit être juste pris et trembler à peine.",
+    "tip": "Trop cuite, la migaine se rétracte et rend de l'eau en refroidissant. On la sort quand elle tremble encore un peu."
+   },
+   {
+    "illu": "reposer",
+    "t": "Laisse tiédir",
+    "min": 10,
+    "detail": "Au moins dix minutes avant de couper.",
+    "tip": "Une quiche est meilleure tiède que brûlante : les arômes du lard et de la muscade ne se sentent qu'en dessous de 60 °C."
+   }
+  ]
+ },
+ {
+  "cle": "quo-burger-maison",
+  "temps": 30,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🍔",
+    "nom": "Pains à burger",
+    "qte": "2",
+    "g": 160,
+    "nu": "pain"
+   },
+   {
+    "em": "🥩",
+    "nom": "Steak haché",
+    "qte": "2 de 150 g",
+    "g": 300,
+    "nu": "boeuf hache"
+   },
+   {
+    "em": "🧀",
+    "nom": "Cheddar",
+    "qte": "2 tranches (40 g)",
+    "g": 40,
+    "nu": "cheddar"
+   },
+   {
+    "em": "🥬",
+    "nom": "Salade",
+    "qte": "4 feuilles",
+    "g": 40,
+    "nu": "salade"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomate",
+    "qte": "1 (120 g)",
+    "g": 120,
+    "nu": "tomate"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon rouge",
+    "qte": "60 g",
+    "g": 60,
+    "nu": "oignon"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Prépare la garniture",
+    "min": 6,
+    "detail": "Tomate en rondelles épaisses, oignon en fines lamelles, salade lavée et essorée.",
+    "tip": "Sale les rondelles de tomate et laisse-les cinq minutes sur du papier : elles rendent leur eau AVANT le burger, pas dedans.",
+    "qte": [
+     [
+      "Tomate",
+      "120 g"
+     ],
+     [
+      "Oignon rouge",
+      "60 g"
+     ]
+    ]
+   },
+   {
+    "illu": "peser",
+    "t": "Façonne les steaks",
+    "min": 4,
+    "detail": "150 g chacun, aplatis à 1,5 cm, un creux au pouce au centre. Sale les deux faces juste avant de cuire.",
+    "tip": "Le creux central, c'est ce qui empêche le steak de gonfler en ballon : la viande se rétracte vers le milieu en cuisant et le comble.",
+    "qte": [
+     [
+      "Steak haché",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Grille les pains",
+    "min": 3,
+    "detail": "Face coupée sur une poêle chaude, à sec, jusqu'à ce qu'ils soient dorés.",
+    "tip": "Un pain grillé fait barrière : sans ça, le jus du steak le détrempe en deux minutes.",
+    "qte": [
+     [
+      "Pains à burger",
+      "2"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Cuis les steaks",
+    "min": 7,
+    "detail": "Poêle très chaude, 2 à 3 min par face sans jamais appuyer dessus. Le fromage sur le dessus à la dernière minute, à couvert.",
+    "tip": "APPUYER SUR LE STEAK, c'est expulser son jus dans la poêle. Tout ce qui grésille en dehors du steak est ce qui manquera dedans.",
+    "qte": [
+     [
+      "Steak haché",
+      "300 g"
+     ],
+     [
+      "Cheddar",
+      "40 g"
+     ]
+    ]
+   },
+   {
+    "illu": "reposer",
+    "t": "Laisse reposer",
+    "min": 3,
+    "detail": "Deux ou trois minutes hors du feu pendant que tu montes le reste.",
+    "tip": "Même sur un steak haché : le jus se redistribue au lieu de partir dans le pain du bas."
+   },
+   {
+    "illu": "dresser",
+    "t": "Monte le burger",
+    "min": 2,
+    "detail": "Pain du bas, salade (elle isole du jus), steak au fromage, tomate, oignon, chapeau.",
+    "tip": "La salade EN BAS et pas en haut : c'est elle qui protège le pain inférieur, celui qui prend tout."
+   }
+  ]
+ },
+ {
+  "cle": "quo-skyr-granola",
+  "temps": 6,
+  "portions": 1,
+  "ing": [
+   {
+    "em": "🥛",
+    "nom": "Skyr",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "skyr"
+   },
+   {
+    "em": "🍓",
+    "nom": "Fruits rouges",
+    "qte": "100 g",
+    "g": 100,
+    "nu": "fraise"
+   },
+   {
+    "em": "🍌",
+    "nom": "Banane",
+    "qte": "1 (120 g)",
+    "g": 120,
+    "nu": "banane"
+   },
+   {
+    "em": "🌾",
+    "nom": "Granola",
+    "qte": "40 g",
+    "g": 40,
+    "nu": "granola"
+   },
+   {
+    "em": "🍯",
+    "nom": "Miel",
+    "qte": "1 c. à café",
+    "g": 8,
+    "nu": "miel"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Coupe la banane",
+    "min": 2,
+    "detail": "En rondelles d'un demi-centimètre.",
+    "tip": "Coupée épaisse elle reste ferme, coupée fine elle se mêle au skyr. À toi de voir — mais coupe-la au dernier moment, elle noircit vite.",
+    "qte": [
+     [
+      "Banane",
+      "120 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Verse le skyr",
+    "min": 1,
+    "detail": "Dans un bol, lisse-le à la cuillère.",
+    "tip": "Le skyr sort dense du pot : trente secondes de cuillère et il devient crémeux, sans rien y ajouter.",
+    "qte": [
+     [
+      "Skyr",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Ajoute fruits et granola",
+    "min": 2,
+    "detail": "Fruits rouges et banane, granola par-dessus, un filet de miel.",
+    "tip": "LE GRANOLA EN DERNIER, et juste avant de manger : posé d'avance sur le skyr, il est mou en cinq minutes.",
+    "qte": [
+     [
+      "Granola",
+      "40 g"
+     ],
+     [
+      "Miel",
+      "1 c. à café"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "quo-riz-cantonais",
+  "temps": 20,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "300 g cuit (la veille)",
+    "g": 300,
+    "nu": "riz"
+   },
+   {
+    "em": "🥚",
+    "nom": "Œufs",
+    "qte": "2",
+    "g": 110,
+    "nu": "oeuf"
+   },
+   {
+    "em": "🥕",
+    "nom": "Carotte",
+    "qte": "100 g",
+    "g": 100,
+    "nu": "carotte"
+   },
+   {
+    "em": "🫛",
+    "nom": "Petits pois",
+    "qte": "100 g",
+    "g": 100,
+    "nu": "petits pois"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "80 g",
+    "g": 80,
+    "nu": "oignon"
+   },
+   {
+    "em": "🫙",
+    "nom": "Sauce soja",
+    "qte": "2 c. à soupe",
+    "g": 30,
+    "nu": "sauce soja"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "huile"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "refrigerer",
+    "t": "Pars de riz FROID",
+    "min": 1,
+    "detail": "Du riz de la veille, sorti du réfrigérateur. À défaut, étale du riz fraîchement cuit sur un plateau et laisse-le refroidir complètement.",
+    "tip": "C'est LA règle du riz sauté. Un riz chaud est gorgé d'eau : il colle, s'écrase et devient une bouillie. Froid, ses grains se séparent.",
+    "qte": [
+     [
+      "Riz",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "couper",
+    "t": "Taille les légumes en petits dés",
+    "min": 5,
+    "detail": "Carotte et oignon en cubes de 5 mm, pour qu'ils cuisent en deux minutes.",
+    "tip": "Tout doit être coupé AVANT d'allumer le feu : un riz sauté se fait en cinq minutes, il n'y a pas le temps de couper en route.",
+    "qte": [
+     [
+      "Carotte",
+      "100 g"
+     ],
+     [
+      "Oignon",
+      "80 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Brouille les œufs à part",
+    "min": 3,
+    "detail": "Feu vif, un peu d'huile, les œufs battus, remue vite et retire-les dès qu'ils sont pris.",
+    "tip": "À part, puis remis à la fin : cuits avec le riz, ils l'enrobent d'une pellicule et tout devient pâteux.",
+    "qte": [
+     [
+      "Œufs",
+      "2"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais sauter les légumes",
+    "min": 4,
+    "detail": "Même poêle très chaude, huile, carotte et oignon 2 min, puis les petits pois.",
+    "tip": "Feu au maximum et poêle pas trop chargée. En deux fois s'il le faut : entassés, les légumes bouillent.",
+    "qte": [
+     [
+      "Carotte",
+      "100 g"
+     ],
+     [
+      "Petits pois",
+      "100 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Ajoute le riz",
+    "min": 4,
+    "detail": "Riz froid émietté à la main, étale-le et laisse-le une minute sans remuer avant de sauter.",
+    "tip": "Cette minute immobile est ce qui donne les grains grillés du fond. Remuer sans arrêt, c'est réchauffer du riz, pas le sauter.",
+    "qte": [
+     [
+      "Riz",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Sauce soja et œufs",
+    "min": 2,
+    "detail": "Sauce soja versée SUR LES BORDS de la poêle, remue, remets les œufs.",
+    "tip": "Sur les bords brûlants, la sauce caramélise une seconde avant de toucher le riz : c'est de là que vient le goût des restaurants.",
+    "qte": [
+     [
+      "Sauce soja",
+      "2 c. à soupe"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "quo-brochettes-poulet",
+  "temps": 40,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "400 g de filets",
+    "g": 400,
+    "nu": "poulet"
+   },
+   {
+    "em": "🥛",
+    "nom": "Yaourt",
+    "qte": "100 g",
+    "g": 100,
+    "nu": "yaourt"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Paprika",
+    "qte": "1 c. à café"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "1",
+    "g": 60,
+    "nu": "citron"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "2 gousses",
+    "g": 8,
+    "nu": "ail"
+   },
+   {
+    "em": "🫑",
+    "nom": "Poivron",
+    "qte": "200 g (1 rouge, 1 jaune)",
+    "g": 200,
+    "nu": "poivron"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Coupe le poulet et les poivrons",
+    "min": 8,
+    "detail": "Cubes de 3 cm pour le poulet, carrés de la même taille pour les poivrons.",
+    "tip": "Même taille pour tout : c'est ce qui fait qu'un morceau n'est pas cru quand le voisin est sec.",
+    "qte": [
+     [
+      "Poulet",
+      "400 g"
+     ],
+     [
+      "Poivron",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Prépare la marinade",
+    "min": 4,
+    "detail": "Yaourt, paprika, ail écrasé, le jus du citron, sel et poivre. Enrobe les cubes de poulet.",
+    "tip": "Le yaourt n'est pas là pour le goût : son acidité et ses enzymes attendrissent la chair. C'est le principe du tandoori.",
+    "qte": [
+     [
+      "Yaourt",
+      "100 g"
+     ],
+     [
+      "Citron",
+      "1"
+     ],
+     [
+      "Ail",
+      "2 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "refrigerer",
+    "t": "Laisse mariner",
+    "min": 20,
+    "detail": "Au réfrigérateur, à couvert, 20 min au minimum — deux heures c'est mieux.",
+    "tip": "Pas plus d'une nuit : au-delà, l'acide « cuit » la surface et la chair devient farineuse."
+   },
+   {
+    "illu": "saisir",
+    "t": "Monte et grille les brochettes",
+    "min": 10,
+    "detail": "Alterne poulet et poivron sur les piques, puis 4 min par face sur une poêle-gril très chaude ou au barbecue.",
+    "tip": "Essuie l'excédent de marinade avant de griller : le yaourt qui reste brûle et noircit avant que la viande soit cuite.",
+    "qte": [
+     [
+      "Poulet",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "reposer",
+    "t": "Laisse reposer",
+    "min": 3,
+    "detail": "Trois minutes sous une feuille d'aluminium.",
+    "tip": "Un blanc de poulet est maigre : il n'a pas de gras pour rattraper une découpe trop rapide."
+   }
+  ]
+ },
+ {
+  "cle": "quo-porridge-avoine",
+  "temps": 12,
+  "portions": 1,
+  "ing": [
+   {
+    "em": "🌾",
+    "nom": "Flocons d'avoine",
+    "qte": "60 g",
+    "g": 60,
+    "nu": "flocons avoine"
+   },
+   {
+    "em": "🥛",
+    "nom": "Lait",
+    "qte": "250 ml",
+    "g": 250,
+    "nu": "lait"
+   },
+   {
+    "em": "🍌",
+    "nom": "Banane",
+    "qte": "1 (120 g)",
+    "g": 120,
+    "nu": "banane"
+   },
+   {
+    "em": "🍯",
+    "nom": "Miel",
+    "qte": "1 c. à café",
+    "g": 8,
+    "nu": "miel"
+   },
+   {
+    "em": "🌰",
+    "nom": "Amandes",
+    "qte": "15 g",
+    "g": 15,
+    "nu": "amande"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel",
+    "qte": "1 pincée"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "bouillir",
+    "t": "Chauffe le lait avec l'avoine",
+    "min": 7,
+    "detail": "Flocons et lait dans une casserole, une pincée de sel, feu moyen, en remuant sans arrêt.",
+    "tip": "LA PINCÉE DE SEL n'est pas facultative : sans elle, un porridge au lait est fade quelle que soit la quantité de miel qu'on y met ensuite.",
+    "qte": [
+     [
+      "Flocons d'avoine",
+      "60 g"
+     ],
+     [
+      "Lait",
+      "250 ml"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Remue jusqu'à épaississement",
+    "min": 4,
+    "detail": "Cinq minutes environ. Il doit napper la cuillère sans être compact.",
+    "tip": "Il épaissit ENCORE dans le bol : arrête-toi quand il te semble un peu trop liquide, sinon tu manges du ciment."
+   },
+   {
+    "illu": "dresser",
+    "t": "Garnis",
+    "min": 2,
+    "detail": "Verse dans un bol, ajoute la banane en rondelles, les amandes concassées et le miel.",
+    "tip": "Le miel après la cuisson : chauffé, il perd ses arômes et ne sert plus qu'à sucrer.",
+    "qte": [
+     [
+      "Banane",
+      "120 g"
+     ],
+     [
+      "Amandes",
+      "15 g"
+     ],
+     [
+      "Miel",
+      "1 c. à café"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "quo-ratatouille",
+  "temps": 70,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍆",
+    "nom": "Aubergine",
+    "qte": "400 g (1 grosse)",
+    "g": 400,
+    "nu": "aubergine"
+   },
+   {
+    "em": "🥒",
+    "nom": "Courgettes",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "courgette"
+   },
+   {
+    "em": "🫑",
+    "nom": "Poivrons",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "poivron"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates",
+    "qte": "500 g",
+    "g": 500,
+    "nu": "tomate"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "oignon"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "3 gousses",
+    "g": 12,
+    "nu": "ail"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "5 c. à soupe",
+    "g": 60,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🌿",
+    "nom": "Thym et laurier",
+    "qte": ""
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Coupe tout en cubes de 2 cm",
+    "min": 12,
+    "detail": "Aubergine, courgettes, poivrons, oignon. Les tomates se pèlent (croix au couteau, 30 s dans l'eau bouillante) et s'épépinent.",
+    "tip": "Des cubes, pas des rondelles : on veut que chaque bouchée porte les cinq légumes.",
+    "qte": [
+     [
+      "Aubergine",
+      "400 g"
+     ],
+     [
+      "Courgettes",
+      "400 g"
+     ],
+     [
+      "Poivrons",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais revenir CHAQUE légume séparément",
+    "min": 25,
+    "detail": "Aubergine d'abord (elle boit le plus d'huile), puis courgette, puis poivron, puis oignon. Chacun à feu vif, doré, réservé à part.",
+    "tip": "C'EST TOUTE LA RECETTE. Tout jeté ensemble, les légumes rendent leur eau et bouillent : on obtient une compote grise. Séparément, chacun garde son goût et sa tenue.",
+    "qte": [
+     [
+      "Huile d'olive",
+      "5 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Fais la base tomate",
+    "min": 15,
+    "detail": "Dans la cocotte, l'oignon, l'ail, les tomates, thym et laurier. 15 min à feu moyen jusqu'à ce que ça réduise.",
+    "tip": "Attends que la tomate ait perdu son eau et qu'elle devienne pâte : c'est ce qui liera tout le reste.",
+    "qte": [
+     [
+      "Tomates",
+      "500 g"
+     ],
+     [
+      "Ail",
+      "3 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Réunis et laisse fondre",
+    "min": 20,
+    "detail": "Remets tous les légumes, sale, poivre, couvre et laisse à feu très doux 20 min.",
+    "tip": "À couvert et à feu minuscule : à ce stade on ne cuit plus, on laisse les goûts se rejoindre."
+   },
+   {
+    "illu": "reposer",
+    "t": "Laisse-la reposer",
+    "min": 5,
+    "detail": "Hors du feu, à couvert. Elle est encore meilleure le lendemain.",
+    "tip": "Une ratatouille est un plat qui se bonifie : la faire la veille n'est pas un pis-aller, c'est la bonne façon de la faire."
+   }
+  ]
+ },
+ {
+  "cle": "quo-dahl-lentilles",
+  "temps": 40,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🫘",
+    "nom": "Lentilles corail",
+    "qte": "250 g crues (≈ 600 g cuites)",
+    "g": 600,
+    "nu": "lentilles"
+   },
+   {
+    "em": "🥥",
+    "nom": "Lait de coco",
+    "qte": "400 ml",
+    "g": 400,
+    "nu": "lait de coco"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates concassées",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "tomate"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "20 g",
+    "g": 20,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Curry",
+    "qte": "2 c. à café"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "200 g cru (≈ 520 g cuit)",
+    "g": 520,
+    "nu": "riz"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "huile"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "rincer",
+    "t": "Rince les lentilles",
+    "min": 3,
+    "detail": "À l'eau froide, jusqu'à ce que l'eau soit claire.",
+    "tip": "L'eau trouble, c'est l'amidon de surface : il fait mousser et déborder la casserole.",
+    "qte": [
+     [
+      "Lentilles corail",
+      "250 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais revenir oignon et gingembre",
+    "min": 6,
+    "detail": "Feu moyen, l'huile, l'oignon émincé jusqu'à transparence, puis le gingembre râpé.",
+    "tip": "Le gingembre après l'oignon : râpé, il brûle en trente secondes et devient amer.",
+    "qte": [
+     [
+      "Oignon",
+      "150 g"
+     ],
+     [
+      "Gingembre",
+      "20 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Fais griller les épices",
+    "min": 2,
+    "detail": "Curry dans la casserole chaude, remue 30 secondes jusqu'à ce que ça sente.",
+    "tip": "LES ÉPICES SE GRILLENT DANS LE GRAS avant tout liquide. Jetées dans la sauce, elles gardent un goût de poudre.",
+    "qte": [
+     [
+      "Curry",
+      "2 c. à café"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Ajoute lentilles, tomates et coco",
+    "min": 25,
+    "detail": "Tout dans la casserole, sale, couvre à moitié et laisse 20 à 25 min à feu doux en remuant de temps en temps.",
+    "tip": "Les lentilles corail se délitent : c'est voulu, c'est ce qui donne sa texture au dahl. N'essaie pas de les garder entières.",
+    "qte": [
+     [
+      "Lentilles corail",
+      "250 g"
+     ],
+     [
+      "Lait de coco",
+      "400 ml"
+     ],
+     [
+      "Tomates",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis le riz à côté",
+    "min": 12,
+    "detail": "Une part de riz pour une part et demie d'eau, à couvert, 11 min à feu doux.",
+    "tip": "Lance-le quand le dahl entame ses vingt minutes : les deux seront prêts ensemble.",
+    "qte": [
+     [
+      "Riz",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Rectifie",
+    "min": 2,
+    "detail": "Goûte, resale, ajoute de l'eau chaude si c'est trop épais.",
+    "tip": "Le dahl épaissit en refroidissant : laisse-le un peu plus liquide que ce que tu veux servir."
+   }
+  ]
+ },
+ {
+  "cle": "quo-cabillaud-poele",
+  "temps": 35,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🐟",
+    "nom": "Cabillaud",
+    "qte": "2 dos de 150 g",
+    "g": 300,
+    "nu": "cabillaud"
+   },
+   {
+    "em": "🥔",
+    "nom": "Pommes de terre",
+    "qte": "500 g",
+    "g": 500,
+    "nu": "pomme de terre"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "1",
+    "g": 60,
+    "nu": "citron"
+   },
+   {
+    "em": "🌿",
+    "nom": "Aneth",
+    "qte": "10 g"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "3 c. à soupe",
+    "g": 35,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🧈",
+    "nom": "Beurre",
+    "qte": "15 g",
+    "g": 15,
+    "nu": "beurre"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "bouillir",
+    "t": "Cuis les pommes de terre",
+    "min": 22,
+    "detail": "En morceaux, départ à l'eau froide salée, 20 min jusqu'à ce que le couteau entre sans effort.",
+    "tip": "En robe des champs si tu as le temps : la peau retient le goût et l'eau ne le lave pas.",
+    "qte": [
+     [
+      "Pommes de terre",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "attendre",
+    "t": "Sors le poisson du froid",
+    "min": 15,
+    "detail": "Pose les dos sur du papier absorbant, à température ambiante, pendant que les pommes de terre cuisent.",
+    "tip": "Un poisson froid et humide colle à la poêle et se défait. Sec et tempéré, il se décolle tout seul quand il est saisi."
+   },
+   {
+    "illu": "melanger",
+    "t": "Écrase les pommes de terre",
+    "min": 5,
+    "detail": "À la fourchette, grossièrement, avec 2 cuillères d'huile d'olive, du sel et la moitié de l'aneth.",
+    "tip": "Un écrasé, pas une purée : on veut des morceaux. C'est ce qui le distingue de la purée à la cuillère.",
+    "qte": [
+     [
+      "Huile d'olive",
+      "2 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Poêle le cabillaud",
+    "min": 7,
+    "detail": "Poêle bien chaude, une cuillère d'huile, le poisson côté peau (ou côté présentation) 4 min sans y toucher, puis 2 min de l'autre côté avec le beurre.",
+    "tip": "NE LE RETOURNE QU'UNE FOIS. Le cabillaud est fragile : chaque manipulation le casse un peu plus.",
+    "qte": [
+     [
+      "Cabillaud",
+      "300 g"
+     ],
+     [
+      "Beurre",
+      "15 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Dresse",
+    "min": 3,
+    "detail": "Écrasé au fond, poisson dessus, le beurre de la poêle et le citron pressé, le reste d'aneth.",
+    "tip": "Le citron À LA FIN et hors du feu : chauffé, son acidité devient amère.",
+    "qte": [
+     [
+      "Citron",
+      "1"
+     ],
+     [
+      "Aneth",
+      "10 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "quo-buddha-bowl",
+  "temps": 35,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🌾",
+    "nom": "Quinoa",
+    "qte": "150 g cru (≈ 450 g cuit)",
+    "g": 450,
+    "nu": "quinoa"
+   },
+   {
+    "em": "🫘",
+    "nom": "Pois chiches",
+    "qte": "250 g égouttés",
+    "g": 250,
+    "nu": "pois chiches"
+   },
+   {
+    "em": "🥑",
+    "nom": "Avocat",
+    "qte": "1 (130 g)",
+    "g": 130,
+    "nu": "avocat"
+   },
+   {
+    "em": "🥕",
+    "nom": "Carotte",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "carotte"
+   },
+   {
+    "em": "🥬",
+    "nom": "Épinards",
+    "qte": "100 g",
+    "g": 100,
+    "nu": "epinards"
+   },
+   {
+    "em": "🌰",
+    "nom": "Graines de courge",
+    "qte": "30 g",
+    "g": 30,
+    "nu": "graines de courge"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "1",
+    "g": 60,
+    "nu": "citron"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "2 c. à soupe",
+    "g": 25,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel, poivre, cumin",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "rincer",
+    "t": "Rince le quinoa",
+    "min": 2,
+    "detail": "À l'eau froide dans une passoire fine, en frottant entre les mains.",
+    "tip": "Le quinoa est enveloppé de saponine, amère. Non rincé, tout le bol a un arrière-goût de savon.",
+    "qte": [
+     [
+      "Quinoa",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis-le",
+    "min": 15,
+    "detail": "Deux parts d'eau pour une de quinoa, à couvert, 13 min, puis 5 min hors du feu sans ouvrir.",
+    "tip": "Il est cuit quand le petit germe blanc se détache en spirale. Les cinq minutes de repos finissent le travail sans le détremper.",
+    "qte": [
+     [
+      "Quinoa",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "enfourner",
+    "t": "Rôtis les pois chiches",
+    "min": 20,
+    "detail": "Égouttés, séchés, une cuillère d'huile, sel et cumin, 20 min à 200 °C en remuant à mi-parcours.",
+    "tip": "SÉCHÉS À FOND avant le four : humides, ils cuisent à la vapeur et restent mous au lieu de croustiller.",
+    "qte": [
+     [
+      "Pois chiches",
+      "250 g"
+     ]
+    ]
+   },
+   {
+    "illu": "couper",
+    "t": "Prépare les légumes crus",
+    "min": 6,
+    "detail": "Carotte râpée ou en fins bâtonnets, avocat en lamelles, épinards lavés.",
+    "tip": "La carotte râpée au dernier moment : râpée d'avance, elle sèche et perd son sucre.",
+    "qte": [
+     [
+      "Carotte",
+      "150 g"
+     ],
+     [
+      "Avocat",
+      "130 g"
+     ]
+    ]
+   },
+   {
+    "illu": "fouetter",
+    "t": "Fais la sauce",
+    "min": 3,
+    "detail": "Jus de citron, une cuillère d'huile, sel, poivre. Fouette pour émulsionner.",
+    "tip": "Une part d'acide pour deux d'huile : c'est le rapport qui tient sans se séparer dans le bol.",
+    "qte": [
+     [
+      "Citron",
+      "1"
+     ],
+     [
+      "Huile d'olive",
+      "1 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Compose le bol",
+    "min": 4,
+    "detail": "Quinoa au fond, puis chaque ingrédient dans SON secteur plutôt que mélangé. Graines et sauce par-dessus.",
+    "tip": "Par secteurs : c'est ce qui fait qu'on choisit sa bouchée. Tout mélangé, c'est une salade composée — bonne, mais autre chose.",
+    "qte": [
+     [
+      "Graines de courge",
+      "30 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "quo-escalope-dinde",
+  "temps": 28,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🦃",
+    "nom": "Dinde",
+    "qte": "2 escalopes (300 g)",
+    "g": 300,
+    "nu": "dinde"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "150 g cru (≈ 390 g cuit)",
+    "g": 390,
+    "nu": "riz"
+   },
+   {
+    "em": "🥦",
+    "nom": "Brocoli",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "brocoli"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "1",
+    "g": 60,
+    "nu": "citron"
+   },
+   {
+    "em": "🌿",
+    "nom": "Herbes de Provence",
+    "qte": ""
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "bouillir",
+    "t": "Lance le riz",
+    "min": 12,
+    "detail": "Une part de riz, une part et demie d'eau salée, à couvert, 11 min à feu doux.",
+    "tip": "C'est le plus long : il part en premier, tout le reste s'aligne dessus.",
+    "qte": [
+     [
+      "Riz",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "couper",
+    "t": "Prépare le brocoli",
+    "min": 4,
+    "detail": "En bouquets, tronc épluché et coupé en rondelles.",
+    "tip": "Des bouquets de taille égale, sinon les petits sont en bouillie quand les gros sont encore durs.",
+    "qte": [
+     [
+      "Brocoli",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis-le à la vapeur",
+    "min": 7,
+    "detail": "6 à 7 min au panier vapeur. Il doit rester bien vert.",
+    "tip": "Vert vif = cuit. Kaki = trop cuit, et la moitié des vitamines est partie avec la couleur.",
+    "qte": [
+     [
+      "Brocoli",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Cuis les escalopes",
+    "min": 6,
+    "detail": "Poêle chaude, l'huile, 3 min par face. Sale, poivre, herbes à la fin.",
+    "tip": "LA DINDE SÈCHE VITE : elle est cuite dès qu'elle n'est plus rosée au centre, et chaque minute de plus la durcit.",
+    "qte": [
+     [
+      "Dinde",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Dresse",
+    "min": 2,
+    "detail": "Riz, brocoli, escalope, le jus de la poêle et un quartier de citron.",
+    "tip": "Déglace la poêle avec deux cuillères d'eau et le jus du citron : ça fait une sauce en dix secondes.",
+    "qte": [
+     [
+      "Citron",
+      "1"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "quo-pita-saumon-feta",
+  "temps": 15,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🐟",
+    "nom": "Saumon fumé",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "saumon fume"
+   },
+   {
+    "em": "🧀",
+    "nom": "Feta",
+    "qte": "80 g",
+    "g": 80,
+    "nu": "feta"
+   },
+   {
+    "em": "🫓",
+    "nom": "Pains pita",
+    "qte": "2",
+    "g": 160,
+    "nu": "pain pita"
+   },
+   {
+    "em": "🥒",
+    "nom": "Concombre",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "concombre"
+   },
+   {
+    "em": "🥕",
+    "nom": "Carotte",
+    "qte": "100 g",
+    "g": 100,
+    "nu": "carotte"
+   },
+   {
+    "em": "🌿",
+    "nom": "Aneth",
+    "qte": "10 g"
+   },
+   {
+    "em": "🥛",
+    "nom": "Yaourt",
+    "qte": "100 g",
+    "g": 100,
+    "nu": "yaourt"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "½",
+    "g": 30,
+    "nu": "citron"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "melanger",
+    "t": "Fais la sauce",
+    "min": 3,
+    "detail": "Yaourt, jus de citron, aneth ciselé, sel, poivre.",
+    "tip": "Épaisse et citronnée : c'est elle qui remplace la mayonnaise, et elle tient mieux dans un pain chaud.",
+    "qte": [
+     [
+      "Yaourt",
+      "100 g"
+     ],
+     [
+      "Citron",
+      "½"
+     ],
+     [
+      "Aneth",
+      "10 g"
+     ]
+    ]
+   },
+   {
+    "illu": "couper",
+    "t": "Taille les légumes",
+    "min": 5,
+    "detail": "Concombre en demi-rondelles fines, carotte râpée.",
+    "tip": "Sale le concombre et laisse-le cinq minutes dans une passoire : il rend son eau avant, pas dans le pain.",
+    "qte": [
+     [
+      "Concombre",
+      "150 g"
+     ],
+     [
+      "Carotte",
+      "100 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Réchauffe les pitas",
+    "min": 3,
+    "detail": "30 secondes par face dans une poêle sèche, ou au grille-pain.",
+    "tip": "Un pita froid se déchire quand on l'ouvre. Tiède, il s'ouvre en poche sans casser.",
+    "qte": [
+     [
+      "Pains pita",
+      "2"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Garnis",
+    "min": 4,
+    "detail": "Sauce à l'intérieur, puis légumes, saumon en lamelles et feta émiettée.",
+    "tip": "La sauce D'ABORD, contre le pain : elle fait barrière et l'empêche de se détremper.",
+    "qte": [
+     [
+      "Saumon fumé",
+      "150 g"
+     ],
+     [
+      "Feta",
+      "80 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "bre-feijoada",
+  "temps": 150,
+  "portions": 6,
+  "ing": [
+   {
+    "em": "🫘",
+    "nom": "Haricots noirs",
+    "qte": "400 g secs (≈ 960 g cuits)",
+    "g": 960,
+    "nu": "haricots noirs"
+   },
+   {
+    "em": "🥩",
+    "nom": "Porc",
+    "qte": "500 g (échine et travers)",
+    "g": 500,
+    "nu": "porc"
+   },
+   {
+    "em": "🌭",
+    "nom": "Chorizo",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "chorizo"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "300 g cru (≈ 780 g cuit)",
+    "g": 780,
+    "nu": "riz"
+   },
+   {
+    "em": "🥬",
+    "nom": "Chou kale",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "chou kale"
+   },
+   {
+    "em": "🍊",
+    "nom": "Orange",
+    "qte": "2",
+    "g": 240,
+    "nu": "orange"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "oignon"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "4 gousses",
+    "g": 16,
+    "nu": "ail"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "attendre",
+    "t": "Fais tremper les haricots",
+    "min": 720,
+    "detail": "La veille : les haricots noirs dans trois fois leur volume d'eau froide, toute la nuit.",
+    "tip": "Le trempage n'est pas qu'un gain de temps : il retire une partie des sucres qui fermentent, ceux qui rendent les haricots difficiles à digérer. Jette cette eau.",
+    "qte": [
+     [
+      "Haricots noirs",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Colore les viandes",
+    "min": 12,
+    "detail": "Cocotte à sec, le porc en gros morceaux et le chorizo en rondelles, jusqu'à ce que le gras rende et que tout soit doré.",
+    "tip": "Le gras du chorizo suffit à cuire le reste : n'ajoute pas d'huile, tu en aurais deux fois trop.",
+    "qte": [
+     [
+      "Porc",
+      "500 g"
+     ],
+     [
+      "Chorizo",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Ajoute oignon et ail",
+    "min": 6,
+    "detail": "Dans le gras rendu, jusqu'à ce que l'oignon soit translucide.",
+    "tip": "Gratte le fond pendant que tu remues : tout ce qui est collé est le goût de la viande, et l'oignon rend son eau pour le décoller.",
+    "qte": [
+     [
+      "Oignon",
+      "150 g"
+     ],
+     [
+      "Ail",
+      "4 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Mijote longuement",
+    "min": 110,
+    "detail": "Haricots égouttés, eau à hauteur de deux doigts, feu très doux, à couvert entrouvert, deux heures.",
+    "tip": "NE SALE PAS AVANT LA FIN. Le sel raffermit la peau des haricots : salés au départ, ils restent durs quelle que soit la durée.",
+    "qte": [
+     [
+      "Haricots noirs",
+      "960 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Riz et chou",
+    "min": 15,
+    "detail": "Riz à part. Le kale émincé très fin, sauté deux minutes à l'huile chaude avec un peu d'ail.",
+    "tip": "Le chou reste vif et légèrement croquant : c'est le contrepoint du plat, il ne doit pas fondre.",
+    "qte": [
+     [
+      "Riz",
+      "300 g"
+     ],
+     [
+      "Chou kale",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers avec l'orange",
+    "min": 5,
+    "detail": "Haricots et viandes dans une assiette creuse, riz à côté, chou dessus, et des quartiers d'orange à part.",
+    "tip": "L'orange n'est pas un dessert : son acidité coupe le gras du porc, et c'est ce qui rend le plat mangeable jusqu'au bout.",
+    "qte": [
+     [
+      "Orange",
+      "2"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "bre-acai-bowl",
+  "temps": 10,
+  "portions": 1,
+  "ing": [
+   {
+    "em": "🫐",
+    "nom": "Açaí",
+    "qte": "200 g de pulpe surgelée",
+    "g": 200,
+    "nu": "acai"
+   },
+   {
+    "em": "🍌",
+    "nom": "Banane",
+    "qte": "1 (120 g)",
+    "g": 120,
+    "nu": "banane"
+   },
+   {
+    "em": "🍓",
+    "nom": "Fraises",
+    "qte": "80 g",
+    "g": 80,
+    "nu": "fraise"
+   },
+   {
+    "em": "🫐",
+    "nom": "Myrtilles",
+    "qte": "60 g",
+    "g": 60,
+    "nu": "myrtille"
+   },
+   {
+    "em": "🌾",
+    "nom": "Granola",
+    "qte": "40 g",
+    "g": 40,
+    "nu": "granola"
+   },
+   {
+    "em": "🍯",
+    "nom": "Miel",
+    "qte": "1 c. à café",
+    "g": 8,
+    "nu": "miel"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "attendre",
+    "t": "Sors l'açaí du congélateur",
+    "min": 5,
+    "detail": "Cinq minutes à température ambiante, pas plus.",
+    "tip": "Complètement dur, il bloque le mixeur ; complètement décongelé, le bol est liquide. On cherche le moment où le sachet se plie sans casser.",
+    "qte": [
+     [
+      "Açaí",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mixer",
+    "t": "Mixe açaí et banane",
+    "min": 3,
+    "detail": "Avec la moitié de la banane et un fond d'eau ou de jus, jusqu'à obtenir une texture de sorbet épais.",
+    "tip": "LE MOINS DE LIQUIDE POSSIBLE. Un açaí bowl se mange à la cuillère : trop liquide, ce n'est plus qu'un smoothie dans un bol.",
+    "qte": [
+     [
+      "Açaí",
+      "200 g"
+     ],
+     [
+      "Banane",
+      "60 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Garnis",
+    "min": 2,
+    "detail": "Verse dans un bol froid, dispose fruits et reste de banane en lignes, granola et miel par-dessus.",
+    "tip": "Un bol sorti du congélateur tient le sorbet dix minutes de plus. C'est le seul moyen de le finir avant qu'il ne fonde.",
+    "qte": [
+     [
+      "Fraises",
+      "80 g"
+     ],
+     [
+      "Myrtilles",
+      "60 g"
+     ],
+     [
+      "Granola",
+      "40 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "bre-bobo-de-camarao",
+  "temps": 55,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍤",
+    "nom": "Crevettes",
+    "qte": "500 g décortiquées",
+    "g": 500,
+    "nu": "crevettes"
+   },
+   {
+    "em": "🍠",
+    "nom": "Manioc",
+    "qte": "600 g",
+    "g": 600,
+    "nu": "manioc"
+   },
+   {
+    "em": "🥥",
+    "nom": "Lait de coco",
+    "qte": "400 ml",
+    "g": 400,
+    "nu": "lait de coco"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "tomate"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌿",
+    "nom": "Coriandre",
+    "qte": "20 g"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "2 c. à soupe",
+    "g": 25,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "3 gousses",
+    "g": 12,
+    "nu": "ail"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "bouillir",
+    "t": "Cuis le manioc",
+    "min": 25,
+    "detail": "Épluché, coupé en gros morceaux, le cœur fibreux retiré, 25 min à l'eau salée jusqu'à ce qu'il s'écrase.",
+    "tip": "LE FIL CENTRAL SE RETIRE TOUJOURS : il est dur et ne cuit jamais. Fends le morceau en deux, il s'enlève d'un coup.",
+    "qte": [
+     [
+      "Manioc",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mixer",
+    "t": "Réduis-le en crème",
+    "min": 4,
+    "detail": "Mixe le manioc avec la moitié du lait de coco et un peu de son eau de cuisson, jusqu'à une purée fluide.",
+    "tip": "C'est cette purée qui EST la sauce : le bobó n'a ni farine ni crème, l'onctuosité vient du manioc.",
+    "qte": [
+     [
+      "Lait de coco",
+      "200 ml"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais la base",
+    "min": 8,
+    "detail": "Huile, oignon, ail, puis les tomates concassées. Laisse réduire jusqu'à ce que ce soit une pâte.",
+    "tip": "Laisse vraiment réduire : de l'eau de tomate dans la crème de manioc et le plat se sépare.",
+    "qte": [
+     [
+      "Oignon",
+      "150 g"
+     ],
+     [
+      "Tomates",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Réunis",
+    "min": 8,
+    "detail": "Ajoute la crème de manioc et le reste de lait de coco, sale, laisse frémir 8 min en remuant.",
+    "tip": "Ça attache très vite au fond : cuillère en bois et feu doux, sinon un goût de brûlé traverse tout le plat.",
+    "qte": [
+     [
+      "Lait de coco",
+      "200 ml"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Ajoute les crevettes en dernier",
+    "min": 4,
+    "detail": "Trois minutes dans la sauce frémissante, juste le temps qu'elles rosissent.",
+    "tip": "Une crevette est cuite quand elle forme un C. Quand elle forme un O, elle est trop cuite et caoutchouteuse.",
+    "qte": [
+     [
+      "Crevettes",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 2,
+    "detail": "Coriandre ciselée par-dessus, avec du riz blanc.",
+    "tip": "La coriandre hors du feu : cuite, elle perd tout et ne laisse qu'une couleur.",
+    "qte": [
+     [
+      "Coriandre",
+      "20 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "bre-moqueca-poisson",
+  "temps": 45,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🐟",
+    "nom": "Poisson blanc",
+    "qte": "700 g (cabillaud, lieu)",
+    "g": 700,
+    "nu": "cabillaud"
+   },
+   {
+    "em": "🥥",
+    "nom": "Lait de coco",
+    "qte": "400 ml",
+    "g": 400,
+    "nu": "lait de coco"
+   },
+   {
+    "em": "🫑",
+    "nom": "Poivrons",
+    "qte": "300 g (rouge et jaune)",
+    "g": 300,
+    "nu": "poivron"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "tomate"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron vert",
+    "qte": "2",
+    "g": 120,
+    "nu": "citron vert"
+   },
+   {
+    "em": "🌿",
+    "nom": "Coriandre",
+    "qte": "20 g"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "oignon"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "2 c. à soupe",
+    "g": 25,
+    "nu": "huile olive"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "assaisonner",
+    "t": "Fais mariner le poisson",
+    "min": 20,
+    "detail": "Coupe-le en gros pavés, arrose du jus d'un citron vert, sale, poivre, laisse 20 min au frais.",
+    "tip": "Vingt minutes, pas plus : au-delà, l'acide commence à cuire la chair et elle se délitera dans la sauce.",
+    "qte": [
+     [
+      "Poisson blanc",
+      "700 g"
+     ],
+     [
+      "Citron vert",
+      "1"
+     ]
+    ]
+   },
+   {
+    "illu": "couper",
+    "t": "Taille les légumes en rondelles",
+    "min": 8,
+    "detail": "Oignon, poivrons et tomates en rondelles régulières de 5 mm.",
+    "tip": "En rondelles et pas en dés : la moqueca se monte en COUCHES, et les rondelles se superposent sans s'écraser.",
+    "qte": [
+     [
+      "Poivrons",
+      "300 g"
+     ],
+     [
+      "Tomates",
+      "300 g"
+     ],
+     [
+      "Oignon",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Monte les couches",
+    "min": 6,
+    "detail": "Dans une cocotte : un filet d'huile, la moitié des légumes, le poisson, le reste des légumes.",
+    "tip": "On ne remue JAMAIS une moqueca. C'est ce qui garde les pavés entiers du début à la fin.",
+    "qte": [
+     [
+      "Poisson blanc",
+      "700 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Verse le lait de coco et laisse mijoter",
+    "min": 18,
+    "detail": "Lait de coco par-dessus, couvre, feu doux, 15 à 18 min sans toucher.",
+    "tip": "Le poisson est cuit quand la chair se sépare en lamelles à la pointe d'un couteau. Piquer un seul pavé suffit à savoir.",
+    "qte": [
+     [
+      "Lait de coco",
+      "400 ml"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Finis au citron et à la coriandre",
+    "min": 3,
+    "detail": "Hors du feu, le jus du second citron et la coriandre en grande quantité.",
+    "tip": "Le citron à la fin réveille tout : la coco est douce, elle a besoin de ce coup d'acide au dernier moment.",
+    "qte": [
+     [
+      "Citron vert",
+      "1"
+     ],
+     [
+      "Coriandre",
+      "20 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "bre-xinxim",
+  "temps": 60,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "700 g de cuisses",
+    "g": 700,
+    "nu": "poulet"
+   },
+   {
+    "em": "🍤",
+    "nom": "Crevettes séchées",
+    "qte": "60 g",
+    "g": 60,
+    "nu": "crevettes sechees"
+   },
+   {
+    "em": "🥜",
+    "nom": "Cacahuètes",
+    "qte": "80 g",
+    "g": 80,
+    "nu": "cacahuetes"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "oignon"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "20 g",
+    "g": 20,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "1",
+    "g": 60,
+    "nu": "citron"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "3 c. à soupe",
+    "g": 35,
+    "nu": "huile"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "4 gousses",
+    "g": 16,
+    "nu": "ail"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "assaisonner",
+    "t": "Fais mariner le poulet",
+    "min": 15,
+    "detail": "Morceaux de cuisse, jus de citron, ail écrasé, sel, poivre. Quinze minutes au frais.",
+    "tip": "Le citron et l'ail, c'est le « tempero » brésilien : cette marinade courte est ce qui donne son fond de goût au plat.",
+    "qte": [
+     [
+      "Poulet",
+      "700 g"
+     ],
+     [
+      "Citron",
+      "1"
+     ],
+     [
+      "Ail",
+      "4 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "mixer",
+    "t": "Prépare la pâte de crevettes et cacahuètes",
+    "min": 6,
+    "detail": "Mixe les crevettes séchées et les cacahuètes grillées jusqu'à obtenir une poudre grossière.",
+    "tip": "Grossière, pas en beurre : on veut sentir les éclats sous la dent. Mixée trop fin, la sauce devient pâteuse.",
+    "qte": [
+     [
+      "Crevettes séchées",
+      "60 g"
+     ],
+     [
+      "Cacahuètes",
+      "80 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Dore le poulet",
+    "min": 12,
+    "detail": "Huile chaude, les morceaux égouttés, dorés sur toutes les faces, puis réserve.",
+    "tip": "Égoutte bien la marinade : mouillé, le poulet bout au lieu de dorer et la peau reste blanche.",
+    "qte": [
+     [
+      "Poulet",
+      "700 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais la base",
+    "min": 7,
+    "detail": "Oignon et gingembre dans la même cocotte jusqu'à ce que ce soit tendre, puis la poudre de crevettes-cacahuètes, remue une minute.",
+    "tip": "La poudre grillée une minute dans le gras : c'est là qu'elle libère son parfum. Jetée dans le liquide, elle reste plate.",
+    "qte": [
+     [
+      "Oignon",
+      "200 g"
+     ],
+     [
+      "Gingembre",
+      "20 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Mijote",
+    "min": 22,
+    "detail": "Remets le poulet, la marinade, de l'eau à mi-hauteur, couvre et laisse 20 min à feu doux.",
+    "tip": "À mi-hauteur seulement : la sauce doit napper, pas nager. On peut toujours allonger à la fin.",
+    "qte": [
+     [
+      "Poulet",
+      "700 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "chi-aubergine-yuxiang",
+  "temps": 35,
+  "portions": 3,
+  "ing": [
+   {
+    "em": "🍆",
+    "nom": "Aubergines",
+    "qte": "600 g",
+    "g": 600,
+    "nu": "aubergine"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "5 gousses",
+    "g": 20,
+    "nu": "ail"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "20 g",
+    "g": 20,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🥢",
+    "nom": "Sauce soja",
+    "qte": "3 c. à soupe",
+    "g": 45,
+    "nu": "sauce soja"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Doubanjiang",
+    "qte": "1 c. à soupe",
+    "g": 15,
+    "nu": "doubanjiang"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "200 g cru (≈ 520 g cuit)",
+    "g": 520,
+    "nu": "riz"
+   },
+   {
+    "em": "🍯",
+    "nom": "Sucre",
+    "qte": "1 c. à café",
+    "g": 5,
+    "nu": "sucre"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "3 c. à soupe",
+    "g": 35,
+    "nu": "huile"
+   },
+   {
+    "em": "🧅",
+    "nom": "Ciboule",
+    "qte": "2 tiges",
+    "g": 20,
+    "nu": "ciboule"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Coupe les aubergines en bâtonnets",
+    "min": 6,
+    "detail": "Des bâtonnets de la taille d'un doigt, peau comprise.",
+    "tip": "En bâtonnets et pas en dés : c'est la forme traditionnelle, et surtout ils cuisent vite tout en gardant du fondant au centre.",
+    "qte": [
+     [
+      "Aubergines",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Sale-les et laisse-les dégorger",
+    "min": 10,
+    "detail": "Une cuillère de sel, dix minutes dans une passoire, puis éponge-les.",
+    "tip": "C'EST L'ÉTAPE QUI FAIT ÉCONOMISER L'HUILE. Une aubergine crue est une éponge : dégorgée, ses cellules se sont refermées et elle en boit trois fois moins.",
+    "qte": [
+     [
+      "Aubergines",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais-les revenir à feu vif",
+    "min": 8,
+    "detail": "Wok très chaud, l'huile, les bâtonnets en une seule couche, jusqu'à ce qu'ils soient dorés et fondants. Réserve.",
+    "tip": "En deux fois s'il le faut. Entassées, elles rendent leur eau et vapeur au lieu de dorer.",
+    "qte": [
+     [
+      "Aubergines",
+      "600 g"
+     ],
+     [
+      "Huile",
+      "3 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais la sauce yúxiāng",
+    "min": 4,
+    "detail": "Un peu d'huile, ail et gingembre hachés, le doubanjiang 30 s, puis soja, sucre et 100 ml d'eau.",
+    "tip": "Le doubanjiang doit frire un instant dans l'huile jusqu'à ce qu'elle rougisse : c'est de là que vient la couleur du plat.",
+    "qte": [
+     [
+      "Ail",
+      "5 gousses"
+     ],
+     [
+      "Doubanjiang",
+      "1 c. à soupe"
+     ],
+     [
+      "Sauce soja",
+      "3 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Réunis",
+    "min": 3,
+    "detail": "Remets les aubergines, fais réduire deux minutes jusqu'à ce que la sauce nappe.",
+    "tip": "« Yúxiāng » veut dire parfum de poisson, et il n'y a pas de poisson : c'est l'équilibre aigre-doux-piquant qui porte ce nom."
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers sur le riz",
+    "min": 2,
+    "detail": "Ciboule ciselée par-dessus, riz blanc à côté.",
+    "tip": "Le riz nature, jamais assaisonné : la sauce est puissante, il lui faut un fond neutre.",
+    "qte": [
+     [
+      "Riz",
+      "200 g"
+     ],
+     [
+      "Ciboule",
+      "2 tiges"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "chi-mapo-tofu",
+  "temps": 30,
+  "portions": 3,
+  "ing": [
+   {
+    "em": "🧊",
+    "nom": "Tofu",
+    "qte": "500 g ferme",
+    "g": 500,
+    "nu": "tofu"
+   },
+   {
+    "em": "🥩",
+    "nom": "Viande hachée",
+    "qte": "200 g de porc",
+    "g": 200,
+    "nu": "porc"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Doubanjiang",
+    "qte": "2 c. à soupe",
+    "g": 30,
+    "nu": "doubanjiang"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "4 gousses",
+    "g": 16,
+    "nu": "ail"
+   },
+   {
+    "em": "🧅",
+    "nom": "Ciboule",
+    "qte": "3 tiges",
+    "g": 30,
+    "nu": "ciboule"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "200 g cru (≈ 520 g cuit)",
+    "g": 520,
+    "nu": "riz"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "2 c. à soupe",
+    "g": 25,
+    "nu": "huile"
+   },
+   {
+    "em": "🌾",
+    "nom": "Fécule",
+    "qte": "1 c. à café",
+    "g": 5,
+    "nu": "farine"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Coupe le tofu en cubes",
+    "min": 4,
+    "detail": "Des cubes de 2 cm, égouttés sur du papier.",
+    "tip": "Du tofu FERME, jamais soyeux : le soyeux se désagrège au premier coup de cuillère.",
+    "qte": [
+     [
+      "Tofu",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Blanchis-le",
+    "min": 4,
+    "detail": "Deux minutes dans l'eau bouillante salée, puis égoutte délicatement.",
+    "tip": "Ce blanchiment raffermit le tofu et lui retire son goût de soja cru. C'est cinq minutes qui changent le plat.",
+    "qte": [
+     [
+      "Tofu",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais rissoler la viande",
+    "min": 6,
+    "detail": "Wok chaud, l'huile, le porc haché écrasé à la spatule jusqu'à ce qu'il soit sec et croustillant.",
+    "tip": "On cherche des miettes croustillantes, pas une masse grise : c'est ce qui donne le contraste avec le tofu fondant.",
+    "qte": [
+     [
+      "Viande hachée",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Ajoute le doubanjiang et l'ail",
+    "min": 3,
+    "detail": "Baisse le feu, le doubanjiang jusqu'à ce que l'huile rougisse, puis l'ail.",
+    "tip": "Feu MOYEN pour cette étape : le doubanjiang brûle vite et devient amer, et il n'y a pas de retour en arrière.",
+    "qte": [
+     [
+      "Doubanjiang",
+      "2 c. à soupe"
+     ],
+     [
+      "Ail",
+      "4 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Ajoute le tofu et l'eau",
+    "min": 7,
+    "detail": "200 ml d'eau, le tofu, et laisse frémir 5 min en poussant délicatement plutôt qu'en remuant.",
+    "tip": "On POUSSE le tofu avec le dos de la cuillère, on ne le remue pas : remué, il se casse en bouillie.",
+    "qte": [
+     [
+      "Tofu",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Lie et sers",
+    "min": 3,
+    "detail": "Fécule délayée dans un peu d'eau froide, versée en filet, remue jusqu'à épaississement. Ciboule par-dessus.",
+    "tip": "La fécule TOUJOURS délayée à l'eau froide : jetée sèche, elle fait des grumeaux qu'on ne rattrape pas.",
+    "qte": [
+     [
+      "Fécule",
+      "1 c. à café"
+     ],
+     [
+      "Ciboule",
+      "3 tiges"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "chi-kung-pao",
+  "temps": 30,
+  "portions": 3,
+  "ing": [
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "500 g de filets",
+    "g": 500,
+    "nu": "poulet"
+   },
+   {
+    "em": "🥜",
+    "nom": "Cacahuètes",
+    "qte": "80 g",
+    "g": 80,
+    "nu": "cacahuetes"
+   },
+   {
+    "em": "🫑",
+    "nom": "Poivron",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "poivron"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Piments séchés",
+    "qte": "6"
+   },
+   {
+    "em": "🥢",
+    "nom": "Sauce soja",
+    "qte": "3 c. à soupe",
+    "g": 45,
+    "nu": "sauce soja"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "200 g cru (≈ 520 g cuit)",
+    "g": 520,
+    "nu": "riz"
+   },
+   {
+    "em": "🍯",
+    "nom": "Sucre",
+    "qte": "2 c. à café",
+    "g": 10,
+    "nu": "sucre"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "2 c. à soupe",
+    "g": 25,
+    "nu": "huile"
+   },
+   {
+    "em": "🌾",
+    "nom": "Fécule",
+    "qte": "2 c. à café",
+    "g": 10,
+    "nu": "farine"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Coupe le poulet en cubes",
+    "min": 6,
+    "detail": "Des cubes de 2 cm, réguliers.",
+    "tip": "Tous de la même taille : dans un wok, tout cuit en trois minutes, un morceau plus gros restera cru.",
+    "qte": [
+     [
+      "Poulet",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Fais le velouting",
+    "min": 10,
+    "detail": "Mélange le poulet avec une cuillère de soja, la fécule et une cuillère d'eau. Laisse 10 min.",
+    "tip": "LE VELOUTING EST LE SECRET DES RESTAURANTS. La fécule forme une pellicule qui retient le jus : le poulet reste tendre même à feu très vif.",
+    "qte": [
+     [
+      "Poulet",
+      "500 g"
+     ],
+     [
+      "Fécule",
+      "2 c. à café"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Prépare la sauce à l'avance",
+    "min": 3,
+    "detail": "Reste de soja, sucre, une cuillère de vinaigre et deux d'eau dans un bol.",
+    "tip": "Tout doit être prêt AVANT d'allumer : un sauté au wok dure quatre minutes, il n'y a pas le temps de doser en route.",
+    "qte": [
+     [
+      "Sauce soja",
+      "2 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Saisis le poulet",
+    "min": 5,
+    "detail": "Wok brûlant, l'huile, le poulet en une couche, sans bouger 1 min, puis saute jusqu'à coloration. Réserve.",
+    "tip": "Le wok doit fumer avant que quoi que ce soit y entre. C'est ce « souffle du wok » qui distingue un sauté d'un ragoût.",
+    "qte": [
+     [
+      "Poulet",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Piments, poivron, cacahuètes",
+    "min": 4,
+    "detail": "Piments séchés quelques secondes, puis le poivron 2 min, puis les cacahuètes.",
+    "tip": "Les piments d'abord et brièvement : ils parfument l'huile. Noircis, ils rendent tout le plat âcre.",
+    "qte": [
+     [
+      "Poivron",
+      "200 g"
+     ],
+     [
+      "Cacahuètes",
+      "80 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Réunis et laque",
+    "min": 3,
+    "detail": "Remets le poulet, verse la sauce, saute une minute jusqu'à ce qu'elle enrobe tout.",
+    "tip": "La sauce doit accrocher, pas baigner : si elle reste liquide, monte le feu trente secondes de plus."
+   }
+  ]
+ },
+ {
+  "cle": "chi-raviolis-vapeur",
+  "temps": 70,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🥟",
+    "nom": "Pâte à raviolis",
+    "qte": "300 g (40 disques)",
+    "g": 300,
+    "nu": "pate a pizza"
+   },
+   {
+    "em": "🥩",
+    "nom": "Viande hachée",
+    "qte": "300 g de porc",
+    "g": 300,
+    "nu": "porc"
+   },
+   {
+    "em": "🥬",
+    "nom": "Chou",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "chou"
+   },
+   {
+    "em": "🧅",
+    "nom": "Ciboule",
+    "qte": "4 tiges",
+    "g": 40,
+    "nu": "ciboule"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "20 g",
+    "g": 20,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🥢",
+    "nom": "Sauce soja",
+    "qte": "3 c. à soupe",
+    "g": 45,
+    "nu": "sauce soja"
+   },
+   {
+    "em": "🌾",
+    "nom": "Sésame",
+    "qte": "1 c. à soupe",
+    "g": 10,
+    "nu": "graines de sesame"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Hache le chou très fin",
+    "min": 8,
+    "detail": "Puis sale-le et laisse-le rendre son eau dix minutes. Presse-le à la main.",
+    "tip": "SI TU SAUTES CETTE ÉTAPE, la farce détrempe la pâte et les raviolis percent à la cuisson. Il sort une demi-tasse d'eau d'un chou.",
+    "qte": [
+     [
+      "Chou",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Prépare la farce",
+    "min": 8,
+    "detail": "Porc, chou pressé, ciboule, gingembre râpé, soja, sésame. Mélange dans un seul sens jusqu'à ce que ce soit collant.",
+    "tip": "Toujours dans le MÊME SENS, deux ou trois minutes : c'est ce qui fait « prendre » la farce et l'empêche de s'effriter à la bouchée.",
+    "qte": [
+     [
+      "Viande hachée",
+      "300 g"
+     ],
+     [
+      "Gingembre",
+      "20 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Farcis les raviolis",
+    "min": 25,
+    "detail": "Une cuillère à café au centre du disque, mouille le bord au doigt, plie en deux et pince en formant des plis d'un côté.",
+    "tip": "Une cuillère à café, pas plus : trop garni, le ravioli s'ouvre à la vapeur. Et les plis d'un seul côté font tenir la forme debout.",
+    "qte": [
+     [
+      "Pâte à raviolis",
+      "40 disques"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis à la vapeur",
+    "min": 12,
+    "detail": "Panier tapissé de papier cuisson percé ou de feuilles de chou, raviolis espacés, 10 à 12 min à couvert sur l'eau bouillante.",
+    "tip": "Espacés d'un centimètre : ils gonflent et se collent entre eux, et deux raviolis collés se déchirent en les séparant."
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers avec la sauce",
+    "min": 3,
+    "detail": "Soja, un trait de vinaigre noir et un peu de gingembre râpé dans un bol à part.",
+    "tip": "La sauce se trempe, elle ne se verse pas : versée dessus, la pâte se détrempe en une minute."
+   }
+  ]
+ },
+ {
+  "cle": "cor-bibimbap-boeuf",
+  "temps": 45,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🥩",
+    "nom": "Bœuf",
+    "qte": "250 g de bavette",
+    "g": 250,
+    "nu": "boeuf"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "150 g cru (≈ 390 g cuit)",
+    "g": 390,
+    "nu": "riz"
+   },
+   {
+    "em": "🥕",
+    "nom": "Carotte",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "carotte"
+   },
+   {
+    "em": "🥬",
+    "nom": "Épinards",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "epinards"
+   },
+   {
+    "em": "🥚",
+    "nom": "Œufs",
+    "qte": "2",
+    "g": 110,
+    "nu": "oeuf"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Gochujang",
+    "qte": "2 c. à soupe",
+    "g": 30,
+    "nu": "gochujang"
+   },
+   {
+    "em": "🥢",
+    "nom": "Sauce soja",
+    "qte": "2 c. à soupe",
+    "g": 30,
+    "nu": "sauce soja"
+   },
+   {
+    "em": "🌾",
+    "nom": "Sésame",
+    "qte": "1 c. à soupe",
+    "g": 10,
+    "nu": "graines de sesame"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile de sésame",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "huile"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "bouillir",
+    "t": "Lance le riz",
+    "min": 15,
+    "detail": "Riz rincé, une part et demie d'eau, à couvert, 11 min puis 5 min de repos.",
+    "tip": "Le bibimbap se mange tiède, pas brûlant : le riz peut attendre pendant que tu prépares le reste.",
+    "qte": [
+     [
+      "Riz",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Fais mariner le bœuf",
+    "min": 10,
+    "detail": "Émincé finement, avec le soja, un peu d'huile de sésame et de l'ail. Dix minutes.",
+    "tip": "Émince le bœuf À MOITIÉ CONGELÉ : c'est le seul moyen d'obtenir des tranches fines à la maison.",
+    "qte": [
+     [
+      "Bœuf",
+      "250 g"
+     ],
+     [
+      "Sauce soja",
+      "2 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Prépare chaque légume à part",
+    "min": 10,
+    "detail": "Épinards blanchis 30 s puis pressés et assaisonnés ; carottes en julienne sautées 2 min.",
+    "tip": "CHACUN SÉPARÉMENT, c'est la règle du bibimbap : chaque namul a son goût, et c'est le contraste qui fait le plat.",
+    "qte": [
+     [
+      "Épinards",
+      "200 g"
+     ],
+     [
+      "Carotte",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Saisis le bœuf",
+    "min": 4,
+    "detail": "Poêle très chaude, en une couche, deux minutes à peine.",
+    "tip": "Coupé fin, il cuit en quelques secondes. Trop cuit, une bavette devient sèche et filandreuse.",
+    "qte": [
+     [
+      "Bœuf",
+      "250 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Cuis les œufs au plat",
+    "min": 3,
+    "detail": "Jaune coulant, blanc pris et croustillant sur les bords.",
+    "tip": "LE JAUNE COULANT EST STRUCTUREL : c'est lui qui, mélangé, lie le riz et adoucit le gochujang."
+   },
+   {
+    "illu": "dresser",
+    "t": "Compose et mélange",
+    "min": 4,
+    "detail": "Riz au fond, chaque garniture dans son secteur, œuf au centre, gochujang à côté. On mélange TOUT au moment de manger.",
+    "tip": "« Bibim » veut dire mélanger. Le dressage en secteurs n'est pas une décoration : c'est ce qui permet de doser soi-même la pâte de piment.",
+    "qte": [
+     [
+      "Gochujang",
+      "2 c. à soupe"
+     ],
+     [
+      "Sésame",
+      "1 c. à soupe"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "cor-nouilles-poulet",
+  "temps": 30,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🍜",
+    "nom": "Nouilles",
+    "qte": "200 g sèches (≈ 480 g cuites)",
+    "g": 480,
+    "nu": "nouilles"
+   },
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "poulet"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Gochujang",
+    "qte": "2 c. à soupe",
+    "g": 30,
+    "nu": "gochujang"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "120 g",
+    "g": 120,
+    "nu": "oignon"
+   },
+   {
+    "em": "🥛",
+    "nom": "Lait",
+    "qte": "150 ml",
+    "g": 150,
+    "nu": "lait"
+   },
+   {
+    "em": "🌿",
+    "nom": "Coriandre",
+    "qte": "10 g"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "3 gousses",
+    "g": 12,
+    "nu": "ail"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Coupe le poulet et l'oignon",
+    "min": 5,
+    "detail": "Poulet en lanières, oignon en demi-lunes.",
+    "tip": "En lanières dans le sens contraire des fibres : c'est ce qui rend le blanc tendre au lieu de filandreux.",
+    "qte": [
+     [
+      "Poulet",
+      "300 g"
+     ],
+     [
+      "Oignon",
+      "120 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Dore le poulet",
+    "min": 7,
+    "detail": "Poêle chaude, un filet d'huile, jusqu'à ce qu'il soit coloré. Ajoute l'oignon et l'ail.",
+    "tip": "Attends que le poulet accroche avant de remuer : ce qui colle au fond deviendra la sauce.",
+    "qte": [
+     [
+      "Poulet",
+      "300 g"
+     ],
+     [
+      "Ail",
+      "3 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Ajoute le gochujang et le lait",
+    "min": 6,
+    "detail": "Gochujang délayé dans le lait, versé sur le poulet, laisse épaissir à feu moyen.",
+    "tip": "LE LAIT N'EST PAS UN CAPRICE : la caséine se lie à la capsaïcine et arrondit le piquant sans l'effacer. L'eau ne fait pas ça.",
+    "qte": [
+     [
+      "Gochujang",
+      "2 c. à soupe"
+     ],
+     [
+      "Lait",
+      "150 ml"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis les nouilles",
+    "min": 6,
+    "detail": "Dans une grande casserole d'eau bouillante, une minute de moins que le paquet, puis rince-les à l'eau froide.",
+    "tip": "Le rinçage à froid retire l'amidon de surface : sans lui, les nouilles coréennes collent en bloc.",
+    "qte": [
+     [
+      "Nouilles",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Réunis",
+    "min": 3,
+    "detail": "Nouilles dans la sauce, saute une minute pour qu'elles s'enrobent. Coriandre par-dessus.",
+    "tip": "Si la sauce a trop réduit, une louche d'eau de cuisson la rallonge sans la diluer en goût."
+   }
+  ]
+ },
+ {
+  "cle": "cor-bulgogi",
+  "temps": 40,
+  "portions": 3,
+  "ing": [
+   {
+    "em": "🥩",
+    "nom": "Bœuf",
+    "qte": "500 g de bavette ou faux-filet",
+    "g": 500,
+    "nu": "boeuf"
+   },
+   {
+    "em": "🥢",
+    "nom": "Sauce soja",
+    "qte": "4 c. à soupe",
+    "g": 60,
+    "nu": "sauce soja"
+   },
+   {
+    "em": "🍐",
+    "nom": "Poire",
+    "qte": "1 (150 g)",
+    "g": 150,
+    "nu": "poire"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "5 gousses",
+    "g": 20,
+    "nu": "ail"
+   },
+   {
+    "em": "🌾",
+    "nom": "Graines de sésame",
+    "qte": "1 c. à soupe",
+    "g": 10,
+    "nu": "graines de sesame"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "200 g cru (≈ 520 g cuit)",
+    "g": 520,
+    "nu": "riz"
+   },
+   {
+    "em": "🍯",
+    "nom": "Sucre",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "sucre"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile de sésame",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "huile"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Émince le bœuf très fin",
+    "min": 8,
+    "detail": "Tranches de 2-3 mm, la viande passée 30 min au congélateur avant.",
+    "tip": "Le congélateur raffermit la viande juste assez pour que le couteau glisse. C'est la seule façon d'obtenir du 2 mm sans trancheuse.",
+    "qte": [
+     [
+      "Bœuf",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mixer",
+    "t": "Râpe la poire",
+    "min": 4,
+    "detail": "Poire râpée finement, mélangée au soja, à l'ail écrasé, au sucre et à l'huile de sésame.",
+    "tip": "LA POIRE EST L'ATTENDRISSEUR. Ses enzymes cassent les fibres de la viande — c'est elle, et pas la marinade en général, qui rend le bulgogi si tendre.",
+    "qte": [
+     [
+      "Poire",
+      "150 g"
+     ],
+     [
+      "Sauce soja",
+      "4 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "refrigerer",
+    "t": "Laisse mariner",
+    "min": 20,
+    "detail": "Le bœuf dans la marinade, au frais, 20 min minimum.",
+    "tip": "Pas plus de deux heures avec de la poire : au-delà, la viande devient molle et pâteuse."
+   },
+   {
+    "illu": "saisir",
+    "t": "Saisis à feu très vif",
+    "min": 6,
+    "detail": "Poêle ou plancha brûlante, la viande en une seule couche, une minute par face.",
+    "tip": "En plusieurs fois s'il le faut. Entassée, la viande rend son jus et bout dans sa marinade — on veut de la caramélisation.",
+    "qte": [
+     [
+      "Bœuf",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 3,
+    "detail": "Sésame par-dessus, riz blanc et feuilles de salade pour envelopper.",
+    "tip": "Le bulgogi se mange en ssam : une feuille de salade, du riz, de la viande, on plie et on mange d'une bouchée.",
+    "qte": [
+     [
+      "Riz",
+      "200 g"
+     ],
+     [
+      "Graines de sésame",
+      "1 c. à soupe"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "cor-poulet-gochujang",
+  "temps": 40,
+  "portions": 3,
+  "ing": [
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "600 g de hauts de cuisse",
+    "g": 600,
+    "nu": "poulet"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Gochujang",
+    "qte": "3 c. à soupe",
+    "g": 45,
+    "nu": "gochujang"
+   },
+   {
+    "em": "🍯",
+    "nom": "Miel",
+    "qte": "2 c. à soupe",
+    "g": 40,
+    "nu": "miel"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "4 gousses",
+    "g": 16,
+    "nu": "ail"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "15 g",
+    "g": 15,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "200 g cru (≈ 520 g cuit)",
+    "g": 520,
+    "nu": "riz"
+   },
+   {
+    "em": "🥢",
+    "nom": "Sauce soja",
+    "qte": "2 c. à soupe",
+    "g": 30,
+    "nu": "sauce soja"
+   },
+   {
+    "em": "🌾",
+    "nom": "Sésame",
+    "qte": "1 c. à soupe",
+    "g": 10,
+    "nu": "graines de sesame"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "melanger",
+    "t": "Prépare la marinade",
+    "min": 5,
+    "detail": "Gochujang, miel, soja, ail et gingembre râpés, un peu d'eau pour détendre.",
+    "tip": "Le miel n'est pas là que pour le sucre : c'est lui qui caramélise et donne la laque brillante.",
+    "qte": [
+     [
+      "Gochujang",
+      "3 c. à soupe"
+     ],
+     [
+      "Miel",
+      "2 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "refrigerer",
+    "t": "Fais mariner le poulet",
+    "min": 20,
+    "detail": "Morceaux de hauts de cuisse enrobés, 20 min au frais.",
+    "tip": "Des hauts de cuisse, pas des blancs : ils supportent le sucre de la marinade sans sécher.",
+    "qte": [
+     [
+      "Poulet",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Saisis à feu moyen",
+    "min": 12,
+    "detail": "Poêle chaude, un peu d'huile, le poulet peau vers le bas. 6 min, puis retourne.",
+    "tip": "FEU MOYEN, PAS VIF : la marinade est sucrée, elle noircit avant que la viande soit cuite si le feu est trop fort.",
+    "qte": [
+     [
+      "Poulet",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Laque",
+    "min": 6,
+    "detail": "Verse le reste de marinade, couvre à moitié, laisse réduire jusqu'à ce que ça nappe en tournant les morceaux.",
+    "tip": "La sauce doit devenir sirupeuse et coller au poulet. Encore liquide, deux minutes de plus à découvert."
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 3,
+    "detail": "Sésame et ciboule par-dessus, riz blanc.",
+    "tip": "Un peu de kimchi à côté si tu en as : son acidité coupe le sucré de la laque.",
+    "qte": [
+     [
+      "Riz",
+      "200 g"
+     ],
+     [
+      "Sésame",
+      "1 c. à soupe"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "cor-japchae",
+  "temps": 40,
+  "portions": 3,
+  "ing": [
+   {
+    "em": "🍠",
+    "nom": "Vermicelles de patate douce",
+    "qte": "200 g secs (≈ 480 g cuits)",
+    "g": 480,
+    "nu": "vermicelles"
+   },
+   {
+    "em": "🥕",
+    "nom": "Carotte",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "carotte"
+   },
+   {
+    "em": "🥬",
+    "nom": "Épinards",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "epinards"
+   },
+   {
+    "em": "🍄",
+    "nom": "Champignons",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "champignon"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "120 g",
+    "g": 120,
+    "nu": "oignon"
+   },
+   {
+    "em": "🥢",
+    "nom": "Sauce soja",
+    "qte": "4 c. à soupe",
+    "g": 60,
+    "nu": "sauce soja"
+   },
+   {
+    "em": "🌾",
+    "nom": "Sésame",
+    "qte": "1 c. à soupe",
+    "g": 10,
+    "nu": "graines de sesame"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile de sésame",
+    "qte": "2 c. à soupe",
+    "g": 25,
+    "nu": "huile"
+   },
+   {
+    "em": "🍯",
+    "nom": "Sucre",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "sucre"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "bouillir",
+    "t": "Cuis les vermicelles",
+    "min": 8,
+    "detail": "6 à 7 min dans l'eau bouillante, puis rince à l'eau froide et coupe-les grossièrement aux ciseaux.",
+    "tip": "Les couper aux ciseaux n'est pas de la coquetterie : non coupés, ils font un mètre de long et sont impossibles à manger.",
+    "qte": [
+     [
+      "Vermicelles",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais sauter chaque légume à part",
+    "min": 14,
+    "detail": "Oignon, puis carotte, puis champignons, chacun 2 min à feu vif avec un peu d'huile et une pincée de sel. Réserve séparément.",
+    "tip": "Séparément, encore : c'est la logique coréenne. Ensemble, l'eau des champignons cuirait la carotte à la vapeur.",
+    "qte": [
+     [
+      "Carotte",
+      "150 g"
+     ],
+     [
+      "Champignons",
+      "150 g"
+     ],
+     [
+      "Oignon",
+      "120 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Blanchis les épinards",
+    "min": 4,
+    "detail": "30 secondes dans l'eau bouillante, refroidis-les, presse-les à la main et assaisonne d'un peu d'huile de sésame.",
+    "tip": "Presse VRAIMENT : un épinard blanchi retient trois fois son poids d'eau, et cette eau finit dans le plat.",
+    "qte": [
+     [
+      "Épinards",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Réunis tout",
+    "min": 6,
+    "detail": "Dans un grand saladier, les vermicelles, tous les légumes, le soja, le sucre et l'huile de sésame. Mélange à la main.",
+    "tip": "À LA MAIN, tiède : c'est le seul moyen de répartir la sauce sans casser les vermicelles."
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers tiède",
+    "min": 2,
+    "detail": "Sésame par-dessus. Le japchae se mange tiède ou à température ambiante.",
+    "tip": "C'est un plat de fête qu'on prépare à l'avance : il est meilleur une heure après, quand les vermicelles ont bu la sauce.",
+    "qte": [
+     [
+      "Sésame",
+      "1 c. à soupe"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "cor-kimchi-jjigae",
+  "temps": 40,
+  "portions": 3,
+  "ing": [
+   {
+    "em": "🥬",
+    "nom": "Kimchi",
+    "qte": "400 g bien mûr",
+    "g": 400,
+    "nu": "kimchi"
+   },
+   {
+    "em": "🧊",
+    "nom": "Tofu",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "tofu"
+   },
+   {
+    "em": "🥩",
+    "nom": "Porc",
+    "qte": "200 g de poitrine",
+    "g": 200,
+    "nu": "porc"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "120 g",
+    "g": 120,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Gochujang",
+    "qte": "1 c. à soupe",
+    "g": 15,
+    "nu": "gochujang"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "3 gousses",
+    "g": 12,
+    "nu": "ail"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "200 g cru (≈ 520 g cuit)",
+    "g": 520,
+    "nu": "riz"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "saisir",
+    "t": "Fais rissoler le porc",
+    "min": 6,
+    "detail": "Poitrine en lanières, à sec dans la casserole, jusqu'à ce que le gras rende et que la viande dore.",
+    "tip": "Le gras de porc rendu est la base du bouillon. C'est pour ça qu'on prend de la poitrine et pas du filet.",
+    "qte": [
+     [
+      "Porc",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Ajoute le kimchi",
+    "min": 7,
+    "detail": "Kimchi égoutté (garde son jus) et coupé, dans le gras, 5 min à feu moyen.",
+    "tip": "FAIRE REVENIR LE KIMCHI est ce qui distingue un vrai jjigae d'une soupe au kimchi. La chaleur adoucit son acidité et concentre son goût.",
+    "qte": [
+     [
+      "Kimchi",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Mouille et laisse bouillir",
+    "min": 15,
+    "detail": "Le jus du kimchi, 600 ml d'eau, l'oignon, l'ail, le gochujang. 15 min à gros bouillons.",
+    "tip": "Un jjigae bout franchement, contrairement à un bouillon clair : c'est ce qui émulsionne le gras et rend le liquide trouble et savoureux.",
+    "qte": [
+     [
+      "Gochujang",
+      "1 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Ajoute le tofu",
+    "min": 6,
+    "detail": "En gros cubes, posés dessus, 5 min de plus sans remuer.",
+    "tip": "Posé et pas mélangé : le tofu se réchauffe dans le bouillon sans se casser.",
+    "qte": [
+     [
+      "Tofu",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers bouillant",
+    "min": 2,
+    "detail": "Directement dans la casserole, avec un bol de riz blanc par personne.",
+    "tip": "Un kimchi TROP VIEUX est exactement ce qu'il faut ici : plus il est acide, meilleur est le jjigae.",
+    "qte": [
+     [
+      "Riz",
+      "200 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "cor-tteokbokki",
+  "temps": 25,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🍥",
+    "nom": "Gâteaux de riz",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "gateaux de riz"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Gochujang",
+    "qte": "3 c. à soupe",
+    "g": 45,
+    "nu": "gochujang"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "120 g",
+    "g": 120,
+    "nu": "oignon"
+   },
+   {
+    "em": "🥬",
+    "nom": "Chou",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "chou"
+   },
+   {
+    "em": "🍯",
+    "nom": "Sucre",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "sucre"
+   },
+   {
+    "em": "🌾",
+    "nom": "Graines de sésame",
+    "qte": "1 c. à soupe",
+    "g": 10,
+    "nu": "graines de sesame"
+   },
+   {
+    "em": "🥢",
+    "nom": "Sauce soja",
+    "qte": "1 c. à soupe",
+    "g": 15,
+    "nu": "sauce soja"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "attendre",
+    "t": "Fais tremper les tteok",
+    "min": 10,
+    "detail": "Dix minutes dans l'eau tiède s'ils sont durs ou sortis du réfrigérateur.",
+    "tip": "Des tteok secs restent durs au cœur même après quinze minutes de sauce. Le trempage les réhydrate avant.",
+    "qte": [
+     [
+      "Gâteaux de riz",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Prépare la sauce",
+    "min": 4,
+    "detail": "400 ml d'eau, gochujang, soja et sucre dans une poêle large, portés à ébullition.",
+    "tip": "Une poêle LARGE : les tteok doivent être en une seule couche, sinon ceux du dessous collent au fond.",
+    "qte": [
+     [
+      "Gochujang",
+      "3 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Cuis les tteok",
+    "min": 10,
+    "detail": "Tteok, oignon et chou dans la sauce, 8 à 10 min à feu moyen en remuant souvent.",
+    "tip": "REMUE SOUVENT : l'amidon des gâteaux de riz s'attache très vite, et un fond brûlé se sent dans toute la poêle.",
+    "qte": [
+     [
+      "Gâteaux de riz",
+      "400 g"
+     ],
+     [
+      "Chou",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Laisse épaissir",
+    "min": 4,
+    "detail": "La sauce doit napper les tteok et devenir brillante.",
+    "tip": "C'est l'amidon des tteok qui épaissit la sauce, pas de la fécule ajoutée. Si c'est trop liquide, laisse réduire deux minutes de plus."
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 2,
+    "detail": "Sésame par-dessus, très chaud.",
+    "tip": "Les tteok durcissent en refroidissant : c'est un plat qui se mange tout de suite, jamais réchauffé.",
+    "qte": [
+     [
+      "Graines de sésame",
+      "1 c. à soupe"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "eth-doro-wat",
+  "temps": 100,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "800 g de cuisses",
+    "g": 800,
+    "nu": "poulet"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignons",
+    "qte": "600 g",
+    "g": 600,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Berbéré",
+    "qte": "3 c. à soupe",
+    "g": 30,
+    "nu": "berbere"
+   },
+   {
+    "em": "🥚",
+    "nom": "Œufs",
+    "qte": "4 durs",
+    "g": 220,
+    "nu": "oeuf"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "5 gousses",
+    "g": 20,
+    "nu": "ail"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "25 g",
+    "g": 25,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🧈",
+    "nom": "Beurre",
+    "qte": "40 g",
+    "g": 40,
+    "nu": "beurre"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "1",
+    "g": 60,
+    "nu": "citron"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Émince les oignons",
+    "min": 10,
+    "detail": "600 g d'oignons, hachés le plus finement possible. Oui, c'est beaucoup.",
+    "tip": "LA QUANTITÉ D'OIGNONS N'EST PAS UNE ERREUR : c'est eux qui font la sauce. Il n'y a ni tomate ni bouillon dans un doro wat.",
+    "qte": [
+     [
+      "Oignons",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais-les fondre À SEC",
+    "min": 30,
+    "detail": "Casserole à fond épais, sans matière grasse, feu doux, 25 à 30 min en remuant. Ils doivent s'effondrer et brunir.",
+    "tip": "À SEC, c'est la technique éthiopienne : sans gras, les oignons rendent leur eau puis caramélisent dans leur propre sucre. Le beurre viendra après.",
+    "qte": [
+     [
+      "Oignons",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Ajoute le beurre et le berbéré",
+    "min": 6,
+    "detail": "Beurre, ail et gingembre râpés, puis le berbéré. Remue 5 min à feu doux.",
+    "tip": "Le berbéré doit frire dans le gras pour s'ouvrir. Ajouté à l'eau, il reste poudreux et râpe la gorge.",
+    "qte": [
+     [
+      "Berbéré",
+      "3 c. à soupe"
+     ],
+     [
+      "Beurre",
+      "40 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Ajoute le poulet",
+    "min": 45,
+    "detail": "Les morceaux, un peu d'eau chaude, couvre et laisse 45 min à feu très doux.",
+    "tip": "Presque pas d'eau : le poulet en rend beaucoup, et un doro wat doit rester une sauce épaisse, pas un bouillon.",
+    "qte": [
+     [
+      "Poulet",
+      "800 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Ajoute les œufs durs",
+    "min": 8,
+    "detail": "Écalés, entaillés de quelques coups de couteau, glissés dans la sauce pour les 8 dernières minutes.",
+    "tip": "Les entailles laissent la sauce entrer : sans elles, l'œuf reste blanc et fade au milieu du plat.",
+    "qte": [
+     [
+      "Œufs",
+      "4"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 3,
+    "detail": "Un trait de citron, avec de l'injera ou du riz.",
+    "tip": "Le citron équilibre : le berbéré est puissant et le beurre est riche, il faut quelque chose d'acide pour tenir jusqu'au bout.",
+    "qte": [
+     [
+      "Citron",
+      "1"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "eth-injera",
+  "temps": 75,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🌾",
+    "nom": "Farine de teff",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "teff"
+   },
+   {
+    "em": "💧",
+    "nom": "Eau",
+    "qte": "500 ml"
+   },
+   {
+    "em": "🫘",
+    "nom": "Lentilles",
+    "qte": "200 g crues (≈ 480 g cuites)",
+    "g": 480,
+    "nu": "lentilles"
+   },
+   {
+    "em": "🥬",
+    "nom": "Chou",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "chou"
+   },
+   {
+    "em": "🥕",
+    "nom": "Carottes",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "carotte"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Berbéré",
+    "qte": "2 c. à soupe",
+    "g": 20,
+    "nu": "berbere"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "oignon"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "3 c. à soupe",
+    "g": 35,
+    "nu": "huile"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "melanger",
+    "t": "Prépare la pâte, la veille",
+    "min": 10,
+    "detail": "Farine de teff et eau, fouettées jusqu'à obtenir une pâte lisse et fluide. Couvre d'un linge.",
+    "tip": "PLANIFIE À L'AVANCE : l'injera n'est pas une crêpe, c'est une pâte fermentée. Sans ces heures d'attente, elle n'a ni son acidité ni ses alvéoles.",
+    "qte": [
+     [
+      "Farine de teff",
+      "300 g"
+     ],
+     [
+      "Eau",
+      "500 ml"
+     ]
+    ]
+   },
+   {
+    "illu": "reposer",
+    "t": "Laisse fermenter",
+    "min": 1440,
+    "detail": "24 à 48 heures à température ambiante. Des bulles se forment et l'odeur devient acidulée.",
+    "tip": "Une odeur aigre et des bulles = c'est prêt. Une odeur de moisi = recommence, la pâte a tourné."
+   },
+   {
+    "illu": "mijoter",
+    "t": "Prépare le misir wat de lentilles",
+    "min": 30,
+    "detail": "Oignon fondu à l'huile, berbéré une minute, lentilles, eau à hauteur, 25 min à feu doux.",
+    "tip": "Lentilles corail si tu veux qu'elles se délitent, lentilles vertes si tu les veux entières. Les deux sont justes.",
+    "qte": [
+     [
+      "Lentilles",
+      "200 g"
+     ],
+     [
+      "Berbéré",
+      "2 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Prépare le tikil gomen de chou",
+    "min": 20,
+    "detail": "Chou et carottes en lanières, sautés à l'huile avec un peu de curcuma, puis à couvert 15 min.",
+    "tip": "Sans berbéré ici : sur une assiette éthiopienne, il faut un plat doux à côté des plats épicés.",
+    "qte": [
+     [
+      "Chou",
+      "300 g"
+     ],
+     [
+      "Carottes",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Cuis les injera",
+    "min": 15,
+    "detail": "Poêle antiadhésive chaude, à sec, une louche versée en spirale du bord vers le centre. Couvre, 2 min : la surface se couvre d'yeux et sèche.",
+    "tip": "ON NE LA RETOURNE JAMAIS. L'injera cuit d'un seul côté, à couvert : c'est la vapeur qui cuit le dessus.",
+    "qte": [
+     [
+      "Farine de teff",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Dresse",
+    "min": 5,
+    "detail": "Une injera à plat comme une nappe, les ragoûts posés dessus en tas, d'autres injera roulées à côté.",
+    "tip": "L'injera est à la fois l'assiette et la fourchette : on déchire un morceau et on pince la nourriture avec."
+   }
+  ]
+ },
+ {
+  "cle": "eth-misir-wat",
+  "temps": 45,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🫘",
+    "nom": "Lentilles corail",
+    "qte": "300 g crues (≈ 720 g cuites)",
+    "g": 720,
+    "nu": "lentilles"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignons",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Berbéré",
+    "qte": "2 c. à soupe",
+    "g": 20,
+    "nu": "berbere"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "4 gousses",
+    "g": 16,
+    "nu": "ail"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "20 g",
+    "g": 20,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomate",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "tomate"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "3 c. à soupe",
+    "g": 35,
+    "nu": "huile"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "saisir",
+    "t": "Fais fondre les oignons",
+    "min": 20,
+    "detail": "Hachés fin, à sec puis avec l'huile, feu doux, 20 min jusqu'à ce qu'ils s'effondrent et brunissent.",
+    "tip": "Encore une fois : c'est le temps passé sur les oignons qui fait la profondeur du plat. Vingt minutes n'est pas négociable.",
+    "qte": [
+     [
+      "Oignons",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Ajoute berbéré, ail et gingembre",
+    "min": 4,
+    "detail": "Dans l'huile chaude, remue 2 min jusqu'à ce que le mélange embaume et fonce.",
+    "tip": "Si ça accroche, une cuillère d'eau : il ne faut surtout pas que le berbéré brûle.",
+    "qte": [
+     [
+      "Berbéré",
+      "2 c. à soupe"
+     ],
+     [
+      "Ail",
+      "4 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Ajoute lentilles et tomate",
+    "min": 22,
+    "detail": "Lentilles rincées, tomate concassée, 700 ml d'eau. 20 min à feu doux, en remuant de temps en temps.",
+    "tip": "Les lentilles corail doivent se défaire : le misir wat est une purée épaisse, pas une soupe de lentilles.",
+    "qte": [
+     [
+      "Lentilles corail",
+      "300 g"
+     ],
+     [
+      "Tomate",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Sale et ajuste",
+    "min": 3,
+    "detail": "Sale seulement maintenant, et allonge à l'eau chaude si c'est trop épais.",
+    "tip": "Le sel en fin de cuisson pour les légumineuses : salées trop tôt, elles restent fermes."
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 2,
+    "detail": "Avec de l'injera, du riz ou du pain plat.",
+    "tip": "Il est meilleur le lendemain, comme tous les wat : les épices continuent de se diffuser à froid."
+   }
+  ]
+ },
+ {
+  "cle": "eth-tibs-boeuf",
+  "temps": 30,
+  "portions": 3,
+  "ing": [
+   {
+    "em": "🥩",
+    "nom": "Bœuf",
+    "qte": "600 g de rumsteck",
+    "g": 600,
+    "nu": "boeuf"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Piment vert",
+    "qte": "2"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "4 gousses",
+    "g": 16,
+    "nu": "ail"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomate",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "tomate"
+   },
+   {
+    "em": "🌿",
+    "nom": "Romarin",
+    "qte": "2 branches"
+   },
+   {
+    "em": "🧈",
+    "nom": "Beurre",
+    "qte": "30 g",
+    "g": 30,
+    "nu": "beurre"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Coupe le bœuf en cubes",
+    "min": 6,
+    "detail": "Des cubes de 2,5 cm, dans une pièce tendre.",
+    "tip": "Les tibs se cuisent vite et fort : il faut un morceau qui n'a pas besoin de mijoter, sinon il sera dur.",
+    "qte": [
+     [
+      "Bœuf",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Saisis-le à feu très vif",
+    "min": 8,
+    "detail": "Poêle en fonte brûlante, le beurre, la viande en une couche, sans remuer 2 min, puis saute jusqu'à coloration.",
+    "tip": "C'est un plat de POÊLE BRÛLANTE. En Éthiopie il arrive encore grésillant sur son réchaud — c'est dire le niveau de chaleur.",
+    "qte": [
+     [
+      "Bœuf",
+      "600 g"
+     ],
+     [
+      "Beurre",
+      "30 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Ajoute oignon, ail et romarin",
+    "min": 6,
+    "detail": "Oignon en quartiers, ail écrasé, romarin entier. Trois minutes à feu vif.",
+    "tip": "Le romarin en branche entière, retirée à la fin : haché, il domine tout et pique la langue.",
+    "qte": [
+     [
+      "Oignon",
+      "200 g"
+     ],
+     [
+      "Ail",
+      "4 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Tomate et piment",
+    "min": 5,
+    "detail": "Tomate en quartiers et piments fendus, deux minutes de plus. Sale.",
+    "tip": "La tomate en quartiers doit rester en morceaux : ce n'est pas une sauce, c'est un sauté.",
+    "qte": [
+     [
+      "Tomate",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers immédiatement",
+    "min": 2,
+    "detail": "Directement dans la poêle, avec de l'injera.",
+    "tip": "Les tibs n'attendent pas : dix minutes de repos et la viande continue de cuire dans la fonte chaude."
+   }
+  ]
+ },
+ {
+  "cle": "geo-chakhokhbili",
+  "temps": 60,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "900 g de cuisses",
+    "g": 900,
+    "nu": "poulet"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates",
+    "qte": "700 g",
+    "g": 700,
+    "nu": "tomate"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignons",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌿",
+    "nom": "Coriandre",
+    "qte": "30 g"
+   },
+   {
+    "em": "🌿",
+    "nom": "Persil",
+    "qte": "20 g"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "5 gousses",
+    "g": 20,
+    "nu": "ail"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "saisir",
+    "t": "Fais colorer le poulet À SEC",
+    "min": 10,
+    "detail": "Cocotte à fond épais, très chaude, les morceaux sans matière grasse, jusqu'à ce que la peau soit dorée.",
+    "tip": "SANS HUILE : la peau du poulet rend assez de gras pour tout le plat. C'est ce qui rend le chakhokhbili moins lourd qu'il n'en a l'air.",
+    "qte": [
+     [
+      "Poulet",
+      "900 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Ajoute les oignons",
+    "min": 12,
+    "detail": "En demi-lunes, dans le gras rendu, 10 min jusqu'à ce qu'ils soient tendres et dorés.",
+    "tip": "Beaucoup d'oignons encore : avec la tomate, ce sont les deux seuls légumes du plat.",
+    "qte": [
+     [
+      "Oignons",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Ajoute les tomates",
+    "min": 30,
+    "detail": "Pelées et concassées, sans une goutte d'eau. Couvre et laisse 30 min à feu doux.",
+    "tip": "AUCUN LIQUIDE AJOUTÉ. Tomates et poulet rendent tout ce qu'il faut — de l'eau en plus donnerait une sauce délavée.",
+    "qte": [
+     [
+      "Tomates",
+      "700 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Ail et herbes en fin de cuisson",
+    "min": 5,
+    "detail": "Ail écrasé, coriandre et persil hachés très grossièrement, dans les 3 dernières minutes.",
+    "tip": "LES HERBES À LA TOUTE FIN, et en quantité. En Géorgie, elles se comptent en poignées : c'est ce qui donne au plat son parfum vert.",
+    "qte": [
+     [
+      "Coriandre",
+      "30 g"
+     ],
+     [
+      "Ail",
+      "5 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 3,
+    "detail": "Dans un plat creux, avec du pain pour saucer.",
+    "tip": "Pas de riz ni de pommes de terre : en Géorgie, c'est le pain qui accompagne, et il n'y a rien d'autre à côté."
+   }
+  ]
+ },
+ {
+  "cle": "geo-mtsvadi",
+  "temps": 50,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍖",
+    "nom": "Agneau",
+    "qte": "800 g d'épaule",
+    "g": 800,
+    "nu": "agneau"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon rouge",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "oignon"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "tomate"
+   },
+   {
+    "em": "🥒",
+    "nom": "Concombre",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "concombre"
+   },
+   {
+    "em": "🌿",
+    "nom": "Coriandre",
+    "qte": "20 g"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "1",
+    "g": 60,
+    "nu": "citron"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Coupe la viande en gros cubes",
+    "min": 8,
+    "detail": "Des cubes de 4 cm, avec un peu de gras conservé.",
+    "tip": "GROS, c'est la règle du mtsvadi : de petits cubes sèchent avant d'avoir pris la fumée. Et le gras fond et arrose la viande en cuisant.",
+    "qte": [
+     [
+      "Agneau",
+      "800 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Fais mariner à l'oignon",
+    "min": 30,
+    "detail": "Moitié des oignons en lamelles, malaxés à la main avec la viande, du sel et du poivre. Trente minutes.",
+    "tip": "PAS DE VINAIGRE NI DE CITRON DANS LA MARINADE. L'oignon suffit : son jus attendrit sans dénaturer le goût de l'agneau, et c'est la tradition.",
+    "qte": [
+     [
+      "Oignon rouge",
+      "150 g"
+     ],
+     [
+      "Agneau",
+      "800 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Grille les brochettes",
+    "min": 15,
+    "detail": "Sur des braises ou une poêle-gril très chaude, 12 à 15 min en tournant régulièrement.",
+    "tip": "Sur braises, jamais sur flamme : la flamme noircit l'extérieur et laisse le centre cru."
+   },
+   {
+    "illu": "couper",
+    "t": "Prépare la salade",
+    "min": 8,
+    "detail": "Tomates, concombre et le reste d'oignon en gros morceaux, coriandre, jus de citron, sel.",
+    "tip": "Des gros morceaux, pas une brunoise : cette salade est là pour rafraîchir entre deux bouchées de viande.",
+    "qte": [
+     [
+      "Tomates",
+      "300 g"
+     ],
+     [
+      "Concombre",
+      "200 g"
+     ],
+     [
+      "Citron",
+      "1"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 3,
+    "detail": "Brochettes sur un lit d'oignon cru, salade à côté, du pain.",
+    "tip": "L'oignon cru sous la viande chaude s'attendrit à peine et boit le jus : c'est la meilleure partie de l'assiette."
+   }
+  ]
+ },
+ {
+  "cle": "gre-daurade",
+  "temps": 45,
+  "portions": 2,
+  "ing": [
+   {
+    "em": "🐟",
+    "nom": "Daurade",
+    "qte": "1 entière (600 g)",
+    "g": 600,
+    "nu": "daurade"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "4 c. à soupe",
+    "g": 50,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "2",
+    "g": 120,
+    "nu": "citron"
+   },
+   {
+    "em": "🌿",
+    "nom": "Origan",
+    "qte": "1 c. à soupe",
+    "g": 5,
+    "nu": "origan"
+   },
+   {
+    "em": "🥔",
+    "nom": "Pommes de terre",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "pomme de terre"
+   },
+   {
+    "em": "🥒",
+    "nom": "Courgette",
+    "qte": "250 g",
+    "g": 250,
+    "nu": "courgette"
+   },
+   {
+    "em": "🧂",
+    "nom": "Sel et poivre",
+    "qte": ""
+   }
+  ],
+  "steps": [
+   {
+    "illu": "rincer",
+    "t": "Prépare le poisson",
+    "min": 6,
+    "detail": "Vidé et écaillé, rincé, séché. Trois entailles en biais de chaque côté, jusqu'à l'arête.",
+    "tip": "LES ENTAILLES SONT INDISPENSABLES : sans elles, la peau se rétracte, le poisson se tord et l'épaisseur ne cuit pas.",
+    "qte": [
+     [
+      "Daurade",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Fais la ladolémono",
+    "min": 4,
+    "detail": "Bats l'huile d'olive avec le jus d'un citron, l'origan, du sel et du poivre.",
+    "tip": "Deux tiers d'huile, un tiers de citron : c'est LA sauce grecque, elle sert de marinade et de sauce finale.",
+    "qte": [
+     [
+      "Huile d'olive",
+      "4 c. à soupe"
+     ],
+     [
+      "Citron",
+      "1"
+     ]
+    ]
+   },
+   {
+    "illu": "couper",
+    "t": "Coupe les légumes",
+    "min": 8,
+    "detail": "Pommes de terre en quartiers, courgette en gros tronçons.",
+    "tip": "Des morceaux qui tiennent 30 minutes de four : coupés fin, ils seraient noirs avant que le poisson soit cuit.",
+    "qte": [
+     [
+      "Pommes de terre",
+      "400 g"
+     ],
+     [
+      "Courgette",
+      "250 g"
+     ]
+    ]
+   },
+   {
+    "illu": "enfourner",
+    "t": "Enfourne les légumes en avance",
+    "min": 15,
+    "detail": "Légumes huilés et salés, 15 min à 200 °C, seuls.",
+    "tip": "Ils partent avec un quart d'heure d'avance : le poisson cuit deux fois plus vite qu'eux."
+   },
+   {
+    "illu": "enfourner",
+    "t": "Ajoute le poisson",
+    "min": 22,
+    "detail": "Pose la daurade sur les légumes, arrose de la moitié de la ladolémono, glisse des rondelles de citron dans le ventre. 20 min à 200 °C.",
+    "tip": "L'œil devient blanc et opaque quand c'est cuit, et la chair se détache de l'arête centrale sans résister.",
+    "qte": [
+     [
+      "Daurade",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 3,
+    "detail": "Arrose du reste de sauce hors du four, avec le second citron en quartiers.",
+    "tip": "La sauce à froid sur le poisson chaud : c'est là que l'origan et le citron se sentent vraiment.",
+    "qte": [
+     [
+      "Citron",
+      "1"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "gre-fasolada",
+  "temps": 90,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🫘",
+    "nom": "Haricots blancs",
+    "qte": "300 g secs (≈ 720 g cuits)",
+    "g": 720,
+    "nu": "haricots blancs"
+   },
+   {
+    "em": "🥕",
+    "nom": "Carottes",
+    "qte": "250 g",
+    "g": 250,
+    "nu": "carotte"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates concassées",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "tomate"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "oignon"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "6 c. à soupe",
+    "g": 75,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🌿",
+    "nom": "Persil",
+    "qte": "20 g"
+   },
+   {
+    "em": "🥬",
+    "nom": "Céleri",
+    "qte": "100 g",
+    "g": 100,
+    "nu": "celeri"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "attendre",
+    "t": "Fais tremper les haricots",
+    "min": 720,
+    "detail": "La veille, dans trois fois leur volume d'eau froide.",
+    "tip": "Sans trempage, compte le double de cuisson et des peaux qui se détachent. Le trempage n'est pas facultatif pour des haricots secs.",
+    "qte": [
+     [
+      "Haricots blancs",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Première cuisson à l'eau",
+    "min": 45,
+    "detail": "Égouttés, couverts d'eau froide, portés à ébullition puis 40 min à petits bouillons. Sans sel.",
+    "tip": "SANS SEL, encore : il durcit la peau des légumineuses et rallonge la cuisson d'une demi-heure.",
+    "qte": [
+     [
+      "Haricots blancs",
+      "720 g"
+     ]
+    ]
+   },
+   {
+    "illu": "couper",
+    "t": "Prépare les légumes",
+    "min": 8,
+    "detail": "Oignon, carottes et céleri en dés d'un centimètre.",
+    "tip": "Ce trio — oignon, carotte, céleri — est la base de la fasolada. Le céleri branche n'est pas décoratif, il porte le goût.",
+    "qte": [
+     [
+      "Carottes",
+      "250 g"
+     ],
+     [
+      "Oignon",
+      "200 g"
+     ],
+     [
+      "Céleri",
+      "100 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Ajoute légumes, tomates et huile",
+    "min": 30,
+    "detail": "Tout dans la casserole avec l'eau de cuisson, l'huile d'olive en entier, 30 min à feu doux. Sale à la fin.",
+    "tip": "SIX CUILLÈRES D'HUILE, et c'est normal : la fasolada est un plat « ladera », cuit à l'huile. C'est elle qui lie le bouillon.",
+    "qte": [
+     [
+      "Huile d'olive",
+      "6 c. à soupe"
+     ],
+     [
+      "Tomates",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 3,
+    "detail": "Persil frais, un filet d'huile crue, du pain et des olives.",
+    "tip": "Elle épaissit en refroidissant et se mange volontiers tiède : c'est le plat national grec de l'hiver.",
+    "qte": [
+     [
+      "Persil",
+      "20 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "gre-gemista",
+  "temps": 100,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍅",
+    "nom": "Tomates",
+    "qte": "8 grosses (1,2 kg)",
+    "g": 1200,
+    "nu": "tomate"
+   },
+   {
+    "em": "🫑",
+    "nom": "Poivrons",
+    "qte": "4 (600 g)",
+    "g": 600,
+    "nu": "poivron"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "250 g cru (≈ 650 g cuit)",
+    "g": 650,
+    "nu": "riz"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignons",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌿",
+    "nom": "Menthe",
+    "qte": "15 g"
+   },
+   {
+    "em": "🌿",
+    "nom": "Persil",
+    "qte": "20 g"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "6 c. à soupe",
+    "g": 75,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🥔",
+    "nom": "Pommes de terre",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "pomme de terre"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Évide les légumes",
+    "min": 15,
+    "detail": "Chapeau des tomates coupé et gardé, chair récupérée à la cuillère et mise de côté. Poivrons épépinés.",
+    "tip": "GARDE LA CHAIR DES TOMATES : elle sera mixée et servira de liquide de cuisson au riz. Rien ne se jette.",
+    "qte": [
+     [
+      "Tomates",
+      "1,2 kg"
+     ],
+     [
+      "Poivrons",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais la farce",
+    "min": 12,
+    "detail": "Oignons fondus à l'huile, la chair de tomate mixée, le riz CRU, les herbes, sel et poivre. Cinq minutes à feu moyen.",
+    "tip": "LE RIZ RESTE CRU : il finira de cuire au four en buvant le jus des tomates. Précuit, il serait en bouillie.",
+    "qte": [
+     [
+      "Riz",
+      "250 g"
+     ],
+     [
+      "Oignons",
+      "300 g"
+     ],
+     [
+      "Menthe",
+      "15 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Garnis",
+    "min": 10,
+    "detail": "Remplis les légumes AUX DEUX TIERS, remets les chapeaux.",
+    "tip": "Aux deux tiers seulement : le riz double de volume, et un légume trop rempli éclate au four.",
+    "qte": [
+     [
+      "Riz",
+      "250 g"
+     ]
+    ]
+   },
+   {
+    "illu": "enfourner",
+    "t": "Enfourne avec les pommes de terre",
+    "min": 60,
+    "detail": "Pommes de terre en quartiers autour, huile d'olive sur tout, un verre d'eau au fond. 1 h à 180 °C, couvert d'alu les 40 premières minutes.",
+    "tip": "Les pommes de terre autour ne sont pas un accompagnement : elles boivent le jus qui déborde et sont la meilleure part du plat.",
+    "qte": [
+     [
+      "Pommes de terre",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "reposer",
+    "t": "Laisse tiédir",
+    "min": 15,
+    "detail": "Au moins un quart d'heure, idéalement plus.",
+    "tip": "La gemista se mange TIÈDE ou froide, jamais brûlante. C'est un plat d'été, et le riz a besoin de se poser."
+   }
+  ]
+ },
+ {
+  "cle": "gre-souvlaki-poulet",
+  "temps": 45,
+  "portions": 3,
+  "ing": [
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "600 g de hauts de cuisse",
+    "g": 600,
+    "nu": "poulet"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "2",
+    "g": 120,
+    "nu": "citron"
+   },
+   {
+    "em": "🌿",
+    "nom": "Origan",
+    "qte": "1 c. à soupe",
+    "g": 5,
+    "nu": "origan"
+   },
+   {
+    "em": "🥒",
+    "nom": "Concombre",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "concombre"
+   },
+   {
+    "em": "🥛",
+    "nom": "Yaourt grec",
+    "qte": "250 g",
+    "g": 250,
+    "nu": "yaourt grec"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "4 gousses",
+    "g": 16,
+    "nu": "ail"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "4 c. à soupe",
+    "g": 50,
+    "nu": "huile olive"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "melanger",
+    "t": "Fais la marinade",
+    "min": 5,
+    "detail": "Jus d'un citron, deux cuillères d'huile, origan, deux gousses d'ail écrasées, sel, poivre.",
+    "tip": "Citron et origan, rien de plus. Un souvláki n'a pas besoin de vingt épices — c'est un plat de trois ingrédients.",
+    "qte": [
+     [
+      "Citron",
+      "1"
+     ],
+     [
+      "Origan",
+      "1 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "refrigerer",
+    "t": "Fais mariner le poulet",
+    "min": 30,
+    "detail": "Cubes de 3 cm, enrobés, 30 min au frais minimum.",
+    "tip": "Des hauts de cuisse, jamais des blancs : sur le gril, le blanc sèche en deux minutes.",
+    "qte": [
+     [
+      "Poulet",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Prépare le tzatziki",
+    "min": 10,
+    "detail": "Concombre râpé, SALÉ et pressé, mélangé au yaourt avec l'ail restant, un filet d'huile et un peu de citron.",
+    "tip": "PRESSE LE CONCOMBRE, vraiment. Il rend un demi-verre d'eau : sans ça, le tzatziki est liquide au bout de dix minutes.",
+    "qte": [
+     [
+      "Concombre",
+      "200 g"
+     ],
+     [
+      "Yaourt grec",
+      "250 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Grille les brochettes",
+    "min": 12,
+    "detail": "Sur une poêle-gril brûlante ou au barbecue, 10 à 12 min en tournant, jusqu'à ce que les arêtes soient noircies.",
+    "tip": "Les points noirs sont recherchés : c'est là qu'est le goût du grillé. Une brochette uniformément dorée est sous-cuite en surface.",
+    "qte": [
+     [
+      "Poulet",
+      "600 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 3,
+    "detail": "Avec du pain pita chaud, le tzatziki, des quartiers de citron.",
+    "tip": "Un dernier trait de citron sur la viande chaude, à la sortie du gril : c'est la signature.",
+    "qte": [
+     [
+      "Citron",
+      "1"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "gre-mezze-dolma",
+  "temps": 80,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍇",
+    "nom": "Feuilles de vigne",
+    "qte": "40 (250 g en saumure)",
+    "g": 250,
+    "nu": "feuilles de vigne"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "250 g cru (≈ 650 g cuit)",
+    "g": 650,
+    "nu": "riz"
+   },
+   {
+    "em": "🫘",
+    "nom": "Pois chiches",
+    "qte": "250 g",
+    "g": 250,
+    "nu": "pois chiches"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "2",
+    "g": 120,
+    "nu": "citron"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "6 c. à soupe",
+    "g": 75,
+    "nu": "huile olive"
+   },
+   {
+    "em": "🥖",
+    "nom": "Pain pita",
+    "qte": "2",
+    "g": 160,
+    "nu": "pain pita"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌿",
+    "nom": "Aneth",
+    "qte": "20 g",
+    "g": 20,
+    "nu": "aneth"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "rincer",
+    "t": "Rince les feuilles de vigne",
+    "min": 6,
+    "detail": "À l'eau froide, plusieurs fois, puis égoutte-les à plat.",
+    "tip": "En saumure, elles sont très salées : mal rincées, tout le plat est immangeable. Goûte-en une pour vérifier.",
+    "qte": [
+     [
+      "Feuilles de vigne",
+      "250 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Prépare la farce",
+    "min": 12,
+    "detail": "Oignon fondu à l'huile, riz cru, aneth, jus d'un citron, sel, poivre. Cinq minutes à feu doux.",
+    "tip": "Riz cru là aussi : il gonflera dans les feuilles en buvant le bouillon.",
+    "qte": [
+     [
+      "Riz",
+      "250 g"
+     ],
+     [
+      "Oignon",
+      "200 g"
+     ],
+     [
+      "Aneth",
+      "20 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Roule les dolmas",
+    "min": 25,
+    "detail": "Une cuillère à café au bas de la feuille nervures vers le haut, replie les côtés, roule serré mais pas trop.",
+    "tip": "SERRÉ MAIS PAS TROP : le riz double de volume. Trop serré, le dolma éclate ; trop lâche, il se défait.",
+    "qte": [
+     [
+      "Feuilles de vigne",
+      "40"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Cuis-les à l'étouffée",
+    "min": 45,
+    "detail": "Serrés en couches dans une casserole, une assiette posée dessus, eau à hauteur avec le reste d'huile et de citron. 40 min à feu très doux.",
+    "tip": "L'ASSIETTE PAR-DESSUS est le truc : elle les empêche de flotter et de se dérouler pendant la cuisson.",
+    "qte": [
+     [
+      "Huile d'olive",
+      "4 c. à soupe"
+     ],
+     [
+      "Citron",
+      "1"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Compose le mezzé",
+    "min": 8,
+    "detail": "Dolmas tièdes, pois chiches assaisonnés d'huile et de citron, pita chaud.",
+    "tip": "Les dolmas sont meilleurs le lendemain, sortis une heure avant : c'est un plat qu'on prépare la veille.",
+    "qte": [
+     [
+      "Pois chiches",
+      "250 g"
+     ],
+     [
+      "Pain pita",
+      "2"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "ind-tandoori-agneau",
+  "temps": 60,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍖",
+    "nom": "Agneau",
+    "qte": "800 g d'épaule",
+    "g": 800,
+    "nu": "agneau"
+   },
+   {
+    "em": "🥛",
+    "nom": "Yaourt",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "yaourt"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Paprika",
+    "qte": "2 c. à soupe",
+    "g": 15,
+    "nu": "paprika"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "6 gousses",
+    "g": 24,
+    "nu": "ail"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "30 g",
+    "g": 30,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🍋",
+    "nom": "Citron",
+    "qte": "2",
+    "g": 120,
+    "nu": "citron"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Garam masala",
+    "qte": "1 c. à soupe",
+    "g": 8,
+    "nu": "epices"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Prépare la viande",
+    "min": 8,
+    "detail": "Cubes de 4 cm, dégraissés grossièrement, entaillés au couteau.",
+    "tip": "Les entailles laissent la marinade entrer : sans elles, elle ne pénètre que d'un millimètre et le cœur reste nature.",
+    "qte": [
+     [
+      "Agneau",
+      "800 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Première marinade au citron",
+    "min": 15,
+    "detail": "Jus des citrons, sel, paprika, frottés sur la viande. Quinze minutes.",
+    "tip": "DEUX MARINADES, c'est la méthode tandoori. L'acide ouvre la chair d'abord, le yaourt agit ensuite en profondeur.",
+    "qte": [
+     [
+      "Citron",
+      "2"
+     ],
+     [
+      "Paprika",
+      "2 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Seconde marinade au yaourt",
+    "min": 5,
+    "detail": "Yaourt, ail et gingembre en pâte, garam masala. Enrobe et couvre.",
+    "tip": "Du yaourt ÉGOUTTÉ si possible : trop liquide, il coule au fond du plat au lieu de rester collé à la viande.",
+    "qte": [
+     [
+      "Yaourt",
+      "300 g"
+     ],
+     [
+      "Gingembre",
+      "30 g"
+     ]
+    ]
+   },
+   {
+    "illu": "refrigerer",
+    "t": "Laisse mariner",
+    "min": 240,
+    "detail": "Quatre heures au réfrigérateur, une nuit c'est mieux.",
+    "tip": "C'est le seul temps long de la recette, et il n'y a pas de raccourci : les enzymes du yaourt travaillent lentement."
+   },
+   {
+    "illu": "enfourner",
+    "t": "Cuis à très forte chaleur",
+    "min": 25,
+    "detail": "Sur une grille au-dessus d'une plaque, 240 °C, 20 à 25 min, en retournant à mi-cuisson.",
+    "tip": "SUR UNE GRILLE, pas dans un plat : la chaleur doit circuler dessous, sinon la viande baigne et bout.",
+    "qte": [
+     [
+      "Agneau",
+      "800 g"
+     ]
+    ]
+   },
+   {
+    "illu": "reposer",
+    "t": "Laisse reposer",
+    "min": 8,
+    "detail": "Huit minutes sous une feuille d'aluminium avant de servir.",
+    "tip": "L'agneau a besoin de repos plus que le poulet : ses fibres sont plus serrées et retiennent moins bien le jus."
+   }
+  ]
+ },
+ {
+  "cle": "ind-chana-masala",
+  "temps": 45,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🫘",
+    "nom": "Pois chiches",
+    "qte": "500 g cuits",
+    "g": 500,
+    "nu": "pois chiches"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "tomate"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignons",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "oignon"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "25 g",
+    "g": 25,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🌿",
+    "nom": "Coriandre",
+    "qte": "25 g"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Épices",
+    "qte": "2 c. à soupe (cumin, coriandre, curcuma, garam masala)",
+    "g": 15,
+    "nu": "epices"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "4 gousses",
+    "g": 16,
+    "nu": "ail"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "3 c. à soupe",
+    "g": 35,
+    "nu": "huile"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "saisir",
+    "t": "Fais dorer les oignons",
+    "min": 15,
+    "detail": "Hachés fin, à l'huile, feu moyen, 15 min jusqu'à ce qu'ils soient bruns et fondus.",
+    "tip": "BRUNS, pas blonds. C'est la couleur des oignons qui donne sa couleur au curry — un chana masala pâle vient d'oignons pas assez cuits.",
+    "qte": [
+     [
+      "Oignons",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Fais griller les épices",
+    "min": 3,
+    "detail": "Ail et gingembre en pâte 1 min, puis les épices moulues 30 s dans l'huile.",
+    "tip": "Trente secondes, montre en main : au-delà, le curcuma devient amer et on ne peut plus le rattraper.",
+    "qte": [
+     [
+      "Épices",
+      "2 c. à soupe"
+     ],
+     [
+      "Gingembre",
+      "25 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Fais le masala de tomate",
+    "min": 12,
+    "detail": "Tomates concassées, sel, feu moyen, jusqu'à ce que l'huile se sépare et remonte sur les bords.",
+    "tip": "L'HUILE QUI REMONTE est LE signal : elle dit que la tomate a perdu son eau et que la base est prête. Avant ça, ne va pas plus loin.",
+    "qte": [
+     [
+      "Tomates",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Ajoute les pois chiches",
+    "min": 15,
+    "detail": "Avec 200 ml d'eau, écrase-en une louche à la cuillère, laisse mijoter 15 min.",
+    "tip": "Écraser une partie des pois chiches épaissit la sauce sans farine : c'est le geste qui lie le plat.",
+    "qte": [
+     [
+      "Pois chiches",
+      "500 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Finis à la coriandre",
+    "min": 3,
+    "detail": "Beaucoup de coriandre hachée hors du feu, et un trait de citron.",
+    "tip": "Le chana masala est meilleur le lendemain : les épices ont besoin d'une nuit pour se fondre.",
+    "qte": [
+     [
+      "Coriandre",
+      "25 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "ind-dal",
+  "temps": 40,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🫘",
+    "nom": "Lentilles corail",
+    "qte": "300 g crues (≈ 720 g cuites)",
+    "g": 720,
+    "nu": "lentilles"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "oignon"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "tomate"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Cumin",
+    "qte": "1 c. à soupe",
+    "g": 8,
+    "nu": "cumin"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "20 g",
+    "g": 20,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🌿",
+    "nom": "Coriandre",
+    "qte": "20 g"
+   },
+   {
+    "em": "🧈",
+    "nom": "Ghee",
+    "qte": "2 c. à soupe",
+    "g": 30,
+    "nu": "ghee"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Curcuma",
+    "qte": "1 c. à café",
+    "g": 4,
+    "nu": "curcuma"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "rincer",
+    "t": "Rince les lentilles",
+    "min": 3,
+    "detail": "Jusqu'à ce que l'eau soit claire.",
+    "tip": "Non rincées, elles moussent et débordent dès l'ébullition — et cette mousse a un goût de poussière.",
+    "qte": [
+     [
+      "Lentilles corail",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Cuis-les simplement",
+    "min": 22,
+    "detail": "Avec le curcuma et 900 ml d'eau, 20 min à petits bouillons, jusqu'à ce qu'elles se défassent.",
+    "tip": "Le curcuma dès le départ : c'est le seul qui a besoin de cuire longtemps pour perdre son amertume.",
+    "qte": [
+     [
+      "Lentilles corail",
+      "720 g"
+     ],
+     [
+      "Curcuma",
+      "1 c. à café"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Prépare le tadka",
+    "min": 6,
+    "detail": "Ghee très chaud dans une petite poêle, les graines de cumin jusqu'à ce qu'elles crépitent, puis oignon, gingembre et tomate.",
+    "tip": "LE TADKA EST TOUT LE PLAT. Les épices frites dans le gras brûlant libèrent des arômes que l'eau ne sortira jamais. Le cumin doit CRÉPITER.",
+    "qte": [
+     [
+      "Ghee",
+      "2 c. à soupe"
+     ],
+     [
+      "Cumin",
+      "1 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Verse le tadka dans les lentilles",
+    "min": 3,
+    "detail": "En une fois, ça grésille. Remue, sale, laisse deux minutes.",
+    "tip": "Le grésillement au contact est normal et attendu : c'est le bruit d'un dal qui se termine."
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers",
+    "min": 3,
+    "detail": "Coriandre fraîche, riz basmati ou pain nature.",
+    "tip": "Il épaissit beaucoup en refroidissant : laisse-le plus liquide que ce que tu veux servir.",
+    "qte": [
+     [
+      "Coriandre",
+      "20 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "ind-poulet-tikka",
+  "temps": 70,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "800 g de hauts de cuisse",
+    "g": 800,
+    "nu": "poulet"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates concassées",
+    "qte": "500 g",
+    "g": 500,
+    "nu": "tomate"
+   },
+   {
+    "em": "🥛",
+    "nom": "Crème",
+    "qte": "150 ml",
+    "g": 150,
+    "nu": "creme"
+   },
+   {
+    "em": "🥛",
+    "nom": "Yaourt",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "yaourt"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "5 gousses",
+    "g": 20,
+    "nu": "ail"
+   },
+   {
+    "em": "🫚",
+    "nom": "Gingembre",
+    "qte": "25 g",
+    "g": 25,
+    "nu": "gingembre"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz basmati",
+    "qte": "250 g cru (≈ 650 g cuit)",
+    "g": 650,
+    "nu": "riz"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Épices",
+    "qte": "2 c. à soupe",
+    "g": 15,
+    "nu": "epices"
+   },
+   {
+    "em": "🧈",
+    "nom": "Beurre",
+    "qte": "30 g",
+    "g": 30,
+    "nu": "beurre"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "melanger",
+    "t": "Fais mariner le poulet",
+    "min": 30,
+    "detail": "Cubes de 3 cm, yaourt, la moitié de l'ail et du gingembre, la moitié des épices, sel. 30 min minimum.",
+    "tip": "Des hauts de cuisse : le tikka masala passe par une cuisson forte puis une sauce — un blanc n'y survit pas.",
+    "qte": [
+     [
+      "Poulet",
+      "800 g"
+     ],
+     [
+      "Yaourt",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "enfourner",
+    "t": "Grille les morceaux",
+    "min": 18,
+    "detail": "Sur une grille, 15 à 18 min à 240 °C ou sous le gril, jusqu'à ce que les bords noircissent.",
+    "tip": "LES BORDS NOIRCIS SONT LE PLAT. « Tikka » veut dire morceaux grillés : sans ce passage au feu vif, il ne reste qu'un curry de poulet.",
+    "qte": [
+     [
+      "Poulet",
+      "800 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais la base masala",
+    "min": 10,
+    "detail": "Beurre, reste d'ail et de gingembre, les épices, puis les tomates. Laisse réduire jusqu'à ce que l'huile se sépare.",
+    "tip": "Même signal que le chana masala : on attend que le gras remonte avant d'aller plus loin.",
+    "qte": [
+     [
+      "Tomates",
+      "500 g"
+     ],
+     [
+      "Épices",
+      "1 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "mixer",
+    "t": "Mixe la sauce",
+    "min": 4,
+    "detail": "Mixe jusqu'à obtenir une sauce parfaitement lisse, puis remets sur le feu.",
+    "tip": "Lisse, c'est ce qui distingue un tikka masala d'un curry maison. Passe-la au chinois si tu veux le niveau restaurant."
+   },
+   {
+    "illu": "mijoter",
+    "t": "Réunis et crème",
+    "min": 10,
+    "detail": "Poulet grillé dans la sauce, la crème, 8 min à feu doux sans bouillir.",
+    "tip": "SANS BOUILLIR après la crème : elle tranche, et la sauce devient granuleuse.",
+    "qte": [
+     [
+      "Crème",
+      "150 ml"
+     ]
+    ]
+   },
+   {
+    "illu": "bouillir",
+    "t": "Riz basmati",
+    "min": 13,
+    "detail": "Rincé, une part et demie d'eau, 11 min à couvert, 5 min de repos.",
+    "tip": "Le basmati se rince jusqu'à l'eau claire et ne se remue jamais : c'est ce qui garde les grains longs et séparés.",
+    "qte": [
+     [
+      "Riz basmati",
+      "250 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "ira-ash-reshteh",
+  "temps": 110,
+  "portions": 5,
+  "ing": [
+   {
+    "em": "🫘",
+    "nom": "Pois chiches",
+    "qte": "250 g cuits",
+    "g": 250,
+    "nu": "pois chiches"
+   },
+   {
+    "em": "🫘",
+    "nom": "Lentilles",
+    "qte": "200 g crues (≈ 480 g cuites)",
+    "g": 480,
+    "nu": "lentilles"
+   },
+   {
+    "em": "🌿",
+    "nom": "Persil",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "persil"
+   },
+   {
+    "em": "🌿",
+    "nom": "Coriandre",
+    "qte": "100 g",
+    "g": 100,
+    "nu": "coriandre"
+   },
+   {
+    "em": "🥬",
+    "nom": "Épinards",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "epinards"
+   },
+   {
+    "em": "🍜",
+    "nom": "Nouilles",
+    "qte": "150 g (reshteh)",
+    "g": 360,
+    "nu": "nouilles"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignons",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "oignon"
+   },
+   {
+    "em": "🥛",
+    "nom": "Kashk",
+    "qte": "150 g",
+    "g": 150,
+    "nu": "kashk"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "4 c. à soupe",
+    "g": 50,
+    "nu": "huile"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "saisir",
+    "t": "Fais les oignons frits",
+    "min": 25,
+    "detail": "300 g d'oignons en lamelles, à l'huile, feu moyen, 25 min jusqu'à ce qu'ils soient bruns et croustillants. Réserve la moitié.",
+    "tip": "LES OIGNONS FRITS SONT LA GARNITURE ET LA BASE. On en met dans la soupe et on en garde pour le dessus : c'est la signature du plat.",
+    "qte": [
+     [
+      "Oignons",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Cuis les légumineuses",
+    "min": 45,
+    "detail": "Lentilles, pois chiches, le reste d'oignon, du curcuma, 1,5 l d'eau. 45 min à feu doux.",
+    "tip": "Une âsh est une soupe ÉPAISSE : elle doit tenir à la cuillère à la fin, pas couler.",
+    "qte": [
+     [
+      "Lentilles",
+      "200 g"
+     ],
+     [
+      "Pois chiches",
+      "250 g"
+     ]
+    ]
+   },
+   {
+    "illu": "couper",
+    "t": "Hache les herbes",
+    "min": 12,
+    "detail": "Persil, coriandre et épinards, hachés grossièrement. C'est une quantité énorme, c'est normal.",
+    "tip": "550 g d'herbes pour cinq personnes : l'âsh-e reshteh est une soupe VERTE, les herbes sont un légume ici, pas un assaisonnement.",
+    "qte": [
+     [
+      "Persil",
+      "150 g"
+     ],
+     [
+      "Coriandre",
+      "100 g"
+     ],
+     [
+      "Épinards",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Ajoute les herbes",
+    "min": 25,
+    "detail": "Toutes les herbes dans la casserole, 25 min à feu doux. Le vert fonce et la soupe s'épaissit.",
+    "tip": "Elles réduisent des trois quarts : ce qui remplissait la casserole tient dans une louche à la fin."
+   },
+   {
+    "illu": "bouillir",
+    "t": "Ajoute les nouilles",
+    "min": 10,
+    "detail": "Cassées en morceaux de 5 cm, 8 à 10 min dans la soupe.",
+    "tip": "Directement dans la soupe : leur amidon est ce qui donne à l'âsh sa consistance finale.",
+    "qte": [
+     [
+      "Nouilles",
+      "150 g"
+     ]
+    ]
+   },
+   {
+    "illu": "dresser",
+    "t": "Sers avec le kashk",
+    "min": 5,
+    "detail": "Kashk délayé versé en spirale, oignons frits par-dessus.",
+    "tip": "Le kashk est un petit-lait fermenté, acide et salé : c'est lui qui équilibre les herbes. Du yaourt grec très salé peut le remplacer.",
+    "qte": [
+     [
+      "Kashk",
+      "150 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "ira-fesenjan-poulet",
+  "temps": 130,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍗",
+    "nom": "Poulet",
+    "qte": "800 g de cuisses",
+    "g": 800,
+    "nu": "poulet"
+   },
+   {
+    "em": "🌰",
+    "nom": "Noix",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "noix"
+   },
+   {
+    "em": "🍇",
+    "nom": "Mélasse de grenade",
+    "qte": "150 ml",
+    "g": 150,
+    "nu": "melasse de grenade"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignon",
+    "qte": "250 g",
+    "g": 250,
+    "nu": "oignon"
+   },
+   {
+    "em": "🍚",
+    "nom": "Riz",
+    "qte": "250 g cru (≈ 650 g cuit)",
+    "g": 650,
+    "nu": "riz"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Curcuma",
+    "qte": "1 c. à café",
+    "g": 4,
+    "nu": "curcuma"
+   },
+   {
+    "em": "🍯",
+    "nom": "Sucre",
+    "qte": "1 c. à soupe",
+    "g": 12,
+    "nu": "sucre"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "mixer",
+    "t": "Mouds les noix",
+    "min": 6,
+    "detail": "Mixe-les jusqu'à obtenir une poudre fine, presque une pâte.",
+    "tip": "Fines, vraiment : ce sont elles qui épaississent la sauce. Grossières, elles restent en morceaux et la sauce reste liquide.",
+    "qte": [
+     [
+      "Noix",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais griller la poudre de noix",
+    "min": 8,
+    "detail": "À sec dans la cocotte, feu doux, 8 min en remuant, jusqu'à ce que ça sente et fonce légèrement.",
+    "tip": "À SEC ET À FEU DOUX : les noix sont déjà grasses, elles brûlent en un instant et deviennent alors amères.",
+    "qte": [
+     [
+      "Noix",
+      "200 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Dore le poulet et l'oignon",
+    "min": 10,
+    "detail": "Réserve les noix, fais colorer les morceaux de poulet et l'oignon avec le curcuma.",
+    "tip": "Le curcuma sur la viande avant le liquide : c'est le pilier de la cuisine persane, et il a besoin de gras.",
+    "qte": [
+     [
+      "Poulet",
+      "800 g"
+     ],
+     [
+      "Oignon",
+      "250 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Mijote très longuement",
+    "min": 90,
+    "detail": "Noix, mélasse, sucre, 700 ml d'eau. Feu le plus bas possible, 1 h 30, en remuant régulièrement.",
+    "tip": "UNE HEURE ET DEMIE, ET ON REMUE. La sauce passe du beige au brun très foncé et l'huile des noix remonte : c'est ça, un fesenjân réussi.",
+    "qte": [
+     [
+      "Mélasse de grenade",
+      "150 ml"
+     ],
+     [
+      "Noix",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "assaisonner",
+    "t": "Équilibre",
+    "min": 4,
+    "detail": "Goûte : ajoute du sucre si c'est trop acide, de la mélasse si c'est trop doux.",
+    "tip": "Le fesenjân se joue sur cet équilibre aigre-doux, et chaque mélasse est différente. C'est le seul moment où l'on ajuste."
+   },
+   {
+    "illu": "bouillir",
+    "t": "Riz",
+    "min": 13,
+    "detail": "Basmati rincé, une part et demie d'eau, 11 min à couvert.",
+    "tip": "Un riz nature est indispensable : la sauce est extrêmement concentrée, elle a besoin d'un fond neutre.",
+    "qte": [
+     [
+      "Riz",
+      "250 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "ira-kashk-bademjan",
+  "temps": 60,
+  "portions": 4,
+  "ing": [
+   {
+    "em": "🍆",
+    "nom": "Aubergines",
+    "qte": "800 g",
+    "g": 800,
+    "nu": "aubergine"
+   },
+   {
+    "em": "🥛",
+    "nom": "Kashk",
+    "qte": "200 g",
+    "g": 200,
+    "nu": "kashk"
+   },
+   {
+    "em": "🧅",
+    "nom": "Oignons",
+    "qte": "300 g",
+    "g": 300,
+    "nu": "oignon"
+   },
+   {
+    "em": "🌿",
+    "nom": "Menthe séchée",
+    "qte": "2 c. à soupe",
+    "g": 10,
+    "nu": "menthe"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "4 gousses",
+    "g": 16,
+    "nu": "ail"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Curcuma",
+    "qte": "1 c. à café",
+    "g": 4,
+    "nu": "curcuma"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile",
+    "qte": "5 c. à soupe",
+    "g": 60,
+    "nu": "huile"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "couper",
+    "t": "Prépare les aubergines",
+    "min": 12,
+    "detail": "Épluchées en lanières, coupées en deux dans la longueur, salées et laissées 10 min.",
+    "tip": "Salées et dégorgées, elles boivent bien moins d'huile — et l'aubergine en boit énormément.",
+    "qte": [
+     [
+      "Aubergines",
+      "800 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais-les cuire",
+    "min": 18,
+    "detail": "Bien épongées, à la poêle avec l'huile, feu moyen, jusqu'à ce qu'elles soient dorées et complètement fondantes.",
+    "tip": "Complètement fondantes : une aubergine à moitié cuite reste amère et spongieuse, il n'y a pas de demi-mesure.",
+    "qte": [
+     [
+      "Aubergines",
+      "800 g"
+     ],
+     [
+      "Huile",
+      "5 c. à soupe"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais les oignons frits",
+    "min": 20,
+    "detail": "En lamelles, feu moyen, 20 min jusqu'au brun croustillant. Garde-en la moitié pour le dessus.",
+    "tip": "Comme pour l'âsh : les oignons frits sont un ingrédient à part entière de la cuisine persane.",
+    "qte": [
+     [
+      "Oignons",
+      "300 g"
+     ]
+    ]
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais l'huile à la menthe",
+    "min": 3,
+    "detail": "Dans une petite poêle, un peu d'huile chaude, l'ail puis la menthe séchée 20 secondes hors du feu.",
+    "tip": "HORS DU FEU pour la menthe : elle noircit en dix secondes sur la flamme et devient âcre.",
+    "qte": [
+     [
+      "Menthe séchée",
+      "2 c. à soupe"
+     ],
+     [
+      "Ail",
+      "4 gousses"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Écrase et mélange",
+    "min": 6,
+    "detail": "Écrase les aubergines à la fourchette, mélange la moitié des oignons, du curcuma et la moitié du kashk.",
+    "tip": "À la fourchette, jamais au mixeur : on veut de la texture, pas une purée lisse."
+   },
+   {
+    "illu": "dresser",
+    "t": "Dresse",
+    "min": 4,
+    "detail": "Dans un plat creux, le reste de kashk en spirale, les oignons frits et l'huile à la menthe.",
+    "tip": "Se mange tiède, avec du pain plat, en trempant : c'est un plat de partage, pas une assiette individuelle.",
+    "qte": [
+     [
+      "Kashk",
+      "200 g"
+     ]
+    ]
+   }
+  ]
+ },
+ {
+  "cle": "ira-mirza-ghasemi",
+  "temps": 55,
+  "portions": 3,
+  "ing": [
+   {
+    "em": "🍆",
+    "nom": "Aubergines",
+    "qte": "700 g",
+    "g": 700,
+    "nu": "aubergine"
+   },
+   {
+    "em": "🍅",
+    "nom": "Tomates",
+    "qte": "400 g",
+    "g": 400,
+    "nu": "tomate"
+   },
+   {
+    "em": "🧄",
+    "nom": "Ail",
+    "qte": "6 gousses",
+    "g": 24,
+    "nu": "ail"
+   },
+   {
+    "em": "🥚",
+    "nom": "Œufs",
+    "qte": "3",
+    "g": 165,
+    "nu": "oeuf"
+   },
+   {
+    "em": "🌶️",
+    "nom": "Curcuma",
+    "qte": "1 c. à café",
+    "g": 4,
+    "nu": "curcuma"
+   },
+   {
+    "em": "🫒",
+    "nom": "Huile d'olive",
+    "qte": "4 c. à soupe",
+    "g": 50,
+    "nu": "huile olive"
+   }
+  ],
+  "steps": [
+   {
+    "illu": "enfourner",
+    "t": "Brûle les aubergines",
+    "min": 35,
+    "detail": "Entières, piquées, sous le gril du four ou directement sur la flamme, jusqu'à ce que la peau soit noire et boursouflée.",
+    "tip": "LA PEAU DOIT ÊTRE NOIRE, PAS DORÉE. C'est la fumée qui fait le mirza ghasemi : sans ce goût brûlé, c'est une autre recette.",
+    "qte": [
+     [
+      "Aubergines",
+      "700 g"
+     ]
+    ]
+   },
+   {
+    "illu": "attendre",
+    "t": "Laisse-les tiédir",
+    "min": 10,
+    "detail": "Dans un saladier couvert : la vapeur décolle la peau toute seule.",
+    "tip": "Dix minutes couvertes, et la peau s'enlève à la main. À chaud, on se brûle et on emporte la moitié de la chair."
+   },
+   {
+    "illu": "saisir",
+    "t": "Fais l'ail au curcuma",
+    "min": 4,
+    "detail": "Beaucoup d'ail écrasé dans l'huile chaude avec le curcuma, jusqu'à ce qu'il soit blond.",
+    "tip": "Six gousses pour trois personnes : ce plat est franchement aillé, c'est son caractère.",
+    "qte": [
+     [
+      "Ail",
+      "6 gousses"
+     ],
+     [
+      "Curcuma",
+      "1 c. à café"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Ajoute la chair d'aubergine",
+    "min": 8,
+    "detail": "Épluchée et écrasée à la fourchette, dans la poêle, 8 min à feu moyen pour évaporer son eau.",
+    "tip": "Laisse-la vraiment sécher : humide, le plat sera liquide et l'œuf ne prendra pas.",
+    "qte": [
+     [
+      "Aubergines",
+      "700 g"
+     ]
+    ]
+   },
+   {
+    "illu": "mijoter",
+    "t": "Ajoute les tomates",
+    "min": 10,
+    "detail": "Pelées et concassées, jusqu'à réduction complète.",
+    "tip": "On veut une pâte, pas une sauce : quand la cuillère laisse une trace au fond, c'est prêt.",
+    "qte": [
+     [
+      "Tomates",
+      "400 g"
+     ]
+    ]
+   },
+   {
+    "illu": "melanger",
+    "t": "Casse les œufs dedans",
+    "min": 4,
+    "detail": "Directement dans la poêle, remue à la spatule jusqu'à ce qu'ils soient juste pris.",
+    "tip": "Juste pris et pas plus : l'œuf lie le plat, il ne doit pas former des morceaux d'omelette.",
+    "qte": [
+     [
+      "Œufs",
+      "3"
+     ]
+    ]
+   }
+  ]
+ }
+]

@@ -363,6 +363,40 @@ var Natty = (function () {
     'lait de coco':{c:185,p:1.8,l:19,g:2.8},'creme de coco':{c:330,p:3.3,l:35,g:3},
     'boisson coco':{c:39,p:0.2,l:0.9,g:7.4},'coco':{c:354,p:3.3,l:33,g:15},
     'beurre':{c:717,p:0.9,l:81,g:0.1},'mascarpone':{c:429,p:4.8,l:44,g:4},
+    /* ── Cuisines du monde ────────────────────────────────────
+       Ajoutés en septembre 2026 en chiffrant les recettes du catalogue : ces
+       aliments-là revenaient dans un plat sur trois et comptaient pour ZÉRO,
+       ou tombaient sur un homonyme (« galettes de riz » sur du riz cuit, alors
+       qu'une feuille de riz sèche vaut 330 kcal). Un plat entier peut basculer
+       sur un seul d'entre eux — le lait de coco l'a montré. */
+    'gochujang':{c:214,p:5,l:1.5,g:45},'doubanjiang':{c:180,p:9,l:6,g:20},
+    'ciboule':{c:32,p:1.8,l:0.2,g:7},'cebette':{c:32,p:1.8,l:0.2,g:7},
+    /* Herbes et épices sèches : elles s'emploient à la cuillère, donc leur
+       valeur au 100 g compte peu — mais comptées ZÉRO, un ingrédient de la
+       recette s'affichait avec un liseré ambre « non reconnu » pour rien. */
+    'origan':{c:265,p:9,l:4.3,g:69},'romarin':{c:331,p:4.9,l:15,g:64},
+    'paprika':{c:282,p:14,l:13,g:54},'ghee':{c:876,p:0.3,l:99,g:0},
+    'grenade':{c:83,p:1.7,l:1.2,g:19},'aneth':{c:43,p:3.5,l:1.1,g:7},
+    'celeri':{c:16,p:0.7,l:0.2,g:3},'fenouil':{c:31,p:1.2,l:0.2,g:7},
+    'cumin':{c:375,p:18,l:22,g:44},'coriandre moulue':{c:298,p:12,l:18,g:55},
+    'cannelle':{c:247,p:4,l:1.2,g:81},'safran':{c:310,p:11,l:6,g:65},
+    'navet':{c:28,p:0.9,l:0.1,g:6},'panais':{c:75,p:1.2,l:0.3,g:18},
+
+    'oignon nouveau':{c:32,p:1.8,l:0.2,g:7},'pousses de soja':{c:30,p:3,l:0.2,g:6},
+    'kimchi':{c:23,p:1.7,l:0.5,g:4},'pak choi':{c:13,p:1.5,l:0.2,g:2.2},
+    'gateaux de riz':{c:220,p:4,l:0.5,g:48},'galettes de riz':{c:330,p:1,l:0.2,g:82},
+    'feuille de riz':{c:330,p:1,l:0.2,g:82},'vermicelles':{c:109,p:0.9,l:0.2,g:25},
+    'soba':{c:92,p:3.4,l:0.6,g:20},'mirin':{c:258,p:0.2,l:0,g:43},
+    'manioc':{c:160,p:1.4,l:0.3,g:38},'teff':{c:366,p:13,l:2.4,g:73},
+    'injera':{c:110,p:3.6,l:0.7,g:22},'berbere':{c:282,p:12,l:8,g:50},
+    'kashk':{c:90,p:8,l:3,g:6},'melasse de grenade':{c:280,p:0.4,l:0,g:70},
+    'tamarin':{c:239,p:2.8,l:0.6,g:63},'aji amarillo':{c:40,p:1.9,l:0.4,g:9},
+    'acai':{c:70,p:1,l:5,g:4},'citronnelle':{c:99,p:1.8,l:0.5,g:25},
+    'curcuma':{c:312,p:9.7,l:3.3,g:67},'salsa':{c:36,p:1.5,l:0.2,g:7},
+    'feuilles de vigne':{c:69,p:5.6,l:2,g:11},'crevettes sechees':{c:307,p:62,l:3,g:3},
+    /* ⚠️ Le concentré de tomate n'est pas de la tomate : trois fois plus
+       concentré, donc trois fois plus sucré. Il tombait sur `tomate` (18 kcal). */
+    'concentre de tomate':{c:82,p:4.3,l:0.5,g:19},
     // Matieres grasses, oleagineux, condiments
     'huile olive':{c:884,p:0,l:100,g:0},'huile':{c:884,p:0,l:100,g:0},
     'noix':{c:654,p:15,l:65,g:14},'amandes':{c:579,p:21,l:50,g:22},'noisette':{c:628,p:15,l:61,g:17},

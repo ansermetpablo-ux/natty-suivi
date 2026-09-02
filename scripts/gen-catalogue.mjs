@@ -19,7 +19,15 @@ const OUT = path.join(RACINE, 'api/_catalogue.js');
 /* On évalue le module dans une doublure de `window` : c'est la source de
    vérité elle-même qu'on lit, pas une réécriture de son contenu. */
 const src = fs.readFileSync(SRC, 'utf8');
-const sandbox = { window: {} };
+/* ⚠️ Une doublure de `document` est nécessaire depuis que le module pose
+   lui-même sa délégation de clic (passe « Découvrir partagé », 2026-09-02) :
+   sans elle, ce script meurt sur `document is not defined` — et c'est le seul
+   endroit d'où `api/_catalogue.js` peut être régénéré. */
+const nul = () => ({ style: {}, setAttribute() {}, addEventListener() {}, appendChild() {}, classList: { add() {}, remove() {} } });
+globalThis.document = { addEventListener() {}, createElement: nul, getElementById: () => null,
+  querySelector: () => null, querySelectorAll: () => [], head: nul(), body: nul() };
+globalThis.localStorage = { getItem: () => null, setItem() {} };
+const sandbox = { window: globalThis };
 const D = new Function('window', src + '; return NattyDecouverte;')(sandbox.window);
 
 /* ⚠️ `D.cuisines()` NE REND QUE LES PLATS PHOTOGRAPHIÉS, et c'est voulu : la
