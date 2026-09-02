@@ -1027,6 +1027,20 @@ html.no-scroll {
 .macro-tag{ display:flex; align-items:center; gap:5px; background:var(--metal-black); border-radius:999px; padding:7px 12px; font-size:12px; font-weight:700; color:#dfe1e4; box-shadow:inset 2px 2px 5px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.18); white-space:nowrap; }
 .ring-obj{ font-size:9px; color:rgba(255,255,255,0.4); margin-top:-2px; }
 
+/* ── Objectif pas encore renseigné ──────────────────────────────────────────
+   Sans onboarding exploitable (ni poids ni tdee), `macObj` vaut 0 partout : les
+   deux cartes noires affichaient « 0 » sur « – Kcal » et « Obj. –g » sous des
+   anneaux vides, ce qui se lit comme un objectif ATTEINT plutôt que comme un
+   objectif absent — l'inverse de ce qu'il faut comprendre. Ce bloc les remplace
+   toutes les deux (voir `majEtatObjectif()`), et il est clair là où elles sont
+   noires : ce n'est pas une mesure, c'est une invitation. */
+.obj-vide{ background:var(--bg); border-radius:26px; padding:26px 22px 22px; box-shadow:var(--sh-out); display:flex; flex-direction:column; align-items:center; text-align:center; gap:13px; }
+.obj-vide .ov-illu{ color:var(--muted); line-height:0; }
+.obj-vide .ov-illu svg{ width:78px; height:78px; display:block; }
+.obj-vide h2{ font-size:19px; font-weight:800; letter-spacing:-0.02em; color:var(--black); }
+.obj-vide p{ font-size:13px; color:var(--muted); font-weight:500; line-height:1.45; max-width:290px; margin-top:-7px; }
+.obj-vide button{ width:100%; padding:15px; margin-top:3px; background:var(--surface-ink); color:var(--on-ink); border:none; border-radius:16px; font-family:'Inter',sans-serif; font-size:15px; font-weight:700; letter-spacing:-0.01em; cursor:pointer; }
+
 .banner{ position:relative; border-radius:20px; padding:16px 18px; display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--bg); box-shadow:var(--sh-out); }
 .banner h3{ color:var(--black); font-size:16px; font-weight:800; letter-spacing:-0.01em; }
 .banner .sec-link{ font-size:12px; font-weight:600; color:var(--muted); cursor:pointer; }
@@ -1105,8 +1119,29 @@ html.no-scroll {
   <!-- SCORE + MACROS -->
   <div class="suivi-top-group">
 
+  <!-- Tant que l'onboarding n'a rien donné d'exploitable, ce bloc REMPLACE les
+       deux cartes qui suivent — calories du jour et anneaux de macros. Elles ne
+       sont pas seulement vides sans objectif : elles annoncent « 0 g » sur un
+       objectif inconnu, ce qui se lit comme une journée réussie. -->
+  <div class="obj-vide" id="objVide" style="display:none;">
+    <div class="ov-illu">
+      <!-- Une cible et sa flèche : le trait de currentColor, comme les autres
+           illustrations de l'app — un seul dessin pour les deux thèmes. -->
+      <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <circle cx="30" cy="34" r="23" stroke="currentColor" stroke-width="2.4" opacity=".35"/>
+        <circle cx="30" cy="34" r="14.5" stroke="currentColor" stroke-width="2.4" opacity=".6"/>
+        <circle cx="30" cy="34" r="6" stroke="currentColor" stroke-width="2.4"/>
+        <path d="M30 34 54 10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M45.5 10H54v8.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h2>Enregistrez votre objectif</h2>
+    <p>Vos calories et vos macros du jour se calculent depuis votre poids et votre profil. Sans eux, il n'y a rien à suivre.</p>
+    <button type="button" id="objVideBtn">Commencer &rarr;</button>
+  </div>
+
   <!-- Calories -->
-  <div class="hero">
+  <div class="hero" id="heroCal">
     <div class="label">
       <div class="t1">Calories <svg viewBox="0 0 24 24" fill="none"><path d="M13 3 5 14h5.5L11 21l8-12h-5.5L13 3Z" fill="#dfe1e4"/></svg></div>
       <div class="t2 hero-cal-left">⚡ Calories aujourd'hui</div>
@@ -1118,7 +1153,7 @@ html.no-scroll {
        système pas encore défini) — plus affiché sur Suivi. -->
 
   <!-- Objectif (3 macros en anneaux) -->
-  <div class="objectif-card">
+  <div class="objectif-card" id="objectifCard">
     <!-- ⚠️ Le grand nombre de chaque anneau est ce qui a été CONSOMMÉ
          aujourd'hui, et l'anneau se REMPLIT en conséquence (demande de Pablo,
          2026-08-10). Le titre le nomme : il a déjà trompé une fois dans l'autre
@@ -2138,6 +2173,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function init() {
   if (urlP.p||urlP.c) { macObj.p=urlP.p; macObj.l=urlP.l; macObj.g=urlP.g; macObj.c=urlP.c; }
+  var ovb = document.getElementById('objVideBtn');
+  if (ovb) ovb.addEventListener('click', function () {
+    window.location.href = 'onboarding.html' + (TOKEN ? '?token=' + TOKEN : '');
+  });
   await Promise.all([loadOnboarding(), loadMeals(), loadScore(), loadDailyHistory(), verifierAbonnement(), chargerActionSemaine()]);
   afficherMacros(); chargerRdv(); chargerDiagnostics(); majCalendrierMacros();
   resetIfNewDay();
@@ -2352,7 +2391,33 @@ function calcMoyenneMacros() {
    ⚠️ Le SCORE, lui, reste sur la moyenne 7 jours (`moy`) : c'est un indicateur
    d'habitude, et le calculer sur la seule journée en cours le ferait plonger
    chaque matin avant le petit déjeuner. D'où deux jeux de pourcentages. */
+/* Un objectif est connu dès que les calories du jour le sont : tout le reste
+   (protéines, lipides, glucides) dérive du même couple poids/tdee, donc un
+   `macObj.c` à zéro veut dire « onboarding pas exploitable », jamais « objectif
+   de zéro calorie ». On teste aussi les protéines, qui viennent du poids seul :
+   une ligne d'onboarding peut porter l'un sans l'autre. */
+function objectifConnu() { return (macObj.c || 0) > 0 && (macObj.p || 0) > 0; }
+
+/* Bascule entre les deux cartes de suivi et le bloc d'invitation. Appelée par
+   `afficherMacros()`, donc par tous ses points d'entrée (chargement, minuit,
+   ajout ou suppression d'un repas, mise à jour du profil) : il n'y a pas de
+   second endroit où ce choix se ferait, et donc pas de second endroit qui
+   pourrait en diverger. */
+function majEtatObjectif() {
+  var ok = objectifConnu();
+  var vide = document.getElementById('objVide');
+  if (vide) vide.style.display = ok ? 'none' : 'flex';
+  ['heroCal', 'objectifCard'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = ok ? '' : 'none';
+  });
+  return ok;
+}
+
 function afficherMacros() {
+  // Sans objectif, les deux cartes ne sont pas à l'écran : rien à peindre.
+  if (!majEtatObjectif()) return;
+
   var moy = calcMoyenneMacros();
 
   // Ce qui a été mangé AUJOURD'HUI, et rien d'autre.
@@ -3147,6 +3212,10 @@ function switchTab(t) {
     document.getElementById('tabSuivi').classList.add('active');
   } else if (t==='prog') {
     // Parcours gamifié narration.html en plein écran (remplace l'ancien mini dashboard donuts/graphique)
+    /* ⚠️ On marque 'defis' AVANT de partir : la barre du bas ne porte plus cet
+       onglet (assets/nav.js), donc plus personne ne posait la clé — le rappel
+       du soir d'assets/notifs.js serait parti même après un parcours ouvert. */
+    if (window.NattyNav && NattyNav.marquerVu) NattyNav.marquerVu('defis');
     window.location.href = 'narration.html';
   } else if (t==='chal') {
     document.getElementById('pageChal').style.display = 'flex';
@@ -5174,6 +5243,7 @@ async function profilSaveInfo() {
     // Recalculer les macros
     macObj = calcMacros(poids, profilInfoCache.tdee || poids * 30);
     updateMacroCards();
+    afficherMacros();
     showToast('Informations mises à jour ✓');
     // Conseil : ne pas régénérer ici, le cycle hebdomadaire s'en charge
   } catch(e) {
@@ -6172,6 +6242,13 @@ window.addEventListener('natty:repas-ajoute', function(){
 <script>
   if (window.NattyJournee) NattyJournee.proposerSiNecessaire();
 </script>
+<!-- Le journal des séances. Chargé AVANT `bilan.js`, et c'est la raison de
+     cette ligne : le bilan du soir propose d'ajouter la séance du jour juste
+     avant de montrer le muscle construit et la graisse puisée, et il saute
+     cette étape SANS UN MOT si le module n'est pas là. Sur un écran qui
+     déclenche le bilan mais ne charge pas seance.js, la question ne serait donc
+     pas posée — l'utilisateur ne verrait aucune différence avec un bug. -->
+<script src="/assets/seance.js"></script>
 <script src="/assets/bilan.js"></script>
 <script>
   /* Le bilan du soir, et celui de la semaine le samedi. Il attend plus

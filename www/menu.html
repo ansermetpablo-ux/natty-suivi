@@ -156,6 +156,13 @@ async function loadFormule(){
     NattyJournee.monterBandeau(document.querySelector('.wrap'));
   }
 </script>
+<!-- Le journal des séances. Chargé AVANT `bilan.js`, et c'est la raison de
+     cette ligne : le bilan du soir propose d'ajouter la séance du jour juste
+     avant de montrer le muscle construit et la graisse puisée, et il saute
+     cette étape SANS UN MOT si le module n'est pas là. Sur un écran qui
+     déclenche le bilan mais ne charge pas seance.js, la question ne serait donc
+     pas posée — l'utilisateur ne verrait aucune différence avec un bug. -->
+<script src="/assets/seance.js"></script>
 <script src="/assets/bilan.js"></script>
 <script>
   /* Le bilan du soir, et celui de la semaine le samedi. Il attend plus
