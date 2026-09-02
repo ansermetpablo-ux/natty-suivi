@@ -180,13 +180,12 @@ body{overflow-x:hidden}
 .det-body.on{display:block;animation:detIn .24s cubic-bezier(.22,1,.36,1)}
 @keyframes detIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 
-/* ══ Découvrir ══ */
-.discover-row{display:flex;gap:12px}
-.discover-card{flex:1;background:var(--metal-white);box-shadow:var(--sh-metal-light);border-radius:var(--r-lg);
-  padding:18px 10px 22px;text-align:center;cursor:pointer;display:flex;flex-direction:column;
-  align-items:center;gap:14px}
-.discover-card .em{font-size:34px}
-.discover-card .t{font-weight:700;font-size:11.5px;line-height:1.25}
+/* ══ Découvrir ══
+   Plus une ligne de style ici : les trois rangées viennent d'
+   `assets/decouverte.js` (`NattyDecouverte.monter`), qui porte son propre
+   habillage. C'est le MÊME « Découvrir » que le fil social, et c'est la
+   demande — l'ancienne version (trois cartes vers les mini-jeux) n'avait de
+   commun avec lui que le titre. */
 
 .toast{position:fixed;left:50%;bottom:118px;transform:translate(-50%,14px);background:var(--ink);
   color:var(--on-ink);border-radius:18px;padding:12px 20px;font-size:12.5px;font-weight:700;opacity:0;
@@ -269,6 +268,16 @@ body{overflow-x:hidden}
   <div class="empty">Chargement…</div>
 </div>
 
+<!-- « Découvrir » — les plats du monde du catalogue, en trois rangées : les
+     cuisines, les envies, la sélection du jour. Hors de `#content` pour la
+     même raison que ses voisins : render() le remplace en entier à chaque
+     changement de recette, et les rangées disparaîtraient au premier tap sur
+     une vignette.
+     ⚠️ Le rendu appartient au module, pas à cette page — voir l'encadré de
+     `assets/decouverte.js`. Deux copies du même contenu, c'est deux qui
+     divergent. -->
+<div class="wrap" id="decouvWrap"></div>
+
 <!-- « Mes préférences » — allergies, goûts, envies de découverte. Hors de
      `#content` pour la même raison que le calendrier : render() le remplace
      en entier à chaque changement de recette, le panneau disparaîtrait au
@@ -311,7 +320,11 @@ body{overflow-x:hidden}
 <!-- Préférences alimentaires : ce que reco.js injecte dans le prompt de la
      génération. Modifiables ici, plutôt que figées au questionnaire. -->
 <script src="/assets/preferences.js"></script>
-<script src="/assets/minijeux.js"></script>
+<!-- `assets/minijeux.js` n'est PLUS chargé : ses trois cartes (Monde,
+     Ingrédients, Aléatoire) étaient l'ancien « Découvrir » de cet écran, que
+     les rangées du catalogue remplacent. Le fichier reste au dépôt et le point
+     d'entrée `window.NattyOnRecetteSuivie` aussi : le relier de nouveau ne
+     tient qu'à cette ligne. -->
 <!-- Suivre une recette retire ses ingrédients du garde-manger (voir brancher()). -->
 <script src="/assets/recette.js"></script>
 <script>
@@ -403,8 +416,7 @@ async function rendreSemaine(){
     + '<div style="font-size:13px;margin-bottom:16px;">Elles se composent à partir de votre profil, de vos repas récents et de votre garde-manger. Une génération par semaine.</div>'
     + '<button id="btnGenSemaine" style="width:100%;padding:15px;background:var(--ink);color:var(--bg);border:none;border-radius:16px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">✨ Générer mes conseils repas</button>'
     + '<div id="genSemaineEtat" style="font-size:12px;color:var(--muted);margin-top:10px;"></div>'
-    + '</div>' + blocDecouvrir();
-  brancherDecouvrir();
+    + '</div>';
   var b = document.getElementById('btnGenSemaine');
   if (b) b.addEventListener('click', genererSemaineMaintenant);
 }
@@ -858,8 +870,7 @@ function render(){
   var d = PLATS[actif];
   if (!d){
     document.getElementById('content').innerHTML =
-      '<div class="empty">Aucune recette à afficher pour le moment.</div>' + blocDecouvrir();
-    brancherDecouvrir();
+      '<div class="empty">Aucune recette à afficher pour le moment.</div>';
     return;
   }
 
@@ -964,24 +975,21 @@ function render(){
          + '<div class="det-body' + (detailsOuverts?' on':'') + '" id="detB">' + detail + '</div>';
   }
 
-  html += blocDecouvrir();
   document.getElementById('content').innerHTML = html;
   brancher();
 }
 
-function blocDecouvrir(){
-  return '<div class="sec-title">Découvrir</div>'
-    + '<div class="discover-row">'
-      + '<div class="discover-card" data-jeu="monde"><div class="t">Recettes du Monde</div><div class="em">🌍</div></div>'
-      + '<div class="discover-card" data-jeu="potager"><div class="t">Ingrédients</div><div class="em">🌱</div></div>'
-      + '<div class="discover-card" data-jeu="aleatoire"><div class="t">Aléatoire</div><div class="em">🎲</div></div>'
-    + '</div>';
-}
-
-function brancherDecouvrir(){
-  document.querySelectorAll('.discover-card').forEach(function(c){
-    c.addEventListener('click', function(){ NattyMiniJeux.ouvrir(c.dataset.jeu); });
-  });
+/* « Découvrir » se monte UNE SEULE FOIS, dans son propre hôte, et pas à chaque
+   render() : son contenu ne dépend ni de la recette affichée ni d'aucune
+   requête. Le remonter à chaque tap sur une vignette relancerait le
+   chargement de ses vignettes pour un contenu identique — et ferait sauter la
+   position de défilement des deux rangées horizontales. */
+function monterDecouvrir(){
+  if (!window.NattyDecouverte || !NattyDecouverte.monter) return;
+  var h = document.getElementById('decouvWrap');
+  if (!h || h.getAttribute('data-pose')) return;
+  h.setAttribute('data-pose', '1');
+  NattyDecouverte.monter(h);
 }
 
 // Une recette choisie à la fin d'un mini-jeu remonte ici : elle prend la
@@ -1120,8 +1128,6 @@ function brancher(){
 
   var edit = document.getElementById('ingrEdit');
   if (edit) edit.addEventListener('click', function(){ toast('Touche un ingrédient pour le retirer'); });
-
-  brancherDecouvrir();
 }
 
 /* ═══ Garde-manger ═══
@@ -1175,6 +1181,13 @@ document.addEventListener('natty:recette-validee', function(e){
 
 (async function(){
   if (!Natty.requireAuth()) return;
+
+  /* « Découvrir » d'abord, et AVANT toute requête. Le catalogue est embarqué
+     dans l'app : le faire patienter derrière la lecture du garde-manger et
+     celle des recettes, c'est plusieurs secondes de vide sur un contenu déjà
+     prêt — et c'est ce qui reste à regarder quand la génération de la semaine
+     n'a pas encore eu lieu. Même parti pris que dans `social.html`. */
+  monterDecouvrir();
 
   // Chargé pour une seule chose désormais : marquer les ingrédients « à
   // acheter » dans les recettes affichées.
@@ -1277,6 +1290,13 @@ function preparerSiDemande(){
 <script>
   if (window.NattyJournee) NattyJournee.proposerSiNecessaire();
 </script>
+<!-- Le journal des séances. Chargé AVANT `bilan.js`, et c'est la raison de
+     cette ligne : le bilan du soir propose d'ajouter la séance du jour juste
+     avant de montrer le muscle construit et la graisse puisée, et il saute
+     cette étape SANS UN MOT si le module n'est pas là. Sur un écran qui
+     déclenche le bilan mais ne charge pas seance.js, la question ne serait donc
+     pas posée — l'utilisateur ne verrait aucune différence avec un bug. -->
+<script src="/assets/seance.js"></script>
 <script src="/assets/bilan.js"></script>
 <script>
   /* Le bilan du soir, et celui de la semaine le samedi. Il attend plus

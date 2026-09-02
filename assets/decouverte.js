@@ -1216,6 +1216,238 @@ var NattyDecouverte = (function () {
   function fermer() { if (window.NattyVisionneuse) NattyVisionneuse.fermer(); }
 
 
+  /* ═══ Les trois rangées « Découvrir » ════════════════════
+     LE RENDU VIT ICI, PAS DANS LA PAGE, et c'est tout l'intérêt de ce bloc
+     (demande de Pablo, 2026-09-02 : « il faut que Découvrir de Social vienne
+     remplacer celui de Repas »). L'écran Repas avait son propre « Découvrir » —
+     trois cartes vers les mini-jeux — qui n'avait de commun avec celui du fil
+     que le titre. Recopier les rangées de `social.html` dans `repas.html`
+     aurait donné deux rendus du même contenu, donc deux qui divergent : c'est
+     le défaut payé sur `api/_nutrition.js` (macros fausses en notification),
+     sur `www/menu.html` (un accueil fossile servi par le bundle) et sur les
+     ombres de `suivi.html`. La page fournit un HÔTE, le module fournit tout
+     le reste.
+
+     ⚠️ LE STYLE EST DANS LE MODULE, ET IL NE S'APPUIE QUE SUR SES PROPRES
+     RÈGLES. La version d'origine héritait de `.rail` et `.dishes`, définis dans
+     le `<style>` de `social.html` : importées telles quelles dans Repas, les
+     rangées y auraient perdu leur défilement horizontal et leur grille sans que
+     rien ne le signale. Seuls les JETONS de `assets/style.css` sont supposés
+     présents (`--card`, `--ink`, `--muted`, `--r-lg`, `--r-full`, `--nm-soft`,
+     `--pad`) : les deux pages qui montent ce bloc chargent cette feuille.
+     `.sec-title` / `.sec-sub` en viennent aussi — les titres gardent donc
+     l'allure de la page qui les accueille, ce qui est voulu.
+
+     ⚠️ Tout est scellé sous `.ndx`, posé sur l'hôte. Les noms de classes sont
+     courts (`.dish`, `.pays`, `.envie`) parce qu'ils étaient déjà ceux de
+     `social.html` — donc des noms qu'une page peut avoir pris. Sans ce
+     scellement, une règle `.dish{}` nue déformerait les rangées sur cette
+     page-là, et personne ne saurait pourquoi.                              */
+
+  var ENVIES_EM = {
+    'Végétarien': '🥬', 'Protéiné': '🥩', 'Léger': '🍋',
+    'Épicé': '🌶️', 'Réconfortant': '🍲', 'Riche en fibres': '🌾'
+  };
+
+  var cssPose = false;
+  function css() {
+    if (cssPose) return;
+    cssPose = true;
+    var s = document.createElement('style');
+    s.textContent = [
+      /* Rangée qui défile. `scroll-padding-left` : sans lui, le snap alignerait
+         la première carte sur le bord du conteneur, donc sous la gouttière —
+         elle partirait rognée. */
+      '.ndx .nd-rail{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;',
+      'margin:0 calc(var(--pad,20px) * -1);padding:2px var(--pad,20px) 6px;',
+      'scroll-padding-left:var(--pad,20px);-webkit-overflow-scrolling:touch}',
+      '.ndx .nd-rail::-webkit-scrollbar{display:none}',
+      '.ndx .nd-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}',
+      '.ndx .nd-head .sec-title{margin-bottom:6px}',
+      '.ndx .nd-lnk{flex:none;background:none;border:none;font-family:inherit;font-size:12px;',
+      'font-weight:800;color:var(--ink);text-decoration:underline;cursor:pointer;padding:0}',
+
+      '.ndx .pays{flex:0 0 43%;scroll-snap-align:start;position:relative;border-radius:var(--r-lg,24px);',
+      'overflow:hidden;aspect-ratio:1/1.22;cursor:pointer;background:var(--card);box-shadow:var(--nm-soft)}',
+      '.ndx .pays img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;',
+      'opacity:0;transition:opacity .45s ease}',
+      '.ndx .pays img.vu{opacity:1}',
+      '.ndx .pays .vo{position:absolute;left:0;right:0;bottom:0;padding:30px 12px 12px;color:#fff;',
+      'background:linear-gradient(0deg,rgba(0,0,0,.86) 0%,rgba(0,0,0,.45) 45%,rgba(0,0,0,0) 100%)}',
+      '.ndx .pays .fl{font-size:19px;line-height:1}',
+      '.ndx .pays .nm{font-weight:900;font-size:15px;letter-spacing:-.2px;margin-top:3px;',
+      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.ndx .pays .nb{font-size:10.5px;font-weight:700;opacity:.78;margin-top:1px}',
+
+      /* Les envies : des pastilles, pas une liste. Un tap ouvre directement la
+         visionneuse sur tous les plats de l'étiquette — filtrer une grille en
+         place aurait demandé un second geste pour arriver au même endroit. */
+      '.ndx .envies{display:flex;gap:8px;overflow-x:auto;margin:0 calc(var(--pad,20px) * -1);',
+      'padding:2px var(--pad,20px) 6px;scroll-padding-left:var(--pad,20px);',
+      '-webkit-overflow-scrolling:touch}',
+      '.ndx .envies::-webkit-scrollbar{display:none}',
+      '.ndx .envie{flex:none;display:inline-flex;align-items:center;gap:7px;border:none;cursor:pointer;',
+      'background:var(--card);color:var(--ink);font-family:inherit;border-radius:var(--r-full,999px);',
+      'padding:11px 16px;font-size:12.5px;font-weight:800;white-space:nowrap}',
+      '.ndx .envie:active{transform:scale(.96)}',
+      '.ndx .envie .e{font-size:15px;line-height:1}',
+
+      /* ⚠️ LES DEUX SÉLECTEURS SONT NÉCESSAIRES, et le second a été trouvé en
+         MESURANT, pas en lisant. `social.html` pose `.ndx` et `.dishes` sur le
+         MÊME élément pour sa grille de résultats de recherche : le sélecteur de
+         descendance seul ne l'atteignait donc pas, et ses sept vignettes
+         s'empilaient sur une colonne, sans cadrage — `gridTemplateColumns`
+         relevé à `none`. Un appelant peut légitimement faire l'un ou l'autre. */
+      '.ndx .dishes,.ndx.dishes{display:grid;grid-template-columns:1fr 1fr;gap:6px 5px}',
+      '.ndx .dish{position:relative;aspect-ratio:1/1.3;border-radius:var(--r-lg,24px);overflow:hidden;',
+      'background:var(--card);box-shadow:var(--nm-soft);cursor:pointer}',
+      '.ndx .dish img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;',
+      'transition:opacity .45s ease}',
+      '.ndx .dish img.vu{opacity:1}',
+      '.ndx .dish .fl{position:absolute;top:8px;left:8px;z-index:2;font-size:15px;line-height:1;',
+      'background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);',
+      'border-radius:999px;padding:5px 7px}',
+      '.ndx .dish .nm{position:absolute;left:6px;right:6px;bottom:6px;z-index:2;color:#fff;font-weight:800;',
+      'font-size:12px;line-height:1.25;text-shadow:0 1px 8px rgba(0,0,0,.75)}',
+      '.ndx .dish .sh{position:absolute;left:0;right:0;bottom:0;height:58%;',
+      'background:linear-gradient(0deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,0) 100%)}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* ⚠️ AUCUN PLAT SANS PHOTO DANS CES RANGÉES (demande de Pablo, 2026-08-25).
+     Le tri se fait en amont — `tous`, `cuisines`, `parTag`, `selection` ne
+     rendent que les plats photographiés. Ce test est le filet du bout de la
+     chaîne : une vignette `null` ne pose AUCUNE carte, plutôt qu'une
+     `<img src="null">` qui afficherait l'icône cassée du navigateur au milieu
+     de la rangée. `illu()` continue de servir ailleurs (le calendrier de
+     `planning.js`, l'arc de `journee.js`), où il faut bien montrer QUELQUE
+     CHOSE pour un plat placé sans photo. */
+  function fond(p) {
+    var v = vignette(p);
+    if (!v) return '';
+    return '<img src="' + esc(v) + '" alt="" loading="lazy" onload="this.classList.add(\'vu\')">';
+  }
+
+  /** La carte d'un plat, telle qu'elle apparaît dans une grille `.dishes`. */
+  function carte(p) {
+    var f = fond(p);
+    if (!f) return '';
+    return '<div class="dish" data-plat="' + esc(p.cle) + '">' + f
+      + '<span class="fl">' + p.drapeau + '</span><div class="sh"></div>'
+      + '<div class="nm">' + esc(p.n) + '</div></div>';
+  }
+
+  /**
+   * Pose les trois rangées dans `hote` : les cuisines, les envies, la
+   * sélection du jour. À appeler AVANT la moindre requête réseau de la page —
+   * le catalogue est embarqué, le faire patienter derrière un fil ou des
+   * recettes, c'est un écran vide sur un contenu déjà prêt.
+   *
+   * @param {Element|string} hote  l'élément (ou son id) qui reçoit les rangées
+   * @param {Object} [o]  {titre, sousTitre, toutVoir:bool, nbSel}
+   */
+  function monter(hote, o) {
+    o = o || {};
+    var el = typeof hote === 'string' ? document.getElementById(hote) : hote;
+    if (!el) return null;
+    css();
+    el.classList.add('ndx');
+
+    var pays = cuisines(), liste = tous();
+    var nbSel = o.nbSel || 8;
+
+    /* Les ids `ttDecouv` / `ttEnvies` / `ttSel` sont conservés : `social.html`
+       leur pose ses illustrations au trait après coup (`poserIcones`). Les
+       changer aurait laissé cet écran sans ses trois dessins, en silence. */
+    el.innerHTML =
+      '<div class="nd-head">'
+      + '<div class="sec-title" id="ttDecouv">' + esc(o.titre || 'Découvrir') + '</div>'
+      + (o.toutVoir === false ? '' : '<button class="nd-lnk" type="button" data-nd="tout">Tout voir</button>')
+      + '</div>'
+      + '<div class="sec-sub">' + esc(o.sousTitre
+          || (liste.length + ' plats, ' + pays.length
+              + ' cuisines — de quoi ne pas remanger deux fois la même chose')) + '</div>'
+      + '<div class="nd-rail">' + pays.map(function (c) {
+          /* La couverture est la photo du PREMIER plat : un choix, pas un
+             hasard — la liste est ordonnée, la vignette ne changera donc jamais
+             d'un chargement à l'autre. Et le pluriel se décide : « Le
+             quotidien » n'a qu'un seul plat photographié, et « 1 plats » se lit
+             comme un bug de gabarit. */
+          var n = c.plats.length;
+          return '<div class="pays" data-pays="' + esc(c.cle) + '">' + fond(c.plats[0])
+            + '<div class="vo"><div class="fl">' + c.drapeau + '</div>'
+            + '<div class="nm">' + esc(c.nom) + '</div>'
+            + '<div class="nb">' + n + (n > 1 ? ' plats' : ' plat') + '</div></div></div>';
+        }).join('') + '</div>'
+      + '<div class="sec-title" id="ttEnvies">Envie de quoi ?</div>'
+      + '<div class="sec-sub">Une étiquette, et on fait défiler les plats qui vont avec</div>'
+      + '<div class="envies">' + tags().map(function (t) {
+          return '<button class="envie" type="button" data-envie="' + esc(t) + '">'
+            + '<span class="e">' + (ENVIES_EM[t] || '🍽️') + '</span>' + esc(t) + '</button>';
+        }).join('') + '</div>'
+      + '<div class="sec-title" id="ttSel">À goûter cette semaine</div>'
+      + '<div class="sec-sub">Une sélection qui change chaque jour, un plat par pays</div>'
+      + '<div class="dishes" data-nd-titre="À goûter cette semaine">'
+      + selection(nbSel).map(carte).join('') + '</div>';
+    return el;
+  }
+
+  /* ⚠️ UN SEUL ÉCOUTEUR, POSÉ SUR `document` ET FILTRÉ PAR `.ndx`. Délégué,
+     parce que les rangées sont réécrites (`monter` peut être rappelé) et que
+     rebrancher à chaque rendu finit par perdre un geste. Filtré, parce que
+     `[data-plat]` est un attribut court : sans le test d'ancêtre, un tap sur un
+     élément homonyme d'une autre partie de la page ouvrirait la visionneuse. */
+  document.addEventListener('click', function (e) {
+    var cl = e.target.closest;
+    if (!cl) return;
+    var dans = e.target.closest('.ndx');
+    if (!dans) return;
+
+    var c = e.target.closest('[data-pays]');
+    if (c) {
+      var cu = cuisine(c.getAttribute('data-pays'));
+      if (!cu) return;
+      /* `cuisine:` est ce qui arme le passage au pays suivant en fin de série.
+         Les deux autres entrées (une envie, la sélection du jour) ne le passent
+         pas : « le pays d'après » n'y veut rien dire. */
+      ouvrir({ plats: cu.plats, index: 0, titre: cu.drapeau + ' ' + cu.nom, cuisine: cu.cle });
+      return;
+    }
+    var t = e.target.closest('[data-envie]');
+    if (t) {
+      var tag = t.getAttribute('data-envie');
+      ouvrir({ plats: parTag(tag), index: 0, titre: tag });
+      return;
+    }
+    if (e.target.closest('[data-nd="tout"]')) {
+      ouvrir({ plats: tous(), titre: 'Tous les plats' });
+      return;
+    }
+    var d = e.target.closest('[data-plat]');
+    if (d) {
+      /* On ouvre sur la LISTE affichée, pas sur le catalogue entier : le geste
+         latéral doit parcourir ce qu'on avait sous les yeux, sinon le plat
+         suivant sort de nulle part. */
+      var boite = d.closest('.dishes') || dans;
+      var cles = [].map.call(boite.querySelectorAll('[data-plat]'), function (x) {
+        return x.getAttribute('data-plat');
+      });
+      ouvrir({
+        plats: cles.map(platParCle).filter(Boolean),
+        index: cles.indexOf(d.getAttribute('data-plat')),
+        titre: boite.getAttribute('data-nd-titre') || 'Plats du monde'
+      });
+    }
+  });
+
+
   return {
     cuisines: cuisines, cuisine: cuisine, parCuisine: parCuisine,
     tous: tous, parTag: parTag, tags: tags, selection: selection,
@@ -1225,6 +1457,11 @@ var NattyDecouverte = (function () {
        la visionneuse — et parce qu'un autre écran voudra la lancer un jour. */
     recette: recette,
     ouvrir: ouvrir, fermer: fermer,
+    /* Les trois rangées « Découvrir », posées dans un hôte fourni par la page.
+       `carte` est exportée avec elles : la recherche de `social.html` doit
+       pouvoir rendre les MÊMES vignettes que la sélection du jour — deux
+       fabriques de cartes, c'est deux qui divergent. */
+    monter: monter, carte: carte,
     estOuverte: function () { return !!window.NattyVisionneuse && NattyVisionneuse.estOuverte(); }
   };
 })();

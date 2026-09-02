@@ -274,53 +274,15 @@ body{overflow-x:hidden}
    embarqué dans l'app, il ne dépend d'aucune requête. Le mettre dans le
    fil l'aurait fait disparaître quand personne n'a encore rien publié —
    c'est-à-dire précisément le moment où l'écran a le plus besoin de
-   quelque chose à regarder. */
-.pays-rail .pays{flex:0 0 43%;scroll-snap-align:start;position:relative;border-radius:var(--r-lg);
-  overflow:hidden;aspect-ratio:1/1.22;cursor:pointer;background:var(--card);box-shadow:var(--nm-soft)}
-.pays img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  opacity:0;transition:opacity .45s ease}
-.pays img.vu{opacity:1}
-.pays .vo{position:absolute;left:0;right:0;bottom:0;padding:30px 12px 12px;color:#fff;
-  background:linear-gradient(0deg,rgba(0,0,0,.86) 0%,rgba(0,0,0,.45) 45%,rgba(0,0,0,0) 100%)}
-.pays .fl{font-size:19px;line-height:1}
-.pays .nm{font-weight:900;font-size:15px;letter-spacing:-.2px;margin-top:3px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pays .nb{font-size:10.5px;font-weight:700;opacity:.78;margin-top:1px}
+   quelque chose à regarder.
 
-/* Les envies : des pastilles, pas une liste. Un tap ouvre directement la
-   visionneuse sur tous les plats de l'étiquette — filtrer une grille en
-   place aurait demandé un second geste pour arriver au même endroit. */
-.envies{display:flex;gap:8px;overflow-x:auto;margin:0 calc(var(--pad) * -1);
-  padding:2px var(--pad) 6px;scroll-padding-left:var(--pad);-webkit-overflow-scrolling:touch}
-.envies::-webkit-scrollbar{display:none}
-.envie{flex:none;display:inline-flex;align-items:center;gap:7px;border:none;cursor:pointer;
-  background:var(--card);color:var(--ink);font-family:inherit;border-radius:var(--r-full);
-  padding:11px 16px;font-size:12.5px;font-weight:800;white-space:nowrap}
-.envie:active{transform:scale(.96)}
-.envie .e{font-size:15px;line-height:1}
-
-/* Les plats du monde en grille : même gabarit que `.post-img` pour que
-   les deux moitiés de l'écran se répondent, mais sans en-tête d'auteur —
-   personne n'a posté ces plats, ils viennent du catalogue. */
-.dishes{display:grid;grid-template-columns:1fr 1fr;gap:6px 5px}
-.dish{position:relative;aspect-ratio:1/1.3;border-radius:var(--r-lg);overflow:hidden;
-  background:var(--card);box-shadow:var(--nm-soft);cursor:pointer}
-.dish img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .45s ease}
-.dish img.vu{opacity:1}
-/* Le fond d'un plat SANS photo : l'illustration au trait, centrée, sur le
-   creux de la carte. ⚠️ `stroke-width` redéclaré et faible — la boîte du SVG
-   fait 24 unités, donc le trait de 1.4 de `plats-illu.js` se peindrait en
-   ~7 px dans une vignette de 120 px. Même piège que le `.hero` de journee.js. */
-.dish .di,.pays .di{position:absolute;inset:0;display:flex;align-items:center;
-  justify-content:center;background:var(--card);color:var(--muted)}
-.dish .di svg,.pays .di svg{width:52%;height:52%;stroke-width:1}
-.dish .fl{position:absolute;top:8px;left:8px;z-index:2;font-size:15px;line-height:1;
-  background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
-  border-radius:999px;padding:5px 7px}
-.dish .nm{position:absolute;left:6px;right:6px;bottom:6px;z-index:2;color:#fff;font-weight:800;
-  font-size:12px;line-height:1.25;text-shadow:0 1px 8px rgba(0,0,0,.75)}
-.dish .sh{position:absolute;left:0;right:0;bottom:0;height:58%;
-  background:linear-gradient(0deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,0) 100%)}
+   ⚠️ NI LE STYLE NI LE RENDU NE SONT PLUS ICI (2026-09-02). Les deux vivent
+   dans `assets/decouverte.js` (`monter`, `carte`), parce que l'écran Repas
+   montre désormais exactement les mêmes rangées : les laisser dans cette page
+   aurait obligé à les y recopier, donc à tenir deux versions du même contenu.
+   Le module se scelle sous la classe `.ndx`, qu'il pose lui-même sur son hôte
+   — d'où cette classe sur `#decouv` ET sur la grille de résultats de la
+   recherche, qui rend les mêmes vignettes. */
 </style>
 </head>
 <body>
@@ -341,22 +303,7 @@ body{overflow-x:hidden}
        Hors de `#fil`, et rendu AVANT que la moindre requête ne parte : ce
        catalogue est embarqué dans l'app. C'est ce que l'on voit en arrivant,
        même hors ligne, même le premier jour où personne n'a rien publié. -->
-  <div id="decouv">
-    <div class="sec-head-row">
-      <div class="sec-title" id="ttDecouv">Découvrir</div>
-      <button class="lnk" id="btnMonde">Tout voir</button>
-    </div>
-    <div class="sec-sub" id="decouvSub"></div>
-    <div class="rail pays-rail" id="railPays"></div>
-
-    <div class="sec-title" id="ttEnvies">Envie de quoi ?</div>
-    <div class="sec-sub">Une étiquette, et on fait défiler les plats qui vont avec</div>
-    <div class="envies" id="envies"></div>
-
-    <div class="sec-title" id="ttSel">À goûter cette semaine</div>
-    <div class="sec-sub">Une sélection qui change chaque jour, un plat par pays</div>
-    <div class="dishes" id="selJour"></div>
-  </div>
+  <div id="decouv"></div>
 
   <div id="etat" class="empty">Chargement du fil…</div>
 
@@ -364,7 +311,11 @@ body{overflow-x:hidden}
   <div id="secRech" class="hidden">
     <div id="secRechMonde" class="hidden">
       <div class="sec-title" id="ttRechMonde">Plats du monde</div>
-      <div class="dishes" id="rechMonde"></div>
+      <!-- `ndx` : la classe sous laquelle `assets/decouverte.js` scelle son
+           style. Sans elle, les cartes rendues par `NattyDecouverte.carte()`
+           s'afficheraient sans grille ni cadrage — et le clic délégué du
+           module, qui exige cet ancêtre, ne partirait pas. -->
+      <div class="dishes ndx" id="rechMonde" data-nd-titre="Plats du monde"></div>
     </div>
     <div class="sec-title" id="ttRech">Dans le fil</div>
     <div class="posts" id="rech"></div>
@@ -567,110 +518,37 @@ function visuel(p, taille){
 }
 
 /* ══ Découvrir ══════════════════════════════════════════════
-   Les données viennent d'assets/decouverte.js, le rendu est ici —
-   même partage que NattySocial / social.html. La visionneuse plein
-   écran, elle, appartient au module : elle s'invite par-dessus
-   l'écran et doit donc porter son propre style.
+   Les données ET le rendu viennent d'`assets/decouverte.js` : cette page ne
+   fait plus que fournir l'hôte. C'est le même « Découvrir » que l'écran Repas
+   depuis le 2026-09-02, et ça ne peut l'être qu'à cette condition — un rendu
+   recopié dans les deux pages, c'est deux rendus qui divergent (voir
+   l'encadré du module).
 
-   ⚠️ Ce bloc se rend AVANT `NattySocial.charger()`, pas après. Le
-   catalogue est embarqué, il n'attend aucune requête : le faire
-   patienter derrière le fil, c'est cinq secondes d'écran vide sur
-   un contenu qui était prêt tout de suite.                        */
+   ⚠️ Il se monte AVANT `NattySocial.charger()`, pas après. Le catalogue est
+   embarqué, il n'attend aucune requête : le faire patienter derrière le fil,
+   c'est cinq secondes d'écran vide sur un contenu qui était prêt tout de
+   suite.
 
-var ENVIES = {
-  'Végétarien':'🥬', 'Protéiné':'🥩', 'Léger':'🍋',
-  'Épicé':'🌶️', 'Réconfortant':'🍲', 'Riche en fibres':'🌾'
-};
-
-/* ⚠️ AUCUN PLAT SANS PHOTO DANS CET ÉCRAN (demande de Pablo, 2026-08-25).
-   Le tri se fait en amont, dans `assets/decouverte.js` : ses fonctions de
-   parcours (`tous`, `cuisines`, `parTag`, `selection`) ne rendent plus que les
-   plats photographiés. Le test ci-dessous est le filet du bout de la chaîne —
-   une vignette `null` ne pose AUCUNE carte, plutôt qu'une `<img src="null">`
-   qui afficherait l'icône cassée du navigateur au milieu de la rangée.
-   ⚠️ `illu()` n'est donc plus appelé ici. Il continue de servir ailleurs — le
-   calendrier de `assets/planning.js` et l'arc de `assets/journee.js` doivent
-   bien montrer QUELQUE CHOSE pour un plat placé qui n'a pas de photo. */
-function fondDish(p){
-  var v = NattyDecouverte.vignette(p);
-  if (!v) return '';
-  return '<img src="' + v + '" alt="" loading="lazy"'
-    + ' onload="this.classList.add(\'vu\')">';
-}
-
-function carteDish(p){
-  var f = fondDish(p);
-  if (!f) return '';
-  return '<div class="dish" data-plat="' + esc(p.cle) + '">'
-    + f
-    + '<span class="fl">' + p.drapeau + '</span><div class="sh"></div>'
-    + '<div class="nm">' + esc(p.n) + '</div></div>';
-}
+   ⚠️ Les clics (un pays, une envie, un plat, « Tout voir ») sont branchés par
+   le module, en délégation sur `document` et filtrés par l'ancêtre `.ndx`.
+   Cette page n'en écoute plus aucun : deux écouteurs pour le même geste
+   ouvraient la visionneuse deux fois.                              */
 
 function rendreDecouverte(){
-  if (!window.NattyDecouverte) { $('decouv').classList.add('hidden'); return; }
-  var pays = NattyDecouverte.cuisines();
-  var tous = NattyDecouverte.tous();
-
-  $('decouvSub').textContent = tous.length + ' plats, ' + pays.length
-    + ' cuisines — de quoi ne pas remanger deux fois la même chose';
-
-  $('railPays').innerHTML = pays.map(function(c){
-    // La photo de couverture est celle du premier plat : un choix, pas un
-    // hasard — la liste est ordonnée, la vignette ne changera donc jamais
-    // d'un chargement à l'autre. Et depuis que les plats sans photo sont
-    // masqués, ce premier plat en a forcément une.
-    // ⚠️ Le pluriel se décide : « Le quotidien » n'a plus qu'un seul plat
-    // photographié, et « 1 plats » se lit comme un bug de gabarit.
-    var n = c.plats.length;
-    return '<div class="pays" data-pays="' + esc(c.cle) + '">'
-      + fondDish(c.plats[0])
-      + '<div class="vo"><div class="fl">' + c.drapeau + '</div>'
-      + '<div class="nm">' + esc(c.nom) + '</div>'
-      + '<div class="nb">' + n + (n > 1 ? ' plats' : ' plat') + '</div></div></div>';
-  }).join('');
-
-  $('envies').innerHTML = NattyDecouverte.tags().map(function(t){
-    return '<button class="envie" data-envie="' + esc(t) + '">'
-      + '<span class="e">' + (ENVIES[t] || '🍽️') + '</span>' + esc(t) + '</button>';
-  }).join('');
-
-  $('selJour').innerHTML = NattyDecouverte.selection(8).map(carteDish).join('');
+  if (!window.NattyDecouverte || !NattyDecouverte.monter) {
+    $('decouv').classList.add('hidden');
+    return;
+  }
+  NattyDecouverte.monter($('decouv'));
+  // Les trois titres reçoivent leur illustration après coup, comme ceux du
+  // fil : le module leur laisse les mêmes ids (`ttDecouv`, `ttEnvies`,
+  // `ttSel`) précisément pour que `poserIcones()` continue de les trouver.
+  poserIcones();
 }
 
-document.addEventListener('click', function(e){
-  if (!window.NattyDecouverte) return;
-  var c = e.target.closest && e.target.closest('[data-pays]');
-  if (c){
-    var cu = NattyDecouverte.cuisine(c.dataset.pays);
-    // `cuisine:` est ce qui arme le passage au pays suivant en fin de série.
-    // Les deux autres entrées (une envie, la sélection du jour) ne le passent
-    // pas : « le pays d'après » n'y veut rien dire.
-    NattyDecouverte.ouvrir({ plats: cu.plats, index: 0,
-                             titre: cu.drapeau + ' ' + cu.nom, cuisine: cu.cle });
-    return;
-  }
-  var t = e.target.closest && e.target.closest('[data-envie]');
-  if (t){
-    var tag = t.dataset.envie;
-    NattyDecouverte.ouvrir({ plats: NattyDecouverte.parTag(tag), index: 0, titre: tag });
-    return;
-  }
-  var d = e.target.closest && e.target.closest('[data-plat]');
-  if (d){
-    // On ouvre sur la LISTE affichée, pas sur le catalogue entier : le geste
-    // latéral doit parcourir ce qu'on avait sous les yeux, sinon le plat
-    // suivant sort de nulle part.
-    var boite = d.closest('.dishes');
-    var cles = [].map.call(boite.querySelectorAll('[data-plat]'), function(x){ return x.dataset.plat; });
-    var plats = cles.map(NattyDecouverte.platParCle).filter(Boolean);
-    NattyDecouverte.ouvrir({
-      plats: plats,
-      index: cles.indexOf(d.dataset.plat),
-      titre: boite.id === 'rechMonde' ? 'Plats du monde' : 'À goûter cette semaine'
-    });
-  }
-});
+/** Les vignettes des résultats de recherche — la fabrique du module, pas une
+    seconde. Deux façons de dessiner la même carte finiraient par différer. */
+function carteDish(p){ return NattyDecouverte.carte(p); }
 
 function coeur(p){
   var c = NattySocial.compteurs(p.id);
@@ -1267,13 +1145,12 @@ function majAmisPlusTard(){
 /* Plus de clic sur le fond : une page pleine n'a pas de fond. Le retour est
    dans la barre collante en haut. */
 
-/* « Tout voir » : tous les plats PHOTOGRAPHIÉS à la suite, dans l'ordre du
-   catalogue — donc pays par pays, ce qui reste un parcours et non un sac.
-   Le compte n'est pas écrit ici : `tous()` le donne, et il a déjà changé
-   trois fois. */
-$('btnMonde').addEventListener('click', function(){
-  if (window.NattyDecouverte) NattyDecouverte.ouvrir({ plats: NattyDecouverte.tous(), titre: 'Tous les plats' });
-});
+/* ⚠️ Le « Tout voir » de Découvrir N'EST PLUS BRANCHÉ ICI. Il appartient au
+   module, avec le reste des rangées : `$('btnMonde')` rendait `null` depuis
+   que celles-ci ont déménagé, et un `addEventListener` sur `null` fait tomber
+   TOUT le script de la page — donc le fil, la recherche et l'annuaire avec.
+   (Tous les plats photographiés à la suite, dans l'ordre du catalogue : pays
+   par pays, ce qui reste un parcours et non un sac.) */
 
 $('btnMembres').addEventListener('click', function(){
   rendreMembres();
