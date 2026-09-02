@@ -34,7 +34,9 @@
 
    Dépend d'`assets/core.js`. Utilise `assets/creneaux.js` s'il est chargé (pour
    savoir combien de repas la personne prévoit, donc juger la régularité) et
-   sait s'en passer.
+   `assets/seance.js` s'il est là (pour que le muscle et la graisse découlent de
+   l'entraînement RÉEL du jour, et non du niveau d'activité déclaré une fois
+   pour toutes) — il sait se passer des deux.
    ═══════════════════════════════════════════════════════════ */
 window.NattyBilan = (function () {
   'use strict';
@@ -65,6 +67,37 @@ window.NattyBilan = (function () {
      mettre aux protéines n'est pas à zéro. */
   var TAUX_MUSCLE = { sedentaire: 0.0015, leger: 0.0025, modere: 0.0035, actif: 0.005 };
   var TAUX_DEFAUT = 0.0025;
+
+  /* Ce qui reste de potentiel un jour SANS stimulus, quand la personne
+     journalise ses séances. Demande de Pablo (2026-09-02) : les grammes de
+     muscle et de graisse doivent découler de la séance, pas d'une case cochée
+     à l'inscription.
+     ⚠️ CE N'EST PAS ZÉRO, et ce n'est pas de la complaisance : la synthèse
+     protéique reste élevée ~48 h après une séance (c'est déjà pris en compte
+     par `NattySeance.stimulus`, qui compte la veille pour moitié), et le corps
+     de quelqu'un qui vient de se mettre aux protéines s'adapte un peu à la
+     charge du quotidien. Un plancher à 0 afficherait « 0 g » tous les jours de
+     repos, ce qui est faux dans l'autre sens.
+     ⚠️ ET IL NE S'APPLIQUE QU'À CEUX QUI JOURNALISENT (voir `corpsDuJour`) :
+     appliqué à tout le monde, il ferait fondre du jour au lendemain les
+     estimations de gens qui n'ont rien changé à leur vie. */
+  var PLANCHER_SEANCE = 0.30;
+
+  /* Et ce qu'un jour de PLEIN stimulus vaut.
+     ⚠️⚠️ IL DOIT ÊTRE > 1, ET C'EST UN DÉFAUT TROUVÉ AU BANC. Le facteur
+     plafonnait d'abord à 1 — exactement la valeur de quelqu'un qui ne
+     journalise pas. Journaliser ne pouvait donc JAMAIS augmenter l'estimation :
+     au mieux elle restait égale, et la séance faisait en plus monter la dépense,
+     donc baisser le facteur énergie. Mesuré : 21 g de muscle sans séance contre
+     13 g avec, à alimentation identique. Autrement dit l'écran répondait « vous
+     avez construit MOINS » à quelqu'un qui venait de déclarer sa séance — soit
+     l'inverse exact de ce que la fonctionnalité promet.
+     Le couple 0,30 / 1,60 REDISTRIBUE la semaine sans la gonfler : quatre jours
+     pleins et trois de repos donnent (4 × 1,6 + 3 × 0,3) / 7 ≈ 1,04, donc le
+     même total hebdomadaire qu'avant, réparti là où l'entraînement a eu lieu.
+     C'est bien ce qu'on veut dire — pas « vous construisez plus qu'avant »,
+     mais « voilà QUAND vous construisez ». */
+  var PLAFOND_SEANCE = 1.60;
 
   /* ═══ 2. Petits utilitaires ══════════════════════════════ */
 
@@ -206,6 +239,13 @@ window.NattyBilan = (function () {
     if (cache && (Date.now() - cache.chargeLe) < 60000) return cache;
     var profil = await chargerProfil();
     var jours = await chargerJours(JOURS_COURBE + 2);
+    /* Les séances, si le module est là. Le `catch` est volontairement muet :
+       un journal d'entraînement indisponible ne doit pas empêcher le bilan de
+       s'ouvrir — il retombe alors exactement sur le modèle d'avant, celui du
+       niveau d'activité déclaré. */
+    if (window.NattySeance) {
+      try { await NattySeance.charger(JOURS_COURBE + 4); } catch (e) {}
+    }
     cache = { profil: profil, jours: jours, chargeLe: Date.now() };
     return cache;
   }
@@ -306,54 +346,127 @@ window.NattyBilan = (function () {
        l'eau, et le déficit réel n'est jamais celui d'un seul jour. Sans ce
        plafond, une journée à jeun afficherait un chiffre spectaculaire et faux.
 
-     MUSCLE — potentiel × protéines × énergie :
+     MUSCLE — potentiel × protéines × énergie × séance :
        potentiel = poids × taux(activité) / 7
        protéines = min(1, apport / cible)         il en faut assez
        énergie   = (apport kcal / dépense − 0,85) / 0,15, borné à [0,1]
+       séance    = 0,30 + 1,30 × stimulus         voir plus bas
        ⚠️ Le facteur énergie est ce qui empêche l'absurdité principale : on ne
        construit pas de muscle en déficit profond, quelle que soit la quantité
        de protéines. Il s'ouvre à partir de 85 % de la dépense et sature à
        100 % — ni un mur à 100 % (personne ne construit rien à 99 %), ni une
-       porte ouverte à 60 %. */
-  function corpsDuJour(a, profil) {
+       porte ouverte à 60 %.
+
+     LA SÉANCE, ajoutée le 2026-09-02 à la demande de Pablo (« pouvoir ajouter
+     sa séance avant le bilan pour voir exactement combien de grammes de muscle
+     on a gagné et combien de graisse brûlée »). Elle entre dans les DEUX
+     chiffres, et pas de la même façon :
+     • dans la GRAISSE, par la dépense — `dépense = tdee + kcal de la séance`,
+       donc un déficit plus grand, donc plus de grammes. C'est la partie
+       vraiment « au gramme près » : le déficit cesse d'ignorer une heure de
+       salle ;
+     • dans le MUSCLE, par le stimulus — `NattySeance.stimulus()` compte les
+       séries du jour plus la moitié de celles de la veille (la synthèse
+       protéique reste élevée ~48 h), rapporté à un volume plein.
+     ⚠️ Le facteur séance rend le facteur ÉNERGIE plus sévère au passage, et
+     c'est juste : diviser l'apport par une dépense plus haute, c'est
+     reconnaître qu'une journée d'entraînement demande plus pour construire.
+
+     ⚠️⚠️ RIEN DE TOUT ÇA NE S'APPLIQUE À QUI NE JOURNALISE PAS. Sans une seule
+     séance notée sur les trois dernières semaines, `facteurSeance` vaut 1 et
+     le calcul est celui d'avant, au gramme près. Sans ce garde-fou, la mise à
+     jour aurait divisé par trois les estimations de tous les comptes existants
+     du jour au lendemain — un changement de modèle qui ressemble à une
+     régression de forme physique. */
+  function corpsDuJour(a, profil, ctx) {
     var c = profil.cible, out = { gras: 0, muscle: 0, deficit: 0, surplus: 0,
-                                  facteurProt: 0, facteurEnergie: 0, taux: 0, estimable: false };
+                                  facteurProt: 0, facteurEnergie: 0, facteurSeance: 1,
+                                  taux: 0, estimable: false,
+                                  kcalSeance: 0, seriesSeance: 0, avecSeance: false };
     if (!c.c || !profil.poids || a.vide) return out;
     out.estimable = true;
 
-    var ecart = c.c - a.mac.c;
+    /* La dépense du jour : celle du profil, plus ce que la séance a coûté.
+       `NattySeance.kcal` retire 1 MET précisément parce que `tdee` compte déjà
+       le repos de ces minutes-là — sans quoi une heure de salle offrirait
+       ~70 kcal qui n'ont pas été dépensées. */
+    var sea = ctx && ctx.seance;
+    if (sea && window.NattySeance) {
+      out.kcalSeance = NattySeance.kcal(sea, profil.poids);
+      out.seriesSeance = NattySeance.series(sea);
+      out.avecSeance = true;
+    }
+    var depense = c.c + out.kcalSeance;
+    out.depense = depense;
+
+    var ecart = depense - a.mac.c;
     if (ecart > 0) { out.deficit = r0(ecart); out.gras = Math.min(250, Math.round(ecart / KCAL_PAR_KG_GRAS * 1000)); }
     else out.surplus = r0(-ecart);
 
     out.taux = TAUX_MUSCLE[profil.activite] || TAUX_DEFAUT;
     var potentielG = profil.poids * out.taux / 7 * 1000;      // en grammes/jour
     out.facteurProt = c.p ? borne(a.mac.p / c.p, 0, 1) : 0;
-    out.facteurEnergie = borne((a.mac.c / c.c - 0.85) / 0.15, 0, 1);
-    out.muscle = Math.round(potentielG * out.facteurProt * out.facteurEnergie);
+    out.facteurEnergie = borne((a.mac.c / depense - 0.85) / 0.15, 0, 1);
+    if (ctx && ctx.journalise && window.NattySeance) {
+      var st = NattySeance.stimulus(sea, ctx.veille);
+      out.stimulus = st;
+      out.facteurSeance = PLANCHER_SEANCE + (PLAFOND_SEANCE - PLANCHER_SEANCE) * st;
+    }
+    out.muscle = Math.round(potentielG * out.facteurProt * out.facteurEnergie * out.facteurSeance);
     return out;
+  }
+
+  /**
+   * Le contexte « séance » d'une journée : la sienne, celle de la veille, et
+   * si cette personne journalise du tout.
+   *
+   * ⚠️ `journalise` est calculé UNE FOIS pour toute la série, pas jour par
+   * jour. Sinon quelqu'un qui note trois séances par semaine verrait ses jours
+   * de repos basculer sur l'ancien modèle et ses jours de salle sur le
+   * nouveau : deux échelles dans le même graphique, donc une courbe qui monte
+   * et descend pour une raison qui n'existe pas.
+   */
+  function ctxSeance(jour, journalise) {
+    if (!window.NattySeance) return { journalise: false, seance: null, veille: null };
+    var d = new Date(jour + 'T12:00:00');
+    var hier = isNaN(d) ? null : (function () {
+      var x = new Date(d); x.setDate(x.getDate() - 1); return jourDe(x);
+    })();
+    return { journalise: !!journalise,
+             seance: NattySeance.duJour(jour),
+             veille: hier ? NattySeance.duJour(hier) : null };
+  }
+
+  /** Cette personne journalise-t-elle ses séances ? (une seule fois par série) */
+  function journalise() {
+    return !!(window.NattySeance && NattySeance.utilise && NattySeance.utilise(21));
   }
 
   /** La série des `nb` derniers jours, du plus ancien au plus récent. */
   function serie(nb) {
-    var out = [];
+    var out = [], jrn = journalise();
     for (var i = nb - 1; i >= 0; i--) {
       var d = new Date(); d.setDate(d.getDate() - i);
       var j = jourDe(d), e = cache.jours[j];
       var a = analyserJour(e, cache.profil);
-      out.push({ jour: j, date: d, a: a, corps: corpsDuJour(a, cache.profil) });
+      var ctx = ctxSeance(j, jrn);
+      out.push({ jour: j, date: d, a: a, corps: corpsDuJour(a, cache.profil, ctx),
+                 seance: ctx.seance });
     }
     return out;
   }
 
   /** Le bilan de la SEMAINE en cours (du lundi à aujourd'hui). */
   function semaineEnCours() {
-    var l = lundiDe(new Date()), out = [];
+    var l = lundiDe(new Date()), out = [], jrn = journalise();
     var d = new Date(l);
     var fin = jourCourant();
     while (jourDe(d) <= fin && out.length < 7) {
       var j = jourDe(d), e = cache.jours[j];
       var a = analyserJour(e, cache.profil);
-      out.push({ jour: j, date: new Date(d), a: a, corps: corpsDuJour(a, cache.profil) });
+      var ctx = ctxSeance(j, jrn);
+      out.push({ jour: j, date: new Date(d), a: a,
+                 corps: corpsDuJour(a, cache.profil, ctx), seance: ctx.seance });
       d.setDate(d.getDate() + 1);
     }
     return out;
@@ -603,12 +716,31 @@ window.NattyBilan = (function () {
       '#nbil .grf .ligne{fill:none;stroke:var(--b-ink);stroke-width:2.5;',
       'stroke-linecap:round;stroke-linejoin:round;',
       'animation:nbTrace 1.9s cubic-bezier(.3,.7,.4,1) forwards}',
+      /* Le PONT : les segments qui traversent un jour sans donnée. La courbe
+         est continue (c'est la demande), mais ces portions-là sont un calcul,
+         pas une mesure — d'où le pointillé, le trait plus fin et la couleur
+         adoucie. Un lecteur doit pouvoir distinguer les deux sans lire la
+         légende ; c'est la seule façon de « lier » les trous sans affirmer
+         qu'on a mesuré ce qui s'y est passé.
+         ⚠️ `stroke-dasharray` porte ICI le motif du pointillé, et
+         `animerCourbe()` ne doit surtout pas l'écraser pour animer le tracé —
+         il en ferait une ligne continue, donc un mensonge. */
+      '#nbil .grf .pont{fill:none;stroke:var(--b-ink);stroke-width:1.6;',
+      'stroke-dasharray:2.5 4;stroke-linecap:round;opacity:0;',
+      'animation:nbFonduPont .9s ease 1.15s forwards}',
+      '@keyframes nbFonduPont{to{opacity:.42}}',
       '@keyframes nbTrace{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}',
       '#nbil .grf .pt{fill:var(--b-ink)}',
       // (Il n'y a plus d'aire remplie sous la courbe — voir `courbeHTML()`.)
       '#nbil .grf .lbl{font-size:9px;font-weight:600;fill:var(--b-mut2)}',
-      '#nbil .lgd{display:flex;justify-content:center;gap:16px;margin:10px 0 0;',
-      'font-size:11px;color:var(--b-mut)}',
+      /* ⚠️ `flex-wrap`, ET C'EST LA RÈGLE 39 DE CLAUDE.md. La légende portait
+         deux entrées, elle en porte trois depuis que les trous sont reliés
+         (« ┈ 6 jours sans donnée, reliés ») : sans le retour à la ligne, la
+         rangée déborde de la colonne à 375 px et la page part en défilement
+         HORIZONTAL — un défaut qui ne se lit pas dans le code, seulement en
+         mesurant. Même correctif que `.hero-foot` de repas.html. */
+      '#nbil .lgd{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;',
+      'margin:10px 0 0;font-size:11px;color:var(--b-mut);line-height:1.5}',
 
       /* ── Les jours de la semaine, en barres ───────────────── */
       /* ⚠️ `height:auto` sur la piste, et `flex-shrink:0` sur la barre — les
@@ -626,7 +758,19 @@ window.NattyBilan = (function () {
       'justify-content:flex-end;gap:6px}',
       '#nbil .sem .bar{width:100%;max-width:34px;flex:0 0 auto;border-radius:9px 9px 4px 4px;',
       'background:var(--b-ink);height:0;transition:height 1.1s cubic-bezier(.22,1,.36,1);min-height:3px}',
-      '#nbil .sem .d.vide .bar{background:var(--b-creux)}',
+      /* ⚠️ UN JOUR NON NOTÉ N'EST PLUS UNE BARRE ÉCRASÉE DE 3 PX (2026-09-02,
+         même demande que la courbe : « il faut absolument que ce soit plein
+         même quand on n'entre pas de données »). Il portait `min-height:3px`,
+         donc un trait au ras du sol : dans une semaine à trois jours notés, le
+         graphique se lisait comme quatre journées de jeûne.
+         Il reçoit maintenant la hauteur INTERPOLÉE entre ses voisins notés,
+         mais dessinée en creux et en hachures — vide à l'intérieur, contour
+         discontinu. La semaine se lit d'un bout à l'autre, et ce qui n'a pas
+         été mesuré ne ressemble en rien à ce qui l'a été. */
+      '#nbil .sem .d.vide .bar{background:none;',
+      'box-shadow:inset 0 0 0 1.4px var(--b-trait);',
+      'background-image:repeating-linear-gradient(135deg,var(--b-trait2) 0 3px,',
+      'transparent 3px 7px)}',
       /* Le trait de dépense : pointillé, DERRIÈRE les barres (z-index 0 contre
          le contexte d'empilement des `.d`), pour qu'une journée qui le dépasse
          se lise comme telle plutôt que de le recouvrir. */
@@ -895,21 +1039,37 @@ window.NattyBilan = (function () {
     var x = function (i) { return mx + (pts.length < 2 ? 0 : i * (largeur - 2 * mx) / (pts.length - 1)); };
     var y = function (v) { return hauteur - my - (v / haut) * (hauteur - 2 * my); };
 
-    /* ⚠️⚠️ UN JOUR NON NOTÉ EST UN TROU, PAS UN ZÉRO. La première version
-       reliait tous les points, donc un jour sans repas plongeait à la ligne du
-       bas : le tracé montrait deux V profonds là où il n'y avait, en réalité,
-       aucune information. Une courbe qui descend à zéro affirme « il n'a rien
-       mangé ce jour-là » ; l'app ne sait pas ça, elle sait seulement qu'elle
-       n'a rien enregistré. On coupe donc le tracé (un nouveau `M` après chaque
-       trou) et on ne pose aucun point : le vide se voit, et il ne ment pas.
-       C'est la même règle que la case « jamais renseignée » d'`assets/planning.js`
-       et que l'ingrédient au liseré ambre d'`assets/ajout.js`. */
-    var d = '', coupe = true;
-    pts.forEach(function (p, i) {
-      if (!p.note) { coupe = true; return; }
-      d += (coupe ? 'M' : 'L') + x(i).toFixed(1) + ' ' + y(p.v).toFixed(1) + ' ';
-      coupe = false;
-    });
+    /* ⚠️⚠️ LA COURBE EST CONTINUE, ET LES TROUS SONT EN POINTILLÉ (demande de
+       Pablo, 2026-09-02 : « le graphique n'est pas continu, il y a des trous,
+       il faut absolument qu'il soit plein même quand on n'entre pas de
+       données → lier »).
+
+       La version précédente coupait le tracé à chaque jour non noté. Le motif
+       était bon — une courbe qui plonge à zéro AFFIRME « il n'a rien mangé »,
+       alors que l'app sait seulement qu'elle n'a rien enregistré — mais le
+       résultat était un graphique en miettes : sur un mois ordinaire, quatre ou
+       cinq segments détachés qui se lisent comme un rendu cassé, pas comme une
+       tendance.
+
+       Les deux exigences se tiennent, et c'est ce que fait `relier()` :
+       • le trait va d'un bout à l'autre, sans interruption — donc « plein » ;
+       • les segments qui traversent un jour sans donnée sont TRACÉS À PART, en
+         pointillé clair, et ne portent AUCUN point. Le trait passe par ces
+         jours, il ne les mesure pas — et ça se voit, sans avoir à lire la
+         légende.
+       Zéro n'est jamais inventé : un jour non noté prend la valeur interpolée
+       entre ses deux voisins notés, et les jours d'avant le premier (ou d'après
+       le dernier) tiennent la valeur à plat plutôt que de tomber. */
+    var lie = relier(pts);
+    var d = '', dPont = '';
+    if (lie) {
+      for (var k = 1; k < pts.length; k++) {
+        var seg = 'M' + x(k - 1).toFixed(1) + ' ' + y(lie[k - 1]).toFixed(1)
+                + ' L' + x(k).toFixed(1) + ' ' + y(lie[k]).toFixed(1) + ' ';
+        // Un segment est « mesuré » quand ses DEUX extrémités le sont.
+        if (pts[k - 1].note && pts[k].note) d += seg; else dPont += seg;
+      }
+    }
     var yc = y(cible || 0);
 
     // Une étiquette tous les 5 jours : les 30 collées seraient illisibles.
@@ -924,10 +1084,14 @@ window.NattyBilan = (function () {
        remplissait les cinq sixièmes du cadre d'un bloc gris uni, et c'est ce
        bloc qu'on voyait au lieu de la courbe. Relevé à l'écran, pas à la
        lecture. Le trait suffit ; le repère, c'est la ligne de dépense. */
+    var trous = pts.filter(function (p) { return !p.note; }).length;
     return '<div class="grf" data-in style="animation-delay:.3s">'
       + '<svg viewBox="0 0 ' + largeur + ' ' + hauteur + '" preserveAspectRatio="none">'
       + (cible ? '<line class="cible" x1="' + mx + '" y1="' + yc.toFixed(1) + '" x2="' + (largeur - mx) + '" y2="' + yc.toFixed(1) + '"/>' : '')
       + '<line class="axe" x1="' + mx + '" y1="' + (hauteur - my) + '" x2="' + (largeur - mx) + '" y2="' + (hauteur - my) + '"/>'
+      /* Le pont est posé AVANT le trait mesuré : là où les deux se touchent,
+         c'est le trait plein qui doit couvrir la jointure, pas l'inverse. */
+      + (dPont ? '<path class="pont" id="nbPont" d="' + dPont.trim() + '"/>' : '')
       + '<path class="ligne" id="nbLigne" d="' + d.trim() + '"/>'
       + pts.map(function (p, i) {
           if (!p.note) return '';   // rien à pointer sur un jour sans donnée
@@ -936,7 +1100,43 @@ window.NattyBilan = (function () {
       + lbls
       + '</svg></div>'
       + '<div class="lgd"><span>— ce que vous avez mangé</span>'
+      + (trous ? '<span>┈ ' + trous + ' jour' + (trous > 1 ? 's' : '') + ' sans donnée, relié'
+                 + (trous > 1 ? 's' : '') + '</span>' : '')
       + (cible ? '<span>┄ votre dépense</span>' : '') + '</div>';
+  }
+
+  /**
+   * Les valeurs de la courbe, un nombre par jour, TROUS COMPRIS.
+   *
+   * @returns {number[]|null} null s'il n'y a pas un seul jour noté — auquel cas
+   *          il n'y a rien à relier, et surtout rien à extrapoler.
+   *
+   * ⚠️ AVANT LE PREMIER JOUR NOTÉ ET APRÈS LE DERNIER, ON TIENT LA VALEUR À
+   * PLAT. Prolonger la pente aurait été plus joli et franchement faux : sur
+   * quelqu'un qui commence à journaliser au milieu du mois, une extrapolation
+   * de deux semaines vers l'arrière dessinerait une progression qui n'a jamais
+   * été observée. Un plateau, lui, dit visiblement « rien de neuf ici » — et
+   * son pointillé dit que ce n'est pas une mesure.
+   */
+  function relier(pts) {
+    var n = pts.length, notes = [];
+    for (var i = 0; i < n; i++) if (pts[i].note) notes.push(i);
+    if (!notes.length) return null;
+
+    var v = new Array(n);
+    for (i = 0; i < notes[0]; i++) v[i] = pts[notes[0]].v;
+    for (i = notes[notes.length - 1] + 1; i < n; i++) v[i] = pts[notes[notes.length - 1]].v;
+    for (var k = 0; k < notes.length; k++) {
+      var a = notes[k];
+      v[a] = pts[a].v;
+      var b = notes[k + 1];
+      if (b == null) break;
+      // Interpolation linéaire entre deux jours notés.
+      for (i = a + 1; i < b; i++) {
+        v[i] = pts[a].v + (pts[b].v - pts[a].v) * ((i - a) / (b - a));
+      }
+    }
+    return v;
   }
 
   /* ⚠️ Le tracé s'anime par `stroke-dasharray`, et la LONGUEUR ne peut être
@@ -957,6 +1157,19 @@ window.NattyBilan = (function () {
       // deux écritures et l'animation ne repart pas.
       void l.getBoundingClientRect();
       l.style.animation = 'nbTrace 1.9s cubic-bezier(.3,.7,.4,1) forwards';
+
+      /* ⚠️ LE PONT NE SE TRACE PAS, IL SE RÉVÈLE. Son `stroke-dasharray` porte
+         déjà le motif du pointillé (voir le CSS) : le réécrire pour l'animer
+         comme le trait plein transformerait les tirets en une ligne continue —
+         donc effacerait précisément ce qui distingue un jour relié d'un jour
+         mesuré. Il apparaît en opacité, et un peu après le trait, pour qu'on
+         lise d'abord ce qui est vrai. */
+      var pont = racine.querySelector('#nbPont');
+      if (pont) {
+        pont.style.animation = 'none';
+        void pont.getBoundingClientRect();
+        pont.style.animation = 'nbFonduPont .9s ease 1.15s forwards';
+      }
     }, 120);
   }
 
@@ -1052,7 +1265,80 @@ window.NattyBilan = (function () {
         + '<div class="sous" data-in style="animation-delay:.4s">' + esc(accord) + '</div>'
         + criteresHTML(a.criteres),
       pret: function () { remplirCriteres(a.criteres); },
-      boutons: [{ txt: 'Et mon corps ?', on: scCorps }]
+      boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
+    });
+  }
+
+  /* ── La séance, juste AVANT le corps ─────────────────────────
+     Demande de Pablo (2026-09-02) : « il faudrait pouvoir ajouter sa séance
+     avant le bilan pour voir exactement combien de grammes de muscle on a
+     gagné et combien de graisse brûlée ».
+
+     ⚠️ SA PLACE DANS LA SÉQUENCE EST TOUT L'INTÉRÊT. Posée après l'écran du
+     corps, la question aurait été une formalité : on aurait déjà lu ses deux
+     chiffres, et les corriger après coup revient à dire que le premier
+     affichage était faux. Posée ici, la réponse ARRIVE À TEMPS — l'écran
+     suivant est calculé avec elle.
+
+     ⚠️ Elle est sautée sans un mot quand `assets/seance.js` n'est pas chargé.
+     Un écran qui demande d'ajouter une séance et n'aurait rien pour la
+     recevoir est pire qu'un écran absent — c'est le défaut qu'avait le bouton
+     « Continuer avec Apple » (§11 de CLAUDE.md). */
+  function scSeance() {
+    if (!window.NattySeance) { scCorps(); return; }
+    enTete('VOTRE SÉANCE');
+    var sea = S.seance;
+
+    if (sea) {
+      var kc = NattySeance.kcal(sea, S.profil.poids);
+      bloc({
+        html: titre('Séance notée', 'p', 0.1)
+          + '<div class="sous" data-in style="animation-delay:.4s">'
+          + esc(NattySeance.resume(sea)) + '</div>'
+          + (kc ? kmodHTML('Ajoutées à votre dépense', kc, 'kcal',
+                'soit ' + Math.round(kc / KCAL_PAR_KG_GRAS * 1000) + ' g de graisse en plus dans le déficit')
+                : '')
+          + '<div class="note-est" data-in style="animation-delay:.7s">C’est ce qui rend '
+          + 'les deux chiffres suivants exacts : la dépense de la séance entre dans le '
+          + 'déficit, et son volume dans ce que votre corps a pu construire.</div>',
+        boutons: [
+          { txt: 'C’est bien ça', on: scCorps },
+          { txt: 'Corriger ma séance', cls: 'b3', on: ouvrirSaisieSeance }
+        ]
+      });
+      return;
+    }
+
+    bloc({
+      html: titre('Vous avez bougé aujourd’hui ?', 'p', 0.1)
+        + '<div class="sous" data-in style="animation-delay:.4s">Sans séance notée, le '
+        + 'muscle et la graisse se déduisent de votre niveau d’activité déclaré à '
+        + 'l’inscription — la même valeur un jour de repos et un jour de squat. '
+        + 'Deux minutes de saisie, et les deux chiffres deviennent les vôtres.</div>',
+      boutons: [
+        { txt: '🏋️  Ajouter ma séance', on: ouvrirSaisieSeance },
+        { txt: 'Pas de séance aujourd’hui', cls: 'b3', on: scCorps }
+      ]
+    });
+  }
+
+  /* ⚠️ AU RETOUR, ON RECALCULE — c'est la seule raison d'être de ce détour.
+     Reprendre `S.corps` tel quel afficherait les chiffres d'AVANT la séance,
+     donc exactement ce que la question était censée corriger : on aurait ajouté
+     dix séries pour voir le même « 12 g ».
+     Le module s'ouvre par-dessus le bilan (z-index 9700 contre 640) et rend la
+     main par son `apres`. */
+  function ouvrirSaisieSeance() {
+    NattySeance.ajouterPour(jourCourant(), function () {
+      if (!racine) return;   // le bilan a été fermé entre-temps
+      var ctx = ctxSeance(jourCourant(), journalise());
+      S.seance = ctx.seance;
+      S.corps = corpsDuJour(S.a, S.profil, ctx);
+      // La série et la semaine portent le même jour : les laisser en arrière
+      // ferait dire à la courbe le contraire de l'écran qu'on vient de quitter.
+      S.serie30 = serie(JOURS_COURBE);
+      S.sem = semaineEnCours();
+      scCorps();
     });
   }
 
@@ -1083,7 +1369,17 @@ window.NattyBilan = (function () {
       });
       return;
     }
-    var phrase = cp.muscle > 0 && cp.gras > 0
+    /* ⚠️ LE CAS CONTRE-INTUITIF PASSE EN PREMIER, et il faut le nommer. Une
+       séance fait monter la dépense : à apport égal, le facteur énergie baisse,
+       donc le muscle construit baisse aussi. C'est la physiologie, mais sans
+       explication ça se lit comme un bug — « j'ai déclaré ma séance et l'app
+       m'annonce moins de muscle ». La phrase dit ce qui manque, et ce qui
+       manque est une assiette, pas une série. */
+    var phrase = (cp.avecSeance && cp.facteurEnergie < 0.5)
+      ? 'Votre séance a augmenté votre dépense du jour. À cet apport, le corps puise '
+        + 'plus qu’il ne construit : manger un peu plus les jours de salle fait monter '
+        + 'les deux chiffres à la fois.'
+      : cp.muscle > 0 && cp.gras > 0
       ? 'Assez de protéines et un léger déficit : les deux à la fois, c’est le meilleur cas.'
       : cp.muscle > 0
         ? 'De quoi construire : les protéines sont là et l’énergie suit.'
@@ -1104,15 +1400,38 @@ window.NattyBilan = (function () {
            sont MODÉLISÉS, pas mesurés : les afficher sans dire d'où ils
            viennent en ferait une balance, ce qu'ils ne sont pas. */
         + '<div class="note-est" data-in style="animation-delay:.85s">Estimations, pas des mesures. '
-        + 'La graisse vient de votre bilan d’énergie (' + (cp.deficit ? '−' + cp.deficit : '+' + cp.surplus)
-        + ' kcal, ~7 700 kcal par kilo). Le muscle, de votre poids et de votre niveau d’activité '
+        + 'La graisse vient de votre bilan d’énergie ('
+        + (cp.deficit ? '−' + cp.deficit : '+' + cp.surplus) + ' kcal sur '
+        + r0(cp.depense || S.profil.cible.c) + ' de dépense'
+        + (cp.kcalSeance ? ', dont ' + cp.kcalSeance + ' de votre séance' : '')
+        + ', ~7 700 kcal par kilo). Le muscle, de votre poids et de votre niveau d’activité '
         + 'déclaré, ramenés à vos protéines (' + Math.round(cp.facteurProt * 100) + '\u00a0% de la cible) '
-        + 'et à votre énergie (' + Math.round(cp.facteurEnergie * 100) + '\u00a0%).</div>',
+        + 'et à votre énergie (' + Math.round(cp.facteurEnergie * 100) + '\u00a0%)'
+        + (cp.facteurSeance !== 1
+            ? ', puis à votre entraînement (' + Math.round(cp.facteurSeance * 100) + '\u00a0%, '
+              + (cp.seriesSeance ? cp.seriesSeance + ' série' + (cp.seriesSeance > 1 ? 's' : '') + ' aujourd’hui'
+                                 : 'aucune série aujourd’hui') + ')'
+            : '')
+        + '.</div>'
+        /* ⚠️ Cette invitation ne s'affiche QUE quand rien n'a été noté. Sur une
+           journée avec séance, elle laisserait croire que la saisie n'a pas
+           été prise en compte — alors que les deux chiffres au-dessus en
+           découlent. */
+        + (!cp.avecSeance && window.NattySeance
+            ? '<div class="note-est" data-in style="animation-delay:.95s">Aucune séance notée '
+              + 'aujourd’hui : ces deux chiffres viennent donc de votre seule alimentation. '
+              + 'Une séance ajoutée les rendrait exacts.</div>'
+            : ''),
       pret: function () {
         compter('nbMus', cp.muscle, 'g');
         compter('nbGras', cp.gras, 'g');
       },
-      boutons: [{ txt: 'Voir ma progression', on: scProgression }]
+      boutons: [
+        { txt: 'Voir ma progression', on: scProgression },
+        !cp.avecSeance && window.NattySeance
+          ? { txt: '🏋️  Ajouter ma séance', cls: 'b3', on: ouvrirSaisieSeance }
+          : null
+      ].filter(Boolean)
     });
   }
 
@@ -1123,6 +1442,23 @@ window.NattyBilan = (function () {
     var el = racine && racine.querySelector('#' + id);
     if (!el) return;
     if (!vers) { el.innerHTML = '0<small>' + unite + '</small>'; return; }
+
+    /* ⚠️⚠️ LE FILET N'EST PAS UNE PRÉCAUTION DE PRINCIPE. Une page qui ne PEINT
+       pas ne reçoit AUCUNE `requestAnimationFrame` : le compteur reste alors sur
+       sa valeur de départ, c'est-à-dire qu'il annonce « 0 g » là où il y a
+       250 g de graisse puisée — l'exact contraire de ce que l'écran célèbre, et
+       sur les deux seuls chiffres qu'on vient y chercher. Mesuré au banc, volet
+       masqué. C'est la situation réelle de quelqu'un qui ouvre son bilan et
+       verrouille son téléphone le temps que la séquence défile.
+       Même famille que le compteur d'XP d'`assets/recette.js` (déjà corrigé
+       pour cette raison) et que la classe `on` de `Natty.confirmer` — règle 40
+       de CLAUDE.md. */
+    var pose = false;
+    setTimeout(function () {
+      if (pose || !racine || !el.parentNode) return;
+      el.innerHTML = vers + '<small>' + unite + '</small>';
+    }, 1300);
+
     var t0 = null, duree = 1100;
     function pas(t) {
       if (!racine || !el.parentNode) return;
@@ -1131,7 +1467,7 @@ window.NattyBilan = (function () {
       // Décélération : un compteur linéaire s'arrête net, celui-ci se pose.
       var v = Math.round(vers * (1 - Math.pow(1 - k, 3)));
       el.innerHTML = v + '<small>' + unite + '</small>';
-      if (k < 1) requestAnimationFrame(pas);
+      if (k < 1) requestAnimationFrame(pas); else pose = true;
     }
     requestAnimationFrame(pas);
   }
@@ -1260,18 +1596,26 @@ window.NattyBilan = (function () {
     var sem = S.sem, c = S.profil.cible;
     var max = Math.max(c.c || 0, Math.max.apply(null, sem.map(function (x) { return x.a.mac.c; }).concat([1])));
     var notes = sem.filter(function (x) { return !x.a.vide; });
+    /* Les hauteurs, trous reliés — exactement la même fonction que la courbe.
+       Deux interpolations pour les deux graphiques du même écran, c'est deux
+       qui finiraient par ne plus raconter la même semaine. */
+    var h = relier(sem.map(function (x) {
+      return { v: x.a.mac.c, note: !x.a.vide };
+    })) || sem.map(function () { return 0; });
 
     bloc({
       html: titre('Jour après jour', 'p', 0.1)
         + '<div class="sem">' + sem.map(function (x, i) {
             return '<div class="d' + (x.a.vide ? ' vide' : '') + '">'
               + '<div class="n">' + (x.a.vide ? '' : r0(x.a.mac.c / 100) / 10 + 'k') + '</div>'
-              + '<div class="bar" data-h="' + Math.max(3, Math.round((x.a.mac.c / max) * 118)) + '"></div>'
+              + '<div class="bar" data-h="' + Math.max(3, Math.round((h[i] / max) * 118)) + '"></div>'
               + '<div class="j">' + JOURS_COURTS[x.date.getDay()] + '</div></div>';
           }).join('') + (c.c ? '<div class="dep"><span></span></div>' : '') + '</div>'
         + '<div class="sous" data-in style="animation-delay:.6s">'
         + notes.length + ' jour' + (notes.length > 1 ? 's' : '') + ' noté' + (notes.length > 1 ? 's' : '')
-        + ' sur ' + sem.length + (c.c ? ' · trait de dépense à ' + c.c + ' kcal' : '') + '</div>',
+        + ' sur ' + sem.length
+        + (notes.length < sem.length ? ' · les jours hachurés sont reliés, pas mesurés' : '')
+        + (c.c ? ' · trait de dépense à ' + c.c + ' kcal' : '') + '</div>',
       pret: function (d) {
         /* ⚠️ Le trait de dépense est DESSINÉ, pas seulement annoncé. La phrase
            du bas disait « trait de dépense à 2800 kcal » alors qu'aucun trait
@@ -1350,6 +1694,8 @@ window.NattyBilan = (function () {
     var gras = sem.reduce(function (n, x) { return n + x.corps.gras; }, 0);
     var deficit = sem.reduce(function (n, x) { return n + x.corps.deficit - x.corps.surplus; }, 0);
     var estimable = sem.some(function (x) { return x.corps.estimable; });
+    var nbSea = sem.filter(function (x) { return x.seance; }).length;
+    var kcalSea = sem.reduce(function (n, x) { return n + (x.corps.kcalSeance || 0); }, 0);
 
     if (!estimable) {
       bloc({
@@ -1370,8 +1716,14 @@ window.NattyBilan = (function () {
         + '</div>'
         + '<div class="note-est" data-in style="animation-delay:.7s">Estimations cumulées sur les '
         + 'jours notés, pas des mesures. Bilan d’énergie de la semaine : '
-        + (deficit >= 0 ? '−' + r0(deficit) : '+' + r0(-deficit)) + ' kcal. '
-        + 'Un jour non noté compte pour zéro — il n’invente rien, mais il ne dit rien non plus.</div>',
+        + (deficit >= 0 ? '−' + r0(deficit) : '+' + r0(-deficit)) + ' kcal'
+        + (kcalSea ? ', dont ' + r0(kcalSea) + ' dépensées en ' + nbSea + ' séance'
+                     + (nbSea > 1 ? 's' : '') : '')
+        + '. Un jour non noté compte pour zéro — il n’invente rien, mais il ne dit rien non plus.'
+        + (window.NattySeance && !nbSea
+            ? ' Aucune séance notée cette semaine : le muscle vient donc de votre seul'
+              + ' niveau d’activité déclaré.' : '')
+        + '</div>',
       pret: function () { compter('nbMus', mus, 'g'); compter('nbGras', gras, 'g'); },
       boutons: [{ txt: 'Voir la courbe', on: scSemCourbe }]
     });
@@ -1484,11 +1836,13 @@ window.NattyBilan = (function () {
     try {
       if (!window.Natty || !Natty.USER_ID) return;
       await charger();
-      var a = analyserJour(cache.jours[jourCourant()], cache.profil);
+      var j = jourCourant();
+      var a = analyserJour(cache.jours[j], cache.profil);
+      var ctx = ctxSeance(j, journalise());
       S = {
-        profil: cache.profil, a: a, corps: corpsDuJour(a, cache.profil),
+        profil: cache.profil, a: a, corps: corpsDuJour(a, cache.profil, ctx),
         serie30: serie(JOURS_COURBE), sem: semaineEnCours(),
-        rep: {}, q: 0, semaine: !!semaine
+        seance: ctx.seance, rep: {}, q: 0, semaine: !!semaine
       };
       monter();
       if (semaine) scSemOuverture(); else scOuverture();
