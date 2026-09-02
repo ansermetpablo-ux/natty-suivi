@@ -83,6 +83,69 @@ window.NattyBilan = (function () {
      estimations de gens qui n'ont rien changé à leur vie. */
   var PLANCHER_SEANCE = 0.30;
 
+  /* ═══ La qualité NUTRITIONNELLE, et pourquoi ce n'est plus un ratio ═══
+     Demande de Pablo (2026-09-02, second passage) : « ça doit vraiment être
+     personnalisé en fonction de la qualité d'entraînement ET de nutrition ».
+
+     ⚠️⚠️ CE QUE FAISAIT L'ANCIENNE VERSION, ET POURQUOI C'ÉTAIT FAIBLE. Deux
+     facteurs : `min(1, protéines / (poids × 2))` et une rampe d'énergie entre
+     85 et 100 % de la dépense. Le premier comparait à une cible arbitraire —
+     2 g/kg est le HAUT de la fourchette utile, donc quelqu'un à 1,8 g/kg (un
+     apport excellent) était plafonné à 90 % pour rien. Et aucun des deux ne
+     regardait la RÉPARTITION, alors que la base la connaît repas par repas.
+
+     Trois termes maintenant, et chacun vient d'une mesure :
+     • PROTÉINES en g/kg de poids de corps — la grandeur que la littérature
+       utilise réellement. Rien en dessous de 0,8 g/kg, plein à 1,8, et au-delà
+       ça ne monte plus : c'est le plateau observé, pas une opinion.
+     • ÉNERGIE, rapportée à la dépense RÉELLE du jour (séance comprise). Rampe
+       de 0,80 à 1,00 : en dessous de 80 % le corps ne construit plus, il
+       arbitre. Le seuil de 0,85 de la version précédente était plus sévère sans
+       raison mesurable.
+     • RÉPARTITION : combien de repas ont porté une dose utile (≥ 0,25 g/kg).
+       Elle MODULE de 0,85 à 1,00, elle ne commande pas — un apport total
+       excellent mal réparti reste un bon apport.
+
+     ⚠️ Les deux premiers se MULTIPLIENT parce qu'ils sont tous deux LIMITANTS :
+     des protéines sans énergie ne construisent rien, et l'inverse non plus.
+     C'est la loi du minimum, pas une moyenne — une moyenne laisserait un
+     excellent apport protéique compenser un jeûne. */
+  var PROT_MIN = 0.8, PROT_PLEIN = 1.8;     // g par kg de poids de corps
+  var ENERGIE_MIN = 0.80, ENERGIE_PLEIN = 1.00;
+  var DOSE_UTILE = 0.25;                     // g/kg dans un même repas
+  var DOSES_PLEIN = 3;
+
+  /** Une rampe linéaire bornée : 0 sous `bas`, 1 au-dessus de `haut`. */
+  function rampe(v, bas, haut) {
+    if (haut <= bas) return v >= haut ? 1 : 0;
+    return borne((v - bas) / (haut - bas), 0, 1);
+  }
+
+  /**
+   * La qualité nutritionnelle d'une journée pour la CONSTRUCTION musculaire.
+   * @returns {Object} {note, fProt, fEnergie, fRepart, gParKg, ratio, doses}
+   */
+  function qualiteNutrition(a, profil, depense) {
+    var out = { note: 0, fProt: 0, fEnergie: 0, fRepart: 0,
+                gParKg: 0, ratio: 0, doses: 0 };
+    if (!profil.poids || !depense || a.vide) return out;
+
+    out.gParKg = a.mac.p / profil.poids;
+    out.fProt = rampe(out.gParKg, PROT_MIN, PROT_PLEIN);
+
+    out.ratio = a.mac.c / depense;
+    out.fEnergie = rampe(out.ratio, ENERGIE_MIN, ENERGIE_PLEIN);
+
+    var seuil = DOSE_UTILE * profil.poids;
+    out.seuilDose = Math.round(seuil);
+    out.nbRepas = (a.protRepas || []).length;
+    out.doses = (a.protRepas || []).filter(function (p) { return p >= seuil; }).length;
+    out.fRepart = rampe(out.doses, 0, DOSES_PLEIN);
+
+    out.note = out.fProt * out.fEnergie * (0.85 + 0.15 * out.fRepart);
+    return out;
+  }
+
   /* Et ce qu'un jour de PLEIN stimulus vaut.
      ⚠️⚠️ IL DOIT ÊTRE > 1, ET C'EST UN DÉFAUT TROUVÉ AU BANC. Le facteur
      plafonnait d'abord à 1 — exactement la valeur de quelqu'un qui ne
@@ -216,10 +279,17 @@ window.NattyBilan = (function () {
         var d = new Date(m.created_at), j = jourDe(d);
         var e = jours[j] || (jours[j] = {
           jour: j, date: d, nbRepas: 0, heures: [], ingredients: [],
-          mac: { p: 0, l: 0, g: 0, c: 0 }, noms: []
+          mac: { p: 0, l: 0, g: 0, c: 0 }, noms: [], protRepas: []
         });
         var mac = Natty.calcMac(parRepas[m.id] || []);
         e.nbRepas++;
+        /* ⚠️ Les protéines sont gardées REPAS PAR REPAS, en plus du total. La
+           synthèse protéique répond à des DOSES (~0,3 g/kg) et retombe entre
+           deux : 160 g pris en un seul repas ne valent pas 160 g répartis sur
+           quatre. Le total seul ne peut pas voir la différence, et c'est l'un
+           des rares leviers nutritionnels que la base permet vraiment de
+           mesurer — les repas sont horodatés et chiffrés un par un. */
+        e.protRepas.push(mac.p);
         e.heures.push(d.getHours() + d.getMinutes() / 60);
         e.noms.push(m.name || '');
         (parRepas[m.id] || []).forEach(function (i) {
@@ -331,7 +401,13 @@ window.NattyBilan = (function () {
     var globale = connus.length
       ? r0(connus.reduce(function (s, x) { return s + x.note; }, 0) / connus.length) : null;
 
+    /* ⚠️ `protRepas` DOIT PASSER PAR ICI. `qualiteNutrition` le lit sur l'objet
+       d'analyse, pas sur la ligne brute : sans ce champ il arrivait `undefined`,
+       donc « 0 repas avec une dose utile » affiché juste sous « 1,7 g par kilo »
+       — deux lignes du même écran qui se contredisaient. Trouvé à l'écran, pas
+       à la lecture. */
     return { jour: e ? e.jour : jourCourant(), vide: vide, mac: mac,
+             protRepas: (e && e.protRepas) || [],
              nbRepas: nbRepas, distincts: distincts, criteres: critere, note: globale };
   }
 
@@ -405,14 +481,33 @@ window.NattyBilan = (function () {
 
     out.taux = TAUX_MUSCLE[profil.activite] || TAUX_DEFAUT;
     var potentielG = profil.poids * out.taux / 7 * 1000;      // en grammes/jour
-    out.facteurProt = c.p ? borne(a.mac.p / c.p, 0, 1) : 0;
-    out.facteurEnergie = borne((a.mac.c / depense - 0.85) / 0.15, 0, 1);
+    out.potentiel = Math.round(potentielG);
+
+    /* ── La nutrition, en trois mesures ── */
+    var nut = qualiteNutrition(a, profil, depense);
+    out.nut = nut;
+    out.facteurProt = nut.fProt;          // conservés : l'écran les nomme
+    out.facteurEnergie = nut.fEnergie;
+
+    /* ── L'entraînement, calculé sur les exercices SAISIS ──
+       ⚠️ On passe par `qualiteEntrainement` et non par le seul `stimulus` :
+       c'est là que le volume PONDÉRÉ (reps, type de mouvement) et la FRÉQUENCE
+       hebdomadaire du groupe entrent. Le stimulus brut ignorait les deux. */
     if (ctx && ctx.journalise && window.NattySeance) {
-      var st = NattySeance.stimulus(sea, ctx.veille);
-      out.stimulus = st;
-      out.facteurSeance = PLANCHER_SEANCE + (PLAFOND_SEANCE - PLANCHER_SEANCE) * st;
+      /* ⚠️ `ctx.jour`, pas `a.jour` : sur une journée sans repas, `analyserJour`
+         retombe sur la date DU JOUR faute de ligne à lire. On n'arrive jamais
+         ici dans ce cas (retour anticipé plus haut), mais faire dépendre le
+         calcul d'un champ qui peut mentir est le genre de dette qui se paie à
+         la première retouche. */
+      var q = NattySeance.qualiteEntrainement
+        ? NattySeance.qualiteEntrainement(ctx.jour, ctx.jourVeille)
+        : { note: NattySeance.stimulus(sea, ctx.veille), volume: 0, frequence: 0 };
+      out.entrainement = q;
+      out.stimulus = q.note;
+      out.facteurSeance = PLANCHER_SEANCE + (PLAFOND_SEANCE - PLANCHER_SEANCE) * q.note;
     }
-    out.muscle = Math.round(potentielG * out.facteurProt * out.facteurEnergie * out.facteurSeance);
+
+    out.muscle = Math.round(potentielG * nut.note * out.facteurSeance);
     return out;
   }
 
@@ -432,7 +527,7 @@ window.NattyBilan = (function () {
     var hier = isNaN(d) ? null : (function () {
       var x = new Date(d); x.setDate(x.getDate() - 1); return jourDe(x);
     })();
-    return { journalise: !!journalise,
+    return { journalise: !!journalise, jour: jour, jourVeille: hier,
              seance: NattySeance.duJour(jour),
              veille: hier ? NattySeance.duJour(hier) : null };
   }
@@ -681,6 +776,22 @@ window.NattyBilan = (function () {
       'transition:width 1.1s cubic-bezier(.22,1,.36,1)}',
       '#nbil .cr .p{font-size:15px;font-weight:800;flex:none;width:44px;text-align:right}',
 
+      /* ── La décomposition du muscle ───────────────────────
+         Trois ou quatre lignes empilées : le facteur, sa jauge, et la MESURE
+         d'où il sort. C'est ce qui distingue un chiffre personnalisé d'un
+         chiffre qui en a l'air. */
+      '#nbil .dcp{margin:20px auto 0;max-width:430px;display:flex;flex-direction:column;',
+      'gap:13px;text-align:left}',
+      '#nbil .dc{width:100%}',
+      '#nbil .dt{display:flex;align-items:baseline;justify-content:space-between;gap:8px}',
+      '#nbil .dt span{font-size:13px;font-weight:700}',
+      '#nbil .dt b{font-size:14px;font-weight:800;flex:none}',
+      '#nbil .db{height:6px;border-radius:4px;background:var(--b-creux);margin-top:5px;',
+      'overflow:hidden}',
+      '#nbil .db i{display:block;height:100%;border-radius:4px;',
+      'transition:width 1.1s cubic-bezier(.22,1,.36,1)}',
+      '#nbil .dd{font-size:11px;color:var(--b-mut);margin-top:4px;line-height:1.45}',
+
       /* ── Le corps : muscle et graisse ─────────────────────── */
       '#nbil .cps{display:flex;gap:12px;margin:24px auto 0;max-width:430px}',
       '#nbil .cp{flex:1;border-radius:22px;padding:18px 14px;background:var(--b-relief);',
@@ -916,16 +1027,31 @@ window.NattyBilan = (function () {
     /* ⚠️ LA RÉSERVE DU BAS NE REDESCEND JAMAIS. Mesurée, parce qu'une barre à
        deux boutons ne fait pas la même hauteur qu'à un seul ; et jamais réduite,
        parce que la réécrire à chaque scène la faisait remonter puis redescendre
-       — ce qui déplace toute la composition entre deux plans. */
+       — ce qui déplace toute la composition entre deux plans.
+
+       ⚠️ ON RÉSERVE LA BARRE ENTIÈRE, plus seulement depuis son premier bouton.
+       L'ancien calcul retirait `b1.offsetTop` au motif que le tiers haut de la
+       barre est un dégradé transparent — vrai, mais un texte posé dans cette
+       zone est ATTÉNUÉ, pas lisible. Mesuré sur l'écran du corps depuis qu'il
+       porte la décomposition : défilé à fond, la mention « Estimations, pas des
+       mesures » finissait 34 px sous le haut de la barre, à demi effacée. C'est
+       précisément la ligne qui ne doit jamais être à moitié lisible — elle est
+       ce qui empêche de prendre ces grammes pour une balance.
+
+       ⚠️ `offsetHeight` inclut déjà le retrait de zone sûre de la barre : le
+       recalculer ici le compterait deux fois.
+
+       ⚠️ Et le `setTimeout` double la rAF — une page qui ne peint pas n'en
+       reçoit aucune, et la réserve ne serait alors jamais posée (règle 43). */
     var col = racine.querySelector('#nbCol');
-    requestAnimationFrame(function () {
-      if (!col || !cta) return;
-      var b1 = cta.firstElementChild;
-      if (!b1) return;
-      var voulu = (cta.offsetHeight - b1.offsetTop) + 14;
+    var reserver = function () {
+      if (!col || !cta || !cta.firstElementChild) return;
+      var voulu = cta.offsetHeight + 14;
       var actuel = parseFloat(getComputedStyle(col).paddingBottom) || 0;
       if (voulu > actuel) col.style.paddingBottom = Math.round(voulu) + 'px';
-    });
+    };
+    requestAnimationFrame(reserver);
+    setTimeout(reserver, 80);
 
     if (o.pret) o.pret(d);
     if (o.auto) minuteur = setTimeout(function () { minuteur = null; if (o.apres) o.apres(); }, o.auto);
@@ -1356,6 +1482,67 @@ window.NattyBilan = (function () {
     return 'Une journée moyenne, et les chiffres disent la même chose.';
   }
 
+  /**
+   * Les trois facteurs du muscle, chacun avec la mesure d'où il sort.
+   *
+   * ⚠️ ON AFFICHE LA MESURE, PAS SEULEMENT LE POURCENTAGE. « Protéines 100 % »
+   * ne dit rien de vérifiable ; « 1,9 g par kilo » se recompte. C'est la
+   * différence entre un chiffre personnalisé et un chiffre qui en a l'air.
+   */
+  function decompositionHTML(cp) {
+    var n = cp.nut || {};
+    var e = cp.entrainement;
+    var lignes = [];
+
+    if (cp.facteurSeance !== 1) {
+      lignes.push({
+        cle: 'Entraînement', v: cp.facteurSeance,
+        max: PLAFOND_SEANCE,
+        dit: e && e.volume
+          ? (cp.seriesSeance || 0) + ' série' + ((cp.seriesSeance || 0) > 1 ? 's' : '')
+            + ' notée' + ((cp.seriesSeance || 0) > 1 ? 's' : '')
+            + (e.volumePondere ? ' · ' + String(e.volumePondere).replace('.', ',')
+                                 + ' pondérées' : '')
+            + (e.frequence >= 2 ? ' · ' + Math.round(e.frequence) + ' passages sur ce groupe cette semaine'
+                                : ' · 1 seul passage sur ce groupe cette semaine')
+          : 'aucune série aujourd’hui — la veille compte pour moitié'
+      });
+    }
+    lignes.push({
+      cle: 'Protéines', v: n.fProt || 0, max: 1,
+      dit: (n.gParKg ? n.gParKg.toFixed(1).replace('.', ',') : '0')
+        + '\u00a0g par kilo de poids de corps' + (n.fProt >= 1 ? ' — au plateau utile' : '')
+    });
+    lignes.push({
+      cle: 'Énergie', v: n.fEnergie || 0, max: 1,
+      dit: Math.round((n.ratio || 0) * 100) + '\u00a0% de votre dépense du jour'
+    });
+    lignes.push({
+      cle: 'Répartition', v: 0.85 + 0.15 * (n.fRepart || 0), max: 1,
+      dit: (n.doses || 0) === 0
+        ? 'aucun de vos ' + (n.nbRepas || 0) + ' repas n’a porté une dose utile de '
+          + 'protéines (≥ ' + (n.seuilDose || 0) + '\u00a0g)'
+        : n.doses + ' repas sur ' + (n.nbRepas || n.doses) + ' ont porté une dose utile '
+          + '(≥ ' + (n.seuilDose || 0) + '\u00a0g)'
+    });
+
+    /* ⚠️ `dcp`/`dc`, PAS `crs`/`cr` : ces deux-là appartiennent déjà aux quatre
+       critères, avec des enfants `.e .b .n .d .j .p` et un `display:flex` en
+       rangée. Les réutiliser aurait posé mes trois lignes côte à côte. */
+    return '<div class="dcp" data-in style="animation-delay:.85s">'
+      + lignes.map(function (l) {
+          var pc = Math.round((l.v / l.max) * 100);
+          return '<div class="dc">'
+            + '<div class="dt"><span>' + esc(l.cle) + '</span>'
+            + '<b>' + Math.round(l.v * 100) + '\u00a0%</b></div>'
+            + '<div class="db"><i style="width:' + borne(pc, 0, 100) + '%;'
+            + 'background:' + couleurNote(pc) + '"></i></div>'
+            + '<div class="dd">' + esc(l.dit) + '</div>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+
   function scCorps() {
     enTete('VOTRE CORPS');
     var cp = S.corps, a = S.a;
@@ -1384,7 +1571,7 @@ window.NattyBilan = (function () {
       : cp.muscle > 0
         ? 'De quoi construire : les protéines sont là et l’énergie suit.'
         : cp.gras > 0
-          ? 'En déficit aujourd’hui. Sous 85 % de votre dépense, le corps ne construit plus — il puise.'
+          ? 'En déficit aujourd’hui. Sous 80\u00a0% de votre dépense, le corps ne construit plus — il puise.'
           : 'Au-delà de votre dépense aujourd’hui : rien de brûlé, mais de quoi construire si les protéines suivent.';
 
     bloc({
@@ -1396,23 +1583,23 @@ window.NattyBilan = (function () {
         + '<div class="v" id="nbGras">0<small>g</small></div><div class="l">de graisse puisée</div></div>'
         + '</div>'
         + '<div class="sous" data-in style="animation-delay:.7s">' + esc(phrase) + '</div>'
-        /* ⚠️ Cette mention n'est pas une précaution de style. Ces deux chiffres
-           sont MODÉLISÉS, pas mesurés : les afficher sans dire d'où ils
-           viennent en ferait une balance, ce qu'ils ne sont pas. */
-        + '<div class="note-est" data-in style="animation-delay:.85s">Estimations, pas des mesures. '
-        + 'La graisse vient de votre bilan d’énergie ('
+        /* ⚠️ LA DÉCOMPOSITION EST À L'ÉCRAN, et ce n'est pas de la décoration.
+           Demande de Pablo : « ça ne doit pas être uniquement 48 g, ça doit
+           être des vrais calculs ». Un total seul est un nombre qu'on croit ou
+           pas ; posé à côté de ses trois facteurs — chacun avec la mesure dont
+           il sort — il devient vérifiable, et on voit LEQUEL des trois retient
+           le résultat. C'est aussi ce qui rend le conseil évident : le facteur
+           le plus bas est ce qu'il y a à corriger demain. */
+        + decompositionHTML(cp)
+        + '<div class="note-est" data-in style="animation-delay:.95s">Estimations, pas des '
+        + 'mesures. La graisse vient de votre bilan d’énergie ('
         + (cp.deficit ? '−' + cp.deficit : '+' + cp.surplus) + ' kcal sur '
         + r0(cp.depense || S.profil.cible.c) + ' de dépense'
-        + (cp.kcalSeance ? ', dont ' + cp.kcalSeance + ' de votre séance' : '')
-        + ', ~7 700 kcal par kilo). Le muscle, de votre poids et de votre niveau d’activité '
-        + 'déclaré, ramenés à vos protéines (' + Math.round(cp.facteurProt * 100) + '\u00a0% de la cible) '
-        + 'et à votre énergie (' + Math.round(cp.facteurEnergie * 100) + '\u00a0%)'
-        + (cp.facteurSeance !== 1
-            ? ', puis à votre entraînement (' + Math.round(cp.facteurSeance * 100) + '\u00a0%, '
-              + (cp.seriesSeance ? cp.seriesSeance + ' série' + (cp.seriesSeance > 1 ? 's' : '') + ' aujourd’hui'
-                                 : 'aucune série aujourd’hui') + ')'
-            : '')
-        + '.</div>'
+        + (cp.kcalSeance ? ', dont ' + cp.kcalSeance + ' calculées sur vos exercices' : '')
+        + ', ~7 700 kcal par kilo). Le muscle part de votre plafond biologique — '
+        + cp.potentiel + '\u00a0g par jour pour ' + r0(S.profil.poids) + '\u00a0kg à votre '
+        + 'niveau — que les facteurs ci-dessus réduisent, chacun calculé sur ce que vous '
+        + 'avez saisi.</div>'
         /* ⚠️ Cette invitation ne s'affiche QUE quand rien n'a été noté. Sur une
            journée avec séance, elle laisserait croire que la saisie n'a pas
            été prise en compte — alors que les deux chiffres au-dessus en

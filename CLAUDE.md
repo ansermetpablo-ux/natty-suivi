@@ -1673,26 +1673,69 @@ vertical 3 séries de 12 » se range comme trois taps.
   « machines → séries → reps » ; un champ de charge par série ferait abandonner la saisie
   avant la fin. Conséquence assumée : la dépense se déduit du VOLUME, pas du tonnage.
 
-**Ce qu'il MESURE et ce qu'il ESTIME**, et l'écran distingue les deux :
+#### ⚠️⚠️ TOUT EST CALCULÉ EXERCICE PAR EXERCICE (2026-09-02, second passage)
+Demande de Pablo : « ça ne doit pas être uniquement 48 g, ça doit être des vrais calculs en
+fonction de ce qu'il a dépensé pendant sa séance grâce à la saisie de ses exercices ; ça doit
+vraiment être personnalisé en fonction de la qualité d'entraînement ET de nutrition ».
+
+**Ce que faisait la première version, et pourquoi ça ne pouvait pas tenir.** Elle comptait
+`séries × 2,2 min` et rien d'autre. Deux séances de 7 séries coûtaient donc **rigoureusement
+la même chose**, qu'il s'agisse de 7 × 20 reps au leg extension ou de 7 × 5 reps de soulevé de
+terre : ni les reps saisies, ni le mouvement choisi n'entraient dans le résultat. La moitié de
+ce que la personne venait de taper ne servait à rien — d'où un chiffre qui ressemblait à une
+constante, parce que c'en était presque une.
+
+**Chaque exercice porte maintenant SON temps et SON coût** :
 
 | Lecture | Nature | Modèle |
 |---|---|---|
 | `series()` / `reps()` | **saisi** | — |
-| `duree()` | déduit | `MIN_PAR_SERIE` = 2,2 min par série (effort + récup), sauf durée saisie |
-| `kcal(s, poids)` | **estimé** | `(MET − 1) × poids × heures` |
-| `stimulus(auj, hier)` | **estimé** | `(séries du jour + séries de la veille / 2) / SERIES_PLEIN`, borné à 1 |
+| `dureeExo(e)` | déduit | reps × `SEC_PAR_REP` (3,5 s en poly, 3 s en guidé) + séries × `REPOS_S` (150 / 90 / 45 s) |
+| `kcalExo(e, poids)` | **estimé** | `(MET − 1) × poids × durée de CET exercice` |
+| `kcal(s, poids)` | **estimé** | somme des exercices × (1 + `epocCoef`) |
+| `epocCoef(s)` | **estimé** | 5 → 13 % selon la part de polyarticulaire de la séance |
+| `poidsSerie(r)` | modèle | 1 entre 5 et 25 reps, déclin progressif au-delà et en deçà |
+| `volumePondere(s)` | modèle | Σ `poidsSerie(reps) × STIM[type]` (poly 1,15 · guidé 1 · statique 0,55 · cardio 0,15) |
+| `stimulus(auj, hier)` | **estimé** | `(volume du jour + volume de la veille / 2) / VOLUME_PLEIN`, borné à 1 |
+| `qualiteEntrainement(j, h)` | **estimé** | `stimulus × fFreq`, où `fFreq` = 0,85 → 1,00 selon les passages du groupe dans la semaine |
+
+**Mesuré au banc, à 80 kg** — c'est ce qui prouve que la saisie sert :
+
+| Séance | Durée | kcal | Volume pondéré | Stimulus |
+|---|---|---|---|---|
+| squat + soulevé, 7 × 5 | 20 min | 147 | 8,0 | 81 % |
+| machines, 7 × 20 | 18 min | 93 | 7,0 | 70 % |
+| pecs mixte, 7 séries | 18 min | 125 | 7,6 | 76 % |
+| vélo, 45 min | 45 min | 378 | 0,1 | 1 % |
+| gainage, 4 × 45 s | 6 min | 21 | 1,7 | 17 % |
 
 > ⚠️⚠️ **ON RETIRE 1 MET, ET CE N'EST PAS UN DÉTAIL.** Un MET vaut le métabolisme de repos, et
 > `onboarding.tdee` le compte **déjà** pour les 24 h de la journée, séance comprise. Le MET
 > brut compterait une heure de repos deux fois — ~70 kcal offertes par heure de salle, donc
 > ~9 g de graisse par séance qui n'ont pas été puisés. Le genre de cadeau qui rend un bilan
 > flatteur et faux.
-> ⚠️ **`SERIES_PLEIN` vaut 10, et ce n'était pas 6.** Mesuré au banc, une séance ordinaire de
-> 7 séries saturait déjà le facteur à 100 % : une séance légère et une séance lourde donnaient
-> le même stimulus, ce qui vide la mesure de son sens.
+> ⚠️⚠️ **LA PLAGE DE REPS PLEINE EST LARGE (5 à 25), ET ELLE ÉTAIT FAUSSE.** Réglée d'abord sur
+> 6-20, elle punissait les séries lourdes : mesuré, sept séries de squat à 5 reps rendaient un
+> volume de **2,8** contre **7,0** pour sept séries de leg extension à 20. Le modèle annonçait
+> qu'une séance lourde construit deux fois moins — à l'envers de ce que montrent Schoenfeld et
+> ses répliques (de ~30 à ~85 % du maximum, l'hypertrophie est comparable dès lors que la série
+> est menée près de l'échec, soit environ 5 à 30 reps).
+> ⚠️ **`VOLUME_PLEIN` vaut 10 séries PONDÉRÉES**, pas 10 séries brutes. Et ce n'était pas 6 :
+> une séance ordinaire de 7 séries saturait le facteur à 100 %, donc une séance légère et une
+> séance lourde donnaient le même stimulus.
 > ⚠️ **La VEILLE compte pour moitié** : la synthèse protéique reste élevée ~48 h. Sans ce
 > report, un jour de repos entre deux séances afficherait « 0 g de muscle » — or c'est
 > précisément le jour où il se construit.
+> ⚠️ **LA FRÉQUENCE HEBDOMADAIRE ENTRE DANS LE CALCUL** (`frequenceGroupes`). À volume égal, un
+> muscle travaillé deux fois dans la semaine construit davantage qu'en une seule grosse séance.
+> C'est l'un des points les plus consensuels de la littérature, et il est **invisible** pour un
+> modèle qui ne regarde que la journée — donc invisible dans la première version. Il MODULE
+> (0,85 → 1,00) et ne commande pas : sinon le chiffre du jour dépendrait des six jours
+> précédents plus que de la séance elle-même.
+> ⚠️ **`t: 'poly'` n'est PAS stocké en base** : `normaliser()` ne le copie pas, et `typeDe()` le
+> retrouve depuis le catalogue par la `cle`. Une ligne ancienne, ou un exercice tapé à la main
+> sans clé, retombe sur `'guide'` — le comportement le plus neutre, jamais une exception ni un
+> zéro.
 
 **Persistance** : table `seances` (`natty_seances.sql`, §4), repli `localStorage` tant qu'elle
 n'existe pas — et les deux écrans **le disent** (« gardées sur cet appareil uniquement »)
@@ -1754,10 +1797,76 @@ aujourd'hui ? », ou le récap de la séance déjà notée.
 - ⚠️ **La scène est sautée SANS UN MOT si `assets/seance.js` n'est pas chargé.** Un écran qui
   demande d'ajouter une séance sans rien pour la recevoir est pire qu'un écran absent — c'est
   le défaut du bouton « Continuer avec Apple » (§11).
-- **Graisse** : `dépense = tdee + kcal de la séance`, donc un déficit plus grand. C'est la
-  partie vraiment « au gramme près » — le déficit cesse d'ignorer une heure de salle.
-- **Muscle** : `potentiel × protéines × énergie × séance`, où
-  `séance = 0,30 + 1,30 × stimulus`.
+- **Graisse** : `dépense = tdee + kcal de la séance`, celle-ci calculée **exercice par
+  exercice** (voir le tableau d'`assets/seance.js`). Le déficit cesse d'ignorer une heure de
+  salle, et deux séances de même nombre de séries ne rendent pas le même chiffre.
+- **Muscle** : `plafond biologique × qualité nutritionnelle × facteur séance`, où
+  `séance = 0,30 + 1,30 × qualiteEntrainement`.
+
+#### ⚠️⚠️ LA QUALITÉ NUTRITIONNELLE, ET POURQUOI CE N'EST PLUS UN RATIO (2026-09-02)
+Même demande de Pablo : « personnalisé en fonction de la qualité d'entraînement ET de
+nutrition ». La version précédente avait deux facteurs, et les deux étaient faibles :
+`min(1, protéines / (poids × 2))` comparait à une cible **arbitraire** — 2 g/kg est le HAUT de
+la fourchette utile, donc quelqu'un à 1,8 g/kg (un apport excellent) plafonnait à 90 % pour
+rien — et la rampe d'énergie partait de 85 %, un seuil sans justification mesurable. Surtout,
+aucun des deux ne regardait la **répartition**, alors que la base la connaît repas par repas.
+
+`qualiteNutrition(a, profil, depense)` rend trois termes, chacun tiré d'une mesure :
+
+| Terme | Mesure | Rampe |
+|---|---|---|
+| `fProt` | protéines en **g/kg de poids de corps** | 0 sous 0,8 · 1 à 1,8 · plateau au-delà |
+| `fEnergie` | apport / dépense **réelle du jour** (séance comprise) | 0 sous 0,80 · 1 à 1,00 |
+| `fRepart` | repas ayant porté ≥ 0,25 g/kg de protéines | 0 → 1 sur 3 doses |
+
+`note = fProt × fEnergie × (0,85 + 0,15 × fRepart)`.
+
+> ⚠️ **Les deux premiers se MULTIPLIENT parce qu'ils sont tous deux LIMITANTS** : des protéines
+> sans énergie ne construisent rien, et l'inverse non plus. C'est la loi du minimum, pas une
+> moyenne — une moyenne laisserait un excellent apport protéique compenser un jeûne.
+> ⚠️ **La répartition MODULE, elle ne commande pas** (0,85 → 1,00). La synthèse protéique
+> répond à des doses et retombe entre deux : 160 g pris en un seul repas ne valent pas 160 g
+> sur quatre. Mais un apport total excellent mal réparti reste un bon apport.
+> ⚠️ **`analyserJour` DOIT transmettre `protRepas`.** Il ne le faisait pas : le champ arrivait
+> `undefined`, donc « aucun repas n'a porté une dose utile » s'affichait juste sous « 1,7 g par
+> kilo » — deux lignes du même écran qui se contredisaient. Trouvé à l'écran.
+> ⚠️ **Ce modèle change les chiffres de TOUT LE MONDE**, y compris de qui ne journalise pas ses
+> séances (leur facteur séance reste à 1, mais leur nutrition passe par la nouvelle échelle).
+> C'est assumé : g/kg est la grandeur que la littérature utilise, et l'ancienne cible à 2 g/kg
+> pénalisait des apports excellents.
+
+**Mesuré au banc, à 80 kg, séance lourde identique (156 kcal)** — chaque saisie déplace le
+résultat, ce qui était tout l'enjeu :
+
+| Nutrition | Muscle | Graisse |
+|---|---|---|
+| 1,9 g/kg · 2 900 kcal · 4 repas | 43 g | 7 g |
+| 1,9 g/kg · 2 900 kcal · **1 repas** | 39 g | 7 g |
+| **0,9 g/kg** · 2 900 kcal · 4 repas | 4 g | 7 g |
+| 1,9 g/kg · **2 300 kcal** · 4 repas | 0 g | 85 g |
+| 1,9 g/kg · **3 300 kcal** · 4 repas | 48 g | 0 g |
+| **2,6 g/kg** · 2 900 kcal · 4 repas | 43 g (plateau) | 7 g |
+
+Et à nutrition identique, séances différentes : **27 g** (7 séries lourdes) · **28 g**
+(7 séries machines) · **36 g** (les mêmes, groupe vu deux fois dans la semaine) · **24 g**
+(repos, mais séance la veille) · **10 g** (aucune séance).
+
+**LA DÉCOMPOSITION EST À L'ÉCRAN** (`decompositionHTML`). Un total seul est un nombre qu'on
+croit ou pas ; posé à côté de ses facteurs — chacun avec la mesure dont il sort — il devient
+vérifiable, et on voit **lequel** retient le résultat. C'est aussi ce qui rend le conseil
+évident : le facteur le plus bas est ce qu'il y a à corriger demain.
+- ⚠️ On affiche **la mesure, pas seulement le pourcentage** : « Protéines 100 % » ne dit rien
+  de vérifiable, « 1,9 g par kilo » se recompte.
+- ⚠️ La ligne **Entraînement est absente** quand la personne ne journalise pas : elle vaudrait
+  100 % sans rien mesurer, donc elle mentirait par omission.
+- ⚠️ Classes **`.dcp`/`.dc`**, pas `.crs`/`.cr` — ces deux-là appartiennent déjà aux quatre
+  critères, avec un `display:flex` en rangée et des enfants `.e .b .n .d .j .p`. Les réutiliser
+  posait les trois lignes côte à côte.
+- ⚠️ **La réserve du bas réserve désormais la barre ENTIÈRE** (`cta.offsetHeight + 14`).
+  L'ancien calcul retirait `b1.offsetTop` au motif que le tiers haut de la barre est un dégradé
+  transparent — vrai, mais un texte posé là est ATTÉNUÉ, pas lisible. Mesuré depuis que cet
+  écran porte la décomposition : la mention « Estimations, pas des mesures » finissait 34 px
+  sous le haut de la barre, à demi effacée. C'est la ligne qui ne doit jamais l'être.
 
 > ⚠️⚠️ **LE PLAFOND DOIT ÊTRE > 1, ET C'EST UN DÉFAUT TROUVÉ AU BANC.** Il valait d'abord 1 —
 > exactement la valeur de quelqu'un qui ne journalise pas. Journaliser ne pouvait donc
@@ -3996,8 +4105,23 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   « gardées sur cet appareil » derrière la barre d'action. Détail en §3.
 - 🔄 **`natty_seances.sql` à exécuter** : sans lui les séances restent sur l'appareil.
 - 🔄 **Non vérifié sur téléphone ni avec une vraie session.**
+- ✅ **TOUT EST CALCULÉ EXERCICE PAR EXERCICE** (second passage du 2026-09-02, « ça ne doit
+  pas être uniquement 48 g »). Durée, énergie et stimulus sont des SOMMES sur les exercices :
+  les reps, le type de mouvement et le MET y entrent tous. Mesuré, 7 séries de squat rendent
+  147 kcal et 8,0 de volume contre 93 kcal et 7,0 pour 7 séries de machines — la première
+  version rendait le même chiffre dans les deux cas. Plus l'après-séance (EPOC, 5 à 13 % selon
+  la part de polyarticulaire) et la fréquence hebdomadaire du groupe.
+- ✅ **La nutrition est jugée sur trois mesures** et non plus sur un ratio : protéines en g/kg
+  (plateau à 1,8), énergie rapportée à la dépense réelle du jour, et répartition des doses sur
+  les repas. Tableau de mesures en §3.
+- ✅ **La décomposition est affichée** : chaque facteur avec sa jauge et la mesure d'où il
+  sort. Le facteur le plus bas est ce qu'il y a à corriger demain, et ça se voit.
 - 🔄 **La charge en kilos n'est pas demandée** (choix assumé, écrit à l'écran) : la dépense se
-  déduit du volume, pas du tonnage. À rediscuter si Pablo veut le suivi de charge.
+  déduit du volume et du type de mouvement, pas du tonnage. C'est la seule grandeur du modèle
+  qui manque vraiment — à rediscuter si Pablo veut le suivi de charge.
+- 🔄 **Le nouveau modèle de nutrition change les chiffres de tous les comptes**, séances ou
+  pas (voir l'encadré de §3). Le facteur séance, lui, reste neutre pour qui ne journalise
+  pas — vérifié en A/B.
 - 🔄 **Le bilan ne s'ouvre que quand l'app est ouverte** : pour qu'il réclame la séance de
   lui-même le soir, il faut le brancher sur `assets/notifs.js`.
 
@@ -5753,3 +5877,46 @@ sans réécrire le travail de l'autre session ; c'est noté ici, comme pour `e01
 🔄 **Non vérifié sur téléphone ni avec une vraie session** : tout a tourné contre des
 doublures de `fetch` (les 401 de la clé anon sur un jeton factice). Bancs jetables
 `_test-seance.html` et `_test-bilan-seance.html` (préfixe `_`, donc hors dépôt).
+
+---
+
+*Second passage de la même session (2 septembre 2026) — « ça ne doit pas être uniquement 48 g,
+ça doit être des vrais calculs en fonction de ce qu'il a dépensé pendant sa séance grâce à la
+saisie de ses exercices ; ça doit vraiment être personnalisé en fonction de la qualité
+d'entraînement ET de nutrition » :*
+
+Le reproche était juste, et il portait sur le fond. La première version comptait
+`séries × 2,2 min` : deux séances de 7 séries coûtaient **rigoureusement la même chose**, que
+ce soit 7 × 20 reps au leg extension ou 7 × 5 reps de soulevé de terre. Ni les reps, ni le
+mouvement choisi n'entraient dans le résultat — donc la moitié de ce que la personne venait de
+taper ne servait à rien, et le chiffre affiché était presque une constante.
+
+**Ce qui entre maintenant dans le calcul**, et rien n'y est forfaitaire :
+- côté SÉANCE — le temps sous tension (vos reps), la récupération (par type de mouvement), le
+  MET de chaque exercice appliqué à SA durée, l'après-séance selon la part de polyarticulaire,
+  le volume pondéré par la plage de reps et le recrutement du mouvement, et la fréquence
+  hebdomadaire du groupe travaillé ;
+- côté NUTRITION — les protéines en g/kg de poids de corps (et non contre une cible arbitraire
+  à 2 g/kg), l'énergie rapportée à la dépense RÉELLE du jour, et la répartition des doses sur
+  les repas, que la base connaissait déjà repas par repas sans que personne la lise.
+
+**Et la décomposition est à l'écran** : quatre lignes, chacune avec sa jauge et la mesure d'où
+elle sort. C'est ce qui fait la différence entre un chiffre personnalisé et un chiffre qui en a
+l'air — on voit lequel des facteurs retient le résultat, donc ce qu'il y a à corriger demain.
+
+**Trois défauts trouvés en mesurant :**
+- 🔴 la plage de reps pleine était réglée sur 6-20 : sept séries de squat à 5 reps rendaient un
+  volume de **2,8** contre **7,0** pour sept séries de leg extension à 20 — le modèle annonçait
+  qu'une séance lourde construit deux fois moins. Recalé sur 5-25 (Schoenfeld et ses
+  répliques : de ~30 à ~85 % du maximum, l'hypertrophie est comparable près de l'échec) ;
+- 🔴 `analyserJour` ne transmettait pas `protRepas` : « aucun repas n'a porté une dose utile »
+  s'affichait juste sous « 1,7 g par kilo », deux lignes du même écran qui se contredisaient ;
+- 🔴 la mention « Estimations, pas des mesures » finissait sous le dégradé de la barre
+  d'action, à demi effacée — la seule ligne qui ne doit jamais l'être. La réserve du bas
+  réserve désormais la barre entière.
+
+⚠️ **Un piège de banc, en Node cette fois** : les modules écrivent
+`window.Natty && Natty.USER_ID`, et hors navigateur l'identifiant **nu** n'est pas global. La
+`ReferenceError` tombait dans le `try/catch` de `lireLocal()`, qui rendait `{}` en silence — le
+banc annonçait donc « aucune séance » sur des données parfaitement présentes, et le modèle
+paraissait cassé. Poser `global.Natty` en plus de `global.window.Natty`.

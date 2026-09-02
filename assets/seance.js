@@ -67,32 +67,32 @@ window.NattySeance = (function () {
     { cle: 'tirage-vertical',  nom: 'Tirage vertical',    g: 'dos', ic: 'poulie',   met: 5,   rep: 10 },
     { cle: 'rowing-machine',   nom: 'Rowing machine',     g: 'dos', ic: 'machine',  met: 5,   rep: 10 },
     { cle: 'tirage-horizontal',nom: 'Tirage horizontal',  g: 'dos', ic: 'poulie',   met: 5,   rep: 12 },
-    { cle: 'traction',         nom: 'Tractions',          g: 'dos', ic: 'traction', met: 6,   rep: 8 },
-    { cle: 'souleve-de-terre', nom: 'Soulevé de terre',   g: 'dos', ic: 'barre',    met: 6,   rep: 6 },
+    { cle: 'traction',         nom: 'Tractions',          g: 'dos', ic: 'traction', met: 6,   rep: 8, t: 'poly' },
+    { cle: 'souleve-de-terre', nom: 'Soulevé de terre',   g: 'dos', ic: 'barre',    met: 6,   rep: 6, t: 'poly' },
     { cle: 'pull-over',        nom: 'Pull-over',          g: 'dos', ic: 'haltere',  met: 5,   rep: 12 },
     // ── Pectoraux ──
-    { cle: 'developpe-couche', nom: 'Développé couché',   g: 'pecs', ic: 'banc',    met: 6,   rep: 8 },
-    { cle: 'developpe-incline',nom: 'Développé incliné',  g: 'pecs', ic: 'banc',    met: 6,   rep: 10 },
+    { cle: 'developpe-couche', nom: 'Développé couché',   g: 'pecs', ic: 'banc',    met: 6,   rep: 8, t: 'poly' },
+    { cle: 'developpe-incline',nom: 'Développé incliné',  g: 'pecs', ic: 'banc',    met: 6,   rep: 10, t: 'poly' },
     { cle: 'presse-pectorale', nom: 'Presse pectorale',   g: 'pecs', ic: 'machine', met: 5,   rep: 12 },
     { cle: 'ecarte-poulie',    nom: 'Écartés à la poulie',g: 'pecs', ic: 'poulie',  met: 5,   rep: 12 },
-    { cle: 'pompes',           nom: 'Pompes',             g: 'pecs', ic: 'corps',   met: 5.5, rep: 15 },
-    { cle: 'dips',             nom: 'Dips',               g: 'pecs', ic: 'dips',    met: 6,   rep: 10 },
+    { cle: 'pompes',           nom: 'Pompes',             g: 'pecs', ic: 'corps',   met: 5.5, rep: 15, t: 'poly' },
+    { cle: 'dips',             nom: 'Dips',               g: 'pecs', ic: 'dips',    met: 6,   rep: 10, t: 'poly' },
     // ── Bras ──
     { cle: 'curl-barre',       nom: 'Curl à la barre',    g: 'bras', ic: 'barre',   met: 5,   rep: 10 },
     { cle: 'curl-haltere',     nom: 'Curl haltères',      g: 'bras', ic: 'haltere', met: 5,   rep: 12 },
     { cle: 'curl-pupitre',     nom: 'Curl au pupitre',    g: 'bras', ic: 'machine', met: 5,   rep: 12 },
     { cle: 'extension-poulie', nom: 'Extension poulie',   g: 'bras', ic: 'poulie',  met: 5,   rep: 12 },
     { cle: 'barre-au-front',   nom: 'Barre au front',     g: 'bras', ic: 'barre',   met: 5,   rep: 10 },
-    { cle: 'dips-triceps',     nom: 'Dips triceps',       g: 'bras', ic: 'dips',    met: 5.5, rep: 12 },
+    { cle: 'dips-triceps',     nom: 'Dips triceps',       g: 'bras', ic: 'dips',    met: 5.5, rep: 12, t: 'poly' },
     // ── Jambes ──
-    { cle: 'presse-cuisses',   nom: 'Presse à cuisses',   g: 'jambes', ic: 'presse',met: 5.5, rep: 12 },
-    { cle: 'squat',            nom: 'Squat',              g: 'jambes', ic: 'barre', met: 6,   rep: 8 },
+    { cle: 'presse-cuisses',   nom: 'Presse à cuisses',   g: 'jambes', ic: 'presse',met: 5.5, rep: 12, t: 'poly' },
+    { cle: 'squat',            nom: 'Squat',              g: 'jambes', ic: 'barre', met: 6,   rep: 8, t: 'poly' },
     { cle: 'leg-extension',    nom: 'Leg extension',      g: 'jambes', ic: 'machine',met: 5,  rep: 12 },
     { cle: 'leg-curl',         nom: 'Leg curl',           g: 'jambes', ic: 'machine',met: 5,  rep: 12 },
-    { cle: 'fentes',           nom: 'Fentes',             g: 'jambes', ic: 'corps', met: 5.5, rep: 12 },
+    { cle: 'fentes',           nom: 'Fentes',             g: 'jambes', ic: 'corps', met: 5.5, rep: 12, t: 'poly' },
     { cle: 'mollets',          nom: 'Mollets',            g: 'jambes', ic: 'machine',met: 4.5,rep: 15 },
     // ── Épaules ──
-    { cle: 'developpe-militaire', nom: 'Développé militaire', g: 'epaules', ic: 'barre',  met: 6, rep: 8 },
+    { cle: 'developpe-militaire', nom: 'Développé militaire', g: 'epaules', ic: 'barre',  met: 6, rep: 8, t: 'poly' },
     { cle: 'elevations-laterales',nom: 'Élévations latérales',g: 'epaules', ic: 'haltere',met: 5, rep: 15 },
     { cle: 'oiseau',           nom: 'Oiseau',             g: 'epaules', ic: 'haltere',met: 5,  rep: 15 },
     { cle: 'presse-epaules',   nom: 'Presse épaules',     g: 'epaules', ic: 'machine',met: 5,  rep: 12 },
@@ -108,6 +108,22 @@ window.NattySeance = (function () {
     { cle: 'elliptique',       nom: 'Elliptique',         g: 'cardio', ic: 'velo',  met: 6.5, rep: 15, unite: 'min' },
     { cle: 'corde',            nom: 'Corde à sauter',     g: 'cardio', ic: 'corde', met: 8,   rep: 5,  unite: 'min' }
   ];
+
+  /**
+   * Le type d'un exercice : 'poly', 'guide', 'stat' ou 'cardio'.
+   * ⚠️ Déduit de `unite` quand elle est là ('min' → cardio, 's' → statique),
+   * du drapeau `t` sinon. Les lignes DÉJÀ EN BASE n'ont pas de `t` : elles
+   * retombent sur 'guide', donc sur le comportement le plus neutre — jamais sur
+   * une exception ni sur zéro.
+   */
+  function typeDe(e) {
+    if (!e) return 'guide';
+    if (e.unite === 'min') return 'cardio';
+    if (e.unite === 's') return 'stat';
+    if (e.t === 'poly') return 'poly';
+    var ref = exoParCle(e.cle);
+    return (ref && ref.t === 'poly') ? 'poly' : 'guide';
+  }
 
   function exoParCle(c) {
     for (var i = 0; i < EXOS.length; i++) if (EXOS[i].cle === c) return EXOS[i];
@@ -165,20 +181,80 @@ window.NattySeance = (function () {
   var MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
               'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
-  /* Combien de temps « coûte » une série : l'effort plus la récupération.
-     ~2,2 min est la valeur qui colle à une séance ordinaire (8 à 12 séries à
-     l'heure). C'est le seul endroit où ce nombre est écrit. */
-  var MIN_PAR_SERIE = 2.2;
+  /* ═══ Le modèle, et pourquoi il est CALCULÉ exercice par exercice ═══
+     Demande de Pablo (2026-09-02, second passage) : « ça ne doit pas être
+     uniquement 48 g, ça doit être des vrais calculs en fonction de ce qu'il a
+     dépensé pendant sa séance grâce à la saisie de ses exercices ; ça doit
+     vraiment être personnalisé en fonction de la qualité d'entraînement ET de
+     nutrition ».
 
-  /* Le volume qui « remplit » une journée de stimulus, sur les 48 h glissantes.
+     ⚠️⚠️ CE QUI A CHANGÉ, ET POURQUOI L'ANCIENNE VERSION NE POUVAIT PAS TENIR.
+     Elle comptait `séries × 2,2 min` et rien d'autre : deux séances de 7 séries
+     coûtaient donc RIGOUREUSEMENT la même chose, qu'il s'agisse de 7 × 20 reps
+     au leg extension ou de 7 × 3 reps de soulevé de terre. Le nombre affiché ne
+     dépendait ni des reps saisies, ni du mouvement choisi — donc la moitié de
+     ce que la personne venait de taper n'entrait dans aucun calcul. C'est ce
+     qui faisait ressembler le résultat à une constante.
+
+     Chaque exercice porte maintenant SON temps et SON coût :
+     • le temps sous tension vient des REPS (`SEC_PAR_REP`) ;
+     • la récupération vient du TYPE de mouvement (`REPOS_S`) — on ne souffle
+       pas 90 s après des mollets et 90 s après un squat lourd ;
+     • le coût énergétique vient du MET de l'exercice, appliqué à SA durée ;
+     • le stimulus vient du volume PONDÉRÉ : une série ne vaut pleinement que
+       dans la plage où l'hypertrophie se joue, et un polyarticulaire recrute
+       plus de masse qu'une machine.                                          */
+
+  /* Secondes par répétition — le temps sous tension. Un polyarticulaire lourd
+     est plus lent (amplitude, mise en place) qu'une machine d'isolation. */
+  var SEC_PAR_REP = { poly: 3.5, guide: 3.0 };
+
+  /* Secondes de récupération APRÈS chaque série, par type de mouvement. Ce sont
+     les valeurs que tout le monde applique sans y penser : ~2,5 min après un
+     squat lourd, ~1,5 min sur une machine, ~45 s sur de l'abdo. */
+  var REPOS_S = { poly: 150, guide: 90, stat: 45, cardio: 0 };
+
+  /* Ce qu'une série RECRUTE, relativement à une machine d'isolation. Un
+     polyarticulaire mobilise plusieurs groupes et plus de masse musculaire ; du
+     gainage statique ne construit presque rien ; du cardio, encore moins.
+     ⚠️ Ces coefficients ne sont PAS des multiplicateurs de résultat : ils
+     pondèrent le volume avant de le comparer à `VOLUME_PLEIN`. Une séance de
+     cardio seule ne peut donc pas « remplir » le stimulus de croissance — ce
+     qui est le comportement voulu, et l'ancien modèle ne savait pas le dire. */
+  var STIM = { poly: 1.15, guide: 1.0, stat: 0.55, cardio: 0.15 };
+
+  /* La plage de répétitions où une série compte PLEINEMENT : 5 à 25.
+     ⚠️ ELLE EST LARGE, ET C'EST DÉLIBÉRÉ. Le travail de Schoenfeld et de
+     plusieurs répliques depuis montre que des charges allant de ~30 à ~85 % du
+     maximum produisent une hypertrophie comparable dès lors que la série est
+     menée près de l'échec — soit à peu près 5 à 30 répétitions. Une plage
+     étroite (6-20, la première version) punissait donc les séries lourdes :
+     mesuré au banc, sept séries de squat à 5 reps rendaient un volume pondéré
+     de 2,8 contre 7,0 pour sept séries de leg extension à 20. Le modèle
+     annonçait qu'une séance lourde construit deux fois moins — faux, et
+     exactement à l'envers.
+     En dessous de 3 reps c'est du travail de force pur : la charge est là, le
+     volume mécanique moins. Au-delà de 25, l'échec vient du souffle avant le
+     muscle. Le déclin est progressif de part et d'autre, jamais un mur : sinon
+     deux séances quasi identiques tomberaient de chaque côté d'un seuil. */
+  var REPS_MIN = 3, REPS_PLEIN_BAS = 5, REPS_PLEIN_HAUT = 25, REPS_MAX = 35;
+
+  /* Le volume PONDÉRÉ qui remplit une journée de stimulus, sur 48 h glissantes.
      La littérature situe le gain quasi maximal autour de 10 à 20 séries par
-     muscle et par semaine ; réparti sur quatre séances hebdomadaires d'une
-     quinzaine de séries, ça donne ~10 séries par jour en moyenne glissante.
-     Au-delà, le facteur sature — plus de séries ne construit pas plus.
-     ⚠️ C'ÉTAIT 6, ET C'ÉTAIT TROP BAS : mesuré au banc, une séance ordinaire de
-     7 séries saturait déjà le facteur à 100 %. Une séance légère et une séance
-     lourde donnaient donc le même stimulus, ce qui vide la mesure de son sens. */
-  var SERIES_PLEIN = 10;
+     muscle et par semaine ; réparti sur quatre séances d'une quinzaine de
+     séries, ça donne ~10 séries pondérées par jour en moyenne glissante. */
+  var VOLUME_PLEIN = 10;
+
+  /* L'après-séance. L'organisme continue de dépenser au-dessus du repos pendant
+     des heures (« EPOC ») : la littérature situe ce supplément autour de 6 à
+     15 % du coût de la séance pour du travail en résistance, davantage quand
+     les mouvements sont lourds et polyarticulaires — d'où un coefficient qui
+     dépend de la COMPOSITION réelle de la séance et non une constante. */
+  var EPOC_MIN = 0.05, EPOC_MAX = 0.13;
+
+  /* Conservé pour les lignes déjà en base et l'affichage de repli : une séance
+     dont les exercices ne portent aucune série n'a pas de durée calculable. */
+  var MIN_PAR_SERIE = 2.2;
 
   var XP_SEANCE = 40;
 
@@ -355,25 +431,27 @@ window.NattySeance = (function () {
     return out;
   }
 
-  /** La durée en minutes : celle qui a été saisie, sinon celle du volume. */
-  function duree(s) {
-    if (s && s.duree_min) return s.duree_min;
-    return Math.round(series(s) * MIN_PAR_SERIE);
-  }
+  /* ── Ce que CHAQUE exercice coûte et rapporte ─────────────
+     Tout part d'ici : la durée, l'énergie et le stimulus de la séance sont des
+     SOMMES sur les exercices, jamais un forfait appliqué à un total de séries.
+     C'est ce qui fait que corriger une seule ligne de reps déplace les trois. */
 
-  /** L'équivalent métabolique moyen de la séance, pondéré par les séries. */
-  function met(s) {
-    var n = 0, som = 0;
-    ((s && s.exos) || []).forEach(function (e) {
-      var k = (e.series || []).length;
-      n += k; som += k * (+e.met || 5);
-    });
-    return n ? som / n : 5;
+  /**
+   * La durée d'un exercice, en secondes : temps sous tension + récupération.
+   * Le cardio est saisi en minutes, le gainage en secondes — dans les deux cas
+   * la valeur saisie EST la durée, il n'y a rien à modéliser.
+   */
+  function dureeExo(e) {
+    var ser = (e && e.series) || [], t = typeDe(e);
+    if (!ser.length) return 0;
+    var somme = ser.reduce(function (a, b) { return a + (+b || 0); }, 0);
+    if (t === 'cardio') return somme * 60;
+    if (t === 'stat') return somme + ser.length * REPOS_S.stat;
+    return somme * (SEC_PAR_REP[t] || SEC_PAR_REP.guide) + ser.length * (REPOS_S[t] || REPOS_S.guide);
   }
 
   /**
-   * L'énergie dépensée par la séance, en kcal, EN PLUS de la dépense
-   * quotidienne — et c'est tout l'intérêt du « en plus ».
+   * L'énergie d'un exercice, en kcal, EN PLUS de la dépense de repos.
    *
    * ⚠️ ON RETIRE 1 MET, ET CE N'EST PAS UN DÉTAIL. Un MET vaut le métabolisme
    * de repos : la dépense quotidienne (`onboarding.tdee`) le compte DÉJÀ pour
@@ -381,14 +459,140 @@ window.NattySeance = (function () {
    * une heure de repos deux fois — soit ~70 kcal offertes par heure de salle,
    * donc ~9 g de graisse par séance qui n'ont pas été puisés. C'est le genre de
    * cadeau qui rend un bilan flatteur et faux.
+   */
+  function kcalExo(e, poids) {
+    if (!e || !poids) return 0;
+    return Math.max(0, ((+e.met || 5) - 1) * poids * (dureeExo(e) / 3600));
+  }
+
+  /**
+   * Ce qu'une série de `r` répétitions vaut comme volume, entre 0 et 1.
    *
-   * Modèle, en une ligne : (MET − 1) × poids(kg) × heures.
+   * ⚠️ CE N'EST PAS UN MUR, et c'est important : une série de 2 reps ne vaut pas
+   * zéro (elle développe de la force, donc la capacité à charger plus la fois
+   * suivante) et une série de 30 reps non plus. Le déclin est linéaire de part
+   * et d'autre de la plage pleine — sinon deux séances quasi identiques
+   * tomberaient de chaque côté d'un seuil et donneraient des résultats très
+   * différents pour rien.
+   */
+  function poidsSerie(r) {
+    r = +r || 0;
+    if (r <= 0) return 0;
+    if (r < REPS_MIN) return 0.45;
+    if (r < REPS_PLEIN_BAS) return 0.45 + 0.55 * (r - REPS_MIN) / (REPS_PLEIN_BAS - REPS_MIN);
+    if (r <= REPS_PLEIN_HAUT) return 1;
+    if (r >= REPS_MAX) return 0.75;
+    return 1 - 0.25 * (r - REPS_PLEIN_HAUT) / (REPS_MAX - REPS_PLEIN_HAUT);
+  }
+
+  /**
+   * Le volume PONDÉRÉ d'une séance : Σ (poids de la série × recrutement du
+   * mouvement). C'est l'unité dans laquelle le stimulus se mesure.
+   *
+   * ⚠️ Le gainage et le cardio sont comptés SÉRIE PAR SÉRIE eux aussi, mais avec
+   * un recrutement faible : une heure de vélo ne remplit pas le stimulus de
+   * croissance, et le modèle doit pouvoir le dire au lieu de compter des séries
+   * indistinctement.
+   */
+  function volumePondere(s) {
+    if (!s || !s.exos) return 0;
+    return s.exos.reduce(function (tot, e) {
+      var k = STIM[typeDe(e)] || 1;
+      return tot + (e.series || []).reduce(function (a, r) { return a + poidsSerie(r) * k; }, 0);
+    }, 0);
+  }
+
+  /** Les séries qui tombent dans la plage pleine — ce qu'on affiche. */
+  function seriesEfficaces(s) {
+    if (!s || !s.exos) return 0;
+    return s.exos.reduce(function (n, e) {
+      if (typeDe(e) === 'cardio') return n;
+      return n + (e.series || []).filter(function (r) {
+        return r >= REPS_PLEIN_BAS && r <= REPS_PLEIN_HAUT;
+      }).length;
+    }, 0);
+  }
+
+  /** La durée en minutes : celle qui a été saisie, sinon la somme des exercices. */
+  function duree(s) {
+    if (s && s.duree_min) return s.duree_min;
+    if (!s || !s.exos || !s.exos.length) return 0;
+    var sec = s.exos.reduce(function (n, e) { return n + dureeExo(e); }, 0);
+    // Repli pour une ligne ancienne dont les exercices n'ont aucune série.
+    return sec ? Math.round(sec / 60) : Math.round(series(s) * MIN_PAR_SERIE);
+  }
+
+  /** L'équivalent métabolique moyen, pondéré par la DURÉE de chaque exercice. */
+  function met(s) {
+    var d = 0, som = 0;
+    ((s && s.exos) || []).forEach(function (e) {
+      var t = dureeExo(e);
+      d += t; som += t * (+e.met || 5);
+    });
+    return d ? som / d : 5;
+  }
+
+  /**
+   * La part de la séance qui vient de mouvements polyarticulaires lourds, entre
+   * 0 et 1 — c'est elle qui règle l'ampleur de l'après-séance (EPOC).
+   */
+  function partPoly(s) {
+    var n = 0, p = 0;
+    ((s && s.exos) || []).forEach(function (e) {
+      var k = (e.series || []).length;
+      n += k; if (typeDe(e) === 'poly') p += k;
+    });
+    return n ? p / n : 0;
+  }
+
+  /**
+   * L'énergie dépensée par la séance, en kcal, EN PLUS de la dépense
+   * quotidienne — et c'est tout l'intérêt du « en plus ».
+   *
+   * Somme exercice par exercice, plus l'après-séance. Deux séances de sept
+   * séries ne donnent donc PAS le même chiffre : les reps saisies, le type de
+   * mouvement et le MET de chaque exercice y entrent tous.
    */
   function kcal(s, poids) {
     if (!s || !poids) return 0;
-    var h = duree(s) / 60;
-    if (!h) return 0;
-    return Math.max(0, r0((met(s) - 1) * poids * h));
+    var base = ((s && s.exos) || []).reduce(function (n, e) { return n + kcalExo(e, poids); }, 0);
+    if (!base) return 0;
+    return Math.max(0, r0(base * (1 + epocCoef(s))));
+  }
+
+  /** Le coefficient d'après-séance, réglé par la composition de la séance. */
+  function epocCoef(s) {
+    return EPOC_MIN + (EPOC_MAX - EPOC_MIN) * partPoly(s);
+  }
+
+  /** L'énergie de la séance SANS l'après-séance — pour la ligne de détail. */
+  function kcalEffort(s, poids) {
+    if (!s || !poids) return 0;
+    return r0(((s && s.exos) || []).reduce(function (n, e) { return n + kcalExo(e, poids); }, 0));
+  }
+
+  /**
+   * La décomposition complète d'une séance, pour l'écran qui l'explique.
+   * Rendre les morceaux plutôt qu'un total, c'est ce qui permet au bilan
+   * d'écrire « 112 kcal, dont 11 d'après-séance » sans refaire le calcul.
+   */
+  function detail(s, poids) {
+    var parExo = ((s && s.exos) || []).map(function (e) {
+      return { nom: e.nom, type: typeDe(e), series: (e.series || []).length,
+               reps: (e.series || []).reduce(function (a, b) { return a + (+b || 0); }, 0),
+               min: Math.round(dureeExo(e) / 60),
+               kcal: r0(kcalExo(e, poids)) };
+    });
+    return {
+      series: series(s), reps: reps(s), efficaces: seriesEfficaces(s),
+      volume: Math.round(volumePondere(s) * 10) / 10,
+      minutes: duree(s), met: Math.round(met(s) * 10) / 10,
+      partPoly: Math.round(partPoly(s) * 100),
+      kcalEffort: kcalEffort(s, poids),
+      kcalEpoc: r0(kcal(s, poids) - kcalEffort(s, poids)),
+      kcal: kcal(s, poids),
+      exos: parExo
+    };
   }
 
   /**
@@ -403,8 +607,63 @@ window.NattySeance = (function () {
    * @param {Object} hier  celle de la veille, ou null
    */
   function stimulus(auj, hier) {
-    var eff = series(auj) + series(hier) / 2;
-    return borne(eff / SERIES_PLEIN, 0, 1);
+    var eff = volumePondere(auj) + volumePondere(hier) / 2;
+    return borne(eff / VOLUME_PLEIN, 0, 1);
+  }
+
+  /**
+   * Combien de JOURS DISTINCTS chaque groupe travaillé le `jour` a été sollicité
+   * sur les sept jours qui précèdent (celui-là compris).
+   *
+   * ⚠️ POURQUOI LA FRÉQUENCE ENTRE DANS LE CALCUL. À volume hebdomadaire égal,
+   * un muscle travaillé deux fois dans la semaine construit davantage qu'une
+   * seule grosse séance : la synthèse protéique retombe après ~48 h, et la
+   * seconde sollicitation la relance. C'est l'un des rares points sur lesquels
+   * la littérature est franchement consensuelle, et il est INVISIBLE pour un
+   * modèle qui ne regarde que la journée — donc invisible dans l'ancien.
+   *
+   * @returns {number} 1 quand chaque groupe n'a été vu qu'une fois, jusqu'à 2+
+   */
+  function frequenceGroupes(jour) {
+    var g = groupes(duJour(jour));
+    if (!g.length) return 0;
+    var t = toutes(), compte = {};
+    g.forEach(function (c) { compte[c] = 0; });
+    var d = dateDe(jour);
+    for (var i = 0; i < 7; i++) {
+      var j = jourDe(d), sj = t[j];
+      if (sj) groupes(sj).forEach(function (c) { if (compte[c] != null) compte[c]++; });
+      d.setDate(d.getDate() - 1);
+    }
+    // La moyenne sur les groupes du jour : une séance qui mêle un groupe vu
+    // deux fois et un groupe vu une fois est entre les deux, pas au maximum.
+    var som = g.reduce(function (a, c) { return a + compte[c]; }, 0);
+    return som / g.length;
+  }
+
+  /**
+   * La QUALITÉ D'ENTRAÎNEMENT d'une journée, entre 0 et 1 — ce que le bilan
+   * multiplie. Deux termes, et chacun vient de la saisie :
+   *   • le volume pondéré sur 48 h, rapporté au volume plein ;
+   *   • la fréquence hebdomadaire des groupes travaillés.
+   *
+   * ⚠️ La fréquence MODULE, elle ne commande pas : de 0,85 (un seul passage sur
+   * le groupe cette semaine) à 1,0 (deux ou plus). Lui donner plus de poids
+   * ferait dépendre le chiffre du jour de ce qui s'est passé les six jours
+   * précédents plus que de la séance elle-même — et personne ne comprendrait
+   * pourquoi la même séance ne vaut pas la même chose.
+   */
+  function qualiteEntrainement(jour, hier) {
+    var sAuj = duJour(jour), sHier = duJour(hier);
+    var vol = stimulus(sAuj, sHier);
+    var pondere = Math.round(volumePondere(sAuj) * 10) / 10;
+    if (!vol) {
+      return { note: 0, volume: 0, volumePondere: pondere, frequence: 0, fFreq: 0 };
+    }
+    var f = frequenceGroupes(jour) || frequenceGroupes(hier) || 1;
+    var fFreq = 0.85 + 0.15 * borne((f - 1) / 1, 0, 1);
+    return { note: borne(vol * fFreq, 0, 1), volume: vol, volumePondere: pondere,
+             frequence: f, fFreq: fFreq };
   }
 
   /**
@@ -1328,6 +1587,7 @@ window.NattySeance = (function () {
     var poids = E.poids || 0;
     var kc = kcal(s, poids);
     var st = stimulus(s, duJour(veille(E.jour)));
+    var d = detail(s, poids);
 
     scene({
       html: '<div class="kick">' + esc(dateFr(E.jour)) + '</div>'
@@ -1338,9 +1598,17 @@ window.NattySeance = (function () {
         + '<div class="rec">'
         + '<div class="r"><div class="v">' + duree(s) + '</div><div class="l">minutes<br>estimées</div></div>'
         + '<div class="r"><div class="v">' + (kc || '—') + '</div><div class="l">kcal<br>dépensées</div></div>'
-        + '<div class="r"><div class="v">' + r0(st * 100) + '<small style="font-size:13px">%</small></div>'
-        + '<div class="l">du stimulus<br>de croissance</div></div>'
+        + '<div class="r"><div class="v">' + d.volume.toFixed(1).replace('.', ',') + '</div>'
+        + '<div class="l">séries<br>pondérées</div></div>'
         + '</div>'
+        /* Le détail par exercice : c'est ce qui rend le total vérifiable. Sans
+           lui, « 112 kcal » est un nombre qu'on croit ou pas ; avec lui, on
+           voit lequel des mouvements a coûté quoi. */
+        + (poids ? '<div class="liste" style="margin-top:11px">' + d.exos.map(function (x) {
+            return '<div class="li"><div class="t" style="font-size:12.5px">' + esc(x.nom)
+              + '</div><div class="q" style="color:#8b8b96;font-weight:700">' + x.min + ' min</div>'
+              + '<div class="q">' + x.kcal + ' kcal</div></div>';
+          }).join('') + '</div>' : '')
         + '<div class="liste">' + s.exos.map(function (e, i) {
             return '<div class="li">' + ic(e.ic) + '<div class="t">' + esc(e.nom) + '</div>'
               + '<div class="q">' + e.series.length + '×' + resumeReps(e) + '</div>'
@@ -1351,12 +1619,20 @@ window.NattySeance = (function () {
            dire lesquelles sont mesurées en ferait deux chiffres de même
            nature, ce qu'ils ne sont pas. Même règle que le bilan. */
         + '<div class="note">Les séries et les répétitions sont ce que vous avez noté. '
-        + 'La durée et les kcal sont ESTIMÉES : ' + MIN_PAR_SERIE.toFixed(1).replace('.', ',')
-        + ' min par série, puis (' + met(s).toFixed(1).replace('.', ',') + ' − 1) MET × '
-        + (poids ? r0(poids) + ' kg' : 'votre poids') + ' × durée. On retire 1 MET parce que '
-        + 'votre dépense quotidienne compte déjà le repos de ces minutes-là. '
-        + 'La charge en kilos n’est pas demandée — le volume suffit à situer le '
-        + 'stimulus, et un champ de plus par série ferait abandonner la saisie.</div>',
+        + 'Le reste en découle, exercice par exercice : chaque série compte son temps '
+        + 'sous tension (vos reps) et sa récupération (' + (d.partPoly >= 50 ? '2 min 30 '
+            + 'sur les mouvements lourds' : '1 min 30 sur les machines') + '), puis son '
+        + 'coût à ' + d.met.toFixed(1).replace('.', ',') + ' MET'
+        + (poids ? ' pour ' + r0(poids) + ' kg' : '') + '. On retire 1 MET parce que votre '
+        + 'dépense quotidienne compte déjà le repos de ces minutes-là'
+        + (d.kcalEpoc ? ', et on ajoute ' + d.kcalEpoc + ' kcal d’après-séance ('
+            + Math.round(epocCoef(s) * 100) + ' %, votre séance est à ' + d.partPoly
+            + ' % de polyarticulaire)' : '') + '. '
+        + 'Le volume pondéré (' + d.volume.toFixed(1).replace('.', ',') + ') vaut '
+        + d.efficaces + ' série' + (d.efficaces > 1 ? 's' : '') + ' dans la plage où '
+        + 'l’hypertrophie se joue, sur ' + d.series + ' notée' + (d.series > 1 ? 's' : '')
+        + '. La charge en kilos n’est pas demandée — un champ de plus par série ferait '
+        + 'abandonner la saisie.</div>',
       pret: function (d) {
         d.querySelectorAll('[data-del]').forEach(function (b) {
           b.addEventListener('click', function () {
@@ -1517,11 +1793,18 @@ window.NattySeance = (function () {
     duJour: duJour, toutes: toutes, serie: serie, supprimer: supprimer,
     series: series, reps: reps, groupes: groupes, duree: duree, met: met,
     kcal: kcal, stimulus: stimulus, utilise: utilise, resume: resume,
+    /* Le modèle, en morceaux : c'est ce qui permet au bilan d'ÉCRIRE d'où
+       viennent ses grammes plutôt que de les poser. */
+    detail: detail, volumePondere: volumePondere, seriesEfficaces: seriesEfficaces,
+    kcalEffort: kcalEffort, epocCoef: epocCoef, partPoly: partPoly,
+    qualiteEntrainement: qualiteEntrainement, frequenceGroupes: frequenceGroupes,
     estSynchronise: estSynchronise,
     monterPanneau: monterPanneau,
     estOuvert: function () { return !!racine; },
-    XP_SEANCE: XP_SEANCE, SERIES_PLEIN: SERIES_PLEIN, MIN_PAR_SERIE: MIN_PAR_SERIE,
+    XP_SEANCE: XP_SEANCE, VOLUME_PLEIN: VOLUME_PLEIN, MIN_PAR_SERIE: MIN_PAR_SERIE,
     // Pour les bancs de test : le catalogue et l'analyse, sans l'écran.
-    _cat: { GROUPES: GROUPES, EXOS: EXOS, analyserTexte: analyserTexte, trouverExo: trouverExo }
+    _cat: { GROUPES: GROUPES, EXOS: EXOS, analyserTexte: analyserTexte,
+            trouverExo: trouverExo, typeDe: typeDe, poidsSerie: poidsSerie,
+            dureeExo: dureeExo, kcalExo: kcalExo }
   };
 })();
