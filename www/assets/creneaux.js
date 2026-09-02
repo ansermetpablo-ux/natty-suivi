@@ -77,6 +77,7 @@ var NattyCreneaux = (function () {
     charge: false,
     nb: 3,
     cibleJour: { p: 120, l: 67, g: 250, c: 2000 },
+    sup: 0,                 // le supplément d'entraînement déjà dans cibleJour
     creneaux: [],           // copie de DECOUPAGES[nb] + poids + cible
     repasDuJour: [],        // [{creneau, macros}]
     nbMesures: 0,
@@ -192,6 +193,17 @@ var NattyCreneaux = (function () {
   }
 
   /* ── 4. Chargement ───────────────────────────────────────────── */
+  /* Le supplément d'entraînement du jour, en kcal. `assets/seance.js` est
+     FACULTATIF : sans lui — ou sans séance notée, programmée ni habituelle —
+     il vaut 0, et les cibles sont exactement celles d'avant. */
+  function supplementSeance(poids, tdee) {
+    if (!window.NattySeance || !NattySeance.besoin || !poids || !tdee) return 0;
+    try {
+      var b = NattySeance.besoin(Natty.jour(), poids, tdee);
+      return Math.max(0, (b.total || tdee) - tdee);
+    } catch (e) { return 0; }
+  }
+
   async function charger(forcer) {
     if (etat.charge && !forcer) return etat;
 
@@ -217,14 +229,16 @@ var NattyCreneaux = (function () {
     if (onb) {
       var poids = parseFloat(onb.poids) || 0, tdee = parseFloat(onb.tdee) || 0;
       if (poids || tdee) {
-        // Même formule que `calcMacros()` de suivi.html : prot = poids × 2,
-        // lip = 25 % des kcal, gluc = 50 %.
-        etat.cibleJour = {
-          p: poids ? r0(poids * 2) : 0,
-          l: tdee ? r0(tdee * 0.25 / 9) : 0,
-          g: tdee ? r0(tdee * 0.5 / 4) : 0,
-          c: tdee ? r0(tdee) : 0
-        };
+        /* ⚠️ LA FORMULE VIT DANS `assets/core.js` (`Natty.macrosJour`), et la
+           recopier ici était déjà une dette : elle porte désormais un
+           SUPPLÉMENT D'ENTRAÎNEMENT, et deux copies auraient annoncé deux
+           objectifs pour la même journée — l'écran Suivi et le bouton `+` se
+           seraient contredits sur ce qu'il reste à manger. */
+        etat.sup = supplementSeance(poids, tdee);
+        etat.cibleJour = (window.Natty && Natty.macrosJour)
+          ? Natty.macrosJour(poids, tdee, etat.sup)
+          : { p: poids ? r0(poids * 2) : 0, l: tdee ? r0(tdee * 0.25 / 9) : 0,
+              g: tdee ? r0(tdee * 0.5 / 4) : 0, c: tdee ? r0(tdee) : 0 };
         etat.source = 'declare';
       }
     }
@@ -390,6 +404,8 @@ var NattyCreneaux = (function () {
   return {
     charger: charger, rafraichirJour: rafraichirJour,
     liste: liste, courant: courant, cibleJour: cibleJour, par: par,
+    // Le supplément d'entraînement déjà compté dans `cibleJour`, en kcal.
+    supplement: function () { return etat.sup || 0; },
     mange: mange, mangeJour: mangeJour, restant: restant, depasse: depasse,
     nbDeja: nbDeja, repas: repasDe,
     nb: function () { return etat.nb; },

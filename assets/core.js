@@ -919,11 +919,84 @@ var Natty = (function () {
     return null;
   }
 
+  /* ═══ Les macros VISÉES un jour donné ═══════════════════
+     LA MÊME FORMULE POUR TOUTE L'APP, et c'est tout l'intérêt d'être ici.
+     Elle était recopiée à l'identique dans TROIS fichiers — `suivi.html`
+     (`calcMacros`), `assets/creneaux.js` (`chargerCibles`) et
+     `assets/bilan.js` (`profil.cible`) — chacun avec un commentaire « même
+     formule que… ». Trois copies d'une formule qui ne bougeait pas, ça tenait ;
+     trois copies d'une formule qui gagne un supplément d'entraînement, non.
+     C'est exactement la divergence payée entre `api/_nutrition.js` et la table
+     de ce fichier (§7 de CLAUDE.md).
+
+     LE SUPPLÉMENT D'ENTRAÎNEMENT (demande de Pablo, 2026-09-02 : « pas que les
+     calories mais toutes les macros s'adaptent »). Il vient de
+     `NattySeance.besoin()` — séance notée, programmée, ou habitude du jour de
+     semaine — et il se répartit :
+
+       | glucides  | 60 % | le carburant de la séance, et ce qui recharge après |
+       | protéines | 25 % | la reconstruction — mais PLAFONNÉE, voir ci-dessous  |
+       | lipides   | 15 % | le reste, sans en faire le véhicule des calories     |
+
+     ⚠️ 0,60 + 0,25 + 0,15 = 1 : le supplément se retrouve EXACTEMENT dans les
+     trois macros. Une répartition qui ne somme pas à 1 afficherait des macros
+     qui ne font pas le total de calories annoncé juste au-dessus — deux
+     nombres du même écran qui se contredisent.
+
+     🔄 ⚠️ LA BASE, ELLE, NE SOMME PAS À 100 %, et c'est PRÉEXISTANT : 25 % de
+     lipides + 50 % de glucides + 2 g/kg de protéines font ~95 % des calories
+     pour 80 kg à 3 200 kcal. Les quatre copies d'origine avaient le même
+     écart. Il n'est pas corrigé ici : rééquilibrer la base changerait
+     l'objectif de TOUS les comptes du jour au lendemain, et ce n'est pas ce
+     qu'on est venu faire. À trancher avec Pablo — voir §8 de CLAUDE.md.
+
+     ⚠️⚠️ LES PROTÉINES SONT PLAFONNÉES À 2,4 g/kg, ET LE RESTE PART EN
+     GLUCIDES. Au-delà, rien ne montre de bénéfice, et surtout : un gros
+     supplément (séance longue + lendemain) aurait poussé la cible à 3 g/kg,
+     donc affiché un objectif qu'on n'atteint qu'en poudre. Le débordement
+     n'est pas jeté — il repasse en glucides, sinon les macros cesseraient de
+     faire le compte des calories. */
+  var SUP_G = 0.60, SUP_P = 0.25, SUP_L = 0.15;
+  var PROT_BASE = 2.0, PROT_MAX = 2.4;       // g par kg de poids de corps
+
+  /**
+   * @param {number} poids  en kg
+   * @param {number} base   la dépense de maintien (`onboarding.tdee`)
+   * @param {number} [sup]  le supplément d'entraînement du jour, en kcal
+   * @returns {{p,l,g,c, base, sup, gParKg}}
+   */
+  function macrosJour(poids, base, sup) {
+    poids = +poids || 0; base = +base || 0; sup = Math.max(0, +sup || 0);
+    var out = { p: 0, l: 0, g: 0, c: 0, base: Math.round(base), sup: Math.round(sup), gParKg: 0 };
+    if (!base && !poids) return out;
+
+    var p = poids ? poids * PROT_BASE : 0;
+    var l = base ? base * 0.25 / 9 : 0;
+    var g = base ? base * 0.5 / 4 : 0;
+
+    if (sup) {
+      var pPlus = SUP_P * sup / 4;
+      /* Le plafond, et ce qu'il déborde : en kcal, pour le repasser en
+         glucides sans perdre une calorie au passage. */
+      var pMax = poids ? poids * PROT_MAX : p + pPlus;
+      var trop = Math.max(0, (p + pPlus) - pMax);
+      p = Math.min(p + pPlus, pMax);
+      g += (SUP_G * sup + trop * 4) / 4;
+      l += SUP_L * sup / 9;
+    }
+    out.p = Math.round(p); out.l = Math.round(l); out.g = Math.round(g);
+    out.c = Math.round(base + sup);
+    out.gParKg = poids ? Math.round(out.p / poids * 100) / 100 : 0;
+    return out;
+  }
+
   return {
     SB_URL: SB_URL, SB_KEY: SB_KEY, CLD_CLD: CLD_CLD, CLD_PRE: CLD_PRE, API: API,
     TOKEN: TOKEN, USER_ID: USER_ID,
     sbFetch: sbFetch, sbPost: sbPost, sbPatch: sbPatch,
     calcMac: calcMac, getNutri: getNutri, goto: goto, requireAuth: requireAuth,
+    // Les macros visées un jour donné — LA formule, pour toute l'app.
+    macrosJour: macrosJour,
     jour: jour, aMinuit: aMinuit,
     // Un plein écran est-il déjà ouvert ? (voir l'encadré ci-dessus)
     ecranOccupe: ecranOccupe,

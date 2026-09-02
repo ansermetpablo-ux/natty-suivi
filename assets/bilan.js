@@ -224,14 +224,21 @@ window.NattyBilan = (function () {
       }
     } catch (e) {}
 
-    // Les cibles de macros ne sont pas stockées : elles se dérivent de poids et
-    // tdee, avec la MÊME formule que `calcMacros()` de suivi.html. Deux formules
-    // pour une cible donneraient deux objectifs pour la même personne.
-    out.cible = {
-      p: out.poids ? r0(out.poids * 2) : 0,
-      l: out.tdee ? r0(out.tdee * 0.25 / 9) : 0,
-      g: out.tdee ? r0(out.tdee * 0.5 / 4) : 0,
-      c: out.tdee ? r0(out.tdee) : 0
+    /* Les cibles ne sont pas stockées : elles se dérivent de poids et tdee,
+       par `Natty.macrosJour` — LA formule de l'app depuis qu'elle porte un
+       supplément d'entraînement (elle vivait en trois copies).
+
+       ⚠️⚠️ DEUX CIBLES, ET LES CONFONDRE SERAIT UN CONTRESENS.
+       • `cible` est la DÉPENSE de maintien. C'est elle que `corpsDuJour` lit
+         (`c.c`) pour calculer le déficit, et une dépense ne monte pas parce
+         qu'on a l'intention de s'entraîner — elle monte parce qu'on s'est
+         entraîné, et ces kcal-là sont ajoutées à part (`kcalSeance`).
+       • `cibleDu(jour)` est l'OBJECTIF de ce jour-là, supplément compris :
+         c'est à lui qu'on compare ce qui a été mangé, sinon un jour de salle
+         serait noté « trop mangé » pour avoir mangé ce qu'il fallait. */
+    out.cible = macros(out.poids, out.tdee, 0);
+    out.cibleDu = function (j) {
+      return macros(out.poids, out.tdee, supplement(j, out.poids, out.tdee));
     };
 
     // Combien de repas la personne prévoit par jour — c'est le denominateur de
@@ -345,8 +352,28 @@ window.NattyBilan = (function () {
     return r0(borne(100 - ecart * 100, 0, 100));
   }
 
-  function analyserJour(e, profil) {
-    var c = profil.cible;
+  /** La formule partagée, avec son repli si `assets/core.js` est ancien. */
+  function macros(poids, tdee, sup) {
+    if (window.Natty && Natty.macrosJour) return Natty.macrosJour(poids, tdee, sup);
+    return { p: poids ? r0(poids * 2) : 0, l: tdee ? r0(tdee * 0.25 / 9) : 0,
+             g: tdee ? r0(tdee * 0.5 / 4) : 0, c: tdee ? r0(tdee) : 0 };
+  }
+
+  /* Le supplément d'entraînement d'un jour donné. `assets/seance.js` est
+     FACULTATIF : sans lui, il vaut 0 et tout redevient le modèle d'avant. */
+  function supplement(j, poids, tdee) {
+    if (!window.NattySeance || !NattySeance.besoin || !poids || !tdee) return 0;
+    try {
+      var b = NattySeance.besoin(j || jourCourant(), poids, tdee);
+      return Math.max(0, (b.total || tdee) - tdee);
+    } catch (e) { return 0; }
+  }
+
+  function analyserJour(e, profil, jour) {
+    /* ⚠️ `jour` est passé EXPLICITEMENT : sur une journée sans repas, `e` est
+       `undefined` et la date serait perdue — donc l'objectif d'un lundi de
+       salle non journalisé retomberait sur celui d'un dimanche. */
+    var c = profil.cibleDu ? profil.cibleDu((e && e.jour) || jour) : profil.cible;
     var vide = !e || !e.nbRepas;
     /* ⚠️ Une journée sans repas arrive ici en `undefined` (la clé n'existe pas
        dans `cache.jours`), pas en objet vide. On se donne donc des valeurs
@@ -550,7 +577,7 @@ window.NattyBilan = (function () {
     for (var i = nb - 1; i >= 0; i--) {
       var d = new Date(); d.setDate(d.getDate() - i);
       var j = jourDe(d), e = cache.jours[j];
-      var a = analyserJour(e, cache.profil);
+      var a = analyserJour(e, cache.profil, j);
       var ctx = ctxSeance(j, jrn);
       out.push({ jour: j, date: d, a: a, corps: corpsDuJour(a, cache.profil, ctx),
                  seance: ctx.seance });
@@ -565,7 +592,7 @@ window.NattyBilan = (function () {
     var fin = jourCourant();
     while (jourDe(d) <= fin && out.length < 7) {
       var j = jourDe(d), e = cache.jours[j];
-      var a = analyserJour(e, cache.profil);
+      var a = analyserJour(e, cache.profil, j);
       var ctx = ctxSeance(j, jrn);
       out.push({ jour: j, date: new Date(d), a: a,
                  corps: corpsDuJour(a, cache.profil, ctx), seance: ctx.seance });
@@ -578,7 +605,7 @@ window.NattyBilan = (function () {
   async function analyse(nbJours) {
     await charger();
     return { profil: cache.profil, serie: serie(nbJours || 7),
-             aujourdhui: analyserJour(cache.jours[jourCourant()], cache.profil) };
+             aujourdhui: analyserJour(cache.jours[jourCourant()], cache.profil, jourCourant()) };
   }
 
   /* ═══ 5. Le questionnaire ════════════════════════════════
@@ -1321,7 +1348,10 @@ window.NattyBilan = (function () {
 
   function scRecap() {
     enTete('LE RÉCAP');
-    var a = S.a, c = S.profil.cible;
+    /* ⚠️ L'objectif DU JOUR, supplément d'entraînement compris : comparé au
+       maintien, un jour de salle où l'on a mangé ce qu'il fallait s'afficherait
+       « au-dessus de l'objectif ». */
+    var a = S.a, c = S.profil.cibleDu ? S.profil.cibleDu(a.jour) : S.profil.cible;
     if (a.vide) {
       // Rien à récapituler : on le dit, et on n'invente pas une journée.
       bloc({
@@ -2035,7 +2065,7 @@ window.NattyBilan = (function () {
       if (!window.Natty || !Natty.USER_ID) return;
       await charger();
       var j = jourCourant();
-      var a = analyserJour(cache.jours[j], cache.profil);
+      var a = analyserJour(cache.jours[j], cache.profil, j);
       var ctx = ctxSeance(j, journalise());
       S = {
         profil: cache.profil, a: a, corps: corpsDuJour(a, cache.profil, ctx),
