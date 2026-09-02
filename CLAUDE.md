@@ -1042,7 +1042,19 @@ liste a maigri.
   en effaçant l'autre : la divergence se répare au premier geste, au lieu de faire disparaître
   un aliment ajouté la nuit du dimanche au lundi.
 
-### `coaching.html` — les aliments à privilégier, et où ils mènent
+### `coaching.html` — les séances, les aliments à privilégier, et où ils mènent
+**Panneau « Mes séances »** (`#seaWrap`, section « Entraînement », juste après le calendrier
+des rendez-vous) : la semaine d'entraînement en sept cases, et l'entrée du calendrier complet.
+Le rendu appartient à `assets/seance.js` ; cet écran ne fournit que l'hôte.
+> ⚠️ **Sa place ici n'est pas décorative.** Sans lui, la seule porte d'entrée du journal
+> serait le bilan du soir — donc rien avant 21 h, alors qu'on note une séance en sortant de la
+> salle. `suivi.html` aurait été plus naturel encore, mais une session parallèle y travaillait
+> (voir la note de commit) : à rediscuter avec Pablo si Coaching se révèle trop loin.
+- Monté **sans `await`** et hors du `Promise.all` de l'init : il lit d'abord le `localStorage`,
+  donc il se peint tout de suite, et sa requête n'a aucune raison de retarder le rendez-vous
+  ou la liste de courses.
+
+#### Les aliments à privilégier, et où ils mènent
 Rangée qui défile au-dessus de la liste de courses, alimentée par
 `NattyReco.alimentsSemaine()` → `conseils_json.plats_macro[].aliments` : **la même génération**
 que les conseils, donc aucun appel IA de plus. Un tap l'ajoute à la liste juste en dessous
@@ -1626,6 +1638,102 @@ proposer « Modifier ce repas » sur une étape cochée. ⚠️ Le paramètre es
 après usage (les autres, dont `token`, sont conservés) : sans ça, un rechargement ou un retour
 arrière rouvrirait l'éditeur indéfiniment.
 
+### `assets/seance.js` — le journal d'entraînement, et ce qu'il change au bilan
+Plein écran **noir** (`#nsea`, tout préfixé `ns-`/`ns`) : calendrier, puis saisie en trois
+temps. Plus un **panneau** « Mes séances » sur l'écran Coaching. Chargé par les écrans qui
+portent le bilan (`suivi`, `repas`, `menu`/`www/index`) et par `coaching.html` (+ copies
+`www/`). Dépend d'`assets/core.js`, et de rien d'autre.
+
+**Ce qu'il corrige.** Demande de Pablo (2026-09-02) : « pouvoir ajouter sa séance avant le
+bilan pour voir exactement combien de grammes de muscle on a gagné et combien de graisse
+brûlée au gramme près ». Le bilan du soir estimait les deux depuis
+`onboarding.activite` — une case cochée **une fois pour toutes à l'inscription**. La même
+valeur un jour de repos et un jour de squat : deux chiffres qui ne pouvaient pas bouger avec
+ce que la personne avait réellement fait.
+
+**Le parcours, exactement celui que Pablo a décrit** : calendrier (un `+` dans **chaque**
+case) → groupe (Dos, Pectoraux, Bras… + « Détailler » pour en cumuler) → **modules de
+machines** → séries **puis** reps → récap → validation. Plus une entrée « ✏️ Écrire à la
+main » qui produit *la même structure* (`analyserTexte`) : « Développé couché 4x10, tirage
+vertical 3 séries de 12 » se range comme trois taps.
+- ⚠️ **Les jours À VENIR n'ont pas de `+` et ne répondent pas au tap.** Une séance est
+  quelque chose qui a eu lieu ; laisser noter celle de jeudi prochain, c'est laisser le bilan
+  compter du muscle construit dans le futur.
+- ⚠️ **Séries et reps sur le MÊME écran, dans cet ordre** : les pastilles 1-8 posent les
+  séries, les lignes de reps apparaissent ensuite. Deux écrans par exercice auraient doublé
+  le nombre de plans pour une séance de six mouvements.
+- ⚠️ **Toutes les pastilles JUSQU'À celle qu'on touche s'allument** : on choisit « quatre
+  séries », pas « la quatrième ». Une seule pastille allumée se lisait comme un numéro d'ordre.
+- ⚠️ **Changer le nombre de séries NE JETTE PAS les reps déjà saisies** (`poserNbSeries`) :
+  la première version reconstruisait le tableau, donc passer de 4 à 5 effaçait les quatre
+  valeurs réglées une par une juste avant. Les séries ajoutées reprennent la dernière valeur.
+- ⚠️ **Trois séries d'office à la sélection d'une machine.** Une liste qui arrive à zéro
+  série demanderait trois taps par exercice avant de pouvoir seulement enregistrer.
+- ⚠️ **La charge en kilos n'est PAS demandée**, et c'est écrit à l'écran. Pablo a décrit
+  « machines → séries → reps » ; un champ de charge par série ferait abandonner la saisie
+  avant la fin. Conséquence assumée : la dépense se déduit du VOLUME, pas du tonnage.
+
+**Ce qu'il MESURE et ce qu'il ESTIME**, et l'écran distingue les deux :
+
+| Lecture | Nature | Modèle |
+|---|---|---|
+| `series()` / `reps()` | **saisi** | — |
+| `duree()` | déduit | `MIN_PAR_SERIE` = 2,2 min par série (effort + récup), sauf durée saisie |
+| `kcal(s, poids)` | **estimé** | `(MET − 1) × poids × heures` |
+| `stimulus(auj, hier)` | **estimé** | `(séries du jour + séries de la veille / 2) / SERIES_PLEIN`, borné à 1 |
+
+> ⚠️⚠️ **ON RETIRE 1 MET, ET CE N'EST PAS UN DÉTAIL.** Un MET vaut le métabolisme de repos, et
+> `onboarding.tdee` le compte **déjà** pour les 24 h de la journée, séance comprise. Le MET
+> brut compterait une heure de repos deux fois — ~70 kcal offertes par heure de salle, donc
+> ~9 g de graisse par séance qui n'ont pas été puisés. Le genre de cadeau qui rend un bilan
+> flatteur et faux.
+> ⚠️ **`SERIES_PLEIN` vaut 10, et ce n'était pas 6.** Mesuré au banc, une séance ordinaire de
+> 7 séries saturait déjà le facteur à 100 % : une séance légère et une séance lourde donnaient
+> le même stimulus, ce qui vide la mesure de son sens.
+> ⚠️ **La VEILLE compte pour moitié** : la synthèse protéique reste élevée ~48 h. Sans ce
+> report, un jour de repos entre deux séances afficherait « 0 g de muscle » — or c'est
+> précisément le jour où il se construit.
+
+**Persistance** : table `seances` (`natty_seances.sql`, §4), repli `localStorage` tant qu'elle
+n'existe pas — et les deux écrans **le disent** (« gardées sur cet appareil uniquement »)
+plutôt que de laisser croire à une synchronisation qui n'a pas lieu. Même contrat que
+`materiel` et `garde_manger`, **clé primaire `(user_id, jour)`** comprise : `enregistrer()`
+écrit en `merge-duplicates` **sans** `?on_conflict=`, donc PostgREST résout sur la clé
+primaire. Une ligne par JOUR, et c'est un choix de produit : le calendrier montre un jour, pas
+une liste ; deux entraînements le même jour sont deux blocs dans le même `exos`.
+
+⚠️ **`exos` ne porte RIEN de calculé** — ni le nombre de séries, ni les reps totales, ni les
+kcal. Les trois se déduisent, et les stocker en ferait une seconde vérité qui dériverait au
+premier ajustement du modèle : c'est exactement ce qui est arrivé entre `api/_nutrition.js` et
+`assets/core.js`, et cette divergence-là s'est payée en macros fausses envoyées par
+notification.
+
+⚠️ **Le texte brut de la saisie libre est CONSERVÉ** (`libre`) même quand l'analyse a réussi.
+Elle peut se tromper ; jeter ce que la personne a écrit rendrait l'erreur irréparable.
+
+⚠️ **`nsea` est dans `PLEIN_ECRAN` d'`assets/core.js`.** Une saisie de six exercices prend
+plusieurs minutes : sans cette entrée, le guide du jour et le bilan du soir viendraient se
+poser par-dessus au bout de leurs 6,5 et 9 secondes, en plein réglage des séries.
+
+⚠️ **`#nsea:not(.on){pointer-events:none}`** — règle 41. Le nœud survit à son fondu : invisible
+et cliquable, il avalerait les taps une demi-seconde après la fermeture.
+
+**Vérifié en navigateur** (375 × 812, thèmes clair ET sombre, doublures de `fetch`) : le
+calendrier et ses `+`, la navigation de mois (le mois suivant désactivé quand il est à venir),
+les jours à venir inertes, le parcours complet Dos → 2 machines → séries/reps → récap →
+enregistrement → félicitation (+40 XP), la persistance relue par le module ET dans le
+`localStorage` brut, l'événement `natty:seance-ajoutee` qui repeint le panneau tout seul, la
+saisie libre (4x10 et « 3 séries de 12 » reconnus, un exercice inconnu gardé tel quel), les
+interactions de reps (« 12 partout », ±, plancher à 1, troncature sans effacement), et
+l'aller-retour depuis le bilan avec **recalcul effectif** des deux chiffres.
+
+🔄 **Non vérifié sur téléphone ni avec une vraie session** : tout a tourné contre des doublures
+(les 401 de la clé anon sur un jeton factice). Restent à juger sur un iPhone : la vibration de
+chaque tap (`navigator.vibrate`), le rythme des transitions, et la zone sûre du bas.
+🔄 **`natty_seances.sql` reste à exécuter.** Sans lui tout fonctionne, mais par appareil.
+🔄 **Les XP des séances ne parlent ni à ceux des recettes ni à ceux de `narration.html`** —
+trois compteurs, comme déjà noté en §8. Les réunir est une décision produit.
+
 ### `assets/bilan.js` — le récap du soir, et celui du samedi
 Plein écran qui raconte la journée qui vient de se passer : ce qui a été mangé, ce que la
 personne en pense (trois questions), ce que les chiffres en disent (quatre critères), ce que
@@ -1633,6 +1741,48 @@ son corps en a fait, et où elle en est depuis un mois. **Le samedi soir, la mê
 porte sur les sept jours.** Chargé par les écrans porteurs de la nav (`suivi`, `repas`,
 `menu`/`www/index`) + copies `www/`. Dépend d'`assets/core.js` ; utilise `creneaux.js` s'il
 est là et sait s'en passer.
+
+**LA SÉANCE ENTRE DANS LES DEUX CHIFFRES** (2026-09-02, voir `assets/seance.js` ci-dessus).
+Une scène **`scSeance`** s'intercale entre l'analyse et le corps : « Vous avez bougé
+aujourd'hui ? », ou le récap de la séance déjà notée.
+- ⚠️ **SA PLACE DANS LA SÉQUENCE EST TOUT L'INTÉRÊT.** Posée après l'écran du corps, la
+  question aurait été une formalité : on aurait déjà lu ses deux chiffres, et les corriger
+  après coup revient à dire que le premier affichage était faux.
+- ⚠️ **`ouvrirSaisieSeance()` RECALCULE au retour** — `S.corps`, `S.serie30` et `S.sem`.
+  Reprendre `S.corps` tel quel afficherait les chiffres d'AVANT : on aurait ajouté dix séries
+  pour voir le même « 12 g ».
+- ⚠️ **La scène est sautée SANS UN MOT si `assets/seance.js` n'est pas chargé.** Un écran qui
+  demande d'ajouter une séance sans rien pour la recevoir est pire qu'un écran absent — c'est
+  le défaut du bouton « Continuer avec Apple » (§11).
+- **Graisse** : `dépense = tdee + kcal de la séance`, donc un déficit plus grand. C'est la
+  partie vraiment « au gramme près » — le déficit cesse d'ignorer une heure de salle.
+- **Muscle** : `potentiel × protéines × énergie × séance`, où
+  `séance = 0,30 + 1,30 × stimulus`.
+
+> ⚠️⚠️ **LE PLAFOND DOIT ÊTRE > 1, ET C'EST UN DÉFAUT TROUVÉ AU BANC.** Il valait d'abord 1 —
+> exactement la valeur de quelqu'un qui ne journalise pas. Journaliser ne pouvait donc
+> **jamais** augmenter l'estimation : au mieux elle restait égale, et la séance faisait en plus
+> monter la dépense, donc baisser le facteur énergie. Mesuré : **21 g de muscle sans séance
+> contre 13 g avec, à alimentation identique**. L'écran répondait « vous avez construit
+> MOINS » à quelqu'un qui venait de déclarer sa séance — l'inverse exact de ce que la
+> fonctionnalité promet. Le couple 0,30 / 1,60 **redistribue** la semaine sans la gonfler :
+> quatre jours pleins et trois de repos donnent (4 × 1,6 + 3 × 0,3) / 7 ≈ 1,04. On ne dit pas
+> « vous construisez plus qu'avant », on dit « voilà QUAND vous construisez ». Remesuré après
+> correction, en mangeant à hauteur d'une journée d'entraînement : **48 g** un jour de salle
+> contre **12 g** un jour de repos, et **40 g** pour qui ne journalise pas.
+>
+> ⚠️⚠️ **ET RIEN DE TOUT ÇA NE S'APPLIQUE À QUI NE JOURNALISE PAS** (`journalise()`, 21 jours).
+> `facteurSeance` vaut alors 1 et le calcul est celui d'avant, au gramme près. Sans ce
+> garde-fou, la mise à jour aurait divisé par trois les estimations de tous les comptes
+> existants du jour au lendemain — un changement de modèle qui ressemble à une régression de
+> forme physique.
+> ⚠️ **`journalise` est calculé UNE FOIS pour toute la série**, pas jour par jour : sinon les
+> jours de repos basculeraient sur l'ancien modèle et les jours de salle sur le nouveau, donc
+> deux échelles dans le même graphique.
+> ⚠️ **Le cas contre-intuitif est NOMMÉ à l'écran.** Une séance fait monter la dépense : à
+> apport égal, le muscle construit baisse. C'est la physiologie, mais sans explication ça se
+> lit comme un bug. La phrase passe donc en premier quand `facteurEnergie < 0,5` — et ce qui
+> manque est une assiette, pas une série.
 
 **⚠️ IL N'INVENTE AUCUN CHIFFRE, et c'est ce qui a dessiné l'écran.** Un bilan est l'endroit
 de l'app où il serait le plus facile — et le plus grave — d'inventer : « vous avez brûlé
@@ -1673,7 +1823,46 @@ D'où `#nbil *{margin:0;padding:0;border:0}` — (1,0,0) bat toute classe nue (0
 que les règles du module, au moins (1,1,0), le battent lui. Vérifié : le module ne pose aucune
 balise à marge native (ni `p`, ni titre, ni liste), la remise à zéro ne lui coûte rien.
 
-**Trois défauts trouvés à l'écran, aucun par `node --check` :**
+**⚠️⚠️ LA COURBE EST CONTINUE, ET LES TROUS SONT EN POINTILLÉ** (2026-09-02, demande de
+Pablo : « le graphique n'est pas continu, il y a des trous, il faut absolument qu'il soit
+plein même quand on n'entre pas de données → lier »).
+
+La version précédente coupait le tracé à chaque jour non noté. Le motif était bon — une
+courbe qui plonge à zéro **affirme** « il n'a rien mangé », alors que l'app sait seulement
+qu'elle n'a rien enregistré — mais le résultat était un graphique en miettes : sur un mois
+ordinaire, quatre ou cinq segments détachés qui se lisent comme un rendu cassé, pas comme une
+tendance. Les deux exigences se tiennent, et c'est ce que fait **`relier()`** :
+- le trait va d'un bout à l'autre, sans interruption — donc « plein » ;
+- les segments qui traversent un jour sans donnée sont **tracés à part** (`.pont`, `#nbPont`),
+  en pointillé clair et fin, et ne portent **aucun point**. Le trait passe par ces jours, il
+  ne les mesure pas — et ça se voit sans lire la légende.
+
+- ⚠️ **Avant le premier jour noté et après le dernier, on TIENT la valeur à plat.** Prolonger
+  la pente aurait été plus joli et franchement faux : sur quelqu'un qui commence à journaliser
+  au milieu du mois, une extrapolation de deux semaines vers l'arrière dessinerait une
+  progression jamais observée.
+- ⚠️ **Le pont ne se TRACE pas, il se RÉVÈLE** (`nbFonduPont`). Son `stroke-dasharray` porte
+  le motif du pointillé : le réécrire pour l'animer comme le trait plein en ferait une ligne
+  continue, donc effacerait précisément ce qui distingue un jour relié d'un jour mesuré.
+- ⚠️ **Le pont est posé AVANT le trait mesuré** : là où les deux se touchent, c'est le trait
+  plein qui doit couvrir la jointure.
+- ⚠️ **La légende passe à la ligne** (règle 39) : elle porte trois entrées depuis que les
+  trous sont annoncés (« ┈ 6 jours sans donnée, reliés »), et sans `flex-wrap` la rangée
+  déborde la colonne à 375 px — la page part en défilement HORIZONTAL.
+- **Le graphique de la SEMAINE est relié par la MÊME fonction.** Un jour non noté portait
+  `min-height:3px`, donc un trait au ras du sol : dans une semaine à trois jours notés, on
+  lisait quatre journées de jeûne. Il reçoit maintenant la hauteur interpolée, **en creux et
+  en hachures**, et la ligne du dessous le dit (« les jours hachurés sont reliés, pas
+  mesurés »). Deux interpolations pour les deux graphiques du même écran, ce serait deux qui
+  finiraient par ne plus raconter la même semaine.
+
+**Quatre défauts trouvés à l'écran, aucun par `node --check` :**
+- ⚠️⚠️ **`compter()` LAISSAIT « 0 g » SUR UNE PAGE QUI NE PEINT PAS.** Le compteur monte en
+  `requestAnimationFrame`, et une page en arrière-plan n'en reçoit **aucune** : mesuré au banc,
+  l'écran du corps annonçait « 0 g » là où il y avait **250 g** de graisse puisée — sur les
+  deux seuls chiffres qu'on vient y chercher. C'est la situation réelle de quelqu'un qui ouvre
+  son bilan et verrouille son téléphone le temps que la séquence défile. Un `setTimeout` pose
+  la valeur finale quoi qu'il arrive (règle 40, même famille que l'XP d'`assets/recette.js`).
 - ⚠️⚠️ **Les barres de la semaine étaient COMPRIMÉES.** Élément flex dans une piste de hauteur
   fixe (`.sem{height:132px}`), elles cédaient la place aux étiquettes du haut et du bas :
   mesuré, des hauteurs calculées à **115, 116, 117 et 118 px se peignaient toutes à 96**. Six
@@ -2348,6 +2537,54 @@ exactement comme avant, ce qui a été vérifié plutôt que supposé.
 > remesuré, **335 = 335, zéro débordement** à 2 comme à 4 actions. Même leçon que `.hero-foot`
 > (règle 39) — un débordement horizontal ne se lit pas dans le code, il se mesure.
 
+#### Les trois rangées vivent ICI, plus dans les pages (2026-09-02)
+Demande de Pablo : « il faut que Découvrir de Social vienne remplacer celui de Repas ».
+L'écran Repas avait son propre « Découvrir » — trois cartes vers les mini-jeux
+(`assets/minijeux.js`) — qui n'avait de commun avec celui du fil que le titre.
+
+`NattyDecouverte.monter(hote, opts)` rend les trois rangées (les cuisines, les envies, la
+sélection du jour) et branche leurs clics ; `NattyDecouverte.carte(p)` rend une vignette.
+`social.html` et `repas.html` ne fournissent plus qu'un **hôte**.
+> ⚠️ **Recopier le rendu dans les deux pages, c'était deux rendus qui divergent.** C'est le
+> défaut payé sur `api/_nutrition.js` (macros fausses en notification), sur `www/menu.html`
+> (un accueil fossile servi par le bundle) et sur les ombres de `suivi.html`.
+- ⚠️ **Le style est dans le module et ne s'appuie que sur ses propres règles.** La version
+  d'origine héritait de `.rail` et `.dishes`, définis dans le `<style>` de `social.html` :
+  importées telles quelles dans Repas, les rangées y auraient perdu leur défilement
+  horizontal et leur grille sans que rien ne le signale. Seuls les JETONS d'`assets/style.css`
+  sont supposés présents, plus `.sec-title` / `.sec-sub` — les titres gardent donc l'allure de
+  la page qui les accueille, ce qui est voulu.
+- ⚠️ **Tout est scellé sous `.ndx`**, posé sur l'hôte par le module. Les noms de classes sont
+  courts (`.dish`, `.pays`, `.envie`) parce qu'ils étaient déjà ceux de `social.html`.
+- ⚠️⚠️ **LES DEUX SÉLECTEURS SONT NÉCESSAIRES** (`.ndx .dishes,.ndx.dishes`), et le second a
+  été trouvé **en mesurant**. `social.html` pose `.ndx` et `.dishes` sur le MÊME élément pour
+  sa grille de résultats de recherche : le sélecteur de descendance seul ne l'atteignait pas,
+  et ses sept vignettes s'empilaient sur une colonne, sans cadrage —
+  `gridTemplateColumns` relevé à `none`.
+- ⚠️ **UN SEUL écouteur, délégué sur `document` et filtré par `.ndx`.** `social.html` n'écoute
+  plus aucun de ces clics : deux écouteurs pour le même geste ouvraient la visionneuse deux
+  fois. Et le filtre d'ancêtre est nécessaire — `[data-plat]` est un attribut court.
+- ⚠️ **Les ids `ttDecouv` / `ttEnvies` / `ttSel` sont CONSERVÉS** : `poserIcones()` de
+  `social.html` leur pose ses illustrations au trait après coup. Les changer aurait laissé cet
+  écran sans ses trois dessins, en silence.
+- ⚠️ **Dans `repas.html`, l'hôte `#decouvWrap` vit HORS de `#content`**, que `render()`
+  remplace en entier — à l'intérieur, les rangées disparaîtraient au premier tap sur une
+  vignette. Et `monterDecouvrir()` ne monte **qu'une fois** (`data-pose`) : remonter à chaque
+  `render()` rechargerait les vignettes et ferait sauter la position de défilement des deux
+  rails. Vérifié : trois `render()` de suite, même nœud, même `scrollLeft`, un seul titre.
+- ⚠️ **`$('btnMonde')` a dû être DÉBRANCHÉ de `social.html`** : le bouton « Tout voir »
+  appartient au module (`data-nd="tout"`), donc `$('btnMonde')` rendait `null` — et un
+  `addEventListener` sur `null` fait tomber TOUT le script de la page, donc le fil, la
+  recherche et l'annuaire avec.
+- ⚠️ **`assets/minijeux.js` n'est plus chargé par `repas.html`.** Le fichier reste au dépôt et
+  `window.NattyOnRecetteSuivie` aussi : le relier de nouveau ne tient qu'à une ligne.
+
+**Vérifié en navigateur** (375 × 812) sur les deux écrans : 20 cuisines, 6 envies, 8 plats du
+jour, la grille à deux colonnes, les rails qui défilent, aucun débordement horizontal, les
+trois titres avec leurs icônes sur Social, et les quatre entrées de la visionneuse — un pays
+(6 diapos, enchaînement armé), un plat (8 diapos, **la liste affichée** et non le catalogue),
+une envie (37), « Tout voir » (94) — plus la recherche croisée fil + catalogue.
+
 **La visionneuse a quitté ce fichier** (août 2026) : elle vit dans `assets/visionneuse.js`,
 partagée avec le fil social. `ouvrir({plats, index, titre})` ne fait plus que traduire un plat
 du catalogue en item de visionneuse. Les pièges qui suivent valent toujours — ils ont juste
@@ -2886,6 +3123,36 @@ série sans refaire le calcul, et le module les recalcule toujours depuis `meals
 affiche l'écran. Si les deux divergeaient, ce sont les repas qui font foi.
 `bilan_jour` est dans `TABLES_USER` d'`api/supprimer-compte.js` — ce qu'on répond le soir sur
 sa motivation et ses difficultés est ce qu'il y a de plus personnel dans cette app.
+
+#### `seances` — 🔄 **à créer** (`natty_seances.sql`)
+Le journal d'entraînement (`assets/seance.js`, §3).
+
+| Colonne | Type | Notes |
+|---|---|---|
+| user_id | text | **PK** avec `jour` — voir ci-dessous, c'est structurel |
+| jour | date | **PK** |
+| exos | jsonb | `[{cle,g,nom,ic,unite,met,series:[10,10,8]}]` |
+| duree_min | integer | la durée SAISIE, quand elle l'a été ; sinon déduite du volume |
+| libre | text | le texte brut de la saisie à la main |
+| updated_at | timestamptz | |
+
+RLS activée, policy « soi seulement » : ce que quelqu'un soulève, à quelle fréquence et quels
+jours il ne vient pas est un relevé de sa forme physique et de ses habitudes. `seances` est
+dans `TABLES_USER` d'`api/supprimer-compte.js`.
+
+> ⚠️ **`(user_id, jour)` en clé primaire, et c'est structurel** : `enregistrer()` écrit en
+> `resolution=merge-duplicates` **sans** `?on_conflict=`, PostgREST résout donc sur la clé
+> primaire. Avec un `id` uuid, corriger une séance repartirait en **409** et la deuxième
+> saisie du même jour ne serait jamais enregistrée — piège déjà payé sur `meal_likes`,
+> `membre_amis` et `notes_nutritionniste`.
+> ⚠️ **Une ligne par JOUR est un choix de produit**, pas une contrainte technique : le
+> calendrier montre un jour, pas une liste de séances. Deux entraînements dans la même journée
+> sont deux blocs d'exercices dans le même `exos`.
+> ⚠️ **`exos` ne porte RIEN de calculé** — voir §3, c'est la leçon d'`api/_nutrition.js`.
+> 🔄 **Tant qu'elle n'existe pas, tout fonctionne** : les séances vivent dans le
+> `localStorage` de l'appareil, le bilan les compte, et les deux écrans qui les montrent le
+> DISENT. Ce que la créer débloque : la séance notée à la salle sur le téléphone comptée par
+> le bilan ouvert le soir sur un autre appareil.
 
 #### `materiel` — ✅ **existe** (`natty_materiel.sql`, exécuté)
 Le matériel de cuisine (`assets/materiel.js`, §3).
@@ -3714,6 +3981,45 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   parcours ; les deux compteurs ne se parlent pas. Les réunir est une décision produit, pas un
   correctif.
 
+**Séances d'entraînement, et le bilan qui en découle (2026-09-02)**
+- ✅ **Livré** — `assets/seance.js` (+ `www/`), `natty_seances.sql`, panneau sur
+  `coaching.html`, scène `scSeance` dans le bilan. Détail et pièges en §3.
+- ✅ **Le calendrier avec un `+` par jour**, le parcours groupe → machines → séries → reps, et
+  la saisie libre qui produit la même structure. Exactement le parcours décrit par Pablo.
+- ✅ **Le muscle et la graisse du bilan en découlent** : la dépense de la séance entre dans le
+  déficit (donc dans les grammes de graisse), son volume dans le stimulus (donc dans le muscle).
+- ✅ **Aucune régression pour qui ne journalise pas** : `journalise()` garde l'ancien modèle au
+  gramme près. Vérifié en A/B — 40 g dans les deux cas.
+- ✅ **Trois défauts trouvés au banc, aucun par `node --check`** : le plafond du facteur séance
+  qui faisait BAISSER le muscle quand on déclarait sa séance (21 g → 13 g), `compter()` qui
+  laissait « 0 g » sur une page qui ne peint pas, et la réserve du bas qui cachait la mention
+  « gardées sur cet appareil » derrière la barre d'action. Détail en §3.
+- 🔄 **`natty_seances.sql` à exécuter** : sans lui les séances restent sur l'appareil.
+- 🔄 **Non vérifié sur téléphone ni avec une vraie session.**
+- 🔄 **La charge en kilos n'est pas demandée** (choix assumé, écrit à l'écran) : la dépense se
+  déduit du volume, pas du tonnage. À rediscuter si Pablo veut le suivi de charge.
+- 🔄 **Le bilan ne s'ouvre que quand l'app est ouverte** : pour qu'il réclame la séance de
+  lui-même le soir, il faut le brancher sur `assets/notifs.js`.
+
+**Le graphique du bilan est continu (2026-09-02)**
+- ✅ **Les trous sont RELIÉS, en pointillé** — courbe des 30 jours ET barres de la semaine, par
+  la même fonction `relier()`. Le trait va d'un bout à l'autre ; ce qui n'a pas été mesuré se
+  distingue sans lire la légende. Détail et pièges en §3.
+- ✅ Vérifié sur 30 jours avec 8 trous volontaires (dont deux avant le premier jour noté) :
+  18 segments mesurés + 11 ponts, 22 points posés, aucun débordement horizontal, légende à
+  trois entrées qui passe à la ligne.
+
+**« Découvrir » : le même sur Social et sur Repas (2026-09-02)**
+- ✅ **Livré** — le rendu des trois rangées est passé dans `assets/decouverte.js`
+  (`monter`, `carte`) ; `social.html` et `repas.html` ne fournissent plus qu'un hôte. Les trois
+  cartes vers les mini-jeux ont disparu de l'écran Repas, remplacées par le catalogue.
+- ✅ Vérifié sur les deux écrans, avec les quatre entrées de la visionneuse et la recherche.
+- ✅ **Un défaut trouvé en mesurant** : la grille de recherche de `social.html` ne prenait pas
+  sa mise en page (`.ndx` et `.dishes` sur le même élément). Détail en §3.
+- 🔄 **`assets/minijeux.js` n'est plus relié à aucun écran.** Le fichier reste au dépôt ; le
+  rebrancher ne tient qu'à une ligne. À trancher avec Pablo : le supprimer, ou lui trouver une
+  autre porte d'entrée.
+
 **Garde-manger & génération de recettes**
 - ✅ Panneau « Mon garde-manger » dans `repas.html` : scan des courses, du ticket de caisse ou
   d'une photo importée, plus saisie libre ; bouton « Générer mes repas avec ces ingrédients ».
@@ -4352,6 +4658,22 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
     restent dans la page, en `display:none`. Les tester par leur présence, c'est se croire
     occupé à vie dès le premier usage. Et un module qui s'invite tout seul ne tient pas sa
     propre liste — trois listes, c'est trois qui divergent.
+
+43. **Un chiffre qui compte ne dépend jamais d'une seule `requestAnimationFrame`.** Le
+    compteur du bilan annonçait « 0 g » là où il y avait 250 g, parce qu'une page qui ne peint
+    pas n'en reçoit aucune. Même chose pour toute mesure de mise en page faite en rAF (la
+    réserve du bas d'`assets/seance.js`). Doubler d'un `setTimeout` — c'est la règle 40
+    appliquée aux nombres et aux positions, pas seulement aux animations.
+44. **Un rendu partagé par deux écrans vit dans UN module, jamais recopié.** Chaque fois que ce
+    dépôt a laissé deux écrans raconter la même chose, ils ont divergé : `api/_nutrition.js`
+    contre `core.js` (macros fausses en notification), `www/menu.html` contre `www/index.html`
+    (un accueil fossile servi par le bundle), les ombres de `suivi.html`. La page fournit un
+    HÔTE, le module fournit le HTML, le CSS et les écouteurs.
+45. **Un modèle de calcul qui remplace une valeur par défaut doit pouvoir la DÉPASSER.** Le
+    facteur séance plafonnait à 1, exactement la valeur de qui ne journalise pas : renseigner
+    ses séances ne pouvait donc que baisser l'estimation. Avant de livrer un facteur, mesurer
+    les trois cas — sans donnée, avec une donnée faible, avec une donnée forte — et vérifier
+    que le troisième bat le premier.
 
 32. **Push automatique autorisé** (décidé le 2026-07-26) : une fois un commit créé sur ce repo, `git push origin main` peut être fait directement, **sans redemander confirmation à chaque fois**. Authentification via clé SSH dédiée (`~/.ssh/id_ed25519_github`, clé "Claude Accès" sur GitHub, remote `origin` en SSH). Cette autorisation est spécifique à ce repo — ne pas l'étendre à un autre dépôt ou à d'autres actions destructrices (force-push, reset, etc., qui restent soumises à confirmation).
 
@@ -5380,3 +5702,54 @@ Pablo, quatre fichiers :*
   > rendrait sa transparence en NOIR une fois en JPEG — et les POSTe.
 - 🔄 **Non vérifié** : que l'email de récupération arrive réellement. Le code ne peut pas le
   garantir ; les journaux d'authentification de Supabase, si.
+
+---
+
+*Contribution session « séances, Découvrir partagé, courbe continue » (Claude Opus,
+2 septembre 2026) — trois demandes de Pablo, dans l'ordre où elles ont été faites :*
+
+**1. « Le Découvrir de Social doit venir remplacer celui de Repas. »** Le rendu des trois
+rangées est passé dans `assets/decouverte.js` (`monter`, `carte`) ; `social.html` et
+`repas.html` ne fournissent plus qu'un hôte. Les trois cartes vers les mini-jeux ont quitté
+l'écran Repas — et `assets/minijeux.js` avec elles, faute d'autre porte d'entrée.
+
+**2. « Pouvoir ajouter sa séance avant le bilan, pour voir au gramme près. »**
+**Nouveau** `assets/seance.js` (+ `www/`) et `natty_seances.sql` : calendrier avec un `+` par
+jour, parcours groupe → machines → séries → reps, saisie libre, panneau sur `coaching.html`.
+Le bilan intercale une scène `scSeance` **avant** l'écran du corps, et recalcule au retour :
+la dépense de la séance entre dans le déficit, son volume dans le stimulus musculaire.
+
+**3. « Le graphique n'est pas continu, il faut le lier. »** `relier()` interpole les jours non
+notés ; le trait va d'un bout à l'autre, et les portions calculées sont en **pointillé clair**
+— continu comme demandé, sans affirmer une mesure qui n'existe pas. La même fonction sert aux
+barres de la semaine, dont les jours vides passent en hachures.
+
+**Cinq défauts trouvés en MESURANT, aucun par `node --check` :**
+- 🔴 le facteur séance plafonnait à 1, donc journaliser ne pouvait que **baisser** le muscle
+  estimé (21 g → 13 g à alimentation identique) — l'inverse de ce que la fonctionnalité
+  promet. Corrigé à 1,60, remesuré : 48 g un jour de salle contre 12 g un jour de repos ;
+- 🔴 `compter()` du bilan laissait **« 0 g » sur une page qui ne peint pas**, sur les deux
+  seuls chiffres qu'on vient y chercher ;
+- 🔴 la grille de recherche de `social.html` ne prenait pas sa mise en page (`.ndx` et
+  `.dishes` sur le même élément, sélecteur de descendance seul) : sept vignettes empilées ;
+- la réserve du bas du plein écran des séances cachait sa dernière ligne derrière la barre
+  d'action (130 px de barre pour 128 px réservés) ;
+- le `+` de chaque jour du calendrier était invisible à 11 px / `#4a4a55` — or c'est
+  l'affordance de toute la fonctionnalité.
+
+**Un piège de rédaction, attrapé de justesse :** en remplaçant le gestionnaire `btnMonde` de
+`social.html` par un commentaire d'explication, j'ai oublié le `*/` de fermeture. `node
+--check` est passé — le commentaire se refermait sur celui du bloc suivant, avalant en silence
+le gestionnaire `$('btnMembres')`. **Un commentaire mal fermé est syntaxiquement valide.**
+
+⚠️ **Ce commit emporte aussi le travail NON COMMITÉ d'une session parallèle sur `suivi.html`
+et `www/suivi.html`** : le bloc `#objVide` (illustration cible + « Enregistrez votre
+objectif » quand `onboarding` n'a ni poids ni tdee, qui REMPLACE les deux cartes noires
+plutôt que de les laisser annoncer « 0 g » sur un objectif absent). Ma seule modification de
+ces deux fichiers est la ligne `<script src="/assets/seance.js">`. Impossible de l'en séparer
+sans réécrire le travail de l'autre session ; c'est noté ici, comme pour `e01e20b` et
+`3d0a0ae`. Rien n'est perdu, et le contenu a été vérifié (syntaxe des 5 blocs inline).
+
+🔄 **Non vérifié sur téléphone ni avec une vraie session** : tout a tourné contre des
+doublures de `fetch` (les 401 de la clé anon sur un jeton factice). Bancs jetables
+`_test-seance.html` et `_test-bilan-seance.html` (préfixe `_`, donc hors dépôt).
