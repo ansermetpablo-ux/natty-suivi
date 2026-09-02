@@ -4,12 +4,16 @@
 // ⚠️ COPIE MÉCANIQUE de la table `NT` d'assets/core.js, ET de son appariement.
 // Le serveur ne peut pas importer core.js (script navigateur, IIFE globale).
 //
-// SI core.js CHANGE, régénérer ce fichier — la table ET `getNutri` :
-//   python3 - <<'EOF'
-//   src=open('assets/core.js').read(); i=src.index('  var NT = {')
-//   j=src.index('\n  };', i)+4; print(src[i:j])
-//   EOF
-// puis recoller le littéral ci-dessous (dédenté d'un niveau).
+// SI core.js CHANGE, UNE SEULE COMMANDE :
+//     node scripts/gen-nutrition.mjs
+// Elle recopie la table ET compare les deux `getNutri` sur les pièges connus.
+// L'ancienne consigne demandait de recoller le littéral à la main depuis un
+// bout de Python en commentaire — c'est exactement la manœuvre qui a laissé
+// les deux tables diverger (voir plus bas). `--verif` contrôle sans réécrire.
+//
+// ⚠️ Seule la TABLE est régénérée. `getNutri` et `normNom` restent écrits des
+// deux côtés : ce sont des fonctions, elles se relisent. Le script les compare
+// sur 37 cas × 2 quantités et sort en erreur au moindre écart.
 //
 // ⚠️ CETTE COPIE A DÉJÀ DIVERGÉ, ET C'ÉTAIT UN BUG EN PRODUCTION. Elle portait
 // la table de ~60 aliments et l'ancien appariement par sous-chaîne
@@ -59,10 +63,19 @@ const NT = {
   'pain':{c:265,p:9,l:3.2,g:49},'pain complet':{c:247,p:10,l:3.4,g:41},
   'pain de mie':{c:265,p:8,l:4,g:48},'baguette':{c:274,p:9,l:1.3,g:56},
   'biscotte':{c:390,p:12,l:5,g:73},'tortilla':{c:310,p:8,l:8,g:51},'wrap':{c:310,p:8,l:8,g:51},
+  /* ⚠️ « pâte brisée » et « pâte feuilletée » DOIVENT être des clés à deux
+     mots. Sans elles, elles tombaient sur `pate` — c'est-à-dire LE PÂTÉ DE
+     CAMPAGNE : une quiche comptait 320 kcal et 2 g de glucides pour 100 g de
+     pâte, au lieu de 350 kcal et 40 g. Même famille que « pomme de terre »
+     comptée en pomme (§7), et le libellé le plus long gagne. */
+  'pate brisee':{c:352,p:5,l:20,g:38},'pate feuilletee':{c:406,p:6,l:26,g:37},
+  'pate a pizza':{c:270,p:8,l:3,g:51},'pate a tarte':{c:352,p:5,l:20,g:38},
+  'farine':{c:364,p:10,l:1,g:76},'chapelure':{c:395,p:13,l:5,g:72},
   'pomme de terre':{c:77,p:2,l:0.1,g:17},'patate douce':{c:86,p:1.6,l:0.1,g:20},
   'frites':{c:312,p:3.4,l:15,g:41},'puree':{c:83,p:2,l:2.5,g:13},'gnocchi':{c:160,p:4,l:1,g:33},
   'avoine':{c:389,p:17,l:7,g:66},'flocons avoine':{c:389,p:17,l:7,g:66},
   'muesli':{c:375,p:10,l:9,g:62},'cereales':{c:380,p:8,l:4,g:78},
+  'granola':{c:471,p:10,l:20,g:64},
   'mais':{c:96,p:3.4,l:1.5,g:21},'petits pois':{c:81,p:5,l:0.4,g:14},
   // Plats et snacks courants
   'pizza':{c:266,p:11,l:10,g:33},'burger':{c:250,p:13,l:12,g:22},'kebab':{c:215,p:16,l:11,g:14},
@@ -94,7 +107,18 @@ const NT = {
   'comte':{c:417,p:27,l:34,g:1.5},'emmental':{c:380,p:28,l:29,g:1},'gruyere':{c:413,p:30,l:32,g:0.4},
   'chevre':{c:364,p:22,l:30,g:2.5},'camembert':{c:300,p:20,l:24,g:0.5},'roquefort':{c:369,p:22,l:31,g:2},
   'raclette':{c:357,p:23,l:29,g:1},'creme fraiche':{c:292,p:2.4,l:30,g:3},
+  /* `creme` seule vaut la crème fraîche : c'est ce que les gens écrivent, et
+     la clé à deux mots continue de gagner quand elle est écrite en entier. */
+  'creme':{c:292,p:2.4,l:30,g:3},'creme liquide':{c:300,p:2.4,l:31,g:3},
+  'cheddar':{c:402,p:25,l:33,g:1.3},'gouda':{c:356,p:25,l:27,g:2.2},
   'lait':{c:61,p:3.2,l:3.3,g:4.8},'lait vegetal':{c:35,p:1,l:1.5,g:3.5},
+  /* ⚠️ LE LAIT DE COCO DE LA BOÎTE — celui des currys, des dahls et des
+     moquecas. Il n'avait aucune clé : il tombait sur `lait` et valait 61 kcal,
+     le prix d'un lait de vache. Un curry pour quatre s'en trouvait sous-compté
+     de plus de 400 kcal. La boisson à la coco du rayon frais, elle, a sa
+     propre clé en deux mots — donc elle gagne quand on l'écrit en entier. */
+  'lait de coco':{c:185,p:1.8,l:19,g:2.8},'creme de coco':{c:330,p:3.3,l:35,g:3},
+  'boisson coco':{c:39,p:0.2,l:0.9,g:7.4},'coco':{c:354,p:3.3,l:33,g:15},
   'beurre':{c:717,p:0.9,l:81,g:0.1},'mascarpone':{c:429,p:4.8,l:44,g:4},
   // Matieres grasses, oleagineux, condiments
   'huile olive':{c:884,p:0,l:100,g:0},'huile':{c:884,p:0,l:100,g:0},
