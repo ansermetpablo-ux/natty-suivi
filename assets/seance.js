@@ -192,6 +192,13 @@ window.NattySeance = (function () {
   var JOURS_L = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
   var MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
               'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  /* ⚠️ Les formes courtes sont ÉCRITES, pas tronquées. « septembre ».slice(0,4)
+     donne « sept » sans point, « août » deviendrait « aoû », et `toLocaleString`
+     rend « aou » sans accent selon l'environnement — c'est exactement ce qui a
+     dû être corrigé dans `coaching.html` (fusion du 27 août). Elles servent aux
+     bornes de l'axe des courbes, où la date longue déborde. */
+  var MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.',
+                'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
   /* ═══ Le modèle, et pourquoi il est CALCULÉ exercice par exercice ═══
      Demande de Pablo (2026-09-02, second passage) : « ça ne doit pas être
@@ -651,6 +658,310 @@ window.NattySeance = (function () {
       d.setDate(d.getDate() - 1);
     }
     return null;
+  }
+
+  /* ── La PROGRESSION, mouvement par mouvement ─────────────
+     Le tonnage se comparait déjà d'une séance à l'autre (`progressionExo`),
+     mais nulle part on ne voyait la SUITE. Or c'est la seule chose qu'on vient
+     chercher dans un carnet d'entraînement : est-ce que ça monte ?
+
+     ⚠️⚠️ UN POINT = UNE SÉANCE, PAS UN JOUR, et c'est ce qui distingue ce
+     graphique de celui du bilan. Là-bas, un jour non noté est un trou qu'il
+     faut relier sans prétendre l'avoir mesuré (§3, `relier()`). Ici il n'y a
+     aucun trou à combler : on ne trace que des séances qui ont eu lieu, donc
+     chaque point est une mesure. Les jours de repos écartent les points, ils
+     n'en créent pas — et l'axe étant le TEMPS, une reprise après trois semaines
+     se voit comme un long segment plat plutôt que comme un pas de plus.
+
+     ⚠️ SANS CHARGE SAISIE, ON NE TRACE PAS UN TONNAGE NUL : on trace le volume
+     de répétitions (séries × reps), et l'écran le dit. Une courbe à zéro se
+     lirait comme un effondrement, alors qu'elle ne dit que « on n'a pas
+     renseigné les kilos ». */
+
+  var PROG_JOURS = 84;         // douze semaines : assez pour voir une tendance
+
+  /**
+   * Toutes les séances où un mouvement a été fait, de la plus ancienne à la
+   * plus récente.
+   * @returns {Array<{jour, series, reps, charge, tonnage, volume}>}
+   */
+  function historiqueExo(cle, poids, nbJours) {
+    var t = toutes(), out = [], d = new Date();
+    d.setDate(d.getDate() - ((nbJours || PROG_JOURS) - 1));
+    for (var i = 0; i < (nbJours || PROG_JOURS); i++) {
+      var j = jourDe(d), sj = t[j];
+      if (sj) (sj.exos || []).forEach(function (e) {
+        if (e.cle !== cle) return;
+        var ser = e.series || [];
+        var ch = 0;
+        ser.forEach(function (_, k) { var c = chargeDe(e, k); if (c != null && c > ch) ch = c; });
+        var rp = ser.reduce(function (a, b) { return a + (+b || 0); }, 0);
+        out.push({
+          /* ⚠️ Les séries BRUTES sont gardées : la liste affichait « 4×9 » sur
+             un 10-10-8-8, c'est-à-dire une MOYENNE arrondie présentée comme la
+             valeur. `resumeReps` sait écrire les deux cas. */
+          jour: j, serie: ser.slice(), series: ser.length, reps: rp,
+          charge: ch || null, tonnage: tonnageExo(e, poids),
+          /* Le repli quand aucune charge n'est connue : la somme des
+             répétitions. Pas « séries × reps », qui compterait deux fois. */
+          volume: rp
+        });
+      });
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }
+
+  /**
+   * Un résumé par mouvement, pour la liste : combien de séances, ce qui est
+   * tracé, le record, et l'écart entre la première et la dernière séance.
+   *
+   * ⚠️ Un mouvement fait UNE SEULE FOIS n'a pas de progression — `pc` vaut
+   * `null`, pas 0. Zéro veut dire « stable », ce qui serait faux.
+   */
+  function mouvements(poids, nbJours) {
+    var t = toutes(), vus = {}, d = new Date(), n = nbJours || PROG_JOURS;
+    d.setDate(d.getDate() - (n - 1));
+    for (var i = 0; i < n; i++) {
+      var sj = t[jourDe(d)];
+      if (sj) (sj.exos || []).forEach(function (e) {
+        if (e.cle) vus[e.cle] = e;
+      });
+      d.setDate(d.getDate() + 1);
+    }
+    var out = [];
+    Object.keys(vus).forEach(function (cle) {
+      var h = historiqueExo(cle, poids, n);
+      if (!h.length) return;
+      var ref = exoParCle(cle) || {};
+      var avecCharge = h.some(function (x) { return x.tonnage > 0; });
+      var vals = h.map(function (x) { return avecCharge ? x.tonnage : x.volume; });
+      var premier = vals[0], dernier = vals[vals.length - 1];
+      out.push({
+        cle: cle, nom: vus[cle].nom || ref.nom || cle, ic: vus[cle].ic || ref.ic || 'haltere',
+        g: vus[cle].g || ref.g || '', unite: vus[cle].unite || ref.unite || '',
+        seances: h.length, avecCharge: avecCharge, valeurs: vals, hist: h,
+        record: Math.max.apply(null, vals),
+        chargeMax: h.reduce(function (m, x) { return Math.max(m, x.charge || 0); }, 0),
+        pc: (h.length > 1 && premier) ? Math.round((dernier / premier - 1) * 100) : null
+      });
+    });
+    /* Le plus pratiqué en tête : c'est celui sur lequel la courbe a le plus à
+       dire. À égalité, le plus récemment fait. */
+    out.sort(function (a, b) {
+      return (b.seances - a.seances) || (b.hist[b.hist.length - 1].jour < a.hist[a.hist.length - 1].jour ? -1 : 1);
+    });
+    return out;
+  }
+
+  /* ── L'HABITUDE, LE PROGRAMME, ET LE BESOIN DU JOUR ──────
+     Demande de Pablo (2026-09-02) : « que ça adapte mon objectif calorique de
+     mon J+1 et du même jour de la semaine prochaine — si le lundi j'enregistre
+     souvent des séances pecs et que mes besoins sont de 3200 kcal, mettre par
+     défaut 3500 kcal le lundi ».
+
+     Ce qui manquait : l'objectif calorique valait `onboarding.tdee`, une
+     constante posée à l'inscription. Le même chiffre le lundi de la salle et le
+     dimanche du canapé — donc, les jours d'entraînement, un objectif qu'on
+     dépasse « en trop » alors qu'on a justement dépensé plus.
+
+     ⚠️⚠️ TROIS SOURCES, DANS CET ORDRE, ET JAMAIS MÉLANGÉES :
+       1. la séance **notée** ce jour-là → ses kcal RÉELLES (une mesure) ;
+       2. la séance **programmée** ce jour-là → une estimation depuis les
+          groupes choisis, calibrée sur SES propres séances passées ;
+       3. l'**habitude** de ce jour de semaine → la moyenne de ses séances des
+          huit dernières semaines ce jour-là.
+     L'écran DIT laquelle des trois parle. Confondre « vous avez dépensé » et
+     « vous dépenserez probablement » serait exactement l'invention que ce
+     module s'interdit partout ailleurs.
+
+     ⚠️ L'HABITUDE N'EST APPLIQUÉE QUE SI C'EN EST UNE (`SEUIL_HABITUDE`). En
+     dessous, on ne met RIEN plutôt qu'une fraction : « +140 kcal parce que vous
+     vous entraînez un lundi sur trois » est un chiffre que personne ne peut
+     vérifier ni comprendre, et il gonfle l'objectif les jours où l'on ne va pas
+     à la salle — c'est-à-dire deux fois sur trois. */
+
+  var HAB_SEMAINES   = 8;      // la fenêtre où l'on cherche une habitude
+  var SEUIL_HABITUDE = 0.6;    // 5 lundis sur 8 : c'est une habitude
+  var PAS_KCAL       = 50;     // l'objectif s'arrondit : 3520 se lit 3500
+
+  /* Le lendemain. ⚠️ CE N'EST PAS DE LA DÉPENSE, et il ne faut pas le présenter
+     comme telle : l'après-séance (EPOC) est DÉJÀ dans les kcal de la veille
+     (`epocCoef`). Ce qui reste le lendemain, c'est la reconstruction — la
+     synthèse protéique tient ~48 h, et elle se paie en énergie et surtout en
+     protéines. D'où un tiers, annoncé comme un besoin et non comme une
+     dépense. Sans cette distinction, on compterait deux fois la même séance. */
+  var PART_LENDEMAIN = 0.33;
+
+  /** Le jour de la semaine, lundi = 0 — comme partout ailleurs dans ce module. */
+  function jourSemaine(j) { return (dateDe(j).getDay() + 6) % 7; }
+
+  /**
+   * Ce que coûtent, en moyenne, les séances de cette personne un jour de
+   * semaine donné — et à quelle fréquence elle en fait ce jour-là.
+   *
+   * @returns {{frequence:number, kcal:number, groupes:string[], n:number, sur:number}}
+   */
+  function habitude(js, poids) {
+    var t = toutes(), n = 0, sur = 0, som = 0, grp = {};
+    var d = new Date();
+    // On remonte au même jour de semaine, puis de sept en sept.
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7 - js + 7) % 7);
+    /* ⚠️ Le jour COURANT est exclu du comptage : il n'est pas fini, et une
+       séance pas encore notée ferait chuter la fréquence de son propre jour. */
+    if (jourDe(d) === aujourdhui()) d.setDate(d.getDate() - 7);
+    for (var i = 0; i < HAB_SEMAINES; i++) {
+      var j = jourDe(d), s = t[j];
+      sur++;
+      if (s && s.exos && s.exos.length) {
+        n++; som += kcal(s, poids);
+        groupes(s).forEach(function (g) { grp[g] = (grp[g] || 0) + 1; });
+      }
+      d.setDate(d.getDate() - 7);
+    }
+    var ordre = Object.keys(grp).sort(function (a, b) { return grp[b] - grp[a]; });
+    return { frequence: sur ? n / sur : 0, kcal: n ? Math.round(som / n) : 0,
+             groupes: ordre, n: n, sur: sur };
+  }
+
+  /**
+   * Ce que coûterait une séance PROGRAMMÉE sur ces groupes.
+   *
+   * ⚠️ CALIBRÉ SUR SES PROPRES SÉANCES, pas sur une table. Les séances passées
+   * qui portent l'un de ces groupes donnent la moyenne ; ce n'est qu'à défaut
+   * qu'on retombe sur un ordre de grandeur (une séance ordinaire de 7 séries,
+   * ~5,5 MET, ~50 min) — et l'écran le dit alors. Une valeur de table
+   * présentée comme « votre » besoin serait un chiffre inventé.
+   */
+  function kcalProgramme(grps, poids) {
+    if (!grps || !grps.length) return { kcal: 0, mesure: false };
+    var t = toutes(), som = 0, n = 0, d = new Date();
+    for (var i = 0; i < HAB_SEMAINES * 7; i++) {
+      var s = t[jourDe(d)];
+      if (s && s.exos && s.exos.length) {
+        var g = groupes(s);
+        if (g.some(function (x) { return grps.indexOf(x) > -1; })) { som += kcal(s, poids); n++; }
+      }
+      d.setDate(d.getDate() - 1);
+    }
+    if (n) return { kcal: Math.round(som / n), mesure: true, n: n };
+    // Repli : (5,5 − 1) MET × poids × 50 min. Annoncé comme un ordre de grandeur.
+    return { kcal: poids ? Math.round(4.5 * poids * (50 / 60)) : 0, mesure: false, n: 0 };
+  }
+
+  /* ── Le programme de la semaine ──────────────────────────
+     Une carte par jour, des groupes ou « repos ». Il sert à deux choses, et la
+     seconde est celle qui compte : annoncer le besoin AVANT la journée, plutôt
+     que de le constater après. */
+
+  function cleProg() { return 'natty_prog_' + uid(); }
+
+  /** Le lundi de la semaine d'une date — la clé d'un programme. */
+  function lundiDe(d) {
+    var x = new Date(d || new Date());
+    x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+    return jourDe(x);
+  }
+
+  /** @returns {{semaine:string, jours:Object}|null} */
+  function programme(semaine) {
+    var sem = semaine || lundiDe();
+    try {
+      var v = JSON.parse(localStorage.getItem(cleProg()) || 'null');
+      if (v && v.semaine === sem) return v;
+    } catch (e) {}
+    return null;
+  }
+
+  function poserProgramme(jours, semaine) {
+    var p = { semaine: semaine || lundiDe(), jours: jours || {}, le: new Date().toISOString() };
+    try { localStorage.setItem(cleProg(), JSON.stringify(p)); } catch (e) {}
+    try { document.dispatchEvent(new CustomEvent('natty:programme-pret', { detail: p })); } catch (e) {}
+    return p;
+  }
+
+  /** Les groupes programmés pour un jour, ou null si la semaine n'est pas programmée. */
+  function prevuLe(j) {
+    var p = programme(lundiDe(dateDe(j)));
+    if (!p) return null;
+    var g = p.jours[j];
+    return g ? (g.length ? g : []) : null;   // [] = repos explicite
+  }
+
+  /**
+   * LE BESOIN CALORIQUE DU JOUR — l'objectif, adapté à l'entraînement.
+   *
+   * @param {string} j     le jour visé
+   * @param {number} poids
+   * @param {number} base  la dépense de maintien (`onboarding.tdee`)
+   * @returns {{base, seance, lendemain, total, source, groupes, mesure, txt}}
+   */
+  function besoin(j, poids, base) {
+    j = j || aujourdhui();
+    base = Math.round(+base || 0);
+    var out = { base: base, seance: 0, lendemain: 0, total: base,
+                source: 'aucune', groupes: [], mesure: false, txt: '' };
+    if (!base || !poids) return out;
+
+    // 1. Ce qui a été NOTÉ ce jour-là : une mesure, elle passe avant tout.
+    var s = duJour(j);
+    if (s) {
+      out.seance = kcal(s, poids);
+      out.source = 'notee'; out.mesure = true; out.groupes = groupes(s);
+    } else {
+      // 2. Ce qui est PROGRAMMÉ.
+      var prev = prevuLe(j);
+      if (prev && prev.length) {
+        var k = kcalProgramme(prev, poids);
+        out.seance = k.kcal; out.source = 'programmee'; out.mesure = k.mesure; out.groupes = prev;
+      } else if (prev && !prev.length) {
+        out.source = 'repos';        // repos programmé : rien à ajouter, et c'est dit
+      } else {
+        // 3. L'HABITUDE de ce jour de semaine, et seulement si c'en est une.
+        var h = habitude(jourSemaine(j), poids);
+        if (h.frequence >= SEUIL_HABITUDE && h.kcal) {
+          out.seance = h.kcal; out.source = 'habitude'; out.mesure = true;
+          out.groupes = h.groupes; out.freq = h;
+        } else if (h.n) {
+          out.source = 'irreguliere'; out.freq = h;
+        }
+      }
+    }
+
+    /* Le lendemain d'une séance : la reconstruction. On regarde ce qui a été
+       NOTÉ la veille — pas ce qui était prévu : une séance prévue et pas faite
+       ne se reconstruit pas. */
+    var v = duJour(veille(j));
+    if (v) out.lendemain = Math.round(kcal(v, poids) * PART_LENDEMAIN);
+
+    var brut = base + out.seance + out.lendemain;
+    out.total = Math.round(brut / PAS_KCAL) * PAS_KCAL;
+    out.txt = phraseBesoin(out);
+    return out;
+  }
+
+  /** La phrase qui dit d'où vient le supplément. Sans elle, l'objectif change
+      tout seul d'un jour à l'autre et ça se lit comme un bug. */
+  function phraseBesoin(b) {
+    var sup = b.total - b.base;
+    if (!sup) {
+      if (b.source === 'repos') return 'Jour de repos programmé : votre objectif de base.';
+      if (b.source === 'irreguliere') return 'Pas d’habitude établie ce jour-là — objectif de base.';
+      return 'Votre objectif de base, sans entraînement prévu.';
+    }
+    var bouts = [];
+    if (b.seance) {
+      var nomG = b.groupes.map(function (c) {
+        var g = groupeParCle(c); return g ? g.nom.toLowerCase() : c;
+      }).slice(0, 2).join(' et ');
+      if (b.source === 'notee') bouts.push('votre séance' + (nomG ? ' ' + nomG : '') + ' du jour (' + b.seance + ' kcal dépensées)');
+      else if (b.source === 'programmee') bouts.push('la séance' + (nomG ? ' ' + nomG : '') + ' que vous avez programmée'
+        + (b.mesure ? ' (~' + b.seance + ' kcal, d’après les vôtres)' : ' (~' + b.seance + ' kcal, ordre de grandeur)'));
+      else bouts.push('vos séances' + (nomG ? ' ' + nomG : '') + ' habituelles ce jour-là ('
+        + (b.freq ? b.freq.n + ' fois sur ' + b.freq.sur + ', ' : '') + '~' + b.seance + ' kcal)');
+    }
+    if (b.lendemain) bouts.push('la reconstruction du lendemain de séance (' + b.lendemain + ' kcal)');
+    return '+' + sup + ' kcal aujourd’hui : ' + bouts.join(', et ') + '.';
   }
 
   /* ── Ce que CHAQUE exercice coûte et rapporte ─────────────
@@ -1262,6 +1573,46 @@ window.NattySeance = (function () {
       '#nsea .set .ck::placeholder{color:#5f5f6b;font-weight:700}',
       '#nsea .set .ckw span{font-size:10.5px;font-weight:700;color:#7d7d89;flex:none}',
 
+      /* ── Le programme de la semaine ───────────────────── */
+      '#nsea .pjl{display:flex;flex-direction:column;gap:7px;margin-top:15px}',
+      '#nsea .pj{background:#14141b;border-radius:16px;overflow:hidden}',
+      '#nsea .pj.on{background:#181820;box-shadow:inset 0 0 0 1.6px #2c2c38}',
+      '#nsea .pj .hd{display:flex;align-items:center;gap:11px;padding:12px 13px;width:100%;text-align:left}',
+      '#nsea .pj .hd .j{width:42px;flex:none;font-size:12px;font-weight:900;letter-spacing:-.2px}',
+      '#nsea .pj .hd .j small{display:block;font-size:9.5px;color:#6f6f7b;font-weight:700;margin-top:1px}',
+      '#nsea .pj .hd .g{flex:1;min-width:0;font-size:12.5px;font-weight:800;color:#c9c9d2;',
+      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '#nsea .pj .hd .g.rep{color:#6f6f7b;font-weight:700}',
+      '#nsea .pj .hd .k{flex:none;font-size:11px;font-weight:800;color:#5ad07a}',
+      '#nsea .pj .hd .k.z{color:#6f6f7b}',
+      '#nsea .pj .ed{padding:0 11px 12px;display:flex;gap:6px;flex-wrap:wrap}',
+      '#nsea .pj .ed button{padding:8px 12px;border-radius:999px;background:#20202a;',
+      'font-size:11.5px;font-weight:800;color:#c9c9d2}',
+      '#nsea .pj .ed button.on{background:#f4f4f7;color:#101014}',
+      '#nsea .pj .ed button.rep{background:#181820;color:#8b8b96}',
+      '#nsea .pj .ed button.rep.on{background:#2c2c38;color:#f4f4f7}',
+      /* ── La progression ───────────────────────────────── */
+      '#nsea .pgl{display:flex;flex-direction:column;gap:8px;margin-top:16px}',
+      '#nsea .pgr{display:flex;align-items:center;gap:11px;background:#14141b;',
+      'border-radius:16px;padding:12px 13px;width:100%;text-align:left}',
+      '#nsea .pgr:active{transform:scale(.985)}',
+      '#nsea .pgr .b{width:34px;height:34px;border-radius:11px;background:#20202a;flex:none;',
+      'display:flex;align-items:center;justify-content:center}',
+      '#nsea .pgr .b svg{width:19px;height:19px;stroke:#c9c9d2}',
+      '#nsea .pgr .tx{flex:1;min-width:0}',
+      '#nsea .pgr .tx .n{font-size:13.5px;font-weight:800;letter-spacing:-.2px;',
+      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '#nsea .pgr .tx .s{font-size:10.5px;color:#7d7d89;font-weight:700;margin-top:2px}',
+      '#nsea .pgr .sp{flex:none;width:78px;height:30px}',
+      '#nsea .pgr .d{flex:none;font-size:12px;font-weight:900;letter-spacing:-.3px;min-width:44px;text-align:right}',
+      /* Le grand graphique du détail. Hauteur FERME : en `flex` il se ferait
+         comprimer comme les barres du bilan (§3), et deux séances voisines
+         se peindraient à la même hauteur. */
+      '#nsea .pgc{background:#14141b;border-radius:18px;padding:16px 14px 12px;margin-top:14px}',
+      '#nsea .pgc svg{width:100%;height:132px;display:block;overflow:visible}',
+      '#nsea .pgc .ax{display:flex;justify-content:space-between;font-size:10px;',
+      'color:#6f6f7b;font-weight:700;margin-top:8px}',
+      '#nsea .pgc .lg{font-size:10.5px;color:#7d7d89;font-weight:700;margin-top:9px;line-height:1.5}',
       '#nsea .chips{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}',
       '#nsea .chips button{padding:9px 15px;border-radius:999px;background:#181820;',
       'font-size:12.5px;font-weight:800;color:#c9c9d2}',
@@ -1510,9 +1861,373 @@ window.NattySeance = (function () {
       boutons: [
         { txt: duJour(auj) ? 'Voir la séance du jour' : 'Ajouter la séance du jour',
           on: function () { if (duJour(auj)) scDetail(auj); else demarrer(auj); } },
+        /* ⚠️ L'entrée de la progression est un bouton et non un lien perdu dans
+           le texte : c'est la seule porte, et une courbe qu'on ne trouve pas
+           n'existe pas. Elle disparaît tant qu'il n'y a rien à tracer — un
+           bouton qui mène à un écran vide est pire qu'un bouton absent. */
+        (mouvements(E.poids || 0).length
+          ? { txt: '📈 Ma progression', cls: 'b3', on: scProgression } : null),
+        { txt: '🗓 Programmer ma semaine', cls: 'b3',
+          on: function () { PE = null; scProgramme(); } },
         { txt: 'Fermer', cls: 'b3', on: fermer }
       ]
     });
+  }
+
+  /* ═══ 8 ter. Le programme de la semaine ══════════════════
+     Demande de Pablo (2026-09-02) : « demander également la programmation de
+     la semaine des séances le lundi ».
+
+     ⚠️ CE N'EST PAS UN AGENDA, c'est ce qui permet d'annoncer le besoin AVANT
+     la journée. Sans lui, l'objectif du lundi ne monte que si l'on s'entraîne
+     déjà tous les lundis depuis deux mois ; avec lui, il monte dès la première
+     semaine — et il baisse le jour où l'on programme du repos, ce qu'aucune
+     habitude ne peut deviner.
+     ⚠️ On ne demande QUE LES GROUPES, pas les machines : à ce moment-là on ne
+     sait pas encore ce qu'on fera, et un formulaire complet une semaine à
+     l'avance ne serait jamais rempli. */
+
+  var PE = null;   // l'état de l'édition en cours : { jours, ouvert }
+
+  function scProgramme() {
+    enTete('MA SEMAINE', E.depuisCal ? scCalendrier : null);
+    var poids = E.poids || 0, base = E.tdee || 0;
+    var lundi = lundiDe();
+    if (!PE) {
+      var deja = programme(lundi);
+      PE = { jours: {}, ouvert: null };
+      for (var i = 0; i < 7; i++) {
+        var d = dateDe(lundi); d.setDate(d.getDate() + i);
+        var j = jourDe(d);
+        /* ⚠️ PRÉ-REMPLI PAR L'HABITUDE, pas vide. Une grille vide se valide
+           telle quelle — donc « repos toute la semaine », c'est-à-dire le pire
+           résultat possible. Ce que la personne fait d'habitude ce jour-là est
+           la meilleure proposition qu'on puisse faire, et elle se corrige d'un
+           tap. Une séance DÉJÀ notée l'emporte : elle a eu lieu. */
+        var s = duJour(j);
+        if (s) PE.jours[j] = groupes(s);
+        else if (deja && deja.jours[j]) PE.jours[j] = deja.jours[j].slice();
+        else {
+          var h = habitude(i, poids);
+          PE.jours[j] = (h.frequence >= SEUIL_HABITUDE && h.groupes.length)
+            ? h.groupes.slice(0, 2) : [];
+        }
+      }
+    }
+    peindreProgramme(base, poids, lundi);
+  }
+
+  function peindreProgramme(base, poids, lundi) {
+    var auj = aujourdhui();
+    var lignes = '';
+    for (var i = 0; i < 7; i++) {
+      var d = dateDe(lundi); d.setDate(d.getDate() + i);
+      var j = jourDe(d), sel = PE.jours[j] || [], ouvert = PE.ouvert === j;
+      var fait = !!duJour(j);
+      var noms = sel.map(function (c) { var g = groupeParCle(c); return g ? g.nom : c; });
+      /* Le besoin qui en découle, tout de suite : c'est la raison d'être de
+         cet écran, et sans lui on remplit un agenda sans savoir pourquoi. */
+      var kb = 0;
+      if (base && poids) {
+        var k = sel.length ? kcalProgramme(sel, poids) : { kcal: 0 };
+        kb = Math.round((base + k.kcal) / PAS_KCAL) * PAS_KCAL;
+      }
+      lignes += '<div class="pj' + (ouvert ? ' on' : '') + '">'
+        + '<button type="button" class="hd" data-pj="' + j + '">'
+        + '<div class="j">' + JOURS_C[i] + '<small>' + d.getDate() + '</small></div>'
+        + '<div class="g' + (sel.length ? '' : ' rep') + '">'
+        + (sel.length ? esc(noms.join(' + ')) : 'Repos')
+        + (fait ? ' ✓' : '') + '</div>'
+        + (kb ? '<div class="k' + (sel.length ? '' : ' z') + '">' + kb + '</div>' : '')
+        + '</button>';
+      if (ouvert) {
+        lignes += '<div class="ed">'
+          + GROUPES.map(function (g) {
+              return '<button type="button" data-pg="' + j + '|' + g.cle + '"'
+                + (sel.indexOf(g.cle) > -1 ? ' class="on"' : '') + '>' + esc(g.nom) + '</button>';
+            }).join('')
+          + '<button type="button" class="rep' + (sel.length ? '' : ' on') + '" data-prep="' + j + '">Repos</button>'
+          + '</div>';
+      }
+      lignes += '</div>';
+    }
+
+    var nb = Object.keys(PE.jours).filter(function (j) { return (PE.jours[j] || []).length; }).length;
+    scene({
+      html: '<div class="kick">Semaine du ' + esc(dateCourte(lundi)) + '</div>'
+        + '<h1>Programmez<br>votre semaine</h1>'
+        + '<div class="sous">Les groupes, pas les machines — on verra le détail le jour venu. '
+        + 'C’est ce qui permet à votre objectif calorique de monter <b>le matin même</b>, '
+        + 'et pas seulement une fois la séance notée.</div>'
+        + '<div class="pjl">' + lignes + '</div>'
+        + (base ? '<div class="note">Le nombre à droite est votre objectif de ce jour-là : '
+              + base + ' kcal de base, plus ce que coûtent vos séances de ce type. '
+              + 'Le lendemain d’une séance monte aussi, pour la reconstruction — mais celui-là '
+              + 'ne se calcule qu’une fois la séance vraiment notée.</div>'
+            : '<div class="note">Votre dépense de base n’est pas connue : renseignez votre poids '
+              + 'et votre profil pour voir l’objectif de chaque jour.</div>')
+        + (estSynchronise() ? ''
+            : '<div class="note">Ce programme est gardé sur cet appareil uniquement.</div>'),
+      pret: function (d) {
+        d.querySelectorAll('[data-pj]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var j = b.getAttribute('data-pj');
+            PE.ouvert = (PE.ouvert === j) ? null : j;
+            tic();
+            peindreProgramme(base, poids, lundi);
+          });
+        });
+        d.querySelectorAll('[data-pg]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var p = b.getAttribute('data-pg').split('|'), j = p[0], g = p[1];
+            var l = PE.jours[j] || (PE.jours[j] = []);
+            var i = l.indexOf(g);
+            if (i > -1) l.splice(i, 1); else l.push(g);
+            tic();
+            peindreProgramme(base, poids, lundi);
+          });
+        });
+        d.querySelectorAll('[data-prep]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            PE.jours[b.getAttribute('data-prep')] = [];
+            tic();
+            peindreProgramme(base, poids, lundi);
+          });
+        });
+      },
+      boutons: [
+        { txt: nb ? 'Valider ma semaine (' + nb + ' séance' + (nb > 1 ? 's' : '') + ')'
+                  : 'Valider — aucune séance cette semaine',
+          on: function () {
+            poserProgramme(PE.jours, lundi);
+            marquerProgVu(lundi);
+            PE = null;
+            if (E.depuisCal) scCalendrier(); else fermer();
+          } },
+        { txt: 'Plus tard', cls: 'b3', on: function () {
+            marquerProgVu(lundi);
+            PE = null;
+            if (E.depuisCal) scCalendrier(); else fermer();
+          } }
+      ]
+    });
+  }
+
+  var JOURS_C = ['LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM', 'DIM'];
+
+  function marquerProgVu(lundi) {
+    try { localStorage.setItem('natty_prog_vu_' + uid(), lundi || lundiDe()); } catch (e) {}
+  }
+  function progVu(lundi) {
+    try { return localStorage.getItem('natty_prog_vu_' + uid()) === (lundi || lundiDe()); }
+    catch (e) { return false; }
+  }
+
+  /**
+   * La proposition du lundi. Même précautions que les autres plein écran de
+   * l'app : jamais par-dessus un autre, et une seule fois par semaine.
+   *
+   * ⚠️ 11 s, APRÈS la planification des repas (5 s), le guide du jour (6,5 s) et
+   * le bilan (9 s). Quatre écrans qui s'invitent ne se discutent pas : celui-ci
+   * arrive en dernier parce que c'est le moins urgent des quatre — une semaine
+   * se programme dans la journée, un repas se note maintenant.
+   */
+  function proposerProgrammeSiNecessaire() {
+    if (!window.Natty || !Natty.USER_ID) return;
+    var d = new Date();
+    if (d.getDay() !== 1) return;              // le lundi, comme demandé
+    var lundi = lundiDe();
+    if (progVu(lundi) || programme(lundi)) return;
+    setTimeout(async function () {
+      if (racine || progVu(lundi) || programme(lundi)) return;
+      if (window.Natty && Natty.ecranOccupe && Natty.ecranOccupe()) return;
+      await ouvrir({ programme: true });
+    }, 11000);
+  }
+
+  /* ═══ 8 bis. La progression ══════════════════════════════
+     Demande de Pablo (2026-09-02) : « une courbe de progression par
+     exercice ». Le tonnage se comparait déjà d'une séance à l'autre, il
+     manquait de le VOIR. */
+
+  /**
+   * Le tracé d'une suite de séances, en SVG.
+   *
+   * ⚠️ L'AXE DES X EST LE TEMPS, pas le rang de la séance. Trois semaines sans
+   * venir doivent se voir : à rang égal, une reprise après une pause
+   * ressemblerait à une séance de plus, et la courbe raconterait une
+   * régularité qui n'a pas eu lieu.
+   * ⚠️ Rien ne dépend d'une animation pour son état final (règle 40) : le
+   * tracé est complet à l'arrêt, l'animation ne fait que le révéler.
+   */
+  function courbe(hist, valeurs, o) {
+    o = o || {};
+    var W = o.w || 100, H = o.h || 34, pad = o.pad || 3;
+    if (!hist.length) return '';
+    if (hist.length === 1) {
+      /* Une seule séance : un point au milieu, et surtout PAS de ligne — une
+         ligne entre un point et lui-même dessinerait une tendance inventée. */
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" fill="none">'
+        + '<circle cx="' + (W / 2) + '" cy="' + (H / 2) + '" r="' + (o.gros ? 4 : 2.6)
+        + '" fill="' + (o.couleur || '#5ad07a') + '"/></svg>';
+    }
+    var t0 = dateDe(hist[0].jour).getTime();
+    var t1 = dateDe(hist[hist.length - 1].jour).getTime();
+    var dt = (t1 - t0) || 1;
+    var min = Math.min.apply(null, valeurs), max = Math.max.apply(null, valeurs);
+    /* ⚠️ Une échelle qui part de zéro écrase toute variation : entre 2,8 t et
+       3,1 t la courbe serait plate alors que c'est +11 %. On cadre sur les
+       valeurs, avec une marge — et l'écran affiche le min et le max, donc
+       l'échelle n'est jamais implicite. */
+    var etendue = (max - min) || Math.max(1, max * 0.1);
+    var bas = min - etendue * 0.18, haut = max + etendue * 0.18;
+    var pts = hist.map(function (x, i) {
+      var px = pad + (W - 2 * pad) * ((dateDe(x.jour).getTime() - t0) / dt);
+      var py = H - pad - (H - 2 * pad) * ((valeurs[i] - bas) / (haut - bas));
+      return [Math.round(px * 10) / 10, Math.round(py * 10) / 10];
+    });
+    var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0] + ' ' + p[1]; }).join(' ');
+    var col = o.couleur || '#5ad07a';
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" fill="none">';
+    if (o.gros) {
+      // Le remplissage sous la courbe : il donne le sens de lecture d'un coup.
+      svg += '<path d="' + d + ' L' + pts[pts.length - 1][0] + ' ' + H + ' L' + pts[0][0] + ' ' + H
+        + ' Z" fill="' + col + '" opacity=".10"/>';
+    }
+    svg += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + (o.gros ? 2.4 : 1.8)
+      + '" stroke-linecap="round" stroke-linejoin="round"/>';
+    pts.forEach(function (pt, i) {
+      var dernier = i === pts.length - 1;
+      svg += '<circle cx="' + pt[0] + '" cy="' + pt[1] + '" r="'
+        + (o.gros ? (dernier ? 4.2 : 2.8) : (dernier ? 2.6 : 1.7)) + '" fill="' + col + '"/>';
+    });
+    return svg + '</svg>';
+  }
+
+  /** « 3,1 t » quand il y a une charge, « 96 reps » sinon. */
+  function valTxt(v, avecCharge) {
+    return avecCharge ? fmtKg(v / 1000) + ' t' : v + ' reps';
+  }
+
+  /** Le vert quand ça monte, l'ambre quand ça descend, le gris sans passé. */
+  function deltaHTML(pc) {
+    if (pc == null) return '<div class="d" style="color:#5f5f6b">1ʳᵉ</div>';
+    var c = pc > 0 ? '#5ad07a' : (pc < 0 ? '#f0b429' : '#7d7d89');
+    return '<div class="d" style="color:' + c + '">' + (pc > 0 ? '+' : '') + pc + ' %</div>';
+  }
+
+  function scProgression() {
+    enTete('MA PROGRESSION', scCalendrier);
+    var poids = E.poids || 0;
+    var mvts = mouvements(poids);
+
+    if (!mvts.length) {
+      scene({
+        html: '<div class="kick">Douze dernières semaines</div>'
+          + '<h1>Rien à tracer<br>pour l’instant</h1>'
+          + '<div class="sous">Une courbe se dessine à partir de deux séances sur le même '
+          + 'mouvement. Notez-en une, puis la suivante, et elle apparaîtra ici.</div>',
+        boutons: [{ txt: 'Noter une séance', on: function () { demarrer(aujourdhui()); } },
+                  { txt: 'Retour au calendrier', cls: 'b3', on: scCalendrier }]
+      });
+      return;
+    }
+
+    var avecCharge = mvts.filter(function (m) { return m.avecCharge; }).length;
+    scene({
+      html: '<div class="kick">Douze dernières semaines</div>'
+        + '<h1>Ce qui monte</h1>'
+        + '<div class="sous">Un point par séance, placé à sa date : trois semaines sans venir '
+        + 'se voient. Touchez un mouvement pour le détail.</div>'
+        + '<div class="pgl">' + mvts.map(function (m) {
+            return '<button type="button" class="pgr" data-mvt="' + esc(m.cle) + '">'
+              + '<div class="b">' + ic(m.ic) + '</div>'
+              + '<div class="tx"><div class="n">' + esc(m.nom) + '</div>'
+              + '<div class="s">' + m.seances + ' séance' + (m.seances > 1 ? 's' : '')
+              + ' · ' + valTxt(m.valeurs[m.valeurs.length - 1], m.avecCharge) + '</div></div>'
+              + '<div class="sp">' + courbe(m.hist, m.valeurs,
+                  { w: 78, h: 30, couleur: m.pc == null ? '#7d7d89' : (m.pc >= 0 ? '#5ad07a' : '#f0b429') })
+              + '</div>' + deltaHTML(m.pc) + '</button>';
+          }).join('') + '</div>'
+        /* ⚠️ Dire CE QUI EST TRACÉ, mouvement par mouvement. Sans cette ligne,
+           une courbe de répétitions et une courbe de tonnage se ressemblent
+           trait pour trait, et on comparerait deux grandeurs différentes. */
+        + '<div class="note">' + (avecCharge
+            ? 'Les mouvements dont vous avez noté la charge sont tracés en <b>tonnage</b> '
+              + '(charge × répétitions) — c’est la seule mesure de ce carnet. '
+              + (avecCharge < mvts.length
+                  ? 'Les autres sont tracés en <b>répétitions</b> : sans charge, il n’y a pas '
+                    + 'de tonnage à calculer, et une courbe à zéro se lirait comme un '
+                    + 'effondrement.' : '')
+            : 'Aucune charge saisie sur ces douze semaines : les courbes tracent le nombre de '
+              + '<b>répétitions</b>. Notez vos kilos et elles passeront au tonnage, qui est '
+              + 'la vraie mesure d’une progression.') + '</div>',
+      pret: function (d) {
+        d.querySelectorAll('[data-mvt]').forEach(function (b) {
+          b.addEventListener('click', function () { tic(); scMouvement(b.getAttribute('data-mvt')); });
+        });
+      },
+      boutons: [{ txt: 'Retour au calendrier', cls: 'b3', on: scCalendrier }]
+    });
+  }
+
+  function scMouvement(cle) {
+    var poids = E.poids || 0;
+    var m = mouvements(poids).filter(function (x) { return x.cle === cle; })[0];
+    if (!m) { scProgression(); return; }
+    enTete(m.nom.toUpperCase(), scProgression);
+
+    var h = m.hist, v = m.valeurs;
+    var dernier = v[v.length - 1], record = m.record;
+    var col = m.pc == null ? '#7d7d89' : (m.pc >= 0 ? '#5ad07a' : '#f0b429');
+
+    scene({
+      html: '<div class="kick">' + m.seances + ' séance' + (m.seances > 1 ? 's' : '')
+        + ' en douze semaines</div>'
+        + '<h1>' + esc(m.nom) + '</h1>'
+        + '<div class="pgc">' + courbe(h, v, { w: 300, h: 132, pad: 8, gros: true, couleur: col })
+        + '<div class="ax"><span>' + esc(dateCourte(h[0].jour)) + '</span>'
+        + '<span>' + esc(dateCourte(h[h.length - 1].jour)) + '</span></div>'
+        /* L'échelle est écrite : elle ne part pas de zéro, et une courbe dont
+           on ignore les bornes peut faire passer 3 % pour un envol. */
+        + '<div class="lg">Entre <b>' + valTxt(Math.min.apply(null, v), m.avecCharge)
+        + '</b> et <b>' + valTxt(record, m.avecCharge) + '</b> · '
+        + (m.avecCharge ? 'tonnage (charge × répétitions)' : 'répétitions — aucune charge notée')
+        + '</div></div>'
+        + '<div class="rec">'
+        + '<div class="r"><div class="v">' + valTxt(dernier, m.avecCharge).replace(' ', ' ')
+        + '</div><div class="l">dernière<br>séance</div></div>'
+        + '<div class="r"><div class="v">' + valTxt(record, m.avecCharge).replace(' ', ' ')
+        + '</div><div class="l">votre<br>record</div></div>'
+        + (m.chargeMax ? '<div class="r"><div class="v">' + fmtKg(m.chargeMax)
+            + '<small style="font-size:13px">kg</small></div><div class="l">charge la<br>plus lourde</div></div>' : '')
+        + '</div>'
+        + '<div class="liste">' + h.slice().reverse().map(function (x) {
+            return '<div class="li"><div class="t" style="font-size:12.5px">'
+              + esc(dateFr(x.jour))
+              + '<div style="font-size:10.5px;color:#7d7d89;font-weight:700">'
+              + x.series + '×' + resumeReps({ series: x.serie }) + (m.unite ? ' ' + m.unite : '')
+              + (x.charge ? ' · ' + fmtKg(x.charge) + ' kg' : '') + '</div></div>'
+              + '<div class="q">' + valTxt(m.avecCharge ? x.tonnage : x.volume, m.avecCharge)
+              + '</div></div>';
+          }).join('') + '</div>'
+        + (m.pc == null
+            ? '<div class="note">Une seule séance sur ce mouvement : il n’y a pas encore de '
+              + 'progression à mesurer. La prochaine donnera le premier écart.</div>'
+            : '<div class="note">Entre la première et la dernière séance : '
+              + (m.pc > 0 ? '+' : '') + m.pc + ' %. C’est un rapport entre deux mesures, '
+              + 'sans aucun modèle — ' + (m.avecCharge
+                  ? 'charge × répétitions des deux jours.'
+                  : 'le nombre de répétitions des deux jours.') + '</div>'),
+      boutons: [{ txt: 'Voir un autre mouvement', on: scProgression },
+                { txt: 'Retour au calendrier', cls: 'b3', on: scCalendrier }]
+    });
+  }
+
+  /** « 4 sept. » — pour les bornes de l'axe, où la date longue déborde. */
+  function dateCourte(j) {
+    var d = dateDe(j);
+    return d.getDate() + ' ' + MOIS_C[d.getMonth()];
   }
 
   function semaineCourante() {
@@ -2206,7 +2921,8 @@ window.NattySeance = (function () {
 
   /* ═══ 11. Ouverture ══════════════════════════════════════ */
 
-  /** Le poids, pour l'estimation des kcal. Une seule colonne, une seule fois. */
+  /** Le poids ET la dépense de base : le premier chiffre les kcal d'une séance,
+      le second permet au programme d'annoncer l'objectif de chaque jour. */
   async function chargerPoids() {
     if (E && E.poids) return E.poids;
     try {
@@ -2215,9 +2931,9 @@ window.NattySeance = (function () {
          table contient de vrais doublons, dont des lignes sans poids : on prend
          la première ligne EXPLOITABLE, pas la première. */
       var r = await Natty.sbFetch('onboarding?user_id=eq.' + uid()
-        + '&select=poids&order=created_at.desc&limit=5');
+        + '&select=poids,tdee&order=created_at.desc&limit=5');
       var d = (r || []).filter(function (x) { return x && x.poids; })[0];
-      if (d && E) E.poids = parseFloat(d.poids) || 0;
+      if (d && E) { E.poids = parseFloat(d.poids) || 0; E.tdee = parseFloat(d.tdee) || 0; }
     } catch (e) {}
     return (E && E.poids) || 0;
   }
@@ -2237,17 +2953,24 @@ window.NattySeance = (function () {
       if (!window.Natty || !Natty.USER_ID) return;
       monter();
       E = { jour: o.jour || aujourdhui(), exos: [], groupes: [], cur: 0,
-            libre: '', poids: 0, apres: o.apres || null,
-            depuisCal: !o.creer, mois: dateDe(o.jour || aujourdhui()) };
+            libre: '', poids: 0, tdee: 0, apres: o.apres || null,
+            depuisCal: !o.creer && !o.programme, mois: dateDe(o.jour || aujourdhui()) };
       /* La scène s'affiche AVANT que le poids soit lu : il ne sert qu'à la
          ligne des kcal du récap, trois écrans plus loin. Attendre une requête
          pour peindre un calendrier qui vit en localStorage, c'est une seconde
          de noir pour rien. */
-      if (o.creer && !duJour(E.jour)) demarrer(E.jour);
+      if (o.programme) { PE = null; scProgramme(); }
+      else if (o.creer && !duJour(E.jour)) demarrer(E.jour);
       else if (o.creer) scDetail(E.jour);
       else scCalendrier();
       await charger();
       await chargerPoids();
+      /* ⚠️ Le programme se REPEINT une fois le poids et la dépense arrivés :
+         il s'affiche tout de suite (le localStorage suffit à le composer), mais
+         l'objectif de chaque jour ne peut être calculé qu'après. Sans ce second
+         rendu, la colonne de droite resterait vide — donc l'écran perdrait la
+         seule chose qui explique pourquoi on le remplit. */
+      if (o.programme && racine && PE) peindreProgramme(E.tdee || 0, E.poids || 0, lundiDe());
       // Les séances viennent peut-être d'arriver de la base : on repeint le
       // calendrier, mais JAMAIS une saisie en cours — on effacerait ses taps.
       if (racine && scEnCours && !o.creer && E && E.exos.length === 0
@@ -2325,6 +3048,12 @@ window.NattySeance = (function () {
     /* La charge — la seule MESURE du module, quand elle est saisie. */
     analyserTexte: analyserTexte,
     tonnage: tonnage, tonnageExo: tonnageExo, chargeDe: chargeDe,
+    historiqueExo: historiqueExo, mouvements: mouvements,
+    /* L'objectif calorique du jour, adapté à l'entraînement. */
+    besoin: besoin, habitude: habitude, kcalProgramme: kcalProgramme,
+    programme: programme, poserProgramme: poserProgramme, prevuLe: prevuLe,
+    lundiDe: lundiDe, proposerProgrammeSiNecessaire: proposerProgrammeSiNecessaire,
+    ouvrirProgramme: function () { return ouvrir({ programme: true }); },
     chargeReelle: chargeReelle, derniereCharge: derniereCharge,
     intensiteRelative: intensiteRelative, progressionExo: progressionExo,
     meilleureCharge: meilleureCharge,
