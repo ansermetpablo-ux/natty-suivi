@@ -1638,6 +1638,62 @@ proposer « Modifier ce repas » sur une étape cochée. ⚠️ Le paramètre es
 après usage (les autres, dont `token`, sont conservés) : sans ça, un rechargement ou un retour
 arrière rouvrirait l'éditeur indéfiniment.
 
+### `suivi.html` — l'objectif : l'ajouter, et le modifier
+Feuille `#ovObjectif` + `ouvrirObjectif()`, ouverte depuis **deux** endroits : le bloc
+`#objVide` (« Enregistrez votre objectif », quand l'onboarding n'a rien d'exploitable) et le
+bouton **« ✎ Objectif »** posé sur la carte des anneaux.
+
+**Ce qui manquait, et les deux défauts trouvés au passage.**
+- « Commencer » renvoyait sur **`onboarding.html`** — le questionnaire d'inscription
+  **complet**, sept étapes dont la motivation, les scores et l'offre — pour obtenir cinq
+  chiffres. La feuille demande poids, taille, âge, sexe et activité, et rien d'autre.
+- 🔴 ⚠️ **La modification existante ÉCRIVAIT AVEC LA CLÉ ANON.** `profilSaveInfo()`, enfoui
+  dans l'overlay profil, envoyait `Authorization: Bearer SB_KEY` : depuis l'activation des RLS
+  (2026-08-04) ce PATCH est refusé en `42501`. Et la réponse n'était pas lue — l'écran
+  affichait **« Informations mises à jour ✓ » sur une écriture qui n'avait pas eu lieu**. Tout
+  passe désormais par `enregistrerObjectif()`, avec la session.
+- 🔴 ⚠️ **Et le `tdee` était FIGÉ** : `profilSaveInfo` recalculait les macros avec
+  `profilInfoCache.tdee || poids * 30`. Changer son poids ou son activité ne changeait donc
+  pas la dépense, donc pas l'objectif. On recalcule BMR puis TDEE avec la **même formule que
+  `onboarding.html`** (Mifflin-St Jeor puis le coefficient d'activité) — deux formules
+  donneraient deux objectifs pour la même personne selon la porte d'entrée.
+
+> ⚠️⚠️ **ON PATCH LA LIGNE PAR SON `id`, JAMAIS PAR `user_id`.** `onboarding.user_id` n'a
+> aucune contrainte d'unicité et la table contient de **vrais doublons** (§4) : un upsert
+> répondrait `42P10`, et un PATCH par `user_id` réécrirait plusieurs lignes. `id` est donc
+> demandé au chargement, et c'est un INSERT s'il n'y a aucune ligne (`completed` reste à
+> `false` — cette feuille ne remplace pas le questionnaire d'inscription).
+> 🔴 ⚠️ **LES TROIS CHAMPS CHIFFRÉS ÉTAIENT MUETS**, et ça cassait deux choses à la fois —
+> trouvé au banc, invisible à la lecture. `peindreObjRes()` lit `OBJ`, qui n'était rempli
+> qu'à l'enregistrement : taper son poids ne faisait pas bouger l'aperçu (toute la promesse
+> « en direct »), **et le bouton restait DÉSACTIVÉ** puisqu'il ne s'active que si la dépense
+> est calculable. Sur une **création** — le cas où les trois champs partent vides — la feuille
+> était un cul-de-sac : on remplissait tout, rien ne réagissait, « Enregistrer » ignorait les
+> taps. On écoute `input` et non `change` : `change` n'arrive qu'à la perte de focus.
+> ⚠️ **L'aperçu est EN HAUT et il y reste** (`position:sticky`). En bas de feuille il passait
+> derrière la barre d'action collante — or c'est LUI qu'on regarde en basculant l'activité.
+> ⚠️ **Les boutons sont collés au bas de la feuille** : mesuré, le contenu dépasse les 92 vh,
+> donc « Enregistrer » tombait sous le pli et il fallait deviner qu'on pouvait défiler.
+> ⚠️ **z-index 560, au-dessus de `#nattyNav` (500)** : à 340, le bouton passait DERRIÈRE la
+> barre d'onglets — le seul geste qui compte était inatteignable.
+> ⚠️ **Le sexe est HORS de la grille à deux colonnes** : deux pastilles dans une case de
+> grille étiraient la case voisine (« Âge ») à leur hauteur.
+> ⚠️ **La feuille dit que l'objectif du JOUR peut être plus haut.** Sinon on enregistre 3 200
+> et on voit 3 350 sur Suivi deux secondes plus tard, sans savoir lequel est le vrai.
+
+**Après enregistrement** : `macObj` recalculé, `majEtatObjectif()` (le bloc `#objVide`
+disparaît), `afficherMacros()`, puis `appliquerBesoinDuJour()` — le supplément d'entraînement
+se recalcule sur la NOUVELLE dépense, sinon l'écran garderait l'ancien objectif du jour
+pendant que la base porte le nouveau.
+
+**L'objectif du jour, à l'écran** : `#besoinNote`, sous les calories, dit d'où vient le
+supplément et **comment il se répartit** (« +23 g de glucides, +9 g de protéines, +2 g de
+lipides »). Masqué les jours sans supplément — répéter « objectif de base » chaque jour de
+repos serait du bruit.
+> ⚠️ **`.hero` a dû passer en `flex-wrap`** : c'est une RANGÉE (libellé à gauche, valeur à
+> droite) et la note y entrait comme un troisième élément — mesuré à l'écran, elle se posait
+> **par-dessus le « 0 / 3350 Kcal »**.
+
 ### `assets/seance.js` — le journal d'entraînement, et ce qu'il change au bilan
 Plein écran **noir** (`#nsea`, tout préfixé `ns-`/`ns`) : calendrier, puis saisie en trois
 temps. Plus un **panneau** « Mes séances » sur l'écran Coaching. Chargé par les écrans qui
@@ -1669,6 +1725,133 @@ vertical 3 séries de 12 » se range comme trois taps.
   valeurs réglées une par une juste avant. Les séries ajoutées reprennent la dernière valeur.
 - ⚠️ **Trois séries d'office à la sélection d'une machine.** Une liste qui arrive à zéro
   série demanderait trois taps par exercice avant de pouvoir seulement enregistrer.
+#### 📈 La PROGRESSION, mouvement par mouvement (2026-09-02)
+« Une courbe de progression par exercice. » Le tonnage se comparait déjà d'une séance à la
+suivante ; nulle part on ne voyait la SUITE — or c'est la seule chose qu'on vient chercher
+dans un carnet d'entraînement.
+
+`historiqueExo(cle, poids, n)` rend les séances où un mouvement a été fait ;
+`mouvements(poids, n)` les résume par mouvement (séances, valeurs, record, charge la plus
+lourde, écart premier→dernier). Deux écrans : la LISTE (une ligne par mouvement, sa
+micro-courbe et son écart en %) et le DÉTAIL (grand graphique, dernière séance, record,
+charge maxi, et toutes les séances datées).
+
+> ⚠️⚠️ **UN POINT = UNE SÉANCE, PAS UN JOUR**, et c'est ce qui distingue ce graphique de
+> celui du bilan. Là-bas, un jour non noté est un trou qu'il faut relier sans prétendre
+> l'avoir mesuré (`relier()`). Ici il n'y a rien à combler : **chaque point est une mesure**.
+> ⚠️ **L'axe des X est le TEMPS, pas le rang de la séance.** À rang égal, une reprise après
+> trois semaines ressemblerait à une séance de plus — la courbe raconterait une régularité
+> qui n'a pas eu lieu.
+> ⚠️ **SANS CHARGE, ON NE TRACE PAS UN TONNAGE NUL** : on trace le nombre de répétitions, et
+> l'écran le dit, mouvement par mouvement. Une courbe à zéro se lirait comme un effondrement
+> alors qu'elle ne dit que « les kilos n'ont pas été renseignés ».
+> ⚠️ **L'échelle ne part pas de zéro** — entre 2,8 t et 3,1 t la courbe serait plate alors
+> que c'est +11 % — donc **le min et le max sont ÉCRITS** sous le graphique. Une courbe dont
+> on ignore les bornes peut faire passer 3 % pour un envol.
+> ⚠️ **Une seule séance ne trace PAS de ligne** (un point, et `pc` vaut `null`, pas 0 : zéro
+> voudrait dire « stable », ce qui serait faux).
+> ⚠️ **La liste des séances affiche les séries BRUTES** (`resumeReps`) : elle montrait
+> « 4×9 » sur un 10-10-8-8, c'est-à-dire une moyenne arrondie présentée comme la valeur.
+> ⚠️ **`MOIS_C` est écrit à la main**, pas tronqué : « septembre ».slice(0,4) donne « sept »
+> sans point et `toLocaleString` rend « aou » — le défaut corrigé dans `coaching.html`.
+
+Entrée : bouton **« 📈 Ma progression »** sur le calendrier, **masqué** tant qu'il n'y a rien
+à tracer (un bouton qui mène à un écran vide est pire qu'un bouton absent).
+
+#### 🗓 LE PROGRAMME DE LA SEMAINE, et l'OBJECTIF QUI S'ADAPTE (2026-09-02)
+Demande de Pablo : « que ça adapte mon objectif calorique de mon J+1 et du même jour de la
+prochaine semaine — si le lundi j'enregistre souvent des séances pecs et que mes besoins sont
+de 3200 kcal, mettre par défaut 3500 le lundi », puis « demander également la programmation de
+la semaine des séances le lundi », puis **« pas que les calories mais toutes les macros
+s'adaptent »**.
+
+**Ce qui manquait.** L'objectif valait `onboarding.tdee`, une constante posée à l'inscription :
+le même chiffre le lundi de la salle et le dimanche du canapé. Les jours d'entraînement, on
+« dépassait » un objectif qu'on avait justement raison de dépasser.
+
+**`besoin(jour, poids, base)` — trois sources, dans cet ordre, jamais mélangées :**
+
+| Source | Ce que c'est | Nature |
+|---|---|---|
+| `notee` | la séance **enregistrée** ce jour-là | **mesure** — ses kcal réelles |
+| `programmee` | les groupes **programmés** ce jour-là | estimation, calibrée sur SES séances passées de ce type |
+| `habitude` | ce qu'elle fait d'habitude **ce jour de semaine** | mesure, moyenne sur 8 semaines |
+| `repos` / `irreguliere` | repos programmé, ou pas d'habitude établie | rien n'est ajouté, **et c'est dit** |
+
+Plus le **lendemain** : un tiers des kcal de la séance de la VEILLE.
+
+> ⚠️⚠️ **L'ÉCRAN DIT LAQUELLE DES TROIS PARLE** (`phraseBesoin`). Confondre « vous avez
+> dépensé » et « vous dépenserez probablement » serait exactement l'invention que ce module
+> s'interdit partout ailleurs. Et un objectif qui change tout seul d'un jour à l'autre, sans
+> phrase, **se lit comme un bug**.
+> ⚠️⚠️ **L'HABITUDE N'EST APPLIQUÉE QUE SI C'EN EST UNE** (`SEUIL_HABITUDE`, 60 % des 8
+> derniers mêmes jours de semaine). En dessous on ne met RIEN plutôt qu'une fraction :
+> « +140 kcal parce que vous vous entraînez un lundi sur trois » est un chiffre que personne
+> ne peut vérifier, et il gonfle l'objectif deux fois sur trois — les jours où l'on n'y va pas.
+> ⚠️ **Le lendemain n'est PAS de la dépense**, et il ne faut pas le présenter comme telle :
+> l'après-séance (EPOC) est DÉJÀ dans les kcal de la veille. Ce qui reste à J+1, c'est la
+> reconstruction. Sans cette distinction, on compterait deux fois la même séance.
+> ⚠️ **Le jour courant est exclu du comptage de l'habitude** : il n'est pas fini, et une
+> séance pas encore notée ferait chuter la fréquence de son propre jour.
+> ⚠️ **L'objectif est arrondi à 50 kcal** : 3 520 se lit 3 500 — l'exemple de Pablo tombe
+> juste, mesuré au banc sur une vraie séance pecs (43 min, 297 kcal → 3 200 + 300 = **3 500**).
+
+**LE PROGRAMME** (`scProgramme`) — sept jours, des groupes ou « repos », **pré-remplis par
+l'habitude** de chaque jour de semaine, et l'objectif du jour affiché à droite de chaque
+ligne. Proposé **le lundi**, une fois par semaine, à **11 s** — après la planification des
+repas (5 s), le guide du jour (6,5 s) et le bilan (9 s), et il renonce en voyant l'un d'eux
+(`Natty.ecranOccupe`).
+> ⚠️ **Une grille vide se valide telle quelle**, donc « repos toute la semaine » — le pire
+> résultat possible. D'où le pré-remplissage : ce que la personne fait d'habitude est la
+> meilleure proposition, et elle se corrige d'un tap.
+> ⚠️ **On ne demande QUE LES GROUPES**, pas les machines : une semaine à l'avance, on ne sait
+> pas encore quoi faire, et un formulaire complet ne serait jamais rempli.
+> ⚠️ **L'objectif de chaque jour est affiché dans la liste** : c'est la raison d'être de
+> l'écran. Sans lui, on remplit un agenda sans savoir pourquoi.
+> 🔄 **Le programme vit en `localStorage`** (`natty_prog_<uid>`), comme les séances tant que
+> `natty_seances.sql` n'est pas exécuté — et l'écran le dit.
+
+#### ⚠️⚠️ `Natty.macrosJour` — LA formule, et elle vivait en QUATRE copies
+« Pas que les calories mais toutes les macros s'adaptent. » La formule des cibles
+(`prot = poids × 2`, `lip = 25 %`, `gluc = 50 %`) était recopiée **à l'identique** dans
+`suivi.html` (`calcMacros` **et** `loadOnboarding`), `assets/creneaux.js` et
+`assets/bilan.js`, chacune avec un commentaire « même formule que… ». Quatre copies d'une
+formule figée, ça tenait ; quatre copies d'une formule qui gagne un supplément
+d'entraînement, non — c'est la divergence payée entre `api/_nutrition.js` et `core.js`.
+
+Elle vit maintenant dans **`assets/core.js`**, et le supplément s'y répartit :
+
+| glucides | 60 % | le carburant de la séance, et ce qui recharge après |
+|---|---|---|
+| **protéines** | **25 %** | la reconstruction — **plafonnée à 2,4 g/kg** |
+| **lipides** | **15 %** | le reste, sans en faire le véhicule des calories |
+
+> ⚠️ **0,60 + 0,25 + 0,15 = 1** : le supplément se retrouve EXACTEMENT dans les trois macros
+> (vérifié au banc, ±1 kcal). Une répartition qui ne somme pas à 1 afficherait des macros qui
+> ne font pas le total annoncé juste au-dessus.
+> ⚠️ **Le plafond de protéines déborde EN GLUCIDES**, il n'est pas jeté : sinon les macros
+> cesseraient de faire le compte des calories. Au-delà de 2,4 g/kg rien ne montre de bénéfice,
+> et un gros supplément aurait affiché un objectif qu'on n'atteint qu'en poudre.
+> 🔄 ⚠️ **LA BASE, ELLE, NE SOMME PAS À 100 %** — 25 % + 50 % + 2 g/kg ≈ 95 % des calories.
+> C'est **préexistant**, partagé par les quatre copies, et **non corrigé** : rééquilibrer la
+> base changerait l'objectif de tous les comptes du jour au lendemain. À trancher avec Pablo.
+
+**Deux cibles dans `assets/bilan.js`, et les confondre serait un contresens** :
+- **`cible`** = la **dépense** de maintien. C'est elle que `corpsDuJour` lit pour le déficit,
+  et une dépense ne monte pas parce qu'on a l'INTENTION de s'entraîner — elle monte parce
+  qu'on s'est entraîné, et ces kcal sont ajoutées à part (`kcalSeance`).
+- **`cibleDu(jour)`** = l'**objectif** de ce jour-là, supplément compris. C'est à lui qu'on
+  compare ce qui a été mangé — sinon un jour de salle serait noté « trop mangé » pour avoir
+  mangé ce qu'il fallait.
+> ⚠️ `analyserJour(e, profil, jour)` reçoit le jour **explicitement** : sur une journée sans
+> repas, `e` est `undefined` et la date serait perdue, donc l'objectif d'un lundi de salle non
+> journalisé retomberait sur celui d'un dimanche.
+
+**Mesuré au banc, à 80 kg / 3 200 kcal de base**, +300 kcal de séance :
+`160 → 179 g` de protéines · `400 → 445 g` de glucides · `89 → 94 g` de lipides ·
+`3 200 → 3 500 kcal`. **Sans séance ni `assets/seance.js`, tout est identique au chiffre
+près** — personne ne voit son objectif changer pour avoir installé une mise à jour.
+
 #### ⚠️⚠️ LA CHARGE (2026-09-02, troisième passage — « oui »)
 Elle avait été écartée deux fois, et le motif tenait : « un champ de plus par série ferait
 abandonner la saisie ». Ce qui la rend tenable, c'est qu'elle n'est PAS un champ par série —
@@ -2225,16 +2408,37 @@ aucune table de tokens. La contrepartie est que le texte est figé au moment de 
 « Il te reste 40 g de protéines » ou « un ami a ajouté un plat » exigent un calcul à l'envoi ou
 un déclencheur venu d'un autre appareil : **ceux-là relèvent du push serveur**, chantier séparé.
 
-**DEUX rendez-vous par jour** (le second ajouté le 2026-08-05, demande de Pablo) :
+**TROIS rendez-vous par jour** (le troisième ajouté le 2026-09-02, demande de Pablo :
+« brancher le bilan sur les notifications, pour qu'il réclame la séance le soir sans qu'on
+ouvre l'app ») :
+- **21 h 15**, ids 4301..4307 — « Votre bilan du soir », vers `suivi.html?bilan=1`. C'était
+  le manque le plus visible du bilan : il ne s'ouvre QUE si l'on ouvre l'app après 21 h, or
+  c'est justement l'heure où on ne l'ouvre pas.
+  > ⚠️ **Heure FIXE, et 21 h 15 précisément** : c'est à partir de 21 h que `assets/bilan.js`
+  > accepte de s'ouvrir (`H_BILAN`). Un rappel plus tôt mènerait à un écran qui refuse de se
+  > montrer.
+  > ⚠️ **Le créneau du jour saute si le bilan est déjà fait**, via `natty_bilan_vu_<uid>` —
+  > la clé qu'écrit `bilan.js`, au caractère près. Recopiée de travers, elle n'échouerait
+  > pas : elle enverrait un rappel de trop, tous les soirs, pour quelque chose de déjà fait.
+  > ⚠️ **La destination passe par `ACTIONS`, pas par une route à rallonge** : `extra` porte
+  > `action:'bilan'`, et c'est NOUS qui composons `?bilan=1`. Une notification est une entrée
+  > externe — on ne concatène jamais ce qu'elle dicte.
+  > ⚠️ **Sur la BONNE page, on n'ignore pas le tap** : `ecouterOuverture` ne rechargeait pas
+  > quand on était déjà sur `suivi.html`, donc taper le rappel du soir depuis Suivi ne faisait
+  > **rien** — précisément le cas où l'app est déjà ouverte au bon endroit. Il appelle
+  > maintenant `NattyBilan.ouvrirJour()`.
+  > ⚠️ `suivi.html` lit **`?bilan=1`** et **retire le paramètre de l'URL** (comme `?repas=`) :
+  > sans ça, un rechargement rouvrirait le bilan indéfiniment.
+
+Les deux autres (le second ajouté le 2026-08-05, demande de Pablo) :
 - **midi**, ids 4201..4207 — « Vos performances / Ajoutez votre premier plat de la
   journée », mène à `suivi.html` où vit le bouton `+`. Heure **fixe** : midi est le
   moment où l'on a déjeuné sans forcément l'avoir noté, ce n'est pas un réglage de
   plus à ajouter aux réglages ;
 - **le soir** (19 h par défaut, réglable), ids 4101..4107 — le palier du parcours.
-> ⚠️ **Deux séries d'ids, et `annuler()` doit couvrir les deux.** N'annuler que la
-> première laisserait les rappels de midi de la planification précédente s'empiler
-> avec les nouveaux — le « tout annuler puis tout replanifier » ne protège que ce
-> qu'il connaît.
+> ⚠️ **TROIS séries d'ids, et `annuler()` doit couvrir les trois.** N'en annuler que
+> certaines laisserait les rappels de la planification précédente s'empiler avec les
+> nouveaux — le « tout annuler puis tout replanifier » ne protège que ce qu'il connaît.
 > ⚠️ **Le créneau du jour saute si un repas est déjà noté**, via le marqueur
 > `natty_dernier_repas_<uid>` qu'écrit `assets/ajout.js` à l'enregistrement : une
 > notification locale porte un texte figé dès la planification, elle ne peut rien
@@ -4224,6 +4428,30 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   (défaut préexistant). Détail en §3.
 - 🔄 **Le 1RM n'est pas estimé** et le tonnage ne se compare qu'à la dernière séance du même
   mouvement. Une courbe de progression par exercice serait la suite naturelle.
+- ✅ **COURBE DE PROGRESSION PAR EXERCICE** (2026-09-02) — liste des mouvements avec leur
+  micro-courbe et leur écart en %, puis le détail (grand graphique, record, charge maxi,
+  séances datées). Un point = une séance, placé à sa DATE ; sans charge, on trace les
+  répétitions et on le dit. Détail et les six pièges en §3.
+- ✅ **L'OBJECTIF S'ADAPTE À L'ENTRAÎNEMENT**, calories ET macros (2026-09-02) — séance
+  notée, programmée, ou habitude du jour de semaine, plus la reconstruction du lendemain.
+  Mesuré : 3 200 → **3 500 kcal** le lundi de pecs, et 160→179 g de protéines, 400→445 g de
+  glucides, 89→94 g de lipides. Aucun changement sans séance ni module.
+- ✅ **`Natty.macrosJour` : LA formule, qui vivait en QUATRE copies** — `suivi.html` (deux
+  fois), `creneaux.js`, `bilan.js`. Elles auraient divergé au premier ajustement. Et
+  `bilan.js` distingue maintenant `cible` (la dépense) de `cibleDu(jour)` (l'objectif).
+- ✅ **LE PROGRAMME DE LA SEMAINE**, proposé le lundi (11 s, après les trois autres plein
+  écran) : sept jours, des groupes ou « repos », pré-remplis par l'habitude, avec l'objectif
+  de chaque jour affiché.
+- ✅ **Le bilan est réclamé par une notification** à 21 h 15 (`suivi.html?bilan=1`) — il ne
+  s'ouvrait que si l'on ouvrait l'app après 21 h, c'est-à-dire jamais.
+- ✅ **L'objectif s'ajoute et se modifie depuis Suivi** (feuille `#ovObjectif`), et deux
+  défauts silencieux corrigés : la modification existante écrivait avec la **clé anon** sous
+  un « mis à jour ✓ » mensonger, et le `tdee` restait figé. Détail en §3.
+- 🔄 **La base des macros ne somme pas à 100 % des calories** (~95 %) — défaut PRÉEXISTANT,
+  volontairement non corrigé : rééquilibrer changerait l'objectif de tous les comptes du jour
+  au lendemain. À trancher.
+- 🔄 **Le programme de la semaine vit en `localStorage`** : même contrat que les séances tant
+  que `natty_seances.sql` n'est pas exécuté.
 - 🔄 **Le nouveau modèle de nutrition change les chiffres de tous les comptes**, séances ou
   pas (voir l'encadré de §3). Le facteur séance, lui, reste neutre pour qui ne journalise
   pas — vérifié en A/B.
@@ -6066,3 +6294,58 @@ pèse zéro et l'intensité n'a plus d'échelle, donc l'écran de la séance et 
 annoncé deux volumes différents pour la même séance — la divergence déjà payée entre
 `api/_nutrition.js` et `assets/core.js`. Corrigé, et la ligne « Entraînement » de la
 décomposition porte désormais le tonnage.
+
+
+---
+
+*Quatrième passage de la même session (2 septembre 2026) — trois chantiers demandés, puis
+deux ajouts en cours de route :*
+
+**1. La courbe de progression par exercice.** Le tonnage se comparait d'une séance à la
+suivante ; on ne voyait jamais la suite. Une liste des mouvements avec leur micro-courbe et
+leur écart en %, puis un détail par mouvement. Un point = **une séance, placée à sa date** —
+trois semaines sans venir se voient, et il n'y a aucun trou à relier puisque chaque point est
+une mesure. Sans charge saisie, on trace les répétitions plutôt qu'un tonnage nul, et l'écran
+le dit mouvement par mouvement.
+
+**2. Le bilan réclamé par une notification**, à 21 h 15. Il ne s'ouvrait que si l'on ouvrait
+l'app après 21 h — c'est-à-dire à l'heure où personne ne l'ouvre. Troisième série d'ids, le
+créneau du jour sauté si le bilan est déjà fait, et `suivi.html?bilan=1` qui l'ouvre puis
+retire le paramètre de l'URL.
+
+**3. L'objectif s'ajoute et se modifie depuis Suivi.** « Commencer » renvoyait sur le
+questionnaire d'inscription complet — sept étapes pour cinq chiffres. Deux défauts silencieux
+corrigés au passage : la seule modification existante écrivait avec la **clé anon** (donc
+refusée par la RLS depuis août, sous un « Informations mises à jour ✓ » qui mentait), et elle
+gardait l'ancien `tdee` — changer son poids ne changeait pas l'objectif.
+
+**4. « Que ça adapte mon objectif calorique de mon J+1 et du même jour de la prochaine
+semaine. »** L'objectif valait `onboarding.tdee`, une constante posée à l'inscription : le
+même chiffre le lundi de la salle et le dimanche du canapé. Il tient maintenant compte de la
+séance **notée**, **programmée**, ou **habituelle ce jour de semaine** — et de la
+reconstruction du lendemain. Mesuré sur une vraie séance de pectoraux : **3 200 → 3 500 kcal
+le lundi**, exactement l'exemple donné. Plus le **programme de la semaine**, proposé le lundi,
+qui permet à l'objectif de monter le matin même au lieu d'attendre deux mois d'habitude.
+
+**5. « Pas que les calories mais toutes les macros s'adaptent. »** La formule des cibles était
+recopiée **en quatre exemplaires** — deux fois dans `suivi.html`, plus `creneaux.js` et
+`bilan.js`. Quatre copies figées, ça tenait ; quatre copies qui gagnent un supplément, non.
+Elle vit dans `Natty.macrosJour`, et le supplément se répartit 60 % glucides / 25 % protéines
+(plafonnées à 2,4 g/kg, le débordement rendu aux glucides) / 15 % lipides — les trois
+fractions somment à 1, donc le supplément se retrouve exactement dans les macros.
+
+**Quatre défauts trouvés en mesurant, aucun par `node --check` :**
+- 🔴 les trois champs chiffrés de la feuille objectif étaient **muets** : l'aperçu ne bougeait
+  pas et « Enregistrer » restait désactivé — sur une création, la feuille était un cul-de-sac ;
+- 🔴 la note d'objectif se posait **par-dessus le « 0 / 3350 Kcal »** (`.hero` est une rangée) ;
+- 🔴 le bouton « Enregistrer » passait **derrière la barre d'onglets** (z-index 340 < 500) ;
+- 🔴 taper le rappel du soir **depuis Suivi ne faisait rien** — on était déjà sur la bonne
+  page, donc aucune navigation, donc aucune action.
+
+⚠️ **`bilan.js` a désormais DEUX cibles**, et les confondre serait un contresens : `cible`
+est la **dépense** de maintien (celle du déficit), `cibleDu(jour)` l'**objectif** de ce
+jour-là, supplément compris — sinon un jour de salle serait noté « trop mangé » pour avoir
+mangé ce qu'il fallait.
+
+🔄 **Rien n'est vérifié sur téléphone ni avec une vraie session** : bancs Node (3 fichiers,
+~60 contrôles) et navigateur avec doublures, dans les deux thèmes.
