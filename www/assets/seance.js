@@ -7,10 +7,11 @@
      NattySeance.duJour(jour)            la séance d'un jour, ou null
      NattySeance.series(s) / reps(s)     ce qui a été fait, en nombres
      NattySeance.kcal(s, poids)          l'énergie dépensée, estimée
-     NattySeance.stimulus(auj, hier)     ce qui module la construction musculaire
+     NattySeance.tonnage(s, poids)       charge × reps — la seule MESURE d'ici
+     NattySeance.stimulus(auj, hier, p)  ce qui module la construction musculaire
      NattySeance.utilise()               cette personne journalise-t-elle ?
      NattySeance.monterPanneau(hote)     la carte « Mes séances » d'un écran
-     NattySeance.resume(s)               une ligne de texte
+     NattySeance.resume(s, poids)        une ligne de texte
 
    CE QUE C'EST, ET POURQUOI. Demande de Pablo (2026-09-02) : « pouvoir ajouter
    sa séance avant le bilan pour voir exactement combien de grammes de muscle on
@@ -24,10 +25,21 @@
    ici qu'elle est la plus facile à trahir. Ce module MESURE des séries et des
    répétitions (ça, la personne l'a saisi) et il ESTIME une dépense (ça, non).
    L'estimation est annoncée comme telle, avec son modèle en une ligne, à
-   l'écran. On ne demande PAS la charge en kilos : Pablo a décrit le parcours
-   « machines → séries → reps », et un champ de charge de plus ferait abandonner
-   la saisie avant la fin. La conséquence est assumée et écrite : la dépense se
-   déduit du VOLUME (séries × durée), pas du tonnage.
+   l'écran.
+
+   LA CHARGE, ajoutée le 2026-09-02 (« oui », après « dis-moi si tu veux le
+   suivi de charge »). Elle avait été écartée au premier passage — « un champ de
+   plus par série ferait abandonner la saisie » — et ce motif tenait. Ce qui la
+   rend tenable maintenant, c'est qu'elle n'est PAS un champ par série : UNE
+   valeur par exercice, PRÉ-REMPLIE avec la dernière fois sur ce mouvement, et
+   un dépliant par série pour ceux qui pyramident.
+   ⚠️⚠️ ELLE RESTE FACULTATIVE, ET C'EST STRUCTUREL. Une charge à `null` n'est
+   pas une charge à zéro : sans elle, le modèle est exactement celui d'avant, au
+   gramme près (vérifié en A/B). Sans cette règle, ajouter le champ aurait cassé
+   toutes les lignes déjà en base et puni ceux qui ne le remplissent pas.
+   Ce qu'elle apporte : le TONNAGE (charge × reps), seule MESURE de tout ce
+   module — tout le reste est estimé —, et l'intensité RELATIVE, qui compare ce
+   qui a été chargé à ce que CETTE personne charge d'habitude sur CE mouvement.
 
    POURQUOI UN MODULE ET PAS UNE PAGE. Même raison qu'`ajout.js`, `planning.js`
    et `bilan.js` : il s'invite PAR-DESSUS l'écran courant. Il doit surtout
@@ -64,43 +76,43 @@ window.NattySeance = (function () {
      gainage (où « reps » se lit en secondes, d'où `unite`). */
   var EXOS = [
     // ── Dos ──
-    { cle: 'tirage-vertical',  nom: 'Tirage vertical',    g: 'dos', ic: 'poulie',   met: 5,   rep: 10 },
-    { cle: 'rowing-machine',   nom: 'Rowing machine',     g: 'dos', ic: 'machine',  met: 5,   rep: 10 },
-    { cle: 'tirage-horizontal',nom: 'Tirage horizontal',  g: 'dos', ic: 'poulie',   met: 5,   rep: 12 },
-    { cle: 'traction',         nom: 'Tractions',          g: 'dos', ic: 'traction', met: 6,   rep: 8, t: 'poly' },
-    { cle: 'souleve-de-terre', nom: 'Soulevé de terre',   g: 'dos', ic: 'barre',    met: 6,   rep: 6, t: 'poly' },
-    { cle: 'pull-over',        nom: 'Pull-over',          g: 'dos', ic: 'haltere',  met: 5,   rep: 12 },
+    { cle: 'tirage-vertical',  nom: 'Tirage vertical',    g: 'dos', ic: 'poulie',   met: 5,   rep: 10, ref: 0.75 },
+    { cle: 'rowing-machine',   nom: 'Rowing machine',     g: 'dos', ic: 'machine',  met: 5,   rep: 10, ref: 0.7 },
+    { cle: 'tirage-horizontal',nom: 'Tirage horizontal',  g: 'dos', ic: 'poulie',   met: 5,   rep: 12, ref: 0.7 },
+    { cle: 'traction',         nom: 'Tractions',          g: 'dos', ic: 'traction', met: 6,   rep: 8, t: 'poly', ref: 0.15, pdc: 1.0 },
+    { cle: 'souleve-de-terre', nom: 'Soulevé de terre',   g: 'dos', ic: 'barre',    met: 6,   rep: 6, t: 'poly', ref: 1.3 },
+    { cle: 'pull-over',        nom: 'Pull-over',          g: 'dos', ic: 'haltere',  met: 5,   rep: 12, ref: 0.3 },
     // ── Pectoraux ──
-    { cle: 'developpe-couche', nom: 'Développé couché',   g: 'pecs', ic: 'banc',    met: 6,   rep: 8, t: 'poly' },
-    { cle: 'developpe-incline',nom: 'Développé incliné',  g: 'pecs', ic: 'banc',    met: 6,   rep: 10, t: 'poly' },
-    { cle: 'presse-pectorale', nom: 'Presse pectorale',   g: 'pecs', ic: 'machine', met: 5,   rep: 12 },
-    { cle: 'ecarte-poulie',    nom: 'Écartés à la poulie',g: 'pecs', ic: 'poulie',  met: 5,   rep: 12 },
-    { cle: 'pompes',           nom: 'Pompes',             g: 'pecs', ic: 'corps',   met: 5.5, rep: 15, t: 'poly' },
-    { cle: 'dips',             nom: 'Dips',               g: 'pecs', ic: 'dips',    met: 6,   rep: 10, t: 'poly' },
+    { cle: 'developpe-couche', nom: 'Développé couché',   g: 'pecs', ic: 'banc',    met: 6,   rep: 8, t: 'poly', ref: 0.9 },
+    { cle: 'developpe-incline',nom: 'Développé incliné',  g: 'pecs', ic: 'banc',    met: 6,   rep: 10, t: 'poly', ref: 0.75 },
+    { cle: 'presse-pectorale', nom: 'Presse pectorale',   g: 'pecs', ic: 'machine', met: 5,   rep: 12, ref: 0.7 },
+    { cle: 'ecarte-poulie',    nom: 'Écartés à la poulie',g: 'pecs', ic: 'poulie',  met: 5,   rep: 12, ref: 0.3 },
+    { cle: 'pompes',           nom: 'Pompes',             g: 'pecs', ic: 'corps',   met: 5.5, rep: 15, t: 'poly', ref: 0.1, pdc: 0.65 },
+    { cle: 'dips',             nom: 'Dips',               g: 'pecs', ic: 'dips',    met: 6,   rep: 10, t: 'poly', ref: 0.15, pdc: 1.0 },
     // ── Bras ──
-    { cle: 'curl-barre',       nom: 'Curl à la barre',    g: 'bras', ic: 'barre',   met: 5,   rep: 10 },
-    { cle: 'curl-haltere',     nom: 'Curl haltères',      g: 'bras', ic: 'haltere', met: 5,   rep: 12 },
-    { cle: 'curl-pupitre',     nom: 'Curl au pupitre',    g: 'bras', ic: 'machine', met: 5,   rep: 12 },
-    { cle: 'extension-poulie', nom: 'Extension poulie',   g: 'bras', ic: 'poulie',  met: 5,   rep: 12 },
-    { cle: 'barre-au-front',   nom: 'Barre au front',     g: 'bras', ic: 'barre',   met: 5,   rep: 10 },
-    { cle: 'dips-triceps',     nom: 'Dips triceps',       g: 'bras', ic: 'dips',    met: 5.5, rep: 12, t: 'poly' },
+    { cle: 'curl-barre',       nom: 'Curl à la barre',    g: 'bras', ic: 'barre',   met: 5,   rep: 10, ref: 0.35 },
+    { cle: 'curl-haltere',     nom: 'Curl haltères',      g: 'bras', ic: 'haltere', met: 5,   rep: 12, ref: 0.15 },
+    { cle: 'curl-pupitre',     nom: 'Curl au pupitre',    g: 'bras', ic: 'machine', met: 5,   rep: 12, ref: 0.3 },
+    { cle: 'extension-poulie', nom: 'Extension poulie',   g: 'bras', ic: 'poulie',  met: 5,   rep: 12, ref: 0.35 },
+    { cle: 'barre-au-front',   nom: 'Barre au front',     g: 'bras', ic: 'barre',   met: 5,   rep: 10, ref: 0.35 },
+    { cle: 'dips-triceps',     nom: 'Dips triceps',       g: 'bras', ic: 'dips',    met: 5.5, rep: 12, t: 'poly', ref: 0.1, pdc: 1.0 },
     // ── Jambes ──
-    { cle: 'presse-cuisses',   nom: 'Presse à cuisses',   g: 'jambes', ic: 'presse',met: 5.5, rep: 12, t: 'poly' },
-    { cle: 'squat',            nom: 'Squat',              g: 'jambes', ic: 'barre', met: 6,   rep: 8, t: 'poly' },
-    { cle: 'leg-extension',    nom: 'Leg extension',      g: 'jambes', ic: 'machine',met: 5,  rep: 12 },
-    { cle: 'leg-curl',         nom: 'Leg curl',           g: 'jambes', ic: 'machine',met: 5,  rep: 12 },
-    { cle: 'fentes',           nom: 'Fentes',             g: 'jambes', ic: 'corps', met: 5.5, rep: 12, t: 'poly' },
-    { cle: 'mollets',          nom: 'Mollets',            g: 'jambes', ic: 'machine',met: 4.5,rep: 15 },
+    { cle: 'presse-cuisses',   nom: 'Presse à cuisses',   g: 'jambes', ic: 'presse',met: 5.5, rep: 12, t: 'poly', ref: 1.8 },
+    { cle: 'squat',            nom: 'Squat',              g: 'jambes', ic: 'barre', met: 6,   rep: 8, t: 'poly', ref: 1.0 },
+    { cle: 'leg-extension',    nom: 'Leg extension',      g: 'jambes', ic: 'machine',met: 5,  rep: 12, ref: 0.7 },
+    { cle: 'leg-curl',         nom: 'Leg curl',           g: 'jambes', ic: 'machine',met: 5,  rep: 12, ref: 0.55 },
+    { cle: 'fentes',           nom: 'Fentes',             g: 'jambes', ic: 'corps', met: 5.5, rep: 12, t: 'poly', ref: 0.25, pdc: 0.85 },
+    { cle: 'mollets',          nom: 'Mollets',            g: 'jambes', ic: 'machine',met: 4.5,rep: 15, ref: 1.0 },
     // ── Épaules ──
-    { cle: 'developpe-militaire', nom: 'Développé militaire', g: 'epaules', ic: 'barre',  met: 6, rep: 8, t: 'poly' },
-    { cle: 'elevations-laterales',nom: 'Élévations latérales',g: 'epaules', ic: 'haltere',met: 5, rep: 15 },
-    { cle: 'oiseau',           nom: 'Oiseau',             g: 'epaules', ic: 'haltere',met: 5,  rep: 15 },
-    { cle: 'presse-epaules',   nom: 'Presse épaules',     g: 'epaules', ic: 'machine',met: 5,  rep: 12 },
+    { cle: 'developpe-militaire', nom: 'Développé militaire', g: 'epaules', ic: 'barre',  met: 6, rep: 8, t: 'poly', ref: 0.6 },
+    { cle: 'elevations-laterales',nom: 'Élévations latérales',g: 'epaules', ic: 'haltere',met: 5, rep: 15, ref: 0.12 },
+    { cle: 'oiseau',           nom: 'Oiseau',             g: 'epaules', ic: 'haltere',met: 5,  rep: 15, ref: 0.12 },
+    { cle: 'presse-epaules',   nom: 'Presse épaules',     g: 'epaules', ic: 'machine',met: 5,  rep: 12, ref: 0.5 },
     // ── Abdos ──
-    { cle: 'crunch',           nom: 'Crunch',             g: 'abdos', ic: 'abdos',  met: 4,   rep: 20 },
-    { cle: 'gainage',          nom: 'Gainage',            g: 'abdos', ic: 'abdos',  met: 3.5, rep: 30, unite: 's' },
-    { cle: 'releve-jambes',    nom: 'Relevé de jambes',   g: 'abdos', ic: 'abdos',  met: 4,   rep: 15 },
-    { cle: 'roue-abdo',        nom: 'Roue abdominale',    g: 'abdos', ic: 'roue',   met: 4.5, rep: 12 },
+    { cle: 'crunch',           nom: 'Crunch',             g: 'abdos', ic: 'abdos',  met: 4,   rep: 20, pdc: 0.35 },
+    { cle: 'gainage',          nom: 'Gainage',            g: 'abdos', ic: 'abdos',  met: 3.5, rep: 30, unite: 's', pdc: 0.55 },
+    { cle: 'releve-jambes',    nom: 'Relevé de jambes',   g: 'abdos', ic: 'abdos',  met: 4,   rep: 15, pdc: 0.45 },
+    { cle: 'roue-abdo',        nom: 'Roue abdominale',    g: 'abdos', ic: 'roue',   met: 4.5, rep: 12, pdc: 0.5 },
     // ── Cardio ──
     { cle: 'tapis',            nom: 'Tapis de course',    g: 'cardio', ic: 'tapis', met: 8.5, rep: 10, unite: 'min' },
     { cle: 'velo',             nom: 'Vélo',               g: 'cardio', ic: 'velo',  met: 7,   rep: 15, unite: 'min' },
@@ -245,6 +257,25 @@ window.NattySeance = (function () {
      séries, ça donne ~10 séries pondérées par jour en moyenne glissante. */
   var VOLUME_PLEIN = 10;
 
+  /* Ce que l'intensité relative fait bouger, et dans quelles bornes.
+     ⚠️ ELLE MODULE, ELLE NE COMMANDE PAS, et les bornes sont là pour ça. Le
+     compendium d'activités physiques distingue lui-même la musculation « effort
+     modéré » (~3,5 MET) de l'« effort vigoureux » (~6 MET) : la charge dit où
+     l'on se situe sur CETTE échelle, elle ne la remplace pas. Hors de [0,80 ;
+     1,20] on cesse de croire au signal — une charge saisie dix fois trop haute
+     (une faute de frappe, un kg pris pour une livre) ne doit pas doubler la
+     dépense de la journée.
+     Côté stimulus, même logique : une série de 12 reps à 60 % de sa charge
+     habituelle est probablement loin de l'échec, donc elle stimule moins — mais
+     on ne descend pas sous 0,80, parce qu'une série reste une série.
+     ⚠️ La borne porte sur le MET, donc l'effet sur les kcal est un peu plus
+     large : on retire 1 MET (le repos, déjà compté par `tdee`), et un plafond
+     de 1,20 sur 6 MET donne 1,24 en net. Mesuré, et sans conséquence — ce qu'on
+     voulait empêcher, c'est qu'une charge saisie dix fois trop haute double la
+     journée, pas les quatre points d'écart. */
+  var INT_MET_MIN = 0.80, INT_MET_MAX = 1.20;
+  var INT_STIM_MIN = 0.80, INT_STIM_MAX = 1.10;
+
   /* L'après-séance. L'organisme continue de dépenser au-dessus du repos pendant
      des heures (« EPOC ») : la littérature situe ce supplément autour de 6 à
      15 % du coût de la séance pour du travail en résistance, davantage quand
@@ -329,6 +360,15 @@ window.NattySeance = (function () {
         ic: x.ic || (ref ? ref.ic : 'haltere'),
         unite: x.unite || (ref ? ref.unite : '') || '',
         met: +x.met || (ref ? ref.met : 5),
+        /* La charge, en kg. `charge` vaut pour tout l'exercice ; `charges`, si
+           elle est là, la surcharge série par série (pyramides, dégressives).
+           ⚠️ Les deux sont FACULTATIVES : `null` veut dire « pas renseignée »,
+           et tout le modèle retombe alors sur son comportement d'avant. Une
+           ligne enregistrée avant cette fonctionnalité n'en porte aucune. */
+        charge: (x.charge == null || x.charge === '') ? null : Math.max(0, +x.charge || 0),
+        charges: Array.isArray(x.charges)
+          ? x.charges.map(function (c) { return (c == null || c === '') ? null : Math.max(0, +c || 0); })
+          : null,
         series: (x.series || []).map(function (r) { return Math.max(0, r0(r)); })
       });
     });
@@ -431,6 +471,188 @@ window.NattySeance = (function () {
     return out;
   }
 
+  /* ── La CHARGE ───────────────────────────────────────────
+     Ajoutée le 2026-09-02 sur demande de Pablo, après qu'elle a été
+     volontairement laissée de côté au premier passage (« un champ de plus par
+     série ferait abandonner la saisie »). Ce qui rend son ajout tenable, c'est
+     qu'elle n'est PAS un champ de plus par série : une seule valeur par
+     exercice, PRÉ-REMPLIE avec la dernière fois, et un détail par série
+     seulement pour ceux qui pyramident.
+
+     ⚠️⚠️ ELLE RESTE FACULTATIVE, ET C'EST STRUCTUREL. Une charge à `null` n'est
+     pas une charge à zéro : tout ce qui suit retombe alors exactement sur le
+     modèle d'avant (intensité neutre, tonnage non affiché). Sans cette règle,
+     ajouter le champ aurait cassé toutes les lignes déjà en base et puni ceux
+     qui ne le remplissent pas — l'inverse d'un progrès. */
+
+  /** La charge d'une série donnée, en kg, ou null si non renseignée. */
+  function chargeDe(e, i) {
+    if (!e) return null;
+    if (e.charges && e.charges[i] != null) return e.charges[i];
+    return e.charge == null ? null : e.charge;
+  }
+
+  /**
+   * La charge RÉELLEMENT déplacée sur une série, poids de corps compris.
+   *
+   * ⚠️ Une traction n'est pas « 0 kg ». Les mouvements au poids du corps portent
+   * `pdc` — la fraction du corps effectivement déplacée (1,0 pour une traction,
+   * 0,65 pour une pompe) — et la charge saisie s'y AJOUTE (ceinture de lest).
+   * Sans ça, le tonnage d'une séance de tractions et de dips serait nul, alors
+   * que c'est souvent la séance la plus lourde de la semaine.
+   */
+  /* 🔴 ⚠️ `pdc` N'EST PORTÉ QUE PAR LES MOUVEMENTS OÙ LE CORPS *EST* LA CHARGE
+     — traction, pompes, dips, abdos, fentes. Le squat l'a porté un moment, et
+     c'était un défaut trouvé au banc : sans charge saisie, une séance de
+     7 × 5 squats annonçait « 2,8 t soulevées » alors que RIEN n'avait été
+     renseigné. La barre est la charge d'un squat, et une barre qu'on ne nous a
+     pas dite ne se devine pas — un tonnage inventé est exactement ce que ce
+     module s'interdit. Sur une traction, au contraire, le poids du corps n'est
+     pas une supposition : c'est la charge, et on la connaît. */
+  function chargeReelle(e, i, poids) {
+    var ref = exoParCle(e && e.cle);
+    var pdc = (e && e.pdc) || (ref && ref.pdc) || 0;
+    var base = pdc && poids ? pdc * poids : 0;
+    var saisie = chargeDe(e, i);
+    if (saisie == null) return base || null;
+    return base + saisie;
+  }
+
+  /**
+   * Le TONNAGE : Σ (charge réelle × répétitions). C'est le volume-load des
+   * pratiquants, et la seule grandeur de tout ce module qui soit une MESURE
+   * plutôt qu'une estimation, dès lors que la charge est saisie. C'est aussi
+   * celle qui suit la progression sans aucun modèle : +5 % de tonnage sur le
+   * même exercice, c'est +5 %, point.
+   * @returns {number} en kg, 0 si aucune charge n'est connue
+   */
+  function tonnage(s, poids) {
+    if (!s || !s.exos) return 0;
+    return Math.round(s.exos.reduce(function (tot, e) {
+      if (typeDe(e) === 'cardio') return tot;
+      return tot + (e.series || []).reduce(function (a, r, i) {
+        var c = chargeReelle(e, i, poids);
+        return a + (c ? c * (+r || 0) : 0);
+      }, 0);
+    }, 0));
+  }
+
+  /** Le tonnage d'un seul exercice — pour la comparaison à la dernière fois. */
+  function tonnageExo(e, poids) {
+    if (!e || typeDe(e) === 'cardio') return 0;
+    return Math.round((e.series || []).reduce(function (a, r, i) {
+      var c = chargeReelle(e, i, poids);
+      return a + (c ? c * (+r || 0) : 0);
+    }, 0));
+  }
+
+  /**
+   * L'intensité RELATIVE d'un exercice, autour de 1 : ce qui a été chargé
+   * rapporté à ce que cette personne charge d'habitude sur ce mouvement.
+   *
+   * ⚠️ L'HISTORIQUE PASSE AVANT LA TABLE, et c'est ce qui rend la mesure
+   * personnelle. `ref` (une fraction du poids de corps pour un pratiquant
+   * intermédiaire) ne sert que le premier jour, quand il n'y a rien à comparer.
+   * Ensuite c'est la meilleure charge des huit dernières semaines sur CE
+   * mouvement qui fait l'échelle — donc « lourd » veut dire lourd pour vous.
+   *
+   * ⚠️⚠️ `sauf` EXCLUT LE JOUR QU'ON ÉVALUE DE SA PROPRE RÉFÉRENCE, et c'est
+   * indispensable : sans lui, une séance enregistrée entre dans le maximum des
+   * huit semaines, donc un RECORD se compare à lui-même et rend exactement
+   * 100 %. Le facteur d'intensité ne pouvait alors **jamais** dépasser 1 — une
+   * séance lourde n'était pas récompensée, une séance légère était pénalisée.
+   * C'est le défaut du plafond à 1 du facteur séance (règle 45 de CLAUDE.md),
+   * sous un autre nom. Toutes les fonctions de séance passent donc `s.jour`.
+   *
+   * @returns {number|null} null quand rien ne permet de situer la charge
+   */
+  function intensiteRelative(e, poids, sauf) {
+    var c = chargeDe(e, 0);
+    if (c == null) return null;
+    var reel = chargeReelle(e, 0, poids) || c;
+    var hist = meilleureCharge(e.cle, poids, sauf);
+    if (hist) return reel / hist;
+    var ref = exoParCle(e.cle);
+    var attendu = (ref && ref.ref && poids) ? ref.ref * poids : 0;
+    var pdc = (ref && ref.pdc) || 0;
+    if (pdc && poids) attendu += pdc * poids;
+    return attendu ? reel / attendu : null;
+  }
+
+  /** La charge réelle la plus lourde vue sur ce mouvement, 8 semaines en arrière. */
+  function meilleureCharge(cle, poids, sauf) {
+    if (!cle) return 0;
+    var t = toutes(), max = 0, d = new Date();
+    for (var i = 0; i < 56; i++) {
+      var sj = jourDe(d) === sauf ? null : t[jourDe(d)];
+      if (sj) (sj.exos || []).forEach(function (e) {
+        if (e.cle !== cle) return;
+        (e.series || []).forEach(function (_, k) {
+          var c = chargeReelle(e, k, poids);
+          if (c && c > max) max = c;
+        });
+      });
+      d.setDate(d.getDate() - 1);
+    }
+    return max;
+  }
+
+  /**
+   * La dernière charge SAISIE sur ce mouvement, pour pré-remplir le champ.
+   * ⚠️ C'est le détail qui fait que la charge ne coûte rien à la deuxième
+   * séance : on ne la retape pas, on la corrige quand elle a bougé. Et c'est
+   * aussi ce qui rend la surcharge progressive visible sans y penser.
+   */
+  function derniereCharge(cle, sauf) {
+    if (!cle) return null;
+    var t = toutes(), d = new Date();
+    for (var i = 0; i < 120; i++) {
+      /* ⚠️ LE JOUR QU'ON EST EN TRAIN DE SAISIR EST EXCLU. Sans ce filtre, une
+         séance rouverte pour correction se comparait À ELLE-MÊME : le champ
+         annonçait « Comme la dernière fois (80 kg) » en regardant les 80 kg
+         qu'on avait sous les yeux. Vu au banc, et c'est le genre de phrase qui
+         fait douter de tout le reste de l'écran. Même précaution que le
+         `jourCourantExclu` de `progressionExo`. */
+      var sj = jourDe(d) === sauf ? null : t[jourDe(d)];
+      if (sj) {
+        var trouve = null;
+        (sj.exos || []).forEach(function (e) {
+          if (e.cle === cle && e.charge != null) trouve = e.charge;
+        });
+        if (trouve != null) return trouve;
+      }
+      d.setDate(d.getDate() - 1);
+    }
+    return null;
+  }
+
+  /**
+   * La progression sur un mouvement : le tonnage du jour contre la dernière
+   * séance où il a été fait. Aucune modélisation — deux mesures, un rapport.
+   * @returns {Object|null} {pc, avant, jour} ou null s'il n'y a pas de passé
+   */
+  function progressionExo(exo, poids, jourCourantExclu) {
+    if (!exo || !exo.cle) return null;
+    var maintenant = tonnageExo(exo, poids);
+    if (!maintenant) return null;
+    var t = toutes(), d = new Date();
+    for (var i = 0; i < 120; i++) {
+      var j = jourDe(d);
+      if (j !== jourCourantExclu && t[j]) {
+        var av = null;
+        (t[j].exos || []).forEach(function (e) { if (e.cle === exo.cle) av = e; });
+        if (av) {
+          var avant = tonnageExo(av, poids);
+          if (avant) {
+            return { pc: Math.round((maintenant / avant - 1) * 100), avant: avant, jour: j };
+          }
+        }
+      }
+      d.setDate(d.getDate() - 1);
+    }
+    return null;
+  }
+
   /* ── Ce que CHAQUE exercice coûte et rapporte ─────────────
      Tout part d'ici : la durée, l'énergie et le stimulus de la séance sont des
      SOMMES sur les exercices, jamais un forfait appliqué à un total de séries.
@@ -460,9 +682,28 @@ window.NattySeance = (function () {
    * donc ~9 g de graisse par séance qui n'ont pas été puisés. C'est le genre de
    * cadeau qui rend un bilan flatteur et faux.
    */
-  function kcalExo(e, poids) {
+  function kcalExo(e, poids, sauf) {
     if (!e || !poids) return 0;
-    return Math.max(0, ((+e.met || 5) - 1) * poids * (dureeExo(e) / 3600));
+    return Math.max(0, (metEffectif(e, poids, sauf) - 1) * poids * (dureeExo(e) / 3600));
+  }
+
+  /**
+   * Le MET d'un exercice, corrigé par l'intensité réellement chargée.
+   * Neutre — donc strictement le MET de la table — quand aucune charge n'est
+   * saisie ou qu'il n'y a rien à quoi la comparer.
+   */
+  function metEffectif(e, poids, sauf) {
+    var base = +e.met || 5;
+    var i = intensiteRelative(e, poids, sauf);
+    if (i == null) return base;
+    return base * borne(i, INT_MET_MIN, INT_MET_MAX);
+  }
+
+  /** Le facteur d'intensité appliqué au volume, neutre sans charge saisie. */
+  function facteurCharge(e, poids, sauf) {
+    var i = intensiteRelative(e, poids, sauf);
+    if (i == null) return 1;
+    return borne(i, INT_STIM_MIN, INT_STIM_MAX);
   }
 
   /**
@@ -494,10 +735,10 @@ window.NattySeance = (function () {
    * croissance, et le modèle doit pouvoir le dire au lieu de compter des séries
    * indistinctement.
    */
-  function volumePondere(s) {
+  function volumePondere(s, poids) {
     if (!s || !s.exos) return 0;
     return s.exos.reduce(function (tot, e) {
-      var k = STIM[typeDe(e)] || 1;
+      var k = (STIM[typeDe(e)] || 1) * facteurCharge(e, poids, s.jour);
       return tot + (e.series || []).reduce(function (a, r) { return a + poidsSerie(r) * k; }, 0);
     }, 0);
   }
@@ -523,11 +764,11 @@ window.NattySeance = (function () {
   }
 
   /** L'équivalent métabolique moyen, pondéré par la DURÉE de chaque exercice. */
-  function met(s) {
+  function met(s, poids) {
     var d = 0, som = 0;
     ((s && s.exos) || []).forEach(function (e) {
       var t = dureeExo(e);
-      d += t; som += t * (+e.met || 5);
+      d += t; som += t * metEffectif(e, poids, s && s.jour);
     });
     return d ? som / d : 5;
   }
@@ -555,7 +796,7 @@ window.NattySeance = (function () {
    */
   function kcal(s, poids) {
     if (!s || !poids) return 0;
-    var base = ((s && s.exos) || []).reduce(function (n, e) { return n + kcalExo(e, poids); }, 0);
+    var base = ((s && s.exos) || []).reduce(function (n, e) { return n + kcalExo(e, poids, s.jour); }, 0);
     if (!base) return 0;
     return Math.max(0, r0(base * (1 + epocCoef(s))));
   }
@@ -568,7 +809,7 @@ window.NattySeance = (function () {
   /** L'énergie de la séance SANS l'après-séance — pour la ligne de détail. */
   function kcalEffort(s, poids) {
     if (!s || !poids) return 0;
-    return r0(((s && s.exos) || []).reduce(function (n, e) { return n + kcalExo(e, poids); }, 0));
+    return r0(((s && s.exos) || []).reduce(function (n, e) { return n + kcalExo(e, poids, s.jour); }, 0));
   }
 
   /**
@@ -578,15 +819,20 @@ window.NattySeance = (function () {
    */
   function detail(s, poids) {
     var parExo = ((s && s.exos) || []).map(function (e) {
+      var i = intensiteRelative(e, poids, s && s.jour);
       return { nom: e.nom, type: typeDe(e), series: (e.series || []).length,
                reps: (e.series || []).reduce(function (a, b) { return a + (+b || 0); }, 0),
                min: Math.round(dureeExo(e) / 60),
-               kcal: r0(kcalExo(e, poids)) };
+               charge: chargeDe(e, 0), chargeTxt: resumeCharge(e),
+               tonnage: tonnageExo(e, poids),
+               intensite: i == null ? null : Math.round(i * 100),
+               kcal: r0(kcalExo(e, poids, s && s.jour)) };
     });
     return {
       series: series(s), reps: reps(s), efficaces: seriesEfficaces(s),
-      volume: Math.round(volumePondere(s) * 10) / 10,
-      minutes: duree(s), met: Math.round(met(s) * 10) / 10,
+      volume: Math.round(volumePondere(s, poids) * 10) / 10,
+      tonnage: tonnage(s, poids),
+      minutes: duree(s), met: Math.round(met(s, poids) * 10) / 10,
       partPoly: Math.round(partPoly(s) * 100),
       kcalEffort: kcalEffort(s, poids),
       kcalEpoc: r0(kcal(s, poids) - kcalEffort(s, poids)),
@@ -606,8 +852,8 @@ window.NattySeance = (function () {
    * @param {Object} auj   la séance du jour, ou null
    * @param {Object} hier  celle de la veille, ou null
    */
-  function stimulus(auj, hier) {
-    var eff = volumePondere(auj) + volumePondere(hier) / 2;
+  function stimulus(auj, hier, poids) {
+    var eff = volumePondere(auj, poids) + volumePondere(hier, poids) / 2;
     return borne(eff / VOLUME_PLEIN, 0, 1);
   }
 
@@ -653,17 +899,19 @@ window.NattySeance = (function () {
    * précédents plus que de la séance elle-même — et personne ne comprendrait
    * pourquoi la même séance ne vaut pas la même chose.
    */
-  function qualiteEntrainement(jour, hier) {
+  function qualiteEntrainement(jour, hier, poids) {
     var sAuj = duJour(jour), sHier = duJour(hier);
-    var vol = stimulus(sAuj, sHier);
-    var pondere = Math.round(volumePondere(sAuj) * 10) / 10;
+    var vol = stimulus(sAuj, sHier, poids);
+    var pondere = Math.round(volumePondere(sAuj, poids) * 10) / 10;
+    var tg = tonnage(sAuj, poids);
     if (!vol) {
-      return { note: 0, volume: 0, volumePondere: pondere, frequence: 0, fFreq: 0 };
+      return { note: 0, volume: 0, volumePondere: pondere, tonnage: tg,
+               frequence: 0, fFreq: 0 };
     }
     var f = frequenceGroupes(jour) || frequenceGroupes(hier) || 1;
     var fFreq = 0.85 + 0.15 * borne((f - 1) / 1, 0, 1);
     return { note: borne(vol * fFreq, 0, 1), volume: vol, volumePondere: pondere,
-             frequence: f, fFreq: fFreq };
+             tonnage: tg, frequence: f, fFreq: fFreq };
   }
 
   /**
@@ -687,15 +935,21 @@ window.NattySeance = (function () {
   }
 
   /** Une ligne de texte : « Dos · 12 séries · 124 reps · ~48 min ». */
-  function resume(s) {
+  function resume(s, poids) {
     if (!s) return '';
     if (!series(s) && s.libre) return s.libre;
     var g = groupes(s).map(function (c) {
       var d = groupeParCle(c); return d ? d.nom : c;
     });
     var n = series(s);
+    /* Le tonnage ne s'ajoute que si `poids` est fourni ET qu'une charge a été
+       saisie : sans l'un ou l'autre, la ligne est exactement celle d'avant. Les
+       mouvements au poids du corps ont besoin du poids pour peser quelque
+       chose — l'omettre annoncerait « 0 t » sur une séance de tractions. */
+    var tg = poids ? tonnage(s, poids) : 0;
     return g.join(' · ') + ' · ' + n + ' série' + (n > 1 ? 's' : '')
-      + ' · ' + reps(s) + ' reps · ~' + duree(s) + ' min';
+      + ' · ' + reps(s) + ' reps · ~' + duree(s) + ' min'
+      + (tg ? ' · ' + fmtKg(tg / 1000) + ' t' : '');
   }
 
   /** Les séances des `nb` derniers jours, du plus ancien au plus récent. */
@@ -725,6 +979,15 @@ window.NattySeance = (function () {
     String(txt || '').split(/[\n,;]+/).forEach(function (ligne) {
       var t = ligne.trim();
       if (!t) return;
+      /* La CHARGE se lit AVANT les séries, et l'unité est EXIGÉE — « kg », ou
+         un « @ » à la mode des carnets. Sans cette exigence, « 4x10 » offrirait
+         deux nombres à confondre avec un poids, et « 20 min » de vélo
+         deviendrait 20 kg. On retire le morceau reconnu du nom : laissé là,
+         « 80kg » resterait dans le libellé de l'exercice. */
+      var mc = /(?:@\s*(\d{1,3}(?:[.,]\d)?)|(?:à\s*)?(\d{1,3}(?:[.,]\d)?)\s*kgs?\b)/i.exec(t);
+      var charge = mc ? Math.min(500, Math.max(0,
+        parseFloat(String(mc[1] || mc[2]).replace(',', '.')) || 0)) : null;
+      if (mc) t = t.replace(mc[0], ' ');
       // « 4x10 », « 4 x 10 », « 4*10 », « 4 séries de 10 »
       var m = /(\d{1,2})\s*(?:x|\*|séries?\s*(?:de)?)\s*(\d{1,3})/i.exec(t);
       var nom = t.replace(/(\d{1,2})\s*(?:x|\*|séries?\s*(?:de)?)\s*(\d{1,3})/i, '')
@@ -734,13 +997,27 @@ window.NattySeance = (function () {
       var ref = trouverExo(nom);
       var nb = m ? borne(+m[1], 1, 12) : 3;
       var rp = m ? borne(+m[2], 1, 300) : (ref ? ref.rep : 10);
+      /* 🔴 « Vélo 20 min » VALAIT 3 × 15 MIN, soit 45 minutes de vélo pour 20
+         annoncées — donc plus du double de calories. Défaut PRÉEXISTANT, trouvé
+         au banc en écrivant les essais de la charge : sans motif « n × n », la
+         ligne retombait sur le forfait « 3 séries de la valeur type », qui n'a
+         aucun sens pour une durée. Un exercice qui se compte en minutes ou en
+         secondes et qui porte un nombre suivi de son unité vaut UNE série de
+         cette durée. L'unité est exigée, comme pour les kilos. */
+      if (!m && ref && (ref.unite === 'min' || ref.unite === 's')) {
+        var md = ref.unite === 'min'
+          ? /(\d{1,3})\s*(?:min\b|minutes?\b|’|')/i.exec(t)
+          : /(\d{1,3})\s*(?:s\b|sec\b|secondes?\b|")/i.exec(t);
+        if (md) { nb = 1; rp = borne(+md[1], 1, 300); }
+      }
       var ser = [];
       for (var i = 0; i < nb; i++) ser.push(rp);
       out.push({
         cle: ref ? ref.cle : '', g: ref ? ref.g : '',
         nom: ref ? ref.nom : nom.charAt(0).toUpperCase() + nom.slice(1),
         ic: ref ? ref.ic : 'haltere', unite: (ref && ref.unite) || '',
-        met: ref ? ref.met : 5, series: ser
+        met: ref ? ref.met : 5, pdc: (ref && ref.pdc) || 0,
+        charge: charge, charges: null, series: ser
       });
     });
     return out;
@@ -948,6 +1225,43 @@ window.NattySeance = (function () {
       'font-size:17px;font-weight:800;line-height:1;display:flex;align-items:center;',
       'justify-content:center}',
       '#nsea .set .pm button:active{transform:scale(.9)}',
+      /* ── La charge ────────────────────────────────────── */
+      '#nsea .lbl .opt{margin-left:8px;font-size:9.5px;font-weight:700;letter-spacing:.3px;',
+      'color:#5f5f6b;background:#181820;border-radius:999px;padding:3px 8px;',
+      'text-transform:none}',
+      '#nsea .chg{display:flex;align-items:center;gap:9px}',
+      '#nsea .chg button{width:52px;height:52px;border-radius:15px;background:#14141b;',
+      'font-size:22px;font-weight:800;line-height:1;flex:none;display:flex;',
+      'align-items:center;justify-content:center}',
+      '#nsea .chg button:active{transform:scale(.93)}',
+      '#nsea .chg .cv{flex:1;height:52px;border-radius:15px;background:#14141b;',
+      'display:flex;align-items:baseline;justify-content:center;gap:5px;padding:0 10px}',
+      /* ⚠️ `appearance:none` ET les deux pseudo-éléments WebKit : un
+         `input[type=number]` affiche sinon ses flèches natives, qui sur fond
+         noir apparaissent en petit bloc blanc au bord du champ. */
+      '#nsea .chg .cv input{width:100%;background:none;border:none;outline:none;color:#fff;',
+      'font-family:inherit;font-size:26px;font-weight:900;letter-spacing:-1px;text-align:right;',
+      'appearance:none;-webkit-appearance:none;padding:12px 0 0}',
+      '#nsea .chg .cv input::-webkit-outer-spin-button,',
+      '#nsea .chg .cv input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}',
+      '#nsea .chg .cv input::placeholder{color:#4a4a55;font-weight:700}',
+      '#nsea .chg .cv span{font-size:13px;font-weight:700;color:#7d7d89;padding-bottom:14px}',
+      '#nsea .chgn{font-size:11px;color:#7d7d89;line-height:1.5;margin-top:8px}',
+      '#nsea .det{margin-top:9px;font-size:11.5px;font-weight:700;color:#8b8b96;padding:4px 0}',
+      /* La charge d'UNE série, dans la ligne — elle remplace la jauge.
+         ⚠️ Le « kg » est POSÉ À CÔTÉ du champ, pas seulement en indication de
+         saisie : rempli, un champ ne montre plus son indication, et la ligne se
+         lisait « 3 · 75 · 8 reps » — deux nombres nus dont un sans unité. */
+      '#nsea .set .ckw{flex:1;min-width:0;height:34px;border-radius:10px;background:#20202a;',
+      'display:flex;align-items:center;justify-content:flex-end;gap:3px;padding-right:9px}',
+      '#nsea .set .ck{flex:1;min-width:0;height:100%;background:none;',
+      'border:none;outline:none;color:#fff;font-family:inherit;font-size:14px;font-weight:800;',
+      'text-align:right;appearance:none;-webkit-appearance:none}',
+      '#nsea .set .ck::-webkit-outer-spin-button,',
+      '#nsea .set .ck::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}',
+      '#nsea .set .ck::placeholder{color:#5f5f6b;font-weight:700}',
+      '#nsea .set .ckw span{font-size:10.5px;font-weight:700;color:#7d7d89;flex:none}',
+
       '#nsea .chips{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}',
       '#nsea .chips button{padding:9px 15px;border-radius:999px;background:#181820;',
       'font-size:12.5px;font-weight:800;color:#c9c9d2}',
@@ -1229,16 +1543,25 @@ window.NattySeance = (function () {
         + '<div class="r"><div class="v">' + series(s) + '</div><div class="l">séries</div></div>'
         + '<div class="r"><div class="v">' + reps(s) + '</div><div class="l">répétitions</div></div>'
         + '<div class="r"><div class="v">' + duree(s) + '</div><div class="l">minutes<br>estimées</div></div>'
+        + (tonnage(s, poids) ? '<div class="r"><div class="v">'
+            + fmtKg(tonnage(s, poids) / 1000) + '<small style="font-size:13px">t</small>'
+            + '</div><div class="l">de tonnage<br>soulevé</div></div>' : '')
         + '</div>'
         + '<div class="liste">' + s.exos.map(function (e) {
             return '<div class="li">' + ic(e.ic)
               + '<div class="t">' + esc(e.nom) + '</div>'
               + '<div class="q">' + e.series.length + '×' + resumeReps(e)
-              + (e.unite ? ' ' + e.unite : '') + '</div></div>';
+              + (e.unite ? ' ' + e.unite : '')
+              /* La charge à côté du compte de séries : sans elle, une séance
+                 relue ne montrerait pas ce qu'on a justement pris la peine de
+                 saisir — et on ne pourrait pas la comparer à la suivante. */
+              + (resumeCharge(e) ? '<i style="font-style:normal;color:#7d7d89"> · '
+                  + resumeCharge(e) + '</i>' : '')
+              + '</div></div>';
           }).join('') + '</div>'
         + (s.libre ? '<div class="note">Écrit à la main : « ' + esc(s.libre) + ' »</div>' : '')
         + (kc ? '<div class="note">Cette séance ajoute <b>' + kc + ' kcal</b> à votre dépense '
-              + 'du jour — c’est une estimation : (' + met(s).toFixed(1).replace('.', ',')
+              + 'du jour — c’est une estimation : (' + met(s, poids).toFixed(1).replace('.', ',')
               + ' − 1) MET × ' + r0(poids) + ' kg × ' + duree(s) + ' min. Le bilan du soir '
               + 'la compte dans le déficit, donc dans les grammes de graisse.</div>' : ''),
       boutons: [
@@ -1256,6 +1579,22 @@ window.NattySeance = (function () {
     });
   }
 
+  /** « 80 kg » quand c'est constant, « 60-70-80 » quand ça monte. Vide sans
+      charge saisie — et VIDE, pas « 0 kg » : n'avoir rien noté n'est pas avoir
+      soulevé la barre à vide. */
+  function resumeCharge(e) {
+    if (!e) return '';
+    if (e.charges) {
+      var v = e.charges.filter(function (c) { return c != null; });
+      if (!v.length) return '';
+      var pareil = v.length === e.charges.length && v.every(function (c) { return c === v[0]; });
+      return (pareil ? fmtKg(v[0]) : e.charges.map(function (c) {
+        return c == null ? '?' : fmtKg(c);
+      }).join('-')) + ' kg';
+    }
+    return e.charge == null ? '' : fmtKg(e.charge) + ' kg';
+  }
+
   /** « 4×10 » quand c'est régulier, « 12-10-8 » quand ça descend. */
   function resumeReps(e) {
     var r = e.series || [];
@@ -1268,8 +1607,18 @@ window.NattySeance = (function () {
 
   function demarrer(j, existante) {
     E.jour = j;
+    /* ⚠️⚠️ LA CHARGE SE RECOPIE, ET C'EST UN DÉFAUT TROUVÉ EN RELISANT.
+       Cette liste de champs est écrite à la main : la version d'origine
+       s'arrêtait à `series`, donc rouvrir une séance pour corriger une seule
+       répétition EFFAÇAIT toutes les charges saisies — et l'enregistrement qui
+       suit les aurait perdues pour de bon. Même famille que « changer le nombre
+       de séries ne jette pas les reps déjà saisies ». `pdc` suit pour que le
+       tonnage d'une traction reste juste avant même que `exoParCle` s'en mêle. */
     E.exos = existante ? existante.exos.map(function (e) {
       return { cle: e.cle, g: e.g, nom: e.nom, ic: e.ic, unite: e.unite, met: e.met,
+               pdc: e.pdc || 0,
+               charge: e.charge == null ? null : e.charge,
+               charges: e.charges ? e.charges.slice() : null,
                series: e.series.slice() };
     }) : [];
     E.libre = existante ? (existante.libre || '') : '';
@@ -1395,8 +1744,14 @@ window.NattySeance = (function () {
     /* Trois séries proposées d'office : c'est ce que fait presque tout le monde,
        et une liste qui arrive à zéro série obligerait à trois taps par exercice
        avant de pouvoir seulement enregistrer. La scène suivante les change. */
+    /* ⚠️ LA CHARGE ARRIVE PRÉ-REMPLIE avec la dernière fois sur ce mouvement.
+       C'est ce qui fait qu'elle ne coûte rien à partir de la deuxième séance :
+       on ne la retape pas, on la corrige quand elle a bougé. Et c'est aussi ce
+       qui rend la surcharge progressive visible sans y penser. `null` la
+       première fois — le champ s'affiche vide, et rester vide est permis. */
     E.exos.push({ cle: ref.cle, g: ref.g, nom: ref.nom, ic: ref.ic,
-                  unite: ref.unite || '', met: ref.met,
+                  unite: ref.unite || '', met: ref.met, pdc: ref.pdc || 0,
+                  charge: derniereCharge(ref.cle, E.jour), charges: null,
                   series: [ref.rep, ref.rep, ref.rep] });
   }
   function majCtaMachines() {
@@ -1432,10 +1787,12 @@ window.NattySeance = (function () {
             }).join('') + '</div>'
         + '<div class="exo-h"><div class="b">' + ic(e.ic) + '</div>'
         + '<div><h1 style="font-size:23px">' + esc(e.nom) + '</h1></div></div>'
+        + chargeBlocHTML(e)
         + '<div class="lbl">Combien de séries ?</div>'
         + '<div class="pills" id="nsPills">' + pillsHTML(e.series.length) + '</div>'
         + '<div id="nsReps"></div>',
       pret: function (d) {
+        brancherCharge(d, e, u);
         brancherPills(d, e);
         rendreReps(d, e, u, false);
       },
@@ -1449,6 +1806,115 @@ window.NattySeance = (function () {
             scSeries();
           } }
       ]
+    });
+  }
+
+  /* ── La charge ────────────────────────────────────────────
+     UNE valeur pour l'exercice, et un dépliant « par série » pour ceux qui
+     pyramident. C'est le compromis qui permet de l'ajouter sans alourdir : au
+     premier passage on tape un nombre, aux suivants il est déjà là. */
+
+  /** Le pas du ± : ce dont on change vraiment sur ce type de matériel. */
+  function pasCharge(e) {
+    var t = typeDe(e);
+    if (t === 'cardio' || t === 'stat') return 1;
+    var ref = exoParCle(e.cle);
+    // Haltères et poulies : 2,5 kg. Barres et machines lourdes : 5 kg.
+    if (ref && ref.ref && ref.ref >= 0.6) return 5;
+    return 2.5;
+  }
+
+  function chargeBlocHTML(e) {
+    var t = typeDe(e);
+    if (t === 'cardio') return '';       // on ne charge pas un vélo
+    var ref = exoParCle(e.cle);
+    var pdc = e.pdc || (ref && ref.pdc) || 0;
+    var c = e.charge;
+    var pas = pasCharge(e);
+    var derniere = derniereCharge(e.cle, E.jour);
+
+    return '<div class="lbl">Quelle charge ?'
+      + '<span class="opt">facultatif</span></div>'
+      + '<div class="chg" id="nsChg">'
+      + '<button type="button" data-c="-1">−</button>'
+      + '<div class="cv"><input id="nsChgV" type="number" inputmode="decimal" step="' + pas + '"'
+      + ' min="0" max="500" placeholder="' + (pdc ? 'lest' : '—') + '"'
+      + ' value="' + (c == null ? '' : c) + '"><span>kg</span></div>'
+      + '<button type="button" data-c="1">+</button>'
+      + '</div>'
+      + '<div class="chgn" id="nsChgN">' + chargeNoteHTML(e, pdc, derniere) + '</div>'
+      + '<button type="button" class="det" id="nsChgDet">'
+      + (e.charges ? '▴ une seule charge' : '▾ charge différente par série') + '</button>';
+  }
+
+  /** Ce qu'on dit sous le champ : le poids du corps, la dernière fois, l'écart. */
+  function chargeNoteHTML(e, pdc, derniere) {
+    var bits = [];
+    if (pdc) {
+      bits.push(pdc >= 0.95 ? 'Au poids du corps — ajoutez seulement le lest'
+        : 'Au poids du corps (environ ' + Math.round(pdc * 100) + ' %) — ajoutez le lest');
+    }
+    if (derniere != null && e.charge != null) {
+      var d = e.charge - derniere;
+      bits.push(d === 0 ? 'Comme la dernière fois (' + fmtKg(derniere) + ' kg)'
+        : (d > 0 ? '+' : '') + fmtKg(d) + ' kg par rapport à la dernière fois');
+    } else if (derniere != null) {
+      bits.push('La dernière fois : ' + fmtKg(derniere) + ' kg');
+    } else if (e.charge != null) {
+      /* Rien à comparer, mais quelque chose de saisi : dire à quoi ça sert,
+         plutôt que « laissez vide » sous un champ qu'on vient de remplir. */
+      bits.push('Première fois sur ce mouvement — ce sera votre repère la prochaine fois');
+    } else if (!pdc) {
+      bits.push('Laissez vide si vous ne la connaissez pas — rien ne s’en trouvera faussé');
+    }
+    return bits.join(' · ');
+  }
+
+  function fmtKg(v) {
+    return String(Math.round(v * 10) / 10).replace('.', ',');
+  }
+
+  function brancherCharge(d, e, u) {
+    var boite = d.querySelector('#nsChg');
+    if (!boite) return;
+    var champ = d.querySelector('#nsChgV');
+    var pas = pasCharge(e);
+
+    function maj(anime) {
+      var ref = exoParCle(e.cle);
+      var pdc = e.pdc || (ref && ref.pdc) || 0;
+      var n = d.querySelector('#nsChgN');
+      if (n) n.innerHTML = chargeNoteHTML(e, pdc, derniereCharge(e.cle, E.jour));
+      rendreReps(d, e, u, !!anime);
+    }
+    champ.addEventListener('input', function () {
+      var v = champ.value.trim().replace(',', '.');
+      /* ⚠️ Une chaîne vide remet à `null`, PAS à zéro. « Je ne sais pas » et
+         « je n'ai rien chargé » ne sont pas la même chose : la première laisse
+         le modèle neutre, la seconde annoncerait un tonnage nul. */
+      e.charge = v === '' ? null : Math.max(0, Math.min(500, parseFloat(v) || 0));
+      maj(false);
+    });
+    boite.querySelectorAll('[data-c]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var p = +b.getAttribute('data-c') * pas;
+        var base = e.charge == null ? (derniereCharge(e.cle, E.jour) || 0) : e.charge;
+        e.charge = Math.max(0, Math.min(500, Math.round((base + p) * 10) / 10));
+        champ.value = e.charge;
+        tic(10);
+        maj(false);
+      });
+    });
+    var det = d.querySelector('#nsChgDet');
+    if (det) det.addEventListener('click', function () {
+      /* Le dépliant par série : on part de la charge globale, et on n'y revient
+         qu'en la repliant. Personne n'a besoin des deux à la fois. */
+      if (e.charges) { e.charges = null; }
+      else {
+        e.charges = e.series.map(function () { return e.charge; });
+      }
+      tic();
+      scSeries();
     });
   }
 
@@ -1492,11 +1958,23 @@ window.NattySeance = (function () {
     var boite = d.querySelector('#nsReps');
     if (!boite) return;
     var max = Math.max(20, Math.max.apply(null, e.series.concat([12])));
+    var poids = E.poids || 0;
+    var pas = pasCharge(e);
+    var tg = tonnageExo(e, poids);
+    var prog = progressionExo(e, poids, E.jour);
+
     boite.innerHTML = '<div class="lbl">Et combien de ' + u + ' ?</div>'
       + '<div class="sets">' + e.series.map(function (r, i) {
           return '<div class="set"' + (anime ? ' style="animation-delay:' + (i * 0.04).toFixed(2) + 's"' : '') + '>'
             + '<div class="i">' + (i + 1) + '</div>'
-            + '<div class="j"><i style="width:' + r0(borne(r / max, 0, 1) * 100) + '%"></i></div>'
+            /* La charge par série n'apparaît QUE si on l'a dépliée : sinon la
+               ligne porterait un champ vide et identique à toutes les autres,
+               donc quatre invitations à saisir la même chose. */
+            + (e.charges
+                ? '<div class="ckw"><input class="ck" type="number" inputmode="decimal"'
+                  + ' step="' + pas + '" min="0" max="500" data-ck="' + i + '" placeholder="—"'
+                  + ' value="' + (e.charges[i] == null ? '' : e.charges[i]) + '"><span>kg</span></div>'
+                : '<div class="j"><i style="width:' + r0(borne(r / max, 0, 1) * 100) + '%"></i></div>')
             + '<div class="v" data-v="' + i + '">' + r + '<small>' + u + '</small></div>'
             + '<div class="pm"><button type="button" data-r="' + i + '" data-p="-1">−</button>'
             + '<button type="button" data-r="' + i + '" data-p="1">+</button></div>'
@@ -1506,14 +1984,26 @@ window.NattySeance = (function () {
       + [8, 10, 12, 15, 20].map(function (n) {
           return '<button type="button" data-tous="' + n + '">' + n + ' partout</button>';
         }).join('') + '</div>'
-      + '<div class="vol"><div class="v" id="nsVol">' + reps({ exos: [e] }) + '</div>'
-      + '<div class="l">' + u + ' au total sur cet exercice</div></div>';
+      /* Le tonnage passe devant le total de reps dès qu'une charge est connue :
+         c'est la grandeur que les pratiquants suivent, et la seule qui soit une
+         mesure. Sans charge, on retombe sur le total de reps — la seule chose
+         que l'on sache alors. */
+      + '<div class="vol"><div class="v" id="nsVol">'
+      + (tg ? fmtKg(tg / 1000) + '<small style="font-size:13px"> t</small>'
+            : reps({ exos: [e] }))
+      + '</div><div class="l">'
+      + (tg ? 'de tonnage sur cet exercice (charge × reps)'
+            : u + ' au total sur cet exercice')
+      + (prog ? '<br><b style="color:' + (prog.pc >= 0 ? '#5ad07a' : '#f0b429') + '">'
+          + (prog.pc >= 0 ? '+' : '') + prog.pc + ' %</b> par rapport au '
+          + dateFr(prog.jour) : '')
+      + '</div></div>';
 
     boite.querySelectorAll('[data-r]').forEach(function (b) {
       b.addEventListener('click', function () {
         var i = +b.getAttribute('data-r'), p = +b.getAttribute('data-p');
-        var pas = e.unite === 'min' ? 1 : (e.unite === 's' ? 5 : 1);
-        e.series[i] = borne(e.series[i] + p * pas, 1, 300);
+        var pasR = e.unite === 'min' ? 1 : (e.unite === 's' ? 5 : 1);
+        e.series[i] = borne(e.series[i] + p * pasR, 1, 300);
         tic(8);
         rendreReps(d, e, u, false);
       });
@@ -1526,6 +2016,18 @@ window.NattySeance = (function () {
         rendreReps(d, e, u, true);
       });
     });
+    /* ⚠️ Les champs de charge par série se rebranchent à CHAQUE rendu, comme
+       tout le reste de ce bloc — et on ne re-rend PAS sur leur `input`, sinon le
+       champ perdrait le focus à chaque frappe. Seul le tonnage attend le `blur`
+       pour se remettre à jour. */
+    boite.querySelectorAll('[data-ck]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var i = +inp.getAttribute('data-ck');
+        var v = inp.value.trim().replace(',', '.');
+        e.charges[i] = v === '' ? null : Math.max(0, Math.min(500, parseFloat(v) || 0));
+      });
+      inp.addEventListener('blur', function () { rendreReps(d, e, u, false); });
+    });
   }
 
   /* ── La saisie libre ─────────────────────────────────────── */
@@ -1534,10 +2036,11 @@ window.NattySeance = (function () {
     scene({
       html: '<div class="kick">' + esc(dateFr(E.jour)) + '</div>'
         + '<h1>Racontez votre séance</h1>'
-        + '<div class="sous">Une ligne par exercice. « Développé couché 4x10 », '
-        + '« tirage vertical 3 séries de 12 » — on reconnaît les machines et les '
-        + 'séries au fur et à mesure.</div>'
-        + '<textarea id="nsTxt" placeholder="Développé couché 4x10&#10;Écartés à la poulie 3x12&#10;Dips 3x10"></textarea>'
+        + '<div class="sous">Une ligne par exercice. « Développé couché 4x10 à 80 kg », '
+        + '« tirage vertical 3 séries de 12 » — on reconnaît les machines, les '
+        + 'séries et la charge au fur et à mesure. La charge est facultative, '
+        + 'mais il lui faut son « kg » pour ne pas être prise pour des reps.</div>'
+        + '<textarea id="nsTxt" placeholder="Développé couché 4x10 à 80 kg&#10;Écartés à la poulie 3x12 @25&#10;Dips 3x10"></textarea>'
         + '<div id="nsLu"></div>',
       pret: function (d) {
         var t = d.querySelector('#nsTxt');
@@ -1549,8 +2052,13 @@ window.NattySeance = (function () {
           E.exos = ex;
           lu.innerHTML = ex.length
             ? '<div class="liste">' + ex.map(function (e) {
+                /* La charge relue est MONTRÉE : c'est la seule façon de voir
+                   qu'elle a été comprise — et, quand elle ne l'est pas, que le
+                   « kg » manque. */
                 return '<div class="li">' + ic(e.ic) + '<div class="t">' + esc(e.nom) + '</div>'
-                  + '<div class="q">' + e.series.length + '×' + resumeReps(e) + '</div></div>';
+                  + '<div class="q">' + e.series.length + '×' + resumeReps(e)
+                  + (resumeCharge(e) ? '<i style="font-style:normal;color:#7d7d89"> · '
+                      + resumeCharge(e) + '</i>' : '') + '</div></div>';
               }).join('') + '</div>'
             : (t.value.trim() ? '<div class="note">Rien de reconnu pour l’instant. Le texte '
                 + 'sera gardé tel quel, mais sans séries il ne comptera pas dans les '
@@ -1586,7 +2094,7 @@ window.NattySeance = (function () {
     var s = courante();
     var poids = E.poids || 0;
     var kc = kcal(s, poids);
-    var st = stimulus(s, duJour(veille(E.jour)));
+    var st = stimulus(s, duJour(veille(E.jour)), poids);
     var d = detail(s, poids);
 
     scene({
@@ -1598,14 +2106,23 @@ window.NattySeance = (function () {
         + '<div class="rec">'
         + '<div class="r"><div class="v">' + duree(s) + '</div><div class="l">minutes<br>estimées</div></div>'
         + '<div class="r"><div class="v">' + (kc || '—') + '</div><div class="l">kcal<br>dépensées</div></div>'
-        + '<div class="r"><div class="v">' + d.volume.toFixed(1).replace('.', ',') + '</div>'
-        + '<div class="l">séries<br>pondérées</div></div>'
+        + '<div class="r"><div class="v">'
+        + (d.tonnage ? fmtKg(d.tonnage / 1000) + '<small style="font-size:13px">t</small>'
+                     : d.volume.toFixed(1).replace('.', ','))
+        + '</div><div class="l">' + (d.tonnage ? 'de tonnage<br>soulevé' : 'séries<br>pondérées') + '</div></div>'
         + '</div>'
         /* Le détail par exercice : c'est ce qui rend le total vérifiable. Sans
            lui, « 112 kcal » est un nombre qu'on croit ou pas ; avec lui, on
            voit lequel des mouvements a coûté quoi. */
         + (poids ? '<div class="liste" style="margin-top:11px">' + d.exos.map(function (x) {
             return '<div class="li"><div class="t" style="font-size:12.5px">' + esc(x.nom)
+              /* `chargeTxt` et non `charge` : une pyramide 20-22,5-25 affichée
+                 « 20 kg » dirait le premier palier pour toute la série. */
+              + (x.chargeTxt ? '<div style="font-size:10.5px;color:#7d7d89;font-weight:700">'
+                  + x.chargeTxt
+                  + (x.tonnage ? ' · ' + fmtKg(x.tonnage / 1000) + ' t' : '')
+                  + (x.intensite != null ? ' · ' + x.intensite + ' % de votre habituel' : '')
+                  + '</div>' : '')
               + '</div><div class="q" style="color:#8b8b96;font-weight:700">' + x.min + ' min</div>'
               + '<div class="q">' + x.kcal + ' kcal</div></div>';
           }).join('') + '</div>' : '')
@@ -1630,9 +2147,16 @@ window.NattySeance = (function () {
             + ' % de polyarticulaire)' : '') + '. '
         + 'Le volume pondéré (' + d.volume.toFixed(1).replace('.', ',') + ') vaut '
         + d.efficaces + ' série' + (d.efficaces > 1 ? 's' : '') + ' dans la plage où '
-        + 'l’hypertrophie se joue, sur ' + d.series + ' notée' + (d.series > 1 ? 's' : '')
-        + '. La charge en kilos n’est pas demandée — un champ de plus par série ferait '
-        + 'abandonner la saisie.</div>',
+        + 'l’hypertrophie se joue, sur ' + d.series + ' notée' + (d.series > 1 ? 's' : '') + '. '
+        + (d.tonnage
+            ? 'Le tonnage (' + fmtKg(d.tonnage / 1000) + ' t) est la seule MESURE de cet '
+              + 'écran : charge × répétitions, sans modèle. C’est lui qui suit votre '
+              + 'progression, et vos charges situent aussi l’intensité de la séance — donc '
+              + 'sa dépense.'
+            : 'Aucune charge saisie : l’intensité reste neutre et le tonnage n’est pas '
+              + 'calculé. Rien n’est faussé pour autant — le modèle se contente alors du '
+              + 'volume et des répétitions.')
+        + '</div>',
       pret: function (d) {
         d.querySelectorAll('[data-del]').forEach(function (b) {
           b.addEventListener('click', function () {
@@ -1665,7 +2189,7 @@ window.NattySeance = (function () {
         + '<path class="co" d="M41 61l13 14 26-30"/></svg></div>'
         + '<h1 style="text-align:center">Séance notée</h1>'
         + '<div class="xp" style="text-align:center">+' + XP_SEANCE + ' XP</div>'
-        + '<div class="sous" style="text-align:center">' + esc(resume(s)) + '</div>'
+        + '<div class="sous" style="text-align:center">' + esc(resume(s, E.poids || 0)) + '</div>'
         + '<div class="sous" style="text-align:center">Le bilan du soir en tiendra compte : '
         + 'ce que vous avez brûlé entre dans le déficit, ce que vous avez soulevé entre '
         + 'dans le muscle construit.</div>'
@@ -1798,7 +2322,18 @@ window.NattySeance = (function () {
     detail: detail, volumePondere: volumePondere, seriesEfficaces: seriesEfficaces,
     kcalEffort: kcalEffort, epocCoef: epocCoef, partPoly: partPoly,
     qualiteEntrainement: qualiteEntrainement, frequenceGroupes: frequenceGroupes,
+    /* La charge — la seule MESURE du module, quand elle est saisie. */
+    analyserTexte: analyserTexte,
+    tonnage: tonnage, tonnageExo: tonnageExo, chargeDe: chargeDe,
+    chargeReelle: chargeReelle, derniereCharge: derniereCharge,
+    intensiteRelative: intensiteRelative, progressionExo: progressionExo,
+    meilleureCharge: meilleureCharge,
     estSynchronise: estSynchronise,
+    /* Vide le cache mémoire et force une relecture. Deux usages : les bancs de
+       test, qui changent les données sous le module ; et un changement de
+       compte, où `uid()` change et où les séances en mémoire sont celles de
+       quelqu'un d'autre. */
+    _reset: function () { SEANCES = null; chargement = null; tableDispo = false; },
     monterPanneau: monterPanneau,
     estOuvert: function () { return !!racine; },
     XP_SEANCE: XP_SEANCE, VOLUME_PLEIN: VOLUME_PLEIN, MIN_PAR_SERIE: MIN_PAR_SERIE,

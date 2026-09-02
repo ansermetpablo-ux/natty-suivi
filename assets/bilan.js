@@ -499,9 +499,16 @@ window.NattyBilan = (function () {
          ici dans ce cas (retour anticipé plus haut), mais faire dépendre le
          calcul d'un champ qui peut mentir est le genre de dette qui se paie à
          la première retouche. */
+      /* ⚠️ LE POIDS EST OBLIGATOIRE ICI, et ce n'est pas un argument de
+         confort : sans lui, une traction ou une pompe pèse zéro (leur charge
+         est une fraction du poids de corps, pas un nombre saisi), et
+         l'intensité relative n'a plus d'échelle. L'écran de la séance, lui,
+         le passe — les deux annonceraient donc deux volumes différents pour la
+         même séance, ce qui est exactement la divergence déjà payée entre
+         `api/_nutrition.js` et `assets/core.js`. */
       var q = NattySeance.qualiteEntrainement
-        ? NattySeance.qualiteEntrainement(ctx.jour, ctx.jourVeille)
-        : { note: NattySeance.stimulus(sea, ctx.veille), volume: 0, frequence: 0 };
+        ? NattySeance.qualiteEntrainement(ctx.jour, ctx.jourVeille, profil.poids)
+        : { note: NattySeance.stimulus(sea, ctx.veille, profil.poids), volume: 0, frequence: 0 };
       out.entrainement = q;
       out.stimulus = q.note;
       out.facteurSeance = PLANCHER_SEANCE + (PLAFOND_SEANCE - PLANCHER_SEANCE) * q.note;
@@ -1420,7 +1427,7 @@ window.NattyBilan = (function () {
       bloc({
         html: titre('Séance notée', 'p', 0.1)
           + '<div class="sous" data-in style="animation-delay:.4s">'
-          + esc(NattySeance.resume(sea)) + '</div>'
+          + esc(NattySeance.resume(sea, S.profil.poids)) + '</div>'
           + (kc ? kmodHTML('Ajoutées à votre dépense', kc, 'kcal',
                 'soit ' + Math.round(kc / KCAL_PAR_KG_GRAS * 1000) + ' g de graisse en plus dans le déficit')
                 : '')
@@ -1503,6 +1510,10 @@ window.NattyBilan = (function () {
             + ' notée' + ((cp.seriesSeance || 0) > 1 ? 's' : '')
             + (e.volumePondere ? ' · ' + String(e.volumePondere).replace('.', ',')
                                  + ' pondérées' : '')
+            /* Le tonnage passe devant le reste dès qu'il existe : c'est la seule
+               MESURE de la ligne, tout le reste étant modélisé. */
+            + (e.tonnage ? ' · ' + String(Math.round(e.tonnage / 100) / 10).replace('.', ',')
+                           + '\u00a0t soulevées' : '')
             + (e.frequence >= 2 ? ' · ' + Math.round(e.frequence) + ' passages sur ce groupe cette semaine'
                                 : ' · 1 seul passage sur ce groupe cette semaine')
           : 'aucune série aujourd’hui — la veille compte pour moitié'

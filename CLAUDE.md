@@ -1669,9 +1669,90 @@ vertical 3 séries de 12 » se range comme trois taps.
   valeurs réglées une par une juste avant. Les séries ajoutées reprennent la dernière valeur.
 - ⚠️ **Trois séries d'office à la sélection d'une machine.** Une liste qui arrive à zéro
   série demanderait trois taps par exercice avant de pouvoir seulement enregistrer.
-- ⚠️ **La charge en kilos n'est PAS demandée**, et c'est écrit à l'écran. Pablo a décrit
-  « machines → séries → reps » ; un champ de charge par série ferait abandonner la saisie
-  avant la fin. Conséquence assumée : la dépense se déduit du VOLUME, pas du tonnage.
+#### ⚠️⚠️ LA CHARGE (2026-09-02, troisième passage — « oui »)
+Elle avait été écartée deux fois, et le motif tenait : « un champ de plus par série ferait
+abandonner la saisie ». Ce qui la rend tenable, c'est qu'elle n'est PAS un champ par série —
+**UNE valeur par exercice, PRÉ-REMPLIE avec la dernière fois sur ce mouvement**, et un
+dépliant « charge différente par série » pour ceux qui pyramident. À la deuxième séance, on
+ne la retape pas : on la corrige quand elle a bougé, et la surcharge progressive devient
+visible sans y penser.
+
+| Lecture | Nature | Modèle |
+|---|---|---|
+| `chargeDe(e, i)` | **saisi** | `charges[i]` s'il y en a, sinon `charge` |
+| `chargeReelle(e, i, poids)` | mesuré | la charge saisie **plus** `pdc × poids` sur les mouvements au poids du corps |
+| `tonnage(s, poids)` | **MESURE** | Σ charge réelle × reps — la seule grandeur non estimée de tout le module |
+| `intensiteRelative(e, poids, sauf)` | mesuré | charge du jour ÷ meilleure charge des 8 dernières semaines sur CE mouvement |
+| `metEffectif` / `facteurCharge` | estimé | le MET et le volume, multipliés par l'intensité **bornée** ([0,80 ; 1,20] et [0,80 ; 1,10]) |
+| `derniereCharge(cle, sauf)` | mesuré | ce qui pré-remplit le champ |
+| `progressionExo(e, poids, sauf)` | **MESURE** | tonnage du jour contre la dernière séance où ce mouvement a été fait |
+
+> ⚠️⚠️ **ELLE RESTE FACULTATIVE, ET C'EST STRUCTUREL.** Une charge à `null` n'est pas une
+> charge à zéro : sans elle, tout retombe **exactement** sur le modèle d'avant — vérifié en
+> A/B au banc (même volume, mêmes kcal, au chiffre près). Sans cette règle, ajouter le champ
+> aurait cassé toutes les lignes déjà en base et puni ceux qui ne le remplissent pas.
+>
+> 🔴 ⚠️⚠️ **`sauf` EXCLUT LE JOUR ÉVALUÉ DE SA PROPRE RÉFÉRENCE, et c'était un défaut trouvé
+> au banc.** Une séance enregistrée entre dans le maximum des huit semaines : un RECORD se
+> comparait donc à lui-même et rendait **exactement 100 %**. Le facteur d'intensité ne pouvait
+> alors *jamais* dépasser 1 — une séance lourde n'était pas récompensée, une séance légère
+> était pénalisée. C'est le plafond à 1 du facteur séance (règle 45) sous un autre nom.
+> Toutes les fonctions de séance passent donc `s.jour`, et `derniereCharge` fait de même :
+> sans lui, une séance rouverte pour correction annonçait « Comme la dernière fois (80 kg) »
+> en regardant les 80 kg qu'on avait sous les yeux.
+> Vérifié après correction : un record du jour rend **120 %**, et son volume dépasse celui
+> d'une séance neutre.
+>
+> 🔴 ⚠️ **`pdc` N'EST PORTÉ QUE PAR LES MOUVEMENTS OÙ LE CORPS *EST* LA CHARGE** — traction,
+> pompes, dips, abdos, fentes. Le **squat** l'a porté un moment : sans charge saisie, une
+> séance de 7 × 5 squats annonçait « **2,8 t soulevées** » alors que RIEN n'avait été
+> renseigné. La barre est la charge d'un squat, et une barre qu'on ne nous a pas dite ne se
+> devine pas — un tonnage inventé est exactement ce que ce module s'interdit. Sur une
+> traction, au contraire, le poids du corps n'est pas une supposition : c'est la charge, et
+> on la connaît (3 × 8 à 80 kg = 1 920 kg, +20 kg de lest = 2 400).
+>
+> 🔴 ⚠️ **`demarrer()` JETAIT LES CHARGES D'UNE SÉANCE QU'ON ROUVRAIT.** Sa liste de champs
+> est écrite à la main et s'arrêtait à `series` : rouvrir une séance pour corriger UNE
+> répétition effaçait toutes les charges, et l'enregistrement qui suit les perdait pour de
+> bon. Même famille que « changer le nombre de séries ne jette pas les reps déjà saisies ».
+>
+> ⚠️ **Le « kg » est POSÉ À CÔTÉ du champ par série, pas seulement en indication de saisie** :
+> rempli, un champ ne montre plus son indication, et la ligne se lisait « 3 · 75 · 8 reps » —
+> deux nombres nus dont un sans unité.
+> ⚠️ **Une chaîne vide remet à `null`, PAS à zéro.** « Je ne sais pas » et « je n'ai rien
+> chargé » ne sont pas la même chose : la première laisse le modèle neutre, la seconde
+> annoncerait un tonnage nul. Même règle sur une série non renseignée d'une pyramide : elle
+> est ignorée, pas comptée 0.
+> ⚠️ **Le pas du ± suit le matériel** : 5 kg sur une barre ou une machine lourde, 2,5 kg sur
+> des haltères et des poulies. Un pas unique de 2,5 kg demande quatre taps pour un
+> changement de disque.
+> ⚠️ **La borne porte sur le MET, donc l'effet net sur les kcal est de 1,24 et non 1,20** :
+> on retire 1 MET (le repos, déjà compté par `tdee`). Mesuré, et sans conséquence — ce qu'on
+> voulait empêcher, c'est qu'une charge dix fois trop haute double la journée.
+
+**Ce que la charge fait au bilan**, mesuré à alimentation identique (80 kg, 4 séries) :
+
+| Séance | Muscle estimé |
+|---|---|
+| sans charge saisie | 46 g |
+| charge = son habituel | **46 g** (strictement neutre) |
+| charge = un record | **49 g** |
+
+> ⚠️ **Et l'inverse arrive, volontairement** : sur une séance longue (stimulus déjà saturé)
+> avec un apport juste, charger plus fait **baisser** le muscle estimé (27 → 25 g) — une
+> séance plus lourde creuse le déficit. C'est la physiologie, et c'est déjà la phrase que
+> `assets/bilan.js` met **en premier** quand le facteur énergie est bas (« manger un peu plus
+> les jours de salle fait monter les deux chiffres à la fois »).
+
+🔴 ⚠️ **« Vélo 20 min » VALAIT 3 × 15 MIN** — défaut PRÉEXISTANT de `analyserTexte`, trouvé
+en écrivant les essais de la charge : sans motif « n × n », la ligne retombait sur le forfait
+« 3 séries de la valeur type », donc 45 minutes de vélo pour 20 annoncées, soit plus du
+double de calories. Un exercice qui se compte en minutes ou en secondes et qui porte un
+nombre suivi de son unité vaut désormais UNE série de cette durée.
+⚠️ **La saisie libre lit aussi la charge** (« Développé couché 4x10 à 80 kg », « @25 »), et
+**l'unité est EXIGÉE** : sans elle, « 4x10 » offrirait deux nombres à confondre avec un
+poids et « 20 min » deviendrait 20 kg. Le morceau reconnu est retiré du nom, sinon « 80kg »
+resterait dans le libellé de l'exercice.
 
 #### ⚠️⚠️ TOUT EST CALCULÉ EXERCICE PAR EXERCICE (2026-09-02, second passage)
 Demande de Pablo : « ça ne doit pas être uniquement 48 g, ça doit être des vrais calculs en
@@ -1769,6 +1850,15 @@ enregistrement → félicitation (+40 XP), la persistance relue par le module ET
 saisie libre (4x10 et « 3 séries de 12 » reconnus, un exercice inconnu gardé tel quel), les
 interactions de reps (« 12 partout », ±, plancher à 1, troncature sans effacement), et
 l'aller-retour depuis le bilan avec **recalcul effectif** des deux chiffres.
+
+**Vérifié aussi pour la charge** (même banc, plus 30 contrôles de modèle en Node) : le champ
+pré-rempli à 80 kg après avoir rouvert la séance (le défaut de `demarrer()`), le ± au pas de
+5 kg sur une barre, le dépliant par série et son retour, le tonnage qui suit la frappe
+(85-85-75-70 → 2,9 t), la persistance de `charge` ET de `charges` en `localStorage`, la
+tuile « de tonnage soulevé » et la pyramide « 20-22,5-25 kg » dans le récap comme dans la
+séance relue, la ligne « 5 t soulevées » de la décomposition du bilan, « ~18 min · 5 t » dans
+le résumé, **aucun débordement horizontal** sur les quatre écrans (375 = 375), et le module
+toujours noir dans les deux thèmes pendant que son panneau suit le thème.
 
 🔄 **Non vérifié sur téléphone ni avec une vraie session** : tout a tourné contre des doublures
 (les 401 de la clé anon sur un jeton factice). Restent à juger sur un iPhone : la vibration de
@@ -3240,7 +3330,7 @@ Le journal d'entraînement (`assets/seance.js`, §3).
 |---|---|---|
 | user_id | text | **PK** avec `jour` — voir ci-dessous, c'est structurel |
 | jour | date | **PK** |
-| exos | jsonb | `[{cle,g,nom,ic,unite,met,series:[10,10,8]}]` |
+| exos | jsonb | `[{cle,g,nom,ic,unite,met,charge,charges,series:[10,10,8]}]` |
 | duree_min | integer | la durée SAISIE, quand elle l'a été ; sinon déduite du volume |
 | libre | text | le texte brut de la saisie à la main |
 | updated_at | timestamptz | |
@@ -3258,6 +3348,10 @@ dans `TABLES_USER` d'`api/supprimer-compte.js`.
 > calendrier montre un jour, pas une liste de séances. Deux entraînements dans la même journée
 > sont deux blocs d'exercices dans le même `exos`.
 > ⚠️ **`exos` ne porte RIEN de calculé** — voir §3, c'est la leçon d'`api/_nutrition.js`.
+> `charge` (une valeur pour l'exercice) et `charges` (une par série, quand on pyramide) sont
+> des SAISIES, pas des calculs : le tonnage et l'intensité s'en déduisent à la lecture.
+> Les deux sont **facultatives** et valent `null` par défaut — une ligne écrite avant le
+> 2026-09-02 n'en porte aucune, et se comporte exactement comme avant.
 > 🔄 **Tant qu'elle n'existe pas, tout fonctionne** : les séances vivent dans le
 > `localStorage` de l'appareil, le bilan les compte, et les deux écrans qui les montrent le
 > DISENT. Ce que la créer débloque : la séance notée à la salle sur le téléphone comptée par
@@ -4116,9 +4210,20 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   les repas. Tableau de mesures en §3.
 - ✅ **La décomposition est affichée** : chaque facteur avec sa jauge et la mesure d'où il
   sort. Le facteur le plus bas est ce qu'il y a à corriger demain, et ça se voit.
-- 🔄 **La charge en kilos n'est pas demandée** (choix assumé, écrit à l'écran) : la dépense se
-  déduit du volume et du type de mouvement, pas du tonnage. C'est la seule grandeur du modèle
-  qui manque vraiment — à rediscuter si Pablo veut le suivi de charge.
+- ✅ **LA CHARGE EST DEMANDÉE** (troisième passage du 2026-09-02, « oui ») — une valeur par
+  exercice, pré-remplie avec la dernière fois, plus un dépliant par série. Elle apporte le
+  **tonnage** (charge × reps), seule MESURE de tout le module, et l'**intensité relative**
+  comparée à ce que cette personne charge d'habitude sur CE mouvement. Détail et les quatre
+  pièges en §3.
+- ✅ **Aucune régression sans elle** : une charge à `null` laisse le modèle strictement
+  identique, vérifié en A/B au banc. Et l'entrer à son niveau habituel est **neutre** (46 g
+  dans les deux cas) ; un record fait monter (49 g).
+- ✅ **Quatre défauts trouvés au banc, aucun par `node --check`** : le squat annonçait
+  « 2,8 t » sans qu'aucune charge soit saisie ; rouvrir une séance effaçait ses charges ; un
+  record se comparait à lui-même et rendait 100 % ; et « Vélo 20 min » comptait 45 minutes
+  (défaut préexistant). Détail en §3.
+- 🔄 **Le 1RM n'est pas estimé** et le tonnage ne se compare qu'à la dernière séance du même
+  mouvement. Une courbe de progression par exercice serait la suite naturelle.
 - 🔄 **Le nouveau modèle de nutrition change les chiffres de tous les comptes**, séances ou
   pas (voir l'encadré de §3). Le facteur séance, lui, reste neutre pour qui ne journalise
   pas — vérifié en A/B.
@@ -5920,3 +6025,44 @@ l'air — on voit lequel des facteurs retient le résultat, donc ce qu'il y a à
 `ReferenceError` tombait dans le `try/catch` de `lireLocal()`, qui rendait `{}` en silence — le
 banc annonçait donc « aucune séance » sur des données parfaitement présentes, et le modèle
 paraissait cassé. Poser `global.Natty` en plus de `global.window.Natty`.
+
+---
+
+*Troisième passage de la même session (2 septembre 2026) — « oui », en réponse à « dis-moi si
+tu veux le suivi de charge » :*
+
+La charge en kilos avait été écartée deux fois, et le motif tenait — « un champ de plus par
+série ferait abandonner la saisie ». Ce qui la rend tenable : **une valeur par exercice,
+pré-remplie avec la dernière fois**, et un dépliant « charge différente par série » pour ceux
+qui pyramident. À la deuxième séance on ne la retape pas ; on la corrige quand elle a bougé.
+
+**Ce qu'elle apporte** — le **tonnage** (charge × reps), *seule mesure* de tout le module
+(tout le reste est estimé), et l'**intensité relative** : ce qui a été chargé rapporté à ce
+que CETTE personne charge d'habitude sur CE mouvement, l'historique passant avant la table.
+L'intensité entre dans la dépense et dans le stimulus, **bornée** des deux côtés — une charge
+saisie dix fois trop haute ne doit pas doubler la journée.
+
+**Cinq défauts trouvés en mesurant, aucun par `node --check` :**
+- 🔴 le **squat** portait `pdc` : sans aucune charge saisie, une séance de 7 × 5 squats
+  annonçait « 2,8 t soulevées ». Un tonnage inventé, exactement ce que ce module s'interdit ;
+- 🔴 **`demarrer()` jetait les charges** d'une séance rouverte pour correction — et
+  l'enregistrement qui suit les aurait perdues pour de bon ;
+- 🔴 un **record se comparait à lui-même** et rendait 100 % : le facteur d'intensité ne
+  pouvait jamais dépasser 1. Le plafond du facteur séance (règle 45) sous un autre nom ;
+- 🔴 **« Vélo 20 min » valait 3 × 15 min** — 45 minutes pour 20 annoncées, donc plus du double
+  de calories. Défaut **préexistant**, trouvé en écrivant les essais de la charge ;
+- le « kg » manquait à côté du champ par série : rempli, un champ ne montre plus son
+  indication, et la ligne se lisait « 3 · 75 · 8 reps ».
+
+**Aucune régression sans charge**, et c'est la règle structurante : une charge à `null` laisse
+le modèle strictement identique (A/B au banc), et la saisir **à son niveau habituel est
+neutre** — 46 g de muscle dans les deux cas ; un record fait monter à 49 g. L'inverse arrive
+aussi, volontairement : sur une séance longue et un apport juste, charger plus fait baisser le
+muscle estimé, parce qu'une séance plus lourde creuse le déficit — et c'est déjà la phrase que
+le bilan met en premier dans ce cas.
+
+⚠️ **`assets/bilan.js` passait `qualiteEntrainement()` SANS le poids** : sans lui une traction
+pèse zéro et l'intensité n'a plus d'échelle, donc l'écran de la séance et le bilan auraient
+annoncé deux volumes différents pour la même séance — la divergence déjà payée entre
+`api/_nutrition.js` et `assets/core.js`. Corrigé, et la ligne « Entraînement » de la
+décomposition porte désormais le tonnage.
