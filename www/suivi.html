@@ -1000,7 +1000,14 @@ html.no-scroll {
 }
 .suivi-top-group{ display:flex; flex-direction:column; gap:14px; }
 
-.hero{ position:relative; border-radius:28px; padding:26px 22px; background:var(--metal-black); box-shadow:var(--sh-metal); display:flex; align-items:center; justify-content:space-between; }
+/* ⚠️ `flex-wrap` + `flex-basis:100%` sur la note : `.hero` est une RANGÉE
+   (libellé à gauche, valeur à droite), et la note d'objectif y entrait comme
+   un troisième élément de la rangée — mesuré à l'écran, elle se posait
+   PAR-DESSUS le « 0 / 3350 Kcal ». Elle passe donc à la ligne, sous les deux.
+   `align-items:flex-start` évite que la rangée du haut soit recentrée sur la
+   hauteur de la note les jours où elle s'affiche. */
+.hero{ position:relative; border-radius:28px; padding:26px 22px; background:var(--metal-black); box-shadow:var(--sh-metal); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.hero:has(.besoin-note:not([style*="display: none"])){ align-items:flex-start; }
 .hero .label .t1{ display:flex; align-items:center; gap:6px; color:#fff; font-size:19px; font-weight:800; letter-spacing:-0.01em; }
 .hero .label .t1 svg{ width:15px; height:15px; }
 .hero .label .t2{ color:rgba(255,255,255,0.45); font-size:13px; font-weight:600; margin-top:2px; }
@@ -1017,6 +1024,65 @@ html.no-scroll {
 .score-card .sc-info h2{ font-size:15px; font-weight:800; color:#fff; letter-spacing:-0.01em; margin-bottom:8px; }
 .score-card .sc-badge{ display:inline-block; font-size:12px; font-weight:700; padding:5px 14px; border-radius:999px; }
 
+/* ── La feuille « Mon objectif » ─────────────────────────────
+   Ajout ET modification, depuis Suivi. Avant, « Enregistrez votre objectif »
+   renvoyait au questionnaire d'inscription COMPLET (7 étapes), et la seule
+   modification vivait dans un formulaire de l'overlay profil qui écrivait avec
+   la CLÉ ANON — donc refusé par la RLS, en silence, sous un « mis à jour ✓ ». */
+/* ⚠️ AU-DESSUS DE LA BARRE D'ONGLETS (`#nattyNav`, z-index 500). Mesuré à
+   l'écran : à 340, le bouton « Enregistrer » passait DERRIÈRE la barre — donc
+   le seul geste qui compte était inatteignable. */
+#ovObjectif{ position:fixed; inset:0; z-index:560; display:none; align-items:flex-end;
+  justify-content:center; background:rgba(10,10,14,.5); }
+#ovObjectif.on{ display:flex; }
+#ovObjectif .ob-sheet{ width:100%; max-width:var(--col,480px); max-height:92vh; overflow-y:auto;
+  -webkit-overflow-scrolling:touch; background:var(--bg); border-radius:28px 28px 0 0;
+  padding:22px 20px calc(24px + env(safe-area-inset-bottom,0px)); }
+#ovObjectif h3{ font-size:22px; font-weight:800; letter-spacing:-0.02em; color:var(--text); margin:2px 0 4px; }
+#ovObjectif .ob-sub{ font-size:13px; color:var(--muted); line-height:1.5; margin-bottom:18px; }
+#ovObjectif .ob-lbl{ font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted); margin:16px 0 8px; }
+#ovObjectif .ob-chips{ display:flex; flex-wrap:wrap; gap:7px; }
+#ovObjectif .ob-chips button{ padding:10px 14px; border-radius:999px; border:none; cursor:pointer;
+  font-family:'Inter',sans-serif; font-size:12.5px; font-weight:700; color:var(--text);
+  background:var(--bg); box-shadow:var(--sm); }
+#ovObjectif .ob-chips button.on{ background:var(--surface-ink); color:var(--on-ink); box-shadow:none; }
+#ovObjectif .ob-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+#ovObjectif .ob-f{ background:var(--bg); border-radius:16px; box-shadow:var(--si); padding:11px 14px; }
+#ovObjectif .ob-f span{ display:block; font-size:10.5px; font-weight:700; color:var(--muted); margin-bottom:3px; }
+#ovObjectif .ob-f input{ width:100%; border:none; outline:none; background:none; color:var(--text);
+  font-family:'Inter',sans-serif; font-size:17px; font-weight:800; letter-spacing:-.4px;
+  appearance:none; -webkit-appearance:none; }
+#ovObjectif .ob-f input::-webkit-outer-spin-button,
+#ovObjectif .ob-f input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+#ovObjectif .ob-res{ position:sticky; top:-2px; z-index:2; margin:4px 0 2px;
+  background:var(--surface-ink); color:var(--on-ink); border-radius:20px;
+  padding:16px 16px 14px; box-shadow:0 8px 18px rgba(10,10,14,.28); }
+#ovObjectif .ob-res .k{ font-size:10.5px; font-weight:800; letter-spacing:.06em;
+  text-transform:uppercase; color:rgba(255,255,255,.5); }
+#ovObjectif .ob-res .v{ font-size:30px; font-weight:800; letter-spacing:-1px; margin:3px 0 2px; }
+#ovObjectif .ob-res .m{ font-size:12px; font-weight:700; color:rgba(255,255,255,.62); }
+#ovObjectif .ob-res .n{ font-size:11px; line-height:1.5; color:rgba(255,255,255,.45); margin-top:10px;
+  border-top:1px solid rgba(255,255,255,.12); padding-top:9px; }
+/* ⚠️ LES BOUTONS SONT COLLÉS AU BAS DE LA FEUILLE. Mesuré : le contenu
+   dépasse les 92 vh de la feuille, donc « Enregistrer » tombait sous le pli —
+   il fallait deviner qu'on pouvait faire défiler pour atteindre le seul geste
+   qui compte. Le dégradé au-dessus dit qu'il reste du contenu derrière. */
+#ovObjectif .ob-actions{ position:sticky; bottom:0; margin-top:18px; padding-top:14px;
+  background:linear-gradient(to bottom, rgba(0,0,0,0) 0%, var(--bg) 22%, var(--bg) 100%); }
+#ovObjectif .ob-go{ width:100%; border:none; cursor:pointer; border-radius:16px;
+  padding:15px; font-family:'Inter',sans-serif; font-size:15px; font-weight:800;
+  background:var(--surface-ink); color:var(--on-ink); }
+#ovObjectif .ob-go[disabled]{ opacity:.4; }
+#ovObjectif .ob-no{ width:100%; margin-top:8px; border:none; background:none; cursor:pointer;
+  font-family:'Inter',sans-serif; font-size:13px; font-weight:600; color:var(--muted); padding:10px; }
+.obj-edit{ position:absolute; top:16px; right:16px; border:none; cursor:pointer; border-radius:999px;
+  background:rgba(255,255,255,.10); color:rgba(255,255,255,.75); font-family:'Inter',sans-serif;
+  font-size:11px; font-weight:700; padding:7px 11px; }
+
+.besoin-note{ flex:0 0 100%; width:100%; margin-top:14px; font-size:11.5px; line-height:1.5;
+  color:rgba(255,255,255,.62); border-top:1px solid rgba(255,255,255,.10); padding-top:11px; }
+.besoin-note b{ color:#fff; font-weight:700; }
 .objectif-card{ position:relative; background:var(--metal-black); border-radius:26px; padding:20px 18px 22px; box-shadow:var(--sh-metal); }
 .objectif-card h2{ font-size:19px; font-weight:800; letter-spacing:-0.02em; color:#fff; margin-bottom:18px; }
 .rings{ display:flex; justify-content:space-between; gap:8px; }
@@ -1140,6 +1206,44 @@ html.no-scroll {
     <button type="button" id="objVideBtn">Commencer &rarr;</button>
   </div>
 
+  <!-- La feuille « Mon objectif » : ajout ET modification, sans quitter Suivi. -->
+  <div id="ovObjectif">
+    <div class="ob-sheet">
+      <h3 id="obTitre">Votre objectif</h3>
+      <div class="ob-sub" id="obSub">Vos calories et vos macros se calculent depuis ces cinq
+        informations. Elles se corrigent quand vous voulez.</div>
+
+      <!-- ⚠️ LE RÉSULTAT EST EN HAUT, ET IL Y RESTE. En bas de feuille, il
+           passait derrière la barre d'action collante — or c'est LUI qu'on
+           regarde en basculant l'activité ou en corrigeant son poids. Collé en
+           haut, le chiffre bouge sous les doigts pendant qu'on remplit. -->
+      <div class="ob-res" id="obRes"></div>
+
+      <div class="ob-lbl">Ce que vous visez</div>
+      <div class="ob-chips" id="obObj"></div>
+
+      <div class="ob-lbl">Vous</div>
+      <div class="ob-grid">
+        <div class="ob-f"><span>Poids (kg)</span><input id="obPoids" type="number" inputmode="decimal" min="30" max="300" step="0.5"></div>
+        <div class="ob-f"><span>Taille (cm)</span><input id="obTaille" type="number" inputmode="numeric" min="120" max="230" step="1"></div>
+        <div class="ob-f"><span>Âge</span><input id="obAge" type="number" inputmode="numeric" min="14" max="100" step="1"></div>
+      </div>
+      <!-- ⚠️ Le sexe est HORS de la grille : deux pastilles dans une case de
+           grille étiraient la case voisine (« Âge ») à leur hauteur, et la
+           colonne de gauche se retrouvait deux fois trop haute pour un nombre. -->
+      <div class="ob-lbl">Sexe (pour le métabolisme de base)</div>
+      <div class="ob-chips" id="obSexe"></div>
+
+      <div class="ob-lbl">Votre activité hors entraînement</div>
+      <div class="ob-chips" id="obAct"></div>
+
+      <div class="ob-actions">
+        <button type="button" class="ob-go" id="obGo">Enregistrer mon objectif</button>
+        <button type="button" class="ob-no" id="obNo">Annuler</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Calories -->
   <div class="hero" id="heroCal">
     <div class="label">
@@ -1147,6 +1251,12 @@ html.no-scroll {
       <div class="t2 hero-cal-left">⚡ Calories aujourd'hui</div>
     </div>
     <div class="value"><div class="num"><span id="vCal">–</span></div><div class="unit">/ <span id="oCal">–</span> Kcal</div></div>
+    <!-- ⚠️ L'objectif change d'un jour à l'autre depuis qu'il tient compte de
+         l'entraînement. Sans cette ligne il changerait TOUT SEUL, et un
+         objectif qui bouge sans explication se lit comme un bug. Masquée les
+         jours sans supplément : dire « objectif de base » chaque jour de repos
+         serait du bruit. -->
+    <div class="besoin-note" id="besoinNote" style="display:none;"></div>
   </div>
 
   <!-- Score nutritionnel : déplacé dans profil.html (Natty Score / points,
@@ -1159,6 +1269,10 @@ html.no-scroll {
          2026-08-10). Le titre le nomme : il a déjà trompé une fois dans l'autre
          sens (« Votre objectif » posé au-dessus d'un restant, donc « 25 g » lu
          comme une cible). L'objectif et le reste vivent sous chaque anneau. -->
+    <!-- ⚠️ La MODIFICATION est ici, sur la carte qu'elle change. Elle vivait
+         dans l'overlay profil, derrière deux taps et un titre qui ne parlait pas
+         d'objectif : personne ne la trouvait. -->
+    <button type="button" class="obj-edit" id="objEditBtn">✎ Objectif</button>
     <h2 id="objTitre">Consommé aujourd'hui</h2>
     <div class="rings">
       <div class="ring-item" onclick="openMacroPopup('prot')">
@@ -2055,6 +2169,9 @@ function calcMac(ings) { return Natty.calcMac(ings); }
 // ═══ STATE ═══
 var USER_ID=null, TOKEN='', estAbonne=false;
 var macObj={p:0,l:0,g:0,c:0}, macAuj={p:0,l:0,g:0,c:0};
+/* Le poids et la dépense de base, retenus : ils resservent chaque fois que
+   l'objectif du jour est recalculé (séance notée, semaine programmée). */
+var PROFIL_POIDS=0, PROFIL_TDEE=0;
 var allMeals=[], allRdvs=[], dailyHistory=[];
 var photoIAFile=null, photoManuFile=null, aiMealData=null;
 var weekOffset=0, currentPeriod='7j';
@@ -2173,16 +2290,61 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function init() {
   if (urlP.p||urlP.c) { macObj.p=urlP.p; macObj.l=urlP.l; macObj.g=urlP.g; macObj.c=urlP.c; }
+  /* ⚠️ « Commencer » N'ENVOIE PLUS SUR `onboarding.html`. Il ouvrait le
+     questionnaire d'inscription COMPLET — sept étapes, dont la motivation, les
+     scores et l'offre — pour obtenir cinq chiffres. La feuille ci-dessous les
+     demande, et rien d'autre. */
   var ovb = document.getElementById('objVideBtn');
-  if (ovb) ovb.addEventListener('click', function () {
-    window.location.href = 'onboarding.html' + (TOKEN ? '?token=' + TOKEN : '');
-  });
+  if (ovb) ovb.addEventListener('click', ouvrirObjectif);
+  var oeb = document.getElementById('objEditBtn');
+  if (oeb) oeb.addEventListener('click', ouvrirObjectif);
+  var obGo = document.getElementById('obGo');
+  if (obGo) obGo.addEventListener('click', validerObjectif);
+  var obNo = document.getElementById('obNo');
+  if (obNo) obNo.addEventListener('click', fermerObjectif);
+  var ovObj = document.getElementById('ovObjectif');
+  // Taper le fond ferme — mais jamais un clic parti de la feuille elle-même.
+  if (ovObj) ovObj.addEventListener('click', function (e) { if (e.target === ovObj) fermerObjectif(); });
   await Promise.all([loadOnboarding(), loadMeals(), loadScore(), loadDailyHistory(), verifierAbonnement(), chargerActionSemaine()]);
   afficherMacros(); chargerRdv(); chargerDiagnostics(); majCalendrierMacros();
+  /* Sans `await` : l'objectif de base est déjà à l'écran, et son ajustement
+     n'a aucune raison de retarder l'historique ni les diagnostics. */
+  appliquerBesoinDuJour();
+  /* Une séance notée ou une semaine programmée change l'objectif du jour —
+     tout de suite, pas au prochain chargement de page. */
+  document.addEventListener('natty:seance-ajoutee', appliquerBesoinDuJour);
+  document.addEventListener('natty:programme-pret', appliquerBesoinDuJour);
   resetIfNewDay();
   armerMinuit();
   if (document.getElementById('pageProg').classList.contains('active')) dessinerProgression();
   ouvrirRepasDemande();
+  ouvrirBilanDemande();
+}
+
+/* ── `?bilan=1` : ouvrir directement le bilan du soir ──
+   C'est ce qui donne son effet au rappel de 21 h 15 (`assets/notifs.js`) : sans
+   ce paramètre, taper la notification ouvrait Suivi et rien de plus — le bilan
+   ne s'affichant que si son propre déclencheur estimait qu'il était dû.
+
+   ⚠️ Le paramètre est RETIRÉ de l'URL après usage, comme `?repas=`. Sans ça,
+   un rechargement ou un retour arrière rouvrirait le bilan indéfiniment. */
+function ouvrirBilanDemande() {
+  var p;
+  try { p = new URLSearchParams(location.search); } catch (e) { return; }
+  if (p.get('bilan') !== '1') return;
+  p.delete('bilan');
+  var q = p.toString();
+  try {
+    history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash);
+  } catch (e) {}
+  /* Le module se charge en fin de page : on attend qu'il soit là plutôt que de
+     supposer l'ordre des balises. Cinq essais d'une demi-seconde, puis on
+     renonce en silence — un écran qui ne s'ouvre pas vaut mieux qu'une boucle. */
+  var n = 0;
+  (function essayer() {
+    if (window.NattyBilan && NattyBilan.ouvrirJour) { NattyBilan.ouvrirJour(); return; }
+    if (++n < 5) setTimeout(essayer, 500);
+  })();
 }
 
 /* ── `?repas=<id>` : ouvrir directement la correction d'un repas ──
@@ -2223,11 +2385,13 @@ async function loadOnboarding() {
     if (!d) for (var j=0;j<r.length;j++) { if (parseFloat(r[j].tdee)>0) { d=r[j]; break; } }
     if (!d) d = r[0];
     if (d.prenom) setText('headerName', d.prenom);
-    var poids=parseFloat(d.poids)||0, tdee=parseFloat(d.tdee)||0;
-    if (!macObj.p) macObj.p = poids?Math.round(poids*2):0;
-    if (!macObj.l) macObj.l = tdee?Math.round(tdee*0.25/9):0;
-    if (!macObj.g) macObj.g = tdee?Math.round(tdee*0.5/4):0;
-    if (!macObj.c) macObj.c = tdee?Math.round(tdee):0;
+    /* ⚠️ La formule ÉTAIT RECOPIÉE ICI, une quatrième fois. Elle vit
+       maintenant dans `Natty.macrosJour` — voir `calcMacros` plus bas. */
+    PROFIL_POIDS = parseFloat(d.poids)||0; PROFIL_TDEE = parseFloat(d.tdee)||0;
+    if (!macObj.p && !macObj.c) {
+      var m0 = calcMacros(PROFIL_POIDS, PROFIL_TDEE, 0);
+      macObj.p = m0.p; macObj.l = m0.l; macObj.g = m0.g; macObj.c = m0.c;
+    }
   } catch(e) {}
 }
 
@@ -4743,13 +4907,300 @@ function drawDonutMeal(id, data, colors) {
 var qaIntercepted = false;
 var _recettesCache = null;
 
-function calcMacros(poids, tdee) {
-  return {
-    p: poids ? Math.round(poids * 2) : 0,
-    l: tdee ? Math.round(tdee * 0.25 / 9) : 0,
-    g: tdee ? Math.round(tdee * 0.5 / 4) : 0,
-    c: tdee ? Math.round(tdee) : 0
+/* ⚠️ LA FORMULE VIT DANS `assets/core.js`, PLUS ICI. Elle était recopiée à
+   l'identique dans trois fichiers ; depuis qu'elle porte un supplément
+   d'entraînement, trois copies auraient divergé au premier ajustement.
+   `sup` est le supplément du jour, calculé par `NattySeance.besoin()` —
+   séance notée, programmée, ou habitude de ce jour de semaine. */
+function calcMacros(poids, tdee, sup) {
+  if (window.Natty && Natty.macrosJour) return Natty.macrosJour(poids, tdee, sup);
+  return { p: poids ? Math.round(poids * 2) : 0,
+           l: tdee ? Math.round(tdee * 0.25 / 9) : 0,
+           g: tdee ? Math.round(tdee * 0.5 / 4) : 0,
+           c: tdee ? Math.round(tdee) : 0 };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MON OBJECTIF — ajout ET modification, depuis Suivi
+   ═══════════════════════════════════════════════════════════════
+   Demande de Pablo (2026-09-02) : « continuer l'ajout et la modification de
+   l'objectif sur l'écran Suivi ». Une session parallèle avait posé le bloc
+   `#objVide` (la cible et « Enregistrez votre objectif ») ; il ne restait qu'à
+   lui donner quelque chose à ouvrir.
+
+   🔴 ⚠️ ET IL Y AVAIT UN DÉFAUT SILENCIEUX À CORRIGER AU PASSAGE.
+   `profilSaveInfo()` — la seule modification existante, enfouie dans l'overlay
+   profil — écrivait avec `Authorization: Bearer SB_KEY`, c'est-à-dire la CLÉ
+   ANON. Depuis l'activation des RLS (2026-08-04), ce PATCH est refusé en
+   `42501`. Et comme la réponse n'était pas lue, l'écran affichait
+   « Informations mises à jour ✓ » sur une écriture qui n'avait pas eu lieu :
+   on corrigeait son poids, le message confirmait, et rien ne changeait. Tout
+   passe maintenant par `enregistrerObjectif()`, qui utilise la session.
+
+   ⚠️ ET LE TDEE ÉTAIT FIGÉ. `profilSaveInfo` recalculait les macros avec
+   `profilInfoCache.tdee || poids * 30` : changer son poids ou son activité ne
+   changeait donc PAS la dépense, donc pas l'objectif. On recalcule ici BMR puis
+   TDEE avec la MÊME formule que `onboarding.html` (Mifflin-St Jeor, puis le
+   coefficient d'activité) — deux formules donneraient deux objectifs pour la
+   même personne selon la porte d'entrée.
+
+   ⚠️ `onboarding.user_id` N'A AUCUNE CONTRAINTE D'UNICITÉ (la table contient de
+   vrais doublons, §4 de CLAUDE.md) : pas d'upsert possible, PostgREST
+   répondrait `42P10`. On PATCH donc la ligne par son `id`, et on n'INSÈRE que
+   s'il n'y en a aucune. */
+
+var OBJ_TYPES = [
+  { c: 'prise_masse', n: 'Prise de masse' },
+  { c: 'perte_poids', n: 'Perte de poids' },
+  { c: 'maintien',    n: 'Maintien' },
+  { c: 'performance', n: 'Performance' },
+  { c: 'bien_etre',   n: 'Bien-être' }
+];
+var ACT_TYPES = [
+  { c: 'sedentaire', n: 'Sédentaire',   k: 1.2,   d: 'bureau, peu de marche' },
+  { c: 'leger',      n: 'Peu actif',    k: 1.375, d: '1 à 3 séances / semaine' },
+  { c: 'modere',     n: 'Actif',        k: 1.55,  d: '3 à 5 séances / semaine' },
+  { c: 'actif',      n: 'Très actif',   k: 1.725, d: '6 séances ou métier physique' }
+];
+var SEXES = [{ c: 'homme', n: 'Homme' }, { c: 'femme', n: 'Femme' }];
+
+/* ⚠️ LA MÊME FORMULE QUE `onboarding.html`, au coefficient près. Mifflin-St
+   Jeor pour le métabolisme de base, puis le facteur d'activité. Recopiée ici
+   parce que `onboarding.html` est une page à part et n'expose rien — mais elle
+   ne doit pas diverger : si l'une bouge, l'autre suit. */
+function objBmr(o) {
+  if (!o.age || !o.poids || !o.taille || !o.sexe) return 0;
+  return Math.round(10 * o.poids + 6.25 * o.taille - 5 * o.age + (o.sexe === 'homme' ? 5 : -161));
+}
+function objTdee(o) {
+  var b = objBmr(o);
+  if (!b) return 0;
+  var a = ACT_TYPES.filter(function (x) { return x.c === o.activite; })[0];
+  return Math.round(b * (a ? a.k : 1.375));
+}
+
+var OBJ = null;      // l'état de la feuille en cours d'édition
+
+async function ouvrirObjectif() {
+  /* ⚠️ Les infos du profil ne sont chargées qu'à l'ouverture de l'overlay
+     profil. Depuis Suivi, on arrive donc avec `profilInfoCache` vide — et sans
+     ce chargement, la feuille de MODIFICATION s'ouvrirait vide, ce qui la ferait
+     passer pour une création et perdrait l'`id` de la ligne à corriger. */
+  if (!profilInfoCache && typeof loadProfilOverlayData === 'function') {
+    try { await loadProfilOverlayData(); } catch (e) {}
+  }
+  var d = profilInfoCache || {};
+  OBJ = {
+    id: d.id || null,
+    objectif_type: d.objectif_type || 'maintien',
+    poids: parseFloat(d.poids) || PROFIL_POIDS || '',
+    taille: parseFloat(d.taille) || '',
+    age: parseInt(d.age, 10) || '',
+    sexe: d.sexe || '',
+    activite: d.activite || 'modere'
   };
+  var neuf = !OBJ.poids || !OBJ.taille;
+  setText('obTitre', neuf ? 'Votre objectif' : 'Modifier mon objectif');
+  var sub = document.getElementById('obSub');
+  if (sub) sub.textContent = neuf
+    ? 'Vos calories et vos macros se calculent depuis ces cinq informations. Elles se corrigent quand vous voulez.'
+    : 'Ce que vous changez ici recalcule tout de suite votre objectif du jour et vos anneaux.';
+  ['obPoids', 'obTaille', 'obAge'].forEach(function (id) {
+    var e = document.getElementById(id);
+    if (e) e.value = OBJ[id === 'obPoids' ? 'poids' : (id === 'obTaille' ? 'taille' : 'age')] || '';
+  });
+  peindreObjChips();
+  brancherObjChamps();
+  peindreObjRes();
+  var el = document.getElementById('ovObjectif');
+  if (el) { el.classList.add('on'); lockScroll(); }
+}
+
+/* 🔴 ⚠️ LES TROIS CHAMPS CHIFFRÉS ÉTAIENT MUETS, et ça cassait DEUX choses à la
+   fois — trouvé au banc, invisible à la lecture. `peindreObjRes()` lit `OBJ`,
+   qui n'était rempli qu'au moment d'enregistrer : taper son poids ne faisait
+   donc pas bouger l'aperçu (toute la promesse « en direct »), ET le bouton
+   restait DÉSACTIVÉ, puisqu'il ne s'active que si la dépense est calculable.
+   Sur une création — le cas où les trois champs sont vides au départ — la
+   feuille était donc un cul-de-sac : on remplissait tout, rien ne réagissait,
+   et « Enregistrer » ignorait les taps.
+   ⚠️ On écoute `input`, pas `change` : `change` n'arrive qu'à la perte de
+   focus, donc l'aperçu ne bougerait qu'en quittant le champ. */
+function brancherObjChamps() {
+  [['obPoids', 'poids', parseFloat], ['obTaille', 'taille', parseFloat],
+   ['obAge', 'age', function (v) { return parseInt(v, 10); }]].forEach(function (x) {
+    var e = document.getElementById(x[0]);
+    if (!e || e.getAttribute('data-branche') === '1') return;
+    e.setAttribute('data-branche', '1');
+    e.addEventListener('input', function () {
+      OBJ[x[1]] = x[2](String(e.value).replace(',', '.')) || 0;
+      peindreObjRes();
+    });
+  });
+}
+
+function fermerObjectif() {
+  var el = document.getElementById('ovObjectif');
+  if (el) el.classList.remove('on');
+  unlockScroll();
+}
+
+function peindreObjChips() {
+  var mk = function (hote, liste, champ) {
+    var el = document.getElementById(hote);
+    if (!el) return;
+    el.innerHTML = liste.map(function (x) {
+      return '<button type="button" data-ob="' + champ + '|' + x.c + '"'
+        + (OBJ[champ] === x.c ? ' class="on"' : '') + '>' + esc(x.n) + '</button>';
+    }).join('');
+  };
+  mk('obObj', OBJ_TYPES, 'objectif_type');
+  mk('obAct', ACT_TYPES, 'activite');
+  mk('obSexe', SEXES, 'sexe');
+  document.querySelectorAll('#ovObjectif [data-ob]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var p = b.getAttribute('data-ob').split('|');
+      OBJ[p[0]] = p[1];
+      peindreObjChips();
+      peindreObjRes();
+    });
+  });
+}
+
+/* Le résultat, EN DIRECT. Sans lui, on remplit cinq champs sans savoir ce
+   qu'ils changent — et l'écran suivant annonce un objectif sorti de nulle
+   part. C'est aussi ce qui rend le coefficient d'activité compréhensible :
+   on le bascule et on voit les calories bouger. */
+function peindreObjRes() {
+  var el = document.getElementById('obRes');
+  if (!el) return;
+  var t = objTdee(OBJ), b = objBmr(OBJ);
+  var go = document.getElementById('obGo');
+  if (go) { if (t) go.removeAttribute('disabled'); else go.setAttribute('disabled', 'disabled'); }
+  if (!t) {
+    el.innerHTML = '<div class="k">Votre objectif</div><div class="v">–</div>'
+      + '<div class="m">Il manque le poids, la taille, l’âge ou le sexe.</div>';
+    return;
+  }
+  var m = calcMacros(OBJ.poids, t, 0);
+  el.innerHTML = '<div class="k">Votre objectif de base</div>'
+    + '<div class="v">' + t + ' <span style="font-size:15px;font-weight:700">kcal</span></div>'
+    + '<div class="m">' + m.p + ' g de protéines · ' + m.g + ' g de glucides · ' + m.l + ' g de lipides</div>'
+    /* ⚠️ On DIT que l'objectif du jour peut être plus haut. Sinon la personne
+       enregistre 3 200 et voit 3 350 sur Suivi deux secondes plus tard, sans
+       comprendre lequel des deux est le vrai. */
+    + '<div class="n">Métabolisme de base ' + b + ' kcal, multiplié par votre activité. '
+    + 'Les jours d’entraînement, votre objectif monte au-dessus de ce chiffre — '
+    + 'c’est calculé à part, depuis vos séances.</div>';
+}
+
+/* L'ÉCRITURE — le seul endroit de cette page qui écrit dans `onboarding`. */
+async function enregistrerObjectif(o) {
+  var t = objTdee(o), b = objBmr(o);
+  if (!t) return { ok: false, raison: 'incomplet' };
+  var corps = {
+    poids: o.poids, taille: o.taille, age: o.age, sexe: o.sexe,
+    activite: o.activite, objectif_type: o.objectif_type,
+    bmr: b, tdee: t, deficit: Math.round(t * 0.15)
+  };
+  try {
+    if (o.id) {
+      await Natty.sbPatch('onboarding?id=eq.' + encodeURIComponent(o.id), corps);
+    } else {
+      /* Aucune ligne : on en crée une. `completed` reste à `false` — cette
+         feuille ne remplace pas le questionnaire d'inscription, elle donne de
+         quoi calculer un objectif. */
+      corps.user_id = USER_ID;
+      var r = await Natty.sbPost('onboarding', corps);
+      if (r && r[0] && r[0].id) o.id = r[0].id;
+    }
+  } catch (e) { return { ok: false, raison: 'reseau', err: e }; }
+  return { ok: true, tdee: t, bmr: b };
+}
+
+async function validerObjectif() {
+  var btn = document.getElementById('obGo');
+  OBJ.poids  = parseFloat((document.getElementById('obPoids') || {}).value) || 0;
+  OBJ.taille = parseFloat((document.getElementById('obTaille') || {}).value) || 0;
+  OBJ.age    = parseInt((document.getElementById('obAge') || {}).value, 10) || 0;
+  if (!objTdee(OBJ)) { showToast('Poids, taille, âge et sexe sont nécessaires', 'err'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
+  var r = await enregistrerObjectif(OBJ);
+  if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer mon objectif'; }
+  if (!r.ok) { showToast('Enregistrement impossible — réessayez', 'err'); return; }
+
+  profilInfoCache = Object.assign({}, profilInfoCache, OBJ, { tdee: r.tdee, bmr: r.bmr });
+  if (typeof profilAfficherInfos === 'function') profilAfficherInfos(profilInfoCache);
+  PROFIL_POIDS = OBJ.poids; PROFIL_TDEE = r.tdee;
+  var m = calcMacros(PROFIL_POIDS, PROFIL_TDEE, 0);
+  macObj.p = m.p; macObj.l = m.l; macObj.g = m.g; macObj.c = m.c;
+  fermerObjectif();
+  showToast('Objectif enregistré ✓');
+  majEtatObjectif();
+  afficherMacros();
+  /* Le supplément d'entraînement se recalcule sur la NOUVELLE dépense — sans
+     ça, l'écran garderait l'ancien objectif du jour pendant que la base porte
+     le nouveau. */
+  await appliquerBesoinDuJour();
+}
+
+/* ═══ L'objectif du jour s'adapte à l'entraînement ═══════════
+   Demande de Pablo (2026-09-02) : « que ça adapte mon objectif calorique de
+   mon J+1 et du même jour de la prochaine semaine », puis « pas que les
+   calories mais toutes les macros s'adaptent ».
+
+   ⚠️ TOUT LE CALCUL EST AILLEURS, et c'est voulu : le supplément vient de
+   `NattySeance.besoin()` (séance notée, programmée, ou habitude de ce jour de
+   semaine) et la répartition de `Natty.macrosJour()`. Cette page ne fait que
+   demander et peindre — sinon l'écran Suivi, le bouton `+` et le bilan
+   auraient chacun leur version de l'objectif du jour.
+
+   ⚠️ SANS `assets/seance.js` NI SÉANCE, LE SUPPLÉMENT VAUT 0 : l'objectif est
+   alors exactement celui d'avant, au chiffre près. Personne ne voit son
+   objectif changer pour avoir installé une mise à jour. */
+var besoinJour = null;
+
+function calculerBesoin(poids, tdee) {
+  besoinJour = null;
+  if (!window.NattySeance || !NattySeance.besoin || !poids || !tdee) return 0;
+  try {
+    besoinJour = NattySeance.besoin(Natty.jour(), poids, tdee);
+    return Math.max(0, (besoinJour.total || tdee) - tdee);
+  } catch (e) { return 0; }
+}
+
+async function appliquerBesoinDuJour() {
+  if (!PROFIL_POIDS || !PROFIL_TDEE) return;
+  // Les séances arrivent peut-être de la base : on les attend avant de compter.
+  if (window.NattySeance && NattySeance.charger) {
+    try { await NattySeance.charger(70); } catch (e) {}
+  }
+  var sup = calculerBesoin(PROFIL_POIDS, PROFIL_TDEE);
+  var m = calcMacros(PROFIL_POIDS, PROFIL_TDEE, sup);
+  macObj.p = m.p; macObj.l = m.l; macObj.g = m.g; macObj.c = m.c;
+  peindreBesoinNote(sup);
+  afficherMacros();
+  majCalendrierMacros();
+  // Le `+` lit les mêmes cibles : sans ce rafraîchissement, il annoncerait
+  // encore l'objectif de base pendant que Suivi affiche le nouveau.
+  if (window.NattyCreneaux && NattyCreneaux.charger) {
+    try { await NattyCreneaux.charger(true); } catch (e) {}
+  }
+}
+
+function peindreBesoinNote(sup) {
+  var el = document.getElementById('besoinNote');
+  if (!el) return;
+  if (!sup || !besoinJour) { el.style.display = 'none'; return; }
+  var b = besoinJour;
+  el.style.display = 'block';
+  /* On dit le supplément ET sa répartition : « +300 kcal » sans dire où ils
+     vont laisse trois anneaux qui ont bougé sans raison visible. */
+  var base = calcMacros(PROFIL_POIDS, PROFIL_TDEE, 0);
+  var dp = macObj.p - base.p, dg = macObj.g - base.g, dl = macObj.l - base.l;
+  el.innerHTML = esc(b.txt)
+    + '<br>Réparti en <b>+' + dg + ' g</b> de glucides, <b>+' + dp + ' g</b> de protéines '
+    + 'et <b>+' + dl + ' g</b> de lipides.';
 }
 
 function updateMacroCards() {
@@ -5224,31 +5675,43 @@ function profilToggleEdit() {
   }
 }
 
+/* 🔴 CE FORMULAIRE PASSE MAINTENANT PAR `enregistrerObjectif()`. Il écrivait
+   avec la clé anon — donc refusé par la RLS depuis le 2026-08-04, en silence,
+   sous un « Informations mises à jour ✓ » qui mentait. Et il gardait l'ancien
+   `tdee` : changer son poids ou son activité ne changeait pas l'objectif.
+   Un seul écrivain, une seule formule. */
 async function profilSaveInfo() {
-  var btn = document.querySelector('#profilInfoEdit button');
-  var poids = parseInt(document.getElementById('editPoids').value) || 0;
-  var taille = parseInt(document.getElementById('editTaille').value) || 0;
+  var poids = parseFloat(document.getElementById('editPoids').value) || 0;
+  var taille = parseFloat(document.getElementById('editTaille').value) || 0;
   var objectif = document.getElementById('editObjectif').value;
   var activite = document.getElementById('editActivite').value;
   if (!poids || !taille) { showToast('Poids et taille requis', 'err'); return; }
-  try {
-    await fetch(SB_URL + '/rest/v1/onboarding?user_id=eq.' + USER_ID, {
-      method: 'PATCH',
-      headers: { apikey: SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ poids: poids, taille: taille, objectif_type: objectif, activite: activite })
-    });
-    profilInfoCache = Object.assign({}, profilInfoCache, { poids, taille, objectif, activite });
-    profilAfficherInfos(profilInfoCache);
+  var d = profilInfoCache || {};
+  var o = { id: d.id || null, poids: poids, taille: taille,
+            age: parseInt(d.age, 10) || 0, sexe: d.sexe || '',
+            activite: activite, objectif_type: objectif };
+  /* ⚠️ Sans âge ni sexe, le métabolisme de base n'est pas calculable — et
+     l'ancien code écrivait quand même, en gardant un tdee périmé. On envoie
+     donc vers la feuille, qui les demande, plutôt que d'enregistrer à moitié. */
+  if (!objTdee(o)) {
     profilToggleEdit();
-    // Recalculer les macros
-    macObj = calcMacros(poids, profilInfoCache.tdee || poids * 30);
-    updateMacroCards();
-    afficherMacros();
-    showToast('Informations mises à jour ✓');
-    // Conseil : ne pas régénérer ici, le cycle hebdomadaire s'en charge
-  } catch(e) {
-    showToast('Erreur lors de la sauvegarde', 'err');
+    showToast('Il manque votre âge et votre sexe');
+    ouvrirObjectif();
+    return;
   }
+  var r = await enregistrerObjectif(o);
+  if (!r.ok) { showToast('Enregistrement impossible — réessayez', 'err'); return; }
+  profilInfoCache = Object.assign({}, profilInfoCache, o, { tdee: r.tdee, bmr: r.bmr });
+  profilAfficherInfos(profilInfoCache);
+  profilToggleEdit();
+  PROFIL_POIDS = poids; PROFIL_TDEE = r.tdee;
+  var m = calcMacros(poids, r.tdee, 0);
+  macObj.p = m.p; macObj.l = m.l; macObj.g = m.g; macObj.c = m.c;
+  majEtatObjectif();
+  updateMacroCards();
+  afficherMacros();
+  showToast('Informations mises à jour ✓');
+  appliquerBesoinDuJour();
 }
 
 function profilAfficherInfos(data) {
@@ -5658,7 +6121,13 @@ async function conseilsForceRefresh() {
 // Charger les infos profil dans l'overlay
 async function loadProfilOverlayData() {
   try {
-    var data = await sbFetch('onboarding?user_id=eq.' + USER_ID + '&select=poids,taille,activite,tdee,objectif_type,prenom,nom,age,sexe&limit=1');
+    /* ⚠️ `id` EST OBLIGATOIRE : la table a de vrais doublons de `user_id` et
+       aucune contrainte d'unicité dessus, donc l'écriture cible une LIGNE, pas
+       un utilisateur. Et `order=created_at.desc` sans `limit=1` : on prend la
+       première ligne exploitable, comme partout ailleurs (§7 de CLAUDE.md). */
+    var toutes = await sbFetch('onboarding?user_id=eq.' + USER_ID + '&select=id,poids,taille,activite,tdee,bmr,objectif_type,prenom,nom,age,sexe&order=created_at.desc');
+    var data = (toutes || []).filter(function (x) { return x && x.poids && x.tdee; });
+    if (!data.length) data = toutes || [];
     if (data && data.length) {
       profilInfoCache = data[0];
       profilAfficherInfos(data[0]);

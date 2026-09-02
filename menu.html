@@ -165,6 +165,14 @@ async function loadFormule(){
      longtemps que le guide du jour (9 s contre 6,5) : quand les deux sont dus,
      c'est le guide qui doit s'ouvrir, et le bilan renonce en le voyant. */
   if (window.NattyBilan) NattyBilan.proposerSiNecessaire();
+  /* La programmation de la semaine, le lundi (demande de Pablo, 2026-09-02).
+     11 s : APRÈS la planification des repas (5 s), le guide du jour (6,5 s) et
+     le bilan (9 s). Quatre écrans qui s'invitent ne se discutent pas — celui-ci
+     passe en dernier parce qu'une semaine se programme dans la journée, alors
+     qu'un repas se note maintenant. Il renonce en voyant l'un des trois. */
+  if (window.NattySeance && NattySeance.proposerProgrammeSiNecessaire) {
+    NattySeance.proposerProgrammeSiNecessaire();
+  }
 </script>
 <script src="/assets/notifs.js"></script>
 <script src="/assets/push.js"></script>
