@@ -2107,6 +2107,43 @@ tracée par-dessus, XP et trois chiffres qui montent.
 > doigt. Même famille que le « contenu réécrit seulement si son rôle change » de `journee.js`.
 > ⚠️ **Le trophée de la fête est en `position:absolute`** : laissé dans le flux, il pousserait
 > la coche de 100 px et la composition sauterait entre l'arrivée et la fin.
+> ⚠️ **L'écran des séries reste NU, et c'est un choix.** C'est celui où l'on tape le plus —
+> charge, pastilles, ± des reps — et 78 px de dessin pousseraient les pastilles sous le pli sur
+> un petit téléphone. L'icône de la machine y entre par le CÔTÉ (`data-ce="cote"`) : le
+> mouvement suffit à marquer le passage.
+
+#### Le glissement latéral, et les quatre modules qui ont adopté le filet (2026-09-03)
+Second passage, sur les trois pistes que Pablo a reprises telles quelles.
+
+**1. Le passage d'une scène à l'autre GLISSE au lieu de fondre.** `NattyCine.passage(sens)`
+nomme les quatre classes ; le fondu vertical d'origine reste comme repli quand `cine.js`
+manque. Adopté par `assets/seance.js` (avec un SENS : `‹` et les boutons de retour repartent
+vers la droite) et par `assets/bilan.js` (séquence sans retour, donc toujours vers l'avant).
+
+> ⚠️⚠️ **LE `:not(…)` SUR LA RÈGLE DE REPLI EST INDISPENSABLE, ET C'EST *LE* PIÈGE DE CE
+> DÉPÔT.** `animation` est une propriété UNIQUE : `#nsea .sc` (1,1,0) et `#nbil .bloc.sort`
+> (1,2,0) écrasent `.nc-e-av` (0,1,0) quoi qu'il arrive dans l'ordre des feuilles. Sans
+> `#nsea .sc:not(.nc-e-av):not(.nc-e-ar)`, le glissement ne se serait **jamais** joué — et
+> rien ne l'aurait signalé, exactement comme `.respire` écrasant `.trace` dans `planning.js`.
+> Vérifié en mesurant `animationName` : `ncEavIn` en avant, `ncEarIn` en arrière.
+> ⚠️ **`overflow-x:hidden` sur les colonnes défilantes.** Un bloc pleine largeur translaté de
+> 34 px élargit le document d'autant : la page part en défilement HORIZONTAL pendant un tiers
+> de seconde. Mesuré pendant la transition — `scrollWidth` reste à 375.
+> ⚠️ **Le sens est une variable de MODULE**, remise à « on avance » après chaque scène. Le
+> porter dans `E` le perdrait à la fermeture ; le passer en argument aux vingt `sc*()`
+> laisserait ceux qu'on oublie repartir dans le mauvais sens.
+
+**2. `planning.js`, `journee.js` et `recette.js` ont adopté LE FILET** — une ligne chacun, à
+l'endroit où le plan est ajouté au DOM. C'est la seule chose qu'ils empruntent : **leurs
+illustrations restent les leurs** (l'arc de `journee.js`, les 16 gestes de `recette.js`, les
+SVG de `planning.js` sont leur identité, les remplacer serait une régression). Ces trois
+modules avaient chacun payé le même défaut séparément — le trait jamais dessiné, le compteur
+d'XP bloqué à zéro, les animations gelées au banc ; ils sont maintenant couverts en entier.
+`social.html` charge donc `cine.js` lui aussi, puisqu'il porte `recette.js` et `planning.js`.
+
+**3. Les écrans nus ont reçu leur illustration** : la saisie libre (bulle de question), le
+détail d'un mouvement (poids ou séries selon qu'une charge est connue), l'état vide de la
+progression (courbe), et la question « Vous avez bougé ? » du bilan (haltère).
 
 ### `assets/bilan.js` — le récap du soir, et celui du samedi
 Plein écran qui raconte la journée qui vient de se passer : ce qui a été mangé, ce que la
@@ -6539,3 +6576,41 @@ Vérifié en navigateur (375 × 812 et 375 × 667) : les 10 scènes du bilan por
 illustration, la fête de fin de séance compte jusqu'à 40 XP et ses trois chiffres, aucun
 débordement horizontal, la réserve du bas suffit toujours, et sans `cine.js` les deux écrans
 redeviennent exactement ce qu'ils étaient.
+
+---
+
+*Septième passage de la même session (3 septembre 2026) — les trois pistes de la liste :*
+
+**1. Les scènes glissent au lieu de fondre.** Un fondu vertical dit « le contenu a changé » ;
+un glissement latéral dit « on avance dans une séquence » — et il rend le retour lisible,
+puisqu'il repart dans l'autre sens. La saisie des séances porte donc un SENS : le `‹` et les
+boutons de retour repartent vers la droite, tout le reste vers la gauche. Le bilan, qui ne
+revient jamais en arrière, avance toujours.
+
+⚠️ **Et le piège maison a failli l'emporter une fois de plus.** `animation` est une propriété
+unique : `#nsea .sc` et `#nbil .bloc.sort` écrasent les classes de `cine.js` quoi qu'il arrive
+dans l'ordre des feuilles, parce que leur spécificité est plus haute. Sans les `:not(…)` posés
+sur les règles de repli, le glissement ne se serait **jamais** joué — et rien ne l'aurait
+signalé, exactement comme `.respire` écrasant `.trace` dans `planning.js`. Vérifié en mesurant
+`animationName` : `ncEavIn` en avant, `ncEarIn` en arrière.
+
+⚠️ Deuxième conséquence à ne pas manquer : un bloc pleine largeur translaté de 34 px élargit le
+document d'autant. Sans `overflow-x:hidden` sur les colonnes défilantes, la page part en
+défilement horizontal pendant un tiers de seconde. Mesuré pendant la transition.
+
+**2. Les trois autres cinématiques ont adopté le filet** — une ligne chacune. C'est la seule
+chose qu'elles empruntent : leurs illustrations restent les leurs, parce que l'arc de
+`journee.js`, les seize gestes de `recette.js` et les SVG de `planning.js` sont leur identité,
+et les remplacer serait une régression, pas une harmonisation. Ces trois modules avaient chacun
+payé le même défaut séparément — le trait jamais dessiné, le compteur d'XP bloqué à zéro, les
+animations gelées au banc. Ils sont maintenant couverts en entier, et il n'y a plus qu'un seul
+endroit où corriger cette classe de bug.
+
+**3. Les écrans laissés nus ont reçu leur illustration** — sauf un, délibérément : l'écran des
+séries. C'est celui où l'on tape le plus, et 78 px de dessin pousseraient les pastilles sous le
+pli sur un petit téléphone. Son icône de machine entre par le côté : le mouvement suffit.
+
+🔄 **Les bancs Node de la session avaient été effacés du scratchpad.** J'en ai réécrit un de
+non-régression sur le MODÈLE — tonnage, kcal, durée, besoin, saisie libre — puisque c'est lui
+qu'une passe de présentation pourrait casser sans qu'on le voie. Il passe. Le reste a été
+vérifié en navigateur, où ces changements se voient.

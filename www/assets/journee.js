@@ -1095,6 +1095,12 @@ window.NattyJournee = (function () {
     d.innerHTML = o.html || '';
     zone.appendChild(d);
     blocEnCours = d;
+    /* ⚠️ LE FILET DE `assets/cine.js`. Une page qui ne PEINT PAS ne joue aucune
+       animation : tout ce qui part d'`opacity:0` y reste, et l'écran arrive
+       vide. Ce module a déjà payé ce défaut (le trait jamais dessiné, le
+       compteur bloqué) ; `animer()` force l'état final par `setTimeout`, et il
+       est FACULTATIF — sans le module, rien ne change. */
+    if (window.NattyCine) NattyCine.animer(d, 1200);
 
     cta.innerHTML = '';
     (o.boutons || []).forEach(function (b) {

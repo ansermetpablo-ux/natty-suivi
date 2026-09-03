@@ -746,12 +746,22 @@ window.NattyBilan = (function () {
       'padding:calc(56px + env(safe-area-inset-top,0px)) 22px ',
       'calc(150px + env(safe-area-inset-bottom,0px));overflow-y:auto;',
       '-webkit-overflow-scrolling:touch;text-align:center}',
+      /* ⚠️ `overflow-x:hidden` à cause du glissement latéral : un bloc pleine
+         largeur translaté élargit le document, et la page part en défilement
+         horizontal le temps de la transition. */
+      '#nbil .col{overflow-x:hidden}',
       '#nbil .zone{width:100%;max-width:430px;position:relative;flex:1 1 auto;',
       'display:flex;flex-direction:column;justify-content:flex-start}',
       '#nbil .bloc{width:100%}',
       // Le bloc sortant reste où il était : épinglé en haut, il se contente de
       // partir. Sans `top:0`, son contenu saute à l'instant de la sortie.
-      '#nbil .bloc.sort{position:absolute;left:0;right:0;top:0;pointer-events:none;',
+      /* ⚠️⚠️ LE `:not(…)` EST INDISPENSABLE. `animation` est une propriété
+         UNIQUE, et `#nbil .bloc.sort` (1,2,0) écrase `.nc-s-av` (0,1,0) quoi
+         qu'il arrive dans l'ordre des feuilles : sans lui, le glissement
+         latéral ne se serait jamais joué. Même piège que `.respire` écrasant
+         `.trace` dans `assets/planning.js`. */
+      '#nbil .bloc.sort{position:absolute;left:0;right:0;top:0;pointer-events:none}',
+      '#nbil .bloc.sort:not(.nc-s-av):not(.nc-s-ar){',
       'animation:nbSort .34s cubic-bezier(.4,0,1,1) forwards}',
       '@keyframes nbSort{to{opacity:0;transform:translateY(-12px)}}',
 
@@ -1054,14 +1064,20 @@ window.NattyBilan = (function () {
     var zone = racine.querySelector('#nbZone');
     if (minuteur) { clearTimeout(minuteur); minuteur = null; }
 
+    /* Le glissement latéral. Le bilan est une séquence qui ne revient jamais
+       en arrière : le sens est donc toujours « on avance », et il n'y a rien à
+       porter. Sans `assets/cine.js`, on retombe sur le fondu vertical. */
+    var pas = window.NattyCine ? NattyCine.passage(1) : null;
+
     var vieux = blocEnCours;
     if (vieux) {
       vieux.classList.add('sort');
-      setTimeout(function () { if (vieux.parentNode) vieux.parentNode.removeChild(vieux); }, 360);
+      if (pas) vieux.classList.add(pas.sortie);
+      setTimeout(function () { if (vieux.parentNode) vieux.parentNode.removeChild(vieux); }, 380);
     }
 
     var d = document.createElement('div');
-    d.className = 'bloc';
+    d.className = 'bloc' + (pas ? ' ' + pas.entree : '');
     d.innerHTML = o.html || '';
     zone.appendChild(d);
     blocEnCours = d;
@@ -1503,7 +1519,8 @@ window.NattyBilan = (function () {
     }
 
     bloc({
-      html: titre('Vous avez bougé aujourd’hui ?', 'p', 0.1)
+      html: ill('haltere', 80)
+        + titre('Vous avez bougé aujourd’hui ?', 'p', 0.1)
         + '<div class="sous" data-in style="animation-delay:.4s">Sans séance notée, le '
         + 'muscle et la graisse se déduisent de votre niveau d’activité déclaré à '
         + 'l’inscription — la même valeur un jour de repos et un jour de squat. '

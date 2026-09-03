@@ -850,6 +850,12 @@ window.NattyPlanning = (function () {
       cta.appendChild(el);
     });
 
+    /* ⚠️ LE FILET DE `assets/cine.js`. Une page qui ne PEINT PAS ne joue aucune
+       animation : tout ce qui part d'`opacity:0` y reste, et l'écran arrive
+       vide. Ce module a déjà payé ce défaut (le trait jamais dessiné, le
+       compteur bloqué) ; `animer()` force l'état final par `setTimeout`, et il
+       est FACULTATIF — sans le module, rien ne change. */
+    if (window.NattyCine) NattyCine.animer(d, 1200);
     if (o.pret) o.pret(d);
     if (o.auto) minuteur = setTimeout(function () { minuteur = null; if (o.apres) o.apres(); }, o.auto);
     return d;

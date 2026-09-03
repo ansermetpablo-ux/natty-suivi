@@ -1415,14 +1415,25 @@ window.NattySeance = (function () {
       /* Colonne défilante. `flex-start`, jamais `center` : le contenu n'a pas
          la même hauteur d'une scène à l'autre, et en `center` tout remonte et
          redescend entre deux plans (le faux raccord de `journee.js`). */
-      '#nsea .col{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;',
+      /* ⚠️ `overflow-x:hidden` À CAUSE DU GLISSEMENT LATÉRAL : un bloc pleine
+         largeur translaté de 34 px élargit le document d'autant, et la page
+         part en défilement horizontal le temps de la transition. Mesuré. */
+      '#nsea .col{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;',
+      '-webkit-overflow-scrolling:touch;',
       'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;',
       'padding:calc(74px + env(safe-area-inset-top,0px)) 18px ',
       'calc(128px + env(safe-area-inset-bottom,0px))}',
       '#nsea .zone{width:100%;max-width:430px;position:relative}',
-      '#nsea .sc{width:100%;animation:nsIn .34s cubic-bezier(.22,1,.36,1) both}',
-      '#nsea .sc.sort{position:absolute;left:0;right:0;top:0;pointer-events:none;',
-      'animation:nsOut .28s cubic-bezier(.4,0,1,1) forwards}',
+      /* ⚠️⚠️ LE REPLI EST EXCLU DÈS QU'UNE CLASSE DE PASSAGE EST LÀ, et c'est
+         LE piège de ce dépôt : `animation` est une propriété UNIQUE, et
+         `#nsea .sc` (1,1,0) écrase `.nc-e-av` (0,1,0) quoi qu'il arrive dans
+         l'ordre des feuilles. Sans ces `:not(…)`, le glissement latéral ne se
+         serait JAMAIS joué — exactement comme `.respire` avait écrasé `.trace`
+         dans `assets/planning.js` et laissé les traits invisibles. */
+      '#nsea .sc{width:100%}',
+      '#nsea .sc:not(.nc-e-av):not(.nc-e-ar){animation:nsIn .34s cubic-bezier(.22,1,.36,1) both}',
+      '#nsea .sc.sort{position:absolute;left:0;right:0;top:0;pointer-events:none}',
+      '#nsea .sc.sort:not(.nc-s-av):not(.nc-s-ar){animation:nsOut .28s cubic-bezier(.4,0,1,1) forwards}',
       '@keyframes nsIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}',
       '@keyframes nsOut{to{opacity:0;transform:translateY(-10px)}}',
 
@@ -1712,6 +1723,7 @@ window.NattySeance = (function () {
     barreT = racine.querySelector('#nsTitre');
     racine.querySelector('#nsX').addEventListener('click', fermer);
     racine.querySelector('#nsBack').addEventListener('click', function () {
+      sensProchain = -1;
       if (E && E.retour) E.retour(); else fermer();
     });
     scrollGele = document.body.style.overflow;
@@ -1748,6 +1760,16 @@ window.NattySeance = (function () {
      étaient. C'est la même règle que partout ici (un module absent ne casse
      rien, il retire une couche), et c'est ce qui permet de le charger
      progressivement sur les 6 écrans porteurs sans coordination. */
+  /* ⚠️ LE SENS EST UNE VARIABLE DE MODULE, remise à « on avance » APRÈS chaque
+     scène. Le porter dans `E` le perdrait à la fermeture, et le passer en
+     argument à chaque `sc*()` demanderait de toucher les vingt appels — dont
+     ceux qu'on oublierait, qui repartiraient alors dans le mauvais sens. */
+  var sensProchain = 1;
+  /** Enveloppe un geste de RETOUR : la scène suivante glissera vers la droite. */
+  function reculer(fn) {
+    return function () { sensProchain = -1; if (fn) fn(); };
+  }
+
   function ill(nom, taille, halo) {
     return (window.NattyCine)
       ? NattyCine.illu(nom, { taille: taille || 78, halo: halo !== false }) : '';
@@ -1760,13 +1782,21 @@ window.NattySeance = (function () {
 
   function scene(o) {
     if (!racine) return null;
+    /* Le glissement latéral : on avance vers la gauche, on revient vers la
+       droite. `passage()` nomme les classes pour que l'appelant ne les invente
+       pas — et sans `assets/cine.js`, on retombe sur le fondu vertical
+       d'origine, qui est toujours là dans la feuille du module. */
+    var pas = window.NattyCine ? NattyCine.passage(sensProchain) : null;
+    sensProchain = 1;
+
     var vieux = scEnCours;
     if (vieux) {
       vieux.classList.add('sort');
-      setTimeout(function () { if (vieux.parentNode) vieux.parentNode.removeChild(vieux); }, 300);
+      if (pas) vieux.classList.add(pas.sortie);
+      setTimeout(function () { if (vieux.parentNode) vieux.parentNode.removeChild(vieux); }, 340);
     }
     var d = document.createElement('div');
-    d.className = 'sc';
+    d.className = 'sc' + (pas ? ' ' + pas.entree : '');
     d.innerHTML = o.html || '';
     zone.appendChild(d);
     scEnCours = d;
@@ -2169,12 +2199,13 @@ window.NattySeance = (function () {
 
     if (!mvts.length) {
       scene({
-        html: '<div class="kick">Douze dernières semaines</div>'
-          + '<h1>Rien à tracer<br>pour l’instant</h1>'
+        html: hero('courbe', 80)
+          + '<div class="kick" data-c="2">Douze dernières semaines</div>'
+          + '<h1 data-c="2">Rien à tracer<br>pour l’instant</h1>'
           + '<div class="sous">Une courbe se dessine à partir de deux séances sur le même '
           + 'mouvement. Notez-en une, puis la suivante, et elle apparaîtra ici.</div>',
         boutons: [{ txt: 'Noter une séance', on: function () { demarrer(aujourdhui()); } },
-                  { txt: 'Retour au calendrier', cls: 'b3', on: scCalendrier }]
+                  { txt: 'Retour au calendrier', cls: 'b3', on: reculer(scCalendrier) }]
       });
       return;
     }
@@ -2214,7 +2245,7 @@ window.NattySeance = (function () {
           b.addEventListener('click', function () { tic(); scMouvement(b.getAttribute('data-mvt')); });
         });
       },
-      boutons: [{ txt: 'Retour au calendrier', cls: 'b3', on: scCalendrier }]
+      boutons: [{ txt: 'Retour au calendrier', cls: 'b3', on: reculer(scCalendrier) }]
     });
   }
 
@@ -2229,9 +2260,10 @@ window.NattySeance = (function () {
     var col = m.pc == null ? '#7d7d89' : (m.pc >= 0 ? '#5ad07a' : '#f0b429');
 
     scene({
-      html: '<div class="kick">' + m.seances + ' séance' + (m.seances > 1 ? 's' : '')
+      html: hero(m.avecCharge ? 'poids' : 'series', 74)
+        + '<div class="kick" data-c="2">' + m.seances + ' séance' + (m.seances > 1 ? 's' : '')
         + ' en douze semaines</div>'
-        + '<h1>' + esc(m.nom) + '</h1>'
+        + '<h1 data-c="2">' + esc(m.nom) + '</h1>'
         + '<div class="pgc">' + courbe(h, v, { w: 300, h: 132, pad: 8, gros: true, couleur: col })
         + '<div class="ax"><span>' + esc(dateCourte(h[0].jour)) + '</span>'
         + '<span>' + esc(dateCourte(h[h.length - 1].jour)) + '</span></div>'
@@ -2266,8 +2298,8 @@ window.NattySeance = (function () {
               + 'sans aucun modèle — ' + (m.avecCharge
                   ? 'charge × répétitions des deux jours.'
                   : 'le nombre de répétitions des deux jours.') + '</div>'),
-      boutons: [{ txt: 'Voir un autre mouvement', on: scProgression },
-                { txt: 'Retour au calendrier', cls: 'b3', on: scCalendrier }]
+      boutons: [{ txt: 'Voir un autre mouvement', on: reculer(scProgression) },
+                { txt: 'Retour au calendrier', cls: 'b3', on: reculer(scCalendrier) }]
     });
   }
 
@@ -2491,7 +2523,7 @@ window.NattySeance = (function () {
       },
       boutons: [
         { txt: 'Régler mes séries', off: !E.exos.length, on: function () { E.cur = 0; scSeries(); } },
-        { txt: 'Changer de groupe', cls: 'b3', on: scGroupe }
+        { txt: 'Changer de groupe', cls: 'b3', on: reculer(scGroupe) }
       ]
     });
     majCtaMachines();
@@ -2550,12 +2582,18 @@ window.NattySeance = (function () {
       html: '<div class="prog">' + E.exos.map(function (_, i) {
               return '<i class="' + (i <= E.cur ? 'on' : '') + '"></i>';
             }).join('') + '</div>'
-        + '<div class="exo-h"><div class="b">' + ic(e.ic) + '</div>'
+        /* ⚠️ PAS D'ILLUSTRATION HÉROÏQUE ICI, ET C'EST DÉLIBÉRÉ. C'est l'écran
+           où l'on tape le plus — la charge, les pastilles de séries, les ± des
+           reps — et 78 px de dessin pousseraient les pastilles sous le pli sur
+           un petit téléphone. L'icône de la machine dit déjà de quoi il s'agit,
+           et elle entre par le CÔTÉ plutôt que par le bas : le mouvement
+           suffit à marquer le passage. */
+        + '<div class="exo-h" data-c="1" data-ce="cote"><div class="b">' + ic(e.ic) + '</div>'
         + '<div><h1 style="font-size:23px">' + esc(e.nom) + '</h1></div></div>'
-        + chargeBlocHTML(e)
-        + '<div class="lbl">Combien de séries ?</div>'
-        + '<div class="pills" id="nsPills">' + pillsHTML(e.series.length) + '</div>'
-        + '<div id="nsReps"></div>',
+        + '<div data-c="2">' + chargeBlocHTML(e) + '</div>'
+        + '<div class="lbl" data-c="3">Combien de séries ?</div>'
+        + '<div class="pills" data-c="3" id="nsPills">' + pillsHTML(e.series.length) + '</div>'
+        + '<div id="nsReps" data-c="4"></div>',
       pret: function (d) {
         brancherCharge(d, e, u);
         brancherPills(d, e);
@@ -2799,8 +2837,9 @@ window.NattySeance = (function () {
   function scLibre() {
     enTete('À LA MAIN', scGroupe);
     scene({
-      html: '<div class="kick">' + esc(dateFr(E.jour)) + '</div>'
-        + '<h1>Racontez votre séance</h1>'
+      html: hero('question', 76)
+        + '<div class="kick" data-c="2">' + esc(dateFr(E.jour)) + '</div>'
+        + '<h1 data-c="2">Racontez votre séance</h1>'
         + '<div class="sous">Une ligne par exercice. « Développé couché 4x10 à 80 kg », '
         + '« tirage vertical 3 séries de 12 » — on reconnaît les machines, les '
         + 'séries et la charge au fur et à mesure. La charge est facultative, '
@@ -2841,7 +2880,7 @@ window.NattySeance = (function () {
       boutons: [
         { txt: 'Continuer', off: !(E.libre || '').trim(),
           on: function () { if (E.exos.length) { E.cur = 0; scSeries(); } else scRecap(); } },
-        { txt: 'Utiliser les machines à la place', cls: 'b3', on: function () { E.libre = ''; scGroupe(); } }
+        { txt: 'Utiliser les machines à la place', cls: 'b3', on: reculer(function () { E.libre = ''; scGroupe(); }) }
       ]
     });
   }
@@ -2940,7 +2979,7 @@ window.NattySeance = (function () {
             await enregistrer(courante());
             scFait();
           } },
-        { txt: 'Ajouter une autre machine', cls: 'b3', on: scGroupe }
+        { txt: 'Ajouter une autre machine', cls: 'b3', on: reculer(scGroupe) }
       ]
     });
   }

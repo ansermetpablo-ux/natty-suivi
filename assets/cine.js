@@ -68,6 +68,31 @@ var NattyCine = (function () {
     + '@keyframes ncVolet{from{opacity:0;clip-path:inset(0 100% 0 0)}'
       + 'to{opacity:1;clip-path:inset(0 0 0 0)}}'
 
+    /* ── Le passage d'une scène à l'autre ────────────────────
+       Un GLISSEMENT LATÉRAL plutôt qu'un fondu vertical : le fondu dit « le
+       contenu a changé », le glissement dit « on avance dans une séquence » —
+       et il rend le retour lisible, puisqu'il repart dans l'autre sens.
+
+       ⚠️ LE SENS EST PORTÉ PAR L'APPELANT, jamais deviné. Une séquence qui
+       glisse toujours vers la gauche transforme un retour en avancée : on
+       reculerait d'un écran en ayant l'impression d'en gagner un.
+       ⚠️ Le plan SORTANT doit être en `position:absolute` chez l'hôte pendant
+       qu'ils se croisent (les deux modules le font déjà) : dans le flux, la
+       hauteur du bloc sauterait le temps de la transition.
+       ⚠️⚠️ ET L'HÔTE DOIT COUPER LE DÉBORDEMENT HORIZONTAL. Un bloc pleine
+       largeur translaté de 34 px élargit le document d'autant : la page part en
+       défilement horizontal pendant un tiers de seconde, ce qui se voit et se
+       mesure (`documentElement.scrollWidth`). C'est le défaut de `.hero-foot`,
+       sous une autre forme. */
+    + '.nc-e-av{animation:ncEavIn .44s cubic-bezier(.22,1,.36,1) both}'
+    + '.nc-s-av{animation:ncEavOut .32s cubic-bezier(.4,0,1,1) forwards}'
+    + '.nc-e-ar{animation:ncEarIn .44s cubic-bezier(.22,1,.36,1) both}'
+    + '.nc-s-ar{animation:ncEarOut .32s cubic-bezier(.4,0,1,1) forwards}'
+    + '@keyframes ncEavIn{from{opacity:0;transform:translateX(34px)}to{opacity:1;transform:none}}'
+    + '@keyframes ncEavOut{to{opacity:0;transform:translateX(-26px)}}'
+    + '@keyframes ncEarIn{from{opacity:0;transform:translateX(-34px)}to{opacity:1;transform:none}}'
+    + '@keyframes ncEarOut{to{opacity:0;transform:translateX(26px)}}'
+
     /* ── L'illustration ───────────────────────────────────────
        Tout en trait, sur `currentColor` : un seul dessin sert les deux thèmes
        et les deux modules, sans pendant à maintenir (règle 33). */
@@ -113,9 +138,14 @@ var NattyCine = (function () {
        Posé par `setTimeout`, il force l'état final de tout ce qui porte une
        animation à sens unique. Les boucles (`.b`, `.m`, `.r`, le halo) en sont
        exclues : les figer les arrêterait sur une image quelconque. */
-    + '.nc-pret [data-c],.nc-pret .nc-illu .t,.nc-pret .nc-vok circle,.nc-pret .nc-vok path{'
+    + '.nc-pret,.nc-pret [data-c],.nc-pret [data-in],.nc-pret .nc-illu .t,'
+      + '.nc-pret .nc-vok circle,.nc-pret .nc-vok path{'
       + 'opacity:1!important;transform:none!important;stroke-dashoffset:0!important;'
-      + 'clip-path:none!important}';
+      + 'clip-path:none!important}'
+    /* ⚠️ Le conteneur lui-même est couvert : c'est LUI qui porte l'entrée
+       latérale, et une scène restée à `translateX(34px)` serait décalée pour de
+       bon. `[data-in]` l'est aussi — c'est le nom qu'emploie `assets/bilan.js`
+       depuis toujours, et il n'y a aucune raison de le laisser dehors. */;
 
   function css() {
     if (pose) return;
@@ -308,8 +338,19 @@ var NattyCine = (function () {
     return o.halo ? '<div class="nc-halo">' + svg + '</div>' : svg;
   }
 
+  /**
+   * Les classes d'entrée et de sortie d'une transition.
+   * @param {number} sens  +1 on avance, -1 on revient en arrière
+   * @returns {{entree:string, sortie:string}}
+   */
+  function passage(sens) {
+    css();
+    return (sens < 0) ? { entree: 'nc-e-ar', sortie: 'nc-s-ar' }
+                      : { entree: 'nc-e-av', sortie: 'nc-s-av' };
+  }
+
   return {
     css: css, animer: animer, compteur: compteur, vok: vok, illu: illu,
-    ILLUS: Object.keys(D)
+    passage: passage, ILLUS: Object.keys(D)
   };
 })();

@@ -395,6 +395,11 @@ body{overflow-x:hidden}
      tout seul. AVANT `decouverte.js`, qui teste sa présence pour décider
      d'afficher le bouton — sans lui, il n'apparaît pas, plutôt que de
      promettre un geste sans effet. -->
+<!-- La couche cinématique partagée : illustrations SVG, entrées échelonnées,
+     transitions latérales et LE FILET qui force l'état final quand la page ne
+     peint pas. Chargée AVANT les modules qui s'en servent — ils savent tous
+     s'en passer si elle manque. -->
+<script src="/assets/cine.js"></script>
 <script src="/assets/recette.js"></script>
 <script src="/assets/decouverte.js"></script>
 <!-- Uniquement pour `NattyListe.basculerExtra` : les ingrédients d'un plat du

@@ -1367,6 +1367,13 @@ window.NattyRecette = (function () {
       setTimeout(function () { if (p.parentNode) p.parentNode.removeChild(p); }, 360);
     });
     st.appendChild(plan);
+    /* ⚠️ LE FILET DE `assets/cine.js`. Une page qui ne PEINT PAS ne joue aucune
+       animation : un plan qui part d'`opacity:0` y reste, et la cinématique
+       arrive vide au déverrouillage. Ce module connaît déjà le défaut — son
+       compteur d'XP avait dû recevoir son propre `setTimeout` (§3) ; il est
+       maintenant couvert dans son entier. FACULTATIF : sans le module, rien ne
+       change. */
+    if (window.NattyCine) NattyCine.animer(plan, 1000);
   }
 
   function majBarre() {
