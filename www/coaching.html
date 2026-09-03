@@ -142,6 +142,11 @@
 <!-- Le journal des séances : le panneau ci-dessus, et le plein écran
      (calendrier + saisie) qu'il ouvre. C'est aussi lui que le bilan du soir
      interroge pour rendre le muscle et la graisse exacts. -->
+<!-- La couche cinématique partagée : illustrations SVG, entrées échelonnées,
+     compteurs et LE FILET qui force l'état final quand la page ne peint pas.
+     Chargée AVANT `seance.js` et `bilan.js`, qui s'en servent tous les deux —
+     et qui savent s'en passer si elle manque. -->
+<script src="/assets/cine.js"></script>
 <script src="/assets/seance.js"></script>
 <!-- ⚠️ Le garde-manger doit être chargé PARTOUT où une génération peut être
      lancée. `assets/generation.js` demande « on part de ton garde-manger ? »

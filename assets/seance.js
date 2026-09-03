@@ -1426,6 +1426,22 @@ window.NattySeance = (function () {
       '@keyframes nsIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}',
       '@keyframes nsOut{to{opacity:0;transform:translateY(-10px)}}',
 
+      /* L'illustration héroïque d'une scène. ⚠️ `color` posé ICI et pas dans
+         `cine.js` : le trait est en `currentColor`, c'est donc l'hôte qui
+         décide, et ce module est noir dans les deux thèmes. */
+      '#nsea .ns-hero{color:#f4f4f7;margin:2px 0 16px;display:flex;justify-content:center}',
+      /* La fête : le trophée en fond, la coche par-dessus. ⚠️ Le trophée est en
+         `position:absolute` — laissé dans le flux, il pousserait la coche de
+         100 px et la composition sauterait entre l'arrivée et la fin. */
+      '#nsea .ns-fete{position:relative;height:128px;display:flex;align-items:center;',
+      'justify-content:center;margin:6px 0 14px}',
+      '#nsea .ns-fete .ns-tro{position:absolute;inset:0;display:flex;align-items:center;',
+      'justify-content:center;color:#f0b429;opacity:.22;',
+      'animation:nsFeteTro 1.1s cubic-bezier(.22,1,.36,1) forwards}',
+      '@keyframes nsFeteTro{from{opacity:0;transform:scale(.7)}to{opacity:.22;transform:scale(1.35)}}',
+      '#nsea .ns-fete .ns-vok{position:relative;z-index:1}',
+      '#nsea .ns-hero .nc-halo{color:#8b8b96}',
+      '#nsea .ns-hero .nc-illu{color:#f4f4f7}',
       '#nsea h1{font-size:29px;font-weight:900;letter-spacing:-1.1px;line-height:1.1}',
       '#nsea .sous{font-size:13.5px;color:#9a9aa6;line-height:1.5;margin-top:9px}',
       '#nsea .kick{font-size:11.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;',
@@ -1726,6 +1742,22 @@ window.NattySeance = (function () {
     if (b) b.style.visibility = retour ? 'visible' : 'hidden';
   }
 
+  /* ── La couche cinématique ────────────────────────────────
+     `assets/cine.js` est FACULTATIF : sans lui, `ill()` rend une chaîne vide et
+     `animer()` ne fait rien — les écrans redeviennent exactement ce qu'ils
+     étaient. C'est la même règle que partout ici (un module absent ne casse
+     rien, il retire une couche), et c'est ce qui permet de le charger
+     progressivement sur les 6 écrans porteurs sans coordination. */
+  function ill(nom, taille, halo) {
+    return (window.NattyCine)
+      ? NattyCine.illu(nom, { taille: taille || 78, halo: halo !== false }) : '';
+  }
+  /** L'illustration héroïque d'une scène : centrée, avec sa lueur, en retrait. */
+  function hero(nom, taille) {
+    if (!window.NattyCine) return '';
+    return '<div class="ns-hero" data-c="1" data-ce="ample">' + ill(nom, taille) + '</div>';
+  }
+
   function scene(o) {
     if (!racine) return null;
     var vieux = scEnCours;
@@ -1751,6 +1783,11 @@ window.NattySeance = (function () {
       ctaEl.appendChild(el);
     });
     if (o.pret) o.pret(d);
+    /* ⚠️ ARMER LE FILET À CHAQUE SCÈNE, et pas une fois au montage : chaque
+       plan repeint des éléments qui repartent d'`opacity:0`. Sans ce rappel,
+       un écran ouvert pendant que le téléphone est verrouillé resterait vide au
+       déverrouillage — c'est la classe de défaut déjà payée deux fois ici. */
+    if (window.NattyCine) NattyCine.animer(d);
 
     /* ⚠️ LA RÉSERVE DU BAS SE MESURE, ET NE REDESCEND JAMAIS. Figée à 128 px
        dans le CSS, elle suffisait à un bouton et pas à deux : mesuré, la barre
@@ -1821,19 +1858,20 @@ window.NattySeance = (function () {
 
     var sem = semaineCourante();
     scene({
-      html: '<div class="kick">Votre journal d’entraînement</div>'
-        + '<h1>Vos séances</h1>'
-        + '<div class="sous">Touchez un jour pour noter ce que vous avez fait. '
+      html: hero('calendrier', 84)
+        + '<div class="kick" data-c="2">Votre journal d’entraînement</div>'
+        + '<h1 data-c="2">Vos séances</h1>'
+        + '<div class="sous" data-c="3">Touchez un jour pour noter ce que vous avez fait. '
         + 'C’est ce qui rend le muscle et la graisse du bilan du soir exacts, '
         + 'plutôt que déduits d’un niveau d’activité déclaré une fois.</div>'
         + '<div class="mois"><button type="button" data-mois="-1" aria-label="Mois précédent">‹</button>'
         + '<div class="m">' + MOIS[mo] + ' ' + an + '</div>'
         + '<button type="button" data-mois="1" aria-label="Mois suivant"'
         + (moisSuivantPossible ? '' : ' disabled style="opacity:.3"') + '>›</button></div>'
-        + '<div class="sem7">'
+        + '<div class="sem7" data-c="4">'
         + JOURS_L.map(function (x) { return '<div class="hd">' + x + '</div>'; }).join('')
         + cases + '</div>'
-        + '<div class="rec">'
+        + '<div class="rec" data-c="5">'
         + '<div class="r"><div class="v">' + sem.nb + '</div><div class="l">séances<br>cette semaine</div></div>'
         + '<div class="r"><div class="v">' + sem.series + '</div><div class="l">séries<br>au total</div></div>'
         + '<div class="r"><div class="v">' + sem.reps + '</div><div class="l">répétitions<br>enchaînées</div></div>'
@@ -1954,8 +1992,15 @@ window.NattySeance = (function () {
 
     var nb = Object.keys(PE.jours).filter(function (j) { return (PE.jours[j] || []).length; }).length;
     scene({
-      html: '<div class="kick">Semaine du ' + esc(dateCourte(lundi)) + '</div>'
-        + '<h1>Programmez<br>votre semaine</h1>'
+      /* ⚠️ L'ENTRÉE NE SE REJOUE PAS À CHAQUE TAP. `peindreProgramme` rappelle
+         `scene()` chaque fois qu'on ouvre un jour ou coche un groupe : sans ce
+         drapeau, le titre et l'illustration repartiraient de zéro à chaque
+         geste — l'écran clignoterait sous le doigt. Même famille que le
+         « contenu réécrit seulement si son rôle change » de `journee.js`. */
+      html: (PE.peint ? '' : hero('semaine', 80))
+        + '<div class="kick"' + (PE.peint ? '' : ' data-c="2"') + '>Semaine du '
+        + esc(dateCourte(lundi)) + '</div>'
+        + '<h1' + (PE.peint ? '' : ' data-c="2"') + '>Programmez<br>votre semaine</h1>'
         + '<div class="sous">Les groupes, pas les machines — on verra le détail le jour venu. '
         + 'C’est ce qui permet à votre objectif calorique de monter <b>le matin même</b>, '
         + 'et pas seulement une fois la séance notée.</div>'
@@ -1969,6 +2014,7 @@ window.NattySeance = (function () {
         + (estSynchronise() ? ''
             : '<div class="note">Ce programme est gardé sur cet appareil uniquement.</div>'),
       pret: function (d) {
+        PE.peint = true;
         d.querySelectorAll('[data-pj]').forEach(function (b) {
           b.addEventListener('click', function () {
             var j = b.getAttribute('data-pj');
@@ -2135,11 +2181,12 @@ window.NattySeance = (function () {
 
     var avecCharge = mvts.filter(function (m) { return m.avecCharge; }).length;
     scene({
-      html: '<div class="kick">Douze dernières semaines</div>'
-        + '<h1>Ce qui monte</h1>'
-        + '<div class="sous">Un point par séance, placé à sa date : trois semaines sans venir '
+      html: hero('courbe', 80)
+        + '<div class="kick" data-c="2">Douze dernières semaines</div>'
+        + '<h1 data-c="2">Ce qui monte</h1>'
+        + '<div class="sous" data-c="3">Un point par séance, placé à sa date : trois semaines sans venir '
         + 'se voient. Touchez un mouvement pour le détail.</div>'
-        + '<div class="pgl">' + mvts.map(function (m) {
+        + '<div class="pgl" data-c="4">' + mvts.map(function (m) {
             return '<button type="button" class="pgr" data-mvt="' + esc(m.cle) + '">'
               + '<div class="b">' + ic(m.ic) + '</div>'
               + '<div class="tx"><div class="n">' + esc(m.nom) + '</div>'
@@ -2250,11 +2297,12 @@ window.NattySeance = (function () {
     var poids = E.poids || 0;
     var kc = kcal(s, poids);
     scene({
-      html: '<div class="kick">' + esc(dateFr(j)) + '</div>'
-        + '<h1>' + esc(groupes(s).map(function (c) {
+      html: hero('haltere', 80)
+        + '<div class="kick" data-c="2">' + esc(dateFr(j)) + '</div>'
+        + '<h1 data-c="2">' + esc(groupes(s).map(function (c) {
             var g = groupeParCle(c); return g ? g.nom : c;
           }).join(' + ') || 'Séance') + '</h1>'
-        + '<div class="rec">'
+        + '<div class="rec" data-c="3">'
         + '<div class="r"><div class="v">' + series(s) + '</div><div class="l">séries</div></div>'
         + '<div class="r"><div class="v">' + reps(s) + '</div><div class="l">répétitions</div></div>'
         + '<div class="r"><div class="v">' + duree(s) + '</div><div class="l">minutes<br>estimées</div></div>'
@@ -2347,11 +2395,12 @@ window.NattySeance = (function () {
     var sel = E.groupes || [];
     var detail = sel.length > 1;
     scene({
-      html: '<div class="kick">' + esc(dateFr(E.jour)) + '</div>'
-        + '<h1>Qu’avez-vous travaillé ?</h1>'
-        + '<div class="sous">Un groupe, et on vous propose ses machines. '
+      html: hero('muscle', 82)
+        + '<div class="kick" data-c="2">' + esc(dateFr(E.jour)) + '</div>'
+        + '<h1 data-c="2">Qu’avez-vous travaillé ?</h1>'
+        + '<div class="sous" data-c="3">Un groupe, et on vous propose ses machines. '
         + '« Détailler » sert aux séances qui en mélangent plusieurs.</div>'
-        + '<div class="tuiles">'
+        + '<div class="tuiles" data-c="4">'
         + GROUPES.map(function (g) {
             var n = nbExosDe(g.cle);
             return '<button type="button" class="tu' + (sel.indexOf(g.cle) > -1 ? ' on' : '')
@@ -2413,7 +2462,8 @@ window.NattySeance = (function () {
     enTete('LES MACHINES', scGroupe);
     var liste = EXOS.filter(function (e) { return E.groupes.indexOf(e.g) > -1; });
     scene({
-      html: '<div class="kick">' + esc(E.groupes.map(function (c) {
+      html: hero('machine', 80)
+        + '<div class="kick" data-c="2">' + esc(E.groupes.map(function (c) {
               var g = groupeParCle(c); return g ? g.nom : c;
             }).join(' · ')) + '</div>'
         + '<h1>Sur quoi ?</h1>'
@@ -2813,12 +2863,13 @@ window.NattySeance = (function () {
     var d = detail(s, poids);
 
     scene({
-      html: '<div class="kick">' + esc(dateFr(E.jour)) + '</div>'
-        + '<h1>' + series(s) + ' séries, ' + reps(s) + ' reps</h1>'
-        + '<div class="sous">' + esc(groupes(s).map(function (c) {
+      html: hero(d.tonnage ? 'poids' : 'chrono', 80)
+        + '<div class="kick" data-c="2">' + esc(dateFr(E.jour)) + '</div>'
+        + '<h1 data-c="2">' + series(s) + ' séries, ' + reps(s) + ' reps</h1>'
+        + '<div class="sous" data-c="3">' + esc(groupes(s).map(function (c) {
             var g = groupeParCle(c); return g ? g.nom : c;
           }).join(' · ') || 'Séance libre') + '</div>'
-        + '<div class="rec">'
+        + '<div class="rec" data-c="4">'
         + '<div class="r"><div class="v">' + duree(s) + '</div><div class="l">minutes<br>estimées</div></div>'
         + '<div class="r"><div class="v">' + (kc || '—') + '</div><div class="l">kcal<br>dépensées</div></div>'
         + '<div class="r"><div class="v">'
@@ -2898,20 +2949,52 @@ window.NattySeance = (function () {
     enTete('', null);
     var s = duJour(E.jour) || courante();
     var nb = Object.keys(toutes()).length;
+    var poids = E.poids || 0;
+    var kc = kcal(s, poids), tg = tonnage(s, poids);
+    /* ⚠️ TROIS TEMPS, ET DANS CET ORDRE : la coche valide, le trophée célèbre,
+       les chiffres récompensent. Tout afficher d'un coup, c'est un écran de
+       plus ; échelonné, c'est une fin de séance. Le trophée est en retrait
+       DERRIÈRE la coche (la coche est la validation, le trophée l'ornement). */
     scene({
-      html: '<div class="vok"><svg viewBox="0 0 120 120">'
-        + '<circle class="rond" cx="60" cy="60" r="42"/>'
-        + '<path class="co" d="M41 61l13 14 26-30"/></svg></div>'
-        + '<h1 style="text-align:center">Séance notée</h1>'
-        + '<div class="xp" style="text-align:center">+' + XP_SEANCE + ' XP</div>'
-        + '<div class="sous" style="text-align:center">' + esc(resume(s, E.poids || 0)) + '</div>'
-        + '<div class="sous" style="text-align:center">Le bilan du soir en tiendra compte : '
+      html: '<div class="ns-fete" data-c="1">'
+        + '<div class="ns-tro">' + ill('trophee', 108) + '</div>'
+        + '<div class="ns-vok">' + (window.NattyCine ? NattyCine.vok(96)
+            : '<svg viewBox="0 0 120 120" class="vok"><circle class="rond" cx="60" cy="60" r="42"/>'
+              + '<path class="co" d="M41 61l13 14 26-30"/></svg>') + '</div></div>'
+        + '<h1 style="text-align:center" data-c="2">Séance notée</h1>'
+        + '<div class="xp" style="text-align:center" data-c="3">+<span id="nsXp">0</span> XP</div>'
+        + '<div class="sous" style="text-align:center" data-c="3">'
+        + esc(resume(s, poids)) + '</div>'
+        /* Les trois chiffres de la séance, dévoilés en volet : c'est ce qu'on
+           vient de gagner, et ça mérite mieux qu'une ligne de texte. */
+        + '<div class="rec" data-c="4" data-ce="volet">'
+        + '<div class="r"><div class="v" id="nsFdur">0</div><div class="l">minutes</div></div>'
+        + (kc ? '<div class="r"><div class="v" id="nsFkc">0</div><div class="l">kcal</div></div>' : '')
+        + (tg ? '<div class="r"><div class="v" id="nsFtg">0</div><div class="l">tonnes</div></div>'
+              : '<div class="r"><div class="v" id="nsFse">0</div><div class="l">séries</div></div>')
+        + '</div>'
+        + '<div class="sous" style="text-align:center" data-c="5">Le bilan du soir en tiendra compte : '
         + 'ce que vous avez brûlé entre dans le déficit, ce que vous avez soulevé entre '
         + 'dans le muscle construit.</div>'
-        + '<div class="note" style="text-align:center">' + nb + ' séance'
+        + '<div class="note" style="text-align:center" data-c="6">' + nb + ' séance'
         + (nb > 1 ? 's' : '') + ' notée' + (nb > 1 ? 's' : '') + ' en tout'
         + (estSynchronise() ? '' : ' · gardées sur cet appareil uniquement') + '</div>',
-      pret: function () { tic(26); },
+      pret: function (d) {
+        tic(26);
+        /* ⚠️ TOUS LES CHIFFRES PASSENT PAR `compteur()`, qui porte son filet.
+           Un compteur en `requestAnimationFrame` seule reste à 0 sur une page
+           qui ne peint pas — c'est-à-dire qu'il annonce le contraire de ce
+           qu'il célèbre (le « +0 XP » des recettes, le « 0 g » du bilan). */
+        var C = window.NattyCine;
+        if (!C) { var x = d.querySelector('#nsXp'); if (x) x.textContent = XP_SEANCE; }
+        else {
+          C.compteur(d.querySelector('#nsXp'), XP_SEANCE, { duree: 900 });
+          C.compteur(d.querySelector('#nsFdur'), duree(s), { duree: 750 });
+          if (kc) C.compteur(d.querySelector('#nsFkc'), kc, { duree: 950 });
+          if (tg) C.compteur(d.querySelector('#nsFtg'), tg / 1000, { duree: 950, decimales: 1 });
+          else C.compteur(d.querySelector('#nsFse'), series(s), { duree: 700 });
+        }
+      },
       boutons: [
         { txt: 'Voir mon calendrier', cls: 'b2', on: function () { E.depuisCal = true; scCalendrier(); } },
         { txt: 'Terminer', on: fermer }

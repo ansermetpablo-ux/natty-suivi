@@ -2050,6 +2050,64 @@ chaque tap (`navigator.vibrate`), le rythme des transitions, et la zone sûre du
 🔄 **Les XP des séances ne parlent ni à ceux des recettes ni à ceux de `narration.html`** —
 trois compteurs, comme déjà noté en §8. Les réunir est une décision produit.
 
+### `assets/cine.js` — la couche cinématique partagée
+Chargée par les six écrans porteurs de la nav, **avant** `seance.js` et `bilan.js` (+ copies
+`www/`). Ne dépend de rien, et les deux modules savent s'en passer.
+
+**Pourquoi elle existe.** Demande de Pablo (2026-09-03) : « rends le bilan ainsi que la saisie
+des séances plus cinématique, avec plus de transitions d'animations et d'illustrations SVG ».
+Les deux écrans sont noirs, plein écran, et racontent une séquence — ils veulent exactement le
+même vocabulaire. Le recopier dans les deux fichiers, c'est deux vocabulaires qui divergent à
+la première retouche : `api/_nutrition.js`, les ombres de `suivi.html`, le « Découvrir » de
+Repas (règle 44).
+
+| Ce qu'elle donne | |
+|---|---|
+| `illu(nom, {taille, halo})` | **19 illustrations** au trait, boîte de 64, `currentColor` |
+| `[data-c="1..8"]` | entrées échelonnées ; `data-ce` varie la forme (`ample`, `cote`, `volet`) |
+| `compteur(el, v, o)` | un nombre qui monte, **avec son filet** |
+| `vok(taille)` | la coche verte, anneau puis coche |
+| `animer(hote, ms)` | arme la scène **et pose LE FILET** |
+
+> ⚠️⚠️ **LE FILET EST LA PIÈCE MAÎTRESSE, PAS UNE PRÉCAUTION.** Une page qui ne PEINT PAS ne
+> reçoit aucune `requestAnimationFrame` et ne joue **aucune** animation CSS : app en
+> arrière-plan, onglet caché, écran verrouillé. Tout ce qui part d'`opacity:0` y RESTE — c'est
+> ainsi que le compteur du bilan annonçait « 0 g » sur 250, que le « +0 XP » des recettes est
+> arrivé, et que le trait de `planning.js` n'a jamais été dessiné. `animer()` pose donc, **par
+> `setTimeout`**, une classe `nc-pret` qui force tout à son état final. On peut dès lors animer
+> librement : le pire cas devient un écran qui apparaît d'un coup, jamais un écran vide.
+> **Mesuré au banc** : animation neutralisée, un `[data-c]` calcule `opacity: 0` sans le filet
+> et `1` avec.
+> ⚠️ **Les boucles en sont exclues** (`.b`, `.m`, `.r`, le halo) : les figer les arrêterait sur
+> une image quelconque, et leur état final ne porte aucune information.
+> ⚠️ **`animation` EST UNE PROPRIÉTÉ UNIQUE.** Une seconde règle qui la redéclare écrase la
+> première — c'est ce qui a laissé les illustrations de `planning.js` invisibles. Ici chaque
+> élément n'a qu'UNE déclaration.
+> ⚠️ **Les tracés sont en `forwards`, JAMAIS `both`.** Avec `both`, l'état `from` (donc
+> `stroke-dashoffset` plein, donc invisible) s'applique pendant le délai — et une page qui ne
+> peint pas y reste. Sans délai, l'animation démarre tout de suite et il n'y a rien à voir
+> avant.
+> ⚠️ **Le module ne fixe AUCUNE couleur.** Tout est en `currentColor`, halo compris : c'est
+> l'hôte qui décide, et un seul dessin sert les deux thèmes (règle 33). `seance.js` et
+> `bilan.js` posent leur `color` sur le conteneur.
+> ⚠️ **Les illustrations sont DÉCORATIVES**, et c'est ce qui les autorise à partir d'une
+> opacité nulle. Les chiffres, eux, passent par `compteur()` — qui a son propre filet.
+
+**Ce que ça change à l'écran** — chaque scène de la saisie et du bilan porte désormais son
+illustration et ses entrées échelonnées : calendrier, muscle, machine, poids/chrono, courbe,
+semaine, haltère côté séances ; lune, assiette, question, cible, cœur/flamme, courbe, trophée
+côté bilan. La fin d'une séance devient une vraie célébration — trophée en fond, coche verte
+tracée par-dessus, XP et trois chiffres qui montent.
+> ⚠️ **L'illustration du corps suit le RÉSULTAT** : la flamme quand le corps a puisé, le cœur
+> quand il a construit. Une seule image pour les deux ferait passer un jour de déficit pour un
+> jour de gain.
+> ⚠️ **Le programme de la semaine ne rejoue PAS son entrée à chaque tap** (`PE.peint`).
+> `peindreProgramme` rappelle `scene()` à chaque geste : sans ce drapeau, le titre et
+> l'illustration repartiraient de zéro à chaque case touchée, et l'écran clignoterait sous le
+> doigt. Même famille que le « contenu réécrit seulement si son rôle change » de `journee.js`.
+> ⚠️ **Le trophée de la fête est en `position:absolute`** : laissé dans le flux, il pousserait
+> la coche de 100 px et la composition sauterait entre l'arrivée et la fin.
+
 ### `assets/bilan.js` — le récap du soir, et celui du samedi
 Plein écran qui raconte la journée qui vient de se passer : ce qui a été mangé, ce que la
 personne en pense (trois questions), ce que les chiffres en disent (quatre critères), ce que
@@ -6448,3 +6506,36 @@ fait, et compare les deux `getNutri` sur 37 cas × 2 quantités.
 gzippés sur le web. Si le poids devient un sujet, `rec` peut partir dans un fichier compagnon —
 mais `recette()` est appelée de façon synchrone par la visionneuse, donc il faudrait rendre ce
 chemin asynchrone.
+
+---
+
+*Sixième passage de la même session (3 septembre 2026) — « rends le bilan ainsi que la saisie
+des séances plus cinématique, avec plus de transitions d'animations et d'illustrations SVG » :*
+
+**Un module partagé plutôt que deux fois le même CSS.** `assets/cine.js` porte 19 illustrations
+au trait (vocabulaire d'`assets/recette.js` : boîte de 64, `currentColor`, trait de 2,4), quatre
+formes d'entrée échelonnée, la coche verte et le compteur. Les deux écrans sont noirs, plein
+écran, et racontent une séquence : ils veulent le même vocabulaire, et le recopier aurait donné
+deux vocabulaires qui divergent — la leçon d'`api/_nutrition.js` et des ombres de `suivi.html`.
+
+**Et surtout, le filet est devenu systématique.** Une page qui ne peint pas ne joue AUCUNE
+animation : tout ce qui part d'`opacity:0` y reste. C'est ce qui avait donné le « 0 g » du
+bilan, le « +0 XP » des recettes et le trait invisible de `planning.js` — trois fois le même
+défaut, corrigé trois fois séparément. `animer()` pose maintenant, par `setTimeout`, une classe
+qui force l'état final de tout ce qui porte une animation à sens unique. Mesuré au banc :
+animation neutralisée, un élément calcule `opacity: 0` sans le filet et `1` avec.
+
+Ce qui rendait la chose possible sans risque : les illustrations sont décoratives, donc elles
+peuvent partir de zéro ; les chiffres passent par `compteur()`, qui garde son propre filet.
+
+**Trois pièges évités, tous déjà payés ailleurs dans ce dépôt :**
+- `animation` est une propriété unique — une seconde déclaration écrase la première ;
+- les tracés sont en `forwards` et jamais `both` : avec `both`, l'état invisible s'applique
+  pendant le délai, et une page en veille y reste ;
+- le programme de la semaine ne rejoue pas son entrée à chaque tap (`PE.peint`), sinon l'écran
+  clignoterait sous le doigt à chaque case touchée.
+
+Vérifié en navigateur (375 × 812 et 375 × 667) : les 10 scènes du bilan portent chacune leur
+illustration, la fête de fin de séance compte jusqu'à 40 XP et ses trois chiffres, aucun
+débordement horizontal, la réserve du bas suffit toujours, et sans `cine.js` les deux écrans
+redeviennent exactement ce qu'ils étaient.

@@ -764,6 +764,12 @@ window.NattyBilan = (function () {
       '.nbsk .sous{font-size:14px;color:var(--b-mut);line-height:1.5;margin:12px auto 0;max-width:330px}',
       // Jamais de flou sur du texte : la règle vient de narration.html et vaut
       // pour toutes les cinématiques de l'app.
+      /* L'illustration d'une scène. ⚠️ `color` posé ICI : le trait est en
+         `currentColor`, donc c'est l'hôte qui décide — et cet écran est noir
+         dans les deux thèmes (comme `ajout.js` et `planning.js`). */
+      '.nbsk .nb-hero{display:flex;justify-content:center;margin:0 0 14px;color:#f4f4f7}',
+      '.nbsk .nb-hero .nc-halo{color:#8b8b96}',
+      '.nbsk .nb-hero .nc-illu{color:#f4f4f7}',
       '@keyframes nbGlide{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}',
       '.nbsk [data-in]{opacity:0;animation:nbGlide .72s cubic-bezier(.22,1,.36,1) forwards}',
 
@@ -1022,6 +1028,18 @@ window.NattyBilan = (function () {
   }
 
   /** Un titre qui s'écrit mot à mot — c'est ce qui en fait une cinématique. */
+  /* ── La couche cinématique ────────────────────────────────
+     `assets/cine.js` est FACULTATIF : sans lui, `ill()` rend une chaîne vide et
+     l'écran redevient exactement celui d'avant. Il porte les illustrations, les
+     entrées échelonnées et surtout LE FILET — celui qui force l'état final
+     quand la page ne peint pas, donc quand rien ne s'anime. */
+  function ill(nom, taille) {
+    return window.NattyCine
+      ? '<div class="nb-hero" data-in>'
+        + NattyCine.illu(nom, { taille: taille || 78, halo: true }) + '</div>'
+      : '';
+  }
+
   function titre(txt, cls, delai) {
     delai = delai == null ? 0 : delai;
     var mots = String(txt).split(' ').map(function (m, i) {
@@ -1088,6 +1106,12 @@ window.NattyBilan = (function () {
     setTimeout(reserver, 80);
 
     if (o.pret) o.pret(d);
+    /* ⚠️ LE FILET, À CHAQUE PLAN. Chaque scène repeint des éléments qui
+       repartent d'`opacity:0` (`[data-in]`, `[data-c]`) : une page en veille
+       les y laisserait. C'est la généralisation du `setTimeout` qui sauvait
+       déjà `compter()` — et il n'y a aucune raison qu'il ne couvre que les
+       chiffres. */
+    if (window.NattyCine) NattyCine.animer(d, 1100);
     if (o.auto) minuteur = setTimeout(function () { minuteur = null; if (o.apres) o.apres(); }, o.auto);
     return d;
   }
@@ -1339,7 +1363,8 @@ window.NattyBilan = (function () {
     var p = S.profil.prenom;
     enTete('');
     bloc({
-      html: '<div class="kick" data-in>' + dateFr(new Date()) + '</div>'
+      html: ill('lune', 92)
+        + '<div class="kick" data-in>' + dateFr(new Date()) + '</div>'
         + titre('Votre journée' + (p ? ',' : ''), '', 0.2)
         + (p ? titre(p, '', 0.5) : ''),
       auto: 2300, apres: scRecap
@@ -1355,7 +1380,8 @@ window.NattyBilan = (function () {
     if (a.vide) {
       // Rien à récapituler : on le dit, et on n'invente pas une journée.
       bloc({
-        html: titre('Rien de noté aujourd’hui', 'p', 0.15)
+        html: ill('assiette', 84)
+          + titre('Rien de noté aujourd’hui', 'p', 0.15)
           + '<div class="sous" data-in style="animation-delay:.5s">Pas de repas enregistré '
           + 'aujourd’hui — il n’y a donc rien à analyser. Trois questions quand même, '
           + 'elles comptent autant que les chiffres.</div>',
@@ -1365,7 +1391,8 @@ window.NattyBilan = (function () {
       return;
     }
     bloc({
-      html: titre('Ce que vous avez mangé', 'p', 0.1)
+      html: ill('assiette', 84)
+        + titre('Ce que vous avez mangé', 'p', 0.1)
         + anneauxHTML(a.mac, c)
         + kmodHTML('Calories comptées', a.mac.c, 'kcal',
             c.c ? 'sur ' + c.c + ' de dépense' : 'dépense inconnue')
@@ -1389,7 +1416,8 @@ window.NattyBilan = (function () {
     }).join('') + '</div>';
 
     bloc({
-      html: titre(qu.titre, 'p', 0.1)
+      html: ill('question', 76)
+        + titre(qu.titre, 'p', 0.1)
         + '<div class="sous" data-in style="animation-delay:.4s">' + esc(qu.sous) + '</div>'
         + '<div class="chx">' + qu.choix.map(function (ch, i) {
             return '<button type="button" data-v="' + esc(ch.v) + '" data-in style="animation-delay:'
@@ -1424,7 +1452,8 @@ window.NattyBilan = (function () {
     var a = S.a;
     var accord = accordRessenti(S.rep.mange, a.note);
     bloc({
-      html: (a.note !== null ? titre(a.note + ' sur 100', '', 0.1) : titre('Votre journée', 'p', 0.1))
+      html: ill('cible', 80)
+        + (a.note !== null ? titre(a.note + ' sur 100', '', 0.1) : titre('Votre journée', 'p', 0.1))
         + '<div class="sous" data-in style="animation-delay:.4s">' + esc(accord) + '</div>'
         + criteresHTML(a.criteres),
       pret: function () { remplirCriteres(a.criteres); },
@@ -1455,7 +1484,8 @@ window.NattyBilan = (function () {
     if (sea) {
       var kc = NattySeance.kcal(sea, S.profil.poids);
       bloc({
-        html: titre('Séance notée', 'p', 0.1)
+        html: ill('haltere', 80)
+        + titre('Séance notée', 'p', 0.1)
           + '<div class="sous" data-in style="animation-delay:.4s">'
           + esc(NattySeance.resume(sea, S.profil.poids)) + '</div>'
           + (kc ? kmodHTML('Ajoutées à votre dépense', kc, 'kcal',
@@ -1589,7 +1619,8 @@ window.NattyBilan = (function () {
     var cp = S.corps, a = S.a;
     if (!cp.estimable) {
       bloc({
-        html: titre('Pas encore estimable', 'p', 0.1)
+        html: ill('balance', 80)
+        + titre('Pas encore estimable', 'p', 0.1)
           + '<div class="sous" data-in style="animation-delay:.4s">Pour estimer ce que votre '
           + 'corps a construit ou brûlé, il faut votre poids et votre dépense quotidienne — '
           + 'ils viennent de votre profil.</div>',
@@ -1616,7 +1647,11 @@ window.NattyBilan = (function () {
           : 'Au-delà de votre dépense aujourd’hui : rien de brûlé, mais de quoi construire si les protéines suivent.';
 
     bloc({
-      html: titre('Aujourd’hui, votre corps', 'p', 0.1)
+      /* L'illustration suit le résultat : la flamme quand le corps a puisé, le
+         cœur quand il a construit. Une seule image pour les deux ferait passer
+         un jour de déficit pour un jour de gain. */
+      html: ill(cp.gras > cp.muscle * 3 ? 'flamme' : 'coeur', 82)
+        + titre('Aujourd’hui, votre corps', 'p', 0.1)
         + '<div class="cps">'
         + '<div class="cp" data-in style="animation-delay:.35s"><div class="e">💪</div>'
         + '<div class="v" id="nbMus">0<small>g</small></div><div class="l">de muscle construit</div></div>'
@@ -1716,7 +1751,8 @@ window.NattyBilan = (function () {
     var moyNote = notes.length ? r0(notes.reduce(function (a, b) { return a + b; }, 0) / notes.length) : null;
 
     bloc({
-      html: titre('Vos 30 derniers jours', 'p', 0.1)
+      html: ill('courbe', 80)
+        + titre('Vos 30 derniers jours', 'p', 0.1)
         + courbeHTML(pts, S.profil.cible.c)
         + '<div class="stats">'
         + stat(joursNotes + '<small style="font-size:14px"> j</small>', 'jours notés sur 30', 0.5)
@@ -1756,7 +1792,8 @@ window.NattyBilan = (function () {
        avait bien échoué. Même piège que les plans qui s'empilent dans
        `assets/recette.js` et `narration.html`. */
     var d = bloc({
-      html: titre('À demain', '', 0.15)
+      html: ill('lune', 88)
+        + titre('À demain', '', 0.15)
         + '<div class="sous" data-in style="animation-delay:.45s">' + esc(demain) + '</div>'
         + (tableDispo === false
             ? '<div class="note-est" data-in style="animation-delay:.6s">' + MENTION_LOCALE + '</div>'
@@ -1813,7 +1850,8 @@ window.NattyBilan = (function () {
     enTete('');
     var l = lundiDe(new Date());
     bloc({
-      html: '<div class="kick" data-in>du ' + dateFr(l) + ' au ' + dateFr(new Date()) + '</div>'
+      html: ill('semaine', 92)
+        + '<div class="kick" data-in>du ' + dateFr(l) + ' au ' + dateFr(new Date()) + '</div>'
         + titre('Votre semaine', '', 0.2),
       auto: 2200, apres: scSemJours
     });
@@ -1832,7 +1870,8 @@ window.NattyBilan = (function () {
     })) || sem.map(function () { return 0; });
 
     bloc({
-      html: titre('Jour après jour', 'p', 0.1)
+      html: ill('calendrier', 80)
+        + titre('Jour après jour', 'p', 0.1)
         + '<div class="sem">' + sem.map(function (x, i) {
             return '<div class="d' + (x.a.vide ? ' vide' : '') + '">'
               + '<div class="n">' + (x.a.vide ? '' : r0(x.a.mac.c / 100) / 10 + 'k') + '</div>'
@@ -1881,7 +1920,8 @@ window.NattyBilan = (function () {
     var meilleur = S.sem.filter(function (x) { return x.a.note !== null && !x.a.vide; })
       .sort(function (a, b) { return b.a.note - a.a.note; })[0];
     bloc({
-      html: (moy.note !== null ? titre(moy.note + ' sur 100', '', 0.1) : titre('Votre semaine', 'p', 0.1))
+      html: ill('cible', 80)
+        + (moy.note !== null ? titre(moy.note + ' sur 100', '', 0.1) : titre('Votre semaine', 'p', 0.1))
         + '<div class="sous" data-in style="animation-delay:.4s">'
         + (meilleur ? 'Meilleur jour : ' + JOURSLONGS(meilleur.date) + ', ' + meilleur.a.note + ' sur 100.'
                     : 'Aucun jour noté cette semaine.') + '</div>'
@@ -1935,7 +1975,8 @@ window.NattyBilan = (function () {
       return;
     }
     bloc({
-      html: titre('Cette semaine, votre corps', 'p', 0.1)
+      html: ill('coeur', 82)
+        + titre('Cette semaine, votre corps', 'p', 0.1)
         + '<div class="cps">'
         + '<div class="cp" data-in style="animation-delay:.35s"><div class="e">💪</div>'
         + '<div class="v" id="nbMus">0<small>g</small></div><div class="l">de muscle construit</div></div>'
@@ -1976,7 +2017,8 @@ window.NattyBilan = (function () {
       : 'Vous tenez le même niveau depuis un mois (' + m1 + ' → ' + m2 + ').';
 
     bloc({
-      html: titre('Sur un mois', 'p', 0.1)
+      html: ill('courbe', 80)
+        + titre('Sur un mois', 'p', 0.1)
         + courbeHTML(pts, S.profil.cible.c)
         + '<div class="sous" data-in style="animation-delay:.5s">' + esc(tend) + '</div>'
         + ressentiSemaineHTML(),
@@ -2026,7 +2068,8 @@ window.NattyBilan = (function () {
       ? 'La semaine qui vient : ' + f.nom.toLowerCase() + '. C’est le critère où vous avez le plus à gagner.'
       : 'Semaine tenue sur les quatre critères. La suivante peut viser un peu plus haut.';
     bloc({
-      html: titre('À la semaine prochaine', 'p', 0.15)
+      html: ill('trophee', 88)
+        + titre('À la semaine prochaine', 'p', 0.15)
         + '<div class="sous" data-in style="animation-delay:.45s">' + esc(mot) + '</div>',
       boutons: [
         { txt: 'Planifier ma semaine', on: function () {

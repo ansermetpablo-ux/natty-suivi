@@ -6717,6 +6717,11 @@ window.addEventListener('natty:repas-ajoute', function(){
      cette étape SANS UN MOT si le module n'est pas là. Sur un écran qui
      déclenche le bilan mais ne charge pas seance.js, la question ne serait donc
      pas posée — l'utilisateur ne verrait aucune différence avec un bug. -->
+<!-- La couche cinématique partagée : illustrations SVG, entrées échelonnées,
+     compteurs et LE FILET qui force l'état final quand la page ne peint pas.
+     Chargée AVANT `seance.js` et `bilan.js`, qui s'en servent tous les deux —
+     et qui savent s'en passer si elle manque. -->
+<script src="/assets/cine.js"></script>
 <script src="/assets/seance.js"></script>
 <script src="/assets/bilan.js"></script>
 <script>
