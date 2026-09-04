@@ -1635,10 +1635,19 @@ window.NattyBilan = (function () {
      15 h ? ». C'est le cumul qui rend visible le rattrapage du soir — ou son
      absence — et qui se compare d'un seul regard à la ligne de la cible.
 
-     ⚠️ UNE COURBE EN ESCALIER, JAMAIS LISSÉE. Rien ne s'accumule entre deux
-     repas : une diagonale de 8 h à 13 h dessinerait un apport continu qui n'a
-     pas eu lieu. Le palier horizontal DIT le jeûne entre deux repas, et c'est
-     une information, pas un défaut de rendu. */
+     ⚠️⚠️ UNE COURBE, PLUS UN ESCALIER (demande de Pablo, 2026-09-04 : « pour le
+     bilan des macros, faire une courbe pas un graphique en escalier »). La
+     première version marchait par paliers, au motif que rien ne s'accumule
+     entre deux repas — une diagonale de 8 h à 13 h dessine un apport continu
+     qui n'a pas eu lieu. C'est vrai, et c'est le prix assumé : les paliers
+     donnaient trois créneaux dentelés là où on vient chercher une tendance.
+     Les POINTS, eux, restent posés sur chaque repas : ce sont les seuls
+     instants mesurés, et ils disent où la courbe est vraie.
+
+     ⚠️ L'interpolation est MONOTONE (Fritsch-Carlson), jamais un Catmull-Rom.
+     Un cumul ne peut pas redescendre : une spline ordinaire creuse entre deux
+     paliers d'écart inégal, et la courbe annoncerait qu'on a « dé-mangé » des
+     protéines en milieu d'après-midi. */
   var MACROS = [
     { k: 'p', nom: 'Protéines', em: '🥩', rgb: '255,107,92' },
     { k: 'l', nom: 'Lipides',   em: '🥑', rgb: '90,208,122' },
@@ -1652,6 +1661,36 @@ window.NattyBilan = (function () {
     return e + ' h' + (m ? ' ' + (m < 10 ? '0' + m : m) : '');
   }
 
+  /* Interpolation cubique MONOTONE (Fritsch-Carlson, 1980). Le seul point
+     délicat est la borne : sans elle, une pente moyenne calculée entre deux
+     segments très inégaux fait dépasser la spline au-dessus du nœud suivant,
+     puis redescendre — sur un CUMUL, ça se lit comme un repas rendu. */
+  function lisser(p) {
+    var n = p.length, i;
+    if (n < 2) return '';
+    var dd = [], m = [];
+    for (i = 0; i < n - 1; i++) {
+      var dx0 = p[i + 1].x - p[i].x;
+      dd.push(dx0 === 0 ? 0 : (p[i + 1].y - p[i].y) / dx0);
+    }
+    m.push(dd[0]);
+    for (i = 1; i < n - 1; i++) m.push(dd[i - 1] * dd[i] <= 0 ? 0 : (dd[i - 1] + dd[i]) / 2);
+    m.push(dd[n - 2]);
+    for (i = 0; i < n - 1; i++) {
+      if (dd[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+      var a = m[i] / dd[i], b = m[i + 1] / dd[i], t = Math.sqrt(a * a + b * b);
+      if (t > 3) { m[i] = 3 * a / t * dd[i]; m[i + 1] = 3 * b / t * dd[i]; }
+    }
+    var s2 = 'M' + p[0].x.toFixed(1) + ' ' + p[0].y.toFixed(1);
+    for (i = 0; i < n - 1; i++) {
+      var h3 = (p[i + 1].x - p[i].x) / 3;
+      s2 += ' C' + (p[i].x + h3).toFixed(1) + ' ' + (p[i].y + m[i] * h3).toFixed(1)
+          + ' ' + (p[i + 1].x - h3).toFixed(1) + ' ' + (p[i + 1].y - m[i + 1] * h3).toFixed(1)
+          + ' ' + p[i + 1].x.toFixed(1) + ' ' + p[i + 1].y.toFixed(1);
+    }
+    return s2;
+  }
+
   function courbeJourHTML(repas, k, cible) {
     var L = 386, H = 96, mx = 12, hb = 12, bb = 16;
     var cum = 0, pas = repas.map(function (r) { cum += (+r[k] || 0); return { h: r.h, v: cum }; });
@@ -1663,14 +1702,24 @@ window.NattyBilan = (function () {
     var x = function (h) { return mx + (borne(h) - H_DEB) / (H_FIN - H_DEB) * (L - 2 * mx); };
     var y = function (v) { return H - bb - (v / haut) * (H - hb - bb); };
 
-    var d = 'M' + x(H_DEB).toFixed(1) + ' ' + y(0).toFixed(1), prec = 0, pts = '';
+    /* Les nœuds de la courbe : l'origine à 0, chaque repas, puis la fin de la
+       fenêtre au même niveau que le dernier repas — le plateau du soir est
+       vrai, lui : après le dernier repas, plus rien ne s'ajoute.
+       ⚠️ Deux repas à la même minute donneraient un `dx` nul, donc une division
+       par zéro dans les tangentes : le second est ignoré comme nœud (sa valeur
+       est déjà dans le cumul). */
+    var noeuds = [{ x: x(H_DEB), y: y(0) }], pts = '', prec = 0;
     pas.forEach(function (q) {
-      d += ' L' + x(q.h).toFixed(1) + ' ' + y(prec).toFixed(1)
-         + ' L' + x(q.h).toFixed(1) + ' ' + y(q.v).toFixed(1);
-      pts += '<circle class="pt" cx="' + x(q.h).toFixed(1) + '" cy="' + y(q.v).toFixed(1) + '" r="2.6"/>';
+      var px = x(q.h), py = y(q.v);
+      if (px - noeuds[noeuds.length - 1].x > 0.5) noeuds.push({ x: px, y: py });
+      else noeuds[noeuds.length - 1] = { x: px, y: py };
+      pts += '<circle class="pt" cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="2.6"/>';
       prec = q.v;
     });
-    d += ' L' + x(H_FIN).toFixed(1) + ' ' + y(prec).toFixed(1);
+    if (x(H_FIN) - noeuds[noeuds.length - 1].x > 0.5) {
+      noeuds.push({ x: x(H_FIN), y: y(prec) });
+    }
+    var d = lisser(noeuds);
 
     var lbls = [6, 10, 14, 18, 22].map(function (h) {
       return '<text class="lbl" x="' + x(h).toFixed(1) + '" y="' + (H - 3) + '" text-anchor="middle">'

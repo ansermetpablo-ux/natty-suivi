@@ -2292,18 +2292,43 @@ var PROFIL_KG=0, PROFIL_SEM=0, PROFIL_BASE=0, PROFIL_ECART=null;
    ⚠️ Elle ne se joue QUE S'IL Y A QUELQUE CHOSE À DIRE : sans objectif de
    poids, il n'y a pas de « +5 kg » à montrer, et un balayage qui découvre un
    module vide est une animation qui fait perdre une seconde pour rien.
-   ⚠️ Et une fois par jour seulement : à chaque passage sur Suivi, ce serait la
-   même bonne nouvelle répétée quinze fois — donc du bruit, puis un réflexe
-   d'attente avant de pouvoir lire son compteur. */
-var HC_MS = { attente: 1000, nappe: 720, lecture: 1800, sortie: 620 };
 
-function annonceObjectifVue() {
-  try { return localStorage.getItem('natty_obj_annonce_' + (USER_ID || 'anon')) === Natty.jour(); }
-  catch (e) { return false; }
+   ⚠️⚠️ ELLE SE REJOUE EN BOUCLE, ET C'EST UNE DEMANDE EXPLICITE DE PABLO
+   (2026-09-04) : « l'animation du module des calories pour rappeler l'objectif
+   doit intervenir à chaque fois qu'on revient sur Suivi, la première fois après
+   1 seconde, sinon toutes les secondes ». Le garde « une fois par jour » a donc
+   sauté, et `armerAnnonce()` la relance une seconde après la fin de la
+   précédente.
+   > ⚠️ Ce que ça coûte, et c'était le motif du garde d'origine : le compteur de
+   > calories est recouvert environ trois secondes sur quatre. `HC_MS.boucle`
+   > est le seul nombre à changer pour espacer les rappels — le mettre à 0
+   > désarme la boucle et rend l'annonce à sa seule arrivée.
+
+   ⚠️ La boucle s'ARRÊTE quand la page n'est pas visible : une animation qui
+   tourne dans un onglet caché ne rappelle rien à personne et coûte de la
+   batterie. Elle repart au retour, ce qui est exactement le « à chaque fois
+   qu'on revient sur Suivi » demandé — `visibilitychange` couvre le retour
+   d'arrière-plan, `pageshow` le retour arrière depuis une autre page. */
+var HC_MS = { attente: 1000, boucle: 1000, nappe: 720, lecture: 1800, sortie: 620 };
+var hcTimer = null;
+
+/* Le planificateur. ⚠️ UN SEUL MINUTEUR, toujours annulé avant d'être reposé :
+   deux `armerAnnonce()` rapprochés — l'arrivée et un retour d'onglet — feraient
+   sinon deux boucles superposées, donc deux nappes qui se croisent. */
+function armerAnnonce(delai) {
+  if (hcTimer) { clearTimeout(hcTimer); hcTimer = null; }
+  if (!PROFIL_KG || document.hidden) return;
+  hcTimer = setTimeout(function () {
+    hcTimer = null;
+    annoncerObjectif(true);
+    // La suivante part une seconde APRÈS la fin de celle-ci, pas une seconde
+    // après son début : sinon elles se chevaucheraient.
+    if (HC_MS.boucle > 0) {
+      armerAnnonce(HC_MS.nappe + HC_MS.lecture + HC_MS.sortie + 160 + HC_MS.boucle);
+    }
+  }, delai == null ? HC_MS.attente : delai);
 }
-function marquerAnnonceObjectif() {
-  try { localStorage.setItem('natty_obj_annonce_' + (USER_ID || 'anon'), Natty.jour()); } catch (e) {}
-}
+function stopperAnnonce() { if (hcTimer) { clearTimeout(hcTimer); hcTimer = null; } }
 
 function texteDuree(sem) {
   sem = parseInt(sem, 10) || 0;
@@ -2316,12 +2341,10 @@ function texteDuree(sem) {
 function annoncerObjectif(forcer) {
   var carte = document.getElementById('heroCal');
   if (!carte || !PROFIL_KG) return;
-  if (!forcer && annonceObjectifVue()) return;
   // Deux plein écran l'un sur l'autre ne se discutent pas — même garde que le
   // guide du jour, la planification et le bilan (§7 de CLAUDE.md).
   if (window.Natty && Natty.ecranOccupe && Natty.ecranOccupe()) return;
   if (document.getElementById('hcCine')) return;
-  marquerAnnonceObjectif();
 
   var signe = PROFIL_KG > 0 ? '+' : '−';
   var kg = Math.abs(PROFIL_KG).toString().replace('.', ',');
@@ -2473,6 +2496,19 @@ async function init() {
      questionnaire d'inscription COMPLET — sept étapes, dont la motivation, les
      scores et l'offre — pour obtenir cinq chiffres. La feuille ci-dessous les
      demande, et rien d'autre. */
+  /* ⚠️ « À CHAQUE FOIS QU'ON REVIENT SUR SUIVI » — les deux retours possibles.
+     `visibilitychange` couvre l'app remise au premier plan et l'onglet
+     réactivé ; `pageshow` couvre le retour arrière depuis une autre page, où
+     la page sort du cache sans repasser par `init()`. Sans le second, revenir
+     de Repas ne rejouerait rien. Et on ARRÊTE en partant : une boucle qui
+     tourne dans un onglet caché ne rappelle rien à personne. */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stopperAnnonce(); else armerAnnonce(HC_MS.attente);
+  });
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) armerAnnonce(HC_MS.attente);
+  });
+
   var ovb = document.getElementById('objVideBtn');
   if (ovb) ovb.addEventListener('click', ouvrirObjectif);
   var oeb = document.getElementById('objCalBtn');
@@ -5455,9 +5491,10 @@ async function validerObjectif() {
      ça, l'écran garderait l'ancien objectif du jour pendant que la base porte
      le nouveau. */
   await appliquerBesoinDuJour();
-  /* Après un enregistrement, on la rejoue MÊME si elle a déjà été vue
-     aujourd'hui : c'est la confirmation de ce qu'on vient de régler. */
+  /* Après un enregistrement, on la rejoue tout de suite : c'est la
+     confirmation de ce qu'on vient de régler. La boucle repart derrière. */
   annoncerObjectif(true);
+  armerAnnonce(HC_MS.nappe + HC_MS.lecture + HC_MS.sortie + 160 + HC_MS.boucle);
 }
 
 /* ═══ L'objectif du jour s'adapte à l'entraînement ═══════════
@@ -5507,7 +5544,7 @@ async function appliquerBesoinDuJour() {
      balayage qui découvrirait « 0 kg » serait pire que pas d'animation. En
      pratique les deux instants sont à quelques centaines de millisecondes
      l'un de l'autre. */
-  setTimeout(function () { annoncerObjectif(false); }, HC_MS.attente);
+  armerAnnonce(HC_MS.attente);
 }
 
 function peindreBesoinNote(sup) {

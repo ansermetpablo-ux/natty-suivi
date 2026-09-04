@@ -1899,6 +1899,27 @@ deux endroits qui font la même chose finissent par diverger.
 > ligne, et une règle conditionnelle qui vaut désormais dans tous les cas est un
 > piège pour la prochaine retouche.
 
+**L'annonce se rejoue en boucle (2026-09-04, second passage).** Demande de Pablo :
+« l'animation du module des calories pour rappeler l'objectif doit intervenir à
+chaque fois qu'on revient sur Suivi, la première fois après 1 seconde, sinon toutes
+les secondes ». Le garde « une fois par jour » a sauté et `armerAnnonce()` relance
+la séquence **une seconde après la fin de la précédente** — l'animation dure 3,14 s,
+« toutes les secondes » ne peut vouloir dire que l'intervalle entre deux passages.
+Mesuré : première à **1 000 ms**, puis un cycle régulier de **4 300 ms**.
+> ⚠️ **Ce que ça coûte**, et c'était le motif du garde d'origine : le compteur de
+> calories est recouvert environ trois secondes sur quatre. `HC_MS.boucle` est le
+> seul nombre à changer pour espacer les rappels ; à 0, l'annonce ne se joue qu'à
+> l'arrivée.
+> ⚠️ **UN SEUL MINUTEUR**, annulé avant d'être reposé : deux `armerAnnonce()`
+> rapprochés — l'arrivée puis un retour d'onglet — feraient deux boucles
+> superposées, donc deux nappes qui se croisent. Vérifié.
+> ⚠️ **« À chaque fois qu'on revient » = DEUX événements.** `visibilitychange`
+> couvre l'app remise au premier plan et l'onglet réactivé ; `pageshow` couvre le
+> retour arrière depuis une autre page, où la page sort du cache sans repasser par
+> `init()`. Sans le second, revenir de Repas ne rejouerait rien.
+> ⚠️ La boucle s'**arrête** quand la page est cachée : une animation qui tourne
+> dans un onglet caché ne rappelle rien à personne et coûte de la batterie.
+
 **Vérifié en navigateur** (375 × 812 et 360 × 740) sur un banc composé du **vrai
 balisage et des vraies règles** extraits de `suivi.html` — une copie à la main ne
 prouve que la copie : les trois états (39 %, 63 %, dépassement en ambre), la note
@@ -1908,6 +1929,17 @@ quand la zone tactile grandit.
 > prises trop tôt l'ont montrée à 91 % et en ambre alors que `style.width` valait
 > déjà `63%` et le fond `#fff`. Lire `style`, pas seulement le calculé — ou
 > attendre la fin.
+> ⚠️⚠️ **DEUX AUTRES PIÈGES DE BANC, trouvés en vérifiant la boucle.**
+> 1. **`document.hidden` vaut `true` dans le volet du navigateur piloté** — la
+>    page n'y est pas l'onglet au premier plan. Tout ce qui se garde derrière
+>    `document.hidden` ne s'y joue donc JAMAIS, et on conclut à un code mort
+>    alors qu'il est correct. Le rythme a été mesuré en **Node**, sur la fonction
+>    extraite du fichier, avec un `document` doublé.
+> 2. **Extraire des règles CSS à `[^}]*\}` coupe un `@keyframes` en deux** : il
+>    contient des blocs imbriqués, la capture s'arrête au premier `}` et laisse
+>    une règle malformée qui casse **silencieusement toute la suite de la
+>    feuille** — le banc rendait `.hero` en `display:block`. Il faut équilibrer
+>    les accolades.
 🔄 **Non vérifié sur la page réelle** : `suivi.html` exige une session, le banc
 n'en a pas. Le câblage (`objCalBtn` → `ouvrirObjectif`, `cp` → `#jaugeCal`) n'a
 été contrôlé qu'à la lecture et par `node --check` sur les cinq blocs inline.
@@ -2537,9 +2569,18 @@ entre la note et la séance (« Le fil de ma journée » → « Et mon corps ? �
 > ⚠️ **Le CUMUL, pas les repas un par un.** La question qu'on se pose devant cet
 > écran est « où en étais-je à 15 h ? », pas « qu'ai-je mangé à 15 h ? ». C'est le
 > cumul qui rend visible le rattrapage du soir — ou son absence.
-> ⚠️ **UNE COURBE EN ESCALIER, JAMAIS LISSÉE.** Rien ne s'accumule entre deux
-> repas : une diagonale de 8 h à 13 h dessinerait un apport continu qui n'a pas eu
-> lieu. Le palier horizontal DIT le jeûne, c'est une information.
+> ⚠️⚠️ **UNE COURBE, PLUS UN ESCALIER** (2026-09-04, demande de Pablo : « faire une
+> courbe, pas un graphique en escalier »). La première version marchait par
+> paliers, au motif que rien ne s'accumule entre deux repas — une diagonale de 8 h
+> à 13 h dessine un apport continu qui n'a pas eu lieu. C'est vrai, et c'est le
+> prix assumé : les paliers donnaient trois créneaux dentelés là où on vient
+> chercher une tendance. Les **points restent posés sur chaque repas** : ce sont
+> les seuls instants mesurés, et ils disent où la courbe est vraie.
+> ⚠️ **L'interpolation est MONOTONE (Fritsch-Carlson), jamais un Catmull-Rom.** Un
+> cumul ne peut pas redescendre : une spline ordinaire creuse entre deux paliers
+> d'écart inégal, et la courbe annoncerait qu'on a « dé-mangé » des protéines en
+> milieu d'après-midi. Vérifié en Node sur 5 tracés (dont deux repas à quatre
+> minutes d'écart et un écart de 1 à 20) : **remontée maximale 0,0000**.
 > ⚠️ **L'échelle tient la CIBLE dans le cadre**, même très loin d'être atteinte :
 > sans elle, une journée à 30 % remplirait le cadre et ressemblerait à une journée
 > réussie.
