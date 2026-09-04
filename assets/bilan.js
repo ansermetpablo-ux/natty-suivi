@@ -211,13 +211,15 @@ window.NattyBilan = (function () {
          est en §4 de CLAUDE.md — `nb_repas`, `proteines`, `calories` n'en font
          pas partie. */
       var r = await Natty.sbFetch('onboarding?user_id=eq.' + uid()
-        + '&select=poids,tdee,activite,objectif_type,prenom&order=created_at.desc&limit=5');
+        + '&select=poids,tdee,activite,objectif_type,objectif_valeur,objectif_semaines,prenom&order=created_at.desc&limit=5');
       // La table contient de vrais doublons, dont des lignes sans poids ni
       // tdee : on prend la première ligne EXPLOITABLE, pas la première.
       var d = (r || []).filter(function (x) { return x && (x.poids || x.tdee); })[0] || (r || [])[0];
       if (d) {
         out.poids = parseFloat(d.poids) || 0;
         out.tdee = parseFloat(d.tdee) || 0;
+        out.objKg = parseFloat(d.objectif_valeur) || 0;
+        out.objSem = parseInt(d.objectif_semaines, 10) || 0;
         out.activite = d.activite || '';
         out.objectif = d.objectif_type || '';
         out.prenom = d.prenom || '';
@@ -237,8 +239,14 @@ window.NattyBilan = (function () {
          c'est à lui qu'on compare ce qui a été mangé, sinon un jour de salle
          serait noté « trop mangé » pour avoir mangé ce qu'il fallait. */
     out.cible = macros(out.poids, out.tdee, 0);
+    /* ⚠️ Et la BASE de l'objectif n'est pas la dépense : l'objectif de poids
+       déclaré la déplace. `cible` reste la dépense — c'est contre elle que se
+       calcule le déficit, et une dépense ne baisse pas parce qu'on a décidé de
+       maigrir. `cibleDu` est ce qu'il FALLAIT manger, donc il part de la base. */
+    out.base = (window.Natty && Natty.baseObjectif)
+      ? Natty.baseObjectif(out.tdee, out.objKg, out.objSem) : out.tdee;
     out.cibleDu = function (j) {
-      return macros(out.poids, out.tdee, supplement(j, out.poids, out.tdee));
+      return macros(out.poids, out.base, supplement(j, out.poids, out.tdee));
     };
 
     // Combien de repas la personne prévoit par jour — c'est le denominateur de
@@ -867,6 +875,36 @@ window.NattyBilan = (function () {
       '#nbil .pts i{width:22px;height:3px;border-radius:2px;background:var(--b-trait)}',
       '#nbil .pts i.on{background:var(--b-ink)}',
 
+      /* ── LA JAUGE DE LA NOTE ──────────────────────────────────
+         Demande de Pablo (2026-09-04) : « une barre de progression unique
+         avec le faded blur et l'inner bright, qui se déroule progressivement
+         vers le haut, de rouge vers le vert (couleur de la barre qui change
+         smooth et le % en même temps) ».
+
+         ⚠️ LA COULEUR EST POSÉE EN JS, IMAGE PAR IMAGE, et pas par un dégradé.
+         Un dégradé rouge→vert peint la barre ENTIÈRE aux trois couleurs : à
+         30 %, on verrait déjà du vert en bas. Ce que la demande décrit est
+         l'inverse — la barre est d'UNE couleur, et cette couleur vire pendant
+         qu'elle monte. Il faut donc interpoler à chaque image.
+         ⚠️ La lueur est un élément à part, HORS du rail : dans le rail elle
+         serait rognée par l'`overflow:hidden` qui arrondit le remplissage, et
+         un flou rogné net à son bord n'est plus un flou. */
+      '#nbil .jv{position:relative;width:70px;height:168px;flex:none}',
+      '#nbil .jv .rail{position:absolute;inset:0;border-radius:22px;background:var(--b-creux);',
+      'overflow:hidden;box-shadow:inset 0 2px 7px rgba(0,0,0,.45),inset 0 -1px 0 rgba(255,255,255,.06)}',
+      '#nbil .jv .flou{position:absolute;left:9px;right:9px;bottom:2px;height:0;border-radius:20px;',
+      'filter:blur(13px);opacity:.7;pointer-events:none}',
+      // « inner bright » : le liseré du haut et le halo interne. Sans eux, le
+      // remplissage est un aplat de couleur, pas un volume.
+      '#nbil .jv .fill{position:absolute;left:0;right:0;bottom:0;height:0;border-radius:22px;',
+      'box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 0 20px rgba(255,255,255,.22),',
+      'inset 0 -10px 22px rgba(0,0,0,.16)}',
+      '#nbil .jn{text-align:left;min-width:0}',
+      '#nbil .jn .v{font-size:52px;font-weight:800;letter-spacing:-2.5px;line-height:1}',
+      '#nbil .jn .v small{font-size:19px;font-weight:700;letter-spacing:-.5px;opacity:.55}',
+      '#nbil .jn .l{font-size:12.5px;font-weight:700;color:var(--b-mut);margin-top:5px}',
+      '#nbil .jw{display:flex;align-items:center;justify-content:center;gap:20px;margin:6px 0 2px}',
+
       /* ── La courbe de progression ─────────────────────────── */
       '#nbil .grf{margin:22px auto 0;max-width:430px;position:relative}',
       '#nbil .grf svg{width:100%;height:170px;overflow:visible}',
@@ -875,8 +913,16 @@ window.NattyBilan = (function () {
       // Le tracé se dessine : une courbe qui apparaît d'un coup ne raconte pas
       // une progression, elle l'affiche.
       '#nbil .grf .ligne{fill:none;stroke:var(--b-ink);stroke-width:2.5;',
-      'stroke-linecap:round;stroke-linejoin:round;',
-      'animation:nbTrace 1.9s cubic-bezier(.3,.7,.4,1) forwards}',
+      'stroke-linecap:round;stroke-linejoin:round}',
+      /* ⚠️ LA LUEUR EST UN SECOND TRACÉ, PAS UNE OMBRE. `filter:drop-shadow`
+         sur le trait aurait flouté aussi ses extrémités et coûté un repaint de
+         tout le SVG à chaque image de l'animation ; un doublon flouté sous le
+         trait net donne le « faded blur » demandé sans toucher au trait qui
+         porte l'information. Il se trace EN MÊME TEMPS que lui (même durée,
+         même courbe d'accélération) — décalé, on verrait la lueur courir
+         derrière la ligne comme une traîne. */
+      '#nbil .grf .lueur{fill:none;stroke:var(--b-ink);stroke-width:6;',
+      'stroke-linecap:round;stroke-linejoin:round;opacity:.26;filter:blur(5px)}',
       /* Le PONT : les segments qui traversent un jour sans donnée. La courbe
          est continue (c'est la demande), mais ces portions-là sont un calcul,
          pas une mesure — d'où le pointillé, le trait plus fin et la couleur
@@ -890,7 +936,42 @@ window.NattyBilan = (function () {
       'stroke-dasharray:2.5 4;stroke-linecap:round;opacity:0;',
       'animation:nbFonduPont .9s ease 1.15s forwards}',
       '@keyframes nbFonduPont{to{opacity:.42}}',
-      '@keyframes nbTrace{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}',
+      /* ⚠️⚠️ LE GRAPHIQUE SE DÉVOILE PAR UN VOLET, PAS PAR UN `stroke-dasharray`,
+         ET C'EST UNE CORRECTION DE FOND. Demande de Pablo (2026-09-04) : « le
+         graphique doit apparaître de droite à gauche, comme s'il se dessinait
+         doucement ».
+
+         Le tracé par `stroke-dashoffset` NE DESSINAIT RIEN — il ne pouvait
+         pas. `d` n'est pas une polyligne continue : c'est une SUITE DE
+         SEGMENTS `M…L…` indépendants (un par jour), parce qu'un segment qui
+         traverse un jour non noté part dans le chemin du pont. Or SVG
+         **réarme le motif de tirets au début de chaque sous-chemin** : les 26
+         segments grandissaient donc TOUS EN MÊME TEMPS, chacun depuis son
+         propre bord gauche. À l'écran, ça ne ressemble pas à une courbe qui se
+         dessine, ça ressemble à une courbe qui grésille. Mesuré au banc : avec
+         un offset intermédiaire, absolument rien n'est peint — chaque segment
+         (~13 px) tombe entier dans l'intervalle du motif.
+
+         Un volet règle les deux d'un coup : il dévoile la ligne, le pont ET les
+         points ensemble, dans l'ordre du temps, quel que soit le nombre de
+         sous-chemins. Et sur une courbe (un seul y par x) un volet vertical
+         EST un tracé : le trait apparaît par son extrémité, exactement comme
+         s'il se dessinait. */
+      /* ⚠️ LE VOLET EST UN `clip-path:inset()` SUR UN DIV, PAS UN `<clipPath>`
+         SVG. Essayé d'abord en SVG (un `<rect>` translaté dans un `<clipPath>`
+         appliqué à un `<g>`) : mesuré au banc, la translation est bien
+         calculée — `matrix(1,0,0,1,270,0)` — et le découpage n'en tient
+         AUCUN compte, le graphique reste entièrement caché quelle que soit la
+         valeur. Un découpage qui ignore sa géométrie ne se voit pas dans le
+         code, seulement à l'écran.
+         `inset(0 0 0 X%)` sur l'élément HTML qui porte le SVG fait la même
+         chose, se laisse animer, et n'a pas besoin d'identifiant unique — donc
+         plus de risque que deux plans qui se croisent se volent leur volet.
+         ⚠️ ET IL LUI FAUT SON PROPRE ÉLÉMENT : `.grf` porte déjà `data-in`, et
+         `animation` est une propriété UNIQUE — la seconde déclaration
+         effacerait l'entrée du bloc. */
+      '#nbil .grf .vol{animation:nbVolet 2.2s cubic-bezier(.32,.72,.3,1) forwards}',
+      '@keyframes nbVolet{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0 0 0 0)}}',
       '#nbil .grf .pt{fill:var(--b-ink)}',
       // (Il n'y a plus d'aire remplie sous la courbe — voir `courbeHTML()`.)
       '#nbil .grf .lbl{font-size:9px;font-weight:600;fill:var(--b-mut2)}',
@@ -1196,6 +1277,75 @@ window.NattyBilan = (function () {
     return n >= 75 ? '#34c759' : n >= 45 ? '#ff9500' : '#ff453a';
   }
 
+  /* ═══ LA JAUGE DE LA NOTE ═══════════════════════════════════
+     Une barre verticale qui se remplit du bas vers le haut, dont la couleur
+     passe du rouge au vert pendant qu'elle monte, et le nombre avec elle. */
+
+  /* Les trois couleurs de `couleurNote`, mais MÉLANGÉES au lieu d'être
+     choisies : c'est la demande (« couleur qui change smooth »). Aux notes
+     45 et 75 la valeur rendue est EXACTEMENT celle de `couleurNote`, donc la
+     jauge et les pastilles des critères ne peuvent pas se contredire. */
+  var PALIERS = [[0, 255, 69, 58], [45, 255, 149, 0], [75, 52, 199, 89], [100, 48, 209, 88]];
+  function couleurFluide(n) {
+    n = Math.max(0, Math.min(100, +n || 0));
+    for (var i = 1; i < PALIERS.length; i++) {
+      var a = PALIERS[i - 1], b = PALIERS[i];
+      if (n <= b[0]) {
+        var k = (n - a[0]) / (b[0] - a[0] || 1);
+        return 'rgb(' + Math.round(a[1] + (b[1] - a[1]) * k) + ','
+                      + Math.round(a[2] + (b[2] - a[2]) * k) + ','
+                      + Math.round(a[3] + (b[3] - a[3]) * k) + ')';
+      }
+    }
+    return 'rgb(48,209,88)';
+  }
+
+  function jaugeHTML(note, libelle) {
+    var connu = note !== null && note !== undefined;
+    return '<div class="jw" data-in style="animation-delay:.08s">'
+      + '<div class="jv" id="nbJauge"><div class="flou" id="nbJflou"></div>'
+      + '<div class="rail"><div class="fill" id="nbJfill"></div></div></div>'
+      + '<div class="jn"><div class="v" id="nbJval">' + (connu ? '0<small>/100</small>' : '—') + '</div>'
+      + '<div class="l">' + esc(libelle || 'de votre objectif du jour') + '</div></div></div>';
+  }
+
+  /* ⚠️⚠️ FILET OBLIGATOIRE, et ici il vaut double : une page qui ne PEINT pas
+     ne reçoit aucune `requestAnimationFrame`, donc la barre resterait à zéro
+     ET le nombre aussi — l'écran annoncerait « 0 sur 100 » à quelqu'un qui a
+     fait une bonne journée. C'est exactement le défaut déjà payé par
+     `compter()` et par le « +0 XP » d'`assets/recette.js` (règle 40 de
+     CLAUDE.md). Le `setTimeout` pose l'état final quoi qu'il arrive. */
+  function animerJauge(note) {
+    if (note === null || note === undefined) return;
+    var pose = false;
+    function poser(n) {
+      if (!racine) return;
+      var f = racine.querySelector('#nbJfill'), b = racine.querySelector('#nbJflou'),
+          v = racine.querySelector('#nbJval');
+      if (!f) return;
+      var c = couleurFluide(n);
+      // La lueur s'arrête un peu sous le haut du remplissage : à hauteur égale
+      // elle déborde par-dessus le liseré clair et l'efface.
+      f.style.height = n + '%'; f.style.background = c;
+      if (b) { b.style.height = Math.max(0, n - 4) + '%'; b.style.background = c; }
+      if (v) { v.innerHTML = Math.round(n) + '<small>/100</small>'; v.style.color = c; }
+    }
+    setTimeout(function () { if (!pose) poser(note); }, 1750);
+
+    var t0 = null, duree = 1500;
+    function pas(t) {
+      if (!racine || !racine.querySelector('#nbJfill')) return;
+      if (t0 === null) t0 = t;
+      var k = Math.min(1, (t - t0) / duree);
+      // Départ franc puis arrivée en douceur : une barre qui monte à vitesse
+      // constante se lit comme un chargement, pas comme un résultat.
+      var e = 1 - Math.pow(1 - k, 3);
+      poser(note * e);
+      if (k < 1) requestAnimationFrame(pas); else pose = true;
+    }
+    setTimeout(function () { requestAnimationFrame(pas); }, 320);
+  }
+
   function criteresHTML(criteres) {
     return '<div class="crs">' + criteres.map(function (c, i) {
       var connu = c.note !== null;
@@ -1285,12 +1435,13 @@ window.NattyBilan = (function () {
        bloc qu'on voyait au lieu de la courbe. Relevé à l'écran, pas à la
        lecture. Le trait suffit ; le repère, c'est la ligne de dépense. */
     var trous = pts.filter(function (p) { return !p.note; }).length;
-    return '<div class="grf" data-in style="animation-delay:.3s">'
+    return '<div class="grf" data-in style="animation-delay:.3s"><div class="vol">'
       + '<svg viewBox="0 0 ' + largeur + ' ' + hauteur + '" preserveAspectRatio="none">'
       + (cible ? '<line class="cible" x1="' + mx + '" y1="' + yc.toFixed(1) + '" x2="' + (largeur - mx) + '" y2="' + yc.toFixed(1) + '"/>' : '')
       + '<line class="axe" x1="' + mx + '" y1="' + (hauteur - my) + '" x2="' + (largeur - mx) + '" y2="' + (hauteur - my) + '"/>'
       /* Le pont est posé AVANT le trait mesuré : là où les deux se touchent,
          c'est le trait plein qui doit couvrir la jointure, pas l'inverse. */
+      + '<path class="lueur" id="nbLueur" d="' + d.trim() + '"/>'
       + (dPont ? '<path class="pont" id="nbPont" d="' + dPont.trim() + '"/>' : '')
       + '<path class="ligne" id="nbLigne" d="' + d.trim() + '"/>'
       + pts.map(function (p, i) {
@@ -1298,7 +1449,7 @@ window.NattyBilan = (function () {
           return '<circle class="pt" cx="' + x(i).toFixed(1) + '" cy="' + y(p.v).toFixed(1) + '" r="' + (pts.length > 12 ? 2 : 3.2) + '"/>';
         }).join('')
       + lbls
-      + '</svg></div>'
+      + '</svg></div></div>'
       + '<div class="lgd"><span>— ce que vous avez mangé</span>'
       + (trous ? '<span>┈ ' + trous + ' jour' + (trous > 1 ? 's' : '') + ' sans donnée, relié'
                  + (trous > 1 ? 's' : '') + '</span>' : '')
@@ -1346,17 +1497,25 @@ window.NattyBilan = (function () {
   function animerCourbe() {
     setTimeout(function () {
       if (!racine) return;
-      var l = racine.querySelector('#nbLigne');
-      if (!l || !l.getTotalLength) return;
-      var len = l.getTotalLength();
-      if (!len) return;
-      l.style.strokeDasharray = len + ' ' + len;
-      l.style.setProperty('--len', len);
-      l.style.animation = 'none';
+      var vol = racine.querySelector('.grf .vol');
+      if (!vol) return;
+      vol.style.animation = 'none';
       // Forcer un recalcul avant de rearmer, sinon le navigateur regroupe les
       // deux écritures et l'animation ne repart pas.
-      void l.getBoundingClientRect();
-      l.style.animation = 'nbTrace 1.9s cubic-bezier(.3,.7,.4,1) forwards';
+      void vol.getBoundingClientRect();
+      vol.style.animation = 'nbVolet 2.2s cubic-bezier(.32,.72,.3,1) forwards';
+
+      /* ⚠️⚠️ LE FILET, ET IL EST PLUS CRITIQUE QU'AILLEURS. Une page qui ne
+         PEINT pas ne joue AUCUNE animation : le volet resterait à sa première
+         image, c'est-à-dire refermé — donc le graphique ENTIER serait
+         invisible, pas seulement figé. Un écran qui annonce « Vos 30 derniers
+         jours » au-dessus d'un cadre vide. On rouvre donc le volet au bout de
+         la durée, quoi qu'il arrive (règle 40 de CLAUDE.md). */
+      setTimeout(function () {
+        if (!racine || !vol.parentNode) return;
+        vol.style.animation = 'none';
+        vol.style.clipPath = 'none';
+      }, 2500);
 
       /* ⚠️ LE PONT NE SE TRACE PAS, IL SE RÉVÈLE. Son `stroke-dasharray` porte
          déjà le motif du pointillé (voir le CSS) : le réécrire pour l'animer
@@ -1468,11 +1627,10 @@ window.NattyBilan = (function () {
     var a = S.a;
     var accord = accordRessenti(S.rep.mange, a.note);
     bloc({
-      html: ill('cible', 80)
-        + (a.note !== null ? titre(a.note + ' sur 100', '', 0.1) : titre('Votre journée', 'p', 0.1))
+      html: (a.note !== null ? jaugeHTML(a.note) : ill('cible', 80) + titre('Votre journée', 'p', 0.1))
         + '<div class="sous" data-in style="animation-delay:.4s">' + esc(accord) + '</div>'
         + criteresHTML(a.criteres),
-      pret: function () { remplirCriteres(a.criteres); },
+      pret: function () { animerJauge(a.note); remplirCriteres(a.criteres); },
       boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
     });
   }
@@ -1937,13 +2095,16 @@ window.NattyBilan = (function () {
     var meilleur = S.sem.filter(function (x) { return x.a.note !== null && !x.a.vide; })
       .sort(function (a, b) { return b.a.note - a.a.note; })[0];
     bloc({
-      html: ill('cible', 80)
-        + (moy.note !== null ? titre(moy.note + ' sur 100', '', 0.1) : titre('Votre semaine', 'p', 0.1))
+      /* La MÊME jauge que le bilan du jour : deux présentations de la même
+         note se mettraient à diverger, et on ne saurait plus si « 62 » veut
+         dire la même chose d'un écran à l'autre. */
+      html: (moy.note !== null ? jaugeHTML(moy.note, 'de vos objectifs cette semaine')
+                               : ill('cible', 80) + titre('Votre semaine', 'p', 0.1))
         + '<div class="sous" data-in style="animation-delay:.4s">'
         + (meilleur ? 'Meilleur jour : ' + JOURSLONGS(meilleur.date) + ', ' + meilleur.a.note + ' sur 100.'
                     : 'Aucun jour noté cette semaine.') + '</div>'
         + criteresHTML(moy.criteres),
-      pret: function () { remplirCriteres(moy.criteres); },
+      pret: function () { animerJauge(moy.note); remplirCriteres(moy.criteres); },
       boutons: [{ txt: 'Ce que mon corps a fait', on: scSemCorps }]
     });
   }
