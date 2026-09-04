@@ -1006,6 +1006,41 @@ html.no-scroll {
    PAR-DESSUS le « 0 / 3350 Kcal ». Elle passe donc à la ligne, sous les deux.
    `align-items:flex-start` évite que la rangée du haut soit recentrée sur la
    hauteur de la note les jours où elle s'affiche. */
+/* ═══ LE MODULE CALORIES ANNONCE L'OBJECTIF ═══════════════════
+   Demande de Pablo (2026-09-04) : « quand on arrive sur Suivi, attendre une
+   seconde, le module calories se transforme en blanc par un balayage de
+   couleur du noir vers le blanc, puis une animation dans le bloc montre
+   l'objectif en kilos en gros avec la durée en plus petit, puis l'écran se
+   fige au compteur de calories ».
+
+   ⚠️ TOUT SE PASSE DANS LE MODULE, ET LA PAGE NE BOUGE PAS. C'est ce qui
+   distingue cette animation d'un écran de plus : on n'interrompt personne, on
+   ne prend pas la navigation, et l'écran est utilisable pendant qu'elle joue.
+   ⚠️ Le voile est posé EN SURCOUCHE, il ne remplace pas le contenu : le
+   compteur n'est jamais démonté, donc il ne peut pas revenir vide ni décalé.
+   ⚠️ `pointer-events:none` — règle 41 de CLAUDE.md : le voile survit un
+   instant à son fondu, et invisible-mais-cliquable il avalerait le tap sur la
+   carte. */
+#hcCine{ position:absolute; inset:0; border-radius:28px; overflow:hidden;
+  pointer-events:none; z-index:3; }
+#hcCine .nappe{ position:absolute; inset:0; background:#fff;
+  clip-path:inset(0 100% 0 0); }
+#hcCine.va .nappe{ animation:hcEntre .72s cubic-bezier(.32,.72,.3,1) forwards; }
+#hcCine.part .nappe{ animation:hcSort .62s cubic-bezier(.4,0,1,1) forwards; }
+@keyframes hcEntre{ from{clip-path:inset(0 100% 0 0)} to{clip-path:inset(0 0 0 0)} }
+@keyframes hcSort { from{clip-path:inset(0 0 0 0)}   to{clip-path:inset(0 0 0 100%)} }
+#hcCine .dit{ position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:2px; opacity:0; }
+#hcCine.va .dit{ animation:hcMot .5s cubic-bezier(.22,1,.36,1) .62s forwards; }
+#hcCine.part .dit{ animation:hcMotSort .3s ease forwards; }
+@keyframes hcMot{ from{opacity:0;transform:translateY(9px)} to{opacity:1;transform:none} }
+@keyframes hcMotSort{ to{opacity:0} }
+#hcCine .kg{ font-size:44px; font-weight:800; letter-spacing:-2.5px; line-height:1;
+  color:#101014; }
+#hcCine .qd{ font-size:12.5px; font-weight:700; color:rgba(16,16,20,.52); }
+#hcCine .qi{ font-size:10.5px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:rgba(16,16,20,.38); margin-bottom:4px; }
+
 .hero{ position:relative; border-radius:28px; padding:26px 22px; background:var(--metal-black); box-shadow:var(--sh-metal); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
 .hero:has(.besoin-note:not([style*="display: none"])){ align-items:flex-start; }
 .hero .label .t1{ display:flex; align-items:center; gap:6px; color:#fff; font-size:19px; font-weight:800; letter-spacing:-0.01em; }
@@ -1055,6 +1090,9 @@ html.no-scroll {
   appearance:none; -webkit-appearance:none; }
 #ovObjectif .ob-f input::-webkit-outer-spin-button,
 #ovObjectif .ob-f input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+#ovObjectif .ob-hint{ font-size:11.5px; line-height:1.55; color:var(--muted); margin-top:8px; }
+#ovObjectif .ob-hint b{ color:var(--text); }
+#ovObjectif .ob-hint.warn b{ color:var(--amber,#ff9500); }
 #ovObjectif .ob-res{ position:sticky; top:-2px; z-index:2; margin:4px 0 2px;
   background:var(--surface-ink); color:var(--on-ink); border-radius:20px;
   padding:16px 16px 14px; box-shadow:0 8px 18px rgba(10,10,14,.28); }
@@ -1221,6 +1259,18 @@ html.no-scroll {
 
       <div class="ob-lbl">Ce que vous visez</div>
       <div class="ob-chips" id="obObj"></div>
+
+      <!-- ⚠️ LE COMBIEN ET LE EN COMBIEN DE TEMPS VONT ENSEMBLE, et c'est
+           pour ça qu'ils sont sur la même ligne : « 5 kg » ne veut rien dire
+           sans sa durée, et c'est le rapport des deux qui fait les calories.
+           La durée est PRÉ-REMPLIE avec ce qui est tenable — une case vide
+           ferait saisir un délai au hasard, donc un objectif au hasard. -->
+      <div class="ob-lbl" id="obKgLbl">Votre objectif de poids</div>
+      <div class="ob-grid" id="obKgBloc">
+        <div class="ob-f"><span>Combien de kg</span><input id="obKg" type="number" inputmode="decimal" min="-40" max="40" step="0.5" placeholder="+3"></div>
+        <div class="ob-f"><span>En combien de semaines</span><input id="obSem" type="number" inputmode="numeric" min="1" max="104" step="1"></div>
+      </div>
+      <div class="ob-hint" id="obKgHint"></div>
 
       <div class="ob-lbl">Vous</div>
       <div class="ob-grid">
@@ -2172,6 +2222,98 @@ var macObj={p:0,l:0,g:0,c:0}, macAuj={p:0,l:0,g:0,c:0};
 /* Le poids et la dépense de base, retenus : ils resservent chaque fois que
    l'objectif du jour est recalculé (séance notée, semaine programmée). */
 var PROFIL_POIDS=0, PROFIL_TDEE=0;
+/* ═══ L'OBJECTIF DE POIDS ENTRE ENFIN DANS LES CHIFFRES ═══════
+   Demande de Pablo (2026-09-04) : « le calcul des macros de suivi se fait en
+   fonction de cet objectif et de cette durée ».
+
+   ⚠️⚠️ AVANT, L'OBJECTIF NE CHANGEAIT RIEN. `objectif_valeur` et
+   `objectif_semaines` étaient écrits par l'onboarding, lus par le seul
+   `api/_generation.js` (pour le texte du prompt), et JAMAIS par un écran :
+   quelqu'un qui déclarait vouloir prendre 5 kg voyait un objectif de maintien,
+   au chiffre près. L'app nommait un but qu'elle ne comptait pas.
+
+   ⚠️ `PROFIL_BASE` ET `PROFIL_TDEE` SONT DEUX CHOSES, et les confondre serait
+   le contresens à ne pas faire : `PROFIL_TDEE` est la DÉPENSE (elle ne bouge
+   pas parce qu'on s'est fixé un but), `PROFIL_BASE` est l'OBJECTIF du jour
+   avant supplément d'entraînement. C'est `PROFIL_BASE` qu'on passe à
+   `calcMacros`, jamais l'autre. */
+var PROFIL_KG=0, PROFIL_SEM=0, PROFIL_BASE=0, PROFIL_ECART=null;
+
+/* ═══ L'ANNONCE DE L'OBJECTIF, DANS LE MODULE CALORIES ═══════
+   Une seconde après l'arrivée : balayage du noir vers le blanc, l'objectif en
+   kilos, sa durée, puis retour au compteur. Détail des choix dans le CSS.
+
+   ⚠️⚠️ FILET OBLIGATOIRE, ET C'EST LUI LE VRAI SUJET. Une page qui ne PEINT
+   pas ne joue AUCUNE animation CSS : la nappe blanche resterait à sa première
+   image. Ici, sa première image est `inset(0 100% 0 0)` — donc refermée, donc
+   invisible : le pire cas est un module normal, jamais un module blanc figé.
+   C'est pour ça que la nappe part FERMÉE et non ouverte. Et le `setTimeout`
+   final retire le voile quoi qu'il arrive, sans attendre le moindre
+   `animationend` — un événement qui, sur une page en arrière-plan, n'arrive
+   jamais (règle 40 de CLAUDE.md).
+
+   ⚠️ Elle ne se joue QUE S'IL Y A QUELQUE CHOSE À DIRE : sans objectif de
+   poids, il n'y a pas de « +5 kg » à montrer, et un balayage qui découvre un
+   module vide est une animation qui fait perdre une seconde pour rien.
+   ⚠️ Et une fois par jour seulement : à chaque passage sur Suivi, ce serait la
+   même bonne nouvelle répétée quinze fois — donc du bruit, puis un réflexe
+   d'attente avant de pouvoir lire son compteur. */
+var HC_MS = { attente: 1000, nappe: 720, lecture: 1800, sortie: 620 };
+
+function annonceObjectifVue() {
+  try { return localStorage.getItem('natty_obj_annonce_' + (USER_ID || 'anon')) === Natty.jour(); }
+  catch (e) { return false; }
+}
+function marquerAnnonceObjectif() {
+  try { localStorage.setItem('natty_obj_annonce_' + (USER_ID || 'anon'), Natty.jour()); } catch (e) {}
+}
+
+function texteDuree(sem) {
+  sem = parseInt(sem, 10) || 0;
+  if (!sem) return '';
+  if (sem < 8) return 'en ' + sem + ' semaine' + (sem > 1 ? 's' : '');
+  var mois = Math.round(sem / 4.345);
+  return 'en ' + mois + ' mois';
+}
+
+function annoncerObjectif(forcer) {
+  var carte = document.getElementById('heroCal');
+  if (!carte || !PROFIL_KG) return;
+  if (!forcer && annonceObjectifVue()) return;
+  // Deux plein écran l'un sur l'autre ne se discutent pas — même garde que le
+  // guide du jour, la planification et le bilan (§7 de CLAUDE.md).
+  if (window.Natty && Natty.ecranOccupe && Natty.ecranOccupe()) return;
+  if (document.getElementById('hcCine')) return;
+  marquerAnnonceObjectif();
+
+  var signe = PROFIL_KG > 0 ? '+' : '−';
+  var kg = Math.abs(PROFIL_KG).toString().replace('.', ',');
+  var d = texteDuree(PROFIL_SEM);
+  var v = document.createElement('div');
+  v.id = 'hcCine';
+  v.innerHTML = '<div class="nappe"></div><div class="dit">'
+    + '<div class="qi">Votre objectif</div>'
+    + '<div class="kg">' + signe + kg + ' kg</div>'
+    + (d ? '<div class="qd">' + esc(d) + '</div>' : '') + '</div>';
+  carte.appendChild(v);
+
+  // rAF pour que l'état initial soit peint avant d'armer — et un `setTimeout`
+  // qui double, parce qu'une page qui ne peint pas n'en donne aucune.
+  var arme = false;
+  function armer() { if (arme || !v.parentNode) return; arme = true; v.classList.add('va'); }
+  requestAnimationFrame(armer); setTimeout(armer, 60);
+
+  var t = HC_MS.nappe + HC_MS.lecture;
+  setTimeout(function () { if (v.parentNode) { v.classList.remove('va'); v.classList.add('part'); } }, t);
+  setTimeout(function () { if (v.parentNode) v.parentNode.removeChild(v); }, t + HC_MS.sortie + 120);
+}
+
+function majBaseObjectif() {
+  PROFIL_ECART = (window.Natty && Natty.ecartObjectif)
+    ? Natty.ecartObjectif(PROFIL_TDEE, PROFIL_KG, PROFIL_SEM) : null;
+  PROFIL_BASE = PROFIL_TDEE + ((PROFIL_ECART && PROFIL_ECART.kcal) || 0);
+  return PROFIL_BASE;
+}
 var allMeals=[], allRdvs=[], dailyHistory=[];
 var photoIAFile=null, photoManuFile=null, aiMealData=null;
 var weekOffset=0, currentPeriod='7j';
@@ -2378,7 +2520,7 @@ async function loadOnboarding() {
     // « 0 g restant » — ce qui se lit « objectif atteint », soit l'inverse.
     // On prend donc la ligne la plus exploitable : celle qui porte un tdee.
     // Même logique que assets/social.js.
-    var r = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&select=poids,tdee,bmr,prenom,completed&order=created_at.desc');
+    var r = await sbFetch('onboarding?user_id=eq.'+USER_ID+'&select=poids,tdee,bmr,prenom,completed,objectif_valeur,objectif_semaines&order=created_at.desc');
     if (!r||!r.length) return;
     var d = null;
     for (var i=0;i<r.length;i++) { if (parseFloat(r[i].tdee)>0 && parseFloat(r[i].poids)>0) { d=r[i]; break; } }
@@ -2388,8 +2530,11 @@ async function loadOnboarding() {
     /* ⚠️ La formule ÉTAIT RECOPIÉE ICI, une quatrième fois. Elle vit
        maintenant dans `Natty.macrosJour` — voir `calcMacros` plus bas. */
     PROFIL_POIDS = parseFloat(d.poids)||0; PROFIL_TDEE = parseFloat(d.tdee)||0;
+    PROFIL_KG = parseFloat(d.objectif_valeur)||0;
+    PROFIL_SEM = parseInt(d.objectif_semaines,10)||0;
+    majBaseObjectif();
     if (!macObj.p && !macObj.c) {
-      var m0 = calcMacros(PROFIL_POIDS, PROFIL_TDEE, 0);
+      var m0 = calcMacros(PROFIL_POIDS, PROFIL_BASE, 0);
       macObj.p = m0.p; macObj.l = m0.l; macObj.g = m0.g; macObj.c = m0.c;
     }
   } catch(e) {}
@@ -4997,8 +5142,15 @@ async function ouvrirObjectif() {
     taille: parseFloat(d.taille) || '',
     age: parseInt(d.age, 10) || '',
     sexe: d.sexe || '',
-    activite: d.activite || 'modere'
+    activite: d.activite || 'modere',
+    kg: parseFloat(d.objectif_valeur) || 0,
+    semaines: parseInt(d.objectif_semaines, 10) || 0
   };
+  /* ⚠️ La durée n'est pré-remplie QUE tant que personne ne l'a touchée. Une
+     durée déjà enregistrée compte comme touchée : la réécrire à l'ouverture
+     effacerait le choix de la personne sous ses yeux. */
+  OBJ.dureeTouchee = !!OBJ.semaines;
+  if (OBJ.kg && !OBJ.semaines) OBJ.semaines = dureeAuto(OBJ.kg);
   var neuf = !OBJ.poids || !OBJ.taille;
   setText('obTitre', neuf ? 'Votre objectif' : 'Modifier mon objectif');
   var sub = document.getElementById('obSub');
@@ -5009,6 +5161,9 @@ async function ouvrirObjectif() {
     var e = document.getElementById(id);
     if (e) e.value = OBJ[id === 'obPoids' ? 'poids' : (id === 'obTaille' ? 'taille' : 'age')] || '';
   });
+  var kgEl = document.getElementById('obKg'), semEl = document.getElementById('obSem');
+  if (kgEl) kgEl.value = OBJ.kg || '';
+  if (semEl) semEl.value = OBJ.semaines || '';
   peindreObjChips();
   brancherObjChamps();
   peindreObjRes();
@@ -5026,7 +5181,35 @@ async function ouvrirObjectif() {
    et « Enregistrer » ignorait les taps.
    ⚠️ On écoute `input`, pas `change` : `change` n'arrive qu'à la perte de
    focus, donc l'aperçu ne bougerait qu'en quittant le champ. */
+/* La durée tenable pour un objectif — celle qu'on pré-remplit. Le calcul vit
+   dans `assets/core.js` : le prompt de la génération et cette feuille doivent
+   dire la même chose. */
+function dureeAuto(kg) {
+  return (window.Natty && Natty.dureeConseillee) ? Natty.dureeConseillee(kg) : 0;
+}
+
 function brancherObjChamps() {
+  var kgEl = document.getElementById('obKg'), semEl = document.getElementById('obSem');
+  if (kgEl && kgEl.getAttribute('data-branche') !== '1') {
+    kgEl.setAttribute('data-branche', '1');
+    kgEl.addEventListener('input', function () {
+      OBJ.kg = parseFloat(String(kgEl.value).replace(',', '.')) || 0;
+      /* ⚠️ LE TYPE SE DÉDUIT DU SIGNE, sinon les deux se contredisent à
+         l'écran : « Prise de masse » au-dessus d'un objectif à −550 kcal. Le
+         chiffre est la vérité, la pastille n'en est que le nom. */
+      OBJ.objectif_type = OBJ.kg > 0 ? 'prise_masse' : (OBJ.kg < 0 ? 'perte_poids' : 'maintien');
+      if (!OBJ.dureeTouchee) { OBJ.semaines = dureeAuto(OBJ.kg); if (semEl) semEl.value = OBJ.semaines || ''; }
+      peindreObjChips(); peindreObjRes();
+    });
+  }
+  if (semEl && semEl.getAttribute('data-branche') !== '1') {
+    semEl.setAttribute('data-branche', '1');
+    semEl.addEventListener('input', function () {
+      OBJ.semaines = parseInt(semEl.value, 10) || 0;
+      OBJ.dureeTouchee = true;
+      peindreObjRes();
+    });
+  }
   [['obPoids', 'poids', parseFloat], ['obTaille', 'taille', parseFloat],
    ['obAge', 'age', function (v) { return parseInt(v, 10); }]].forEach(function (x) {
     var e = document.getElementById(x[0]);
@@ -5061,6 +5244,22 @@ function peindreObjChips() {
     b.addEventListener('click', function () {
       var p = b.getAttribute('data-ob').split('|');
       OBJ[p[0]] = p[1];
+      /* Choisir « Prise de masse » avec un objectif à −3 kg n'aurait aucun
+         sens : la pastille propose un objectif par défaut plutôt que de
+         laisser les deux se contredire. Maintien remet à zéro — c'est
+         exactement ce que le mot veut dire. */
+      if (p[0] === 'objectif_type') {
+        var v = OBJ.kg || 0;
+        if (p[1] === 'prise_masse' && v <= 0) OBJ.kg = 3;
+        else if (p[1] === 'perte_poids' && v >= 0) OBJ.kg = -3;
+        else if (p[1] === 'maintien') OBJ.kg = 0;
+        if (OBJ.kg !== v) {
+          if (!OBJ.dureeTouchee || !OBJ.kg) OBJ.semaines = dureeAuto(OBJ.kg);
+          var k = document.getElementById('obKg'), sm = document.getElementById('obSem');
+          if (k) k.value = OBJ.kg || '';
+          if (sm) sm.value = OBJ.semaines || '';
+        }
+      }
       peindreObjChips();
       peindreObjRes();
     });
@@ -5082,16 +5281,56 @@ function peindreObjRes() {
       + '<div class="m">Il manque le poids, la taille, l’âge ou le sexe.</div>';
     return;
   }
-  var m = calcMacros(OBJ.poids, t, 0);
+  var e = (window.Natty && Natty.ecartObjectif)
+    ? Natty.ecartObjectif(t, OBJ.kg, OBJ.semaines) : { kcal: 0 };
+  var base = t + (e.kcal || 0);
+  var m = calcMacros(OBJ.poids, base, 0);
   el.innerHTML = '<div class="k">Votre objectif de base</div>'
-    + '<div class="v">' + t + ' <span style="font-size:15px;font-weight:700">kcal</span></div>'
+    + '<div class="v">' + base + ' <span style="font-size:15px;font-weight:700">kcal</span></div>'
     + '<div class="m">' + m.p + ' g de protéines · ' + m.g + ' g de glucides · ' + m.l + ' g de lipides</div>'
-    /* ⚠️ On DIT que l'objectif du jour peut être plus haut. Sinon la personne
-       enregistre 3 200 et voit 3 350 sur Suivi deux secondes plus tard, sans
-       comprendre lequel des deux est le vrai. */
-    + '<div class="n">Métabolisme de base ' + b + ' kcal, multiplié par votre activité. '
-    + 'Les jours d’entraînement, votre objectif monte au-dessus de ce chiffre — '
-    + 'c’est calculé à part, depuis vos séances.</div>';
+    /* ⚠️ On DIT d'où vient le chiffre, et il vient de DEUX endroits depuis que
+       l'objectif de poids compte : la dépense, puis l'écart qu'impose le but.
+       Sans cette ligne, la personne verrait 2 650 là où sa dépense est 3 200 et
+       n'aurait aucun moyen de savoir lequel des deux est faux. */
+    + '<div class="n">Vous dépensez environ <b>' + t + ' kcal</b> par jour '
+    + '(métabolisme de base ' + b + ', multiplié par votre activité)'
+    + (e.kcal ? (', et votre objectif de poids ' + (e.kcal > 0 ? 'ajoute' : 'retire')
+                 + ' <b>' + Math.abs(e.kcal) + ' kcal</b>') : '')
+    + '. Les jours d’entraînement, il monte encore — c’est calculé à part, '
+    + 'depuis vos séances.</div>';
+  peindreObjKgHint(t, e);
+}
+
+/* La ligne qui dit si le rythme demandé existe. Sans elle, « 10 kg en un mois »
+   afficherait un objectif de 2 400 kcal comme si c'était un plan : le chiffre
+   serait borné en silence, donc faux sans le dire, et la date visée
+   n'arriverait jamais. */
+function peindreObjKgHint(t, e) {
+  var h = document.getElementById('obKgHint');
+  if (!h) return;
+  h.className = 'ob-hint';
+  if (!OBJ.kg) {
+    h.innerHTML = 'Laissez à zéro pour viser le <b>maintien</b> : vos calories '
+      + 'seront exactement votre dépense.';
+    return;
+  }
+  if (!OBJ.semaines) { h.innerHTML = 'Indiquez en combien de semaines, sans quoi il n’y a rien à répartir.'; return; }
+  var sens = OBJ.kg > 0 ? 'prendre' : 'perdre';
+  var rythme = Math.abs(e.kgParSemaine || 0);
+  var txt = 'Pour ' + sens + ' <b>' + Math.abs(OBJ.kg) + ' kg</b> en <b>'
+    + OBJ.semaines + ' semaines</b>, soit ' + rythme.toFixed(2).replace('.', ',')
+    + ' kg par semaine.';
+  if (e.borne) {
+    h.className = 'ob-hint warn';
+    txt += ' <b>Ce rythme n’est pas tenable</b> : il demanderait '
+      + Math.abs(e.brut) + ' kcal d’écart par jour. On s’en tient à '
+      + Math.abs(e.kcal) + ' kcal, ce qui demande plutôt <b>'
+      + e.semainesRealistes + ' semaines</b>.';
+  } else if (rythme > 0) {
+    txt += ' La durée proposée par défaut (' + dureeAuto(OBJ.kg)
+      + ' semaines) est celle qui se tient sans y laisser de muscle.';
+  }
+  h.innerHTML = txt;
 }
 
 /* L'ÉCRITURE — le seul endroit de cette page qui écrit dans `onboarding`. */
@@ -5103,6 +5342,14 @@ async function enregistrerObjectif(o) {
     activite: o.activite, objectif_type: o.objectif_type,
     bmr: b, tdee: t, deficit: Math.round(t * 0.15)
   };
+  /* ⚠️ On n'écrit l'objectif de poids QUE s'il a été saisi ici. `profilSaveInfo`
+     (l'overlay profil) passe par cette même fonction sans ces deux champs :
+     les envoyer à `undefined` remettrait à zéro un objectif enregistré, depuis
+     un écran qui n'en parle même pas. */
+  if (o.kg !== undefined) {
+    corps.objectif_valeur = o.kg || null;
+    corps.objectif_semaines = o.kg ? (o.semaines || null) : null;
+  }
   try {
     if (o.id) {
       await Natty.sbPatch('onboarding?id=eq.' + encodeURIComponent(o.id), corps);
@@ -5123,6 +5370,9 @@ async function validerObjectif() {
   OBJ.poids  = parseFloat((document.getElementById('obPoids') || {}).value) || 0;
   OBJ.taille = parseFloat((document.getElementById('obTaille') || {}).value) || 0;
   OBJ.age    = parseInt((document.getElementById('obAge') || {}).value, 10) || 0;
+  OBJ.kg       = parseFloat(String((document.getElementById('obKg') || {}).value || '').replace(',', '.')) || 0;
+  OBJ.semaines = parseInt((document.getElementById('obSem') || {}).value, 10) || 0;
+  if (OBJ.kg && !OBJ.semaines) OBJ.semaines = dureeAuto(OBJ.kg);
   if (!objTdee(OBJ)) { showToast('Poids, taille, âge et sexe sont nécessaires', 'err'); return; }
   if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
   var r = await enregistrerObjectif(OBJ);
@@ -5132,7 +5382,8 @@ async function validerObjectif() {
   profilInfoCache = Object.assign({}, profilInfoCache, OBJ, { tdee: r.tdee, bmr: r.bmr });
   if (typeof profilAfficherInfos === 'function') profilAfficherInfos(profilInfoCache);
   PROFIL_POIDS = OBJ.poids; PROFIL_TDEE = r.tdee;
-  var m = calcMacros(PROFIL_POIDS, PROFIL_TDEE, 0);
+  PROFIL_KG = OBJ.kg || 0; PROFIL_SEM = OBJ.semaines || 0;
+  var m = calcMacros(PROFIL_POIDS, majBaseObjectif(), 0);
   macObj.p = m.p; macObj.l = m.l; macObj.g = m.g; macObj.c = m.c;
   fermerObjectif();
   showToast('Objectif enregistré ✓');
@@ -5142,6 +5393,9 @@ async function validerObjectif() {
      ça, l'écran garderait l'ancien objectif du jour pendant que la base porte
      le nouveau. */
   await appliquerBesoinDuJour();
+  /* Après un enregistrement, on la rejoue MÊME si elle a déjà été vue
+     aujourd'hui : c'est la confirmation de ce qu'on vient de régler. */
+  annoncerObjectif(true);
 }
 
 /* ═══ L'objectif du jour s'adapte à l'entraînement ═══════════
@@ -5176,7 +5430,7 @@ async function appliquerBesoinDuJour() {
     try { await NattySeance.charger(70); } catch (e) {}
   }
   var sup = calculerBesoin(PROFIL_POIDS, PROFIL_TDEE);
-  var m = calcMacros(PROFIL_POIDS, PROFIL_TDEE, sup);
+  var m = calcMacros(PROFIL_POIDS, majBaseObjectif(), sup);
   macObj.p = m.p; macObj.l = m.l; macObj.g = m.g; macObj.c = m.c;
   peindreBesoinNote(sup);
   afficherMacros();
@@ -5186,6 +5440,12 @@ async function appliquerBesoinDuJour() {
   if (window.NattyCreneaux && NattyCreneaux.charger) {
     try { await NattyCreneaux.charger(true); } catch (e) {}
   }
+  /* ⚠️ La seconde d'attente court à partir d'ICI, pas de l'arrivée sur la
+     page : avant que l'objectif ne soit lu, il n'y a rien à annoncer, et un
+     balayage qui découvrirait « 0 kg » serait pire que pas d'animation. En
+     pratique les deux instants sont à quelques centaines de millisecondes
+     l'un de l'autre. */
+  setTimeout(function () { annoncerObjectif(false); }, HC_MS.attente);
 }
 
 function peindreBesoinNote(sup) {
@@ -5196,7 +5456,7 @@ function peindreBesoinNote(sup) {
   el.style.display = 'block';
   /* On dit le supplément ET sa répartition : « +300 kcal » sans dire où ils
      vont laisse trois anneaux qui ont bougé sans raison visible. */
-  var base = calcMacros(PROFIL_POIDS, PROFIL_TDEE, 0);
+  var base = calcMacros(PROFIL_POIDS, PROFIL_BASE, 0);
   var dp = macObj.p - base.p, dg = macObj.g - base.g, dl = macObj.l - base.l;
   el.innerHTML = esc(b.txt)
     + '<br>Réparti en <b>+' + dg + ' g</b> de glucides, <b>+' + dp + ' g</b> de protéines '
@@ -5705,7 +5965,7 @@ async function profilSaveInfo() {
   profilAfficherInfos(profilInfoCache);
   profilToggleEdit();
   PROFIL_POIDS = poids; PROFIL_TDEE = r.tdee;
-  var m = calcMacros(poids, r.tdee, 0);
+  var m = calcMacros(poids, majBaseObjectif(), 0);
   macObj.p = m.p; macObj.l = m.l; macObj.g = m.g; macObj.c = m.c;
   majEtatObjectif();
   updateMacroCards();
@@ -6125,7 +6385,7 @@ async function loadProfilOverlayData() {
        aucune contrainte d'unicité dessus, donc l'écriture cible une LIGNE, pas
        un utilisateur. Et `order=created_at.desc` sans `limit=1` : on prend la
        première ligne exploitable, comme partout ailleurs (§7 de CLAUDE.md). */
-    var toutes = await sbFetch('onboarding?user_id=eq.' + USER_ID + '&select=id,poids,taille,activite,tdee,bmr,objectif_type,prenom,nom,age,sexe&order=created_at.desc');
+    var toutes = await sbFetch('onboarding?user_id=eq.' + USER_ID + '&select=id,poids,taille,activite,tdee,bmr,objectif_type,objectif_valeur,objectif_semaines,prenom,nom,age,sexe&order=created_at.desc');
     var data = (toutes || []).filter(function (x) { return x && x.poids && x.tdee; });
     if (!data.length) data = toutes || [];
     if (data && data.length) {

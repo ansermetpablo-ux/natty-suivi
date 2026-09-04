@@ -1025,6 +1025,88 @@ var Natty = (function () {
   var SUP_G = 0.60, SUP_P = 0.25, SUP_L = 0.15;
   var PROT_BASE = 2.0, PROT_MAX = 2.4;       // g par kg de poids de corps
 
+  /* ═══ L'OBJECTIF DE POIDS, ET CE QU'IL COÛTE PAR JOUR ═══════
+     Demande de Pablo (2026-09-04) : « le module doit comprendre le poids voulu
+     par exemple +5 kg ou −5 kg et en combien de temps il veut l'atteindre ; le
+     calcul des macros se fait en fonction de cet objectif et de cette durée ».
+
+     Jusqu'ici l'objectif n'avait AUCUN effet sur les chiffres : `objectif_type`
+     partait dans le prompt de la génération, et c'est tout. On visait donc son
+     maintien quoi qu'on ait déclaré vouloir — un écran qui dit « prise de
+     masse » au-dessus d'un objectif de maintien.
+
+     Le calcul est une règle de trois, et rien de plus : un kilo de masse
+     corporelle vaut ~7 700 kcal, réparties sur la durée choisie.
+
+     ⚠️⚠️ MAIS IL EST BORNÉ, ET LES BORNES NE SONT PAS DÉCORATIVES. « 10 kg en
+     4 semaines » demande 2 750 kcal de déficit par jour — davantage que ce que
+     dépensent la plupart des gens. Sans plafond, l'app afficherait un objectif
+     de 450 kcal par jour et le présenterait comme un plan. On plafonne donc à
+     25 % de la dépense en déficit et 20 % en surplus, et on DIT que le rythme
+     demandé n'est pas tenable en proposant la durée qui l'est. */
+  var KCAL_PAR_KG = 7700;
+  var DEFICIT_MAX = 0.25, SURPLUS_MAX = 0.20;
+  /* Le rythme sain, en semaines par kilo. La perte va deux fois plus vite que
+     la prise : au-delà de ~0,25 kg par semaine, ce qu'on gagne est surtout du
+     gras — c'est la seule raison de ce chiffre, et il est très consensuel. */
+  var SEM_PAR_KG_PERTE = 2, SEM_PAR_KG_PRISE = 4;
+
+  /**
+   * La durée réalisable pour un objectif, en semaines — celle qu'on pré-remplit.
+   * @param {number} kg  signé : +3 pour prendre 3 kg, −3 pour en perdre 3
+   */
+  function dureeConseillee(kg) {
+    kg = +kg || 0;
+    if (!kg) return 0;
+    var n = Math.abs(kg) * (kg > 0 ? SEM_PAR_KG_PRISE : SEM_PAR_KG_PERTE);
+    /* Arrondi au mois plein dès 8 semaines : « 3 mois » se lit, « 13 semaines »
+       se calcule. En dessous, la semaine reste l'unité utile. */
+    return n >= 8 ? Math.max(4, Math.round(n / 4) * 4) : Math.max(2, Math.round(n));
+  }
+
+  /**
+   * L'écart calorique quotidien qu'impose un objectif, en kcal — positif pour
+   * une prise, négatif pour une perte, 0 s'il n'y a pas d'objectif chiffré.
+   *
+   * @returns {{kcal, brut, borne, kgParSemaine, semainesRealistes}}
+   *   `borne` dit que le rythme demandé a dû être ramené à ce qui est tenable ;
+   *   c'est ce que l'écran affiche pour ne pas laisser croire à un plan qui n'en
+   *   est pas un.
+   */
+  function ecartObjectif(tdee, kg, semaines) {
+    tdee = +tdee || 0; kg = +kg || 0; semaines = +semaines || 0;
+    var out = { kcal: 0, brut: 0, borne: false, kgParSemaine: 0, semainesRealistes: 0 };
+    if (!tdee || !kg || !semaines) return out;
+    out.kgParSemaine = Math.round((kg / semaines) * 100) / 100;
+    var brut = (kg * KCAL_PAR_KG) / (semaines * 7);
+    out.brut = Math.round(brut);
+    var plafond = tdee * (kg > 0 ? SURPLUS_MAX : DEFICIT_MAX);
+    var borne = Math.max(-plafond, Math.min(plafond, brut));
+    out.borne = Math.abs(brut) - Math.abs(borne) > 1;
+    out.kcal = Math.round(borne);
+    /* Ce que la borne implique : le temps qu'il faudra VRAIMENT. On le dit
+       plutôt que de laisser la personne croire à sa date. */
+    if (out.borne) out.semainesRealistes = Math.ceil(Math.abs(kg) * KCAL_PAR_KG / (plafond * 7));
+    return out;
+  }
+
+  /**
+   * La base calorique d'une journée : la dépense, corrigée par l'objectif.
+   *
+   * ⚠️⚠️ C'EST ELLE QU'ON PASSE À `macrosJour`, PAS `tdee`. Sans ça, quelqu'un
+   * qui déclare vouloir prendre 5 kg voit un objectif de maintien — l'app dit
+   * « prise de masse » et compte comme si de rien n'était. C'est le seul point
+   * où l'objectif déclaré rencontre les chiffres.
+   * ⚠️ Ne PAS l'utiliser comme dépense : le bilan du soir calcule son déficit
+   * contre la dépense réelle (`tdee` + séance), qui ne bouge pas parce qu'on
+   * s'est fixé un but.
+   */
+  function baseObjectif(tdee, kg, semaines) {
+    tdee = +tdee || 0;
+    if (!tdee) return 0;
+    return Math.round(tdee + ecartObjectif(tdee, kg, semaines).kcal);
+  }
+
   /**
    * @param {number} poids  en kg
    * @param {number} base   la dépense de maintien (`onboarding.tdee`)
@@ -1073,6 +1155,9 @@ var Natty = (function () {
     calcMac: calcMac, getNutri: getNutri, goto: goto, requireAuth: requireAuth,
     // Les macros visées un jour donné — LA formule, pour toute l'app.
     macrosJour: macrosJour,
+    // L'objectif de poids : ce qu'il coûte par jour, et en combien de temps.
+    ecartObjectif: ecartObjectif, dureeConseillee: dureeConseillee,
+    baseObjectif: baseObjectif,
     jour: jour, aMinuit: aMinuit,
     // Un plein écran est-il déjà ouvert ? (voir l'encadré ci-dessus)
     ecranOccupe: ecranOccupe,

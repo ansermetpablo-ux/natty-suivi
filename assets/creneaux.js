@@ -214,7 +214,7 @@ var NattyCreneaux = (function () {
       // macros n'existent pas, et une colonne inconnue fait échouer TOUTE la
       // requête en 42703 (voir §7 de CLAUDE.md).
       var r = await Natty.sbFetch('onboarding?user_id=eq.' + Natty.USER_ID
-        + '&select=poids,tdee&order=created_at.desc&limit=5');
+        + '&select=poids,tdee,objectif_valeur,objectif_semaines&order=created_at.desc&limit=5');
       // La table contient de vrais doublons : on prend la première ligne
       // réellement exploitable, pas la première tout court.
       onb = (r || []).filter(function (x) { return x && (x.poids || x.tdee); })[0] || null;
@@ -235,8 +235,15 @@ var NattyCreneaux = (function () {
            objectifs pour la même journée — l'écran Suivi et le bouton `+` se
            seraient contredits sur ce qu'il reste à manger. */
         etat.sup = supplementSeance(poids, tdee);
+        /* ⚠️ LA BASE N'EST PAS LA DÉPENSE : l'objectif de poids déclaré la
+           déplace (`Natty.baseObjectif`). Sans cette ligne, le `+` annoncerait
+           les restes d'un objectif de maintien pendant que l'écran Suivi
+           afficherait ceux d'une prise de masse — deux chiffres pour la même
+           journée, et rien pour dire lequel est le bon. */
+        var base = (window.Natty && Natty.baseObjectif)
+          ? Natty.baseObjectif(tdee, onb.objectif_valeur, onb.objectif_semaines) : tdee;
         etat.cibleJour = (window.Natty && Natty.macrosJour)
-          ? Natty.macrosJour(poids, tdee, etat.sup)
+          ? Natty.macrosJour(poids, base, etat.sup)
           : { p: poids ? r0(poids * 2) : 0, l: tdee ? r0(tdee * 0.25 / 9) : 0,
               g: tdee ? r0(tdee * 0.5 / 4) : 0, c: tdee ? r0(tdee) : 0 };
         etat.source = 'declare';
