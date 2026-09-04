@@ -580,37 +580,122 @@ d'abord vers une page ferait perdre le geste utilisateur et iOS/WebKit refuserai
 la caméra. `assets/nav.js` appelle `window.NattyAjout.start()` en premier, et retombe sur
 l'ancien `window.NattyOnAdd` puis sur `suivi.html?add=1` si le module n'est pas chargé.
 
-**Refonte en trois temps (2026-08-05, demande de Pablo).** L'écran unique faisait
-tout — cadre, anneaux, liste, « Terminer » — et c'est ce qui étouffait le cadre photo.
-Il est découpé :
-1. **`naScRepas` — la prise de vue.** Le cadre est le HÉROS (3/4, centré), puis les
-   anneaux en **−30 %** (92 px au lieu de 132, trait et textes réduits dans le même
-   rapport), le **module noir des calories restantes** (vocabulaire `--metal-black` /
-   `--sh-metal` de `suivi.html`, valeurs recopiées : ces tokens vivent dans son
-   `<style>`, pas dans `assets/style.css`), et les trois sources — **Prendre la photo**,
-   **Galerie**, **Écrire**. Ni liste d'ingrédients ni « Terminer » : ils n'ont aucun sens
-   avant qu'un plat existe.
+#### La refonte du 2026-09-04 — maquettes de Pablo
+Deux écrans redessinés, et **toutes les portes d'entrée mènent enfin ici** (voir
+« Ce qui menait encore ailleurs » plus bas).
+
+1. **`naScRepas` — la prise de vue, PLEIN ÉCRAN.** La caméra occupe tout l'écran ;
+   la maison en haut à gauche, et en bas une barre de trois gestes : **galerie**,
+   **obturateur**, **crayon** (écrire à la main). Rien d'autre.
+   > ⚠️ **Les anneaux et le module noir des calories ont QUITTÉ cet écran**, et
+   > c'est le point à ne pas « rattraper » : ils y décrivaient un reste **avant la
+   > photo**, donc avant qu'il y ait quoi que ce soit à décrire — et la photo
+   > allait de toute façon le changer dans la seconde. Ils sont sur le récap, où
+   > ils parlent d'un repas qui existe.
+   > ⚠️ **La colonne perd son rembourrage sur CET écran seulement** (classe `cam`
+   > posée par `montrer()`). Sans ça, l'image garderait 22 px de noir de chaque
+   > côté : ce ne serait pas un plein écran, ce serait un cadre sans bordure.
+   > ⚠️ **L'obturateur porte l'id `naPrendre` et vit dans la barre**, plus dans le
+   > cadre : `camDemarrer()` n'en fabrique donc plus. Le fabriquer en double
+   > donnait deux ronds blancs superposés dès l'autorisation caméra accordée.
+   > ⚠️⚠️ **ET LA CAPTURE EST RECADRÉE SUR CE QUI EST À L'ÉCRAN.** Le viseur est
+   > en `object-fit:cover` : une partie du flux est **hors** du cadre visible.
+   > Envoyer l'image entière ferait analyser ce que personne n'a cadré — c'est le
+   > défaut déjà payé du temps du cadre 3/4 (« la photo réellement analysée ne
+   > ressemblait pas à ce qu'on avait vu »), simplement retourné dans l'autre
+   > sens. `camCapturer()` refait donc le calcul de `cover` et ne dessine que la
+   > fenêtre visible.
+
+2. **`naScRecap` — le récap.** La **photo en héros** (44 vh, fondue vers le bas),
+   le nom modifiable, **« Valeurs nutritionnelles »**, **trois cartes sobres** —
+   une par macro — puis les **calories du repas** et la liste des ingrédients.
+   En bas, deux pastilles rondes : **enrichir à gauche** (discrète), **valider à
+   droite** (coche noire sur rond blanc). Elles remplacent deux boutons pleine
+   largeur qui mangeaient le quart de l'écran.
+   > **Les anneaux n'ont pas disparu** : ils sont passés en pastille de 22 px dans
+   > l'en-tête de chaque carte, à côté de l'emoji, et ce sont **toujours**
+   > `naArc<k>` — `majAnneaux()` n'a rien eu à apprendre. La barre du bas de la
+   > carte redit la même fraction ; les deux sortent du même calcul, elles ne
+   > peuvent pas se contredire. Graisse **300** et non 800 : « plus sérieux et
+   > sobre », demandé explicitement.
+   > ⚠️ **Le fondu vers le bas remplace le détourage de la maquette.** Le plat
+   > « flotte » quel que soit son arrière-plan, sans qu'aucune image n'ait à être
+   > détourée — et `contain`, jamais `cover` : on doit revoir **exactement** la
+   > photo qui a été analysée.
+   > ⚠️⚠️ **AUCUN ENFANT DU RÉCAP NE SE COMPRIME** (`#naScRecap > *{flex:0 0 auto}`).
+   > `.na-screen` est une colonne flex, où un enfant vaut `flex-shrink:1` : mesuré
+   > au banc sans cette règle, la photo de 44 vh se réduisait à un bandeau montrant
+   > le seul bord de l'assiette, et la rangée de vignettes tombait **à 0 px** — sa
+   > vignette débordait alors par-dessus le titre « Valeurs nutritionnelles ».
+   > Quatrième occurrence de la même famille dans ce dépôt : **une hauteur demandée
+   > ne survit pas à une compression flex** (le cadre photo 3/4, les barres de la
+   > semaine du bilan).
+   > ⚠️⚠️ **LA PHOTO VA D'UN BORD À L'AUTRE, ET UNE MARGE NÉGATIVE NE SUFFIT PAS.**
+   > Le rembourrage de 22 px vit sur `.na-col` ; un `margin:0 -22px` fait bien
+   > déborder la photo, mais `.na-screen` défile (`overflow-y:auto`, donc
+   > `overflow-x` calculé à `auto`) et ces 22 px devenaient un **défilement
+   > horizontal** — mesuré, 353 px de contenu pour 331 de large. Le rembourrage est
+   > donc déplacé de la colonne vers l'écran lui-même : la boîte de défilement fait
+   > 375 px, la photo débordante s'aligne sur ses bords, et `overflow-x:hidden`
+   > clôt l'affaire sans rien rogner. La barre du haut reprend le rembourrage à son
+   > compte, sinon la maison se colle au bord.
+   > ⚠️ **Une seule photo : PAS de vignette.** La rangée affichait la même image en
+   > 46 px sous la même image en 357 — on lisait ça comme une seconde prise de vue,
+   > pas comme un bouton. Elle revient dès la deuxième photo, quand elle sert
+   > vraiment à en retirer une.
+   > ⚠️ **`majAnneaux()` ne réécrit plus `naTerminer.className`** : il valait
+   > `'na-btn ' + (marge ? 'sombre' : 'primary')` et effaçait donc `na-fab-b`,
+   > c'est-à-dire la forme ronde, à chaque rafraîchissement des anneaux.
+   > ⚠️ **Et « Enrichir » ne se cache plus quand la marge est épuisée** : il
+   > s'atténue (opacité .55). C'était défendable pour un bouton pleine largeur qui
+   > disputait la place à « Terminer » ; ce n'est plus qu'une pastille de 52 px
+   > dans un coin, et Pablo l'a demandée en bas à gauche — donc en permanence.
+   > ⚠️ **L'attente d'enregistrement passe par une CLASSE** (`na-busy`), plus par
+   > `textContent` : le bouton est une pastille dont tout le contenu est un SVG, et
+   > y écrire « Enregistrement… » aurait effacé la coche pour de bon.
+   > ⚠️ **Petit écran** : sous 700 px de haut la photo passe à 34 vh. Mesuré à
+   > 375 × 667, à 44 vh la carte des calories passait **entièrement** sous la barre
+   > des deux boutons — donc le total du repas, qui est précisément ce que Pablo a
+   > demandé d'ajouter, n'était visible qu'en défilant.
+   > 🔄 **Cet écran DÉFILE**, contrairement à la prise de vue et à la règle d'avant
+   > (« la page est fixe, seule la liste des ingrédients défile ») : avec une photo
+   > de 44 vh en tête, un écran fixe n'a plus la place de montrer les macros ET les
+   > ingrédients. C'est donc la liste qui perd son défilement propre.
+
+**Ce qui menait encore ailleurs** (corrigé le même jour, `suivi.html` + `www/`) :
+trois chemins ouvraient toujours l'**ancien** overlay `ovRepas` — l'arrivée en
+`?add=1` (donc le lien de `profil.html` et le repli de la nav), l'action « repas »
+du popup conseils, et le bouton caché de la page. Ils tombaient sur un formulaire
+alors que le reste de l'app ouvre la caméra plein écran. Tout passe désormais par
+`ouvrirAjoutPlat()`, qui appelle `NattyAjout.start()` et ne garde l'ancien overlay
+qu'en repli si le module n'est pas chargé.
+
+**Refonte en trois temps (2026-08-05, demande de Pablo) — HISTORIQUE.** L'écran unique
+faisait tout — cadre, anneaux, liste, « Terminer » — et c'est ce qui étouffait le cadre
+photo. C'est ce découpage qui a donné les trois écrans ci-dessus ; seul le deuxième est
+resté tel quel :
 2. **`naScOk` — la validation.** Rond puis V vert, reprise de `.vok` d'`assets/planning.js`
    (deux tracés décalés ; un seul tracé continu ne se lit pas comme une validation).
    Enchaîne seule au bout de 1,75 s — c'est une confirmation, pas une étape.
    ⚠️ La caméra est arrêtée **avant** la transition : la laisser tourner garde l'indicateur
    allumé sur des écrans qui ne filment plus. Le minuteur est annulé par `fermer()`, sinon
    un overlay fermé pendant l'animation se rouvrirait tout seul sur un `S` déjà nul.
-3. **`naScRecap` — le récap.** Nom modifiable, vignettes, anneaux à taille normale, liste
-   des ingrédients **ouverte** (retirer / corriger la quantité / ajouter), puis
-   **Enrichir** — qui n'apparaît qu'ici — et **Terminer et enregistrer**.
-   « Écrire » y mène **sans** la transition verte : rien n'a été reconnu, il n'y a rien à
-   confirmer.
+3. **`naScRecap` — le récap.** Redessiné le 2026-09-04 (ci-dessus). Ce qui n'a pas
+   bougé : « Écrire » y mène **sans** la transition verte — rien n'a été reconnu, il n'y
+   a rien à confirmer.
 
 Retours : depuis le récap on revient à la prise de vue (c'est là qu'on ajoute une seconde
 photo au même repas) ; c'est depuis la prise de vue qu'on abandonne. Retirer la dernière
 vignette ramène à la prise de vue, plutôt que d'afficher un récap vide avec « Terminer ».
 
-⚠️ **Les anneaux existent en DEUX exemplaires**, d'où le préfixe d'identifiant
-(`naArcp` / `naArcmp`) et `PREFIXES` : `majAnneaux()` peint les deux du même coup, ils ne
-peuvent donc pas se contredire d'un écran à l'autre.
+⚠️ **Il n'y a plus qu'UN jeu d'anneaux**, donc plus de préfixe d'identifiant ni de
+`PREFIXES` : le second vivait sur l'écran de prise de vue, qui n'en porte plus (refonte
+du 2026-09-04). Les identifiants sont `naArcp` / `naArcl` / `naArcg`, et `naVal<k>` ne
+porte plus que le CHIFFRE — le « g » est un élément statique à côté, en plus petit. Y
+remettre l'unité afficherait « 61gg ».
 
-**Enchaînement des écrans** (maquettes d'origine, avant la refonte ci-dessus) :
+**Enchaînement des écrans** (maquettes d'ORIGINE — les écrans 3 et 5 ont depuis été
+redessinés, voir la refonte du 2026-09-04 ci-dessus) :
 1. `<input capture="environment">` → caméra native.
 2. `naScAnalyse` — photo envoyée à `/api/claude` (vision), même prompt que `analyserAvecIA()`
    de `suivi.html`. En cas d'échec : « Reprendre une photo » / « Galerie » / « Saisir à la main »
@@ -730,7 +815,13 @@ critique → suggestion du prochain repas → **et seulement ensuite** le choix 
 > critique du plat »). Le choix arrive quand même si l'analyse échoue : une panne d'IA ne doit
 > pas bloquer la publication.
 
-⚠️ **Le cadre photo est en `object-fit:contain`, en portrait.** En `cover` dans un cadre 4/3, un
+⚠️ **Le cadre photo n'existe plus** (refonte du 2026-09-04) : le viseur est plein écran en
+`object-fit:cover`, et c'est `camCapturer()` qui garantit désormais que la photo analysée est
+celle qu'on a cadrée, en recadrant la capture sur la fenêtre visible. La règle, elle, n'a pas
+changé — **ce qui est analysé doit être ce qui a été vu** — et les deux encadrés qui suivent
+disent pourquoi elle a été payée deux fois. Ils décrivent l'ancien cadre 3/4 :
+
+⚠️ **Le cadre photo était en `object-fit:contain`, en portrait.** En `cover` dans un cadre 4/3, un
 cliché de téléphone (3/4) était rogné des deux tiers : on cadrait son assiette sur une vue
 tronquée, et la photo réellement analysée ne ressemblait pas à ce qu'on avait vu.
 
@@ -4607,6 +4698,39 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   18 segments mesurés + 11 ponts, 22 points posés, aucun débordement horizontal, légende à
   trois entrées qui passe à la ligne.
 
+**Ajout d'un plat : la caméra plein écran, puis un récap sobre (2026-09-04)**
+- ✅ **Toutes les portes d'entrée mènent au nouveau parcours.** Trois chemins ouvraient
+  encore l'ancien overlay `ovRepas` de `suivi.html` — `?add=1` (donc le lien de
+  `profil.html` et le repli de la nav), l'action « repas » du popup conseils, et le
+  bouton caché de la page. Ils passent par `ouvrirAjoutPlat()`, l'ancien overlay
+  restant le repli si le module n'est pas chargé.
+- ✅ **Prise de vue plein écran** : la caméra occupe tout l'écran, la maison en haut à
+  gauche, et en bas galerie / obturateur / crayon. Les anneaux et le module noir des
+  calories ont quitté cet écran — ils y décrivaient un reste avant qu'il y ait un plat.
+- ✅ **Récap redessiné** : photo en héros fondue vers le bas, « Valeurs nutritionnelles »,
+  trois cartes sobres (anneau de 22 px + emoji, libellé, chiffre en graisse 300, barre),
+  **carte des calories du repas**, et deux pastilles rondes — enrichir à gauche, valider
+  (coche noire sur rond blanc) à droite.
+- ✅ **La capture est recadrée sur ce qui est à l'écran.** Le viseur passant en `cover`,
+  envoyer l'image entière aurait fait analyser ce que personne n'avait cadré — le défaut
+  du cadre 3/4, retourné dans l'autre sens.
+- ✅ **Quatre défauts trouvés en MESURANT, aucun par `node --check`** : les enfants du
+  récap se comprimaient (photo réduite à un bandeau, rangée de vignettes à 0 px débordant
+  par-dessus le titre) ; la marge négative de la photo créait un défilement horizontal de
+  22 px ; `majAnneaux()` effaçait la forme ronde du bouton valider à chaque
+  rafraîchissement ; et sur un écran de 667 px la carte des calories passait entièrement
+  sous la barre des boutons. Détail et raisons en §3.
+- ✅ Vérifié en navigateur (375 × 812 **et** 375 × 667) contre des doublures de `Natty` et
+  `NattyCreneaux` : le parcours photo → analyse → récap, les valeurs et les barres qui
+  suivent la saisie, le dépassement (chiffre et barre en ambre, « Enrichir » atténué),
+  **aucun débordement horizontal** (375 = 375 sur les deux gabarits), l'aller-retour vers
+  « Enrichir » qui ne casse pas les boutons ronds, l'état d'attente qui masque la coche,
+  et l'écran de prise de vue avec sa barre de trois gestes.
+- 🔄 **Non vérifié sur téléphone ni avec une vraie session** : tout a tourné contre des
+  doublures, et le navigateur du banc n'a pas de caméra — le viseur `cover` et le
+  recadrage de la capture n'ont donc pas pu être joués en vrai. C'est le premier point à
+  regarder au prochain build iOS.
+
 **« Découvrir » : le même sur Social et sur Repas (2026-09-02)**
 - ✅ **Livré** — le rendu des trois rangées est passé dans `assets/decouverte.js`
   (`monter`, `carte`) ; `social.html` et `repas.html` ne fournissent plus qu'un hôte. Les trois
@@ -6614,3 +6738,48 @@ pli sur un petit téléphone. Son icône de machine entre par le côté : le mou
 non-régression sur le MODÈLE — tonnage, kcal, durée, besoin, saisie libre — puisque c'est lui
 qu'une passe de présentation pourrait casser sans qu'on le voie. Il passe. Le reste a été
 vérifié en navigateur, où ces changements se voient.
+
+---
+
+*Contribution session « ajout d'un plat : caméra plein écran et récap sobre » (Claude Opus,
+4 septembre 2026) — maquettes fournies par Pablo :*
+
+**Ce qu'il a demandé, et ce que ça impliquait.** « Les boutons qui y dirigent amènent sur
+cette nouvelle page de saisie des plats » — trois d'entre eux ouvraient encore l'ancien
+formulaire de `suivi.html`, donc deux parcours d'ajout coexistaient et l'un des deux avait
+l'air d'une version périmée de l'app. Puis l'écran d'après : les graphiques de macros
+gardés mais « plus sérieux et sobres », les calories globales ajoutées, un bouton valider
+en petit — coche noire sur rond blanc, en bas à droite — et l'icône enrichir en bas à
+gauche.
+
+**Ce qui a été retiré, et pourquoi ça ne manque pas.** Les anneaux et le module noir des
+calories restantes ont quitté l'écran de prise de vue. Ils y annonçaient un reste **avant
+la photo** : avant qu'il y ait un plat à décrire, et alors que la photo allait de toute
+façon le changer dans la seconde. Ils vivent maintenant sur le récap, où ils parlent d'un
+repas qui existe — et l'anneau n'a pas disparu pour autant, il est passé en pastille de
+22 px dans l'en-tête de chaque carte, tenu par le même code.
+
+**Quatre défauts trouvés en mesurant, aucun par `node --check` :**
+- 🔴 **les enfants du récap se comprimaient** — `.na-screen` est une colonne flex, où tout
+  enfant vaut `flex-shrink:1`. La photo de 44 vh se réduisait à un bandeau montrant le seul
+  bord de l'assiette, et la rangée de vignettes tombait **à 0 px**, sa vignette débordant
+  par-dessus le titre « Valeurs nutritionnelles ». Quatrième occurrence de la même famille
+  dans ce dépôt ;
+- 🔴 **la photo pleine largeur créait un défilement horizontal** de 22 px — une marge
+  négative dans un conteneur qui défile. Le rembourrage a été déplacé de la colonne vers
+  l'écran ;
+- 🔴 **`majAnneaux()` effaçait la forme ronde du bouton valider** : il réécrivait
+  `className` à chaque rafraîchissement des anneaux ;
+- 🔴 **sur un écran de 667 px, la carte des calories passait entièrement sous la barre des
+  boutons** — donc le total du repas, précisément ce qu'on venait d'ajouter, n'était
+  visible qu'en défilant.
+
+**Un piège de banc, à retenir.** Le premier banc n'avait pas de `*{box-sizing:border-box}`.
+Toutes les pages de l'app en ont un ; sans lui, `.na-col{width:100%;padding:0 22px}` fait
+419 px de large dans une fenêtre de 375, et l'on passe un quart d'heure à chercher dans le
+module un débordement qui vient de la page d'essai. Une doublure doit reproduire le reset
+de la page qu'elle remplace, pas seulement ses variables.
+
+🔄 **Rien n'a été vu sur un téléphone, ni avec une vraie session** : doublures de `Natty` et
+`NattyCreneaux`, et un navigateur sans caméra — le viseur `cover` et le recadrage de la
+capture n'ont donc pas pu être joués en vrai.

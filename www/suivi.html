@@ -1395,7 +1395,7 @@ html.no-scroll {
     </div>
   </div>
 
-  <button onclick="openRepasOverlay()" class="natty-hidden" style="width:100%;padding:16px;background:var(--card2);border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.06);">+ Ajouter un repas</button>
+  <button onclick="ouvrirAjoutPlat()" class="natty-hidden" style="width:100%;padding:16px;background:var(--card2);border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.06);">+ Ajouter un repas</button>
 
   <!-- BLOC PROCHAINS REPAS PERMANENT -->
   <div id="blocProchainsRepas" class="natty-hidden" style="background:var(--bg);border-radius:24px;box-shadow:var(--so);overflow:hidden;">
@@ -2394,7 +2394,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var profilOvEl = document.getElementById('profilOverlay');
   if (profilOvEl) profilOvEl.addEventListener('click', function(e){ if(e.target===this) closeProfilOverlay(); });
   if (USER_ID) { init().then(function(){ var _qp = new URLSearchParams(window.location.search);
-    if (_qp.get('add')==='1') openRepasOverlay();
+    if (_qp.get('add')==='1') ouvrirAjoutPlat();
     // repas.html renvoie ici pour la génération hebdomadaire : un seul appel
     // Claude produit les 7 recettes ET les conseils. On ouvre le popup plutôt
     // que de lancer une génération de ~20 s sans que rien ne l'annonce.
@@ -3761,6 +3761,19 @@ async function chargerMessages(){
 // subscribeRT supprimé (WebSocket non supporté dans ce contexte)
 
 // ═══ REPAS OVERLAY ═══
+/* ⚠️ TOUT CE QUI MÈNE À « AJOUTER UN PLAT » PASSE PAR ICI (2026-09-04, demande
+   de Pablo : « les boutons qui y dirigent amènent sur cette nouvelle page »).
+   Trois chemins ouvraient encore `openRepasOverlay()` en direct — l'arrivée en
+   `?add=1` (donc le lien de profil.html et le repli de la nav), l'action
+   « repas » du popup conseils, et le bouton caché de la page. Ils tombaient sur
+   l'ANCIEN parcours : un formulaire, alors que le reste de l'app ouvre la
+   caméra plein écran d'`assets/ajout.js`. Deux parcours d'ajout coexistants,
+   c'est ce qui donne l'impression d'une version périmée de l'app.
+   L'ancien overlay reste le repli quand le module n'est pas chargé. */
+function ouvrirAjoutPlat(){
+  if (window.NattyAjout && typeof window.NattyAjout.start === 'function') { window.NattyAjout.start(); return; }
+  openRepasOverlay();
+}
 function openRepasOverlay(){
   document.getElementById('inputNom').value='';
   document.getElementById('ingsList').innerHTML='<div class="ing-row"><input class="form-inp" type="text" placeholder="Ingredient"><input class="form-inp qty" type="number" placeholder="g" min="0"></div>';
@@ -6779,7 +6792,7 @@ async function pcActionClick() {
     }
   }
   else if (action==='questionnaire') { closePopupConseils(); window.location.href='questionnaire-alim.html?token='+TOKEN; }
-  else if (action==='repas') { closePopupConseils(); openRepasOverlay(); }
+  else if (action==='repas') { closePopupConseils(); ouvrirAjoutPlat(); }
   else { window.location.href='onboarding.html?token='+TOKEN; }
 }
 function closePopupConseils() {

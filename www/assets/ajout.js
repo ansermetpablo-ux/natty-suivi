@@ -106,20 +106,11 @@
        plat », c'est le plat qui compte sur cet écran-là. Sur un téléphone
        courant (390×844 et au-delà) rien ne défile, le plancher n'est jamais
        atteint. */
-    + '#nattyAjout .na-hero-wrap{flex:1;min-height:236px;display:flex;justify-content:center;margin:10px 0 4px}'
-    + '#nattyAjout .na-hero{height:100%;aspect-ratio:3/4;max-width:100%;'
-      + 'border-radius:26px;border:2px solid rgba(255,255,255,.9);'
-      + 'overflow:hidden;background:#0c0c0e;'
-      + 'display:flex;align-items:center;justify-content:center}'
-    + '#nattyAjout .na-hero img{width:100%;height:100%;object-fit:contain;display:block}'
-    + '#nattyAjout .na-hero .na-hero-em{font-size:58px}'
-    /* — prise de vue DANS le cadre (voir camDemarrer) — */
-    + '#nattyAjout .na-hero{position:relative}'
-    + '#nattyAjout .na-hero video{width:100%;height:100%;object-fit:contain;display:block}'
-    + '#nattyAjout .na-shutter{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);'
-      + 'width:58px;height:58px;border-radius:50%;border:4px solid rgba(255,255,255,.95);'
-      + 'background:rgba(255,255,255,.3);cursor:pointer;padding:0}'
-    + '#nattyAjout .na-shutter:active{background:rgba(255,255,255,.6)}'
+    /* L'obturateur vit dans la barre du bas (`.na-cambar`), plus dans le cadre :
+       il n'est donc pas positionné. */
+    + '#nattyAjout .na-shutter{flex:none;width:74px;height:74px;border-radius:50%;'
+      + 'border:5px solid #fff;background:rgba(255,255,255,.22);cursor:pointer;padding:0}'
+    + '#nattyAjout .na-shutter:active{background:rgba(255,255,255,.62)}'
     + '#nattyAjout .na-hero-fb{display:flex;flex-direction:column;align-items:center;gap:9px;'
       + 'background:none;border:none;font-family:inherit;font-size:13px;font-weight:700;'
       + 'color:#d8d8de;cursor:pointer;padding:18px;line-height:1.35;text-align:center;'
@@ -128,10 +119,6 @@
     /* — les deux autres sources : galerie, saisie — discrètes sous le cadre.
        Un lien plat plutôt qu'un bouton plein : la photo reste le geste
        principal, ces deux-là ne doivent pas lui disputer l'attention. */
-    + '#nattyAjout .na-src{display:flex;gap:8px;justify-content:center;margin-top:8px}'
-    + '#nattyAjout .na-src-b{background:rgba(255,255,255,.07);border:none;border-radius:999px;'
-      + 'color:#c9c9d1;font-family:inherit;font-size:12.5px;font-weight:700;padding:8px 14px;cursor:pointer}'
-    + '#nattyAjout .na-src-b:active{background:rgba(255,255,255,.16)}'
     + '#nattyAjout .na-plat-nom{display:block;width:100%;text-align:center;font-family:inherit;font-size:15px;'
       + 'font-weight:700;color:#d8d8de;margin-top:8px;background:none;border:none;outline:none;padding:2px}'
     + '#nattyAjout .na-plat-plus{text-align:center;font-size:12.5px;color:#6e6e78;margin-top:2px}'
@@ -142,60 +129,6 @@
     + '#nattyAjout .na-vign img{width:100%;height:100%;object-fit:cover;display:block}'
     + '#nattyAjout .na-vign .x{position:absolute;top:0;right:0;background:rgba(0,0,0,.6);'
       + 'color:#fff;font-size:10px;line-height:1;padding:3px 4px;border-bottom-left-radius:8px}'
-
-    /* — anneaux de macros restantes — */
-    + '#nattyAjout .na-rings{display:flex;justify-content:space-between;gap:8px;margin:14px 0 0}'
-    + '#nattyAjout .na-ring{position:relative;flex:1;max-width:132px;aspect-ratio:1}'
-    /* Version −30 % pour l'écran de prise de vue : le cadre photo y est le sujet,
-       les anneaux ne sont qu'un rappel de ce qu'il reste. Tout est réduit dans le
-       même rapport — diamètre, épaisseur du trait, textes — sinon un anneau plus
-       petit avec le même trait de 9 px paraît épais et sale. */
-    + '#nattyAjout .na-rings.mini{gap:10px;justify-content:center;margin:12px 0 0}'
-    + '#nattyAjout .na-rings.mini .na-ring{max-width:92px}'
-    + '#nattyAjout .na-rings.mini .bg,#nattyAjout .na-rings.mini .arc{stroke-width:6.5}'
-    + '#nattyAjout .na-rings.mini .na-ring-lbl{font-size:9px}'
-    + '#nattyAjout .na-rings.mini .na-ring-em{font-size:11px}'
-    + '#nattyAjout .na-rings.mini .na-ring-val{font-size:15px}'
-    + '#nattyAjout .na-ring svg{width:100%;height:100%;transform:rotate(-90deg);display:block}'
-    + '#nattyAjout .na-ring .bg{fill:none;stroke:#2b2b30;stroke-width:9}'
-    + '#nattyAjout .na-ring .arc{fill:none;stroke-width:9;stroke-linecap:round;'
-      + 'transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1)}'
-    + '#nattyAjout .na-ring-in{position:absolute;inset:0;display:flex;flex-direction:column;'
-      + 'align-items:center;justify-content:center;gap:1px;pointer-events:none}'
-    + '#nattyAjout .na-ring-lbl{font-size:12.5px;font-weight:600;color:#f2f2f5}'
-    + '#nattyAjout .na-ring-em{font-size:16px;line-height:1}'
-    + '#nattyAjout .na-ring-val{font-size:21px;font-weight:800;color:#c9c9d1;letter-spacing:-.5px}'
-    /* Compacté (2026-08-05) : ces pixels-là repartent au cadre photo. « Restants »
-       est un intertitre, pas un chiffre — il n'a pas besoin d'être plus gros que
-       les valeurs des anneaux. */
-    /* — l'en-tête « il vous reste » —
-       Volontairement au-dessus des anneaux et non dans chacun : à 92 px de
-       diamètre, une quatrième ligne de texte dans un anneau ne se lit plus. Un
-       seul mot bien placé couvre les trois. */
-    + '#nattyAjout .na-reste-h{text-align:center;margin:14px 0 0;font-size:14.5px;'
-      + 'font-weight:800;color:#e9e9ef;letter-spacing:-.2px;line-height:1.35}'
-    + '#nattyAjout .na-reste-deja{display:block;font-size:11.5px;font-weight:600;'
-      + 'color:#8a8a92;margin-top:3px}'
-    + '#nattyAjout .na-restants{text-align:center;font-size:17px;font-weight:600;color:#8a8a92;margin:10px 0 2px}'
-
-    /* — module « calories restantes », noir métallisé —
-       Reprise du vocabulaire de `suivi.html` (`--metal-black` / `--sh-metal`,
-       demande de Pablo) : mêmes deux reflets, même relief. Les VALEURS sont
-       recopiées et non héritées d'une variable : ces tokens vivent dans le
-       <style> de suivi.html, pas dans assets/style.css, et cet overlay s'invite
-       sur cinq écrans dont quatre ne les définissent pas. */
-    + '#nattyAjout .na-kmod{margin:14px 0 0;border-radius:26px;padding:17px 20px;'
-      + 'display:flex;align-items:center;justify-content:space-between;gap:14px;'
-      + 'background:radial-gradient(130% 65% at 12% -10%, rgba(255,255,255,.11) 0%, rgba(255,255,255,0) 42%),'
-      + 'linear-gradient(135deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,0) 28%),'
-      + 'linear-gradient(165deg, #0c0d0f 0%, #050506 55%, #000 100%);'
-      + 'box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -1px 0 rgba(0,0,0,.6),0 10px 24px rgba(0,0,0,.5)}'
-    + '#nattyAjout .na-kmod-l{min-width:0}'
-    + '#nattyAjout .na-kmod-t{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.2px}'
-    + '#nattyAjout .na-kmod-s{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.45);margin-top:2px}'
-    + '#nattyAjout .na-kmod-v{text-align:right;flex:none}'
-    + '#nattyAjout .na-kmod-n{font-size:31px;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1}'
-    + '#nattyAjout .na-kmod-u{font-size:11px;font-weight:700;color:rgba(255,255,255,.42);margin-top:3px;white-space:nowrap}'
 
     /* — transition de validation, reprise d'assets/planning.js (`.vok`) —
        Le rond se trace, puis le V. Deux animations distinctes et décalées : un
@@ -215,8 +148,6 @@
     + '#nattyAjout .na-ok-s{font-size:13.5px;color:#8a8a92;margin-top:8px;max-width:280px;'
       + 'line-height:1.45;opacity:0;animation:naOkIn .5s cubic-bezier(.22,1,.36,1) 1s forwards}'
     + '@keyframes naOkIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}'
-    + '#nattyAjout .na-kcal-line{text-align:center;font-size:12.5px;color:#6e6e78}'
-
     /* — détail du repas en cours — */
     + '#nattyAjout .na-detail{margin:10px 0 0;display:flex;flex-direction:column;min-height:0}'
     + '#nattyAjout .na-detail-h{width:100%;background:none;border:none;color:#8a8a92;font-family:inherit;'
@@ -276,11 +207,9 @@
     + '#nattyAjout .na-btn:active{transform:scale(.975)}'
     + '#nattyAjout .na-btn.primary{background:#f2f2f7;color:#0a0a0c}'
     + '#nattyAjout .na-btn.ghost{background:none;color:#8a8a92;font-size:15px;font-weight:700;padding:12px}'
-    /* « Terminer et enregistrer » était un simple texte gris : personne ne
-       voyait que c'était LUI qui enregistrait le repas. Bouton noir en
-       relief — le fond de cet écran étant noir, le neumorphisme se fait
-       avec une ombre portée sombre ET un liseré clair, sinon il n'y a
-       rien à voir. Plus petit que « Enrichir », comme demandé. */
+    /* Bouton sombre en relief — le fond de cet écran étant noir, le
+       neumorphisme se fait avec une ombre portée sombre ET un liseré clair,
+       sinon il n'y a rien à voir. Sert au « Garder pour moi » du bilan. */
     + '#nattyAjout .na-btn.sombre{background:#16161b;color:#f2f2f7;font-size:16px;font-weight:800;'
       + 'padding:15px 22px;width:auto;min-width:64%;margin:0 auto;'
       + 'box-shadow:7px 8px 18px rgba(0,0,0,.75),-4px -5px 14px rgba(255,255,255,.07),'
@@ -374,6 +303,182 @@
     + '#nattyAjout .na-ask-box{width:100%;max-width:340px;background:#141418;border-radius:24px;padding:24px}'
     + '#nattyAjout .na-ask-t{font-size:16px;font-weight:800;margin-bottom:6px}'
     + '#nattyAjout .na-ask-s{font-size:13px;color:#8a8a92;margin-bottom:18px}'
+
+
+    /* ══════════ PRISE DE VUE PLEIN ÉCRAN (maquette de Pablo, 2026-09-04) ══════════
+       Le cadre 3/4 bordé de blanc a disparu : la caméra prend TOUT l'écran, la
+       maison reste en haut à gauche, et les trois gestes — galerie, obturateur,
+       écrire — sont posés en bas, sur l'image.
+
+       ⚠️ Les anneaux et le module noir des calories ont QUITTÉ cet écran. Ils
+       annonçaient un reste avant la photo, c'est-à-dire avant qu'il y ait quoi
+       que ce soit à décrire — et la photo allait de toute façon le changer. Ils
+       sont maintenant sur le récap, où ils parlent d'un repas qui existe.
+
+       ⚠️ La colonne perd son rembourrage SUR CET ÉCRAN SEULEMENT (classe `cam`
+       posée par `montrer()`). Sans ça, l'image garderait 22 px de noir de chaque
+       côté : ce ne serait pas un plein écran, ce serait un cadre sans bordure. */
+    + '#nattyAjout.cam .na-col{padding:0}'
+    + '#nattyAjout.cam h1{display:none}'
+    + '#nattyAjout.cam .na-screen{overflow:hidden}'
+    + '#nattyAjout.cam .na-top{position:absolute;top:0;left:0;right:0;z-index:6;'
+      + 'padding:calc(14px + env(safe-area-inset-top,0px)) 18px 0;pointer-events:none}'
+    + '#nattyAjout.cam .na-top button{pointer-events:auto}'
+    + '#nattyAjout.cam .na-top #naProfil{display:none}'
+    + '#nattyAjout.cam .na-top svg{stroke:#fff;width:30px;height:30px;'
+      + 'filter:drop-shadow(0 2px 8px rgba(0,0,0,.55))}'
+    + '#nattyAjout #naScRepas{position:relative}'
+    + '#nattyAjout .na-cam{position:relative;flex:1;min-height:0;display:flex;'
+      + 'align-items:center;justify-content:center;background:#000;overflow:hidden}'
+    + '#nattyAjout .na-cam video,#nattyAjout .na-cam img{width:100%;height:100%;'
+      + 'object-fit:cover;display:block}'
+    + '#nattyAjout .na-cam .na-hero-em{font-size:64px}'
+    /* La barre des trois gestes est posée SUR l'image, d'où le voile : sur une
+       photo claire — un mur blanc, une nappe — un obturateur blanc et deux
+       icônes blanches n'ont de contraste que par accident. Même leçon que le
+       verre dépoli de la visionneuse. */
+    + '#nattyAjout .na-cambar{position:absolute;left:0;right:0;bottom:0;z-index:5;'
+      + 'display:flex;align-items:center;justify-content:center;gap:54px;'
+      + 'padding:26px 24px calc(28px + env(safe-area-inset-bottom,0px));'
+      + 'background:linear-gradient(to top,rgba(0,0,0,.55),rgba(0,0,0,0))}'
+    + '#nattyAjout .na-cbtn{background:none;border:none;padding:6px;cursor:pointer;'
+      + 'display:flex;align-items:center;justify-content:center}'
+    + '#nattyAjout .na-cbtn svg{width:30px;height:30px;stroke:#fff;fill:none;stroke-width:1.7;'
+      + 'stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}'
+    + '#nattyAjout .na-cbtn:active{opacity:.55}'
+
+    /* ══════════ RÉCAP (maquette de Pablo, 2026-09-04) ══════════
+       La photo en héros, puis « Valeurs nutritionnelles » et trois cartes
+       sobres. Les anneaux ne disparaissent pas — ils passent en pastille de
+       22 px dans l'en-tête de chaque carte, à côté de l'emoji : c'est la même
+       information, tenue par le même code (`naArc<k>`), lue d'un coup d'œil.
+       La barre du bas de la carte redit la même fraction, comme sur le design.
+
+       ⚠️ Cet écran DÉFILE, contrairement à la prise de vue. C'était l'inverse
+       avant (« la page est fixe, seule la liste des ingrédients défile ») :
+       avec une photo de 44 vh en tête, un écran fixe n'a plus la place de
+       montrer les macros ET les ingrédients. C'est donc la liste qui perd son
+       défilement propre, et la page qui prend le relais — voir `.na-detail`
+       plus bas. */
+    + '#nattyAjout.recap h1{display:none}'
+    /* ⚠️⚠️ LA PHOTO VA D'UN BORD À L'AUTRE, ET UNE MARGE NÉGATIVE NE SUFFIT PAS.
+       Le rembourrage de 22 px vit sur `.na-col` : un `margin:0 -22px` sur la
+       photo la fait bien déborder, mais `.na-screen` défile (`overflow-y:auto`,
+       donc `overflow-x` calculé à `auto`) et ces 22 px devenaient un DÉFILEMENT
+       HORIZONTAL — mesuré au banc, 353 px de contenu pour 331 de large. C'est
+       le défaut de `.hero-foot` (règle 39) : il ne se lit pas dans le code, il
+       se mesure.
+       On déplace donc le rembourrage de la colonne vers l'écran lui-même : la
+       boîte de défilement fait alors 375 px, la photo débordante s'aligne
+       exactement sur ses bords, et `overflow-x:hidden` peut clore l'affaire
+       sans rien rogner. La barre du haut reprend le rembourrage à son compte,
+       sinon la maison se colle au bord de l'écran. */
+    + '#nattyAjout.recap .na-col{padding-left:0;padding-right:0}'
+    + '#nattyAjout.recap .na-top{padding-left:22px;padding-right:22px}'
+    + '#nattyAjout #naScRecap{padding:0 22px;overflow-x:hidden}'
+    /* ⚠️⚠️ AUCUN ENFANT DU RÉCAP NE SE COMPRIME. `.na-screen` est une colonne
+       flex : un enfant y vaut `flex-shrink:1` par défaut, donc dès que le
+       contenu dépasse la fenêtre, chacun cède un peu de sa hauteur. Mesuré au
+       banc sans cette règle : la photo de 44 vh se réduisait à un bandeau où
+       l'on ne voyait plus que le bord de l'assiette, et la rangée de vignettes
+       tombait littéralement à 0 px — sa vignette débordait alors PAR-DESSUS le
+       titre « Valeurs nutritionnelles ». C'est la famille de défauts déjà payée
+       trois fois ici : une hauteur demandée ne survit pas à une compression
+       flex (le cadre photo 3/4, les barres de la semaine du bilan).
+       La page défile, elle ne comprime pas. */
+    + '#nattyAjout #naScRecap > *{flex:0 0 auto}'
+    + '#nattyAjout .na-rhero{flex:none;margin:2px -22px 0;height:44vh;min-height:214px;'
+      + 'max-height:400px;display:flex;align-items:center;justify-content:center;position:relative}'
+    /* Le fondu vers le bas remplace le détourage de la maquette : le plat
+       « flotte » quel que soit son arrière-plan, sans qu'aucune image n'ait à
+       être détourée — et sans jamais rogner l'assiette. `contain` et non
+       `cover`, c'est la règle de cet écran depuis le début : on doit revoir
+       exactement la photo qui a été analysée. */
+    + '#nattyAjout .na-rhero img{width:100%;height:100%;object-fit:contain;display:block;'
+      + '-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 62%,rgba(0,0,0,.45) 86%,transparent 100%);'
+      + 'mask-image:linear-gradient(to bottom,#000 0,#000 62%,rgba(0,0,0,.45) 86%,transparent 100%)}'
+    + '#nattyAjout .na-rhero .na-hero-em{font-size:72px}'
+    /* ⚠️ Petit écran : la photo cède quelques points. Mesuré à 375×667, à
+       44 vh la carte des calories passait ENTIÈREMENT sous la barre des deux
+       boutons — donc le total du repas, qui est ce que Pablo a demandé
+       d'ajouter, n'était visible qu'en défilant. Entre « voir son plat en
+       grand » et « voir ce qu'on a mangé », c'est le second qui compte ici :
+       la photo, on vient de la prendre. */
+    + '@media (max-height:700px){#nattyAjout .na-rhero{height:34vh;min-height:178px}}'
+    + '#nattyAjout .na-sec{font-size:11.5px;font-weight:700;letter-spacing:1.7px;'
+      + 'text-transform:uppercase;color:#8a8a92;margin:14px 0 0}'
+    + '#nattyAjout .na-sec i{display:block;height:1px;width:60%;background:#26262c;'
+      + 'margin:11px 0 13px;border-radius:1px}'
+    + '#nattyAjout .na-macs{display:flex;gap:9px}'
+    + '#nattyAjout .na-mac{flex:1;min-width:0;background:#131317;border:1px solid #1e1e24;'
+      + 'border-radius:20px;padding:13px 12px 12px}'
+    + '#nattyAjout .na-mac-h{display:flex;align-items:center;gap:7px}'
+    + '#nattyAjout .na-mac-r{width:22px;height:22px;flex:none}'
+    + '#nattyAjout .na-mac-r svg{width:100%;height:100%;transform:rotate(-90deg);display:block}'
+    + '#nattyAjout .na-mac-r .bg{fill:none;stroke:#2b2b30;stroke-width:12}'
+    /* ⚠️ Trait de 12 pour un anneau de 22 px à l'écran : la boîte SVG fait
+       120 unités, donc 12 s'y peignent en ~2,2 px. Le trait de 9 des grands
+       anneaux aurait rendu un filet de 1,6 px — invisible sur du noir. */
+    + '#nattyAjout .na-mac-r .arc{fill:none;stroke-width:12;stroke-linecap:round;'
+      + 'transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1)}'
+    + '#nattyAjout .na-mac-em{font-size:14px;line-height:1}'
+    + '#nattyAjout .na-mac-l{font-size:12.5px;font-weight:500;color:#9a9aa4;margin-top:11px;'
+      + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    /* Graisse 300 et non 800 : « plus sérieux et sobre », demandé par Pablo.
+       Un chiffre de 34 px en gras sur trois cartes côte à côte crie ; le même
+       en maigre se lit comme une donnée. */
+    + '#nattyAjout .na-mac-v{font-size:34px;font-weight:300;color:#f4f4f7;'
+      + 'letter-spacing:-1.4px;line-height:1.05;margin-top:1px}'
+    + '#nattyAjout .na-mac-v u{font-size:14px;font-weight:400;color:#8a8a92;'
+      + 'text-decoration:none;letter-spacing:0;margin-left:2px}'
+    + '#nattyAjout .na-mac-b{height:4px;border-radius:99px;background:#26262c;'
+      + 'margin-top:12px;overflow:hidden}'
+    + '#nattyAjout .na-mac-b i{display:block;height:100%;width:0;border-radius:99px;'
+      + 'transition:width .9s cubic-bezier(.22,1,.36,1)}'
+    /* Les calories globales du repas — demandées avec la refonte. Même famille
+       que les trois cartes, en pleine largeur : c'est le total, pas une
+       quatrième macro. */
+    + '#nattyAjout .na-kcard{margin-top:10px;background:#131317;border:1px solid #1e1e24;'
+      + 'border-radius:20px;padding:14px 16px 13px}'
+    + '#nattyAjout .na-kcard-l{font-size:12.5px;font-weight:500;color:#9a9aa4}'
+    + '#nattyAjout .na-kcard-v{font-size:38px;font-weight:300;color:#f4f4f7;'
+      + 'letter-spacing:-1.6px;line-height:1.05;margin-top:1px}'
+    + '#nattyAjout .na-kcard-v u{font-size:14px;font-weight:400;color:#8a8a92;'
+      + 'text-decoration:none;letter-spacing:0;margin-left:4px}'
+    + '#nattyAjout .na-kcard-s{font-size:11.5px;font-weight:500;color:#6e6e78;'
+      + 'margin-top:8px;line-height:1.4}'
+    + '#nattyAjout .na-kcard-d{font-size:11.5px;font-weight:500;color:#6e6e78;margin-top:3px}'
+    /* La liste des ingrédients ne défile plus SUR ELLE-MÊME : c'est la page qui
+       défile maintenant. Deux zones défilantes imbriquées, sur un écran qui
+       commence par une photo de 44 vh, donnaient une liste haute de 34 vh coincée
+       entre deux ascenseurs. */
+    + '#nattyAjout #naScRecap .na-detail{flex:none}'
+    + '#nattyAjout #naScRecap .na-detail-body.on{max-height:none;overflow:visible;flex:none}'
+    /* — la barre du bas : enrichir à gauche, valider à droite —
+       `sticky` et non `fixed` : elle appartient au récap, elle doit disparaître
+       avec lui. Le dégradé la détache du contenu qui passe dessous. */
+    + '#nattyAjout .na-fab{position:sticky;bottom:0;margin-top:auto;display:flex;'
+      + 'align-items:center;justify-content:space-between;gap:12px;'
+      + 'padding:22px 0 calc(4px + env(safe-area-inset-bottom,0px));'
+      + 'background:linear-gradient(to top,#000 62%,rgba(0,0,0,0))}'
+    + '#nattyAjout .na-fab-b{border:none;padding:0;cursor:pointer;display:flex;'
+      + 'align-items:center;justify-content:center;border-radius:50%;transition:transform .12s}'
+    + '#nattyAjout .na-fab-b:active{transform:scale(.93)}'
+    + '#nattyAjout #naEnrichir{width:52px;height:52px;background:#16161b;color:#f2f2f7;'
+      + 'box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),0 6px 16px rgba(0,0,0,.6)}'
+    + '#nattyAjout #naEnrichir svg{width:24px;height:24px;fill:currentColor}'
+    + '#nattyAjout #naTerminer{width:62px;height:62px;background:#f5f5f7;'
+      + 'box-shadow:0 8px 22px rgba(0,0,0,.55)}'
+    + '#nattyAjout #naTerminer svg{width:28px;height:28px;stroke:#0a0a0c;fill:none;'
+      + 'stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}'
+    + '#nattyAjout #naTerminer[disabled]{opacity:.45}'
+    /* ⚠️ L'attente d'enregistrement passe par une CLASSE, pas par `textContent` :
+       le bouton est une pastille dont le contenu est un SVG, et y écrire
+       « Enregistrement… » effacerait la coche pour de bon. */
+    + '#nattyAjout #naTerminer.na-busy svg{display:none}'
+    + '#nattyAjout #naTerminer.na-busy::after{content:"";width:22px;height:22px;'
+      + 'border:2.5px solid rgba(10,10,12,.22);border-top-color:#0a0a0c;border-radius:50%;'
+      + 'animation:naSpin .9s linear infinite}'
 
     + '.na-toast{position:fixed;left:50%;bottom:120px;transform:translate(-50%,14px);background:#101014;'
       + 'color:#fff;border-radius:18px;padding:12px 20px;font-family:\'Inter\',sans-serif;font-size:12.5px;'
@@ -631,27 +736,33 @@
   }
 
   /* ═══════════════════ Construction de l'overlay ═══════════════════ */
-  /* Les anneaux existent en DEUX exemplaires : petits sur l'écran de prise de
-     vue (le cadre photo y est le héros), à taille normale sur le récap. D'où le
-     préfixe d'identifiant — deux jeux d'`id` distincts dans la même page, et
-     `majAnneaux()` peint les deux. Déplacer un seul jeu d'un écran à l'autre
-     aurait été plus court à écrire et impossible à animer proprement. */
-  var PREFIXES = ['', 'm'];
+  /* Une carte par macro (maquette de Pablo, 2026-09-04). L'anneau n'a pas
+     disparu : il est passé en pastille de 22 px dans l'en-tête, à côté de
+     l'emoji, et c'est TOUJOURS `naArc<k>` — donc `majAnneaux()` n'a rien à
+     apprendre. La barre du bas redit la même fraction en plus lisible ; les
+     deux ne peuvent pas se contredire, elles sortent du même calcul.
 
-  function ringHTML(k, label, pre) {
-    return '<div class="na-ring">'
-      + '<svg viewBox="0 0 120 120">'
+     ⚠️ Il n'y a plus qu'UN jeu d'anneaux, donc plus de préfixe d'identifiant.
+     Le second jeu vivait sur l'écran de prise de vue, qui n'en porte plus. */
+  function macHTML(k, label) {
+    return '<div class="na-mac">'
+      + '<div class="na-mac-h"><div class="na-mac-r"><svg viewBox="0 0 120 120">'
       + '<circle class="bg" cx="60" cy="60" r="52"/>'
-      + '<circle class="arc" id="naArc' + pre + k + '" cx="60" cy="60" r="52" stroke="' + COL[k] + '" '
-        + 'stroke-dasharray="0 ' + CIRC.toFixed(1) + '"/></svg>'
-      + '<div class="na-ring-in"><div class="na-ring-lbl">' + label + '</div>'
-      + '<div class="na-ring-em">' + EM[k] + '</div>'
-      + '<div class="na-ring-val" id="naVal' + pre + k + '">–</div></div></div>';
+      + '<circle class="arc" id="naArc' + k + '" cx="60" cy="60" r="52" stroke="' + COL[k] + '" '
+        + 'stroke-dasharray="0 ' + CIRC.toFixed(1) + '"/></svg></div>'
+      + '<div class="na-mac-em">' + EM[k] + '</div></div>'
+      + '<div class="na-mac-l">' + label + '</div>'
+      /* Le nombre et son unité sont SÉPARÉS : `majAnneaux()` n'écrit que le
+         chiffre, le « g » est statique et plus petit. Écrire « 61g » d'un bloc
+         obligerait à repasser par de l'innerHTML à chaque rafraîchissement. */
+      + '<div class="na-mac-v"><span id="naVal' + k + '">–</span><u>g</u></div>'
+      + '<div class="na-mac-b"><i id="naBar' + k + '" style="background:' + COL[k] + '"></i></div>'
+      + '</div>';
   }
 
-  function ringsHTML(pre, cls) {
-    return '<div class="na-rings' + (cls ? ' ' + cls : '') + '">'
-      + ringHTML('p', 'Protéines', pre) + ringHTML('l', 'Lipides', pre) + ringHTML('g', 'Glucides', pre)
+  function macsHTML() {
+    return '<div class="na-macs">'
+      + macHTML('p', 'Protéines') + macHTML('l', 'Lipides') + macHTML('g', 'Glucides')
       + '</div>';
   }
 
@@ -690,42 +801,35 @@
       + '    </div>'
       + '  </div>'
 
-      /* ── écran 2 : le repas et ses macros restantes ── */
-      /* ── écran 2 : la PRISE DE VUE (refonte demandée par Pablo, 2026-08-05) ──
-         Le cadre photo est le héros. Sous lui : les anneaux en −30 %, le module
-         noir des calories restantes, et les trois façons d'ajouter un plat —
-         photo, galerie, saisie. Rien d'autre : ni liste d'ingrédients, ni
-         « Terminer », qui n'ont aucun sens avant qu'un plat existe. C'est ce
-         découpage qui laisse enfin au cadre la place d'être un héros. */
+      /* ── écran 2 : la PRISE DE VUE, PLEIN ÉCRAN (maquette de Pablo, 2026-09-04) ──
+         La caméra occupe tout l'écran ; la maison en haut à gauche, et en bas
+         les trois gestes : galerie, obturateur, écrire. Rien d'autre.
+
+         ⚠️ Ce qui a été RETIRÉ ici, et pourquoi ça ne manque pas : les anneaux
+         de macros et le module noir des calories. Ils décrivaient un reste
+         AVANT la photo — donc avant qu'il y ait quoi que ce soit à décrire, et
+         la photo allait de toute façon le changer dans la seconde. Ils sont sur
+         le récap, où ils parlent d'un repas qui existe.
+
+         ⚠️ L'obturateur porte l'id `naPrendre` et vit dans la barre, plus dans
+         le cadre : `camDemarrer()` n'en fabrique donc plus. Un seul bouton pour
+         les deux chemins (flux getUserMedia, ou appareil photo natif en repli) —
+         la source de la photo est un détail d'implémentation. */
       + '  <div class="na-screen" id="naScRepas">'
-      + '    <div class="na-hero-wrap"><div class="na-hero" id="naHero"><span class="na-hero-em">🍽️</span></div></div>'
-      /* ⚠️ Nommer ce qu'on regarde. Trois anneaux et un nombre ne disent pas
-         d'eux-mêmes qu'il s'agit d'un RESTE, ni sur quel repas — c'est le
-         reproche de Pablo. Cette ligne le dit, et dit aussi ce qui est déjà
-         noté : sans elle, un reste amputé d'un plat pris une demi-heure plus tôt
-         ressemble à une erreur. */
-      + '    <div class="na-reste-h"><span id="naResteH">Vous avez mangé pour ce repas</span>'
-      + '      <span class="na-reste-deja" id="naResteDeja"></span></div>'
-      +      ringsHTML('m', 'mini')
-      + '    <div class="na-kmod">'
-      + '      <div class="na-kmod-l">'
-      + '        <div class="na-kmod-t" id="naKmodT">Calories comptées</div>'
-      + '        <div class="na-kmod-s" id="naKmodS">pour ce repas</div>'
-      + '      </div>'
-      + '      <div class="na-kmod-v">'
-      + '        <div class="na-kmod-n" id="naKmodN">–</div>'
-      + '        <div class="na-kmod-u" id="naKmodU">kcal</div>'
-      + '      </div>'
-      + '    </div>'
-      + '    <div class="na-cta">'
-      + '      <button class="na-btn primary" id="naPrendre">Prendre la photo 📸</button>'
-      /* Galerie et saisie n'existaient QUE dans la branche d'échec de l'analyse :
-         il fallait donc qu'une photo rate pour découvrir qu'on pouvait piocher
-         dans ses images ou écrire son plat. */
-      + '      <div class="na-src">'
-      + '        <button class="na-src-b" id="naSrcGal">🖼️ Galerie</button>'
-      + '        <button class="na-src-b" id="naSrcMan">✏️ Écrire</button>'
-      + '      </div>'
+      + '    <div class="na-cam" id="naHero"><span class="na-hero-em">🍽️</span></div>'
+      + '    <div class="na-cambar">'
+      + '      <button class="na-cbtn" id="naSrcGal" aria-label="Choisir dans la galerie">'
+      + '        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="3.2"/>'
+      + '          <path d="m4.6 17.4 4.6-5a1.7 1.7 0 0 1 2.5 0l3.6 3.9"/>'
+      + '          <path d="m13.4 14.1 1.9-1.9a1.7 1.7 0 0 1 2.4 0l1.9 2"/>'
+      + '          <circle cx="8.9" cy="9.3" r="1.35"/></svg>'
+      + '      </button>'
+      + '      <button class="na-shutter" id="naPrendre" aria-label="Prendre la photo"></button>'
+      + '      <button class="na-cbtn" id="naSrcMan" aria-label="Écrire le plat à la main">'
+      + '        <svg viewBox="0 0 24 24" aria-hidden="true">'
+      + '          <path d="M4 20h4.2L20.1 8.1a2.9 2.9 0 0 0-4.2-4.2L4 15.8z"/>'
+      + '          <path d="m14.6 5.4 4 4"/></svg>'
+      + '      </button>'
       + '    </div>'
       + '  </div>'
 
@@ -744,29 +848,49 @@
       + '    </div>'
       + '  </div>'
 
-      /* ── écran 3 : le RÉCAP du repas ──
-         Photo en vignette, nom modifiable, anneaux à taille normale, et la liste
-         des ingrédients OUVERTE — on vient ici pour retirer, corriger ou
-         ajouter. « Enrichir » n'apparaît qu'ici, puisqu'il n'y a rien à enrichir
+      /* ── écran 3 : le RÉCAP du repas (maquette de Pablo, 2026-09-04) ──
+         La photo en héros, fondue dans le noir de la page ; sous elle le nom
+         modifiable, « Valeurs nutritionnelles », les trois cartes de macros, le
+         total des calories, puis la liste des ingrédients — on vient ici pour
+         retirer, corriger ou ajouter.
+
+         Deux boutons ronds en bas, et un seul des deux est le geste attendu :
+         « valider » à DROITE (coche noire sur pastille blanche), « enrichir »
+         à GAUCHE, discret. Ils remplacent les deux boutons pleine largeur, qui
+         occupaient à eux seuls le quart de l'écran.
+
+         ⚠️ « Enrichir » n'existe que sur cet écran : il n'y a rien à enrichir
          avant qu'un plat existe. */
       + '  <div class="na-screen" id="naScRecap">'
+      + '    <div class="na-rhero" id="naRHero"><span class="na-hero-em">🍽️</span></div>'
       + '    <input class="na-plat-nom" id="naPlatNom" type="text" aria-label="Nom du plat">'
       + '    <div class="na-plat-plus" id="naPlatPlus"></div>'
       + '    <div class="na-vigns" id="naVign"></div>'
-      +      ringsHTML('', '')
-      + '    <div class="na-reste-h"><span id="naResteH2">Vous avez mangé pour ce repas</span>'
-      + '      <span class="na-reste-deja" id="naResteDeja2"></span></div>'
-      + '    <div class="na-kcal-line" id="naKcal"></div>'
+      + '    <div class="na-sec">Valeurs nutritionnelles<i></i></div>'
+      +      macsHTML()
+      /* Les calories du repas : le total, et la cible du créneau juste en
+         dessous. Un grand chiffre seul ne dit pas s'il est haut ou bas. */
+      + '    <div class="na-kcard">'
+      + '      <div class="na-kcard-l" id="naKmodT">Calories</div>'
+      + '      <div class="na-kcard-v"><span id="naKmodN">–</span><u id="naKmodU">kcal</u></div>'
+      + '      <div class="na-mac-b"><i id="naBarC"></i></div>'
+      + '      <div class="na-kcard-s" id="naKmodS"></div>'
+      /* ⚠️ Ce qui est DÉJÀ noté sur le créneau. Sans cette ligne, un total qui
+         compte un plat pris une demi-heure plus tôt ressemble à une erreur. */
+      + '      <div class="na-kcard-d" id="naResteDeja2"></div>'
+      + '    </div>'
       + '    <div class="na-detail ouvert">'
       + '      <button class="na-detail-h" id="naDetailH">Détail du repas <span id="naDetailC">▴</span></button>'
       + '      <div class="na-detail-body on" id="naDetailB"></div>'
       + '    </div>'
-      + '    <div class="na-cta">'
-      + '      <button class="na-btn primary" id="naEnrichir">Enrichir '
-      + '        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+      + '    <div class="na-fab">'
+      + '      <button class="na-fab-b" id="naEnrichir" aria-label="Enrichir ce repas">'
+      + '        <svg viewBox="0 0 24 24" aria-hidden="true">'
       + '          <path d="M12 2c.9 5.5 4.5 9.1 10 10-5.5.9-9.1 4.5-10 10-.9-5.5-4.5-9.1-10-10 5.5-.9 9.1-4.5 10-10z"/></svg>'
       + '      </button>'
-      + '      <button class="na-btn sombre" id="naTerminer">Terminer et enregistrer</button>'
+      + '      <button class="na-fab-b" id="naTerminer" aria-label="Valider et enregistrer ce repas">'
+      + '        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.6 12.7 9.6 18 19.4 6.6"/></svg>'
+      + '      </button>'
       + '    </div>'
       + '  </div>'
 
@@ -867,7 +991,19 @@
   /* ═══════════════════ Navigation entre écrans ═══════════════════ */
   function montrer(id) {
     dom.querySelectorAll('.na-screen').forEach(function (s) { s.classList.toggle('on', s.id === id); });
+    /* Deux écrans sortent du gabarit commun, et c'est le CSS qui le sait : la
+       prise de vue est plein écran (colonne sans rembourrage, titre masqué,
+       barre du haut posée sur l'image), et le récap masque le titre parce que
+       la photo en héros annonce déjà de quoi on parle. Une classe sur la racine
+       plutôt qu'un style en ligne — le gabarit appartient à la feuille. */
+    dom.classList.toggle('cam', id === 'naScRepas');
+    dom.classList.toggle('recap', id === 'naScRecap');
     dom.scrollTop = 0;
+    /* ⚠️ C'est `.na-screen` qui défile, pas `dom` : sans cette remise à zéro,
+       on revenait sur le récap au milieu de la liste des ingrédients, donc sur
+       un écran dont la photo et les macros étaient hors champ. */
+    var a = dom.querySelector('.na-screen.on');
+    if (a) a.scrollTop = 0;
     majTitre();
   }
   function ecranCourant() {
@@ -980,20 +1116,33 @@
 
     v.srcObject = flux;
     try { await v.play(); } catch (e) {}
-
-    var b = document.createElement('button');
-    b.className = 'na-shutter';
-    b.setAttribute('aria-label', 'Prendre la photo');
-    b.addEventListener('click', function () { camCapturer(v); });
-    h.appendChild(b);
+    /* Plus d'obturateur fabriqué ici : depuis la refonte plein écran il vit
+       dans `.na-cambar` (id `naPrendre`), à côté de la galerie et du crayon.
+       Le fabriquer en double aurait donné deux ronds blancs superposés dès
+       que l'autorisation caméra était accordée. */
   }
 
   function camCapturer(v) {
     var w = v.videoWidth, ht = v.videoHeight;
     if (!w || !ht) return;                       // flux pas encore prêt
+    /* ⚠️⚠️ ON RECADRE SUR CE QUI EST À L'ÉCRAN, et ce n'est pas un raffinement.
+       Le viseur est passé en plein écran `object-fit:cover` : une partie du flux
+       est donc HORS du cadre visible. Envoyer l'image entière ferait analyser ce
+       que personne n'a cadré — exactement le défaut déjà payé du temps du cadre
+       3/4 (« la photo réellement analysée ne ressemblait pas à ce qu'on avait
+       vu »), simplement retourné dans l'autre sens.
+       On reproduit donc le calcul de `cover` : le rapport le plus large des deux
+       est rogné, centré, et c'est cette fenêtre-là qu'on dessine. */
+    var r = v.getBoundingClientRect();
+    var sx = 0, sy = 0, sw = w, sh = ht;
+    if (r.width > 0 && r.height > 0) {
+      var vue = r.width / r.height, flx = w / ht;
+      if (flx > vue) { sw = Math.round(ht * vue); sx = Math.round((w - sw) / 2); }
+      else if (flx < vue) { sh = Math.round(w / vue); sy = Math.round((ht - sh) / 2); }
+    }
     var c = document.createElement('canvas');
-    c.width = w; c.height = ht;
-    c.getContext('2d').drawImage(v, 0, 0, w, ht);
+    c.width = sw; c.height = sh;
+    c.getContext('2d').drawImage(v, sx, sy, sw, sh, 0, 0, sw, sh);
     c.toBlob(function (blob) {
       if (!blob) return camRepli();
       camArreter();
@@ -1157,10 +1306,31 @@
      ouverte — c'est ici qu'on retire, corrige ou ajoute. */
   function rendreRecap() {
     majNoms();
+    majHero();
     rendreVignettes();
     rendreDetail();
     majAnneaux();
     montrer('naScRecap');
+  }
+
+  /* La photo en héros du récap : celle du plat qu'on regarde, à défaut la
+     première de la session, et l'emoji quand le repas a été saisi à la main.
+     `contain` plus un fondu vers le bas (voir `.na-rhero` dans le CSS) : le
+     plat « flotte » comme sur la maquette, sans qu'aucune image n'ait à être
+     détourée et sans que l'assiette soit rognée. */
+  function majHero() {
+    var h = q('#naRHero');
+    if (!h) return;
+    var pl = S.plats[S.cur] || S.plats[0] || null;
+    var src = (pl && pl.photo) || null;
+    if (!src) {
+      for (var i = 0; i < S.plats.length; i++) {
+        if (S.plats[i].photo) { src = S.plats[i].photo; break; }
+      }
+    }
+    h.innerHTML = src
+      ? '<img src="' + esc(src) + '" alt="">'
+      : '<span class="na-hero-em">🍽️</span>';
   }
 
   /* Les photos de la session, en petit, sous le nom du plat. Un appui retire la
@@ -1170,6 +1340,13 @@
     var z = q('#naVign');
     if (!z) return;
     z.innerHTML = '';
+    /* ⚠️ Une seule photo : PAS de vignette. Depuis que le récap ouvre sur la
+       photo en héros, la rangée affichait la même image en 46 px juste en
+       dessous de la même image en 357 — on lisait ça comme une seconde prise de
+       vue, pas comme un bouton. La rangée reprend son sens dès la deuxième
+       photo, quand elle sert vraiment à en retirer une. Retirer la seule photo
+       d'un repas, c'est abandonner le repas : le retour est là pour ça. */
+    if (S.plats.filter(function (p) { return p.photo; }).length < 2) return;
     S.plats.forEach(function (pl, i) {
       if (!pl.photo) return;
       var b = document.createElement('button');
@@ -1218,51 +1395,51 @@
        ⚠️ L'anneau se REMPLIT — la fraction est le CONSOMMÉ sur la cible, plafonné
        à 1. Sans plafond, un dépassement enroulerait l'arc une seconde fois par
        dessus le premier tour et un gros excès ressemblerait à un petit. */
-    PREFIXES.forEach(function (pre) {
-      ['p', 'l', 'g'].forEach(function (k) {
-        var frac = c[k] > 0 ? Math.max(0, Math.min(1, t[k] / c[k])) : 0;
-        var arc = q('#naArc' + pre + k);
-        if (arc) arc.setAttribute('stroke-dasharray', (frac * CIRC).toFixed(1) + ' ' + CIRC.toFixed(1));
-        var v = q('#naVal' + pre + k);
-        if (v) v.textContent = Math.round(t[k]) + 'g';
-      });
+    ['p', 'l', 'g'].forEach(function (k) {
+      var frac = c[k] > 0 ? Math.max(0, Math.min(1, t[k] / c[k])) : 0;
+      var arc = q('#naArc' + k);
+      if (arc) arc.setAttribute('stroke-dasharray', (frac * CIRC).toFixed(1) + ' ' + CIRC.toFixed(1));
+      var v = q('#naVal' + k);
+      /* Le chiffre SEUL : le « g » est un élément statique à côté, en plus
+         petit (voir `macHTML`). Y remettre l'unité afficherait « 61gg ». */
+      if (v) v.textContent = Math.round(t[k]);
+      var b = q('#naBar' + k);
+      if (b) b.style.width = (frac * 100).toFixed(1) + '%';
     });
-    /* L'en-tête nomme le repas et annonce ce qui est déjà noté. C'est lui qui
-       rend le chiffre compréhensible : « 500 kcal » n'a de sens que si on sait
-       sur quel repas, et ce qui y était déjà compté avant cette session. */
+    /* Ce qui est DÉJÀ noté sur le créneau, sous la carte des calories. C'est
+       cette ligne qui rend le total compréhensible : « 900 kcal » ressemble à
+       une erreur quand elle compte un plat pris une demi-heure plus tôt. */
     var cr = creneauCourant(), dj = dejaCreneau();
     var nomRepas = cr ? cr.nom.toLowerCase() : 'ce repas';
-    var phrase = 'Vous avez mangé pour votre ' + nomRepas;
-    var sousPhrase = dj.n
-      ? dj.n + (dj.n > 1 ? ' plats déjà notés' : ' plat déjà noté') + ' · ' + dj.c + ' kcal comptées'
-      : (cr ? 'sur ' + c.c + ' kcal prévues pour ce créneau' : '');
-    ['naResteH', 'naResteH2'].forEach(function (id) {
-      var e = q('#' + id); if (e) e.textContent = phrase;
-    });
-    ['naResteDeja', 'naResteDeja2'].forEach(function (id) {
-      var e = q('#' + id); if (e) e.textContent = sousPhrase;
-    });
-
-    var kc = q('#naKcal');
-    if (kc) {
-      kc.textContent = r.c > 0
-        ? t.c + ' kcal sur ' + c.c + ' pour ce ' + nomRepas + ' · reste ' + r.c
-        : t.c + ' kcal sur ' + c.c + ' — cible atteinte';
+    var dejaEl = q('#naResteDeja2');
+    if (dejaEl) {
+      dejaEl.textContent = dj.n
+        ? dj.n + (dj.n > 1 ? ' plats déjà notés' : ' plat déjà noté') + ' · ' + dj.c + ' kcal comptées'
+        : '';
     }
-    /* Le module noir de l'écran de prise de vue. Le grand chiffre est ce qui a
-       été COMPTÉ ; le dépassement se dit dans le sous-titre et par la couleur,
-       plutôt qu'en remplaçant le chiffre — on veut toujours pouvoir lire ce
-       qu'on a mangé, y compris quand on a mangé plus que prévu. */
+    /* La carte des calories du repas. Le grand chiffre est ce qui a été COMPTÉ ;
+       le dépassement se dit dans le sous-titre et par la couleur, plutôt qu'en
+       remplaçant le chiffre — on veut toujours pouvoir lire ce qu'on a mangé, y
+       compris quand on a mangé plus que prévu. */
     var n = q('#naKmodN'), su = q('#naKmodS'), un = q('#naKmodU'), ti = q('#naKmodT');
+    var depasse = r.c <= 0 && t.c > c.c;
     if (n && su && un) {
-      var depasse = r.c <= 0 && t.c > c.c;
       if (ti) ti.textContent = 'Calories comptées';
       n.textContent = t.c;
       un.textContent = 'kcal';
       su.textContent = depasse
         ? '+' + (t.c - c.c) + ' au-delà de votre ' + nomRepas + ' (' + c.c + ')'
         : 'sur ' + c.c + ' pour votre ' + nomRepas;
-      n.style.color = depasse ? '#ff9500' : '#fff';
+      n.style.color = depasse ? '#ff9500' : '#f4f4f7';
+    }
+    /* La barre de la carte calories. Blanche tant qu'on est dans la cible,
+       ambre au-delà — la même convention que le chiffre juste au-dessus, sinon
+       les deux moitiés de la carte raconteraient deux choses. */
+    var bc = q('#naBarC');
+    if (bc) {
+      var fc = c.c > 0 ? Math.max(0, Math.min(1, t.c / c.c)) : 0;
+      bc.style.width = (fc * 100).toFixed(1) + '%';
+      bc.style.background = depasse ? '#ff9500' : '#f2f2f7';
     }
     /* Le titre de chaque plat, dans la liste des ingrédients. Rafraîchi ici et
        non par `rendreDetail()`, qui réécrirait le champ en cours de saisie. */
@@ -1274,16 +1451,21 @@
     }
 
     var enr = q('#naEnrichir');
-    /* « Enrichir » n'a de sens que s'il reste de la marge sur ce repas — ET
-       qu'un plat existe. Il vit désormais sur le seul écran de récap, donc la
-       seconde condition est structurelle : c'est ce que Pablo demandait par
-       « le bouton enrichir apparaît » (il apparaît AVEC le récap). */
-    var marge = S.plats.length > 0 && (r.c > c.c * 0.08 || r.p > c.p * 0.12);
-    enr.style.display = marge ? 'flex' : 'none';
-    // Sans marge restante, terminer devient LE geste attendu : le bouton passe
-    // en clair. Avec de la marge il reste noir en relief, mais visible —
-    // jamais un simple texte, c'est l'enregistrement du repas.
-    q('#naTerminer').className = 'na-btn ' + (marge ? 'sombre' : 'primary');
+    /* « Enrichir » apparaît AVEC le récap : il n'y a rien à enrichir avant
+       qu'un plat existe.
+       ⚠️ Il ne se cache PLUS quand la marge du repas est épuisée. C'était
+       défendable pour un bouton pleine largeur qui disputait la place à
+       « Terminer » ; ce n'est plus qu'une pastille de 52 px dans un coin, et
+       Pablo l'a demandée en bas à gauche du récap — donc en permanence. Elle
+       s'atténue plutôt que de disparaître : ajouter un dessert au-delà de sa
+       cible reste un geste légitime, simplement pas celui qu'on suggère.
+       ⚠️ Et surtout : plus de `className` réécrit ici. Il effaçait `na-fab-b`,
+       donc la forme ronde, à chaque rafraîchissement des anneaux. */
+    var marge = r.c > c.c * 0.08 || r.p > c.p * 0.12;
+    if (enr) {
+      enr.style.display = S.plats.length ? 'flex' : 'none';
+      enr.style.opacity = marge ? '1' : '.55';
+    }
   }
 
   function rendreDetail() {
@@ -1687,8 +1869,11 @@
     if (!Natty.USER_ID) { toast('Connectez-vous pour enregistrer'); return; }
     var btn = q('#naTerminer');
     btn.disabled = true;
-    var libelle = btn.textContent;
-    btn.textContent = 'Enregistrement…';
+    /* ⚠️ L'attente passe par une CLASSE, plus par `textContent`. Le bouton est
+       devenu une pastille ronde dont tout le contenu est un SVG : y écrire
+       « Enregistrement… » aurait effacé la coche, et la restauration aurait
+       remis du texte à la place du dessin. */
+    btn.classList.add('na-busy');
 
     /* Une photo par plat, et chacune sur SON plat. Avant, une seule photo était
        envoyée (`S.file`) et collée au premier repas : depuis qu'on peut
@@ -1787,11 +1972,11 @@
     } catch (e) {
       toast('Enregistrement impossible');
       btn.disabled = false;
-      btn.textContent = libelle;
+      btn.classList.remove('na-busy');
       return;
     }
     btn.disabled = false;
-    btn.textContent = libelle;
+    btn.classList.remove('na-busy');
   }
 
   /* ═══════════════════ Bilan : analyse, puis publication ═══════════════════
