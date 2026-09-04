@@ -30,6 +30,7 @@
   var ORD = ['premier', 'deuxième', 'troisième', 'quatrième', 'cinquième', 'sixième', 'septième'];
 
   var COL = { p: '#ff6b5e', l: '#5ac47d', g: '#f0a94b' };
+  var EM  = { p: '🥩', l: '🥑', g: '🌾' };
 
   /* ═══ État de la session d'ajout ═══
      S.plats : tout ce qui a été composé pendant la session. Le premier
@@ -452,31 +453,8 @@
        par accident (la leçon du verre dépoli de la visionneuse). Il s'assombrit
        vers le bas, là où les anneaux se posent. */
     + '#nattyAjout .na-rphoto .voile{position:absolute;inset:0;pointer-events:none;'
-    /* ⚠️ LE FONDU EST FRANC, PAS DÉGRADÉ EN DOUCEUR. Mesuré à l'écran : à .42
-       sous les anneaux, la photo restait lisible derrière eux et l'écran n'avait
-       pas de bas — les anneaux flottaient au milieu d'une image. À partir de
-       60 % c'est presque du noir, et c'est ce noir-là qui porte la grille et
-       fait socle. Le haut reste clair : la moitié supérieure du plat est ce
-       qu'on vient regarder. */
-      + 'background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,rgba(0,0,0,.08) 10%,'
-      + 'rgba(0,0,0,.05) 24%,rgba(3,3,6,.50) 42%,rgba(3,3,6,.88) 56%,'
-      + 'rgba(5,5,10,.98) 66%,#05050a 74%,#05050a 100%)}'
-    /* ══ LA GRILLE SUR LE FONDU ══════════════════════════════════
-       Demande de Pablo (2026-09-04) : « le fondu noir doit être plus marqué et
-       on doit pouvoir voir la grille sur le fondu ». C'est ce qui donne au bas
-       de l'écran une MATIÈRE au lieu d'un simple aplat : les anneaux se posent
-       sur une surface, pas sur du vide.
-       ⚠️ Elle est MASQUÉE en haut, exactement là où le fondu est encore clair :
-       une grille sur la photo, ce sont des lignes en travers du plat. Elle
-       n'apparaît qu'au-dessous de 46 %, donc uniquement sur le noir.
-       ⚠️ Deux dégradés à 1 px, pas une image : aucun fichier à charger, et le
-       pas suit l'écran. */
-    + '#nattyAjout .na-rphoto .grille{position:absolute;inset:0;pointer-events:none;'
-      + 'background-image:linear-gradient(to right,rgba(255,255,255,.075) 1px,transparent 1px),'
-      + 'linear-gradient(to bottom,rgba(255,255,255,.075) 1px,transparent 1px);'
-      + 'background-size:30px 30px;background-position:center top;'
-      + '-webkit-mask-image:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,.5) 54%,#000 66%,#000 100%);'
-      + 'mask-image:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,.5) 54%,#000 66%,#000 100%)}'
+      + 'background:linear-gradient(to bottom,rgba(0,0,0,.5) 0%,rgba(0,0,0,.12) 18%,'
+      + 'rgba(0,0,0,.06) 40%,rgba(6,6,9,.66) 74%,#06060a 100%)}'
     + '#nattyAjout .na-rphoto .em{position:absolute;inset:0;display:flex;align-items:center;'
       + 'justify-content:center;font-size:74px}'
     /* La zone transparente : c'est elle qui laisse voir la photo. Sa hauteur
@@ -495,42 +473,23 @@
        Pastille sombre floutée sous chacun : c'est ce qui les rend lisibles quel
        que soit le plat photographié. */
     + '#nattyAjout .na-rgs{position:relative;z-index:2;display:flex;justify-content:center;'
-      + 'gap:11px;padding:14px 14px 0}'
-    /* ⚠️ PLUS DE PASTILLE FLOUTÉE SOUS L'ANNEAU, et c'est le fondu renforcé qui
-       le permet : le disque sombre servait à décoller les anneaux d'une photo
-       claire, il n'a plus rien à corriger et il ajoutait un objet de plus par
-       macro. Un anneau posé sur le noir se lit tout seul — c'est la grammaire
-       des anneaux d'activité d'Apple, et c'est ce que Pablo demande par
-       « plus sérieux, minimaliste, premium ». */
-    + '#nattyAjout .na-rg{position:relative;width:99px;height:99px;flex:none;'
-      + 'opacity:0;transform:scale(.88) translateY(10px);'
+      + 'gap:12px;padding:14px 16px 0}'
+    + '#nattyAjout .na-rg{position:relative;width:92px;height:92px;flex:none;border-radius:50%;'
+      + 'background:rgba(8,8,11,.46);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);'
+      + 'box-shadow:0 12px 30px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.09);'
+      + 'opacity:0;transform:scale(.84) translateY(12px);'
       + 'animation:naRg .72s cubic-bezier(.22,1,.36,1) forwards}'
     + '@keyframes naRg{to{opacity:1;transform:none}}'
     + '#nattyAjout .na-rg svg{position:absolute;inset:0;width:100%;height:100%;'
       + 'transform:rotate(-90deg);display:block}'
-    /* Trait de 5,5 dans une boîte de 120 pour un anneau rendu à 99 px, soit
-       ~4,5 px à l'écran. Le 7 d'avant faisait un bourrelet autour du chiffre ;
-       en dessous de 4, l'arc devient un cheveu et la couleur ne se lit plus. */
-    + '#nattyAjout .na-rg .bg{fill:none;stroke:rgba(255,255,255,.13);stroke-width:5.5}'
-    + '#nattyAjout .na-rg .arc{fill:none;stroke-width:5.5;stroke-linecap:round;'
+    + '#nattyAjout .na-rg .bg{fill:none;stroke:rgba(255,255,255,.16);stroke-width:7}'
+    + '#nattyAjout .na-rg .arc{fill:none;stroke-width:7;stroke-linecap:round;'
       + 'transition:stroke-dasharray 1.1s cubic-bezier(.22,1,.36,1)}'
     + '#nattyAjout .na-rg .in{position:absolute;inset:0;display:flex;flex-direction:column;'
-      + 'align-items:center;justify-content:center;gap:1px;pointer-events:none;'
-      + 'text-shadow:0 1px 10px rgba(0,0,0,.5)}'
-    /* ⚠️ L'EMOJI A QUITTÉ L'ANNEAU. C'était le seul élément qui empêchait ces
-       trois disques de se lire comme un instrument : trois pictogrammes colorés
-       au milieu de trois chiffres. La couleur de l'arc dit déjà de quelle macro
-       il s'agit, et le libellé le dit en toutes lettres. */
-    + '#nattyAjout .na-rg .l{font-size:8.5px;font-weight:600;letter-spacing:.9px;'
-      + 'text-transform:uppercase;color:rgba(255,255,255,.5)}'
-    /* Graisse 500, pas 800 : le chiffre est une donnée, pas un cri. Même
-       arbitrage que les cartes de macros du bilan. */
-    + '#nattyAjout .na-rg .v{font-size:24px;font-weight:500;color:#fff;'
-      + 'letter-spacing:-.9px;line-height:1.15;margin-top:2px}'
-    + '#nattyAjout .na-rg .v u{font-size:11px;font-weight:500;color:rgba(255,255,255,.5);'
-      + 'text-decoration:none;letter-spacing:0;margin-left:1px}'
-    + '#nattyAjout .na-rg .o{font-size:9px;font-weight:600;color:rgba(255,255,255,.42);'
-      + 'letter-spacing:.1px}'
+      + 'align-items:center;justify-content:center;gap:0;pointer-events:none}'
+    + '#nattyAjout .na-rg .l{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.85)}'
+    + '#nattyAjout .na-rg .e{font-size:12px;line-height:1.2}'
+    + '#nattyAjout .na-rg .v{font-size:16.5px;font-weight:800;color:#fff;letter-spacing:-.4px}'
     /* L'invitation à descendre. Sans elle, rien ne dit que la page continue —
        la photo occupe tout l'écran et paraît être toute la page. */
     + '#nattyAjout .na-rdet{position:relative;z-index:2;display:flex;align-items:center;'
@@ -917,13 +876,11 @@
       + '<circle class="arc" id="naArc' + k + '" cx="60" cy="60" r="52" stroke="' + COL[k] + '" '
         + 'stroke-dasharray="0 ' + CIRC.toFixed(1) + '"/></svg>'
       + '<div class="in"><div class="l">' + label + '</div>'
+      + '<div class="e">' + EM[k] + '</div>'
       /* Le nombre et son unité sont SÉPARÉS : `majAnneaux()` n'écrit que le
          chiffre, le « g » est statique. Écrire « 61g » d'un bloc obligerait à
          repasser par de l'innerHTML à chaque rafraîchissement. */
-      + '<div class="v"><span id="naVal' + k + '">–</span><u>g</u></div>'
-      /* La cible du créneau, sous le chiffre : « 61 » ne dit pas s'il est haut
-         ou bas. Même ligne que les anneaux du bilan (`.anx .o`). */
-      + '<div class="o" id="naObj' + k + '">—</div></div></div>';
+      + '<div class="v"><span id="naVal' + k + '">–</span>g</div></div></div>';
   }
 
   function rgsHTML() {
@@ -1525,11 +1482,11 @@
       }
     }
     h.classList.remove('plein');
-    var couche = '<div class="voile"></div><div class="grille"></div>';
     h.innerHTML = src
       ? '<img class="fond" src="' + esc(src) + '" alt="" aria-hidden="true">'
-        + '<img class="net" src="' + esc(src) + '" alt="">' + couche
-      : '<span class="em">🍽️</span>' + couche;
+        + '<img class="net" src="' + esc(src) + '" alt="">'
+        + '<div class="voile"></div>'
+      : '<span class="em">🍽️</span><div class="voile"></div>';
     var net = h.querySelector('.net');
     if (!net) return;
     // La forme de la photo décide : voir l'encadré `.plein` du CSS.
@@ -1614,8 +1571,6 @@
       if (v) v.textContent = Math.round(t[k]);
       var b = q('#naBar' + k);
       if (b) b.style.width = (frac * 100).toFixed(1) + '%';
-      var o = q('#naObj' + k);
-      if (o) o.textContent = c[k] ? 'sur ' + Math.round(c[k]) + ' g' : '—';
     });
     /* Ce qui est DÉJÀ noté sur le créneau, sous la carte des calories. C'est
        cette ligne qui rend le total compréhensible : « 900 kcal » ressemble à
