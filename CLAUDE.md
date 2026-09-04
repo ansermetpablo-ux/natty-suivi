@@ -1899,26 +1899,29 @@ deux endroits qui font la même chose finissent par diverger.
 > ligne, et une règle conditionnelle qui vaut désormais dans tous les cas est un
 > piège pour la prochaine retouche.
 
-**L'annonce se rejoue en boucle (2026-09-04, second passage).** Demande de Pablo :
-« l'animation du module des calories pour rappeler l'objectif doit intervenir à
-chaque fois qu'on revient sur Suivi, la première fois après 1 seconde, sinon toutes
-les secondes ». Le garde « une fois par jour » a sauté et `armerAnnonce()` relance
-la séquence **une seconde après la fin de la précédente** — l'animation dure 3,14 s,
-« toutes les secondes » ne peut vouloir dire que l'intervalle entre deux passages.
-Mesuré : première à **1 000 ms**, puis un cycle régulier de **4 300 ms**.
-> ⚠️ **Ce que ça coûte**, et c'était le motif du garde d'origine : le compteur de
-> calories est recouvert environ trois secondes sur quatre. `HC_MS.boucle` est le
-> seul nombre à changer pour espacer les rappels ; à 0, l'annonce ne se joue qu'à
-> l'arrivée.
+**L'annonce se rejoue à chaque arrivée, et une seule fois (2026-09-04, second
+passage).** Demande de Pablo : « pas de récurrence — quand on arrive sur Suivi, au
+bout de 2 secondes animation, puis fige tant qu'on est sur la page Suivi ;
+recommence à chaque arrivée sur Suivi ». Le garde « une fois par jour » a donc
+sauté, mais rien n'est reprogrammé après le passage : l'écran se fige sur son
+compteur jusqu'à la visite suivante. Mesuré : **une seule apparition, à 2 000 ms**,
+et rien sur les neuf secondes qui suivent.
+> ⚠️⚠️ **UNE BOUCLE A ÉTÉ ESSAYÉE PUIS RETIRÉE LE MÊME JOUR.** Première consigne :
+> « la première fois après 1 seconde, sinon toutes les secondes » — implémenté en
+> relançant une seconde après la fin de la précédente, soit un cycle de 4,3 s.
+> Vu à l'écran, retiré aussitôt : le compteur de calories était recouvert trois
+> secondes sur quatre, ce qui était précisément le motif du garde d'origine. La
+> note reste pour ne pas refaire le même essai en croyant l'inventer.
 > ⚠️ **UN SEUL MINUTEUR**, annulé avant d'être reposé : deux `armerAnnonce()`
-> rapprochés — l'arrivée puis un retour d'onglet — feraient deux boucles
-> superposées, donc deux nappes qui se croisent. Vérifié.
-> ⚠️ **« À chaque fois qu'on revient » = DEUX événements.** `visibilitychange`
-> couvre l'app remise au premier plan et l'onglet réactivé ; `pageshow` couvre le
-> retour arrière depuis une autre page, où la page sort du cache sans repasser par
-> `init()`. Sans le second, revenir de Repas ne rejouerait rien.
-> ⚠️ La boucle s'**arrête** quand la page est cachée : une animation qui tourne
-> dans un onglet caché ne rappelle rien à personne et coûte de la batterie.
+> rapprochés — le chargement puis un retour d'onglet — poseraient deux attentes,
+> donc deux nappes qui se croisent. Vérifié.
+> ⚠️ **« ARRIVER SUR SUIVI » = TROIS ÉVÉNEMENTS**, pas un : le chargement
+> (`init` → `appliquerBesoinDuJour`), `visibilitychange` (app remise au premier
+> plan, onglet réactivé) et `pageshow` (retour arrière depuis une autre page, où
+> la page sort du cache sans repasser par `init()`). Sans le troisième, revenir de
+> Repas ne rejouerait rien.
+> ⚠️ Rien ne s'arme quand la page est cachée : une animation qui se joue dans un
+> onglet caché ne rappelle rien à personne.
 
 **Vérifié en navigateur** (375 × 812 et 360 × 740) sur un banc composé du **vrai
 balisage et des vraies règles** extraits de `suivi.html` — une copie à la main ne

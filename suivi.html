@@ -2293,39 +2293,37 @@ var PROFIL_KG=0, PROFIL_SEM=0, PROFIL_BASE=0, PROFIL_ECART=null;
    poids, il n'y a pas de « +5 kg » à montrer, et un balayage qui découvre un
    module vide est une animation qui fait perdre une seconde pour rien.
 
-   ⚠️⚠️ ELLE SE REJOUE EN BOUCLE, ET C'EST UNE DEMANDE EXPLICITE DE PABLO
-   (2026-09-04) : « l'animation du module des calories pour rappeler l'objectif
-   doit intervenir à chaque fois qu'on revient sur Suivi, la première fois après
-   1 seconde, sinon toutes les secondes ». Le garde « une fois par jour » a donc
-   sauté, et `armerAnnonce()` la relance une seconde après la fin de la
-   précédente.
-   > ⚠️ Ce que ça coûte, et c'était le motif du garde d'origine : le compteur de
-   > calories est recouvert environ trois secondes sur quatre. `HC_MS.boucle`
-   > est le seul nombre à changer pour espacer les rappels — le mettre à 0
-   > désarme la boucle et rend l'annonce à sa seule arrivée.
+   ⚠️⚠️ UNE FOIS PAR ARRIVÉE, ET PAS UNE DE PLUS (demande de Pablo,
+   2026-09-04) : « pas de récurrence — quand on arrive sur Suivi, au bout de
+   2 secondes animation, puis fige tant qu'on est sur la page Suivi ; recommence
+   à chaque arrivée sur Suivi ».
+   Le garde « une fois par jour » a donc sauté — l'annonce se rejoue à chaque
+   visite — mais elle ne se répète JAMAIS pendant qu'on reste sur la page. Une
+   boucle a été essayée le même jour et retirée aussitôt : elle recouvrait le
+   compteur de calories trois secondes sur quatre, ce qui était précisément le
+   motif du garde d'origine.
 
-   ⚠️ La boucle s'ARRÊTE quand la page n'est pas visible : une animation qui
-   tourne dans un onglet caché ne rappelle rien à personne et coûte de la
-   batterie. Elle repart au retour, ce qui est exactement le « à chaque fois
-   qu'on revient sur Suivi » demandé — `visibilitychange` couvre le retour
-   d'arrière-plan, `pageshow` le retour arrière depuis une autre page. */
-var HC_MS = { attente: 1000, boucle: 1000, nappe: 720, lecture: 1800, sortie: 620 };
+   ⚠️ « ARRIVER SUR SUIVI », C'EST TROIS ÉVÉNEMENTS ET PAS UN : le chargement de
+   la page (`init` → `appliquerBesoinDuJour`), le retour au premier plan
+   (`visibilitychange`), et le retour arrière depuis une autre page (`pageshow`,
+   où la page sort du cache sans repasser par `init()`). Sans le troisième,
+   revenir de Repas ne rejouerait rien.
+   ⚠️ Et rien n'est armé quand la page n'est pas visible : une animation qui se
+   joue dans un onglet caché ne rappelle rien à personne. */
+var HC_MS = { attente: 2000, nappe: 720, lecture: 1800, sortie: 620 };
 var hcTimer = null;
 
 /* Le planificateur. ⚠️ UN SEUL MINUTEUR, toujours annulé avant d'être reposé :
-   deux `armerAnnonce()` rapprochés — l'arrivée et un retour d'onglet — feraient
-   sinon deux boucles superposées, donc deux nappes qui se croisent. */
+   deux `armerAnnonce()` rapprochés — le chargement puis un retour d'onglet —
+   poseraient sinon deux attentes, donc deux nappes qui se croisent. */
 function armerAnnonce(delai) {
   if (hcTimer) { clearTimeout(hcTimer); hcTimer = null; }
   if (!PROFIL_KG || document.hidden) return;
   hcTimer = setTimeout(function () {
     hcTimer = null;
     annoncerObjectif(true);
-    // La suivante part une seconde APRÈS la fin de celle-ci, pas une seconde
-    // après son début : sinon elles se chevaucheraient.
-    if (HC_MS.boucle > 0) {
-      armerAnnonce(HC_MS.nappe + HC_MS.lecture + HC_MS.sortie + 160 + HC_MS.boucle);
-    }
+    /* Et c'est tout : rien n'est reprogrammé. L'écran se fige sur son compteur
+       jusqu'à la prochaine arrivée. */
   }, delai == null ? HC_MS.attente : delai);
 }
 function stopperAnnonce() { if (hcTimer) { clearTimeout(hcTimer); hcTimer = null; } }
@@ -5492,9 +5490,9 @@ async function validerObjectif() {
      le nouveau. */
   await appliquerBesoinDuJour();
   /* Après un enregistrement, on la rejoue tout de suite : c'est la
-     confirmation de ce qu'on vient de régler. La boucle repart derrière. */
+     confirmation de ce qu'on vient de régler — et la seule fois où elle part
+     sans attendre les deux secondes. */
   annoncerObjectif(true);
-  armerAnnonce(HC_MS.nappe + HC_MS.lecture + HC_MS.sortie + 160 + HC_MS.boucle);
 }
 
 /* ═══ L'objectif du jour s'adapte à l'entraînement ═══════════
