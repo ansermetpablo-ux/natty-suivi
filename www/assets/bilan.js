@@ -704,6 +704,9 @@ window.NattyBilan = (function () {
       '.nbsk{--b-bg:#000;--b-ink:#fff;--b-mut:#8b8b95;--b-mut2:#6e6e78;',
       '--b-lueur1:rgba(255,255,255,.26);--b-lueur2:rgba(255,255,255,.11);',
       '--b-lueur3:rgba(255,255,255,.03);--b-trait:rgba(255,255,255,.13);',
+      '--b-c1:#16171c;--b-c2:#0c0d10;--b-rim:rgba(255,255,255,.55);',
+      '--b-rim2:rgba(255,255,255,.07);--b-bulle:rgba(30,31,36,.94);',
+      '--b-barre:#1b1c21;--b-ombre:0 20px 44px rgba(0,0,0,.5);',
       '--b-trait2:rgba(255,255,255,.06);--b-creux:#0a0a0c;--b-relief:#17181c;',
       '--b-vif:#fff;--b-sur-vif:#0a0a0c;--b-ombre:rgba(0,0,0,.7);',
       '--b-reflet:rgba(255,255,255,.055);--b-contour:rgba(255,255,255,.07);',
@@ -711,6 +714,14 @@ window.NattyBilan = (function () {
       ':root[data-theme="light"] .nbsk{--b-bg:#fff;--b-ink:#101014;--b-mut:#8a8a95;',
       '--b-mut2:#a6a6b0;--b-lueur1:rgba(126,128,145,.15);--b-lueur2:rgba(126,128,145,.06);',
       '--b-lueur3:rgba(126,128,145,.02);--b-trait:rgba(20,20,30,.14);',
+      /* ⚠️ EN CLAIR, LA CARTE NE PEUT PAS ÊTRE BLANCHE : le fond de l'écran
+         l'est déjà, et elle disparaissait purement et simplement — vu à
+         l'écran, un graphique flottant sans support. Elle est donc légèrement
+         grise, avec une ombre douce ; et les barres, qui étaient à `#f4f5f7`
+         sur du blanc, passent à un gris qu'on distingue. */
+      '--b-c1:#fbfbfd;--b-c2:#f0f1f5;--b-rim:rgba(255,255,255,.95);',
+      '--b-rim2:rgba(20,20,30,.08);--b-bulle:rgba(255,255,255,.96);',
+      '--b-barre:#e0e2e9;--b-ombre:0 14px 32px rgba(20,20,30,.12);',
       '--b-trait2:rgba(20,20,30,.06);--b-creux:#eceef1;--b-relief:#f4f5f7;',
       '--b-vif:#101014;--b-sur-vif:#fff;--b-ombre:rgba(20,20,30,.16);',
       '--b-reflet:rgba(255,255,255,.9);--b-contour:rgba(20,20,30,.07);',
@@ -905,6 +916,62 @@ window.NattyBilan = (function () {
       '#nbil .jn .l{font-size:12.5px;font-weight:700;color:var(--b-mut);margin-top:5px}',
       '#nbil .jw{display:flex;align-items:center;justify-content:center;gap:20px;margin:6px 0 2px}',
 
+      /* ── LA CARTE, ET SON ARÊTE LUMINEUSE ─────────────────────
+         Reprise de la référence envoyée par Pablo (2026-09-04) : un panneau
+         sombre posé sur un fond presque noir, dont le bord haut-droit capte
+         une lumière — comme un objet en verre éclairé de trois quarts.
+
+         ⚠️ L'ARÊTE EST UN DÉGRADÉ MASQUÉ, PAS UNE BORDURE. Une bordure d'un
+         pixel a la même couleur sur ses quatre côtés : elle entoure la carte
+         au lieu de l'éclairer, et l'effet tombe à plat. Ici le pseudo-élément
+         porte un dégradé orienté, et le masque n'en garde que l'épaisseur du
+         contour — donc la lumière court sur deux côtés et s'éteint sur les
+         deux autres.
+         ⚠️ `#nbil *{border:0}` (le pare-feu) ne l'atteint pas : `*` ne
+         sélectionne pas les pseudo-éléments. C'est aussi pourquoi l'arête ne
+         peut PAS être faite avec `border`. */
+      '#nbil .carte{position:relative;border-radius:26px;padding:16px 14px 14px;',
+      'background:linear-gradient(157deg,var(--b-c1) 0%,var(--b-c2) 62%);',
+      'box-shadow:var(--b-ombre)}',
+      /* ⚠️ `#nbil` DANS LE SÉLECTEUR, sinon la règle ne s'applique jamais :
+         `#nbil .carte::before` vaut (1,1,1) et une règle sans identifiant, si
+         tardive soit-elle, perd. Le genre de correctif qui a l'air posé et
+         qui ne fait rien. */
+      ':root[data-theme="light"] #nbil .carte::before,',
+      ':root[data-theme="light"] #nbil .st::before{background:var(--b-rim2)}',
+      '#nbil .carte::before{content:"";position:absolute;inset:0;border-radius:inherit;',
+      'padding:1px;pointer-events:none;',
+      'background:linear-gradient(203deg,var(--b-rim) 0%,var(--b-rim2) 24%,transparent 48%);',
+      '-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);',
+      '-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);',
+      'mask-composite:exclude}',
+      // Le halo qui déborde du coin éclairé — c'est lui qui fait « poser » la
+      // carte sur le fond au lieu de l'y coller.
+      '#nbil .carte::after{content:"";position:absolute;top:-18%;right:-10%;width:52%;height:64%;',
+      'border-radius:50%;pointer-events:none;z-index:-1;',
+      'background:radial-gradient(50% 50% at 50% 50%,var(--b-lueur2) 0%,transparent 70%)}',
+
+      /* La bulle de valeur : le nombre en gros, la date en dessous, en sourdine.
+         Même objet sur les deux graphiques — deux styles pour la même chose
+         finiraient par ne plus dire la même chose. */
+      '#nbil .bul{position:absolute;z-index:4;padding:7px 10px;border-radius:12px;',
+      // L'ombre suit le thème : une ombre noire dense sous une bulle blanche,
+      // sur un fond blanc, ne sépare rien du tout.
+      'background:var(--b-bulle);box-shadow:var(--b-ombre),inset 0 0 0 1px var(--b-trait);',
+      'backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);',
+      'white-space:nowrap;opacity:0;transform:translateY(5px);pointer-events:none}',
+      '#nbil .bul.on{opacity:1;transform:none;transition:opacity .4s ease,transform .4s ease}',
+      '#nbil .bul .bv{font-size:13px;font-weight:800;letter-spacing:-.2px;color:var(--b-ink)}',
+      '#nbil .bul .bd{font-size:10px;font-weight:600;color:var(--b-mut);margin-top:1px}',
+      '#nbil .bul .br{display:flex;gap:14px;justify-content:space-between;',
+      'font-size:11.5px;font-weight:700;margin-top:3px}',
+      '#nbil .bul .br i{font-style:normal;color:var(--b-mut)}',
+      // Le point posé sur la courbe, à l'aplomb de la bulle.
+      '#nbil .pin{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--b-ink);',
+      'box-shadow:0 0 0 3px var(--b-c2),0 0 14px rgba(255,255,255,.5);',
+      'transform:translate(-50%,-50%);opacity:0;transition:opacity .4s ease;z-index:3}',
+      '#nbil .pin.on{opacity:1}',
+
       /* ── La courbe de progression ─────────────────────────── */
       '#nbil .grf{margin:22px auto 0;max-width:430px;position:relative}',
       '#nbil .grf svg{width:100%;height:170px;overflow:visible}',
@@ -995,11 +1062,43 @@ window.NattyBilan = (function () {
          écran sert à montrer. Même famille que le cadre photo d'`ajout.js`
          (§3) : une hauteur demandée ne survit pas à une compression flex. */
       '#nbil .sem{display:flex;align-items:flex-end;justify-content:center;gap:7px;',
-      'margin:24px auto 0;max-width:430px;min-height:158px}',
+      'flex:1;min-width:0;min-height:158px}',
       '#nbil .sem .d{flex:1;display:flex;flex-direction:column;align-items:center;',
       'justify-content:flex-end;gap:6px}',
-      '#nbil .sem .bar{width:100%;max-width:34px;flex:0 0 auto;border-radius:9px 9px 4px 4px;',
-      'background:var(--b-ink);height:0;transition:height 1.1s cubic-bezier(.22,1,.36,1);min-height:3px}',
+      /* ⚠️ LES BARRES SONT SOMBRES, ET LA JOURNÉE MISE EN AVANT EST LA SEULE
+         COLORÉE. Reprise de la référence de Pablo (2026-09-04). Avant, les
+         sept barres étaient blanches : la semaine se lisait comme un bloc, et
+         rien ne désignait le jour dont parle le texte juste en dessous.
+         La barre accentuée porte un dégradé qui va de la couleur de sa note
+         (en haut) vers le blanc (en bas) — l'accent là où l'œil arrive, et une
+         base claire qui l'ancre. */
+      '#nbil .sem .bar{width:100%;max-width:34px;flex:0 0 auto;border-radius:11px;',
+      'background:var(--b-barre);box-shadow:inset 0 1px 0 var(--b-trait2);',
+      'height:0;transition:height 1.1s cubic-bezier(.22,1,.36,1);min-height:3px}',
+      /* ⚠️ LE DÉGRADÉ EST POSÉ EN JS, PAS EN CSS. La version d'origine passait
+         par `color-mix()`, que Safari ne connaît qu'à partir de la 16.2 — or
+         l'app cible iOS 15. Une fonction de couleur inconnue rend la
+         déclaration entière invalide : la barre serait retombée au gris des
+         autres, SANS RIEN SIGNALER, et la mise en avant aurait simplement
+         disparu sur les vieux téléphones. Les trois arrêts sont donc calculés
+         depuis la couleur de la note (voir `peindreBarres`). */
+      '#nbil .sem .d.top .bar{box-shadow:0 0 26px -6px var(--b-acc)}',
+      /* La poignée : le disque blanc au sommet de la barre choisie. C'est elle
+         qui dit « c'est celle-là », avant même qu'on lise la bulle. */
+      '#nbil .sem .d.top .bar{position:relative}',
+      /* ⚠️ Le jour mis en avant PERD son étiquette de valeur : la poignée se
+         pose exactement dessus, et la bulle donne déjà le chiffre — en
+         plus gros et avec son écart. Deux fois la même valeur, dont une
+         à moitié cachée par un disque blanc. */
+      '#nbil .sem .d.top .n{visibility:hidden}',
+      '#nbil .sem .d.top .bar::after{content:"";position:absolute;top:-9px;left:50%;',
+      'width:18px;height:18px;margin-left:-9px;border-radius:50%;background:#fff;',
+      'box-shadow:0 3px 10px rgba(0,0,0,.45)}',
+      // L'échelle, à gauche : sans elle, sept hauteurs ne se rapportent à rien.
+      '#nbil .semw{display:flex;align-items:stretch;gap:10px;margin:22px auto 0;max-width:430px}',
+      '#nbil .semy{display:flex;flex-direction:column;justify-content:space-between;',
+      'flex:none;padding-bottom:22px;text-align:right}',
+      '#nbil .semy span{font-size:9.5px;font-weight:700;color:var(--b-mut2);line-height:1}',
       /* ⚠️ UN JOUR NON NOTÉ N'EST PLUS UNE BARRE ÉCRASÉE DE 3 PX (2026-09-02,
          même demande que la courbe : « il faut absolument que ce soit plein
          même quand on n'entre pas de données »). Il portait `min-height:3px`,
@@ -1027,9 +1126,18 @@ window.NattyBilan = (function () {
       '#nbil .sem .n{font-size:10px;font-weight:700;color:var(--b-mut2)}',
 
       /* ── Les chiffres marquants de la semaine ─────────────── */
+      // Mêmes carte et arête que les graphiques : c'est ce qui fait que
+      // l'écran se lit comme un seul objet et non comme trois styles empilés.
       '#nbil .stats{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:22px auto 0;max-width:430px}',
-      '#nbil .st{border-radius:19px;padding:15px;background:var(--b-relief);text-align:left;',
-      'box-shadow:inset 0 1px 0 var(--b-reflet)}',
+      '#nbil .st{position:relative;border-radius:19px;padding:15px;text-align:left;',
+      'background:linear-gradient(157deg,var(--b-c1) 0%,var(--b-c2) 68%);',
+      'box-shadow:var(--b-ombre)}',
+      '#nbil .st::before{content:"";position:absolute;inset:0;border-radius:inherit;',
+      'padding:1px;pointer-events:none;',
+      'background:linear-gradient(203deg,var(--b-rim) 0%,var(--b-rim2) 26%,transparent 52%);',
+      '-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);',
+      '-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);',
+      'mask-composite:exclude}',
       '#nbil .st .v{font-size:23px;font-weight:900;letter-spacing:-.9px}',
       '#nbil .st .l{font-size:11px;font-weight:700;color:var(--b-mut);margin-top:2px;line-height:1.35}',
 
@@ -1286,6 +1394,16 @@ window.NattyBilan = (function () {
      45 et 75 la valeur rendue est EXACTEMENT celle de `couleurNote`, donc la
      jauge et les pastilles des critères ne peuvent pas se contredire. */
   var PALIERS = [[0, 255, 69, 58], [45, 255, 149, 0], [75, 52, 199, 89], [100, 48, 209, 88]];
+  /* Mélange vers le blanc, en dur. Un arrêt translucide aurait laissé voir la
+     carte À TRAVERS la barre — donc une barre trouée, pas un dégradé. */
+  function versBlanc(rgb, k) {
+    var m = String(rgb).match(/\d+/g);
+    if (!m) return rgb;
+    return 'rgb(' + m.slice(0, 3).map(function (v) {
+      return Math.round(+v + (255 - +v) * k);
+    }).join(',') + ')';
+  }
+
   function couleurFluide(n) {
     n = Math.max(0, Math.min(100, +n || 0));
     for (var i = 1; i < PALIERS.length; i++) {
@@ -1375,6 +1493,13 @@ window.NattyBilan = (function () {
      calories et pas la note : c'est la seule série que la personne reconnaît
      sans explication, et celle qui rend visible « je mange trop / pas assez »
      — ce que la note globale, elle, agrège au point de le cacher. */
+  /* « 16 sep. » — court, sans point sur les mois qui n'en prennent pas. Écrit
+     à la main plutôt que tronqué : `'août'.slice(0,4)` rend « aou », le défaut
+     déjà corrigé dans `coaching.html`. */
+  var MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.',
+                'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  function jourEtMois(d) { return d.getDate() + ' ' + MOIS_C[d.getMonth()]; }
+
   function courbeHTML(pts, cible, largeur, hauteur) {
     largeur = largeur || 386; hauteur = hauteur || 170;
     var mx = 10, my = 18;
@@ -1435,7 +1560,27 @@ window.NattyBilan = (function () {
        bloc qu'on voyait au lieu de la courbe. Relevé à l'écran, pas à la
        lecture. Le trait suffit ; le repère, c'est la ligne de dépense. */
     var trous = pts.filter(function (p) { return !p.note; }).length;
-    return '<div class="grf" data-in style="animation-delay:.3s"><div class="vol">'
+    /* Le point marqué : le DERNIER jour noté. C'est la journée qu'on vient de
+       vivre, celle dont tout l'écran parle — et c'est là que le volet finit sa
+       course, donc la bulle apparaît pile où le regard arrive. */
+    var iM = -1;
+    for (var m = pts.length - 1; m >= 0; m--) if (pts[m].note) { iM = m; break; }
+    var bul = '';
+    if (iM >= 0 && lie) {
+      var px = x(iM) / largeur * 100, py = y(lie[iM]) / hauteur * 100;
+      /* ⚠️ La bulle est ancrée à DROITE quand le point est près du bord droit —
+         et il l'est presque toujours, puisque c'est le dernier jour. Centrée,
+         elle sortirait de la carte et la page partirait en défilement
+         horizontal (règle 39 de CLAUDE.md). */
+      var aDroite = px > 62;
+      bul = '<div class="pin" style="left:' + px.toFixed(1) + '%;top:' + py.toFixed(1) + '%"></div>'
+        + '<div class="bul" style="' + (aDroite ? 'right:' + (100 - px).toFixed(1) + '%;margin-right:12px'
+                                                : 'left:' + px.toFixed(1) + '%;margin-left:12px')
+        + ';top:' + py.toFixed(1) + '%;transform:translateY(-118%)">'
+        + '<div class="bv">' + r0(pts[iM].v) + ' kcal</div>'
+        + '<div class="bd">' + esc(jourEtMois(pts[iM].date)) + '</div></div>';
+    }
+    return '<div class="grf carte" data-in style="animation-delay:.3s">' + bul + '<div class="vol">'
       + '<svg viewBox="0 0 ' + largeur + ' ' + hauteur + '" preserveAspectRatio="none">'
       + (cible ? '<line class="cible" x1="' + mx + '" y1="' + yc.toFixed(1) + '" x2="' + (largeur - mx) + '" y2="' + yc.toFixed(1) + '"/>' : '')
       + '<line class="axe" x1="' + mx + '" y1="' + (hauteur - my) + '" x2="' + (largeur - mx) + '" y2="' + (hauteur - my) + '"/>'
@@ -1516,6 +1661,15 @@ window.NattyBilan = (function () {
         vol.style.animation = 'none';
         vol.style.clipPath = 'none';
       }, 2500);
+
+      /* Le point et sa bulle n'arrivent qu'une fois le trait passé sous eux :
+         posés avant, ils désigneraient un endroit encore vide. */
+      setTimeout(function () {
+        if (!racine) return;
+        var b = racine.querySelector('.grf .bul'), pin = racine.querySelector('.grf .pin');
+        if (pin) pin.classList.add('on');
+        if (b) b.classList.add('on');
+      }, 1500);
 
       /* ⚠️ LE PONT NE SE TRACE PAS, IL SE RÉVÈLE. Son `stroke-dasharray` porte
          déjà le motif du pointillé (voir le CSS) : le réécrire pour l'animer
@@ -2032,6 +2186,14 @@ window.NattyBilan = (function () {
     });
   }
 
+  /* L'échelle de gauche : quatre repères, du haut vers le bas. Un graphique
+     dont on ignore les bornes peut faire passer 3 % pour un envol. */
+  function echelleHTML(max) {
+    var out = [];
+    for (var i = 4; i >= 0; i--) out.push('<span>' + (Math.round(max * i / 4 / 100) / 10) + 'k</span>');
+    return '<div class="semy">' + out.join('') + '</div>';
+  }
+
   function scSemJours() {
     enTete('LES SEPT JOURS');
     var sem = S.sem, c = S.profil.cible;
@@ -2044,15 +2206,42 @@ window.NattyBilan = (function () {
       return { v: x.a.mac.c, note: !x.a.vide };
     })) || sem.map(function () { return 0; });
 
+    /* LE JOUR MIS EN AVANT est le mieux noté de la semaine — pas le plus
+       calorique. Le graphique montre des calories, mais ce que l'écran
+       célèbre, c'est une journée réussie : accentuer la plus grosse barre
+       féliciterait le jour où l'on a le plus mangé. */
+    var iTop = -1, meilleureNote = -1;
+    sem.forEach(function (x, i) {
+      if (x.a.vide || x.a.note === null) return;
+      if (x.a.note > meilleureNote) { meilleureNote = x.a.note; iTop = i; }
+    });
+    /* ⚠️ La bulle vit DANS `.sem`, en pourcentage de sa largeur : posée dans la
+       colonne du jour, elle serait rognée par la largeur d'une barre (34 px).
+       Et elle bascule du côté du centre quand le jour est près d'un bord —
+       sinon elle sort de la carte et la page part en défilement horizontal. */
+    var bulTop = '';
+    if (iTop >= 0) {
+      var t = sem[iTop], xp = ((iTop + 0.5) / sem.length) * 100, aG = xp > 55;
+      var ecart = c.c ? (t.a.mac.c - c.c) : null;
+      bulTop = '<div class="bul" style="' + (aG ? 'right:' + (100 - xp).toFixed(1) + '%;margin-right:16px'
+                                               : 'left:' + xp.toFixed(1) + '%;margin-left:16px')
+        + ';top:6px">'
+        + '<div class="bd">' + esc(jourEtMois(t.date)) + '</div>'
+        + '<div class="br"><i>Mangé</i><b>' + r0(t.a.mac.c) + ' kcal</b></div>'
+        + (ecart === null ? '' : '<div class="br"><i>Écart</i><b>'
+            + (ecart > 0 ? '+' : '−') + Math.abs(r0(ecart)) + ' kcal</b></div>')
+        + '<div class="br"><i>Note</i><b>' + t.a.note + '/100</b></div></div>';
+    }
+
     bloc({
       html: ill('calendrier', 80)
         + titre('Jour après jour', 'p', 0.1)
-        + '<div class="sem">' + sem.map(function (x, i) {
-            return '<div class="d' + (x.a.vide ? ' vide' : '') + '">'
+        + '<div class="semw carte">' + echelleHTML(max) + '<div class="sem">' + sem.map(function (x, i) {
+            return '<div class="d' + (x.a.vide ? ' vide' : '') + (i === iTop ? ' top' : '') + '">'
               + '<div class="n">' + (x.a.vide ? '' : r0(x.a.mac.c / 100) / 10 + 'k') + '</div>'
               + '<div class="bar" data-h="' + Math.max(3, Math.round((h[i] / max) * 118)) + '"></div>'
               + '<div class="j">' + JOURS_COURTS[x.date.getDay()] + '</div></div>';
-          }).join('') + (c.c ? '<div class="dep"><span></span></div>' : '') + '</div>'
+          }).join('') + (c.c ? '<div class="dep"><span></span></div>' : '') + bulTop + '</div></div>'
         + '<div class="sous" data-in style="animation-delay:.6s">'
         + notes.length + ' jour' + (notes.length > 1 ? 's' : '') + ' noté' + (notes.length > 1 ? 's' : '')
         + ' sur ' + sem.length
@@ -2076,11 +2265,28 @@ window.NattyBilan = (function () {
             trait.style.bottom = (bas + Math.round((c.c / max) * 118)) + 'px';
           }
         }
+        /* ⚠️ Le dégradé de la barre accentuée est POSÉ ICI, pas en CSS : voir
+           la note sur `color-mix` dans la feuille. Les trois arrêts partent de
+           la couleur de la note du jour, donc la barre dit la même chose que
+           la jauge et que les pastilles des critères. */
+        var top = d.querySelector('.d.top .bar');
+        if (top && meilleureNote >= 0) {
+          var acc = couleurFluide(meilleureNote);
+          top.parentNode.style.setProperty('--b-acc', acc);
+          top.style.background = 'linear-gradient(180deg,' + acc + ' 0%,'
+            + versBlanc(acc, 0.55) + ' 58%,#fff 100%)';
+        }
         setTimeout(function () {
           if (trait) trait.classList.add('on');
           d.querySelectorAll('.bar').forEach(function (b, i) {
             setTimeout(function () { b.style.height = b.getAttribute('data-h') + 'px'; }, i * 70);
           });
+          /* La bulle arrive après la dernière barre : annoncée avant, elle
+             désignerait une colonne encore vide. */
+          setTimeout(function () {
+            var bl = d.querySelector('.sem .bul');
+            if (bl) bl.classList.add('on');
+          }, sem.length * 70 + 600);
         }, 200);
       },
       boutons: [{ txt: 'Mes performances', on: scSemPerf }]
