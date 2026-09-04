@@ -119,9 +119,6 @@
     /* — les deux autres sources : galerie, saisie — discrètes sous le cadre.
        Un lien plat plutôt qu'un bouton plein : la photo reste le geste
        principal, ces deux-là ne doivent pas lui disputer l'attention. */
-    + '#nattyAjout .na-plat-nom{display:block;width:100%;text-align:center;font-family:inherit;font-size:15px;'
-      + 'font-weight:700;color:#d8d8de;margin-top:8px;background:none;border:none;outline:none;padding:2px}'
-    + '#nattyAjout .na-plat-plus{text-align:center;font-size:12.5px;color:#6e6e78;margin-top:2px}'
     + '#nattyAjout .na-vigns{display:flex;gap:8px;justify-content:center;margin-top:6px;'
       + 'flex-wrap:wrap;min-height:0}'
     + '#nattyAjout .na-vign{position:relative;width:46px;height:46px;border-radius:14px;'
@@ -220,29 +217,6 @@
     /* ── Bilan : ce qui suit l'enregistrement ──────────────────────
        Une cinématique courte (la coche, puis l'analyse), et à la fin le seul
        choix qui reste : publier ce plat, ou le garder pour soi. */
-    + '#nattyAjout .na-bilan{flex:1;min-height:0;display:flex;flex-direction:column}'
-    + '#nattyAjout .na-bcheck{margin:26px auto 0;width:88px;height:88px;border-radius:50%;'
-      + 'background:#14351f;border:2px solid #2fd36b;display:flex;align-items:center;'
-      + 'justify-content:center;font-size:40px;animation:naPop .5s cubic-bezier(.34,1.56,.64,1)}'
-    + '@keyframes naPop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}'
-    + '#nattyAjout .na-btitre{text-align:center;font-size:22px;font-weight:900;letter-spacing:-.5px;margin-top:18px}'
-    + '#nattyAjout .na-bsub{text-align:center;font-size:13px;color:#8a8a92;margin-top:8px;line-height:1.5}'
-    + '#nattyAjout .na-bcorps{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;'
-      + 'overscroll-behavior:contain;margin-top:20px;opacity:0;transition:opacity .5s ease}'
-    + '#nattyAjout .na-bcorps.on{opacity:1}'
-    /* La suggestion du prochain repas arrive APRÈS l'analyse, et se révèle de
-       la même façon — mais séparément, sinon les deux se lisent comme un bloc. */
-    + '#nattyAjout .na-brev{opacity:0;transform:translateY(12px);'
-      + 'transition:opacity .5s ease,transform .5s cubic-bezier(.22,1,.36,1)}'
-    + '#nattyAjout .na-brev.on{opacity:1;transform:none}'
-    + '#nattyAjout .na-bsec{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;'
-      + 'color:#6e6e78;margin:16px 0 8px}'
-    + '#nattyAjout .na-bcard{background:#141418;border-radius:16px;padding:12px 14px;margin-bottom:7px;'
-      + 'font-size:13.5px;line-height:1.5;color:#eaeaef;border-left:3px solid #2b2b30}'
-    + '#nattyAjout .na-bcard.plus{border-left-color:#2fd36b}'
-    + '#nattyAjout .na-bcard.moins{border-left-color:#f0b429}'
-    + '#nattyAjout .na-bnote{display:inline-block;background:#1d1d22;border-radius:99px;padding:6px 14px;'
-      + 'font-size:12px;font-weight:800;color:#eaeaef}'
     /* La suggestion du prochain repas : une carte, pas une liste — c'est une
        proposition, on doit pouvoir la lire d'un coup d'œil. */
     + '#nattyAjout .na-next{background:#f2f2f7;color:#0a0a0c;border-radius:20px;padding:16px 16px 14px}'
@@ -254,7 +228,6 @@
     + '#nattyAjout .na-next .ii{display:flex;flex-wrap:wrap;gap:5px;margin-top:11px}'
     + '#nattyAjout .na-next .ii i{font-style:normal;background:rgba(10,10,12,.06);border-radius:99px;'
       + 'padding:5px 10px;font-size:11px;font-weight:700}'
-    + '#nattyAjout .na-choix{display:flex;flex-direction:column;gap:9px;padding-top:16px}'
     + '#nattyAjout .na-opts{display:flex;flex-direction:column;gap:18px;margin:44px 0 0}'
     + '#nattyAjout .na-opt{width:100%;background:#ececf3;color:#0a0a0c;border:none;border-radius:26px;'
       + 'font-family:inherit;font-size:26px;font-weight:800;letter-spacing:-.6px;line-height:1.15;'
@@ -387,50 +360,10 @@
        flex (le cadre photo 3/4, les barres de la semaine du bilan).
        La page défile, elle ne comprime pas. */
     + '#nattyAjout #naScRecap > *{flex:0 0 auto}'
-    + '#nattyAjout .na-rhero{flex:none;margin:2px -22px 0;height:44vh;min-height:214px;'
-      + 'max-height:400px;display:flex;align-items:center;justify-content:center;position:relative}'
-    /* Le fondu vers le bas remplace le détourage de la maquette : le plat
-       « flotte » quel que soit son arrière-plan, sans qu'aucune image n'ait à
-       être détourée — et sans jamais rogner l'assiette. `contain` et non
-       `cover`, c'est la règle de cet écran depuis le début : on doit revoir
-       exactement la photo qui a été analysée. */
-    + '#nattyAjout .na-rhero img{width:100%;height:100%;object-fit:contain;display:block;'
-      + '-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 62%,rgba(0,0,0,.45) 86%,transparent 100%);'
-      + 'mask-image:linear-gradient(to bottom,#000 0,#000 62%,rgba(0,0,0,.45) 86%,transparent 100%)}'
-    + '#nattyAjout .na-rhero .na-hero-em{font-size:72px}'
-    /* ⚠️ Petit écran : la photo cède quelques points. Mesuré à 375×667, à
-       44 vh la carte des calories passait ENTIÈREMENT sous la barre des deux
-       boutons — donc le total du repas, qui est ce que Pablo a demandé
-       d'ajouter, n'était visible qu'en défilant. Entre « voir son plat en
-       grand » et « voir ce qu'on a mangé », c'est le second qui compte ici :
-       la photo, on vient de la prendre. */
-    + '@media (max-height:700px){#nattyAjout .na-rhero{height:34vh;min-height:178px}}'
     + '#nattyAjout .na-sec{font-size:11.5px;font-weight:700;letter-spacing:1.7px;'
       + 'text-transform:uppercase;color:#8a8a92;margin:14px 0 0}'
     + '#nattyAjout .na-sec i{display:block;height:1px;width:60%;background:#26262c;'
       + 'margin:11px 0 13px;border-radius:1px}'
-    + '#nattyAjout .na-macs{display:flex;gap:9px}'
-    + '#nattyAjout .na-mac{flex:1;min-width:0;background:#131317;border:1px solid #1e1e24;'
-      + 'border-radius:20px;padding:13px 12px 12px}'
-    + '#nattyAjout .na-mac-h{display:flex;align-items:center;gap:7px}'
-    + '#nattyAjout .na-mac-r{width:22px;height:22px;flex:none}'
-    + '#nattyAjout .na-mac-r svg{width:100%;height:100%;transform:rotate(-90deg);display:block}'
-    + '#nattyAjout .na-mac-r .bg{fill:none;stroke:#2b2b30;stroke-width:12}'
-    /* ⚠️ Trait de 12 pour un anneau de 22 px à l'écran : la boîte SVG fait
-       120 unités, donc 12 s'y peignent en ~2,2 px. Le trait de 9 des grands
-       anneaux aurait rendu un filet de 1,6 px — invisible sur du noir. */
-    + '#nattyAjout .na-mac-r .arc{fill:none;stroke-width:12;stroke-linecap:round;'
-      + 'transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1)}'
-    + '#nattyAjout .na-mac-em{font-size:14px;line-height:1}'
-    + '#nattyAjout .na-mac-l{font-size:12.5px;font-weight:500;color:#9a9aa4;margin-top:11px;'
-      + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
-    /* Graisse 300 et non 800 : « plus sérieux et sobre », demandé par Pablo.
-       Un chiffre de 34 px en gras sur trois cartes côte à côte crie ; le même
-       en maigre se lit comme une donnée. */
-    + '#nattyAjout .na-mac-v{font-size:34px;font-weight:300;color:#f4f4f7;'
-      + 'letter-spacing:-1.4px;line-height:1.05;margin-top:1px}'
-    + '#nattyAjout .na-mac-v u{font-size:14px;font-weight:400;color:#8a8a92;'
-      + 'text-decoration:none;letter-spacing:0;margin-left:2px}'
     + '#nattyAjout .na-mac-b{height:4px;border-radius:99px;background:#26262c;'
       + 'margin-top:12px;overflow:hidden}'
     + '#nattyAjout .na-mac-b i{display:block;height:100%;width:0;border-radius:99px;'
@@ -479,6 +412,182 @@
     + '#nattyAjout #naTerminer.na-busy::after{content:"";width:22px;height:22px;'
       + 'border:2.5px solid rgba(10,10,12,.22);border-top-color:#0a0a0c;border-radius:50%;'
       + 'animation:naSpin .9s linear infinite}'
+
+
+    /* ══════════ RÉCAP : LA PHOTO EN PLEIN ÉCRAN (2026-09-04) ══════════
+       Demande de Pablo : « la page doit être la photo prise en écran complet,
+       avec l'affichage des macros superposé à la photo directement ». La
+       version d'avant posait la photo en haut d'une page noire et les cartes
+       EN DESSOUS : on regardait une fiche illustrée, pas son plat.
+
+       ⚠️ LA PHOTO EST EN `position:fixed`, DONC ELLE NE DÉFILE PAS. C'est ce
+       qui fait que les détails REMONTENT par-dessus elle au lieu de la pousser
+       hors de l'écran — et c'est aussi pourquoi elle ne peut pas être un
+       `background-image` du conteneur défilant.
+
+       ⚠️ DEUX COPIES DE LA MÊME IMAGE, et ce n'est pas un gaspillage : la
+       nette est en `contain` (on doit revoir EXACTEMENT ce qui a été analysé,
+       c'est la règle de cet écran depuis le début), la floue en `cover` remplit
+       le reste. Un simple `cover` aurait rogné une photo de galerie sans le
+       dire. Sur une photo prise ici, dont le cadrage a la forme de l'écran, le
+       flou ne se voit pas du tout. */
+    + '#nattyAjout.recap .na-col{padding:0}'
+    + '#nattyAjout.recap .na-top{position:absolute;top:0;left:0;right:0;z-index:6;'
+      + 'padding:calc(14px + env(safe-area-inset-top,0px)) 18px 0;pointer-events:none}'
+    + '#nattyAjout.recap .na-top button{pointer-events:auto}'
+    + '#nattyAjout.recap .na-top svg{stroke:#fff;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}'
+    + '#nattyAjout #naScRecap{padding:0;overflow-x:hidden;position:relative}'
+    + '#nattyAjout .na-rphoto{position:fixed;inset:0;z-index:0;background:#08080a;overflow:hidden}'
+    + '#nattyAjout .na-rphoto .fond{position:absolute;left:-8%;top:-8%;width:116%;height:116%;'
+      + 'object-fit:cover;filter:blur(34px) saturate(1.2) brightness(.5)}'
+    + '#nattyAjout .na-rphoto .net{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}'
+    /* ⚠️ `cover` SEULEMENT quand la photo a déjà la forme de l'écran — c'est le
+       cas de toutes celles prises ici depuis que la capture est recadrée sur le
+       viseur. Elle remplit alors l'écran sans perdre un pixel, ce qui est
+       exactement la demande. Une image importée de la galerie, elle, garde
+       `contain` : la rogner silencieusement reviendrait à faire corriger un
+       plat sur une vue tronquée — le défaut déjà payé du cadre 4/3. */
+    + '#nattyAjout .na-rphoto.plein .net{object-fit:cover}'
+    + '#nattyAjout .na-rphoto.plein .fond{display:none}'
+    /* Le voile : une photo claire sous des icônes blanches n'a de contraste que
+       par accident (la leçon du verre dépoli de la visionneuse). Il s'assombrit
+       vers le bas, là où les anneaux se posent. */
+    + '#nattyAjout .na-rphoto .voile{position:absolute;inset:0;pointer-events:none;'
+      + 'background:linear-gradient(to bottom,rgba(0,0,0,.5) 0%,rgba(0,0,0,.12) 18%,'
+      + 'rgba(0,0,0,.06) 40%,rgba(6,6,9,.66) 74%,#06060a 100%)}'
+    + '#nattyAjout .na-rphoto .em{position:absolute;inset:0;display:flex;align-items:center;'
+      + 'justify-content:center;font-size:74px}'
+    /* La zone transparente : c'est elle qui laisse voir la photo. Sa hauteur
+       décide de ce qu'on voit avant de défiler. */
+    + '#nattyAjout .na-rtop{position:relative;z-index:1;height:60vh;min-height:250px;'
+      + 'display:flex;flex-direction:column;justify-content:flex-end;'
+      + 'padding:0 18px 4px;pointer-events:none}'
+    + '#nattyAjout .na-rnom{position:relative;z-index:2;display:block;width:100%;text-align:center;'
+      + 'font-family:inherit;font-size:19px;font-weight:800;letter-spacing:-.4px;color:#fff;'
+      + 'background:none;border:none;outline:none;padding:2px;pointer-events:auto;'
+      + 'text-shadow:0 2px 14px rgba(0,0,0,.6)}'
+    + '#nattyAjout .na-rplus{position:relative;z-index:2;text-align:center;font-size:12px;'
+      + 'color:rgba(255,255,255,.6);margin-top:2px;text-shadow:0 2px 10px rgba(0,0,0,.6)}'
+
+    /* — les trois anneaux, POSÉS SUR la photo —
+       Pastille sombre floutée sous chacun : c'est ce qui les rend lisibles quel
+       que soit le plat photographié. */
+    + '#nattyAjout .na-rgs{position:relative;z-index:2;display:flex;justify-content:center;'
+      + 'gap:12px;padding:14px 16px 0}'
+    + '#nattyAjout .na-rg{position:relative;width:92px;height:92px;flex:none;border-radius:50%;'
+      + 'background:rgba(8,8,11,.46);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);'
+      + 'box-shadow:0 12px 30px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.09);'
+      + 'opacity:0;transform:scale(.84) translateY(12px);'
+      + 'animation:naRg .72s cubic-bezier(.22,1,.36,1) forwards}'
+    + '@keyframes naRg{to{opacity:1;transform:none}}'
+    + '#nattyAjout .na-rg svg{position:absolute;inset:0;width:100%;height:100%;'
+      + 'transform:rotate(-90deg);display:block}'
+    + '#nattyAjout .na-rg .bg{fill:none;stroke:rgba(255,255,255,.16);stroke-width:7}'
+    + '#nattyAjout .na-rg .arc{fill:none;stroke-width:7;stroke-linecap:round;'
+      + 'transition:stroke-dasharray 1.1s cubic-bezier(.22,1,.36,1)}'
+    + '#nattyAjout .na-rg .in{position:absolute;inset:0;display:flex;flex-direction:column;'
+      + 'align-items:center;justify-content:center;gap:0;pointer-events:none}'
+    + '#nattyAjout .na-rg .l{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.85)}'
+    + '#nattyAjout .na-rg .e{font-size:12px;line-height:1.2}'
+    + '#nattyAjout .na-rg .v{font-size:16.5px;font-weight:800;color:#fff;letter-spacing:-.4px}'
+    /* L'invitation à descendre. Sans elle, rien ne dit que la page continue —
+       la photo occupe tout l'écran et paraît être toute la page. */
+    + '#nattyAjout .na-rdet{position:relative;z-index:2;display:flex;align-items:center;'
+      + 'justify-content:center;gap:9px;margin:16px auto 0;background:rgba(8,8,11,.46);'
+      + 'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:none;'
+      + 'border-radius:999px;padding:10px 18px;color:#f2f2f7;font-family:inherit;'
+      + 'font-size:13px;font-weight:700;cursor:pointer;'
+      + 'box-shadow:0 8px 22px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.09)}'
+    + '#nattyAjout .na-rdet:active{transform:scale(.97)}'
+    + '#nattyAjout .na-rdet svg{width:16px;height:16px;stroke:currentColor;fill:none;'
+      + 'stroke-width:2;stroke-linecap:round}'
+
+    /* — la feuille de détails, qui remonte par-dessus la photo —
+       Même panneau que le bilan : dégradé sombre et arête lumineuse. */
+    + '#nattyAjout .na-rsheet{position:relative;z-index:2;margin-top:22px;'
+      + 'border-radius:28px 28px 0 0;padding:14px 20px calc(122px + env(safe-area-inset-bottom,0px));'
+      + 'min-height:64vh;text-align:left;'
+      + 'background:linear-gradient(157deg,#16171c 0%,#0c0d10 62%);'
+      + 'box-shadow:0 -20px 48px rgba(0,0,0,.65)}'
+    + '#nattyAjout .na-rsheet::before{content:"";position:absolute;inset:0;'
+      + 'border-radius:inherit;padding:1px;pointer-events:none;'
+      + 'background:linear-gradient(203deg,rgba(255,255,255,.5) 0%,rgba(255,255,255,.06) 26%,transparent 52%);'
+      + '-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);'
+      + '-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);'
+      + 'mask-composite:exclude}'
+    + '#nattyAjout.recap .na-vigns{position:relative;z-index:2;margin-top:12px}'
+    /* ⚠️ La barre reste `sticky` : elle doit être atteignable pendant qu'on
+       regarde la photo comme quand on lit les ingrédients. Seuls le plan de
+       superposition et le rembourrage changent — la colonne n'en a plus. */
+    + '#nattyAjout.recap .na-fab{z-index:3;padding-left:22px;padding-right:22px}'
+    + '#nattyAjout .na-poign{width:38px;height:4px;border-radius:2px;'
+      + 'background:rgba(255,255,255,.2);margin:0 auto 16px}'
+    + '#nattyAjout .na-sec{font-size:11.5px;font-weight:700;letter-spacing:1.7px;'
+      + 'text-transform:uppercase;color:#8a8a92;margin:2px 0 0}'
+    + '#nattyAjout .na-sec i{display:block;height:1px;width:58%;background:#26262c;'
+      + 'margin:10px 0 13px;border-radius:1px}'
+
+    /* — la macro dominante de chaque ingrédient —
+       Demande de Pablo : « 110 g de poulet — 25 g de protéines ». C'est ce qui
+       transforme une liste de courses en une lecture nutritionnelle : on voit
+       d'un coup ce que chaque aliment APPORTE, et pas seulement ce qu'il pèse. */
+    + '#nattyAjout .na-item .tx{flex:1;min-width:0}'
+    + '#nattyAjout .na-item .nm{width:100%}'
+    + '#nattyAjout .na-item .dm{font-size:11px;font-weight:700;color:#6e6e78;margin-top:1px;'
+      + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+
+    /* ══════════ LE BILAN DU PLAT, CINÉMATIQUE (2026-09-04) ══════════
+       Demande de Pablo : « l'analyse du plat doit aussi être cinématique — les
+       points forts avec animations et illustration SVG, puis les points
+       faibles, puis le prochain repas », et « reprendre toute la DA du bilan ».
+       Trois scènes au lieu d'une liste : chacune porte une illustration, un
+       grand titre et ses panneaux. */
+    + '#nattyAjout.bilan h1{display:none}'
+    + '#nattyAjout #naScBilan{position:relative}'
+    + '#nattyAjout .na-bzone{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;'
+      + 'overscroll-behavior:contain;padding:10px 0 calc(132px + env(safe-area-inset-bottom,0px))}'
+    + '#nattyAjout .na-bsc{text-align:center}'
+    + '#nattyAjout .na-bsc.sort{position:absolute;left:0;right:0;top:0;pointer-events:none;'
+      + 'animation:naBSort .34s cubic-bezier(.4,0,1,1) forwards}'
+    + '@keyframes naBSort{to{opacity:0;transform:translateY(-14px)}}'
+    + '#nattyAjout .na-bkick{font-size:11.5px;font-weight:700;letter-spacing:1.6px;'
+      + 'text-transform:uppercase;color:#8a8a92}'
+    + '#nattyAjout .na-bill{display:flex;justify-content:center;margin:14px 0 0;color:#f4f4f7}'
+    + '#nattyAjout .na-bill .nc-halo{color:#8b8b96}'
+    + '#nattyAjout .na-bill .em{font-size:60px;line-height:1}'
+    + '#nattyAjout .na-bh1{font-size:33px;font-weight:900;letter-spacing:-1.3px;line-height:1.05;'
+      + 'margin:12px 0 0}'
+    + '#nattyAjout .na-bsous{font-size:13.5px;color:#8a8a92;line-height:1.5;margin:12px auto 0;'
+      + 'max-width:330px}'
+    + '#nattyAjout .na-bpan{position:relative;border-radius:19px;padding:13px 15px;margin-top:11px;'
+      + 'text-align:left;font-size:13.5px;line-height:1.5;color:#eaeaef;'
+      + 'background:linear-gradient(157deg,#16171c 0%,#0c0d10 66%);'
+      + 'box-shadow:0 18px 40px rgba(0,0,0,.5)}'
+    + '#nattyAjout .na-bpan::before{content:"";position:absolute;inset:0;border-radius:inherit;'
+      + 'padding:1px;pointer-events:none;'
+      + 'background:linear-gradient(203deg,var(--r,rgba(255,255,255,.5)) 0%,rgba(255,255,255,.06) 26%,transparent 52%);'
+      + '-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);'
+      + '-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);'
+      + 'mask-composite:exclude}'
+    + '#nattyAjout .na-bpan .pu{font-size:15px;line-height:1;flex:none}'
+    + '#nattyAjout .na-bpan.rang{display:flex;align-items:flex-start;gap:10px}'
+    + '#nattyAjout .na-blist{margin-top:16px;text-align:left}'
+    + '#nattyAjout .na-bsc .na-next{margin-top:18px;text-align:center}'
+    + '#nattyAjout .na-bnote2{display:inline-block;background:#1d1d22;border-radius:99px;'
+      + 'padding:7px 15px;font-size:12px;font-weight:800;color:#eaeaef;margin-top:14px}'
+    /* La barre d'action du bilan : fixe, hors de la scène animée — un bouton
+       posé DANS le plan part avec son animation de sortie (leçon narration.html). */
+    + '#nattyAjout .na-bcta{position:absolute;left:0;right:0;bottom:0;z-index:6;'
+      + 'padding:14px 22px calc(18px + env(safe-area-inset-bottom,0px));display:flex;'
+      + 'flex-direction:column;gap:9px;pointer-events:none;'
+      + 'background:linear-gradient(to top,#000 62%,transparent)}'
+    + '#nattyAjout .na-bcta > *{pointer-events:auto}'
+    + '#nattyAjout [data-in]{opacity:0;animation:naGlide .7s cubic-bezier(.22,1,.36,1) forwards}'
+    + '@keyframes naGlide{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}'
+    /* ⚠️ LE FILET. Une page qui ne PEINT pas ne joue aucune animation : tout ce
+       qui part d'`opacity:0` y reste. Même règle que `assets/cine.js`. */
+    + '#nattyAjout .pret [data-in],#nattyAjout .na-rgs.pret .na-rg{'
+      + 'opacity:1!important;transform:none!important;animation:none!important}'
 
     + '.na-toast{position:fixed;left:50%;bottom:120px;transform:translate(-50%,14px);background:#101014;'
       + 'color:#fff;border-radius:18px;padding:12px 20px;font-family:\'Inter\',sans-serif;font-size:12.5px;'
@@ -685,6 +794,22 @@
     return n ? { p: n.p, l: n.l, g: n.g, c: n.c } : { p: 0, l: 0, g: 0, c: 0 };
   }
 
+  /* La macro DOMINANTE d'un ingrédient, et son grammage — « 25 g de
+     protéines » sous « 110 g de poulet » (demande de Pablo, 2026-09-04).
+     ⚠️ Dominante au sens des CALORIES qu'elle apporte, pas des grammes : 10 g
+     d'huile pèsent moins que 20 g de sucre et apportent deux fois plus. Sans
+     cette pondération, tout aliment un peu sucré serait « glucides » et le gras
+     n'apparaîtrait jamais. */
+  var MAC_NOM = { p: 'protéines', l: 'lipides', g: 'glucides' };
+  function dominante(i) {
+    var m = macroDe(i);
+    var poids = { p: m.p * 4, l: m.l * 9, g: m.g * 4 };
+    var k = null, best = 0;
+    ['p', 'l', 'g'].forEach(function (x) { if (poids[x] > best) { best = poids[x]; k = x; } });
+    if (!k || best <= 0) return null;
+    return { k: k, g: m[k], nom: MAC_NOM[k], coul: COL[k] };
+  }
+
   /** Un ingrédient qu'aucune des trois sources ne sait chiffrer. */
   function inconnu(i) {
     return !!(i && (i.nom || '').trim()) && !i.macros && !credible(i.pour100)
@@ -744,25 +869,23 @@
 
      ⚠️ Il n'y a plus qu'UN jeu d'anneaux, donc plus de préfixe d'identifiant.
      Le second jeu vivait sur l'écran de prise de vue, qui n'en porte plus. */
-  function macHTML(k, label) {
-    return '<div class="na-mac">'
-      + '<div class="na-mac-h"><div class="na-mac-r"><svg viewBox="0 0 120 120">'
+  function rgHTML(k, label, i) {
+    return '<div class="na-rg" style="animation-delay:' + (0.25 + i * 0.13).toFixed(2) + 's">'
+      + '<svg viewBox="0 0 120 120">'
       + '<circle class="bg" cx="60" cy="60" r="52"/>'
       + '<circle class="arc" id="naArc' + k + '" cx="60" cy="60" r="52" stroke="' + COL[k] + '" '
-        + 'stroke-dasharray="0 ' + CIRC.toFixed(1) + '"/></svg></div>'
-      + '<div class="na-mac-em">' + EM[k] + '</div></div>'
-      + '<div class="na-mac-l">' + label + '</div>'
+        + 'stroke-dasharray="0 ' + CIRC.toFixed(1) + '"/></svg>'
+      + '<div class="in"><div class="l">' + label + '</div>'
+      + '<div class="e">' + EM[k] + '</div>'
       /* Le nombre et son unité sont SÉPARÉS : `majAnneaux()` n'écrit que le
-         chiffre, le « g » est statique et plus petit. Écrire « 61g » d'un bloc
-         obligerait à repasser par de l'innerHTML à chaque rafraîchissement. */
-      + '<div class="na-mac-v"><span id="naVal' + k + '">–</span><u>g</u></div>'
-      + '<div class="na-mac-b"><i id="naBar' + k + '" style="background:' + COL[k] + '"></i></div>'
-      + '</div>';
+         chiffre, le « g » est statique. Écrire « 61g » d'un bloc obligerait à
+         repasser par de l'innerHTML à chaque rafraîchissement. */
+      + '<div class="v"><span id="naVal' + k + '">–</span>g</div></div></div>';
   }
 
-  function macsHTML() {
-    return '<div class="na-macs">'
-      + macHTML('p', 'Protéines') + macHTML('l', 'Lipides') + macHTML('g', 'Glucides')
+  function rgsHTML() {
+    return '<div class="na-rgs" id="naRgs">'
+      + rgHTML('p', 'Protéines', 0) + rgHTML('l', 'Lipides', 1) + rgHTML('g', 'Glucides', 2)
       + '</div>';
   }
 
@@ -862,12 +985,23 @@
          ⚠️ « Enrichir » n'existe que sur cet écran : il n'y a rien à enrichir
          avant qu'un plat existe. */
       + '  <div class="na-screen" id="naScRecap">'
-      + '    <div class="na-rhero" id="naRHero"><span class="na-hero-em">🍽️</span></div>'
-      + '    <input class="na-plat-nom" id="naPlatNom" type="text" aria-label="Nom du plat">'
-      + '    <div class="na-plat-plus" id="naPlatPlus"></div>'
+      /* La photo, en `position:fixed` : elle ne défile pas, c'est le reste qui
+         remonte par-dessus elle. Deux copies — nette en `contain`, floue en
+         `cover` — voir l'encadré du CSS. */
+      + '    <div class="na-rphoto" id="naRPhoto"><span class="em">🍽️</span></div>'
+      + '    <div class="na-rtop">'
+      + '      <input class="na-rnom" id="naPlatNom" type="text" aria-label="Nom du plat">'
+      + '      <div class="na-rplus" id="naPlatPlus"></div>'
+      + '    </div>'
+      +      rgsHTML()
       + '    <div class="na-vigns" id="naVign"></div>'
-      + '    <div class="na-sec">Valeurs nutritionnelles<i></i></div>'
-      +      macsHTML()
+      + '    <button class="na-rdet" id="naRDet">'
+      + '      <svg viewBox="0 0 24 24" aria-hidden="true">'
+      + '        <path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>'
+      + '      Voir le détail</button>'
+      + '    <div class="na-rsheet" id="naRSheet">'
+      + '      <div class="na-poign"></div>'
+      + '      <div class="na-sec">Valeurs nutritionnelles<i></i></div>'
       /* Les calories du repas : le total, et la cible du créneau juste en
          dessous. Un grand chiffre seul ne dit pas s'il est haut ou bas. */
       + '    <div class="na-kcard">'
@@ -879,9 +1013,10 @@
          compte un plat pris une demi-heure plus tôt ressemble à une erreur. */
       + '      <div class="na-kcard-d" id="naResteDeja2"></div>'
       + '    </div>'
-      + '    <div class="na-detail ouvert">'
-      + '      <button class="na-detail-h" id="naDetailH">Détail du repas <span id="naDetailC">▴</span></button>'
-      + '      <div class="na-detail-body on" id="naDetailB"></div>'
+      + '      <div class="na-sec">Ce qu’il y a dedans<i></i></div>'
+      + '      <div class="na-detail ouvert">'
+      + '        <div class="na-detail-body on" id="naDetailB"></div>'
+      + '      </div>'
       + '    </div>'
       + '    <div class="na-fab">'
       + '      <button class="na-fab-b" id="naEnrichir" aria-label="Enrichir ce repas">'
@@ -895,14 +1030,14 @@
       + '  </div>'
 
       /* ── écran « bilan » : après l'enregistrement ── */
+      /* ── écran « bilan » : l'analyse, en scènes ──
+         Ce qui va, puis ce qui est à surveiller, puis le prochain repas —
+         chacun son plan, son illustration et son grand titre, comme le bilan
+         du soir. Une liste unique faisait défiler trois sujets d'un coup :
+         on lisait le premier et on faisait défiler le reste. */
       + '  <div class="na-screen" id="naScBilan">'
-      + '    <div class="na-bilan">'
-      + '      <div class="na-bcheck" id="naBCheck">✓</div>'
-      + '      <div class="na-btitre" id="naBTitre">Repas enregistré</div>'
-      + '      <div class="na-bsub" id="naBSub">Analyse de votre plat…</div>'
-      + '      <div class="na-bcorps" id="naBCorps"></div>'
-      + '      <div class="na-choix" id="naBChoix"></div>'
-      + '    </div>'
+      + '    <div class="na-bzone" id="naBZone"></div>'
+      + '    <div class="na-bcta" id="naBCta"></div>'
       + '  </div>'
 
       /* ── écran 3 : les 4 pistes d'enrichissement ── */
@@ -956,7 +1091,13 @@
       if (flux && v && v.videoWidth) return camCapturer(v);
       inputCam.value = ''; inputCam.click();
     });
-    q('#naDetailH').addEventListener('click', toggleDetail);
+    /* « Voir le détail » ne replie plus rien : il fait DÉFILER jusqu'à la
+       feuille. Elle est toujours dépliée — on vient ici pour corriger, et une
+       liste repliée par défaut ajoute un geste avant le premier. */
+    q('#naRDet').addEventListener('click', function () {
+      var sh = q('#naRSheet'), ec = q('#naScRecap');
+      if (sh && ec) ec.scrollTo({ top: sh.offsetTop - 8, behavior: 'smooth' });
+    });
     q('#naPlatNom').addEventListener('input', function () {
       if (S && S.plats[0]) S.plats[0].nom = this.value;
       rendreDetail();
@@ -998,6 +1139,9 @@
        plutôt qu'un style en ligne — le gabarit appartient à la feuille. */
     dom.classList.toggle('cam', id === 'naScRepas');
     dom.classList.toggle('recap', id === 'naScRecap');
+    /* Le bilan porte son propre kicker DANS la scène : le titre de la page
+       ferait doublon juste au-dessus (« C'est noté ✓ » puis « CE QUI VA »). */
+    dom.classList.toggle('bilan', id === 'naScBilan');
     dom.scrollTop = 0;
     /* ⚠️ C'est `.na-screen` qui défile, pas `dom` : sans cette remise à zéro,
        on revenait sur le récap au milieu de la liste des ingrédients, donc sur
@@ -1306,20 +1450,29 @@
      ouverte — c'est ici qu'on retire, corrige ou ajoute. */
   function rendreRecap() {
     majNoms();
-    majHero();
+    majPhoto();
+    /* ⚠️ Le filet des anneaux. Ils naissent à `opacity:0` et n'apparaissent que
+       par leur animation : sur une page qui ne peint pas, ils seraient
+       INVISIBLES — une photo sans ses macros, c'est-à-dire l'écran amputé de ce
+       qu'on vient y chercher. */
+    var rgs = q('#naRgs');
+    if (rgs) {
+      rgs.classList.remove('pret');
+      setTimeout(function () { if (rgs.parentNode) rgs.classList.add('pret'); }, 1300);
+    }
     rendreVignettes();
     rendreDetail();
     majAnneaux();
     montrer('naScRecap');
   }
 
-  /* La photo en héros du récap : celle du plat qu'on regarde, à défaut la
-     première de la session, et l'emoji quand le repas a été saisi à la main.
-     `contain` plus un fondu vers le bas (voir `.na-rhero` dans le CSS) : le
-     plat « flotte » comme sur la maquette, sans qu'aucune image n'ait à être
-     détourée et sans que l'assiette soit rognée. */
-  function majHero() {
-    var h = q('#naRHero');
+  /* La photo du récap, en PLEIN ÉCRAN : celle du plat qu'on regarde, à défaut
+     la première de la session, et l'emoji quand le repas a été saisi à la main.
+     Deux copies de la même image — la nette en `contain` par-dessus la floue en
+     `cover` (voir l'encadré `.na-rphoto` du CSS) : on revoit exactement ce qui
+     a été analysé, et l'écran est rempli d'un bord à l'autre. */
+  function majPhoto() {
+    var h = q('#naRPhoto');
     if (!h) return;
     var pl = S.plats[S.cur] || S.plats[0] || null;
     var src = (pl && pl.photo) || null;
@@ -1328,9 +1481,22 @@
         if (S.plats[i].photo) { src = S.plats[i].photo; break; }
       }
     }
+    h.classList.remove('plein');
     h.innerHTML = src
-      ? '<img src="' + esc(src) + '" alt="">'
-      : '<span class="na-hero-em">🍽️</span>';
+      ? '<img class="fond" src="' + esc(src) + '" alt="" aria-hidden="true">'
+        + '<img class="net" src="' + esc(src) + '" alt="">'
+        + '<div class="voile"></div>'
+      : '<span class="em">🍽️</span><div class="voile"></div>';
+    var net = h.querySelector('.net');
+    if (!net) return;
+    // La forme de la photo décide : voir l'encadré `.plein` du CSS.
+    var juger = function () {
+      if (!net.naturalWidth || !net.naturalHeight) return;
+      var rp = net.naturalWidth / net.naturalHeight;
+      var re = (window.innerWidth || 375) / (window.innerHeight || 812);
+      if (Math.abs(rp - re) / re < 0.16) h.classList.add('plein');
+    };
+    if (net.complete) juger(); else net.addEventListener('load', juger);
   }
 
   /* Les photos de la session, en petit, sous le nom du plat. Un appui retire la
@@ -1502,9 +1668,22 @@
         // Les grammes ne changent pas : c'est la façon de les lire qui change.
         unites(ing);
 
+        /* La colonne de texte : le nom modifiable, et sous lui ce que cet
+           aliment APPORTE — « 25 g de protéines ». C'est ce qui fait passer la
+           liste d'un inventaire à une lecture nutritionnelle. */
+        var tx = document.createElement('div');
+        tx.className = 'tx';
+        var dm = document.createElement('div');
+        dm.className = 'dm';
+        function majDom() {
+          var d = dominante(ing);
+          dm.textContent = d ? Math.round(d.g) + ' g de ' + d.nom : '';
+          dm.style.color = d ? d.coul : '#6e6e78';
+        }
+
         var nm = document.createElement('input');
         nm.className = 'nm';
-        nm.style.cssText = 'width:auto;flex:1;text-align:left;background:none;border:none;padding:0';
+        nm.style.cssText = 'width:100%;text-align:left;background:none;border:none;padding:0';
         nm.type = 'text';
         nm.value = ing.nom;
         nm.addEventListener('input', function () {
@@ -1534,6 +1713,7 @@
             qty.value = affQte(ing);
             majUnite();
           }
+          majDom();
           majAnneaux();
         });
 
@@ -1547,6 +1727,7 @@
         qty.addEventListener('input', function () {
           saisirQte(ing, this.value);
           majUnite();          // « 1 banane » devient « 2 bananes »
+          majDom();            // 110 g de poulet → 25 g de protéines
           majAnneaux();
         });
 
@@ -1600,7 +1781,9 @@
           rendreDetail(); majAnneaux(); majNoms();
         });
 
-        row.appendChild(em); row.appendChild(nm); row.appendChild(qty);
+        tx.appendChild(nm); tx.appendChild(dm);
+        majDom();
+        row.appendChild(em); row.appendChild(tx); row.appendChild(qty);
         row.appendChild(u); row.appendChild(del);
         b.appendChild(row);
       });
@@ -1635,12 +1818,6 @@
     majAnneaux();
     var inputs = q('#naDetailB').querySelectorAll('.nm');
     if (inputs.length) inputs[inputs.length - 1].focus();
-  }
-
-  function toggleDetail() {
-    var b = q('#naDetailB');
-    b.classList.toggle('on');
-    q('#naDetailC').textContent = b.classList.contains('on') ? '▴' : '▾';
   }
 
   /* ═══════════════════ Suggestions & carrousel ═══════════════════ */
@@ -2003,38 +2180,30 @@
      l'analyse échoue, sinon on bloquerait la publication sur une panne d'IA. */
   async function bilan(ids) {
     montrer('naScBilan');
-    var corps = q('#naBCorps'), choix = q('#naBChoix');
-    corps.classList.remove('on');
-    corps.innerHTML = '';
-    choix.innerHTML = '';
-    q('#naBTitre').textContent = 'Repas enregistré';
-    q('#naBSub').textContent = '';
+    bScene = null;
+    q('#naBZone').innerHTML = '';
+    q('#naBCta').innerHTML = '';
 
-    // 1. La validation respire une seconde : c'est le moment où l'on comprend
-    //    que c'est fait. Puis on annonce ce qui arrive, pour que l'attente
-    //    suivante ait un nom.
-    await pause(1100);
-    q('#naBSub').textContent = 'Analyse de votre plat…';
+    // 1. La coche respire une seconde : c'est le moment où l'on comprend que
+    //    c'est fait. Puis on annonce ce qui arrive, pour que l'attente ait un nom.
+    scB({ html: vokHTML()
+      + '<div class="na-bh1" data-in style="animation-delay:.55s">Repas enregistré</div>'
+      + '<div class="na-bsous" data-in style="animation-delay:.75s" id="naBAtt">Analyse de votre plat…</div>' });
 
     var data = null;
     try { data = await analyseCritique(); } catch (e) { data = null; }
 
     if (!data) {
-      q('#naBSub').textContent = 'Analyse indisponible — votre repas est bien enregistré.';
-      montrerChoix(ids);
+      var att = q('#naBAtt');
+      if (att) att.textContent = 'Analyse indisponible — votre repas est bien enregistré.';
+      await pause(900);
+      scChoix(ids);
       return;
     }
 
-    // 2. L'analyse critique, seule. On ne peint pas la suggestion en même
-    //    temps : deux blocs qui arrivent ensemble se lisent comme un seul.
-    q('#naBTitre').textContent = 'Votre plat, analysé';
-    q('#naBSub').textContent = data.note ? ('Verdict : ' + data.note) : '';
-    corps.innerHTML = peindreAnalyse(data);
-    reveler(corps);
-
-    // Cache : même clé que suivi.html, pour que la réouverture du plat montre
-    // ce texte-là et n'appelle plus rien. Écrit dès maintenant — l'utilisateur
-    // peut fermer l'app pendant qu'il lit.
+    /* Cache : même clé que `suivi.html`, pour que la réouverture du plat montre
+       ce texte-là et n'appelle plus rien. Écrit dès maintenant — l'utilisateur
+       peut fermer l'app pendant qu'il lit. */
     try { localStorage.setItem('natty_analyse_plat_' + ids[0], JSON.stringify(data)); } catch (e) {}
     fetch(Natty.SB_URL + '/rest/v1/meals?id=eq.' + ids[0], {
       method: 'PATCH',
@@ -2042,51 +2211,138 @@
       body: JSON.stringify({ analyse_json: data })
     }).catch(function () { /* colonne absente : le cache local suffit */ });
 
-    // 3. Puis la suggestion du prochain repas, ajoutée en dessous.
-    if (data.prochain && data.prochain.titre) {
-      await pause(1600);
-      var suite = document.createElement('div');
-      suite.className = 'na-brev';
-      suite.innerHTML = peindreProchain(data.prochain);
-      corps.appendChild(suite);
-      reveler(suite);
-      suite.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    /* ⚠️ LES ÉTAPES SONT CALCULÉES, PAS ÉCRITES EN DUR. Une scène « Ce qui va »
+       vide — parce que le modèle n'a rien trouvé à dire — serait un plan avec
+       un titre et rien dessous : pire qu'une scène absente. */
+    var etapes = [];
+    if (data.points_positifs && data.points_positifs.length) etapes.push('plus');
+    if (data.points_negatifs && data.points_negatifs.length) etapes.push('moins');
+    if (data.conseils && data.conseils.length) etapes.push('conseils');
+    if (data.prochain && data.prochain.titre) etapes.push('prochain');
+    etapes.push('choix');
 
-    // 4. Et seulement là, le choix de publication.
-    await pause(900);
-    montrerChoix(ids);
+    var i = 0;
+    function jouer() {
+      var e = etapes[i], dernier = (i >= etapes.length - 2);
+      var suite = function () { i++; jouer(); };
+      var btn = { txt: dernier ? 'Terminer' : 'Continuer', on: suite };
+      if (e === 'plus') {
+        scB({ html: bTete('CE QUI VA', 'coeur', '💪', 'Vos points forts')
+            + listeHTML(data.points_positifs, '✓', 'rgba(47,211,107,.55)'),
+          boutons: [btn] });
+      } else if (e === 'moins') {
+        scB({ html: bTete('À SURVEILLER', 'balance', '⚖️', 'Ce qui peut mieux faire')
+            + listeHTML(data.points_negatifs, '!', 'rgba(240,180,41,.55)'),
+          boutons: [btn] });
+      } else if (e === 'conseils') {
+        scB({ html: bTete('CONSEILS', 'eclair', '🎯', 'Pour la suite')
+            + listeHTML(data.conseils, '→', 'rgba(255,255,255,.5)'),
+          boutons: [btn] });
+      } else if (e === 'prochain') {
+        scB({ html: bTete('LA SUITE', 'assiette', '🥗', 'Votre prochain repas')
+            + peindreProchain(data.prochain),
+          boutons: [btn] });
+      } else {
+        scChoix(ids);
+      }
+    }
+    /* Le verdict d'abord, seul : c'est la phrase qui résume, et elle n'a de
+       sens qu'avant le détail. */
+    scB({ html: bTete('L’ANALYSE', 'cible', '🔍', 'Votre plat, analysé')
+        + (data.note ? '<div class="na-bnote2" data-in style="animation-delay:.5s">'
+             + esc(data.note) + '</div>' : ''),
+      boutons: [{ txt: 'Voir le détail', on: jouer }] });
+  }
+
+  /* ── Les scènes du bilan ─────────────────────────────────────
+     Reprise de `assets/bilan.js` : un plan à la fois, la barre d'action FIXE
+     hors du plan (un bouton posé dedans part avec l'animation de sortie et
+     disparaît sous le doigt — leçon de `narration.html`). */
+  var bScene = null;
+  function scB(o) {
+    var z = q('#naBZone'), barre = q('#naBCta');
+    if (!z) return null;
+    var vieux = bScene;
+    if (vieux) {
+      vieux.classList.add('sort');
+      setTimeout(function () { if (vieux.parentNode) vieux.parentNode.removeChild(vieux); }, 380);
+    }
+    var d = document.createElement('div');
+    d.className = 'na-bsc';
+    d.innerHTML = o.html || '';
+    z.appendChild(d);
+    bScene = d;
+    z.scrollTop = 0;
+
+    barre.innerHTML = '';
+    (o.boutons || []).forEach(function (b) {
+      var el = document.createElement('button');
+      el.className = b.cls || 'na-btn primary';
+      el.textContent = b.txt;
+      el.addEventListener('click', function () { if (b.on) b.on(); });
+      barre.appendChild(el);
+    });
+    /* ⚠️ LE FILET, à chaque plan. Une page qui ne PEINT pas ne joue aucune
+       animation : tout ce qui part d'`opacity:0` y resterait, et la scène
+       serait VIDE — pas figée, vide. Même règle que `assets/cine.js`.
+       ⚠️ Et `NattyCine.animer()` fait DEUX choses ici : il pose son propre
+       filet, et surtout il INJECTE la feuille de `cine.js` — sans elle les
+       illustrations sont dans le DOM mais sans dimensions ni trait, donc
+       invisibles. C'est ce qui manquait au premier essai. */
+    if (window.NattyCine) NattyCine.animer(d, 1250);
+    setTimeout(function () { if (d.parentNode) d.classList.add('pret'); }, 1250);
+    return d;
+  }
+
+  /* Illustration + kicker + grand titre : la tête de chaque plan. L'illustration
+     vient de `assets/cine.js` quand il est là — il ne l'est pas sur `profil.html`,
+     d'où le repli en emoji plutôt qu'un trou. */
+  function bTete(kick, illu, em, titre) {
+    return '<div class="na-bkick" data-in>' + esc(kick) + '</div>'
+      + '<div class="na-bill" data-in style="animation-delay:.1s">'
+      + (window.NattyCine ? NattyCine.illu(illu, { taille: 74, halo: true })
+                          : '<span class="em">' + em + '</span>')
+      + '</div>'
+      + '<div class="na-bh1" data-in style="animation-delay:.25s">' + esc(titre) + '</div>';
+  }
+
+  function listeHTML(items, puce, rim) {
+    return '<div class="na-blist">' + items.map(function (t, k) {
+      return '<div class="na-bpan rang" data-in style="--r:' + rim
+        + ';animation-delay:' + (0.4 + k * 0.13).toFixed(2) + 's">'
+        + '<span class="pu">' + puce + '</span><span>' + esc(t) + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  function vokHTML() {
+    return '<div class="na-vok" style="margin-top:12vh"><svg viewBox="0 0 120 120">'
+      + '<circle class="rond" cx="60" cy="60" r="42"/>'
+      + '<path class="coche" d="M41 61l13 14 26-30"/></svg></div>';
   }
 
   function pause(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-
-  /* Une classe posée par la seule rAF ne se pose pas si la page ne peint pas
-     (app en arrière-plan) : le bloc resterait à `opacity:0`. Même précaution
-     que `Natty.confirmer` et `assets/generation.js`. */
-  function reveler(el) {
-    if (!el) return;
-    requestAnimationFrame(function () { el.classList.add('on'); });
-    setTimeout(function () { el.classList.add('on'); }, 60);
-  }
 
   /* Poster, ou garder pour soi. ⚠️ Rien n'est publié par défaut : c'était le
      cas avant (tout plat enregistré apparaissait dans le fil), et c'est
      précisément ce que cette étape corrige. `partage=false` d'abord, puis
      `true` seulement si on le demande. */
-  function montrerChoix(ids) {
-    var choix = q('#naBChoix');
-    if (!choix || choix.innerHTML) return;
-    choix.innerHTML =
-        '<button class="na-btn primary" id="naPoster" style="font-size:17px;padding:16px">Poster dans le fil 🌍</button>'
-      + '<button class="na-btn sombre" id="naGarder">Garder pour moi 🔒</button>';
-    q('#naPoster').addEventListener('click', function () { publier(ids, true); });
-    q('#naGarder').addEventListener('click', function () { publier(ids, false); });
+  function scChoix(ids) {
+    scB({
+      html: bTete('ET MAINTENANT', 'question', '🌍', 'On le partage ?')
+        + '<div class="na-bsous" data-in style="animation-delay:.4s">Dans le fil, votre plat '
+        + 'est visible par les autres membres. Vous pouvez aussi le garder pour vous — il '
+        + 'compte dans votre suivi dans les deux cas.</div>',
+      boutons: [
+        { txt: 'Poster dans le fil 🌍', on: function () { publier(ids, true); } },
+        { txt: 'Garder pour moi 🔒', cls: 'na-btn sombre', on: function () { publier(ids, false); } }
+      ]
+    });
   }
 
   async function publier(ids, dansLeFil) {
-    var b1 = q('#naPoster'), b2 = q('#naGarder');
-    if (b1) b1.disabled = true;
-    if (b2) b2.disabled = true;
+    // Les deux boutons de la barre : on les fige ensemble, sans les nommer —
+    // ils n'ont plus d'id depuis que le choix est une scène.
+    dom.querySelectorAll('#naBCta button').forEach(function (b) { b.disabled = true; });
     try {
       if (!PARTAGE_OK) throw new Error('colonne partage absente');
       await fetch(Natty.SB_URL + '/rest/v1/meals?id=in.(' + ids.join(',') + ')', {
@@ -2195,34 +2451,13 @@
   }
 
   /** L'analyse seule — la suggestion du prochain repas arrive après (voir `bilan`). */
-  function peindreAnalyse(d) {
-    var h = '';
-    if (d.note) h += '<div class="na-bnote">' + esc(d.note) + '</div>';
-    if (d.points_positifs && d.points_positifs.length) {
-      h += '<div class="na-bsec">Ce qui va</div>'
-        + d.points_positifs.map(function (t) {
-            return '<div class="na-bcard plus">' + esc(t) + '</div>';
-          }).join('');
-    }
-    if (d.points_negatifs && d.points_negatifs.length) {
-      h += '<div class="na-bsec">À surveiller</div>'
-        + d.points_negatifs.map(function (t) {
-            return '<div class="na-bcard moins">' + esc(t) + '</div>';
-          }).join('');
-    }
-    if (d.conseils && d.conseils.length) {
-      h += '<div class="na-bsec">Conseils</div>'
-        + d.conseils.map(function (t) {
-            return '<div class="na-bcard">' + esc(t) + '</div>';
-          }).join('');
-    }
-    return h;
-  }
-
+  /* La carte du prochain repas. Elle garde son fond clair : c'est une
+     PROPOSITION, pas un constat — et l'inverser du reste de l'écran est
+     précisément ce qui la fait lire comme telle. */
   function peindreProchain(n) {
     var m = n.macros || {};
-    return '<div class="na-bsec">Votre prochain repas</div>'
-      + '<div class="na-next"><div class="t">' + esc(n.titre) + '</div>'
+    return '<div class="na-next" data-in style="animation-delay:.4s">'
+      + '<div class="t">' + esc(n.titre) + '</div>'
       + (n.pourquoi ? '<div class="w">' + esc(n.pourquoi) + '</div>' : '')
       + '<div class="mm"><span>🥩 ' + Math.round(m.prot || 0) + 'g</span>'
       + '<span>🌾 ' + Math.round(m.gluc || 0) + 'g</span>'

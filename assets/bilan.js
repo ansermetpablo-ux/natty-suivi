@@ -294,7 +294,7 @@ window.NattyBilan = (function () {
         var d = new Date(m.created_at), j = jourDe(d);
         var e = jours[j] || (jours[j] = {
           jour: j, date: d, nbRepas: 0, heures: [], ingredients: [],
-          mac: { p: 0, l: 0, g: 0, c: 0 }, noms: [], protRepas: []
+          mac: { p: 0, l: 0, g: 0, c: 0 }, noms: [], protRepas: [], repas: []
         });
         var mac = Natty.calcMac(parRepas[m.id] || []);
         e.nbRepas++;
@@ -305,6 +305,13 @@ window.NattyBilan = (function () {
            des rares leviers nutritionnels que la base permet vraiment de
            mesurer — les repas sont horodatés et chiffrés un par un. */
         e.protRepas.push(mac.p);
+        /* ⚠️ Le repas ENTIER, macro par macro, et pas seulement ses protéines.
+           C'est ce qui permet de tracer le cumul de la journée heure par heure
+           (`scJournee`) : le total du jour ne dit pas QUAND il s'est constitué,
+           et c'est précisément la question de cet écran. `protRepas` reste —
+           il sert au facteur de répartition, qui ne regarde que les doses. */
+        e.repas.push({ h: d.getHours() + d.getMinutes() / 60, nom: m.name || '',
+                       p: mac.p, l: mac.l, g: mac.g, c: mac.c });
         e.heures.push(d.getHours() + d.getMinutes() / 60);
         e.noms.push(m.name || '');
         (parRepas[m.id] || []).forEach(function (i) {
@@ -391,6 +398,7 @@ window.NattyBilan = (function () {
        donc celui qui cassait la courbe entière. Attrapé au banc. */
     var mac = (e && e.mac) || { p: 0, l: 0, g: 0, c: 0 };
     var nbRepas = (e && e.nbRepas) || 0;
+    var repasDuJour = (e && e.repas) || [];
 
     var regularite = vide ? 0
       : r0(borne((nbRepas / Math.max(1, profil.nbCreneaux)) * 100, 0, 100));
@@ -442,7 +450,7 @@ window.NattyBilan = (function () {
        — deux lignes du même écran qui se contredisaient. Trouvé à l'écran, pas
        à la lecture. */
     return { jour: e ? e.jour : jourCourant(), vide: vide, mac: mac,
-             protRepas: (e && e.protRepas) || [],
+             protRepas: (e && e.protRepas) || [], repas: repasDuJour, cible: c,
              nbRepas: nbRepas, distincts: distincts, criteres: critere, note: globale };
   }
 
@@ -911,11 +919,12 @@ window.NattyBilan = (function () {
       '#nbil .jv .fill{position:absolute;left:0;right:0;bottom:0;height:0;border-radius:22px;',
       'box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 0 20px rgba(255,255,255,.22),',
       'inset 0 -10px 22px rgba(0,0,0,.16)}',
-      '#nbil .jn{text-align:left;min-width:0}',
+      '#nbil .jn{text-align:center;min-width:0}',
       '#nbil .jn .v{font-size:52px;font-weight:800;letter-spacing:-2.5px;line-height:1}',
       '#nbil .jn .v small{font-size:19px;font-weight:700;letter-spacing:-.5px;opacity:.55}',
       '#nbil .jn .l{font-size:12.5px;font-weight:700;color:var(--b-mut);margin-top:5px}',
-      '#nbil .jw{display:flex;align-items:center;justify-content:center;gap:20px;margin:6px 0 2px}',
+      '#nbil .jw{display:flex;flex-direction:column;align-items:center;justify-content:center;',
+      'gap:16px;margin:6px 0 2px}',
 
       /* ── LES DEUX TEMPS DE LA NOTE ─────────────────────────────
          Demande de Pablo (2026-09-04) : « seulement d'abord la barre de
@@ -950,6 +959,53 @@ window.NattyBilan = (function () {
       'transform .82s cubic-bezier(.22,1,.36,1)}',
       '#nbil .jhero.solo{min-height:min(50vh,400px);transform:scale(1.16)}',
       '#nbil .apres{width:100%}',
+
+      /* ══ LE FIL DE LA JOURNÉE, MACRO PAR MACRO ══════════════════
+         Demande de Pablo (2026-09-04) : « une séquence pour montrer le
+         déroulement de la journée pour chaque macro — l'évolution en cumulé
+         comparée aux besoins », avec « les couleurs des modules, des
+         graphiques et des stats corrélées avec la couleur de la macro ».
+
+         D'où `--m` (la couleur pleine), `--mr` (son arête) et `--mg` (sa
+         lueur), posées EN LIGNE sur chaque carte : c'est le seul moyen d'avoir
+         trois panneaux de la même famille et de trois teintes différentes sans
+         écrire trois fois la recette. Le reste — dégradé de fond, masque de
+         l'arête, ombre — est identique aux autres panneaux du bilan. */
+      '#nbil .mcs{display:flex;flex-direction:column;gap:12px;margin:20px auto 0;max-width:430px}',
+      '#nbil .mc{position:relative;border-radius:22px;padding:13px 14px 6px;text-align:left;',
+      'background:linear-gradient(157deg,var(--b-c1) 0%,var(--b-c2) 66%);',
+      'box-shadow:var(--b-ombre-c)}',
+      '#nbil .mc::before{content:"";position:absolute;inset:0;border-radius:inherit;',
+      'padding:1px;pointer-events:none;',
+      'background:linear-gradient(203deg,var(--mr) 0%,var(--b-rim2) 30%,transparent 56%);',
+      '-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);',
+      '-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);',
+      'mask-composite:exclude}',
+      '#nbil .mc::after{content:"";position:absolute;top:-14%;right:-8%;width:46%;height:58%;',
+      'border-radius:50%;pointer-events:none;z-index:-1;',
+      'background:radial-gradient(50% 50% at 50% 50%,var(--mg) 0%,transparent 70%)}',
+      '#nbil .mch{display:flex;align-items:center;gap:8px}',
+      '#nbil .mch .e{font-size:15px}',
+      '#nbil .mch .n{font-size:13.5px;font-weight:800;flex:1;min-width:0}',
+      '#nbil .mch .pc{font-size:15px;font-weight:800;color:var(--m);flex:none}',
+      '#nbil .mcv{font-size:11.5px;font-weight:600;color:var(--b-mut);margin-top:2px}',
+      '#nbil .mcv i{font-style:normal;color:var(--b-mut2)}',
+      '#nbil .mc .gj{position:relative;margin-top:6px}',
+      '#nbil .mc svg{display:block;width:100%;height:86px}',
+      '#nbil .mc .axe{stroke:var(--b-trait2);stroke-width:1}',
+      '#nbil .mc .cib{stroke:var(--b-trait);stroke-width:1;stroke-dasharray:4 5;fill:none}',
+      '#nbil .mc .trait{fill:none;stroke:var(--m);stroke-width:2.4;stroke-linecap:round;',
+      'stroke-linejoin:round;filter:drop-shadow(0 0 6px var(--mg))}',
+      '#nbil .mc .pt{fill:var(--m)}',
+      '#nbil .mc .lbl{font-size:9px;font-weight:600;fill:var(--b-mut2)}',
+      '#nbil .mc .cibl{font-size:9px;font-weight:700;fill:var(--b-mut2)}',
+      // Le volet : le tracé se découvre de gauche à droite, dans le sens des
+      // heures. Même mécanique que la courbe des 30 jours.
+      '#nbil .mc .vol{clip-path:inset(0 100% 0 0)}',
+      '#nbil .mvide{font-size:12.5px;color:var(--b-mut);margin:18px auto 0;max-width:340px;line-height:1.5}',
+      // Les deux moments de la journée, aux couleurs de rien : ils parlent des
+      // trois macros à la fois.
+      '#nbil .mom{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:16px auto 0;max-width:430px}',
 
       /* ── LA CARTE, ET SON ARÊTE LUMINEUSE ─────────────────────
          Reprise de la référence envoyée par Pablo (2026-09-04) : un panneau
@@ -1096,7 +1152,11 @@ window.NattyBilan = (function () {
          `animation` est une propriété UNIQUE — la seconde déclaration
          effacerait l'entrée du bloc. */
       '#nbil .grf .vol{animation:nbVolet 2.2s cubic-bezier(.32,.72,.3,1) forwards}',
-      '@keyframes nbVolet{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0 0 0 0)}}',
+      /* ⚠️ `inset(top right bottom left)`. On pousse le bord DROIT, pas le
+         gauche : le graphique se découvre alors depuis la gauche et court vers
+         la droite, dans le sens du temps. L'inverse — `inset(0 0 0 100%)` —
+         faisait avancer le tracé à contresens de son axe. */
+      '@keyframes nbVolet{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}',
       '#nbil .grf .pt{fill:var(--b-ink)}',
       // (Il n'y a plus d'aire remplie sous la courbe — voir `courbeHTML()`.)
       '#nbil .grf .lbl{font-size:9px;font-weight:600;fill:var(--b-mut2)}',
@@ -1478,14 +1538,22 @@ window.NattyBilan = (function () {
     return 'rgb(48,209,88)';
   }
 
+  /* ⚠️ LE CHIFFRE EST AU-DESSUS DE LA BARRE, ET TOUT EST CENTRÉ (demande de
+     Pablo, 2026-09-04). Côte à côte, l'ensemble n'avait pas d'axe : la barre
+     tombait à gauche du centre et le nombre à droite, donc rien n'était centré
+     et le premier temps — la jauge SEULE au milieu de l'écran — ne tenait pas
+     sa promesse. Et le format est un POURCENTAGE (`64 %`), pas une fraction :
+     « 64/100 » se lit comme une note d'école, alors que la phrase juste en
+     dessous dit « de votre objectif du jour ». */
   function jaugeHTML(note, libelle) {
     var connu = note !== null && note !== undefined;
     return '<div class="jhero solo" id="nbJhero">'
       + '<div class="jw" data-in style="animation-delay:.08s">'
+      + '<div class="jn"><div class="v" id="nbJval">' + (connu ? '0<small>%</small>' : '—') + '</div>'
+      + '<div class="l">' + esc(libelle || 'de votre objectif du jour') + '</div></div>'
       + '<div class="jv" id="nbJauge"><div class="flou" id="nbJflou"></div>'
       + '<div class="rail"><div class="fill" id="nbJfill"></div></div></div>'
-      + '<div class="jn"><div class="v" id="nbJval">' + (connu ? '0<small>/100</small>' : '—') + '</div>'
-      + '<div class="l">' + esc(libelle || 'de votre objectif du jour') + '</div></div></div></div>';
+      + '</div></div>';
   }
 
   /* ⚠️⚠️ FILET OBLIGATOIRE, et ici il vaut double : une page qui ne PEINT pas
@@ -1515,7 +1583,7 @@ window.NattyBilan = (function () {
       // elle déborde par-dessus le liseré clair et l'efface.
       f.style.height = n + '%'; f.style.background = c;
       if (b) { b.style.height = Math.max(0, n - 4) + '%'; b.style.background = c; }
-      if (v) { v.innerHTML = Math.round(n) + '<small>/100</small>'; v.style.color = c; }
+      if (v) { v.innerHTML = Math.round(n) + '<small>%</small>'; v.style.color = c; }
     }
     setTimeout(function () { if (!pose) { fini = true; poser(note); } }, 1750);
 
@@ -1555,6 +1623,154 @@ window.NattyBilan = (function () {
         if (c) el.style.width = (c.note === null ? 0 : c.note) + '%';
       });
     }, 260);
+  }
+
+  /* ═══ Le fil de la journée, macro par macro ══════════════════
+     Demande de Pablo (2026-09-04) : « une séquence pour montrer le déroulement
+     de la journée pour chaque macro — l'évolution en cumulé sur la journée, en
+     comparaison avec les besoins ».
+
+     Pourquoi le CUMUL et pas les repas un par un : la question qu'on se pose
+     devant cet écran est « où en étais-je à 15 h ? », pas « qu'ai-je mangé à
+     15 h ? ». C'est le cumul qui rend visible le rattrapage du soir — ou son
+     absence — et qui se compare d'un seul regard à la ligne de la cible.
+
+     ⚠️ UNE COURBE EN ESCALIER, JAMAIS LISSÉE. Rien ne s'accumule entre deux
+     repas : une diagonale de 8 h à 13 h dessinerait un apport continu qui n'a
+     pas eu lieu. Le palier horizontal DIT le jeûne entre deux repas, et c'est
+     une information, pas un défaut de rendu. */
+  var MACROS = [
+    { k: 'p', nom: 'Protéines', em: '🥩', rgb: '255,107,92' },
+    { k: 'l', nom: 'Lipides',   em: '🥑', rgb: '90,208,122' },
+    { k: 'g', nom: 'Glucides',  em: '🌾', rgb: '240,180,41' }
+  ];
+  var H_DEB = 5, H_FIN = 23;   // la fenêtre de l'axe, en heures
+
+  function heureTxt(h) {
+    var e = Math.floor(h), m = Math.round((h - e) * 60);
+    if (m >= 60) { e += 1; m = 0; }
+    return e + ' h' + (m ? ' ' + (m < 10 ? '0' + m : m) : '');
+  }
+
+  function courbeJourHTML(repas, k, cible) {
+    var L = 386, H = 96, mx = 12, hb = 12, bb = 16;
+    var cum = 0, pas = repas.map(function (r) { cum += (+r[k] || 0); return { h: r.h, v: cum }; });
+    /* L'échelle tient la CIBLE dans le cadre, même quand on est loin de
+       l'avoir atteinte : sans elle, une journée à 30 % remplirait le cadre et
+       ressemblerait à une journée réussie. */
+    var haut = Math.max(cible || 0, cum, 1) * 1.14;
+    var borne = function (h) { return Math.max(H_DEB, Math.min(H_FIN, h)); };
+    var x = function (h) { return mx + (borne(h) - H_DEB) / (H_FIN - H_DEB) * (L - 2 * mx); };
+    var y = function (v) { return H - bb - (v / haut) * (H - hb - bb); };
+
+    var d = 'M' + x(H_DEB).toFixed(1) + ' ' + y(0).toFixed(1), prec = 0, pts = '';
+    pas.forEach(function (q) {
+      d += ' L' + x(q.h).toFixed(1) + ' ' + y(prec).toFixed(1)
+         + ' L' + x(q.h).toFixed(1) + ' ' + y(q.v).toFixed(1);
+      pts += '<circle class="pt" cx="' + x(q.h).toFixed(1) + '" cy="' + y(q.v).toFixed(1) + '" r="2.6"/>';
+      prec = q.v;
+    });
+    d += ' L' + x(H_FIN).toFixed(1) + ' ' + y(prec).toFixed(1);
+
+    var lbls = [6, 10, 14, 18, 22].map(function (h) {
+      return '<text class="lbl" x="' + x(h).toFixed(1) + '" y="' + (H - 3) + '" text-anchor="middle">'
+        + h + ' h</text>';
+    }).join('');
+    var yc = y(cible || 0);
+    return '<div class="gj"><div class="vol">'
+      + '<svg viewBox="0 0 ' + L + ' ' + H + '" preserveAspectRatio="none">'
+      + (cible ? '<line class="cib" x1="' + mx + '" y1="' + yc.toFixed(1) + '" x2="' + (L - mx) + '" y2="' + yc.toFixed(1) + '"/>' : '')
+      + '<line class="axe" x1="' + mx + '" y1="' + (H - bb) + '" x2="' + (L - mx) + '" y2="' + (H - bb) + '"/>'
+      + '<path class="trait" d="' + d + '"/>' + pts + lbls
+      + '</svg></div></div>';
+  }
+
+  /* Les deux moments de la journée. « Part des besoins couverte » = la moyenne
+     des trois macros du repas rapportées à leur cible — donc un repas qui
+     n'apporte que des glucides ne passe pas pour un bon repas.
+     ⚠️ Plafonné à 1,4 par macro : sans plafond, un repas très gras seul
+     ferait 250 % sur les lipides et écraserait tout le reste. */
+  function momentsQuota(repas, cible) {
+    if (!repas.length) return null;
+    var l = repas.map(function (r) {
+      var som = 0;
+      ['p', 'l', 'g'].forEach(function (k) {
+        som += cible[k] ? Math.min(1.4, (+r[k] || 0) / cible[k]) : 0;
+      });
+      return { h: r.h, nom: r.nom, part: som / 3 };
+    }).sort(function (a, b) { return b.part - a.part; });
+    return { haut: l[0], bas: l[l.length - 1], n: l.length };
+  }
+
+  function momentsHTML(m) {
+    if (!m) return '';
+    var t = '<div class="mom">'
+      + stat(heureTxt(m.haut.h), 'a couvert le plus de vos besoins · '
+          + r0(m.haut.part * 100) + ' %', 0.95);
+    // Avec un seul repas, « le plus » et « le moins » désignent la même chose :
+    // une seconde tuile ne dirait rien de plus, elle ferait juste illusion.
+    if (m.n > 1) {
+      t += stat(heureTxt(m.bas.h), 'en a couvert le moins · ' + r0(m.bas.part * 100) + ' %', 1.03);
+    }
+    return t + '</div>';
+  }
+
+  function animerFil() {
+    setTimeout(function () {
+      if (!racine) return;
+      racine.querySelectorAll('.mc .vol').forEach(function (v, i) {
+        v.style.animation = 'nbVolet 1.5s cubic-bezier(.32,.72,.3,1) '
+          + (0.55 + i * 0.2).toFixed(2) + 's forwards';
+      });
+      /* ⚠️ LE FILET, et il est vital ici : `.vol` part à `inset(0 100% 0 0)`,
+         donc SANS animation les trois courbes ne sont pas figées, elles sont
+         INVISIBLES — trois cartes vides sous trois titres. Une page qui ne
+         peint pas ne joue aucune animation (règle 40). */
+      setTimeout(function () {
+        if (!racine) return;
+        racine.querySelectorAll('.mc .vol').forEach(function (v) {
+          v.style.animation = 'none'; v.style.clipPath = 'none';
+        });
+      }, 2700);
+    }, 100);
+  }
+
+  function scJournee() {
+    enTete('LE FIL DE LA JOURNÉE');
+    var a = S.a, c = a.cible || S.profil.cible;
+    var repas = (a.repas || []).slice().sort(function (x, y) { return x.h - y.h; });
+    if (!repas.length) {
+      bloc({
+        html: ill('horloge', 78) + titre('Rien à dérouler', 'p', 0.1)
+          + '<div class="sous" data-in style="animation-delay:.35s">Aucun repas noté '
+          + 'aujourd’hui : il n’y a pas de fil à suivre. Un seul repas enregistré suffit '
+          + 'à faire apparaître cette courbe.</div>',
+        boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
+      });
+      return;
+    }
+    var m = momentsQuota(repas, c);
+    var phrase = repas.length + (repas.length > 1 ? ' repas notés, de ' : ' repas noté, à ')
+      + heureTxt(repas[0].h)
+      + (repas.length > 1 ? ' à ' + heureTxt(repas[repas.length - 1].h) : '') + '.';
+    bloc({
+      html: ill('horloge', 76) + titre('Heure par heure', 'p', 0.1)
+        + '<div class="sous" data-in style="animation-delay:.35s">' + esc(phrase) + '</div>'
+        + '<div class="mcs">' + MACROS.map(function (d, i) {
+            var v = a.mac[d.k] || 0, o = c[d.k] || 0;
+            var pc = o ? r0(v / o * 100) : null;
+            return '<div class="mc" data-in style="animation-delay:' + (0.45 + i * 0.12).toFixed(2)
+              + 's;--m:' + COUL[d.k] + ';--mr:rgba(' + d.rgb + ',.55);--mg:rgba(' + d.rgb + ',.18)">'
+              + '<div class="mch"><span class="e">' + d.em + '</span>'
+              + '<span class="n">' + d.nom + '</span>'
+              + '<b class="pc">' + (pc === null ? '—' : pc + ' %') + '</b></div>'
+              + '<div class="mcv">' + r0(v) + ' g <i>sur ' + r0(o) + ' g visés</i></div>'
+              + courbeJourHTML(repas, d.k, o) + '</div>';
+          }).join('') + '</div>'
+        + momentsHTML(m),
+      pret: animerFil,
+      boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
+    });
   }
 
   /* ── L'écran de la NOTE, en deux temps ──────────────────────
@@ -1896,7 +2112,7 @@ window.NattyBilan = (function () {
     var accord = accordRessenti(S.rep.mange, a.note);
     ecranNote({
       note: a.note, titre: 'Votre journée', sous: accord, criteres: a.criteres,
-      bouton: { txt: 'Et mon corps ?', on: scSeance }
+      bouton: { txt: 'Le fil de ma journée', on: scJournee }
     });
   }
 

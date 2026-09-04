@@ -662,6 +662,69 @@ Deux écrans redessinés, et **toutes les portes d'entrée mènent enfin ici** (
    > de 44 vh en tête, un écran fixe n'a plus la place de montrer les macros ET les
    > ingrédients. C'est donc la liste qui perd son défilement propre.
 
+#### Le second passage du 2026-09-04 — la photo, et l'analyse en scènes
+Pablo, sur la première version : « l'ATH s'affiche en dessous de la photo et pas
+sur la photo ; il faut que la page soit la photo prise en écran complet, avec
+l'affichage des macros superposé à la photo, qui s'affiche avec une animation ».
+
+**1. La photo occupe TOUT l'écran, les macros sont dessus.** `.na-rphoto` est en
+`position:fixed` : elle ne défile pas, c'est le reste qui remonte par-dessus elle.
+Les trois macros sont des **anneaux posés sur la photo** — pastille sombre floutée
+sous chacun, arc à la couleur de la macro, apparition échelonnée. Ce sont
+**toujours** `naArc<k>` / `naVal<k>`, donc `majAnneaux()` n'a rien eu à apprendre.
+> ⚠️ **DEUX COPIES DE LA MÊME IMAGE, et ce n'est pas un gaspillage** : la nette en
+> `contain` par-dessus une floue en `cover`. Un simple `cover` aurait rogné une
+> photo importée de la galerie sans le dire — le défaut du cadre 4/3 sous une
+> autre forme.
+> ⚠️ **`cover` seulement quand la photo a DÉJÀ la forme de l'écran** (classe
+> `plein`, décidée en JS à ±16 %). C'est le cas de toutes celles prises ici depuis
+> que la capture est recadrée sur le viseur : elles remplissent l'écran sans perdre
+> un pixel. Une image importée garde `contain`.
+> ⚠️ **Chaque enfant de la couche défilante porte `position:relative;z-index:2`.**
+> `.na-rphoto` est positionnée avec `z-index:0` : un enfant statique se peindrait
+> DERRIÈRE elle.
+> ⚠️ **Les anneaux naissent à `opacity:0`** et n'apparaissent que par leur
+> animation : sur une page qui ne peint pas, ils seraient invisibles — une photo
+> sans ses macros, c'est-à-dire l'écran amputé de ce qu'on vient y chercher. D'où
+> le filet posé par `rendreRecap()`.
+
+**2. Le détail, en dessous ou d'un tap.** « Voir le détail » (icône burger) fait
+défiler jusqu'à la feuille ; on y arrive aussi en défilant simplement. La feuille
+porte le panneau du bilan (dégradé + arête), les calories du repas, puis les
+ingrédients — chacun avec **sa quantité et sa macro dominante en grammes** :
+« Poulet · 180 g » et, dessous, « 56 g de protéines » à la couleur de la macro.
+> ⚠️ **Dominante au sens des CALORIES apportées, pas des grammes.** 10 g d'huile
+> pèsent moins que 20 g de sucre et apportent deux fois plus : sans pondération
+> 4/4/9, tout aliment un peu sucré serait « glucides » et le gras n'apparaîtrait
+> jamais.
+> ⚠️ La ligne se recalcule à chaque frappe — sur le nom ET sur la quantité —, comme
+> les anneaux. Une macro dominante qui ne suit pas la correction serait pire que
+> pas de macro du tout.
+> ⚠️ **La liste ne se replie plus** (`toggleDetail` retiré) : on vient ici pour
+> corriger, et une liste repliée par défaut ajoute un geste avant le premier.
+
+**3. L'analyse du plat est CINÉMATIQUE.** Une liste unique faisait défiler trois
+sujets d'un coup : on lisait le premier et on faisait défiler le reste. Six plans
+maintenant, chacun avec son kicker, son illustration SVG et son grand titre —
+verdict (`cible`), **ce qui va** (`coeur`, arête verte), **à surveiller**
+(`balance`, arête ambre), **conseils** (`eclair`), **le prochain repas**
+(`assiette`), puis le choix de publication (`question`).
+> ⚠️ **Les étapes sont CALCULÉES, pas écrites en dur** : une scène « Ce qui va »
+> vide — parce que le modèle n'a rien trouvé à dire — serait un titre au-dessus de
+> rien, pire qu'une scène absente.
+> ⚠️ **`NattyCine.animer()` fait DEUX choses** dans `scB()` : il pose son filet, et
+> surtout il **injecte la feuille de `cine.js`**. Sans elle les illustrations sont
+> dans le DOM mais sans dimensions ni trait — donc invisibles. C'est ce qui
+> manquait au premier essai, et ça ne se voit qu'à l'écran.
+> ⚠️ **La barre d'action est FIXE, hors du plan** : un bouton posé dans la scène
+> part avec son animation de sortie et disparaît sous le doigt (leçon
+> `narration.html`).
+> ⚠️ **`#nattyAjout.bilan h1{display:none}`** : le kicker vit dans la scène, le
+> titre de page ferait doublon juste au-dessus (« C'est noté ✓ » puis « CE QUI VA »).
+> ⚠️ **`profil.html` a reçu `assets/cine.js`** — c'était le seul écran porteur du
+> `+` à ne pas le charger, donc le seul où l'analyse serait retombée sur ses emojis
+> de repli.
+
 **Ce qui menait encore ailleurs** (corrigé le même jour, `suivi.html` + `www/`) :
 trois chemins ouvraient toujours l'**ancien** overlay `ovRepas` — l'arrivée en
 `?add=1` (donc le lien de `profil.html` et le repli de la nav), l'action « repas »
@@ -2384,6 +2447,50 @@ ce qui l'explique paraît en dessous.
 > écrasant `.trace` dans `planning.js`.
 > ⚠️ **`minuteurNote` est distinct de `minuteur`** (qui appartient aux scènes à
 > enchaînement automatique) et il est annulé par `bloc()` comme par `fermer()`.
+
+**1 bis. La jauge, redressée (2026-09-04, second passage).** Le pourcentage est
+**au-dessus** de la barre et tout est centré : côte à côte, l'ensemble n'avait pas
+d'axe — la barre tombait à gauche du centre et le nombre à droite, donc le premier
+temps, qui promet « la jauge SEULE au milieu de l'écran », ne tenait pas. Et le
+format est un **pourcentage** (`64 %`) et non une fraction : « 64/100 » se lit comme
+une note d'école, alors que la ligne juste en dessous dit « de votre objectif du
+jour ».
+
+**1 ter. Le graphique se découvre de GAUCHE à DROITE.** `nbVolet` poussait le bord
+gauche (`inset(0 0 0 100%)`), donc le tracé avançait à contresens de son axe. Il
+pousse maintenant le bord droit. Une ligne de temps se lit dans le sens du temps.
+
+#### `scJournee` — le fil de la journée, macro par macro (2026-09-04)
+Demande de Pablo : « une séquence pour montrer le déroulement de la journée pour
+chaque macro — l'évolution en cumulé sur la journée, en comparaison avec les
+besoins », avec « les couleurs des modules, des graphiques et des stats corrélées
+avec la couleur de la macro ».
+
+Trois cartes, une par macro : le cumul de la journée en **escalier**, la cible en
+pointillé, et le pourcentage atteint. Puis deux tuiles : **l'heure qui a couvert le
+plus de vos besoins**, et celle qui en a couvert le moins. La scène s'intercale
+entre la note et la séance (« Le fil de ma journée » → « Et mon corps ? »).
+> ⚠️ **Le CUMUL, pas les repas un par un.** La question qu'on se pose devant cet
+> écran est « où en étais-je à 15 h ? », pas « qu'ai-je mangé à 15 h ? ». C'est le
+> cumul qui rend visible le rattrapage du soir — ou son absence.
+> ⚠️ **UNE COURBE EN ESCALIER, JAMAIS LISSÉE.** Rien ne s'accumule entre deux
+> repas : une diagonale de 8 h à 13 h dessinerait un apport continu qui n'a pas eu
+> lieu. Le palier horizontal DIT le jeûne, c'est une information.
+> ⚠️ **L'échelle tient la CIBLE dans le cadre**, même très loin d'être atteinte :
+> sans elle, une journée à 30 % remplirait le cadre et ressemblerait à une journée
+> réussie.
+> ⚠️ **`--m` / `--mr` / `--mg` sont posées EN LIGNE** sur chaque carte (couleur
+> pleine, arête, lueur) : c'est le seul moyen d'avoir trois panneaux de la même
+> famille et de trois teintes différentes sans écrire trois fois la recette.
+> ⚠️ **La part des besoins d'un repas est la MOYENNE des trois macros**, plafonnée
+> à 1,4 chacune : sans plafond, un repas très gras ferait 250 % sur les lipides et
+> écraserait tout le reste. Et avec un seul repas, « le plus » et « le moins »
+> désignent la même chose — la seconde tuile disparaît.
+> ⚠️ **`chargerJours` range désormais chaque repas AVEC ses trois macros**
+> (`e.repas`), pas seulement ses protéines : le total du jour ne dit pas QUAND il
+> s'est constitué, et c'est exactement la question de cet écran.
+> ⚠️ **`.mc .vol` part à `inset(0 100% 0 0)`** : sans animation, les trois courbes
+> ne sont pas figées, elles sont **invisibles**. D'où un filet propre à la scène.
 
 **2. Une seule peau pour tous les panneaux.** Les critères (`.cr`), la
 décomposition (`.dc`), les deux chiffres du corps (`.cp`), le module des calories
@@ -4763,6 +4870,36 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   18 segments mesurés + 11 ponts, 22 points posés, aucun débordement horizontal, légende à
   trois entrées qui passe à la ligne.
 
+**Le fil de la journée, la photo plein écran, l'analyse en scènes (2026-09-04, soir)**
+- ✅ **La jauge du bilan est centrée**, le pourcentage **au-dessus** de la barre et
+  au format `64 %` — plus de fraction « 64/100 », qui se lisait comme une note
+  d'école sous une phrase qui parle d'objectif.
+- ✅ **Le graphique des 30 jours se découvre de gauche à droite** : `nbVolet`
+  poussait le mauvais bord, donc le tracé avançait à contresens de son axe.
+- ✅ **Nouvelle scène « Le fil de la journée »** : trois cartes, une par macro, avec
+  le cumul en escalier contre la cible en pointillé, et deux tuiles pour l'heure qui
+  a couvert le plus de vos besoins et celle qui en a couvert le moins. Couleurs des
+  arêtes, des lueurs, des courbes et des pourcentages corrélées à la macro.
+- ✅ **`chargerJours` range chaque repas avec ses trois macros** : le total du jour
+  ne disait pas QUAND il s'était constitué.
+- ✅ **L'ajout d'un plat : la photo occupe tout l'écran, les macros sont dessus** —
+  trois anneaux posés sur la photo, apparition échelonnée, `contain` sous une copie
+  floue en `cover`, et `cover` plein cadre quand la photo a déjà la forme de l'écran.
+- ✅ **Le détail montre la macro dominante de chaque ingrédient** : « Poulet · 180 g »
+  puis « 56 g de protéines », à la couleur de la macro, recalculé à chaque frappe.
+- ✅ **L'analyse du plat est cinématique** : verdict, ce qui va, à surveiller,
+  conseils, prochain repas, puis le choix de publication — six plans, chacun avec son
+  illustration SVG et son grand titre, dans la DA du bilan.
+- ✅ **`profil.html` charge `assets/cine.js`** : c'était le seul écran porteur du `+`
+  à ne pas l'avoir, donc le seul où les illustrations seraient retombées sur un emoji.
+- ✅ Vérifié en navigateur (375 × 812) contre des doublures : la séquence complète du
+  bilan jusqu'au fil de la journée (trois courbes tracées, deux tuiles), le récap
+  photo dans ses deux modes (`contain` et `plein`), les anneaux et leurs valeurs, la
+  feuille de détail et ses quatre macros dominantes, et les six plans de l'analyse.
+- 🔄 **Non vérifié sur téléphone ni avec une vraie session.** Et le banc n'a pas de
+  caméra : le mode `plein` a été mesuré en forçant la classe, pas sur une vraie prise
+  de vue.
+
 **Bilan : la note en deux temps, et une seule DA (2026-09-04)**
 - ✅ **L'écran de la note s'ouvre sur la jauge SEULE**, agrandie au milieu d'un
   écran vide pendant qu'elle monte ; à 2,1 s elle se réduit et remonte, et les
@@ -6917,3 +7054,41 @@ le reposant à la main pour la capture — et non en essayant de tomber au bon m
 
 🔄 **Rien n'a été vu sur un téléphone, ni avec une vraie session** : doublures de `Natty` et
 30 jours de repas fabriqués, avec six trous volontaires.
+
+---
+
+*Contribution session « le fil de la journée, la photo plein écran, l'analyse en scènes »
+(Claude Opus, 4 septembre 2026, troisième passage) — six demandes de Pablo :*
+
+**Sur le bilan.** La jauge et son pourcentage n'avaient pas d'axe commun : posés côte à
+côte, ni l'un ni l'autre n'était centré, et le premier temps — « la jauge SEULE au milieu
+de l'écran » — ne tenait pas sa promesse. Le chiffre est passé au-dessus, en pourcentage :
+« 64/100 » se lisait comme une note d'école sous une phrase qui parle d'objectif. Et le
+graphique des 30 jours se découvrait de la droite vers la gauche, à contresens de son axe
+du temps.
+
+**La scène qui manquait.** Le bilan disait ce qui avait été mangé et ce que le corps en
+avait fait, jamais QUAND. « Le fil de la journée » trace le cumul de chaque macro heure par
+heure contre sa cible — en escalier, parce que rien ne s'accumule entre deux repas et
+qu'une diagonale de 8 h à 13 h dessinerait un apport continu qui n'a pas eu lieu.
+
+**Sur l'ajout d'un plat.** La photo était en haut d'une page noire et les cartes en
+dessous : on regardait une fiche illustrée, pas son plat. Elle occupe maintenant tout
+l'écran, en `position:fixed`, et les trois macros sont des anneaux posés dessus. Le détail
+remonte par-dessus, et chaque ingrédient y dit ce qu'il APPORTE — « 56 g de protéines »
+sous « Poulet · 180 g ».
+
+**Un défaut trouvé à l'écran, et invisible autrement.** Les illustrations de l'analyse
+étaient bien dans le DOM et parfaitement invisibles : `NattyCine.illu()` produit le
+balisage, mais c'est `NattyCine.animer()` qui **injecte la feuille** de `cine.js`. Sans
+elle, ni dimensions ni trait. Le genre de correctif qui a l'air posé et qui ne fait rien.
+
+⚠️ **Deux pièges de banc, tous deux payés.** Les clics enchaînés dans un seul
+`javascript_exec` visaient le plan SORTANT — il reste 380 ms dans le DOM avec `.sort` :
+sélectionner `.bloc:not(.sort)`. Et un banc sans `*{box-sizing:border-box}` fait
+déborder une colonne en `width:100%;padding:0 22px` de 44 px, ce qui envoie chercher dans
+le module un défaut qui vient de la page d'essai.
+
+🔄 **Rien n'a été vu sur un téléphone, ni avec une vraie session** : doublures de `Natty`,
+`NattyCreneaux` et `/api/claude`, et un navigateur sans caméra — le mode plein écran de la
+photo a été mesuré en forçant sa classe, pas sur une prise de vue réelle.
