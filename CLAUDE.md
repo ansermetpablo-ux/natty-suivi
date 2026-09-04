@@ -1870,6 +1870,48 @@ repos serait du bruit.
 > droite) et la note y entrait comme un troisième élément — mesuré à l'écran, elle se posait
 > **par-dessus le « 0 / 3350 Kcal »**.
 
+#### Le panneau des calories : l'objectif y habite, et il a sa jauge (2026-09-04)
+Demande de Pablo : « reprends le chantier de l'objectif dans le panneau calorie
+de Suivi ».
+
+**1. La jauge des calories.** C'était la seule cible de l'écran sans repère
+visuel : les trois macros ont leur anneau, les calories n'avaient que deux
+nombres l'un à côté de l'autre. « 1 320 / 3 350 » demande un calcul mental pour
+dire où on en est, là où une barre le dit d'un coup d'œil. Elle se **remplit**
+comme les anneaux (le consommé) — même grammaire depuis le 2026-08-10.
+> ⚠️ **Plafonnée à 100 %, et l'ambre dit le dépassement.** Sans plafond la barre
+> sortirait de sa piste ; sans la couleur, 3 800 sur 3 350 se lirait comme un
+> objectif atteint pile.
+
+**2. `✎ Objectif` a quitté la carte des anneaux.** Il y était posé au-dessus de
+trois grands nombres qui sont des **consommés** : le mot « objectif » n'y
+désignait rien de visible, et on pouvait le lire comme « voici votre objectif » —
+exactement le contresens déjà payé par le titre de cette carte. C'est maintenant
+**le chiffre lui-même qu'on touche** : `/ 3 350 Kcal ✎` est un bouton, collé au
+seul objectif écrit en toutes lettres de tout l'écran. Une seule porte, donc —
+deux endroits qui font la même chose finissent par diverger.
+> ⚠️ **La zone tactile est agrandie par le rembourrage et REPRISE par une marge
+> négative.** Sans elle le bouton faisait 21 px de haut — viser 21 px au doigt
+> est une promesse qu'on ne tient pas — et l'agrandir sans compenser aurait
+> décalé la jauge de 14 px vers le bas. Mesuré : 38 px de haut, jauge inchangée.
+> ⚠️ **`.hero` passe en `align-items:flex-start`**, et la règle `:has(.besoin-note
+> …)` disparaît avec : la jauge étant toujours là, la rangée passe toujours à la
+> ligne, et une règle conditionnelle qui vaut désormais dans tous les cas est un
+> piège pour la prochaine retouche.
+
+**Vérifié en navigateur** (375 × 812 et 360 × 740) sur un banc composé du **vrai
+balisage et des vraies règles** extraits de `suivi.html` — une copie à la main ne
+prouve que la copie : les trois états (39 %, 63 %, dépassement en ambre), la note
+de l'objectif du jour, aucun débordement horizontal, et la jauge qui ne bouge pas
+quand la zone tactile grandit.
+> ⚠️ Piège de banc, encore : la jauge a une transition de 1,1 s. Deux mesures
+> prises trop tôt l'ont montrée à 91 % et en ambre alors que `style.width` valait
+> déjà `63%` et le fond `#fff`. Lire `style`, pas seulement le calculé — ou
+> attendre la fin.
+🔄 **Non vérifié sur la page réelle** : `suivi.html` exige une session, le banc
+n'en a pas. Le câblage (`objCalBtn` → `ouvrirObjectif`, `cp` → `#jaugeCal`) n'a
+été contrôlé qu'à la lecture et par `node --check` sur les cinq blocs inline.
+
 ### `assets/seance.js` — le journal d'entraînement, et ce qu'il change au bilan
 Plein écran **noir** (`#nsea`, tout préfixé `ns-`/`ns`) : calendrier, puis saisie en trois
 temps. Plus un **panneau** « Mes séances » sur l'écran Coaching. Chargé par les écrans qui

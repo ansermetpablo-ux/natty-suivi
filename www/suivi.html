@@ -1041,8 +1041,7 @@ html.no-scroll {
 #hcCine .qi{ font-size:10.5px; font-weight:700; letter-spacing:.06em;
   text-transform:uppercase; color:rgba(16,16,20,.38); margin-bottom:4px; }
 
-.hero{ position:relative; border-radius:28px; padding:26px 22px; background:var(--metal-black); box-shadow:var(--sh-metal); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-.hero:has(.besoin-note:not([style*="display: none"])){ align-items:flex-start; }
+.hero{ position:relative; border-radius:28px; padding:26px 22px; background:var(--metal-black); box-shadow:var(--sh-metal); display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
 .hero .label .t1{ display:flex; align-items:center; gap:6px; color:#fff; font-size:19px; font-weight:800; letter-spacing:-0.01em; }
 .hero .label .t1 svg{ width:15px; height:15px; }
 .hero .label .t2{ color:rgba(255,255,255,0.45); font-size:13px; font-weight:600; margin-top:2px; }
@@ -1117,6 +1116,31 @@ html.no-scroll {
 .obj-edit{ position:absolute; top:16px; right:16px; border:none; cursor:pointer; border-radius:999px;
   background:rgba(255,255,255,.10); color:rgba(255,255,255,.75); font-family:'Inter',sans-serif;
   font-size:11px; font-weight:700; padding:7px 11px; }
+
+/* ⚠️ LA JAUGE DES CALORIES. C'était la seule cible de l'écran sans repère
+   visuel : les trois macros ont leur anneau, les calories n'avaient que deux
+   nombres l'un à côté de l'autre. « 1 320 / 3 350 » demande un calcul mental
+   pour dire où on en est, là où une barre le dit d'un coup d'œil. Elle se
+   REMPLIT comme les anneaux (le consommé), même grammaire depuis le
+   2026-08-10. */
+.hero-jauge{ flex:0 0 100%; width:100%; margin-top:16px; height:6px; border-radius:99px;
+  background:rgba(255,255,255,.12); overflow:hidden; }
+.hero-jauge i{ display:block; height:100%; width:0; border-radius:99px; background:#fff;
+  transition:width 1.1s cubic-bezier(.22,1,.36,1), background .3s ease; }
+
+/* L'objectif est UN BOUTON, et c'est le chiffre lui-même qu'on touche pour le
+   changer. Il vivait sur la carte des anneaux, à côté de trois nombres qui sont
+   des CONSOMMÉS : le mot « objectif » n'y désignait rien de visible. Ici il est
+   collé au seul objectif affiché en toutes lettres. */
+/* ⚠️ La zone tactile est agrandie par le rembourrage et REPRISE par une marge
+   négative : sans elle le bouton faisait 21 px de haut — viser 21 px au doigt
+   est une promesse qu'on ne tient pas —, et l'agrandir sans compenser aurait
+   décalé la jauge de 14 px vers le bas. */
+.obj-cal{ display:inline-flex; align-items:baseline; gap:5px; border:none; background:none;
+  cursor:pointer; padding:8px 4px 10px; margin:-6px -4px -10px; font-family:'Inter',sans-serif;
+  color:rgba(255,255,255,0.55); font-size:16px; font-weight:600; }
+.obj-cal svg{ width:12px; height:12px; align-self:center; opacity:.8; flex:none; }
+.obj-cal:active{ opacity:.6; }
 
 .besoin-note{ flex:0 0 100%; width:100%; margin-top:14px; font-size:11.5px; line-height:1.5;
   color:rgba(255,255,255,.62); border-top:1px solid rgba(255,255,255,.10); padding-top:11px; }
@@ -1300,7 +1324,17 @@ html.no-scroll {
       <div class="t1">Calories <svg viewBox="0 0 24 24" fill="none"><path d="M13 3 5 14h5.5L11 21l8-12h-5.5L13 3Z" fill="#dfe1e4"/></svg></div>
       <div class="t2 hero-cal-left">⚡ Calories aujourd'hui</div>
     </div>
-    <div class="value"><div class="num"><span id="vCal">–</span></div><div class="unit">/ <span id="oCal">–</span> Kcal</div></div>
+    <div class="value">
+      <div class="num"><span id="vCal">–</span></div>
+      <button type="button" class="obj-cal" id="objCalBtn" aria-label="Modifier mon objectif">
+        / <span id="oCal">–</span> Kcal
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m14 6 4 4"/></svg>
+      </button>
+    </div>
+    <!-- Où on en est sur la journée. Voir l'encadré `.hero-jauge` du CSS. -->
+    <div class="hero-jauge"><i id="jaugeCal"></i></div>
     <!-- ⚠️ L'objectif change d'un jour à l'autre depuis qu'il tient compte de
          l'entraînement. Sans cette ligne il changerait TOUT SEUL, et un
          objectif qui bouge sans explication se lit comme un bug. Masquée les
@@ -1319,10 +1353,13 @@ html.no-scroll {
          2026-08-10). Le titre le nomme : il a déjà trompé une fois dans l'autre
          sens (« Votre objectif » posé au-dessus d'un restant, donc « 25 g » lu
          comme une cible). L'objectif et le reste vivent sous chaque anneau. -->
-    <!-- ⚠️ La MODIFICATION est ici, sur la carte qu'elle change. Elle vivait
-         dans l'overlay profil, derrière deux taps et un titre qui ne parlait pas
-         d'objectif : personne ne la trouvait. -->
-    <button type="button" class="obj-edit" id="objEditBtn">✎ Objectif</button>
+    <!-- ⚠️ LE BOUTON « ✎ Objectif » A QUITTÉ CETTE CARTE (2026-09-04). Il y
+         était posé au-dessus de trois grands nombres qui sont des CONSOMMÉS :
+         le mot « objectif » n'y désignait rien de visible, et on pouvait le lire
+         comme « voici votre objectif ». Il est passé sur le panneau des
+         calories, collé au seul objectif écrit en toutes lettres (« / 3 350
+         Kcal »), et il n'y a plus qu'une seule porte — deux endroits qui font la
+         même chose finissent par diverger. -->
     <h2 id="objTitre">Consommé aujourd'hui</h2>
     <div class="rings">
       <div class="ring-item" onclick="openMacroPopup('prot')">
@@ -2438,7 +2475,7 @@ async function init() {
      demande, et rien d'autre. */
   var ovb = document.getElementById('objVideBtn');
   if (ovb) ovb.addEventListener('click', ouvrirObjectif);
-  var oeb = document.getElementById('objEditBtn');
+  var oeb = document.getElementById('objCalBtn');
   if (oeb) oeb.addEventListener('click', ouvrirObjectif);
   var obGo = document.getElementById('obGo');
   if (obGo) obGo.addEventListener('click', validerObjectif);
@@ -2751,6 +2788,17 @@ function afficherMacros() {
   setText('vCal',  Math.round(conso.c));
   setText('oCal',  macObj.c||'–');
 
+  /* La jauge des calories, même grammaire que les anneaux : elle se remplit.
+     ⚠️ Plafonnée à 100 %, et l'ambre dit le dépassement. Sans plafond la barre
+     déborderait de sa piste ; sans la couleur, 3 800 sur 3 350 se lirait comme
+     un objectif atteint pile. */
+  var cp = part(macObj.c, conso.c);
+  var jc = document.getElementById('jaugeCal');
+  if (jc) {
+    var trop = macObj.c > 0 && conso.c > macObj.c;
+    jc.style.background = trop ? 'var(--amber,#ff9500)' : '#fff';
+  }
+
   /* Le titre dit ce que sont les grands nombres. Il a déjà induit en erreur une
      fois dans l'autre sens (« Votre objectif » au-dessus d'un restant) : il
      nomme donc explicitement le geste. */
@@ -2781,6 +2829,7 @@ function afficherMacros() {
 
   // Anneaux et barres : la part CONSOMMÉE. Ils se remplissent.
   setTimeout(function(){
+    var jc2=document.getElementById('jaugeCal'); if(jc2) jc2.style.width=cp+'%';
     var bp=document.getElementById('bProt'); if(bp) bp.style.width=pp+'%';
     var bg=document.getElementById('bGluc'); if(bg) bg.style.width=gp+'%';
     var bl=document.getElementById('bLip');  if(bl) bl.style.width=lp+'%';
