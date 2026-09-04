@@ -706,7 +706,7 @@ window.NattyBilan = (function () {
       '--b-lueur3:rgba(255,255,255,.03);--b-trait:rgba(255,255,255,.13);',
       '--b-c1:#16171c;--b-c2:#0c0d10;--b-rim:rgba(255,255,255,.55);',
       '--b-rim2:rgba(255,255,255,.07);--b-bulle:rgba(30,31,36,.94);',
-      '--b-barre:#1b1c21;--b-ombre:0 20px 44px rgba(0,0,0,.5);',
+      '--b-barre:#1b1c21;--b-ombre-c:0 20px 44px rgba(0,0,0,.5);',
       '--b-trait2:rgba(255,255,255,.06);--b-creux:#0a0a0c;--b-relief:#17181c;',
       '--b-vif:#fff;--b-sur-vif:#0a0a0c;--b-ombre:rgba(0,0,0,.7);',
       '--b-reflet:rgba(255,255,255,.055);--b-contour:rgba(255,255,255,.07);',
@@ -721,7 +721,7 @@ window.NattyBilan = (function () {
          sur du blanc, passent à un gris qu'on distingue. */
       '--b-c1:#fbfbfd;--b-c2:#f0f1f5;--b-rim:rgba(255,255,255,.95);',
       '--b-rim2:rgba(20,20,30,.08);--b-bulle:rgba(255,255,255,.96);',
-      '--b-barre:#e0e2e9;--b-ombre:0 14px 32px rgba(20,20,30,.12);',
+      '--b-barre:#e0e2e9;--b-ombre-c:0 14px 32px rgba(20,20,30,.12);',
       '--b-trait2:rgba(20,20,30,.06);--b-creux:#eceef1;--b-relief:#f4f5f7;',
       '--b-vif:#101014;--b-sur-vif:#fff;--b-ombre:rgba(20,20,30,.16);',
       '--b-reflet:rgba(255,255,255,.9);--b-contour:rgba(20,20,30,.07);',
@@ -818,22 +818,25 @@ window.NattyBilan = (function () {
       '#nbil .anx .v{font-size:21px;font-weight:800;letter-spacing:-.6px}',
       '#nbil .anx .o{font-size:10px;font-weight:600;color:var(--b-mut2)}',
 
-      /* ── Le module noir des calories ──────────────────────── */
-      // Vocabulaire de `suivi.html` (--metal-black / --sh-metal), valeurs
-      // recopiées : ces jetons vivent dans son <style>, pas dans style.css.
+      /* ── Le module des calories ────────────────────────────
+         ⚠️ Il portait le noir métallisé recopié de `suivi.html`
+         (`--metal-black` / `--sh-metal`). Il est passé au panneau commun le
+         2026-09-04 : un module noir au milieu de panneaux gris se lisait comme
+         un objet venu d'un autre écran — et sur le thème CLAIR c'était une
+         dalle noire au milieu d'une page blanche. Ses couleurs de texte
+         étaient d'ailleurs écrites en dur (`#fff`, `rgba(255,255,255,.45)`),
+         donc illisibles dès que le fond a cessé d'être noir. */
       '#nbil .kmod{margin:20px auto 0;max-width:430px;border-radius:26px;padding:17px 20px;',
-      'display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:left;',
-      'background:radial-gradient(130% 65% at 12% -10%, rgba(255,255,255,.11) 0%, rgba(255,255,255,0) 42%),',
-      'linear-gradient(165deg,#0c0d0f 0%,#050506 55%,#000 100%);',
-      'box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 10px 24px rgba(0,0,0,.5)}',
-      '#nbil .kmod .t{font-size:15px;font-weight:800;color:#fff}',
-      '#nbil .kmod .s{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.45);margin-top:2px}',
-      '#nbil .kmod .n{font-size:31px;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1;text-align:right}',
-      '#nbil .kmod .u{font-size:11px;font-weight:700;color:rgba(255,255,255,.42);margin-top:3px;text-align:right}',
+      'display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:left}',
+      '#nbil .kmod .t{font-size:15px;font-weight:800;color:var(--b-ink)}',
+      '#nbil .kmod .s{font-size:11.5px;font-weight:600;color:var(--b-mut);margin-top:2px}',
+      '#nbil .kmod .n{font-size:31px;font-weight:800;color:var(--b-ink);letter-spacing:-.03em;line-height:1;text-align:right}',
+      '#nbil .kmod .u{font-size:11px;font-weight:700;color:var(--b-mut2);margin-top:3px;text-align:right}',
 
       /* ── Les critères ─────────────────────────────────────── */
       '#nbil .crs{margin:22px auto 0;max-width:430px;display:flex;flex-direction:column;gap:11px}',
-      '#nbil .cr{display:flex;align-items:center;gap:12px;text-align:left}',
+      '#nbil .cr{display:flex;align-items:center;gap:12px;text-align:left;',
+      'border-radius:19px;padding:13px 15px}',
       '#nbil .cr .e{width:34px;height:34px;border-radius:11px;background:var(--b-relief);',
       'display:flex;align-items:center;justify-content:center;font-size:16px;flex:none;',
       'box-shadow:inset 0 1px 0 var(--b-reflet)}',
@@ -851,7 +854,7 @@ window.NattyBilan = (function () {
          chiffre qui en a l'air. */
       '#nbil .dcp{margin:20px auto 0;max-width:430px;display:flex;flex-direction:column;',
       'gap:13px;text-align:left}',
-      '#nbil .dc{width:100%}',
+      '#nbil .dc{width:100%;border-radius:19px;padding:13px 15px}',
       '#nbil .dt{display:flex;align-items:baseline;justify-content:space-between;gap:8px}',
       '#nbil .dt span{font-size:13px;font-weight:700}',
       '#nbil .dt b{font-size:14px;font-weight:800;flex:none}',
@@ -863,8 +866,7 @@ window.NattyBilan = (function () {
 
       /* ── Le corps : muscle et graisse ─────────────────────── */
       '#nbil .cps{display:flex;gap:12px;margin:24px auto 0;max-width:430px}',
-      '#nbil .cp{flex:1;border-radius:22px;padding:18px 14px;background:var(--b-relief);',
-      'box-shadow:inset 0 1px 0 var(--b-reflet),0 8px 22px var(--b-ombre)}',
+      '#nbil .cp{flex:1;border-radius:22px;padding:18px 14px}',
       '#nbil .cp .e{font-size:24px}',
       '#nbil .cp .v{font-size:30px;font-weight:900;letter-spacing:-1.2px;margin-top:4px}',
       '#nbil .cp .v small{font-size:14px;font-weight:700;letter-spacing:0}',
@@ -876,9 +878,8 @@ window.NattyBilan = (function () {
       /* ── Le questionnaire ─────────────────────────────────── */
       '#nbil .chx{display:flex;flex-direction:column;gap:10px;margin:24px auto 0;max-width:400px}',
       '#nbil .chx button{display:flex;align-items:center;gap:13px;text-align:left;',
-      'background:var(--b-relief);color:var(--b-ink);border-radius:19px;padding:15px 17px;',
-      'font-size:15px;font-weight:700;box-shadow:inset 0 1px 0 var(--b-reflet),0 6px 18px var(--b-ombre);',
-      'transition:transform .18s ease,box-shadow .18s ease}',
+      'color:var(--b-ink);border-radius:19px;padding:15px 17px;',
+      'font-size:15px;font-weight:700;transition:transform .18s ease}',
       '#nbil .chx button .em{font-size:20px;flex:none}',
       '#nbil .chx button:active{transform:scale(.975)}',
       '#nbil .chx button.pris{background:var(--b-vif);color:var(--b-sur-vif)}',
@@ -916,6 +917,40 @@ window.NattyBilan = (function () {
       '#nbil .jn .l{font-size:12.5px;font-weight:700;color:var(--b-mut);margin-top:5px}',
       '#nbil .jw{display:flex;align-items:center;justify-content:center;gap:20px;margin:6px 0 2px}',
 
+      /* ── LES DEUX TEMPS DE LA NOTE ─────────────────────────────
+         Demande de Pablo (2026-09-04) : « seulement d'abord la barre de
+         progression en héros avec son animation et le pourcentage, sans rien
+         d'autre ; après elle se déplace pour laisser apparaître les autres
+         stats ». La note est le RÉSULTAT de la journée : la poser au milieu
+         d'un écran vide le temps qu'elle monte, c'est lui laisser le temps
+         d'être lue. Les critères qui l'expliquent répondent à une question
+         qu'on ne se pose qu'une fois le chiffre vu.
+
+         ⚠️ UN SEUL BLOC, PAS DEUX SCÈNES. `bloc()` fait GLISSER le plan
+         sortant : la jauge partirait par la gauche et reviendrait par la
+         droite — elle serait REMPLACÉE, pas déplacée. Ici c'est le même
+         élément qui se réduit et remonte, et c'est ce mouvement continu qui
+         relie les deux temps.
+         ⚠️ Le passage est piloté par un `setTimeout`, jamais par
+         `transitionend` : sur une page qui ne peint pas, aucune transition ne
+         se joue et l'événement n'arrive JAMAIS — l'écran resterait sur sa
+         jauge, sans ses critères, et rien ne le dirait (règle 43). */
+      /* ⚠️⚠️ L'AGRANDISSEMENT EST SUR `.jhero`, JAMAIS SUR `.jw` — et c'est un
+         défaut trouvé au banc. `.jw` porte `data-in`, et le filet de `cine.js`
+         écrit `.nc-pret [data-in]{transform:none!important}` : posé à 1,1 s, il
+         ANNULAIT le `scale(1.16)` une demi-seconde avant la révélation. La
+         jauge se réduisait donc en deux temps — un saut d'échelle à 1,1 s,
+         puis le glissement à 2,1 s — au lieu d'un seul mouvement. Le conteneur,
+         lui, ne porte aucune animation d'entrée : rien ne vient le contredire.
+         Même famille que `.respire` écrasant `.trace` dans `planning.js` : une
+         animation à `forwards` l'emporte sur la déclaration qu'elle recouvre. */
+      '#nbil .jhero{display:flex;align-items:center;justify-content:center;width:100%;',
+      'min-height:0;transform-origin:center;',
+      'transition:min-height .82s cubic-bezier(.22,1,.36,1),',
+      'transform .82s cubic-bezier(.22,1,.36,1)}',
+      '#nbil .jhero.solo{min-height:min(50vh,400px);transform:scale(1.16)}',
+      '#nbil .apres{width:100%}',
+
       /* ── LA CARTE, ET SON ARÊTE LUMINEUSE ─────────────────────
          Reprise de la référence envoyée par Pablo (2026-09-04) : un panneau
          sombre posé sur un fond presque noir, dont le bord haut-droit capte
@@ -930,21 +965,44 @@ window.NattyBilan = (function () {
          ⚠️ `#nbil *{border:0}` (le pare-feu) ne l'atteint pas : `*` ne
          sélectionne pas les pseudo-éléments. C'est aussi pourquoi l'arête ne
          peut PAS être faite avec `border`. */
-      '#nbil .carte{position:relative;border-radius:26px;padding:16px 14px 14px;',
-      'background:linear-gradient(157deg,var(--b-c1) 0%,var(--b-c2) 62%);',
-      'box-shadow:var(--b-ombre)}',
-      /* ⚠️ `#nbil` DANS LE SÉLECTEUR, sinon la règle ne s'applique jamais :
+      '#nbil .carte{border-radius:26px;padding:16px 14px 14px}',
+
+      /* ══ LE PANNEAU, ET SON ARÊTE : la DA de TOUTE la séquence ══
+         Demande de Pablo (2026-09-04) : « tout le bilan doit avoir exactement
+         la DA de cette page de progression ». Un seul groupe de sélecteurs,
+         donc : les critères, la décomposition, les deux chiffres du corps, le
+         module des calories et les boutons du questionnaire portent le MÊME
+         panneau que les graphiques et les tuiles. Écrire six fois la même
+         recette, c'est six recettes qui divergent à la première retouche
+         (règle 44).
+         ⚠️ `#nbil` DANS LE SÉLECTEUR, sinon la règle ne s'applique jamais :
          `#nbil .carte::before` vaut (1,1,1) et une règle sans identifiant, si
          tardive soit-elle, perd. Le genre de correctif qui a l'air posé et
-         qui ne fait rien. */
-      ':root[data-theme="light"] #nbil .carte::before,',
-      ':root[data-theme="light"] #nbil .st::before{background:var(--b-rim2)}',
-      '#nbil .carte::before{content:"";position:absolute;inset:0;border-radius:inherit;',
+         qui ne fait rien.
+         ⚠️ `#nbil *{border:0}` (le pare-feu) n'atteint pas les pseudo-éléments.
+         C'est aussi pourquoi l'arête ne peut PAS être faite avec `border`. */
+      '#nbil .carte,#nbil .st,#nbil .cr,#nbil .dc,#nbil .cp,#nbil .kmod,',
+      '#nbil .chx button{position:relative;',
+      'background:linear-gradient(157deg,var(--b-c1) 0%,var(--b-c2) 66%);',
+      'box-shadow:var(--b-ombre-c)}',
+      '#nbil .carte::before,#nbil .st::before,#nbil .cr::before,#nbil .dc::before,',
+      '#nbil .cp::before,#nbil .kmod::before,#nbil .chx button::before{',
+      'content:"";position:absolute;inset:0;border-radius:inherit;',
       'padding:1px;pointer-events:none;',
-      'background:linear-gradient(203deg,var(--b-rim) 0%,var(--b-rim2) 24%,transparent 48%);',
+      'background:linear-gradient(203deg,var(--b-rim) 0%,var(--b-rim2) 26%,transparent 52%);',
       '-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);',
       '-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);',
       'mask-composite:exclude}',
+      ':root[data-theme="light"] #nbil .carte::before,',
+      ':root[data-theme="light"] #nbil .st::before,',
+      ':root[data-theme="light"] #nbil .cr::before,',
+      ':root[data-theme="light"] #nbil .dc::before,',
+      ':root[data-theme="light"] #nbil .cp::before,',
+      ':root[data-theme="light"] #nbil .kmod::before,',
+      ':root[data-theme="light"] #nbil .chx button::before{background:var(--b-rim2)}',
+      // Un bouton retenu passe en plein : l'arête d'un panneau sombre n'a plus
+      // rien à éclairer sur un aplat clair, elle y dessine un liseré sale.
+      '#nbil .chx button.pris::before{opacity:0}',
       // Le halo qui déborde du coin éclairé — c'est lui qui fait « poser » la
       // carte sur le fond au lieu de l'y coller.
       '#nbil .carte::after{content:"";position:absolute;top:-18%;right:-10%;width:52%;height:64%;',
@@ -957,7 +1015,7 @@ window.NattyBilan = (function () {
       '#nbil .bul{position:absolute;z-index:4;padding:7px 10px;border-radius:12px;',
       // L'ombre suit le thème : une ombre noire dense sous une bulle blanche,
       // sur un fond blanc, ne sépare rien du tout.
-      'background:var(--b-bulle);box-shadow:var(--b-ombre),inset 0 0 0 1px var(--b-trait);',
+      'background:var(--b-bulle);box-shadow:var(--b-ombre-c),inset 0 0 0 1px var(--b-trait);',
       'backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);',
       'white-space:nowrap;opacity:0;transform:translateY(5px);pointer-events:none}',
       '#nbil .bul.on{opacity:1;transform:none;transition:opacity .4s ease,transform .4s ease}',
@@ -1129,15 +1187,7 @@ window.NattyBilan = (function () {
       // Mêmes carte et arête que les graphiques : c'est ce qui fait que
       // l'écran se lit comme un seul objet et non comme trois styles empilés.
       '#nbil .stats{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:22px auto 0;max-width:430px}',
-      '#nbil .st{position:relative;border-radius:19px;padding:15px;text-align:left;',
-      'background:linear-gradient(157deg,var(--b-c1) 0%,var(--b-c2) 68%);',
-      'box-shadow:var(--b-ombre)}',
-      '#nbil .st::before{content:"";position:absolute;inset:0;border-radius:inherit;',
-      'padding:1px;pointer-events:none;',
-      'background:linear-gradient(203deg,var(--b-rim) 0%,var(--b-rim2) 26%,transparent 52%);',
-      '-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);',
-      '-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);',
-      'mask-composite:exclude}',
+      '#nbil .st{border-radius:19px;padding:15px;text-align:left}',
       '#nbil .st .v{font-size:23px;font-weight:900;letter-spacing:-.9px}',
       '#nbil .st .l{font-size:11px;font-weight:700;color:var(--b-mut);margin-top:2px;line-height:1.35}',
 
@@ -1180,6 +1230,10 @@ window.NattyBilan = (function () {
      deux comportements d'animation différents dans la même app. */
 
   var racine = null, cta = null, blocEnCours = null, minuteur = null;
+  /* Le minuteur du SECOND temps de l'écran de note — distinct de
+     `minuteur`, qui appartient aux scènes à enchaînement automatique. Les
+     confondre, c'est une révélation annulée par une scène qui s'enchaîne. */
+  var minuteurNote = null;
   var ouvert = false, scrollGele = '';
   var S = null;   // l'état de la séquence en cours
 
@@ -1218,6 +1272,7 @@ window.NattyBilan = (function () {
   function fermer() {
     ouvert = false;
     if (minuteur) { clearTimeout(minuteur); minuteur = null; }
+    if (minuteurNote) { clearTimeout(minuteurNote); minuteurNote = null; }
     if (!racine) return;
     var r = racine;
     racine = null; cta = null; blocEnCours = null; S = null;
@@ -1252,6 +1307,11 @@ window.NattyBilan = (function () {
     if (!racine) return null;
     var zone = racine.querySelector('#nbZone');
     if (minuteur) { clearTimeout(minuteur); minuteur = null; }
+    /* ⚠️ La révélation en attente est annulée ICI. Sans ça, quitter l'écran de
+       la note avant ses 2,1 s faisait paraître les critères par-dessus la
+       scène suivante — le contrôle `blocEnCours !== d` les rattrape, mais
+       autant ne pas armer un minuteur dont on sait déjà qu'il ne sert plus. */
+    if (minuteurNote) { clearTimeout(minuteurNote); minuteurNote = null; }
 
     /* Le glissement latéral. Le bilan est une séquence qui ne revient jamais
        en arrière : le sens est donc toujours « on avance », et il n'y a rien à
@@ -1420,11 +1480,12 @@ window.NattyBilan = (function () {
 
   function jaugeHTML(note, libelle) {
     var connu = note !== null && note !== undefined;
-    return '<div class="jw" data-in style="animation-delay:.08s">'
+    return '<div class="jhero solo" id="nbJhero">'
+      + '<div class="jw" data-in style="animation-delay:.08s">'
       + '<div class="jv" id="nbJauge"><div class="flou" id="nbJflou"></div>'
       + '<div class="rail"><div class="fill" id="nbJfill"></div></div></div>'
       + '<div class="jn"><div class="v" id="nbJval">' + (connu ? '0<small>/100</small>' : '—') + '</div>'
-      + '<div class="l">' + esc(libelle || 'de votre objectif du jour') + '</div></div></div>';
+      + '<div class="l">' + esc(libelle || 'de votre objectif du jour') + '</div></div></div></div>';
   }
 
   /* ⚠️⚠️ FILET OBLIGATOIRE, et ici il vaut double : une page qui ne PEINT pas
@@ -1435,7 +1496,15 @@ window.NattyBilan = (function () {
      CLAUDE.md). Le `setTimeout` pose l'état final quoi qu'il arrive. */
   function animerJauge(note) {
     if (note === null || note === undefined) return;
-    var pose = false;
+    /* ⚠️⚠️ `fini` N'EST PAS UN DOUBLON DE `pose`, et c'est un défaut trouvé au
+       banc. Le filet posait bien la valeur finale à 1,75 s — puis une image
+       tardive de la boucle rAF la RÉÉCRASAIT par sa valeur intermédiaire, et
+       la jauge redescendait à « 9/100 » après être passée à 64. Ce n'est pas
+       un cas de banc : c'est exactement ce que fait une app remise au premier
+       plan au milieu de l'animation, où les images arrivent de nouveau après
+       un long silence. Le filet doit donc ARRÊTER la boucle, pas seulement la
+       devancer. */
+    var pose = false, fini = false;
     function poser(n) {
       if (!racine) return;
       var f = racine.querySelector('#nbJfill'), b = racine.querySelector('#nbJflou'),
@@ -1448,11 +1517,11 @@ window.NattyBilan = (function () {
       if (b) { b.style.height = Math.max(0, n - 4) + '%'; b.style.background = c; }
       if (v) { v.innerHTML = Math.round(n) + '<small>/100</small>'; v.style.color = c; }
     }
-    setTimeout(function () { if (!pose) poser(note); }, 1750);
+    setTimeout(function () { if (!pose) { fini = true; poser(note); } }, 1750);
 
     var t0 = null, duree = 1500;
     function pas(t) {
-      if (!racine || !racine.querySelector('#nbJfill')) return;
+      if (fini || !racine || !racine.querySelector('#nbJfill')) return;
       if (t0 === null) t0 = t;
       var k = Math.min(1, (t - t0) / duree);
       // Départ franc puis arrivée en douceur : une barre qui monte à vitesse
@@ -1486,6 +1555,51 @@ window.NattyBilan = (function () {
         if (c) el.style.width = (c.note === null ? 0 : c.note) + '%';
       });
     }, 260);
+  }
+
+  /* ── L'écran de la NOTE, en deux temps ──────────────────────
+     La jauge seule au milieu de l'écran pendant qu'elle monte, puis elle se
+     réduit et remonte pour laisser paraître ce qui l'explique. Le pourquoi et
+     les deux pièges sont dans l'encadré `.jhero` du CSS.
+
+     Le même écran sert au bilan du JOUR et à celui de la SEMAINE : deux
+     présentations de la même note finiraient par diverger, et on ne saurait
+     plus si « 62 » veut dire la même chose d'un écran à l'autre. */
+  function ecranNote(o) {
+    var connu = o.note !== null && o.note !== undefined;
+    return bloc({
+      html: (connu ? jaugeHTML(o.note, o.libelle)
+                   : ill('cible', 80) + titre(o.titre, 'p', 0.1))
+        + '<div class="apres"></div>',
+      pret: function (d) {
+        animerJauge(o.note);
+        /* ⚠️ Le contenu du second temps est INJECTÉ au moment où il paraît, il
+           n'est pas posé puis découvert : ses `[data-in]` sont des animations à
+           délai, elles se seraient jouées — donc terminées — pendant que le
+           bloc était encore caché, et tout serait apparu d'un coup au lieu de
+           s'échelonner. */
+        var poser = function () {
+          minuteurNote = null;
+          if (blocEnCours !== d || !d.parentNode) return;
+          var ap = d.querySelector('.apres');
+          if (!ap || ap.childNodes.length) return;
+          ap.innerHTML = '<div class="sous" data-in>' + esc(o.sous) + '</div>'
+            + criteresHTML(o.criteres);
+          var h = d.querySelector('.jhero');
+          if (h) h.classList.remove('solo');
+          remplirCriteres(o.criteres);
+          /* ⚠️ Le filet de `cine.js` est RÉARMÉ. Il a déjà posé `nc-pret` sur
+             ce bloc au bout de 1,1 s : sans ce réarmement, les `[data-in]`
+             qu'on vient d'insérer naîtraient figés à leur état final, donc
+             sans jamais s'animer. */
+          if (window.NattyCine) NattyCine.animer(d, 1100);
+        };
+        // Sans note, il n'y a pas de jauge à regarder monter : on montre tout.
+        if (!connu) { poser(); return; }
+        minuteurNote = setTimeout(poser, 2100);
+      },
+      boutons: [o.bouton]
+    });
   }
 
   /* ── La courbe ──────────────────────────────────────────────
@@ -1780,12 +1894,9 @@ window.NattyBilan = (function () {
     enTete('L’ANALYSE');
     var a = S.a;
     var accord = accordRessenti(S.rep.mange, a.note);
-    bloc({
-      html: (a.note !== null ? jaugeHTML(a.note) : ill('cible', 80) + titre('Votre journée', 'p', 0.1))
-        + '<div class="sous" data-in style="animation-delay:.4s">' + esc(accord) + '</div>'
-        + criteresHTML(a.criteres),
-      pret: function () { animerJauge(a.note); remplirCriteres(a.criteres); },
-      boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
+    ecranNote({
+      note: a.note, titre: 'Votre journée', sous: accord, criteres: a.criteres,
+      bouton: { txt: 'Et mon corps ?', on: scSeance }
     });
   }
 
@@ -2300,18 +2411,14 @@ window.NattyBilan = (function () {
     var moy = moyenneCriteres(S.sem);
     var meilleur = S.sem.filter(function (x) { return x.a.note !== null && !x.a.vide; })
       .sort(function (a, b) { return b.a.note - a.a.note; })[0];
-    bloc({
-      /* La MÊME jauge que le bilan du jour : deux présentations de la même
-         note se mettraient à diverger, et on ne saurait plus si « 62 » veut
-         dire la même chose d'un écran à l'autre. */
-      html: (moy.note !== null ? jaugeHTML(moy.note, 'de vos objectifs cette semaine')
-                               : ill('cible', 80) + titre('Votre semaine', 'p', 0.1))
-        + '<div class="sous" data-in style="animation-delay:.4s">'
-        + (meilleur ? 'Meilleur jour : ' + JOURSLONGS(meilleur.date) + ', ' + meilleur.a.note + ' sur 100.'
-                    : 'Aucun jour noté cette semaine.') + '</div>'
-        + criteresHTML(moy.criteres),
-      pret: function () { animerJauge(moy.note); remplirCriteres(moy.criteres); },
-      boutons: [{ txt: 'Ce que mon corps a fait', on: scSemCorps }]
+    ecranNote({
+      note: moy.note, titre: 'Votre semaine',
+      libelle: 'de vos objectifs cette semaine',
+      sous: meilleur
+        ? 'Meilleur jour : ' + JOURSLONGS(meilleur.date) + ', ' + meilleur.a.note + ' sur 100.'
+        : 'Aucun jour noté cette semaine.',
+      criteres: moy.criteres,
+      bouton: { txt: 'Ce que mon corps a fait', on: scSemCorps }
     });
   }
 

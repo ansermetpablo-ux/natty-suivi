@@ -2352,6 +2352,71 @@ vérifiable, et on voit **lequel** retient le résultat. C'est aussi ce qui rend
 > lit comme un bug. La phrase passe donc en premier quand `facteurEnergie < 0,5` — et ce qui
 > manque est une assiette, pas une série.
 
+#### La note en DEUX TEMPS, et une seule DA pour tout le bilan (2026-09-04)
+Demande de Pablo : « il faut qu'il y ait seulement d'abord la barre de progression
+en héros avec son animation et le pourcentage, sans rien d'autre ; après elle se
+déplace pour laisser apparaître les autres stats », et « tout le bilan doit avoir
+exactement la DA de cette page de progression, avec les couleurs adaptées ».
+
+**1. L'écran de la note s'ouvre sur la jauge SEULE.** `ecranNote()` sert le bilan
+du jour comme celui de la semaine — deux présentations de la même note finiraient
+par diverger, et on ne saurait plus si « 62 » veut dire la même chose d'un écran à
+l'autre. La jauge naît dans une bande de `min(50vh,400px)`, agrandie de 16 %, seule
+au milieu de l'écran ; à 2,1 s la bande se referme, la jauge reprend sa taille, et
+ce qui l'explique paraît en dessous.
+> ⚠️ **UN SEUL BLOC, PAS DEUX SCÈNES.** `bloc()` fait GLISSER le plan sortant : la
+> jauge partirait par la gauche et reviendrait par la droite — elle serait
+> REMPLACÉE, pas déplacée. C'est le même élément qui se réduit, et c'est ce
+> mouvement continu qui relie les deux temps.
+> ⚠️ **Le passage est piloté par un `setTimeout`, jamais par `transitionend`** :
+> sur une page qui ne peint pas, aucune transition ne se joue et l'événement
+> n'arrive JAMAIS — l'écran resterait sur sa jauge, sans ses critères, et rien ne
+> le dirait (règle 43).
+> ⚠️ **Le contenu du second temps est INJECTÉ au moment où il paraît**, il n'est
+> pas posé puis découvert : ses `[data-in]` sont des animations à délai, elles se
+> seraient jouées — donc terminées — pendant que le bloc était caché, et tout
+> serait apparu d'un coup. Le filet de `cine.js` est réarmé après l'injection,
+> sinon les nouveaux `[data-in]` naîtraient figés à leur état final.
+> ⚠️⚠️ **L'AGRANDISSEMENT EST SUR `.jhero`, JAMAIS SUR `.jw`** — défaut trouvé au
+> banc. `.jw` porte `data-in`, et `.nc-pret [data-in]{transform:none!important}`
+> ANNULAIT le `scale(1.16)` à 1,1 s, une demi-seconde avant la révélation : la
+> jauge se réduisait en deux temps au lieu d'un. Même famille que `.respire`
+> écrasant `.trace` dans `planning.js`.
+> ⚠️ **`minuteurNote` est distinct de `minuteur`** (qui appartient aux scènes à
+> enchaînement automatique) et il est annulé par `bloc()` comme par `fermer()`.
+
+**2. Une seule peau pour tous les panneaux.** Les critères (`.cr`), la
+décomposition (`.dc`), les deux chiffres du corps (`.cp`), le module des calories
+(`.kmod`) et les boutons du questionnaire (`.chx button`) portent désormais le
+MÊME panneau que les graphiques (`.carte`) et les tuiles (`.st`) : dégradé
+`--b-c1`→`--b-c2` et arête lumineuse en dégradé masqué. Un seul groupe de
+sélecteurs — écrire six fois la même recette, c'est six recettes qui divergent à
+la première retouche (règle 44).
+> ⚠️ **`.kmod` a quitté le noir métallisé.** Il recopiait `--metal-black` de
+> `suivi.html` : un module noir au milieu de panneaux gris se lisait comme un objet
+> venu d'un autre écran, et sur le thème CLAIR c'était une dalle noire au milieu
+> d'une page blanche. Ses couleurs de texte étaient d'ailleurs écrites en dur
+> (`#fff`, `rgba(255,255,255,.45)`) — donc illisibles dès que le fond cessait
+> d'être noir.
+> ⚠️ **Un bouton retenu (`.chx button.pris`) éteint son arête** : sur un aplat
+> clair elle ne dessine plus un relief, elle laisse un liseré sale.
+
+> 🔴 ⚠️⚠️ **ET `--b-ombre` ÉTAIT DÉCLARÉ DEUX FOIS PAR THÈME** — une fois comme
+> box-shadow complet, une fois comme simple couleur, la seconde l'emportant. Donc
+> `box-shadow:var(--b-ombre)` sur `.carte`, `.st` et la bulle des graphiques était
+> une déclaration **invalide**, silencieusement jetée : **les cartes et les tuiles
+> n'avaient aucune ombre**, et la bulle perdait avec elle son liseré interne. La
+> valeur box-shadow s'appelle maintenant `--b-ombre-c` ; `--b-ombre` reste la
+> couleur, utilisée par les boutons.
+
+> 🔴 ⚠️ **ET LE FILET DE LA JAUGE NE SUFFISAIT PAS À L'ARRÊTER.** Il posait la
+> valeur finale à 1,75 s, puis une image tardive de la boucle `requestAnimationFrame`
+> la RÉÉCRASAIT par sa valeur intermédiaire — mesuré au banc, la jauge repassait de
+> 57 à 9. Ce n'est pas un cas de banc : c'est exactement ce que fait une app remise
+> au premier plan au milieu de l'animation, où les images reprennent après un long
+> silence. Le filet lève désormais un drapeau `fini` qui **arrête** la boucle, au
+> lieu de seulement la devancer.
+
 **⚠️ IL N'INVENTE AUCUN CHIFFRE, et c'est ce qui a dessiné l'écran.** Un bilan est l'endroit
 de l'app où il serait le plus facile — et le plus grave — d'inventer : « vous avez brûlé
 400 g de graisse » est une phrase que personne ne peut vérifier. Deux règles :
@@ -4698,6 +4763,39 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   18 segments mesurés + 11 ponts, 22 points posés, aucun débordement horizontal, légende à
   trois entrées qui passe à la ligne.
 
+**Bilan : la note en deux temps, et une seule DA (2026-09-04)**
+- ✅ **L'écran de la note s'ouvre sur la jauge SEULE**, agrandie au milieu d'un
+  écran vide pendant qu'elle monte ; à 2,1 s elle se réduit et remonte, et les
+  critères paraissent en dessous. Le même écran sert au bilan du jour et à celui
+  de la semaine.
+- ✅ **Tout le bilan porte la peau de la page de progression** : critères,
+  décomposition du muscle, chiffres du corps, module des calories et boutons du
+  questionnaire ont le même panneau et la même arête lumineuse que les graphiques
+  et les tuiles — un seul groupe de sélecteurs.
+- ✅ **Le module des calories a quitté le noir métallisé** : il était illisible sur
+  le thème clair (couleurs de texte écrites en dur) et se lisait comme un objet
+  venu d'un autre écran.
+- 🔴 ✅ **`--b-ombre` était déclaré deux fois par thème** — la seconde déclaration,
+  une simple couleur, l'emportait : `box-shadow:var(--b-ombre)` était donc une
+  déclaration invalide et **les cartes et les tuiles n'avaient aucune ombre**.
+- 🔴 ✅ **Le filet de la jauge ne l'arrêtait pas** : il posait la valeur finale à
+  1,75 s, puis une image rAF tardive la réécrasait — mesuré, la jauge repassait de
+  57 à 9. C'est ce que fait une app remise au premier plan en pleine animation.
+- 🔴 ✅ **L'agrandissement de la jauge était annulé par le filet de `cine.js`**
+  (`.nc-pret [data-in]{transform:none!important}`), une demi-seconde avant la
+  révélation : la jauge se réduisait en deux temps au lieu d'un.
+- ✅ Vérifié en navigateur (375 × 812, thèmes sombre ET clair) contre des doublures
+  de `Natty` et 30 jours de repas avec 6 trous : la séquence complète du bilan du
+  jour, l'état solo mesuré (bande de 400 px, jauge centrée, `.apres` vide), la
+  révélation (bande à 236 px, quatre critères en panneaux), la jauge qui atteint
+  bien sa vraie note (57 = moyenne des quatre critères), les boutons du
+  questionnaire et le bouton retenu sans arête, l'écran du corps, et la page de
+  progression avec ses tuiles enfin ombrées.
+- 🔄 **Non vérifié sur téléphone ni avec une vraie session.** Et le banc n'a pas pu
+  filmer le premier temps en direct : les allers-retours de l'outil dépassent les
+  2,1 s de la révélation, donc l'état solo a été vérifié par MESURE et en le
+  reposant à la main, pas au vol.
+
 **Ajout d'un plat : la caméra plein écran, puis un récap sobre (2026-09-04)**
 - ✅ **Toutes les portes d'entrée mènent au nouveau parcours.** Trois chemins ouvraient
   encore l'ancien overlay `ovRepas` de `suivi.html` — `?add=1` (donc le lien de
@@ -6783,3 +6881,39 @@ de la page qu'elle remplace, pas seulement ses variables.
 🔄 **Rien n'a été vu sur un téléphone, ni avec une vraie session** : doublures de `Natty` et
 `NattyCreneaux`, et un navigateur sans caméra — le viseur `cover` et le recadrage de la
 capture n'ont donc pas pu être joués en vrai.
+
+---
+
+*Contribution session « bilan : la note en deux temps » (Claude Opus, 4 septembre 2026) —
+seconde demande de la journée, sur les captures du bilan :*
+
+**Ce qu'il a demandé.** Que l'écran de la note s'ouvre sur la barre de progression SEULE,
+avec son animation et son pourcentage, et qu'elle se déplace ensuite pour laisser paraître
+les critères ; et que tout le bilan porte la direction artistique de la page « Vos 30
+derniers jours » — panneaux sombres à arête lumineuse, tuiles, couleurs adaptées.
+
+**Ce que la seconde demande a révélé.** En rassemblant les six recettes de panneau en une
+seule, `--b-ombre` s'est avéré déclaré DEUX FOIS par thème : une fois comme box-shadow
+complet, une fois comme simple couleur, la seconde l'emportant. `box-shadow:var(--b-ombre)`
+était donc invalide et silencieusement jeté — **les cartes et les tuiles de la page de
+progression n'avaient jamais eu d'ombre**, et la bulle des graphiques perdait avec elle son
+liseré interne. C'est le genre de défaut qu'un rapport ne signale pas : la page reste jolie,
+elle est simplement plate.
+
+**Deux défauts trouvés au banc, aucun par `node --check` :**
+- 🔴 **le filet de la jauge ne l'arrêtait pas** — il posait la valeur finale à 1,75 s, puis
+  une image `requestAnimationFrame` tardive la réécrasait par sa valeur intermédiaire : la
+  jauge repassait de 57 à 9. Ce n'est pas un artefact de banc, c'est ce que fait une app
+  remise au premier plan au milieu de l'animation ;
+- 🔴 **l'agrandissement de la jauge était annulé par le filet de `cine.js`** :
+  `.nc-pret [data-in]{transform:none!important}` tombe à 1,1 s, une demi-seconde avant la
+  révélation, donc la jauge se réduisait en deux temps au lieu d'un. La mise à l'échelle est
+  passée sur le conteneur, qui ne porte aucune animation d'entrée.
+
+⚠️ **Un piège de banc, à retenir.** Les allers-retours de l'outil de navigation dépassent
+les 2,1 s de la révélation : impossible de photographier le premier temps « au vol ». L'état
+solo a donc été vérifié par MESURE (bande de 400 px, jauge centrée, `.apres` vide) puis en
+le reposant à la main pour la capture — et non en essayant de tomber au bon moment.
+
+🔄 **Rien n'a été vu sur un téléphone, ni avec une vraie session** : doublures de `Natty` et
+30 jours de repas fabriqués, avec six trous volontaires.
