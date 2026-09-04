@@ -688,6 +688,33 @@ sous chacun, arc à la couleur de la macro, apparition échelonnée. Ce sont
 > sans ses macros, c'est-à-dire l'écran amputé de ce qu'on vient y chercher. D'où
 > le filet posé par `rendreRecap()`.
 
+**1 bis. Les anneaux, redessinés (2026-09-04, quatrième passage).** Demande de
+Pablo : « des graphiques circulaires plus sérieux, UX Apple minimaliste premium ;
+le fondu noir doit être plus marqué et on doit pouvoir voir la grille sur le
+fondu ».
+> ⚠️ **L'EMOJI A QUITTÉ L'ANNEAU.** C'était le seul élément qui empêchait ces
+> trois disques de se lire comme un instrument : trois pictogrammes colorés au
+> milieu de trois chiffres. La couleur de l'arc dit déjà de quelle macro il
+> s'agit, et le libellé le dit en toutes lettres.
+> ⚠️ **PLUS DE PASTILLE FLOUTÉE SOUS L'ANNEAU**, et c'est le fondu renforcé qui
+> le permet : le disque sombre servait à décoller les anneaux d'une photo claire,
+> il n'a plus rien à corriger et il ajoutait un objet de plus par macro.
+> Trait de 5,5 dans la boîte de 120 (~4,5 px à l'écran) : le 7 d'avant faisait un
+> bourrelet autour du chiffre, en dessous de 4 l'arc devient un cheveu.
+> Chiffre en graisse **500**, libellé en capitales espacées à 8,5 px, et la cible
+> du créneau dessous (« sur 55 g ») — même ligne que les anneaux du bilan.
+> ⚠️ **LE FONDU EST FRANC, PAS DÉGRADÉ EN DOUCEUR.** Mesuré à l'écran : à .42
+> sous les anneaux, la photo restait lisible derrière eux et l'écran n'avait pas
+> de bas — les anneaux flottaient au milieu d'une image. À partir de 56 % c'est
+> presque du noir ; la moitié haute du plat, elle, reste claire.
+> ⚠️ **LA GRILLE EST MASQUÉE EN HAUT.** Une grille sur la photo, ce sont des
+> lignes en travers du plat : elle n'apparaît qu'en dessous de 40 %, donc
+> uniquement sur le noir, et c'est elle qui donne au bas de l'écran une matière
+> au lieu d'un aplat. Deux dégradés à 1 px, pas une image — aucun fichier à
+> charger et le pas suit l'écran.
+> ⚠️ La table `EM` d'`assets/ajout.js` a été retirée : plus personne ne la lit, et
+> une constante morte finit par être « rétablie » par erreur.
+
 **2. Le détail, en dessous ou d'un tap.** « Voir le détail » (icône burger) fait
 défiler jusqu'à la feuille ; on y arrive aussi en défilant simplement. La feuille
 porte le panneau du bilan (dégradé + arête), les calories du repas, puis les
