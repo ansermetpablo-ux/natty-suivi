@@ -174,6 +174,35 @@ window.NattyBilan = (function () {
   function jourDe(d) { return (window.Natty && Natty.jour) ? Natty.jour(d) : ''; }
   function jourCourant() { return jourDe(); }
 
+  /* ⚠️ `new Date('2026-09-04')` est analysé en UTC par la spécification, donc
+     rend la VEILLE dès qu'on est à l'ouest de Greenwich et le bon jour à l'est.
+     C'est le même piège que `toISOString()` (§3 de CLAUDE.md) pris par l'autre
+     bout. On construit donc la date à partir de ses morceaux. */
+  function dateDe(j) {
+    var p = String(j || '').split('-');
+    return p.length === 3 ? new Date(+p[0], +p[1] - 1, +p[2]) : new Date();
+  }
+  function veilleDe(d) { var x = new Date(d || new Date()); x.setDate(x.getDate() - 1); return x; }
+
+  /* ⚠️⚠️ LE JOUR DONT PARLE LA SÉQUENCE — et ce n'est plus forcément aujourd'hui.
+     Depuis que le bilan de la VEILLE peut s'ouvrir le lendemain matin, une
+     douzaine d'endroits demandaient « quel jour sommes-nous ? » alors que la
+     vraie question est « de quel jour parle cet écran ? ». Les confondre écrirait
+     les réponses d'hier sur la ligne d'aujourd'hui, marquerait le mauvais jour
+     comme vu, et rattacherait la séance au mauvais jour. Un seul point de
+     vérité, comme `Natty.jour()` l'est pour la date locale. */
+  function jourCible() { return (S && S.jour) || jourCourant(); }
+
+  /* Le mot que la séquence emploie pour parler de son jour. Écrit UNE fois :
+     six écrans disaient « aujourd'hui » en dur, et un bilan de la veille les
+     faisait tous mentir — « Vous avez bougé aujourd'hui ? » posé le lendemain
+     matin sur la séance de la veille, « Aujourd'hui, votre corps » sur des
+     grammes qui décrivent hier. */
+  function quandMot(maj) {
+    var v = S && S.veille;
+    return maj ? (v ? 'Hier' : 'Aujourd’hui') : (v ? 'hier' : 'aujourd’hui');
+  }
+
   function dateFr(d) {
     return d.getDate() + ' ' + MOIS[d.getMonth()];
   }
@@ -588,10 +617,13 @@ window.NattyBilan = (function () {
   }
 
   /** La série des `nb` derniers jours, du plus ancien au plus récent. */
-  function serie(nb) {
+  function serie(nb, base) {
     var out = [], jrn = journalise();
     for (var i = nb - 1; i >= 0; i--) {
-      var d = new Date(); d.setDate(d.getDate() - i);
+      /* ⚠️ La courbe finit sur le jour DONT ON PARLE, pas sur aujourd'hui : un
+         bilan de la veille qui tracerait 30 jours finissant ce matin ferait
+         plonger sa dernière colonne sur une journée à peine commencée. */
+      var d = new Date(base || new Date()); d.setDate(d.getDate() - i);
       var j = jourDe(d), e = cache.jours[j];
       var a = analyserJour(e, cache.profil, j);
       var ctx = ctxSeance(j, jrn);
@@ -602,10 +634,11 @@ window.NattyBilan = (function () {
   }
 
   /** Le bilan de la SEMAINE en cours (du lundi à aujourd'hui). */
-  function semaineEnCours() {
-    var l = lundiDe(new Date()), out = [], jrn = journalise();
+  function semaineEnCours(base) {
+    var ref = base || new Date();
+    var l = lundiDe(ref), out = [], jrn = journalise();
     var d = new Date(l);
-    var fin = jourCourant();
+    var fin = jourDe(ref);
     while (jourDe(d) <= fin && out.length < 7) {
       var j = jourDe(d), e = cache.jours[j];
       var a = analyserJour(e, cache.profil, j);
@@ -660,7 +693,7 @@ window.NattyBilan = (function () {
   var tableDispo = null;   // null = pas encore su
 
   async function enregistrerReponses(rep, a, corps, estSemaine) {
-    var j = jourCourant();
+    var j = jourCible();
     ecrire(cle('rep_' + j), JSON.stringify(rep));
     ecrire(cle('vu'), j);
     if (estSemaine) ecrire(cle('vusem'), jourDe(lundiDe(new Date())));
@@ -719,6 +752,18 @@ window.NattyBilan = (function () {
       '--b-vif:#fff;--b-sur-vif:#0a0a0c;--b-ombre:rgba(0,0,0,.7);',
       '--b-reflet:rgba(255,255,255,.055);--b-contour:rgba(255,255,255,.07);',
       '--b-fermer:rgba(255,255,255,.07)}',
+      /* Le mot surligné : l'inversion complète. C'est le contraste le plus fort
+         dont l'écran dispose, et il tient dans les DEUX thèmes sans règle en
+         double — `--b-vif` / `--b-sur-vif` s'échangent d'eux-mêmes. */
+      /* ⚠️ `animation:none` et `opacity:1` : `.nbsk h1 span` est un sélecteur de
+         DESCENDANCE, il attrape donc aussi la pastille imbriquée — qui repartirait
+         d'une opacité nulle avec sa propre animation, en plus de celle du mot qui
+         la porte. `animation` étant une propriété unique, c'est la règle la plus
+         spécifique qui gagne, et c'est celle-ci. */
+      '#nbil h1 span.mk{animation:none;opacity:1;',
+      'background:var(--b-vif);color:var(--b-sur-vif);',
+      'border-radius:.22em;padding:0 .16em;margin:0 -.02em;',
+      'box-decoration-break:clone;-webkit-box-decoration-break:clone}',
       ':root[data-theme="light"] .nbsk{--b-bg:#fff;--b-ink:#101014;--b-mut:#8a8a95;',
       '--b-mut2:#a6a6b0;--b-lueur1:rgba(126,128,145,.15);--b-lueur2:rgba(126,128,145,.06);',
       '--b-lueur3:rgba(126,128,145,.02);--b-trait:rgba(20,20,30,.14);',
@@ -1314,7 +1359,7 @@ window.NattyBilan = (function () {
     racine.querySelector('#nbFerme').addEventListener('click', function () {
       // Fermer vaut « pas ce soir » : on note la visite pour ne pas rouvrir en
       // boucle, mais on n'enregistre aucune réponse qu'on n'a pas eue.
-      ecrire(cle('vu'), jourCourant());
+      ecrire(cle('vu'), jourCible());
       fermer();
     });
     scrollGele = document.body.style.overflow;
@@ -1356,9 +1401,22 @@ window.NattyBilan = (function () {
 
   function titre(txt, cls, delai) {
     delai = delai == null ? 0 : delai;
+    /* Un mot entouré d'astérisques est SURLIGNÉ. Le passage par un marqueur
+       plutôt que par du HTML est délibéré : chaque mot reste échappé, donc un
+       prénom ou un nom de plat ne peut rien injecter ici. */
     var mots = String(txt).split(' ').map(function (m, i) {
-      return '<span style="animation-delay:' + (delai + i * 0.08).toFixed(3) + 's">'
-        + esc(m) + '</span>';
+      /* ⚠️ LA PONCTUATION RESTE DEHORS. Sans le groupe final, « *Hier*, » ne
+         correspondait plus au motif et s'affichait avec ses astérisques —
+         « *Hier*, votre corps », vu à l'écran. Et la surligner avec le mot
+         donnerait une pastille qui déborde d'une virgule. */
+      var mk = /^\*(.+)\*([,.;:!?…]*)$/.exec(m);
+      var d = ' style="animation-delay:' + (delai + i * 0.08).toFixed(3) + 's"';
+      /* La pastille est IMBRIQUÉE dans le span du mot : c'est lui qui porte
+         l'animation d'entrée, donc la ponctuation apparaît avec son mot au lieu
+         d'être là dès la première image. */
+      return mk
+        ? '<span' + d + '><span class="mk">' + esc(mk[1]) + '</span>' + esc(mk[2]) + '</span>'
+        : '<span' + d + '>' + esc(m) + '</span>';
     }).join(' ');
     return '<h1' + (cls ? ' class="' + cls + '"' : '') + '>' + mots + '</h1>';
   }
@@ -1441,9 +1499,16 @@ window.NattyBilan = (function () {
     return d;
   }
 
+  /* ⚠️ Le rappel ne vit pas que sur la première scène. Une séquence dure une
+     minute : quelqu'un qui arrive à l'écran du corps trois plans plus loin a
+     perdu le contexte, et « 250 g de graisse puisée » sur ce qu'il croit être
+     aujourd'hui n'a aucun sens. Le bandeau le redit à chaque plan. */
   function enTete(t) {
     var e = racine && racine.querySelector('#nbEnTete');
-    if (e) e.textContent = t || '';
+    if (!e) return;
+    // Sur la scène d'ouverture le bandeau est vide par choix — et le grand
+    // titre y dit déjà « hier ». On ne préfixe donc que ce qui existe.
+    e.textContent = (t && S && S.veille) ? ('HIER · ' + t) : (t || '');
   }
 
   /* ═══ 8. Les morceaux d'écran ════════════════════════════ */
@@ -1792,7 +1857,7 @@ window.NattyBilan = (function () {
       bloc({
         html: ill('horloge', 78) + titre('Rien à dérouler', 'p', 0.1)
           + '<div class="sous" data-in style="animation-delay:.35s">Aucun repas noté '
-          + 'aujourd’hui : il n’y a pas de fil à suivre. Un seul repas enregistré suffit '
+          + quandMot() + ' : il n’y a pas de fil à suivre. Un seul repas enregistré suffit '
           + 'à faire apparaître cette courbe.</div>',
         boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
       });
@@ -2070,12 +2135,27 @@ window.NattyBilan = (function () {
   function scOuverture() {
     var p = S.profil.prenom;
     enTete('');
+    /* ⚠️ QUAND C'EST LA VEILLE, L'ÉCRAN LE DIT, ET LE MOT EST SURLIGNÉ.
+       Sans ça, un bilan ouvert le mardi matin décrit le lundi en ayant l'air de
+       décrire le mardi : on lit « 1 850 kcal » sur une journée qui commence à
+       peine, et le chiffre paraît absurde. Le kicker porte déjà la date, mais
+       une date se lit sans se remarquer — le mot, lui, se remarque. */
+    var quand = S.veille ? '*hier*' : 'Votre journée';
     bloc({
       html: ill('lune', 92)
-        + '<div class="kick" data-in>' + dateFr(new Date()) + '</div>'
-        + titre('Votre journée' + (p ? ',' : ''), '', 0.2)
-        + (p ? titre(p, '', 0.5) : ''),
-      auto: 2300, apres: scRecap
+        + '<div class="kick" data-in>'
+        + (S.veille ? 'Le bilan que vous n’avez pas vu · ' : '')
+        + dateFr(dateDe(S.jour)) + '</div>'
+        + /* ⚠️ L'élision est DANS le surlignage : `titre()` découpe sur les espaces,
+             donc « d’ *hier* » rendait « d’ hier » avec une espace au milieu du mot.
+             Vu à l'écran, invisible à la lecture. */
+          titre(S.veille ? 'Votre journée *d’hier*' : ('Votre journée' + (p ? ',' : '')), '', 0.2)
+        + (!S.veille && p ? titre(p, '', 0.5) : '')
+        + (S.veille && p
+            ? '<div class="sous" data-in style="animation-delay:.75s">On la referme, ' + esc(p)
+              + ', et on repart proprement sur aujourd’hui.</div>'
+            : ''),
+      auto: S.veille ? 2800 : 2300, apres: scRecap
     });
   }
 
@@ -2087,20 +2167,21 @@ window.NattyBilan = (function () {
     var a = S.a, c = S.profil.cibleDu ? S.profil.cibleDu(a.jour) : S.profil.cible;
     if (a.vide) {
       // Rien à récapituler : on le dit, et on n'invente pas une journée.
+      var q = S.veille ? 'hier' : 'aujourd’hui';
       bloc({
         html: ill('assiette', 84)
-          + titre('Rien de noté aujourd’hui', 'p', 0.15)
+          + titre('Rien de noté ' + (S.veille ? '*hier*' : 'aujourd’hui'), 'p', 0.15)
           + '<div class="sous" data-in style="animation-delay:.5s">Pas de repas enregistré '
-          + 'aujourd’hui — il n’y a donc rien à analyser. Trois questions quand même, '
+          + q + ' — il n’y a donc rien à analyser. Trois questions quand même, '
           + 'elles comptent autant que les chiffres.</div>',
         boutons: [{ txt: 'Répondre', on: function () { S.q = 0; scQuestion(); } },
-                  { txt: 'Plus tard', cls: 'b3', on: function () { ecrire(cle('vu'), jourCourant()); fermer(); } }]
+                  { txt: 'Plus tard', cls: 'b3', on: function () { ecrire(cle('vu'), jourCible()); fermer(); } }]
       });
       return;
     }
     bloc({
       html: ill('assiette', 84)
-        + titre('Ce que vous avez mangé', 'p', 0.1)
+        + titre(S.veille ? 'Ce que vous avez mangé *hier*' : 'Ce que vous avez mangé', 'p', 0.1)
         + anneauxHTML(a.mac, c)
         + kmodHTML('Calories comptées', a.mac.c, 'kcal',
             c.c ? 'sur ' + c.c + ' de dépense' : 'dépense inconnue')
@@ -2208,14 +2289,14 @@ window.NattyBilan = (function () {
 
     bloc({
       html: ill('haltere', 80)
-        + titre('Vous avez bougé aujourd’hui ?', 'p', 0.1)
+        + titre('Vous avez bougé ' + (S.veille ? '*hier*' : 'aujourd’hui') + ' ?', 'p', 0.1)
         + '<div class="sous" data-in style="animation-delay:.4s">Sans séance notée, le '
         + 'muscle et la graisse se déduisent de votre niveau d’activité déclaré à '
         + 'l’inscription — la même valeur un jour de repos et un jour de squat. '
         + 'Deux minutes de saisie, et les deux chiffres deviennent les vôtres.</div>',
       boutons: [
         { txt: '🏋️  Ajouter ma séance', on: ouvrirSaisieSeance },
-        { txt: 'Pas de séance aujourd’hui', cls: 'b3', on: scCorps }
+        { txt: 'Pas de séance ' + quandMot(), cls: 'b3', on: scCorps }
       ]
     });
   }
@@ -2227,15 +2308,15 @@ window.NattyBilan = (function () {
      Le module s'ouvre par-dessus le bilan (z-index 9700 contre 640) et rend la
      main par son `apres`. */
   function ouvrirSaisieSeance() {
-    NattySeance.ajouterPour(jourCourant(), function () {
+    NattySeance.ajouterPour(jourCible(), function () {
       if (!racine) return;   // le bilan a été fermé entre-temps
-      var ctx = ctxSeance(jourCourant(), journalise());
+      var ctx = ctxSeance(jourCible(), journalise());
       S.seance = ctx.seance;
       S.corps = corpsDuJour(S.a, S.profil, ctx);
       // La série et la semaine portent le même jour : les laisser en arrière
       // ferait dire à la courbe le contraire de l'écran qu'on vient de quitter.
-      S.serie30 = serie(JOURS_COURBE);
-      S.sem = semaineEnCours();
+      S.serie30 = serie(JOURS_COURBE, dateDe(jourCible()));
+      S.sem = semaineEnCours(dateDe(jourCible()));
       scCorps();
     });
   }
@@ -2281,7 +2362,7 @@ window.NattyBilan = (function () {
                            + '\u00a0t soulevées' : '')
             + (e.frequence >= 2 ? ' · ' + Math.round(e.frequence) + ' passages sur ce groupe cette semaine'
                                 : ' · 1 seul passage sur ce groupe cette semaine')
-          : 'aucune série aujourd’hui — la veille compte pour moitié'
+          : 'aucune série ' + quandMot() + ' — la veille compte pour moitié'
       });
     }
     lignes.push({
@@ -2348,15 +2429,15 @@ window.NattyBilan = (function () {
       : cp.muscle > 0
         ? 'De quoi construire : les protéines sont là et l’énergie suit.'
         : cp.gras > 0
-          ? 'En déficit aujourd’hui. Sous 80\u00a0% de votre dépense, le corps ne construit plus — il puise.'
-          : 'Au-delà de votre dépense aujourd’hui : rien de brûlé, mais de quoi construire si les protéines suivent.';
+          ? 'En déficit ' + quandMot() + '. Sous 80\u00a0% de votre dépense, le corps ne construit plus — il puise.'
+          : 'Au-delà de votre dépense ' + quandMot() + ' : rien de brûlé, mais de quoi construire si les protéines suivent.';
 
     bloc({
       /* L'illustration suit le résultat : la flamme quand le corps a puisé, le
          cœur quand il a construit. Une seule image pour les deux ferait passer
          un jour de déficit pour un jour de gain. */
       html: ill(cp.gras > cp.muscle * 3 ? 'flamme' : 'coeur', 82)
-        + titre('Aujourd’hui, votre corps', 'p', 0.1)
+        + titre(S.veille ? '*Hier*, votre corps' : 'Aujourd’hui, votre corps', 'p', 0.1)
         + '<div class="cps">'
         + '<div class="cp" data-in style="animation-delay:.35s"><div class="e">💪</div>'
         + '<div class="v" id="nbMus">0<small>g</small></div><div class="l">de muscle construit</div></div>'
@@ -2387,7 +2468,7 @@ window.NattyBilan = (function () {
            découlent. */
         + (!cp.avecSeance && window.NattySeance
             ? '<div class="note-est" data-in style="animation-delay:.95s">Aucune séance notée '
-              + 'aujourd’hui : ces deux chiffres viennent donc de votre seule alimentation. '
+              + quandMot() + ' : ces deux chiffres viennent donc de votre seule alimentation. '
               + 'Une séance ajoutée les rendrait exacts.</div>'
             : ''),
       pret: function () {
@@ -2487,7 +2568,17 @@ window.NattyBilan = (function () {
 
   function scFin() {
     enTete('');
+    /* ⚠️ Le conseil de fin parle de « demain ». Sur un bilan de la veille, ce
+       demain-là est AUJOURD'HUI — le conseil porterait sinon sur un jour encore
+       plus lointain que celui qu'on vient de relire, et deviendrait inactionnable
+       au moment précis où il devrait servir. */
     var demain = motDeFin();
+    if (S.veille) demain = demain.replace(/^Demain, l’/, 'Aujourd’hui, l’')
+                                 .replace(/^Demain, /, 'Aujourd’hui, ')
+                                 .replace(/ Demain, /, ' Aujourd’hui, ')
+                                 .replace(/pas mangé aujourd’hui/, 'pas mangé hier')
+                                 .replace(/Même chose demain suffira/, 'Même chose aujourd’hui suffira')
+                                 .replace(/demain, viser un seul repas/, 'aujourd’hui, viser un seul repas');
     var quandSemaine = new Date().getDay() === 6;
     /* ⚠️ ON GARDE LA RÉFÉRENCE DU BLOC, on ne le retrouve pas par sélecteur.
        `racine.querySelector('.bloc')` renvoyait le plan SORTANT — il reste dans
@@ -2498,7 +2589,10 @@ window.NattyBilan = (function () {
        `assets/recette.js` et `narration.html`. */
     var d = bloc({
       html: ill('lune', 88)
-        + titre('À demain', '', 0.15)
+        /* Sur un bilan de la veille, « À demain » désigne un jour de plus que
+           celui dont le conseil vient de parler. On referme sur la journée qui
+           commence, pas sur la suivante. */
+        + titre(S.veille ? 'Bonne journée' : 'À demain', '', 0.15)
         + '<div class="sous" data-in style="animation-delay:.45s">' + esc(demain) + '</div>'
         + (tableDispo === false
             ? '<div class="note-est" data-in style="animation-delay:.6s">' + MENTION_LOCALE + '</div>'
@@ -2850,26 +2944,28 @@ window.NattyBilan = (function () {
        pour de bon. Six réponses sur sept restent la matière de « ce qui
        revient » (`accordSemaine`). */
     ecrire(cle('vusem'), jourDe(lundiDe(new Date())));
-    ecrire(cle('vu'), jourCourant());
+    ecrire(cle('vu'), jourCible());
   }
 
   /* ═══ 11. Ouverture et déclencheur ═══════════════════════ */
 
   var enCours = false;
 
-  async function lancer(semaine) {
+  async function lancer(semaine, jour) {
     if (enCours) return;
     enCours = true;
     try {
       if (!window.Natty || !Natty.USER_ID) return;
       await charger();
-      var j = jourCourant();
+      var j = jour || jourCourant();
+      var base = dateDe(j);
       var a = analyserJour(cache.jours[j], cache.profil, j);
       var ctx = ctxSeance(j, journalise());
       S = {
         profil: cache.profil, a: a, corps: corpsDuJour(a, cache.profil, ctx),
-        serie30: serie(JOURS_COURBE), sem: semaineEnCours(),
-        seance: ctx.seance, rep: {}, q: 0, semaine: !!semaine
+        serie30: serie(JOURS_COURBE, base), sem: semaineEnCours(base),
+        seance: ctx.seance, rep: {}, q: 0, semaine: !!semaine,
+        jour: j, veille: j !== jourCourant()
       };
       monter();
       if (semaine) scSemOuverture(); else scOuverture();
@@ -2881,6 +2977,29 @@ window.NattyBilan = (function () {
   }
 
   function ouvrir(opts) { return lancer(!!(opts && opts.semaine)); }
+
+  /* ⚠️ UNE VEILLE VIDE NE VAUT PAS UN RATTRAPAGE, et le cas n'est pas rare :
+     c'est celui de tout compte neuf, dont la clé `vu` est vide et pour qui
+     `vu < hier` est donc vrai. Sans ce filtre, la première ouverture de l'app
+     s'ouvrirait sur « Rien de noté hier » — un reproche adressé à quelqu'un qui
+     vient d'installer. On marque quand même le jour comme vu : sinon la
+     question se reposerait à chaque lancement, indéfiniment.
+     Repas OU séance : une journée sans repas mais avec un entraînement noté a
+     bel et bien quelque chose à raconter. */
+  async function lancerVeille(j) {
+    try {
+      await charger();
+      var e = cache.jours[j];
+      var aRepas = !!(e && e.nbRepas);
+      /* ⚠️ `duJour(j)`, pas `du(j)` — ce dernier n'existe pas. Écrit de mémoire
+         puis vérifié contre l'API réelle de `assets/seance.js` : un appel à une
+         fonction absente aurait levé ici, dans un `try` qui rend la main sans
+         un mot, et le rattrapage n'aurait jamais eu lieu. */
+      var aSeance = !!(window.NattySeance && NattySeance.duJour && NattySeance.duJour(j));
+      if (!aRepas && !aSeance) { ecrire(cle('vu'), j); return; }
+    } catch (err) { return; }   // hors ligne : on ne rattrape rien, on ne marque rien
+    return lancer(false, j);
+  }
 
   /**
    * Le déclencheur des écrans porteurs de la nav.
@@ -2896,25 +3015,59 @@ window.NattyBilan = (function () {
     var d = new Date();
     var samedi = d.getDay() === 6;
     var lundi = jourDe(lundiDe(d));
+    var vu = lire(cle('vu'), '');
 
     // Le bilan de la SEMAINE, le samedi soir, une fois par semaine.
     var duSemaine = samedi && d.getHours() >= H_BILAN && lire(cle('vusem'), '') !== lundi;
     // Celui du JOUR, à partir de 21 h, une fois par jour.
-    var duJour = d.getHours() >= H_BILAN && lire(cle('vu'), '') !== jourCourant();
-    if (!duSemaine && !duJour) return;
+    var duJour = d.getHours() >= H_BILAN && vu !== jourCourant();
 
-    setTimeout(function () {
-      // Même garde que le guide du jour et la planification, au même endroit
-      // (`assets/core.js`) : trois listes tenues à la main, c'est trois listes
-      // qui divergent — celle-ci ignorait les deux questions de la génération.
-      if (Natty.ecranOccupe()) return;
-      if (window.NattyGeneration && NattyGeneration.enCours && NattyGeneration.enCours()) return;
-      lancer(duSemaine);
-    }, delai == null ? 9000 : delai);
+    /* ⚠️⚠️ LE BILAN DE LA VEILLE — celui qu'on n'a pas regardé hier soir.
+       Le bilan du soir ne s'ouvre qu'à partir de 21 h et qu'à l'ouverture de
+       l'app : quelqu'un qui se couche tôt, ou qui n'ouvre pas Natty ce soir-là,
+       ne le voit JAMAIS. Sa journée disparaît alors sans avoir été relue, et
+       les trois questions du soir ne sont posées ni ce jour-là ni un autre.
+       On le rattrape donc le lendemain, à l'ouverture.
+
+       ⚠️ La clé `vu` porte le DERNIER jour dont le bilan a été vu, et cette
+       seule valeur suffit à tenir la boucle : après avoir vu celui d'hier elle
+       vaut hier, donc celui du soir reste dû ce soir ; après l'avoir vu ce soir
+       elle vaut aujourd'hui, donc demain matin `vu === hier` et on ne repropose
+       rien. Deux clés auraient fini par se contredire. */
+    var hier = jourDe(veilleDe(d));
+    var duVeille = !duSemaine && vu !== hier && vu < hier;
+
+    if (!duSemaine && !duJour && !duVeille) return;
+
+    /* Le rattrapage passe à 5 s (demande de Pablo) ; le bilan du soir garde ses
+       9 s, derrière le guide du jour. */
+    var attente = delai == null ? (duVeille && !duJour && !duSemaine ? 5000 : 9000) : delai;
+
+    /* ⚠️ IL RÉESSAIE, ET C'EST NÉCESSAIRE À 5 s. La planification de la semaine
+       se déclenche exactement au même moment, et le guide du jour à 6,5 s : un
+       simple `if (occupé) return`, comme ailleurs, ferait que le rattrapage ne
+       s'ouvrirait JAMAIS les matins où l'un des deux est dû — c'est-à-dire tous
+       les lundis. On repasse donc quelques fois, puis on renonce pour de bon
+       plutôt que de s'inviter au milieu de ce que la personne a commencé. */
+    var essais = 0;
+    (function tenter() {
+      setTimeout(function () {
+        if (racine) return;                       // une séquence est déjà là
+        if (Natty.ecranOccupe()
+            || (window.NattyGeneration && NattyGeneration.enCours && NattyGeneration.enCours())) {
+          if (++essais < 6) return tenter();
+          return;
+        }
+        if (duVeille && !duJour && !duSemaine) return lancerVeille(hier);
+        lancer(duSemaine);
+      }, essais === 0 ? attente : 4000);
+    })();
   }
 
   return {
     ouvrir: ouvrir, ouvrirJour: function () { return lancer(false); },
+    /** Le bilan d'un jour précis — la veille, typiquement. */
+    ouvrirVeille: function (j) { return lancer(false, j || jourDe(veilleDe(new Date()))); },
     ouvrirSemaine: function () { return lancer(true); },
     proposerSiNecessaire: proposerSiNecessaire,
     analyse: analyse, reponses: reponses,
