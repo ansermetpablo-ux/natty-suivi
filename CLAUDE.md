@@ -6174,6 +6174,59 @@ l'écran est caché**, une seule socket vivante, et au retour à l'écran on rep
 en rechargeant la conversation (le temps réel a pu manquer des messages). Le protocole, lui,
 reste l'ancien `phx_join` — voir §7.
 
+### ✅ Archive 1.0 (3) — faite et vérifiée (2026-09-05)
+Produite en ligne de commande sur le Mac de Pablo, Xcode 26.3 : `ARCHIVE SUCCEEDED`
+puis `EXPORT SUCCEEDED` en méthode `app-store-connect`. L'IPA (16,3 Mo) est sur le bureau —
+`~/Desktop/Natty-1.0-build3.ipa`. Elle porte les **54 commits** faits depuis l'archive d'août :
+les séances et la charge, l'objectif qui suit l'entraînement, les 114 plats du catalogue qui se
+cuisinent, la refonte du bilan et celle de l'ajout d'un plat.
+
+**Relevé sur le binaire exporté** : signature `Apple Distribution: Natty (DJLW82GU5A)` (certificat
+« Cloud Managed »), profil *iOS Team Store*, `aps-environment: production`, `get-task-allow 0`,
+`beta-reports-active 1` (donc TestFlight), `com.nattynutrition.app` **1.0 (3)**, arm64,
+`MinimumOSVersion 15.0`, `ITSAppUsesNonExemptEncryption 0`, `PrivacyInfo.xcprivacy` embarqué.
+
+> ⚠️⚠️ **LE NUMÉRO DE BUILD EST DÉCIDÉ À L'EXPORT, PAS DANS LE PROJET.** Mesuré le 2026-09-05 :
+> `project.pbxproj` portait 2, `xcodebuild -showBuildSettings` disait 2, l'app **dans l'archive**
+> disait 2 — et l'IPA exporté est sorti en **3**. C'est `-exportArchive` en méthode
+> `app-store-connect` qui interroge App Store Connect et prend le prochain numéro libre. Deux
+> conséquences : les builds **1 et 2 existent déjà** côté App Store Connect (c'est la seule façon
+> de le savoir sans ouvrir l'interface), et `CURRENT_PROJECT_VERSION` n'est qu'un **plancher**.
+> Vérifier le numéro réel dans `Natty-export/DistributionSummary.plist`, clé `buildNumber` —
+> jamais dans le dépôt.
+
+> ⚠️ **La commande, pour la refaire** (l'archive tient ~2 min, l'export ~40 s) :
+> ```
+> xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+>   -destination 'generic/platform=iOS' -archivePath ~/Desktop/Natty.xcarchive \
+>   -allowProvisioningUpdates archive
+> xcodebuild -exportArchive -archivePath ~/Desktop/Natty.xcarchive \
+>   -exportOptionsPlist ExportOptions.plist -exportPath ~/Desktop/Natty-export \
+>   -allowProvisioningUpdates
+> ```
+> `ExportOptions.plist` : `method` = `app-store-connect`, `teamID` = `DJLW82GU5A`,
+> `signingStyle` = `automatic`, `uploadSymbols` = vrai, `destination` = `export`.
+
+> ⚠️ **L'ENVOI VERS APP STORE CONNECT N'A PAS ÉTÉ FAIT, et pas par oubli.** Il demande soit une
+> clé d'API App Store Connect (avec son Issuer ID), soit un mot de passe d'application — donc des
+> identifiants. Les deux `.p8` présents dans `~/Downloads` sont selon toute vraisemblance les clés
+> **APNs** (§8), qui ne savent pas envoyer un build. Le chemin le plus court est **Transporter.app**
+> (déjà installé) : on y glisse l'IPA. C'est aussi ce qui produira le premier **jeton APNs réel**,
+> qui manque toujours (`appareils` est vide), et ce qui met l'app sur le téléphone pour prendre
+> les captures.
+
+### ❌ Le chantier « photo de progression » — arrêté (2026-09-05)
+Décision de Pablo, après l'étape 1. Le moteur d'étalonnage (7 calques en un shader WebGL2,
+normalisation adaptative sur la médiane du sujet, cartes de macros au Canvas, placement
+automatique évitant le visage, prise de vue avec gabarit et calque de la semaine précédente) est
+resté au stade du banc `_test-photo-progression.html` — **gitignoré, donc jamais déployé**.
+Les 24 Mo de MediaPipe vendorisés ont été **retirés des deux arborescences** : laissés en place,
+`www/assets/vendor/` aurait mis 12 Mo de WebAssembly dans l'IPA pour une fonctionnalité
+inexistante. Ils restent récupérables : `git checkout 9078f93 -- assets/vendor www/assets/vendor`.
+Ce qui a été mesuré et vaut d'être su si le chantier reprend un jour est dans le commit `9078f93`
+(dont : le PREMIER `segment()` de MediaPipe coûte ~4,3 s, contre ~90-160 ms une fois le graphe
+préchauffé sur une vignette vide).
+
 ### ✅ La première archive App Store — faite et vérifiée (2026-08-26)
 Produite sur le Mac de Pablo, Xcode 26.3 : `ARCHIVE SUCCEEDED` puis `EXPORT SUCCEEDED` en
 méthode `app-store-connect`. L'IPA (15 Mo) est sur le bureau — `~/Desktop/Natty-1.0-build1.ipa`.
