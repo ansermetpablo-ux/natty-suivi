@@ -348,6 +348,34 @@
        sinon la maison se colle au bord de l'écran. */
     + '#nattyAjout.recap .na-col{padding-left:0;padding-right:0}'
     + '#nattyAjout.recap .na-top{padding-left:22px;padding-right:22px}'
+    + '#nattyAjout .na-quand{display:inline-flex;align-items:center;gap:6px;margin-top:7px;'
+    + 'background:rgba(255,255,255,.10);color:rgba(255,255,255,.82);border:0;border-radius:999px;'
+    + 'padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;'
+    + '-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}'
+    + '#nattyAjout .na-quand svg{width:13px;height:13px;fill:none;stroke:currentColor;'
+    + 'stroke-width:1.9;stroke-linecap:round}'
+    /* ⚠️ Quand ce n'est PAS maintenant, la pastille change de couleur. Un plat
+       antidaté ne changera pas les anneaux de l'écran — ceux-ci décrivent
+       aujourd'hui — et sans ce signal on croirait à un bug. */
+    + '#nattyAjout .na-quand.autre{background:#ffb340;color:#1a1206;font-weight:600}'
+    + '#nattyAjout .na-quand-sh{position:absolute;inset:0;z-index:9;display:flex;'
+    + 'align-items:flex-end;background:rgba(0,0,0,.62);-webkit-backdrop-filter:blur(3px);'
+    + 'backdrop-filter:blur(3px)}'
+    + '#nattyAjout .na-quand-sh[hidden]{display:none}'
+    + '#nattyAjout .na-quand-bx{width:100%;background:#17171c;border-radius:22px 22px 0 0;'
+    + 'padding:18px 22px calc(22px + env(safe-area-inset-bottom));'
+    + 'box-shadow:0 -18px 44px rgba(0,0,0,.55)}'
+    + '#nattyAjout .na-quand-rac{display:flex;gap:8px;margin:12px 0 4px}'
+    + '#nattyAjout .na-quand-rac button{flex:1;padding:10px 4px;border-radius:12px;border:0;'
+    + 'background:rgba(255,255,255,.09);color:#f4f4f7;font:inherit;font-size:13px;cursor:pointer}'
+    + '#nattyAjout .na-quand-rac button.on{background:#f4f4f7;color:#101014;font-weight:600}'
+    + '#nattyAjout .na-quand-ch{display:flex;gap:10px;margin:12px 0 4px}'
+    + '#nattyAjout .na-quand-ch label{flex:1;font-size:11px;color:#8b8b98;display:block}'
+    + '#nattyAjout .na-quand-ch input{width:100%;margin-top:5px;padding:10px;border-radius:12px;'
+    + 'border:1px solid rgba(255,255,255,.12);background:#0f0f13;color:#f4f4f7;font:inherit;'
+    + 'font-size:15px;color-scheme:dark}'
+    + '#nattyAjout .na-quand-w{font-size:11.5px;line-height:1.5;color:#ffb340;min-height:1px;'
+    + 'margin:8px 0 12px}'
     + '#nattyAjout #naScRecap{padding:0 22px;overflow-x:hidden}'
     /* ⚠️⚠️ AUCUN ENFANT DU RÉCAP NE SE COMPRIME. `.na-screen` est une colonne
        flex : un enfant y vaut `flex-shrink:1` par défaut, donc dès que le
@@ -604,6 +632,37 @@
   // Date LOCALE : `toISOString()` rend la veille entre 00 h et 02 h à Paris,
   // donc un repas ajouté à 00 h 30 était enregistré sur la journée précédente.
   function today() { return Natty.jour(); }
+
+  /* ═══ QUAND CE REPAS A-T-IL ÉTÉ PRIS ? ════════════════════════════════════
+     Par défaut maintenant. Mais on mange souvent sans noter, et on note plus
+     tard — le soir, ou le lendemain matin. Sans ce réglage, un plat d'hier
+     enregistré ce matin fausse DEUX journées à la fois : il gonfle aujourd'hui
+     et laisse hier vide.
+
+     ⚠️⚠️ IL FAUT ÉCRIRE `created_at`, PAS SEULEMENT `meal_date`. C'est le point
+     qui rend la chose non triviale, et il est facile de le rater : partout
+     ailleurs dans l'app, le jour ET le créneau d'un repas se déduisent de
+     `created_at` — `chargerJours()` d'`assets/bilan.js` fait
+     `jourDe(new Date(m.created_at))`, et `assets/creneaux.js` en tire l'heure
+     (« une date sèche n'a pas d'heure », §3 de CLAUDE.md). Un antidatage qui ne
+     toucherait que `meal_date` marcherait dans l'historique et nulle part
+     ailleurs : le bilan, les anneaux et la semaine continueraient de le compter
+     aujourd'hui. Le défaut serait invisible à la lecture et faux en silence. */
+  var MOMENT = null;             // Date choisie, ou null pour « maintenant »
+
+  function momentDate() { return MOMENT || new Date(); }
+  function momentJour() { return Natty.jour(momentDate()); }
+  function momentEstAujourdhui() { return momentJour() === today(); }
+
+  function libelleMoment() {
+    var d = momentDate(), j = Natty.jour(d), h = today();
+    var hier = new Date(); hier.setDate(hier.getDate() - 1);
+    var quand = j === h ? 'Aujourd’hui'
+      : j === Natty.jour(hier) ? 'Hier'
+      : d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+    return quand + ' · ' + String(d.getHours()).padStart(2, '0')
+         + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
 
   var toastEl = null;
   function toast(msg) {
@@ -992,6 +1051,11 @@
       + '    <div class="na-rtop">'
       + '      <input class="na-rnom" id="naPlatNom" type="text" aria-label="Nom du plat">'
       + '      <div class="na-rplus" id="naPlatPlus"></div>'
+      /* Quand ce repas a été pris. Discret tant que c'est maintenant, marqué
+         dès que ce ne l'est plus — c'est l'écart qui doit se voir. */
+      + '      <button class="na-quand" id="naQuand" type="button">'
+      + '        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/>'
+      + '        <path d="M12 7v5l3.2 2"/></svg><span id="naQuandT"></span></button>'
       + '    </div>'
       +      rgsHTML()
       + '    <div class="na-vigns" id="naVign"></div>'
@@ -999,6 +1063,22 @@
       + '      <svg viewBox="0 0 24 24" aria-hidden="true">'
       + '        <path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>'
       + '      Voir le détail</button>'
+      + '    <div class="na-quand-sh" id="naQuandSh" hidden>'
+      + '      <div class="na-quand-bx">'
+      + '        <div class="na-sec">Quand l’avez-vous mangé ?<i></i></div>'
+      + '        <div class="na-quand-rac">'
+      + '          <button type="button" data-q="hier">Hier</button>'
+      + '          <button type="button" data-q="auj">Aujourd’hui</button>'
+      + '          <button type="button" data-q="maintenant">Maintenant</button>'
+      + '        </div>'
+      + '        <div class="na-quand-ch">'
+      + '          <label>Date<input type="date" id="naQDate"></label>'
+      + '          <label>Heure<input type="time" id="naQHeure"></label>'
+      + '        </div>'
+      + '        <div class="na-quand-w" id="naQuandW"></div>'
+      + '        <button class="na-btn primary" id="naQuandOk" type="button">C’est noté</button>'
+      + '      </div>'
+      + '    </div>'
       + '    <div class="na-rsheet" id="naRSheet">'
       + '      <div class="na-poign"></div>'
       + '      <div class="na-sec">Valeurs nutritionnelles<i></i></div>'
@@ -1450,6 +1530,8 @@
      ouverte — c'est ici qu'on retire, corrige ou ajoute. */
   function rendreRecap() {
     majNoms();
+    brancherQuand();
+    majQuand();
     majPhoto();
     /* ⚠️ Le filet des anneaux. Ils naissent à `opacity:0` et n'apparaissent que
        par leur animation : sur une page qui ne peint pas, ils seraient
@@ -1535,6 +1617,91 @@
   /* Le nom du plat photographié reste modifiable — l'IA se trompe parfois,
      et la saisie manuelle part d'un nom générique. Les plats ajoutés
      ensuite s'affichent en dessous, et se retrouvent dans le détail. */
+  /* ═══ Le réglage du moment ════════════════════════════════════════════════ */
+
+  function deuxCh(n) { return String(n).padStart(2, '0'); }
+
+  function majQuand() {
+    var b = q('#naQuand'), t = q('#naQuandT');
+    if (!b || !t) return;
+    t.textContent = libelleMoment();
+    /* L'ambre ne marque QUE le changement de JOUR. Une heure différente sur la
+       journée en cours ne contredit pas les anneaux de l'écran — un autre jour,
+       si. Tout marquer en ambre aurait rendu le signal muet à force d'être là. */
+    b.classList.toggle('autre', !momentEstAujourdhui());
+  }
+
+  function ouvrirQuand() {
+    var sh = q('#naQuandSh');
+    if (!sh) return;
+    var d = momentDate();
+    q('#naQDate').value = Natty.jour(d);
+    q('#naQHeure').value = deuxCh(d.getHours()) + ':' + deuxCh(d.getMinutes());
+    /* ⚠️ Pas de date future : un repas qu'on n'a pas encore mangé n'a rien à
+       faire dans le suivi, et il fausserait les moyennes en attendant. */
+    q('#naQDate').max = today();
+    majAvertQuand();
+    sh.hidden = false;
+  }
+
+  function lireQuand() {
+    var jd = q('#naQDate').value, hh = q('#naQHeure').value || '12:00';
+    if (!jd) return null;
+    var pj = jd.split('-'), ph = hh.split(':');
+    // Construit en LOCAL, morceau par morceau : `new Date('2026-09-04T12:00')`
+    // est interprété différemment selon les navigateurs et les versions.
+    var d = new Date(+pj[0], +pj[1] - 1, +pj[2], +ph[0] || 0, +ph[1] || 0, 0, 0);
+    if (isNaN(d.getTime())) return null;
+    // Une minute dans le futur suffit à fausser « ce qui reste aujourd'hui ».
+    if (d.getTime() > Date.now()) d = new Date();
+    return d;
+  }
+
+  function majAvertQuand() {
+    var w = q('#naQuandW'); if (!w) return;
+    var d = lireQuand();
+    var autre = d && Natty.jour(d) !== today();
+    w.textContent = autre
+      ? 'Ce repas comptera sur le ' + d.toLocaleDateString('fr-FR',
+          { weekday: 'long', day: 'numeric', month: 'long' })
+        + ' — pas sur aujourd’hui. Les anneaux de cet écran, eux, parlent d’aujourd’hui.'
+      : '';
+  }
+
+  function brancherQuand() {
+    var b = q('#naQuand'); if (!b || b.dataset.pose) return;
+    b.dataset.pose = '1';
+    b.addEventListener('click', ouvrirQuand);
+    var sh = q('#naQuandSh');
+    sh.addEventListener('click', function (e) { if (e.target === sh) sh.hidden = true; });
+    sh.querySelectorAll('[data-q]').forEach(function (r) {
+      r.addEventListener('click', function () {
+        var n = new Date();
+        if (r.dataset.q === 'hier') n.setDate(n.getDate() - 1);
+        q('#naQDate').value = Natty.jour(n);
+        if (r.dataset.q === 'maintenant') {
+          q('#naQHeure').value = deuxCh(n.getHours()) + ':' + deuxCh(n.getMinutes());
+        }
+        majAvertQuand();
+      });
+    });
+    ['naQDate', 'naQHeure'].forEach(function (id) {
+      q('#' + id).addEventListener('change', majAvertQuand);
+      q('#' + id).addEventListener('input', majAvertQuand);
+    });
+    q('#naQuandOk').addEventListener('click', function () {
+      var d = lireQuand();
+      /* On ne garde un moment explicite que s'il diffère vraiment de maintenant :
+         sinon `MOMENT` figerait l'heure au moment du réglage, et un repas noté
+         dix minutes plus tard porterait une heure fausse — donc, potentiellement,
+         un autre créneau. */
+      MOMENT = (d && Math.abs(d.getTime() - Date.now()) > 90000) ? d : null;
+      q('#naQuandSh').hidden = true;
+      majQuand();
+      majAnneaux();
+    });
+  }
+
   function majNoms() {
     q('#naPlatNom').value = S.plats[0] ? S.plats[0].nom : '';
     q('#naPlatPlus').textContent = S.plats.length > 1
@@ -2078,9 +2245,19 @@
         var ings = pl.ingredients.filter(function (g) { return (g.nom || '').trim(); });
         if (!ings.length) continue;
         var photoUrl = await televerser(pl.file);
+        /* ⚠️ `created_at` EST ENVOYÉ, et c'est lui qui compte. `meal_date` ne
+           sert qu'à l'historique ; le bilan, les créneaux et la semaine lisent
+           tous `created_at`. Envoyer l'un sans l'autre donnerait un repas
+           antidaté dans une liste et daté d'aujourd'hui dans tous les calculs.
+           `toISOString()` est ici le BON choix — contrairement au calcul d'un
+           jour local, où c'est le piège n° 1 : on veut l'instant absolu, que
+           PostgreSQL rangera dans son `timestamptz` et que `new Date(...)`
+           relira en heure locale. L'aller-retour est exact. */
+        var quandISO = MOMENT ? MOMENT.toISOString() : null;
         var saved = await Natty.sbPost('meals', {
           user_id: Natty.USER_ID, name: pl.nom || 'Repas',
-          photo_url: photoUrl, meal_date: today(),
+          photo_url: photoUrl, meal_date: momentJour(),
+          created_at: quandISO || undefined,
           /* ⚠️ PRIVÉ par défaut, et c'est tout le point de l'étape suivante :
              avant, tout plat enregistré partait dans le fil sans que personne
              ne l'ait demandé. Si la colonne n'existe pas sur l'instance,
@@ -2091,7 +2268,8 @@
           PARTAGE_OK = false;
           return Natty.sbPost('meals', {
             user_id: Natty.USER_ID, name: pl.nom || 'Repas',
-            photo_url: photoUrl, meal_date: today()
+            photo_url: photoUrl, meal_date: momentJour(),
+            created_at: quandISO || undefined
           });
         });
         var meal = saved && saved[0];
@@ -2484,6 +2662,12 @@
     opts = opts || {};
     if (!dom) build();
     S = { plats: [], cur: -1, file: null, photoDataUrl: null };
+    /* ⚠️ REMIS À ZÉRO À CHAQUE OUVERTURE. `MOMENT` vit hors de `S` (la feuille
+       de réglage est construite une fois pour toutes) : sans cette ligne, un
+       petit déjeuner antidaté à hier ferait porter la même date au dîner noté
+       le soir même — et rien à l'écran ne l'expliquerait, puisque l'overlay
+       s'ouvre sur la prise de vue et non sur le récap. */
+    MOMENT = null;
     chargerCibles();           // en tâche de fond ; rappelle majAnneaux() en fin
     dom.classList.add('on');
     document.body.style.overflow = 'hidden';   // jamais position:fixed (scroll iOS)
