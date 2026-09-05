@@ -29,6 +29,7 @@
     "@capacitor/push-notifications": "^8.1.2"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5"
+    "@capacitor/assets": "^3.0.5",
+    "@mediapipe/tasks-vision": "^1.0.1"
   }
 }

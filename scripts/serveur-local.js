@@ -34,7 +34,12 @@ const TYPES = {
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
   '.ico':  'image/x-icon',
-  '.woff2':'font/woff2'
+  '.woff2':'font/woff2',
+  /* ⚠️ `application/wasm` est OBLIGATOIRE, pas cosmétique :
+     `WebAssembly.instantiateStreaming()` refuse tout autre type et
+     MediaPipe échoue alors sur un message qui parle de réseau. */
+  '.wasm': 'application/wasm',
+  '.tflite':'application/octet-stream'
 };
 
 /* ── Écriture d'une image recompressée par le navigateur ──────────────────────
