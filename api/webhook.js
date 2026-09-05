@@ -77,16 +77,41 @@ export default async function handler(req) {
       const userId = session.metadata?.user_id;
       if (!userId) return new Response('ok', { status: 200 });
 
+      /* 🔴 ⚠️ UN ACHAT À L'UNITÉ N'EST PAS UN ABONNEMENT — défaut PRÉEXISTANT,
+         apparu avec la commande au plat. `checkout.session.completed` se
+         déclenche AUSSI pour un paiement unique, où `session.subscription` est
+         nul : on interrogeait donc `/v1/subscriptions/null`, et on insérait
+         dans `abonnements` une ligne « 3_repas » sans identifiant
+         d'abonnement. Conséquence visible : la pastille « ★ Abonné » de la
+         liste clients — qui se fonde sur la PRÉSENCE d'une ligne active —
+         s'allumait pour quelqu'un ayant acheté un seul plat.
+         La session porte déjà `metadata[type]` : on s'en sert. */
+      if (session.metadata?.type === 'unite' || !session.subscription) {
+        return new Response('ok', { status: 200 });
+      }
+
       // Récupérer les détails de l'abonnement
       const subRes = await fetch('https://api.stripe.com/v1/subscriptions/' + session.subscription, {
         headers: { 'Authorization': 'Bearer ' + process.env.STRIPE_SECRET_KEY }
       });
       const sub = await subRes.json();
-      const priceId = sub.items?.data[0]?.price?.id;
+      const ligne = sub.items?.data?.[0];
+      const priceId = ligne?.price?.id;
 
-      const PRICE_3 = process.env.STRIPE_PRICE_3_REPAS;
-      const PRICE_4 = process.env.STRIPE_PRICE_4_REPAS;
-      const formule = priceId === PRICE_4 ? '4_repas' : '3_repas';
+      /* ⚠️ LA FORMULE NE SE DÉDUIT PLUS DU PRIX. Depuis que l'abonnement se
+         vend au plat, un SEUL prix sert à toutes les formules et c'est la
+         quantité qui les distingue — comparer l'identifiant rendrait « 3_repas »
+         pour tout le monde, y compris un abonnement à 6 plats.
+         Trois sources, de la plus fiable à la plus ancienne : la métadonnée
+         posée par `api/checkout.js`, la quantité de la ligne, puis les deux
+         identifiants historiques. */
+      const PRICE_3 = process.env.STRIPE_PRICE_3_REPAS || 'price_1TbhMB0TTrkVKRpiPvbGHLyI';
+      const PRICE_4 = process.env.STRIPE_PRICE_4_REPAS || 'price_1TbhWk0TTrkVKRpiFNYOOcEJ';
+      const parMeta = Number(sub.metadata?.repas || session.metadata?.repas);
+      const parQte  = process.env.STRIPE_PRICE_ABO && priceId === process.env.STRIPE_PRICE_ABO
+                        ? Number(ligne?.quantity) : NaN;
+      const n = [parMeta, parQte].find(v => Number.isFinite(v) && v > 0);
+      const formule = n ? n + '_repas' : (priceId === PRICE_4 ? '4_repas' : '3_repas');
 
       await supabase('abonnements', 'POST', {
         user_id: userId,
