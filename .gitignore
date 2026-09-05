@@ -22,3 +22,13 @@ design/**/*Feijoada.html
 # suffirait à les publier sur un dépôt public.
 .env*
 .vercel/
+
+# Photos de personnes réelles, déposées pour régler l'étalonnage de la photo de
+# progression (`_test-photo-progression.html`).
+#
+# ⚠️ ELLES NE DOIVENT JAMAIS ENTRER DANS LE DÉPÔT. Ce sont des visages et des
+# corps identifiables, et ce dépôt part sur GitHub : une fois committées, elles
+# resteraient dans l'historique même après suppression. Le même `git add -A`
+# malheureux qui a emporté deux sessions dans e01e20b suffirait.
+# Elles sont servies en local par scripts/serveur-local.js, et c'est tout.
+_photos-test/
