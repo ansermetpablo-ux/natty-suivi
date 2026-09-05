@@ -84,6 +84,16 @@ Modifier fichier HTML sur GitHub → Commit → Vercel redéploie automatiquemen
 - **Cloudinary cloud** : `dujji1s6g`
 - **Cloudinary preset** : `meal_photos` (unsigned)
 - **Stripe price IDs** : `price_1TbhMB0TTrkVKRpiPvbGHLyI` (3 repas/sem — 27€), `price_1TbhWk0TTrkVKRpiFNYOOcEJ` (4 repas/sem — 36€)
+  > ⚠️⚠️ **CES DEUX PRIX SONT « À PLAT », PAS UNITAIRES** — ce sont 3 et 4 repas
+  > DÉJÀ multipliés. Depuis la refonte de l'offre (2026-09-05), l'abonnement se
+  > vend **au plat** et Stripe multiplie une quantité : leur passer
+  > `quantity: 5` facturerait **135 € au lieu de 45**. Le prix unitaire vit dans
+  > **`STRIPE_PRICE_ABO`** (9 €/semaine/plat), et **`STRIPE_PRICE_UNITE`**
+  > (10,50 €, paiement unique) pour la commande sans engagement. 🔄 **Aucun des
+  > deux n'existe encore** : mesuré le 2026-09-05, `GET /api/checkout` en prod
+  > répond `{"unite":false}`. Tant qu'ils manquent, l'écran ne propose que 3 et 4
+  > et le serveur refuse tout autre nombre en **503** — dégradation annoncée, pas
+  > repli silencieux.
 - **Stripe public key** : `pk_test_51TK0Kp0TTrkVKRpi...` (en variable Vercel `STRIPE_PUBLIC_KEY`)
 - **Stripe secret key** : en variable Vercel `STRIPE_SECRET_KEY` (ne jamais committer)
 - **Resend** : clé dans variable d'environnement Vercel `RESEND_API_KEY`
@@ -3647,7 +3657,7 @@ Notifications email via Resend.
 ### `onboarding.html`
 Questionnaire d'onboarding client — 7 étapes.
 
-### `api/checkout.js`
+### `api/checkout.js` — un prix unitaire, une quantité
 Crée une session Stripe Checkout. Handler serverless classique (`export default async function handler`, pas edge).
 
 - Parse manuel du body (fallback si `req.body` vide/string via lecture stream), lit `{priceId, userId, token}`.
