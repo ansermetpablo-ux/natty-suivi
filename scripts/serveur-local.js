@@ -77,7 +77,7 @@ function ecrire(req, res) {
   });
 }
 
-http.createServer((req, res) => {
+const serveur = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url.split('?')[0] === '/__ecrire') { ecrire(req, res); return; }
 
   let rel = decodeURIComponent(req.url.split('?')[0]);
@@ -95,4 +95,22 @@ http.createServer((req, res) => {
     });
     res.end(buf);
   });
-}).listen(PORT, () => console.log('Dépôt servi sur http://localhost:' + PORT));
+});
+
+/* ⚠️ UN PORT DÉJÀ PRIS N'EST PAS UNE PANNE, C'EST PRESQUE TOUJOURS CE MÊME
+   SERVEUR DÉJÀ LANCÉ — dans un autre onglet de terminal, ou par une session
+   Claude Code. Sans ce gestionnaire, Node répond par 25 lignes de trace sur un
+   `EADDRINUSE` : on croit à un fichier cassé et on relance trois fois. On dit
+   donc quoi faire, et on sort proprement. */
+serveur.on('error', (e) => {
+  if (e.code === 'EADDRINUSE') {
+    console.error('\nLe port ' + PORT + ' est déjà pris — le serveur tourne sans doute déjà.');
+    console.error('  • Ouvrir directement   http://localhost:' + PORT);
+    console.error('  • Voir qui l\'occupe    lsof -nP -iTCP:' + PORT + ' -sTCP:LISTEN');
+    console.error('  • Ou servir ailleurs   node scripts/serveur-local.js ' + (PORT + 1) + '\n');
+    process.exit(1);
+  }
+  throw e;
+});
+
+serveur.listen(PORT, () => console.log('Dépôt servi sur http://localhost:' + PORT));
