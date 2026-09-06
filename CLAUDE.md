@@ -89,11 +89,23 @@ Modifier fichier HTML sur GitHub → Commit → Vercel redéploie automatiquemen
   > vend **au plat** et Stripe multiplie une quantité : leur passer
   > `quantity: 5` facturerait **135 € au lieu de 45**. Le prix unitaire vit dans
   > **`STRIPE_PRICE_ABO`** (9 €/semaine/plat), et **`STRIPE_PRICE_UNITE`**
-  > (10,50 €, paiement unique) pour la commande sans engagement. 🔄 **Aucun des
-  > deux n'existe encore** : mesuré le 2026-09-05, `GET /api/checkout` en prod
-  > répond `{"unite":false}`. Tant qu'ils manquent, l'écran ne propose que 3 et 4
-  > et le serveur refuse tout autre nombre en **503** — dégradation annoncée, pas
-  > repli silencieux.
+  > (10,50 €, paiement unique) pour la commande sans engagement.
+  > ✅ **LES DEUX PRIX EXISTENT** — créés dans le Dashboard le 2026-09-06 :
+  > `price_1UCgvO0TTrkVKRpir8ZWsZBg` (« Repas Natty — abonnement hebdomadaire »,
+  > 9,00 € récurrent hebdomadaire, `prod_VD79IZoHuvtCSQ`) et
+  > `price_1UCgwC0TTrkVKRpicY9OHW6D` (« Repas Natty — à l'unité », 10,50 €
+  > ponctuel, `prod_VD7AdHTgrU0W7Z`).
+  > ⚠️ **Dans le MÊME mode que les deux anciens**, et c'est ce qu'il fallait
+  > vérifier avant de les créer : un prix est propre à son mode, un prix de test
+  > est invisible en production. La preuve n'est pas le libellé de l'interface
+  > mais l'identifiant — la fiche « 3 repas / semaine » de ce Dashboard porte
+  > `price_1TbhMB0TTrkVKRpiPvbGHLyI`, exactement celui du code. Le chemin ne
+  > contient pas `/test/`, donc c'est le mode réel.
+  > 🔄 **Restent à poser en variables Vercel** : tant que `STRIPE_PRICE_ABO`
+  > manque côté serveur, `GET /api/checkout` répond `{"unite":false,"abo":false}`,
+  > l'écran ne propose que 3 et 4 (via les anciens identifiants) et le serveur
+  > refuse tout autre nombre en **503** — dégradation annoncée, pas repli
+  > silencieux.
 - **Stripe public key** : `pk_test_51TK0Kp0TTrkVKRpi...` (en variable Vercel `STRIPE_PUBLIC_KEY`)
 - **Stripe secret key** : en variable Vercel `STRIPE_SECRET_KEY` (ne jamais committer)
 - **Resend** : clé dans variable d'environnement Vercel `RESEND_API_KEY`
