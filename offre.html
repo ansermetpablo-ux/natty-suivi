@@ -173,7 +173,7 @@ body:not(.vue-plats) .wrapper { padding-bottom: 96px; }
 /* ⚠️ La rangée DÉFILE plutôt que de passer à la ligne : à sept choix sur un
    écran de 375 px, un retour à la ligne casserait la lecture en deux paquets
    inégaux et pousserait les onglets sous le pli. */
-.repas-row { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px;
+.repas-row { position: relative; display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px;
   scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .repas-row::-webkit-scrollbar { display: none; }
 .repas-row button { flex: 0 0 auto; min-width: 52px; padding: 11px 6px; border-radius: 15px;
@@ -858,9 +858,41 @@ function selectMode(m) {
 
 function choisirRepas(n) {
   selectedFormule = n;
-  document.querySelectorAll("#repasRow button").forEach(b =>
-    b.classList.toggle("on", Number(b.dataset.n) === n));
+  let actif = null;
+  document.querySelectorAll("#repasRow button").forEach(b => {
+    const cible = Number(b.dataset.n) === n;
+    b.classList.toggle("on", cible);
+    if (cible) actif = b;
+  });
   majTotalRepas();
+
+  /* ⚠️ ON RAMÈNE LE CHOIX DANS LE CHAMP DE VISION. À dix pastilles sur un
+     écran de 375 px, la rangée défile : mesuré, 596 px de contenu pour 343 de
+     large. Sans ce recentrage, choisir « 10 » sélectionne une pastille qui
+     sort de l'écran — et en revenant à l'étape 1 on ne voit plus ce qu'on a
+     pris.
+     ⚠️ On écrit `scrollLeft` à la main plutôt que d'appeler `scrollIntoView` :
+     celui-ci fait aussi défiler les ancêtres, donc la PAGE, et déplacerait le
+     tunnel sous le doigt pour recentrer un bouton. */
+  const row = document.getElementById("repasRow");
+  if (row && actif) {
+    /* ⚠️ `offsetLeft` se mesure contre le premier ANCÊTRE POSITIONNÉ. Sans le
+       `position:relative` de `.repas-row`, il se comptait depuis le corps de la
+       page et le recentrage visait à côté. */
+    const max = row.scrollWidth - row.clientWidth;
+    const vise = Math.max(0, Math.min(
+      actif.offsetLeft - (row.clientWidth - actif.offsetWidth) / 2, max));
+    row.scrollTo({ left: vise, behavior: "smooth" });
+    /* ⚠️ ET UN FILET, parce que l'état final ne doit jamais dépendre d'une
+       animation : une page qui ne peint pas — app en arrière-plan, onglet
+       caché — gèle le défilement doux à sa première image. Mesuré au banc,
+       `scrollLeft` restait à 16 pour une cible à 253. La pastille choisie
+       serait alors hors de l'écran, c'est-à-dire invisible au moment précis où
+       elle vient d'être choisie. */
+    setTimeout(function () {
+      if (Math.abs(row.scrollLeft - vise) > 2) row.scrollLeft = vise;
+    }, 420);
+  }
 }
 
 function majTotalRepas() {

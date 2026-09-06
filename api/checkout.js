@@ -1,8 +1,12 @@
-/* Les bornes du nombre de repas par semaine, côté serveur — c'est la seule
-   place qui compte : un POST bricolé ne passe pas par l'écran. Sept jours
-   suffisent à couvrir un plat par jour ; au-delà, c'est une commande, pas un
-   abonnement (et la commande à l'unité existe pour ça). */
-const REPAS_MIN = 1, REPAS_MAX = 7;
+/* Les bornes du nombre de repas par semaine, côté serveur — c'est la SEULE
+   place qui compte : un POST bricolé ne passe pas par l'écran, qui lit d'ailleurs
+   ces valeurs par le GET plutôt que d'en tenir une copie.
+   Dix, et non sept : un plat par jour n'est pas le plafond réel, quelqu'un qui
+   fait livrer déjeuner ET dîner sur une partie de la semaine dépasse la
+   douzaine de repas. Le plafond n'est pas là pour dire ce qui est raisonnable,
+   il est là pour qu'une quantité bricolée ne crée pas une session à quatre
+   chiffres. */
+const REPAS_MIN = 1, REPAS_MAX = 10;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
