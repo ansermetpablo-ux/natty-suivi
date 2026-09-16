@@ -71,6 +71,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
    l'information qu'on cherche d'un coup d'œil dans la liste. */
 .ctag-abo     { background: var(--black); color: #fff; box-shadow: none; font-weight: 600; }
 .ctag-sansabo { background: transparent; color: var(--muted); box-shadow: none; border: 1px solid rgba(154,154,170,0.35); }
+.cl-avert { background: var(--al); color: var(--amber); border-radius: 12px; padding: 10px 14px; font-size: 12px; margin-bottom: 10px; line-height: 1.5; }
+.cl-avert code { background: rgba(0,0,0,.07); padding: 1px 5px; border-radius: 5px; font-size: 11px; }
 .client-scores { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; flex-shrink: 0; }
 .score-mini { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
 .score-dot  { width: 8px; height: 8px; border-radius: 50%; }
@@ -635,6 +637,7 @@ input[type="file"] { display: none; }
             <div class="stat-card"><div class="stat-val" id="statTotal">–</div><div class="stat-lbl">Clients</div></div>
             <div class="stat-card"><div class="stat-val" id="statCette">–</div><div class="stat-lbl">Cette semaine</div></div>
             <div class="stat-card"><div class="stat-val" id="statAlerte">–</div><div class="stat-lbl">Alertes</div></div>
+            <div class="stat-card"><div class="stat-val" id="statAFinir">–</div><div class="stat-lbl">Questionnaire à finir</div></div>
           </div>
           <div class="filters">
             <div class="filter-chip on" id="filterTous">Tous</div>
@@ -642,6 +645,8 @@ input[type="file"] { display: none; }
             <div class="filter-chip" id="filterCorps">🏃 Corps</div>
             <div class="filter-chip" id="filterPerf">🏆 Performance</div>
             <div class="filter-chip" id="filterAlerte">🚨 Alertes</div>
+            <div class="filter-chip" id="filterAbo">★ Abonnés</div>
+            <div class="filter-chip" id="filterAFinir">⏳ Questionnaire à finir</div>
           </div>
           <div class="clients-list" id="clientsList"><div class="loading">Chargement...</div></div>
         </div>
@@ -1159,6 +1164,8 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('filterCorps').addEventListener('click', function() { setFilter('changer_corps', this); });
   document.getElementById('filterPerf').addEventListener('click', function() { setFilter('performance', this); });
   document.getElementById('filterAlerte').addEventListener('click', function() { setFilter('alerte', this); });
+  document.getElementById('filterAbo').addEventListener('click', function() { setFilter('abonne', this); });
+  document.getElementById('filterAFinir').addEventListener('click', function() { setFilter('a_finir', this); });
   // Cat tabs menu
   document.getElementById('catAll').addEventListener('click', function() { setCatFilter('all', this); });
   document.getElementById('catPerf').addEventListener('click', function() { setCatFilter('performance', this); });
@@ -1448,65 +1455,165 @@ function switchNav(tab) {
 }
 
 // ── CLIENTS ──
+/* Ce que la liste montre, et pourquoi ce n'est plus la même (2026-09-16).
+   Elle lisait `onboarding?completed=eq.true` : elle ne montrait donc QUE les
+   gens allés au bout du questionnaire. Quelqu'un inscrit hier et arrêté à
+   l'étape 3 n'y figurait pas — or c'est précisément celui qu'il faut rappeler.
+   Et quelqu'un entré par Google ou Apple, qui n'a jamais rien écrit dans
+   `onboarding`, n'existait nulle part : relevé le 2026-09-16, 68 comptes pour
+   36 lignes affichées.
+   `auth.users` n'est pas exposé par PostgREST : d'où `membres_admin()`
+   (natty_admin_clients.sql), SECURITY DEFINER et réservée à l'équipe, qui rend
+   une ligne par COMPTE. La liste est l'union des deux, appariée sur `user_id`. */
+
+/* De deux lignes `onboarding` pour le même compte, laquelle garder ? La table
+   n'a AUCUNE contrainte d'unicité sur `user_id` et contient de vrais doublons,
+   dont des lignes sans poids ni tdee. Prendre la première venue, c'est afficher
+   une fiche vide à côté de la vraie. */
+function richesseOnb(o) {
+  if (!o) return -1;
+  return (o.completed ? 100 : 0) + (o.prenom ? 10 : 0) + (o.poids ? 5 : 0)
+       + (o.tdee ? 5 : 0) + (o.email ? 2 : 0) + (o.objectif_type ? 1 : 0);
+}
+/* Un compte sans questionnaire n'a pas de scores. Les 5/10 par défaut sont un
+   repli d'affichage, pas une mesure : les faire compter comme une alerte —
+   ou comme une absence d'alerte — reviendrait à noter quelqu'un qui n'a rien
+   répondu. */
+function estAlerte(c) {
+  return !!c._onb && ((c.score_motivation || 5) <= 3 || (c.score_rigueur || 5) <= 3);
+}
+
+let clientsAvertissement = '';
+
 async function chargerClients() {
   try {
-    let query = 'onboarding?completed=eq.true&order=created_at.desc&select=*';
-    // nutritionniste_id not in schema — load all for now
-    allClients = await sb(query);
+    // Plus de `completed=eq.true`, et pas de `limit` : un plafond deviné ferait
+    // disparaître les plus anciens sans que rien ne le dise.
+    const onbs = await sb('onboarding?order=created_at.desc&select=*');
+    const parUser = {}, sansId = [];
+    (onbs || []).forEach(o => {
+      if (!o.user_id) { sansId.push(o); return; }
+      if (richesseOnb(o) > richesseOnb(parUser[o.user_id])) parUser[o.user_id] = o;
+    });
 
-    // Abonné ou non : l'information la plus utile de la liste, et elle n'y
-    // était pas. Elle ne vit pas dans `onboarding` mais dans `abonnements`,
-    // d'où cette seconde requête plutôt qu'un champ deviné.
+    // Les comptes. Si la fonction n'est pas en place, on le DIT : une liste
+    // amputée qui a l'air complète est pire qu'une liste avec un avertissement.
+    let comptes = null; clientsAvertissement = '';
+    try {
+      comptes = await sb('rpc/membres_admin', { method: 'POST', body: '{}' });
+    } catch(e) {
+      const m = e.message || '';
+      clientsAvertissement = '<div class="cl-avert">⚠️ Liste incomplète : seuls les gens qui ont ouvert le questionnaire apparaissent. '
+        + (/PGRST202|schema cache|does not exist/.test(m)
+            ? 'La fonction <code>membres_admin()</code> n’est pas en place — exécuter <code>natty_admin_clients.sql</code>.'
+            : escHtml(m.slice(0, 160)))
+        + '</div>';
+    }
+
+    const liste = [], vus = {};
+    (comptes || []).forEach(u => {
+      const o = parUser[u.user_id];
+      vus[u.user_id] = 1;
+      liste.push(Object.assign({}, o || {}, {
+        id: o ? o.id : 'compte:' + u.user_id,
+        user_id: u.user_id,
+        email: (o && o.email) || u.email,
+        created_at: u.inscrit_le || (o && o.created_at) || null,
+        _onb: !!o, _fini: !!(o && o.completed),
+        _vu: u.derniere_connexion, _via: u.fournisseur, _confirme: u.email_confirme
+      }));
+    });
+    /* Les lignes d'onboarding sans compte derrière : héritage de l'époque Wix.
+       On les GARDE et on les marque — un back-office qui cache ce qu'il y a en
+       base ne sert à rien, et c'est justement ce qu'on vient y chercher.
+       `_orphelin` n'est posé que si les comptes ont pu être lus : sans eux, on
+       ne sait pas qu'il n'y a pas de compte, on sait qu'on n'a pas regardé. */
+    Object.keys(parUser).forEach(uid => {
+      if (vus[uid]) return;
+      liste.push(Object.assign({}, parUser[uid], { _onb: true, _fini: !!parUser[uid].completed, _orphelin: !!comptes }));
+    });
+    sansId.forEach(o => liste.push(Object.assign({}, o, { _onb: true, _fini: !!o.completed, _orphelin: !!comptes })));
+
+    liste.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    allClients = liste;
+
+    // Abonné ou non : l'information la plus utile de la liste. Elle ne vit pas
+    // dans `onboarding` mais dans `abonnements`, d'où cette seconde requête
+    // plutôt qu'un champ deviné.
     try {
       const abos = await sb('abonnements?statut=eq.actif&select=user_id,formule');
-      const parUser = {};
-      // `formule` est nulle sur les abonnements réels en base (le webhook ne
-      // la renseigne que s'il retrouve le priceId). Un abonné sans formule
-      // reste un abonné : on retient donc la PRÉSENCE de la ligne, pas sa
-      // formule — sinon la pastille afficherait « Sans abonnement » à
-      // quelqu'un qui paie.
-      (abos || []).forEach(a => { parUser[a.user_id] = a.formule || ''; });
+      const parAbo = {};
+      // `formule` est nulle sur les abonnements réels en base (le webhook ne la
+      // renseigne que s'il retrouve le priceId). Un abonné sans formule reste un
+      // abonné : on retient donc la PRÉSENCE de la ligne, pas sa formule —
+      // sinon la pastille afficherait « Sans abonnement » à quelqu'un qui paie.
+      (abos || []).forEach(a => { parAbo[a.user_id] = a.formule || ''; });
       allClients.forEach(c => {
-        c._abo = Object.prototype.hasOwnProperty.call(parUser, c.user_id);
-        c._formule = c._abo ? parUser[c.user_id] : null;
+        c._abo = Object.prototype.hasOwnProperty.call(parAbo, c.user_id);
+        c._formule = c._abo ? parAbo[c.user_id] : null;
       });
     } catch(e) { /* sans abonnements, la liste reste utilisable */ }
 
-    updateStats(allClients); afficherClients(allClients);
+    updateStats(allClients); appliquerFiltres();
   } catch(e) { document.getElementById('clientsList').innerHTML = '<div class="empty">Erreur : '+e.message+'</div>'; }
 }
 
 function updateStats(data) {
   const sept = new Date(); sept.setDate(sept.getDate()-7);
   document.getElementById('statTotal').textContent = data.length;
-  document.getElementById('statCette').textContent = data.filter(c=>new Date(c.created_at)>sept).length;
-  document.getElementById('statAlerte').textContent = data.filter(c=>(c.score_motivation||5)<=3||(c.score_rigueur||5)<=3).length;
+  document.getElementById('statCette').textContent = data.filter(c=>c.created_at && new Date(c.created_at)>sept).length;
+  document.getElementById('statAlerte').textContent = data.filter(estAlerte).length;
+  // Combien restent à relancer : c'est le chiffre qu'on vient chercher ici, et
+  // il n'existait pas — la liste d'avant ne contenait que des questionnaires finis.
+  const el = document.getElementById('statAFinir');
+  if (el) el.textContent = data.filter(c=>!c._fini).length;
 }
 
 function afficherClients(data) {
   const el = document.getElementById('clientsList');
-  if (!data||!data.length) { el.innerHTML='<div class="empty">Aucun client assigné</div>'; return; }
+  if (!data||!data.length) { el.innerHTML = clientsAvertissement + '<div class="empty">Aucun inscrit ne correspond</div>'; return; }
   const motivL = {mieux_manger:'🥦 Mieux manger', changer_corps:'🏃 Corps', performance:'🏆 Performance', sante:'❤️ Santé'};
   const maturL = {debutant:'Débutant', premiers_pas:'Premiers pas', habitudes:'Habitudes', regime_place:'Régime structuré'};
-  el.innerHTML = data.map(c => {
+  const viaL   = {google:'Google', apple:'Apple', email:'Email'};
+  const jour   = v => v ? new Date(v).toLocaleDateString('fr-FR', {day:'numeric', month:'short'}) : '–';
+  el.innerHTML = clientsAvertissement + data.map(c => {
+    const alerte = estAlerte(c);
     const sm=c.score_motivation||5, sr=c.score_rigueur||5, sn=c.score_nutrition||5;
-    const isAlerte=sm<=3||sr<=3, isWarn=(sm<=5||sr<=5)&&!isAlerte;
-    const date = new Date(c.created_at).toLocaleDateString('fr-FR', {day:'numeric', month:'short'});
+    const isWarn = c._onb && (sm<=5||sr<=5) && !alerte;
     const sc = v => v<=3?'#c77b7b':v<=6?'#ba7517':'#5a9e6f';
-    const emailTag = c.email ? '<span class="ctag ctag-green">✉️ '+c.email+'</span>' : '';
+    const nom = c.prenom ? (c.prenom+' '+(c.nom||'')).trim() : c.email ? c.email.split('@')[0] : 'Client '+(c.user_id||'').substring(0,8);
     const FORMULES = { '3_repas': '3 repas/sem', '4_repas': '4 repas/sem' };
     const aboTag = c._abo
       ? '<span class="ctag ctag-abo">★ '+(FORMULES[c._formule] || c._formule || 'Abonné')+'</span>'
       : '<span class="ctag ctag-sansabo">Sans abonnement</span>';
-    return '<div class="client-card '+(isAlerte?'alert':isWarn?'warn':'')+'" data-id="'+c.id+'">'
-      +'<div class="client-avatar '+(isAlerte?'red-av':'')+'">'+((c.user_id||'?').substring(0,2).toUpperCase())+'</div>'
-      +'<div class="client-info"><div class="client-name">'+(c.prenom ? (c.prenom+' '+(c.nom||'')).trim() : c.email ? c.email.split("@")[0] : 'Client '+(c.user_id||'').substring(0,8))+'</div>'
-      +'<div class="client-meta">'+(motivL[c.motivation]||c.motivation||'–')+' · '+(maturL[c.maturite]||c.maturite||'–')+'</div>'
-      +'<div class="client-tags">'+aboTag+(isAlerte?'<span class="ctag ctag-red">🚨 Alerte</span>':'')+(c.axe_amelioration?'<span class="ctag ctag-green">'+c.axe_amelioration+'</span>':'')+(c.poids?'<span class="ctag">'+c.poids+' kg</span>':'')+emailTag+'</div></div>'
-      +'<div class="client-scores"><div class="score-mini"><div class="score-dot" style="background:'+sc(sm)+'"></div>Motiv. '+sm+'/10</div>'
-      +'<div class="score-mini"><div class="score-dot" style="background:'+sc(sr)+'"></div>Rigueur '+sr+'/10</div>'
-      +'<div class="score-mini"><div class="score-dot" style="background:'+sc(sn)+'"></div>Nutri. '+sn+'/10</div>'
-      +'<div class="client-date">'+date+'</div></div></div>';
+    // Ce qu'on sait de quelqu'un qui n'a pas rempli le questionnaire, c'est son
+    // compte. L'écrire plutôt qu'afficher « – · – » : le tiret ne dit pas s'il
+    // manque une réponse ou une requête.
+    const meta = c._onb
+      ? (motivL[c.motivation]||c.motivation||'–') + ' · ' + (maturL[c.maturite]||c.maturite||'–')
+      : 'Compte ' + (viaL[c._via]||c._via||'email') + ' · questionnaire jamais ouvert';
+    let tags = aboTag;
+    if (!c._fini) tags += '<span class="ctag ctag-amber">⏳ '+(c._onb?'Questionnaire à finir':'Questionnaire à faire')+'</span>';
+    if (alerte) tags += '<span class="ctag ctag-red">🚨 Alerte</span>';
+    if (c._orphelin) tags += '<span class="ctag">Sans compte (ancien Wix)</span>';
+    if (c._onb && c.axe_amelioration) tags += '<span class="ctag ctag-green">'+escHtml(c.axe_amelioration)+'</span>';
+    if (c.poids) tags += '<span class="ctag">'+c.poids+' kg</span>';
+    if (c.email) tags += '<span class="ctag ctag-green">✉️ '+escHtml(c.email)+'</span>';
+    // Les scores n'existent que si le questionnaire a été rempli. Pour les
+    // autres on montre le compte — inscrit quand, revu quand —, qui est la
+    // seule chose vraie à leur sujet.
+    const droite = c._onb
+      ? '<div class="score-mini"><div class="score-dot" style="background:'+sc(sm)+'"></div>Motiv. '+sm+'/10</div>'
+        +'<div class="score-mini"><div class="score-dot" style="background:'+sc(sr)+'"></div>Rigueur '+sr+'/10</div>'
+        +'<div class="score-mini"><div class="score-dot" style="background:'+sc(sn)+'"></div>Nutri. '+sn+'/10</div>'
+      : '<div class="score-mini">Inscrit le '+jour(c.created_at)+'</div>'
+        +'<div class="score-mini">'+(c._vu ? 'Vu le '+jour(c._vu) : 'Jamais revenu')+'</div>';
+    return '<div class="client-card '+(alerte?'alert':isWarn?'warn':'')+'" data-id="'+escHtml(String(c.id))+'">'
+      +'<div class="client-avatar '+(alerte?'red-av':'')+'">'+((c.prenom||c.user_id||'?').substring(0,2).toUpperCase())+'</div>'
+      +'<div class="client-info"><div class="client-name">'+escHtml(nom)+'</div>'
+      +'<div class="client-meta">'+escHtml(meta)+'</div>'
+      +'<div class="client-tags">'+tags+'</div></div>'
+      +'<div class="client-scores">'+droite+'<div class="client-date">'+jour(c.created_at)+'</div></div></div>';
   }).join('');
   el.querySelectorAll('.client-card').forEach(card => {
     card.addEventListener('click', () => ouvrirFiche(card.dataset.id));
@@ -1519,9 +1626,21 @@ function setFilter(f, el) {
   el.classList.add('on'); appliquerFiltres();
 }
 
+/* 🔴 Cette fonction levait une ReferenceError à chaque frappe dans la recherche :
+   elle lisait `currentAbonnFilter`, qui n'était déclaré NULLE PART. La recherche
+   client ne marchait donc pas du tout, et aucune des pastilles non plus — on
+   tapait, la liste ne bougeait pas, et rien ne le disait. Et même sans ça, elle
+   ne lisait jamais `currentFilter` : `setFilter` allumait la pastille et c'est
+   tout. Les deux défauts sont morts avec cette variable. */
 function appliquerFiltres() {
-  var search = currentSearch.toLowerCase().trim();
+  var search = (currentSearch||'').toLowerCase().trim();
+  var f = currentFilter || 'tous';
+  var MOTIVATIONS = { mieux_manger:1, changer_corps:1, performance:1, sante:1 };
   var filtered = allClients.filter(function(cl) {
+    if (f === 'alerte'  && !estAlerte(cl)) return false;
+    if (f === 'abonne'  && !cl._abo) return false;
+    if (f === 'a_finir' && cl._fini) return false;
+    if (MOTIVATIONS[f]  && (cl.motivation||'') !== f) return false;
     if (!search) return true;
     var prenom = (cl.prenom||'').toLowerCase();
     var nom    = (cl.nom||'').toLowerCase();
@@ -1530,14 +1649,6 @@ function appliquerFiltres() {
     var motiv  = (cl.motivation||'').toLowerCase();
     return prenom.includes(search) || nom.includes(search) || email.includes(search) || uid.includes(search) || motiv.includes(search) || (prenom+' '+nom).includes(search);
   });
-  var abonnFilter = currentAbonnFilter;
-  if (abonnFilter && abonnFilter !== 'tous') {
-    filtered = filtered.filter(function(cl) {
-      if (abonnFilter === 'abonne') return cl._abonne;
-      if (abonnFilter === 'non_abonne') return !cl._abonne;
-      return true;
-    });
-  }
   afficherClients(filtered);
 }
 
@@ -1925,10 +2036,22 @@ async function saveEditField() {
 
 
 // ── ONGLET ALIMENTATION ──
+/* Les champs à choix multiples de `questionnaire_alim` arrivent en TABLEAU,
+   mais peuvent arriver en CHAÎNE selon la version du questionnaire qui a écrit
+   la ligne — `assets/creneaux.js` fait déjà ce test pour `snacking`. Ici, sans
+   lui, `'bureau'.forEach` lève, et c'est tout le panneau Alimentation qui
+   disparaît derrière « Erreur : … is not a function » : un panneau perdu pour
+   une ligne un peu ancienne. */
+function liste(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') return v.trim() ? [v] : [];
+  return [];
+}
+
 async function chargerFicheAlim(userId) {
   document.getElementById('ficheAlimContent').innerHTML = '<div class="loading">Chargement...</div>';
   try {
-    var data = await sbFetch('questionnaire_alim?user_id=eq.'+userId+'&limit=1');
+    var data = await sb('questionnaire_alim?user_id=eq.'+userId+'&limit=1');
     if (!data||!data.length) {
       document.getElementById('ficheAlimContent').innerHTML = '<div class="alim-empty" style="padding:20px;">Questionnaire alimentaire non complété.</div>';
       return;
@@ -1938,8 +2061,8 @@ async function chargerFicheAlim(userId) {
 
     // Allergies
     html += '<div class="sec-card"><div class="alim-section"><div class="alim-section-title">🚫 Allergies & Régimes</div>';
-    var allergies = (q.allergies||[]);
-    var regime = (q.regime||[]);
+    var allergies = liste(q.allergies);
+    var regime = liste(q.regime);
     if (allergies.length||regime.length) {
       html += '<div class="alim-chips">';
       allergies.forEach(function(a){ html += '<span class="alim-chip alim-chip-red">'+a+'</span>'; });
@@ -1972,16 +2095,18 @@ async function chargerFicheAlim(userId) {
     html += '</div></div>';
 
     // Snacking
-    if ((q.snacking||[]).length) {
+    var snacking = liste(q.snacking);
+    if (snacking.length) {
       html += '<div class="alim-section"><div class="alim-section-title">🍿 Snacking</div><div class="alim-chips">';
-      q.snacking.forEach(function(s){ html += '<span class="alim-chip">'+s+'</span>'; });
+      snacking.forEach(function(s){ html += '<span class="alim-chip">'+s+'</span>'; });
       html += '</div></div>';
     }
 
     // Ressenti
-    if ((q.ressenti||[]).length) {
+    var ressenti = liste(q.ressenti);
+    if (ressenti.length) {
       html += '<div class="alim-section"><div class="alim-section-title">💭 Ressenti</div><div class="alim-chips">';
-      q.ressenti.forEach(function(r){ html += '<span class="alim-chip alim-chip-dark">'+r+'</span>'; });
+      ressenti.forEach(function(r){ html += '<span class="alim-chip alim-chip-dark">'+r+'</span>'; });
       html += '</div></div>';
     }
 
@@ -2010,7 +2135,7 @@ async function chargerFicheRdvPanel(userId) {
   var el = document.getElementById('ficheRdvContent');
   el.innerHTML = '<div class="loading">Chargement...</div>';
   try {
-    var rdvs = await sbFetch('rdv?user_id=eq.'+userId+'&order=date_rdv.desc&select=*');
+    var rdvs = await sb('rdv?user_id=eq.'+userId+'&order=date_rdv.desc&select=*');
     var MOIS = ['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'];
     el.innerHTML = '<div class="sec-card" id="rdvListeAdmin"><div class="sec-label" style="margin-bottom:12px;">Rendez-vous</div><div id="rdvItems"></div></div>'
       + '<div class="sec-card"><div class="sec-label">+ Programmer un RDV</div>'
@@ -2094,13 +2219,57 @@ async function programmerRdvAdmin(userId) {
 }
 
 // ── ONGLET PROGRESSION ──
+/* LES CIBLES DU JOUR — protéines, lipides, glucides, calories.
+   ⚠️ LA FORMULE VIT DANS `assets/core.js` (`Natty.macrosJour` et
+   `Natty.baseObjectif`). Ceci en est une COPIE, et c'en est une parce que
+   `core.js` pose au chargement un intercepteur de clics sur tout le document
+   (`brancherLiens`) : l'importer dans un back-office de 4 900 lignes pour deux
+   formules coûterait plus cher que la copie.
+   ⚠️ Une copie est exactement ce qui a fait diverger `api/_nutrition.js` de
+   `core.js` pendant des mois, et ça s'est payé en macros fausses envoyées par
+   notification. D'où le garde-fou : `node scripts/verifier-cibles-admin.mjs`
+   compare cette fonction à celle de `core.js` sur une grille de profils. À
+   lancer après toute retouche de l'une OU de l'autre.
+   ⚠️ Ce qui existait ici était l'ANCIENNE formule (poids×2, tdee×0,25/9,
+   tdee×0,5/4), remplacée dans l'app le 2026-09-03 parce qu'elle ne faisait pas
+   le compte : à 80 kg pour 3 200 kcal ses trois macros n'en valaient que 3 041.
+   Le nutritionniste comparait donc les moyennes de son client à une cible que
+   le client, lui, ne voyait nulle part. */
+function ciblesJour(onb) {
+  onb = onb || {};
+  var poids = parseFloat(onb.poids) || 0;
+  var tdee  = parseFloat(onb.tdee)  || 0;
+  /* La base n'est pas la dépense : c'est la dépense CORRIGÉE par l'objectif
+     déclaré. Sans ça, quelqu'un qui veut prendre 5 kg se voit fixer un objectif
+     de maintien — et l'app, elle, lui en affiche un autre. */
+  var kg = parseFloat(onb.objectif_valeur) || 0, sem = parseFloat(onb.objectif_semaines) || 0;
+  var base = tdee;
+  if (tdee && kg && sem) {
+    var brut = (kg * 7700) / (sem * 7);                    // KCAL_PAR_KG
+    var plafond = tdee * (kg > 0 ? 0.20 : 0.25);           // SURPLUS_MAX / DEFICIT_MAX
+    base = Math.round(tdee + Math.max(-plafond, Math.min(plafond, brut)));
+  }
+  var out = { p: 0, l: 0, g: 0, c: Math.round(base), base: Math.round(base) };
+  if (!base && !poids) return out;
+  /* Les protéines d'abord, le reste ensuite — c'est ce qui fait que la somme
+     tombe juste. Elles se fixent au poids de corps ; les calories qu'elles
+     n'occupent pas se partagent entre lipides et glucides dans le rapport 1:2. */
+  var pr = poids ? poids * 2.0 : 0;                        // PROT_BASE
+  if (base && pr * 4 > base * 0.4) pr = base * 0.4 / 4;    // plafond à 40 % des kcal
+  var reste = Math.max(0, base - pr * 4);
+  out.p = Math.round(pr);
+  out.l = Math.round(reste / 3 / 9);
+  out.g = Math.round(reste * 2 / 3 / 4);
+  return out;
+}
+
 async function chargerFicheProg(userId) {
   document.getElementById('ficheProgContent').innerHTML = '<div class="loading">Chargement...</div>';
   try {
     var [daily, meals, onb] = await Promise.all([
-      sbFetch('daily_macros?user_id=eq.'+userId+'&order=date.desc&limit=30'),
-      sbFetch('meals?user_id=eq.'+userId+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=20'),
-      sbFetch('onboarding?user_id=eq.'+userId+'&select=poids,tdee,bmr,proteines,lipides,glucides&limit=1')
+      sb('daily_macros?user_id=eq.'+userId+'&order=date.desc&limit=30'),
+      sb('meals?user_id=eq.'+userId+'&select=*,meal_ingredients(*)&order=created_at.desc&limit=20'),
+      sb('onboarding?user_id=eq.'+userId+'&select=poids,tdee,bmr,objectif_type,objectif_valeur,objectif_semaines&limit=1')
     ]);
     var obj = onb[0]||{};
     var avgProt=0, avgLip=0, avgGluc=0, avgCal=0;
@@ -2118,8 +2287,9 @@ async function chargerFicheProg(userId) {
     html += '</div>';
 
     // Bars vs objectif
-    if (obj.tdee) {
-      var oprot = obj.proteines||0, olip = obj.lipides||0, ogluc = obj.glucides||0, ocal = obj.tdee||0;
+    if (obj.tdee || obj.poids) {
+      var cib = ciblesJour(obj);
+      var oprot = cib.p, olip = cib.l, ogluc = cib.g, ocal = cib.c;
       html += '<div style="margin-top:10px;">';
       [[' Protéines',avgProt,oprot,'#ff6b35'],[' Glucides',avgGluc,ogluc,'#ff9500'],[' Lipides',avgLip,olip,'#7b5ea7'],[' Calories',avgCal,ocal,'#34c759']].forEach(function(arr){
         var pct = arr[2]>0?Math.min(100,Math.round((arr[1]/arr[2])*100)):0;
@@ -3295,14 +3465,14 @@ async function selectionnerClientRepas(userId, el) {
 
 async function chargerMacrosClient(userId) {
   try {
-    const obs = await sb('onboarding?user_id=eq.'+userId+'&select=poids,tdee,objectif_type,activite,prenom&limit=1');
+    const obs = await sb('onboarding?user_id=eq.'+userId+'&select=poids,tdee,objectif_type,objectif_valeur,objectif_semaines,activite,prenom&limit=1');
     const ob = obs[0] || {};
-    const poids = parseFloat(ob.poids) || 70;
-    const tdee  = parseFloat(ob.tdee)  || 2000;
-    const prot = Math.round(poids * 2);
-    const gluc = Math.round(tdee * 0.5 / 4);
-    const lip  = Math.round(tdee * 0.25 / 9);
-    const cal  = Math.round(tdee);
+    // Une seule formule dans ce fichier — voir l'encadré de `ciblesJour`. Ici
+    // vivait la seconde copie, l'ancienne : elle donnait 89 g de lipides et
+    // 400 g de glucides là où l'app en affiche 95 et 427.
+    const cib = ciblesJour({ poids: parseFloat(ob.poids) || 70, tdee: parseFloat(ob.tdee) || 2000,
+                             objectif_valeur: ob.objectif_valeur, objectif_semaines: ob.objectif_semaines });
+    const prot = cib.p, gluc = cib.g, lip = cib.l, cal = cib.c;
 
     // Get nb_plats from cached offres data
     const cachedOffre = (window._repasOffres || []).find(r => r.offre.user_id === userId);
