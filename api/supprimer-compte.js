@@ -41,6 +41,9 @@ const TABLES_USER = [
   // (créée depuis) : un compte supprimé laissait ses plans de repas derrière
   // lui — donc quand la personne est chez elle et ce qu'elle mange.
   'planning_semaine',
+  // Les bons de commande portent l'adresse de livraison : personnelle. Les
+  // attributions partent avec eux (on delete cascade).
+  'bons_commande',
   // Le bilan du soir porte le ressenti, la motivation et les difficultés
   // déclarées jour après jour : ce qu'il y a de plus personnel dans l'app.
   // Ajouté en même temps qu'`assets/bilan.js` — la route ignore sans broncher

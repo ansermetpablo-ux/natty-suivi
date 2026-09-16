@@ -52,6 +52,25 @@ export default async function handler(req, res) {
     }
 
     const { priceId, userId, token, plateforme, mode, quantite, repas } = body;
+
+    /* Ce que la cuisine doit savoir du bon de commande, et qui n'était écrit
+       NULLE PART jusqu'en septembre 2026 : le jour et l'adresse de livraison
+       partaient d'offre.html vers ici, et s'arrêtaient là. Ils voyagent
+       maintenant dans les métadonnées de la session Stripe, et c'est le
+       webhook — au paiement, jamais avant — qui en fait un `bons_commande`.
+       ⚠️ Une valeur de métadonnée Stripe est limitée à 500 caractères : on
+       tronque l'adresse plutôt que de faire échouer le paiement dessus. */
+    const livraison = {
+      jour:    typeof body.jourLivraison === 'string' ? body.jourLivraison.slice(0, 20) : '',
+      adresse: typeof body.adresse === 'string' ? body.adresse.slice(0, 480) : '',
+      // Les plats choisis à l'unité : [{id, n}] — l'attribution en cuisine
+      // part de là. Bornée elle aussi.
+      plats:   Array.isArray(body.plats)
+        ? JSON.stringify(body.plats.slice(0, 20).map(function (p) {
+            return { id: String(p && p.id || '').slice(0, 40), n: Math.max(1, Math.floor(Number(p && p.n) || 1)) };
+          })).slice(0, 490)
+        : ''
+    };
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
     // ⚠️ Ne jamais journaliser le body : offre.html y met l'adresse de
@@ -92,7 +111,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Quantité invalide (1 à 20 plats)' });
       }
       return await creerSession({
-        res, STRIPE_SECRET_KEY, token, userId, plateforme,
+        res, STRIPE_SECRET_KEY, token, userId, plateforme, livraison,
         priceId: PRIX_UNITE, quantite: n, stripeMode: 'payment'
       });
     }
@@ -140,7 +159,7 @@ export default async function handler(req, res) {
     }
 
     return await creerSession({
-      res, STRIPE_SECRET_KEY, token, userId, plateforme,
+      res, STRIPE_SECRET_KEY, token, userId, plateforme, livraison,
       priceId: PRIX_ABO || LEGACY[n],
       quantite: PRIX_ABO ? n : 1,
       stripeMode: 'subscription', repas: n
@@ -160,7 +179,7 @@ export default async function handler(req, res) {
    justement coûté le piège de la WebView (§8). */
 async function creerSession(o) {
   const { res, STRIPE_SECRET_KEY, token, userId, plateforme,
-          priceId, quantite, stripeMode, repas } = o;
+          priceId, quantite, stripeMode, repas, livraison } = o;
   const origin = 'https://natty-suivi.vercel.app';
   const unique = stripeMode === 'payment';
 
@@ -191,9 +210,19 @@ async function creerSession(o) {
      Le lire dans la quantité de la ligne serait possible mais fragile : elle
      vaut 1 sur le chemin historique, où c'est le prix qui porte le nombre. */
   if (repas) params.append('metadata[repas]', String(repas));
+  // Jour, adresse et plats : lus par le webhook pour créer le bon de commande.
+  // Sur un abonnement ils vont AUSSI sur la souscription, parce que c'est elle
+  // que `invoice.paid` porte à chaque semaine suivante — la session, elle, ne
+  // sert qu'à la première.
+  const liv = livraison || {};
+  if (liv.jour)    params.append('metadata[livraison]', liv.jour);
+  if (liv.adresse) params.append('metadata[adresse]', liv.adresse);
+  if (liv.plats)   params.append('metadata[plats]', liv.plats);
   if (!unique) {
     params.append('subscription_data[metadata][user_id]', userId || '');
     if (repas) params.append('subscription_data[metadata][repas]', String(repas));
+    if (liv.jour)    params.append('subscription_data[metadata][livraison]', liv.jour);
+    if (liv.adresse) params.append('subscription_data[metadata][adresse]', liv.adresse);
   }
 
   const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {

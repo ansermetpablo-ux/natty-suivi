@@ -621,6 +621,7 @@ input[type="file"] { display: none; }
         <button class="nav-tab" id="navRdv">📅 RDV<span class="nav-badge" id="navRdvBadge">0</span></button>
         <button class="nav-tab" id="navMenu">🍽️ Menu</button>
         <button class="nav-tab" id="navCommandes">📦 Commandes</button>
+        <button class="nav-tab" id="navProduction" style="display:none;">🏭 Production</button>
         <button class="nav-tab" id="navChef" style="display:none;">👨‍🍳 Chef</button>
         <button class="nav-tab" id="navStocks" style="display:none;">📊 Stocks</button>
         <button class="nav-tab" id="navEquipe" style="display:none;">👤 Équipe</button>
@@ -897,6 +898,11 @@ input[type="file"] { display: none; }
             </div>
           </div>
         </div>
+
+        <!-- ONGLET PRODUCTION — bons de commande, attribution, calendrier,
+             journée de production. Tout le rendu vit dans
+             assets/admin-production.js ; cette page ne fournit qu'un hôte. -->
+        <div class="tab-content" id="tabProduction"><div id="npHost"></div></div>
 
         <!-- ONGLET STOCKS -->
         <div class="tab-content" id="tabStocks">
@@ -1375,24 +1381,24 @@ document.addEventListener('click', function (e) {
 
 function switchNav(tab) {
   // All known tabs
-  const ALL_TABS = ['clients','repasAProg','messages','rdv','menu','commandes','chef','stocks','equipe','signalements'];
+  const ALL_TABS = ['clients','repasAProg','messages','rdv','menu','commandes','production','chef','stocks','equipe','signalements'];
   const NAV_IDS  = {
     clients:'navClients', repasAProg:'navRepasAProg', messages:'navMessages',
     rdv:'navRdv', menu:'navMenu', commandes:'navCommandes',
     chef:'navChef', stocks:'navStocks', equipe:'navEquipe',
-    signalements:'navSignalements'
+    signalements:'navSignalements', production:'navProduction'
   };
   const TAB_IDS  = {
     clients:'tabClients', repasAProg:'tabRepasAProg', messages:'tabMessages',
     rdv:'tabRdv', menu:'tabMenu', commandes:'tabCommandes',
     chef:'tabChef', stocks:'tabStocks', equipe:'tabEquipe',
-    signalements:'tabSignalements'
+    signalements:'tabSignalements', production:'tabProduction'
   };
   const TITLES = {
     clients:'Mes clients', repasAProg:'Repas à programmer', messages:'Messages',
     rdv:'Rendez-vous', menu:'Menu', commandes:'Commandes',
     chef:'Recettes & Production', stocks:'Stocks', equipe:'Équipe',
-    signalements:'Signalements'
+    signalements:'Signalements', production:'Production'
   };
 
   // Deactivate all
@@ -1428,6 +1434,15 @@ function switchNav(tab) {
     chargerClientsRepas();
   }
   if (tab === 'chef')   chargerRecettes();
+  if (tab === 'production') {
+    // Monté une fois ; ensuite on relit la base à chaque retour sur l'onglet —
+    // une attribution faite pendant qu'un bon arrivait par le webhook doit se voir.
+    var hoteProd = document.getElementById('npHost');
+    if (hoteProd && window.NattyProd) {
+      if (!hoteProd.dataset.monte) { hoteProd.dataset.monte = '1'; NattyProd.monter(hoteProd); }
+      else NattyProd.rafraichir();
+    }
+  }
   if (tab === 'stocks') chargerStocks('dashboard');
   if (tab === 'signalements') chargerSignalements();
 }
@@ -2819,7 +2834,7 @@ let currentRole = null;
 const ROLE_CONFIG = {
   admin: {
     logo:'🛡️', title:'Accès Administrateur',
-    tabs: ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navChef','navStocks','navEquipe','navSignalements'],
+    tabs: ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navProduction','navChef','navStocks','navEquipe','navSignalements'],
     pwdOnly: true
   },
   nutritionniste: {
@@ -2829,12 +2844,12 @@ const ROLE_CONFIG = {
   },
   chef: {
     logo:'👨‍🍳', title:'Interface Chef',
-    tabs: ['navChef','navStocks'],
+    tabs: ['navProduction','navChef','navStocks'],
     pwdOnly: true
   },
   commandes: {
     logo:'📦', title:'Logistique & Commandes',
-    tabs: ['navCommandes','navStocks'],
+    tabs: ['navCommandes','navProduction','navStocks'],
     pwdOnly: true
   }
 };
@@ -3023,7 +3038,7 @@ function demarrerAppAvecRole(deSecours) {
 
   // Show/hide tabs based on role
   const cfg = currentRole ? ROLE_CONFIG[currentRole] : ROLE_CONFIG.admin;
-  const allTabs = ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navChef','navStocks','navEquipe','navSignalements'];
+  const allTabs = ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navProduction','navChef','navStocks','navEquipe','navSignalements'];
   allTabs.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = cfg.tabs.includes(id) ? 'block' : 'none';
@@ -3034,7 +3049,8 @@ function demarrerAppAvecRole(deSecours) {
   const tabMap = {
     navClients:'clients', navRepasAProg:'repasAProg', navMessages:'messages',
     navRdv:'rdv', navMenu:'menu', navCommandes:'commandes', navChef:'chef',
-    navStocks:'stocks', navEquipe:'equipe', navSignalements:'signalements'
+    navStocks:'stocks', navEquipe:'equipe', navSignalements:'signalements',
+    navProduction:'production'
   };
   switchNav(tabMap[firstTab] || 'clients');
 
@@ -3815,7 +3831,9 @@ async function ouvrirRecetteChef(id) {
     });
     html += '</div>';
     // Ingredients
-    html += '<div class="rdp-section">Ingrédients (pour 1 portion)</div>';
+    // ⚠️ Les grammages valent pour le nombre de portions du champ « Portions »
+    // ci-dessus — c'est ce que lisent l'onglet Stocks et l'onglet Production.
+    html += '<div class="rdp-section">Ingrédients (pour '+(r.nb_portions||1)+' portion'+((r.nb_portions||1)>1?'s':'')+' — le champ Portions)</div>';
     html += '<div id="ingsChefList">';
     ings.forEach(function(ing) {
       html += '<div class="ing-chef-row">'
@@ -3829,13 +3847,16 @@ async function ouvrirRecetteChef(id) {
     html += '<button class="btn-add-row" onclick="ajouterIngChef()">+ Ajouter un ingrédient</button>';
     // Etapes
     html += '<div class="rdp-section">Procédés de fabrication</div>';
+    // Ce que l'onglet Production lit sur chaque étape : sa DURÉE (sans elle,
+    // 10 min par défaut, et le plan le dit), sa PHASE (« production » = en
+    // masse, toutes commandes confondues ; « assemblage » = portion par
+    // portion, sur la balance) et PASSIF (four, repos, marinade : le
+    // cuisinier est libre pendant ce temps — l'algorithme lui donne autre
+    // chose à faire). Voir natty_production.sql.
+    html += '<div style="font-size:11px;color:var(--muted);margin:-4px 0 8px;">Durée · phase · <b>attente</b> = le cuisinier est libre (four, repos). C’est ce que lit l’onglet Production.</div>';
     html += '<div id="etapesChefList">';
     etapes.forEach(function(e, i) {
-      html += '<div class="etape-chef-row">'
-        +'<div class="etape-chef-num">'+(i+1)+'</div>'
-        +'<textarea class="etape-chef-txt" placeholder="Décrivez cette étape..." data-id="'+e.id+'" rows="2">'+(e.description||'')+'</textarea>'
-        +'<button class="btn-del-etape" data-delid="'+e.id+'" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;flex-shrink:0;">✕</button>'
-        +'</div>';
+      html += ligneEtapeChef(e, i+1);
     });
     html += '</div>';
     html += '<button class="btn-add-row" onclick="ajouterEtapeChef()">+ Ajouter une étape</button>';
@@ -3896,12 +3917,22 @@ async function sauvegarderRecetteComplete() {
     const ta = row.querySelector('.etape-chef-txt');
     const id = ta.dataset.id;
     if (!id || id==='new') continue;
+    const duree = parseInt(row.querySelector('.etape-chef-duree')?.value, 10);
+    const temp  = parseInt(row.querySelector('.etape-chef-temp')?.value, 10);
+    const corps = {
+      numero: i+1, description: ta.value,
+      titre: (row.querySelector('.etape-chef-titre')?.value || '').trim() || null,
+      duree_min: Number.isFinite(duree) && duree > 0 ? duree : null,
+      temperature_c: Number.isFinite(temp) && temp > 0 ? temp : null,
+      phase: row.querySelector('.etape-chef-phase')?.value || 'production',
+      passif: !!row.querySelector('.etape-chef-passif')?.checked,
+      poste: (row.querySelector('.etape-chef-poste')?.value || '').trim() || null
+    };
     try {
-      await fetch(SB_URL+'/rest/v1/recettes_etapes?id=eq.'+id, {
-        method:'PATCH', headers:{apikey:SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-        body:JSON.stringify({numero:i+1, description:ta.value})
-      });
-    } catch(e) {}
+      // sb() envoie le jeton d'équipe ; la clé anon seule est refusée par la
+      // RLS sur cette table depuis natty_staff.sql.
+      await sb('recettes_etapes?id=eq.'+id, { method:'PATCH', headers:{'Prefer':'return=minimal'}, body: JSON.stringify(corps) });
+    } catch(e) { toast('Étape '+(i+1)+' non enregistrée : '+e.message, 'err'); }
   }
   toast('Recette sauvegardée !','ok');
 }
@@ -3939,26 +3970,42 @@ async function supprimerIngChef(id) {
   } catch(e) {}
 }
 
+// Une ligne d'étape de la fiche technique. Les valeurs passent par des
+// attributs, jamais par du texte inline dans un onclick (règle 8).
+function ligneEtapeChef(e, num) {
+  const inp = 'border:none;background:var(--bg);border-radius:8px;padding:5px 8px;font-size:12px;box-shadow:var(--si);font-family:DM Sans,sans-serif;color:var(--black);';
+  // Pas escHtml() ici : il traduit les retours à la ligne en <br>, qui
+  // s'afficheraient en toutes lettres dans un textarea.
+  const esc = t => String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  return '<div class="etape-chef-row" style="flex-wrap:wrap;">'
+    +'<div class="etape-chef-num">'+num+'</div>'
+    +'<div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px;">'
+    +'<input class="etape-chef-titre" type="text" placeholder="Titre court (ex. Émincer les oignons)" value="'+esc(e.titre)+'" style="'+inp+'font-weight:700;">'
+    +'<textarea class="etape-chef-txt" placeholder="Décrivez cette étape..." data-id="'+e.id+'" rows="2">'+esc(e.description)+'</textarea>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);">'
+    +'<label>⏱ <input class="etape-chef-duree" type="number" min="0" placeholder="min" value="'+(e.duree_min||'')+'" style="'+inp+'width:58px;"> min</label>'
+    +'<label>🌡 <input class="etape-chef-temp" type="number" min="0" placeholder="°C" value="'+(e.temperature_c||'')+'" style="'+inp+'width:58px;"> °C</label>'
+    +'<select class="etape-chef-phase" style="'+inp+'"><option value="production"'+(e.phase!=='assemblage'?' selected':'')+'>Production (en masse)</option><option value="assemblage"'+(e.phase==='assemblage'?' selected':'')+'>Assemblage (par portion)</option></select>'
+    +'<label><input class="etape-chef-passif" type="checkbox"'+(e.passif?' checked':'')+'> attente (four, repos)</label>'
+    +'<input class="etape-chef-poste" type="text" placeholder="poste (four, plan 1…)" value="'+esc(e.poste)+'" style="'+inp+'width:130px;">'
+    +'</div></div>'
+    +'<button class="btn-del-etape" data-delid="'+e.id+'" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;flex-shrink:0;">✕</button>'
+    +'</div>';
+}
+
 async function ajouterEtapeChef() {
   if (!recetteSelectee) return;
   try {
-    const res = await sb('recettes_etapes', {method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify({recette_id:recetteSelectee, numero:99, description:''})});
-    const newId = res[0]?.id || 'new';
+    const res = await sb('recettes_etapes', {method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify({recette_id:recetteSelectee, numero:99, description:'', phase:'production', passif:false})});
+    const e = res[0] || {id:'new', description:''};
     const cont = document.getElementById('etapesChefList');
     const num = cont.querySelectorAll('.etape-chef-row').length + 1;
-    const row = document.createElement('div');
-    row.className = 'etape-chef-row';
-    const numDiv = document.createElement('div');
-    numDiv.className = 'etape-chef-num'; numDiv.textContent = num;
-    const ta = document.createElement('textarea');
-    ta.className = 'etape-chef-txt'; ta.placeholder = 'Décrivez cette étape...'; ta.dataset.id = newId; ta.rows = 2;
-    const delBtn = document.createElement('button');
-    delBtn.textContent = '✕';
-    delBtn.style.cssText = 'background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;flex-shrink:0;';
-    delBtn.addEventListener('click', function() { supprimerEtapeChef(newId); });
-    row.appendChild(numDiv); row.appendChild(ta); row.appendChild(delBtn);
+    const tmp = document.createElement('div');
+    tmp.innerHTML = ligneEtapeChef(e, num);
+    const row = tmp.firstElementChild;
+    row.querySelector('.btn-del-etape').addEventListener('click', function() { supprimerEtapeChef(this.dataset.delid); });
     cont.appendChild(row);
-    ta.focus();
+    row.querySelector('.etape-chef-txt').focus();
   } catch(e) {}
 }
 
@@ -4833,5 +4880,9 @@ async function rendreVuePreparation(plans, onbMap, stockMap, lundi) {
 }
 
 </script>
+<!-- L'onglet Production (bons de commande, attribution, calendrier, journée
+     de production). Chargé après le script principal : il s'appuie sur
+     sb(), toast() et la session d'équipe. -->
+<script src="/assets/admin-production.js"></script>
 </body>
 </html>

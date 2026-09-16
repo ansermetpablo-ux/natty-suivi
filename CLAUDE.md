@@ -3564,6 +3564,92 @@ l'autre — sinon les cartes sauteraient à chaque retour sur l'écran et on ne 
 retrouver le plat qu'on venait de voir. Un plat par cuisine au maximum, sans quoi le tirage
 sort trois currys thaïs et la « sélection du monde » n'en est plus une.
 
+### `assets/admin-production.js` — l'onglet « 🏭 Production » d'`admin.html` (2026-09-16)
+Module `NattyProd` (tout préfixé `np-`), chargé par `admin.html` seulement, monté dans
+`#npHost` à l'ouverture de l'onglet ; visible pour les rôles **admin, chef, logistique**.
+Demande de Pablo : regrouper les bons de commande, leur attribuer des recettes et des
+quantités par personne, voir un calendrier « plat × n » toutes commandes confondues avec les
+bons non attribués **en rouge**, puis un onglet production qui répartit les étapes des
+fiches techniques entre les cuisiniers présents, et passe à l'assemblage portion par
+portion avec les grammes de TOUS les ingrédients sur la balance.
+
+**Quatre vues, dans l'ordre du travail** :
+1. **Bons de commande** — filtres En cours / 🔴 À traiter / Attribués / Livrés. Un bon sans
+   attribution complète OU sans date de livraison est en rouge. Date de livraison modifiable
+   sur la carte. « Générer depuis les abonnements actifs » crée un bon par abonné pour la
+   semaine PROCHAINE s'il n'en a pas (rattrape les abonnements d'avant septembre 2026, sans
+   métadonnées) ; « + Bon manuel » pour le reste.
+2. **Attribution** (depuis un bon) — la **cible calorique par repas** de CE client, calculée et
+   expliquée (voir ci-dessous), modifiable ; puis les recettes avec un compteur de portions,
+   et pour chacune ce que pèsera la portion de ce client (« 564 g pour ce client, ×1,71 »).
+   Le compteur doit atteindre `nb_repas`. Écrit `bons_attributions` (DELETE puis POST) et le
+   statut du bon.
+3. **Calendrier** — grille mensuelle, chaque jour « Recette × n » agrégé, bons à attribuer en
+   rouge dans la case, bons sans date dans un bandeau rouge au-dessus. En dessous, la table
+   des commandes détaillées **triée par recette puis par date**. Un tap sur un jour ouvre sa
+   production.
+4. **Production** (un jour) — nombre de cuisiniers, heure de début → **Gantt** par cuisinier
+   et liste « qui fait quoi, quand » ; puis **Assemblage** : par recette, chaque portion de
+   chaque client avec les grammes de chaque ingrédient, case à cocher (localStorage).
+
+**La cible calorique d'un repas (`cibleClient`)** — `tdee` (onboarding) ÷ repas par jour
+(`questionnaire_alim.nb_repas` : `1_2`→2, `3`→3, `3_collations`→4, `grignotage`→3) donne la
+base. Si le client a **≥ 5 plats notés sur 28 jours** (`meals` + `meal_ingredients.calories`
+écrites), le plat livré couvre ce que les autres repas ne couvrent pas :
+`cible = tdee − (n − 1) × moyenne observée`, bornée à **[0,6 ; 1,6] × base**. C'est
+l'exemple de Pablo : 3 000 kcal, 2 repas, des plats à ~800 → 2 200 kcal (mesuré au banc).
+Sans tdee : 650 kcal, et c'est dit. Le raisonnement s'affiche en toutes lettres avec le mot
+« Estimation ».
+
+**La fiche technique, lue comme elle est écrite (`fiche`, `portionPour`)** :
+- `recettes.nb_portions` dit pour combien de portions les grammages sont écrits (⚠️ le
+  libellé de l'onglet Chef disait « pour 1 portion » — corrigé, il affiche le champ Portions,
+  c'est ce que lisent Stocks et Production).
+- `calories_portion` si renseignée ; sinon **déduite** des ingrédients via `ingredients_base`
+  (kcal/100 g, rapprochement mot à mot, jamais en sous-chaîne). Sans portions : la portion
+  se déduit du besoin (`cible ÷ kcal/100 g`). Sans rien de chiffré : facteur 1 et ⚠ à l'écran.
+- `facteur = cible / kcal de la portion fiche` ; grammes par ingrédient =
+  `quantite_g ÷ nb_portions × facteur`. Le facteur est **recalculé** à l'affichage depuis
+  `kcal_portion` (la colonne `facteur` n'est qu'un instantané).
+
+**L'algorithme de répartition (`dispatcher`)** — ordonnancement de liste : les étapes d'une
+recette sont **séquentielles dans l'ordre de la fiche**, tout est parallèle entre recettes.
+À chaque instant, la tâche prête dont la recette a le plus long chemin restant passe en
+premier, sur le premier cuisinier libre. Une étape **passive** (`recettes_etapes.passif` :
+four, repos, marinade) démarre dès que la précédente finit et **ne prend personne** — le
+cuisinier enchaîne sur une autre recette. Durée d'une étape active = `duree_min ×
+√(nombre de fiches à produire)` (une estimation, annoncée) ; sans `duree_min`, 10 min par
+défaut, et le plan le dit.
+> ⚠️ **L'ordre des étapes de la fiche EST l'ordre de dépendance.** Un « Cuire le riz » écrit
+> après « Mijoter 30 min » attendra la fin du mijotage ; l'écrire avant le fait tourner en
+> parallèle. C'est au chef de l'ordonner.
+
+**Onglet Chef** — chaque étape porte désormais titre, durée, température, **phase**
+(Production en masse / Assemblage par portion), **attente** et poste. Le PATCH passe par
+`sb()` (jeton d'équipe) et non plus par la clé anon, refusée par la RLS.
+
+**D'où viennent les bons** — `api/webhook.js` crée un `bons_commande` au paiement :
+achat à l'unité (`checkout.session.completed`, `type=unite`, plats choisis dans `plats`),
+première semaine d'un abonnement (même événement), puis **une par renouvellement**
+(`invoice.paid` avec `billing_reason=subscription_cycle`). Idempotent par `stripe_ref`
+(`cs_<session>` / `in_<invoice>`, unique → 409 ignoré). Le jour de livraison saisi dans
+`offre.html` (« mardi ») devient la prochaine occurrence à ≥ 2 jours ; sans jour, le bon est
+créé SANS date et ressort en rouge.
+> 🔴 ⚠️ **JOUR ET ADRESSE DE LIVRAISON N'ÉTAIENT ÉCRITS NULLE PART** avant cette session :
+> `offre.html` les envoyait à `/api/checkout`, qui les ignorait. Et un achat à l'unité ne
+> laissait AUCUNE trace en base. Ils voyagent maintenant dans les métadonnées Stripe
+> (`livraison`, `adresse`, `plats` ; 500 caractères max par valeur, adresse tronquée) et sur
+> la souscription pour les cycles suivants.
+
+**Vérifié en navigateur** (banc `_test-production.html`, doublure de `sb()` en mémoire) : les
+quatre vues, la cible de Ferreol (2 200), les grammes par portion (427 kcal/portion fiche
+recalculés depuis `ingredients_base`), l'attribution écrite et le statut qui passe à
+`attribue`, la génération depuis les abonnements, le bon manuel, le Gantt à 2 cuisiniers
+avec deux attentes qui libèrent, l'assemblage 5 + 1 portions, aucun débordement horizontal.
+🔄 **Non vérifié avec une session d'équipe réelle** : `admin.html` exige un compte staff.
+🔄 **Le webhook n'a pas été rejoué contre Stripe** — le premier vrai paiement le vérifiera ;
+`bons_commande` est à 0 ligne tant qu'aucun paiement n'a eu lieu depuis le déploiement.
+
 ### `api/claude.js`
 Proxy vers l'API Claude pour les conseils nutritionnels.
 
@@ -4050,6 +4136,26 @@ série sans refaire le calcul, et le module les recalcule toujours depuis `meals
 affiche l'écran. Si les deux divergeaient, ce sont les repas qui font foi.
 `bilan_jour` est dans `TABLES_USER` d'`api/supprimer-compte.js` — ce qu'on répond le soir sur
 sa motivation et ses difficultés est ce qu'il y a de plus personnel dans cette app.
+
+#### `bons_commande` et `bons_attributions` — ✅ **existent** (`natty_production.sql`, appliqué le 2026-09-16 via MCP Supabase)
+| `bons_commande` | | `bons_attributions` | |
+|---|---|---|---|
+| id | uuid PK | id | uuid PK |
+| user_id | text | bon_id | uuid → `bons_commande` **on delete cascade** |
+| type | `abonnement` / `unite` / `manuel` | recette_id | uuid → `recettes` on delete restrict |
+| nb_repas | integer 1..40 | nb_portions | integer > 0 |
+| jour_livraison | date (null = **en rouge**) | kcal_portion | integer — la cible retenue pour ce client |
+| semaine | date (lundi) | facteur | numeric — instantané, recalculé à l'affichage |
+| adresse | text | | unique (bon_id, recette_id) |
+| plats | jsonb `[{id, n}]` — choix à l'unité | | |
+| statut | `a_attribuer` / `attribue` / `en_production` / `livre` / `annule` | | |
+| abonnement_id / stripe_ref | uuid / text **unique** (idempotence webhook) | | |
+
+RLS activée : policy `_staff` (`est_staff()`) pour tout, `_soi` en lecture sur ses propres
+bons. Le webhook écrit avec la clé service.
+`recettes_etapes` a reçu **`phase`** (`production` / `assemblage`, défaut `production`),
+**`passif`** (bool) et **`poste`** (text). `bons_commande` est dans `TABLES_USER`
+d'`api/supprimer-compte.js` (une adresse de livraison est personnelle).
 
 #### `seances` — 🔄 **à créer** (`natty_seances.sql`)
 Le journal d'entraînement (`assets/seance.js`, §3).
@@ -4999,6 +5105,16 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ Vérifié sur 30 jours avec 8 trous volontaires (dont deux avant le premier jour noté) :
   18 segments mesurés + 11 ponts, 22 points posés, aucun débordement horizontal, légende à
   trois entrées qui passe à la ligne.
+
+**Production en cuisine : bons de commande → attribution → calendrier → dispatch (2026-09-16)**
+- ✅ **Livré** — `assets/admin-production.js`, onglet « 🏭 Production » d'`admin.html`,
+  `natty_production.sql` (appliqué), webhook et checkout qui créent les bons. Détail en §3.
+- ✅ Onglet Chef : durée, phase, attente et poste sur chaque étape de la fiche technique.
+- 🔄 **Non vérifié avec une session d'équipe réelle ni contre un vrai paiement Stripe.**
+- 🔄 Les durées scalent en √(fiches) et l'ordre des étapes vaut dépendance : deux
+  approximations à valider en cuisine, avec le chef.
+- 🔄 `commandes`, `plans_repas` et l'onglet « Repas à programmer » vivent à côté sans être
+  reliés aux bons — à fusionner ou retirer, décision de Pablo.
 
 **Le fil de la journée, la photo plein écran, l'analyse en scènes (2026-09-04, soir)**
 - ✅ **La jauge du bilan est centrée**, le pourcentage **au-dessus** de la barre et

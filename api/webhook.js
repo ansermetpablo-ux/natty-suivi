@@ -87,6 +87,15 @@ export default async function handler(req) {
          s'allumait pour quelqu'un ayant acheté un seul plat.
          La session porte déjà `metadata[type]` : on s'en sert. */
       if (session.metadata?.type === 'unite' || !session.subscription) {
+        /* Un achat à l'unité n'est pas un abonnement, mais c'est BIEN une
+           commande à préparer : elle donne un bon, avec les plats choisis. */
+        await creerBon(supabase, {
+          user_id: userId, type: 'unite',
+          nb_repas: nombreDePlats(session),
+          jour: session.metadata?.livraison, adresse: session.metadata?.adresse,
+          plats: lireJson(session.metadata?.plats),
+          stripe_ref: 'cs_' + session.id
+        });
         return new Response('ok', { status: 200 });
       }
 
@@ -113,13 +122,28 @@ export default async function handler(req) {
       const n = [parMeta, parQte].find(v => Number.isFinite(v) && v > 0);
       const formule = n ? n + '_repas' : (priceId === PRICE_4 ? '4_repas' : '3_repas');
 
-      await supabase('abonnements', 'POST', {
+      const aboRes = await supabase('abonnements', 'POST', {
         user_id: userId,
         stripe_customer_id: session.customer,
         stripe_subscription_id: session.subscription,
         formule,
         statut: 'actif',
         date_debut: new Date().toISOString(),
+      });
+      let aboId = null;
+      try { const a = await aboRes.json(); aboId = Array.isArray(a) && a[0] ? a[0].id : null; } catch (e) {}
+
+      /* La PREMIÈRE semaine de l'abonnement : un bon, tout de suite. Les
+         suivantes viennent d'`invoice.paid` (cycle), ci-dessous. La référence
+         Stripe rend la création idempotente — un webhook rejoué ne double pas
+         le bon (contrainte unique sur `stripe_ref`, donc 409, donc ignoré). */
+      await creerBon(supabase, {
+        user_id: userId, type: 'abonnement',
+        nb_repas: n || (formule === '4_repas' ? 4 : 3),
+        jour: session.metadata?.livraison || sub.metadata?.livraison,
+        adresse: session.metadata?.adresse || sub.metadata?.adresse,
+        abonnement_id: aboId,
+        stripe_ref: 'cs_' + session.id
       });
     }
 
@@ -133,6 +157,26 @@ export default async function handler(req) {
         'PATCH',
         { statut: 'actif' }
       );
+
+      /* Chaque RENOUVELLEMENT hebdomadaire est une livraison de plus, donc un
+         bon de plus. La première facture (`subscription_create`) est déjà
+         couverte par `checkout.session.completed` — la compter ici en ferait
+         deux pour la même semaine. */
+      if (invoice.billing_reason === 'subscription_cycle') {
+        const meta = invoice.subscription_details?.metadata || {};
+        let aboId = null;
+        try {
+          const r = await supabase('abonnements?stripe_subscription_id=eq.' + invoice.subscription + '&select=id&limit=1', 'GET');
+          const a = await r.json(); aboId = Array.isArray(a) && a[0] ? a[0].id : null;
+        } catch (e) {}
+        await creerBon(supabase, {
+          user_id: userId, type: 'abonnement',
+          nb_repas: Number(meta.repas) || 3,
+          jour: meta.livraison, adresse: meta.adresse,
+          abonnement_id: aboId,
+          stripe_ref: 'in_' + invoice.id
+        });
+      }
     }
 
     if (event.type === 'customer.subscription.deleted') {
@@ -151,5 +195,76 @@ export default async function handler(req) {
 
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
+}
+
+
+/* ── Le bon de commande ───────────────────────────────────────────────────
+   Créé au paiement, jamais avant. `jour` est un nom de jour de la semaine
+   (« mardi ») tel qu'offre.html le saisit : on le traduit en DATE — la
+   prochaine occurrence de ce jour, à au moins deux jours d'ici, parce qu'un
+   plat payé un lundi soir pour « mardi » ne se cuisine pas dans la nuit.
+   Sans jour, le bon est créé SANS date : il ressort en rouge dans l'admin,
+   qui la pose. Un bon sans date vaut mieux qu'un bon absent. */
+const JOURS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+
+function prochaineDate(jour) {
+  const i = JOURS.indexOf(String(jour || '').toLowerCase());
+  if (i < 0) return null;
+  const d = new Date(); d.setUTCHours(12, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + 2);
+  while (d.getUTCDay() !== i) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function lundiDe(ymd) {
+  if (!ymd) return null;
+  const d = new Date(ymd + 'T12:00:00Z');
+  const j = d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() - (j === 0 ? 6 : j - 1));
+  return d.toISOString().slice(0, 10);
+}
+
+function lireJson(s) {
+  if (!s) return null;
+  try { const v = JSON.parse(s); return Array.isArray(v) ? v : null; } catch (e) { return null; }
+}
+
+/* Le nombre de plats d'un achat à l'unité : la quantité de la ligne n'est pas
+   dans la session (il faudrait un second appel) ; les plats choisis, eux, y
+   sont, et leur somme EST la quantité facturée. Repli sur `repas` puis 1. */
+function nombreDePlats(session) {
+  const plats = lireJson(session.metadata?.plats);
+  if (plats && plats.length) {
+    const n = plats.reduce((t, p) => t + (Number(p.n) || 0), 0);
+    if (n > 0) return Math.min(40, n);
+  }
+  const r = Number(session.metadata?.repas);
+  return Number.isFinite(r) && r > 0 ? Math.min(40, r) : 1;
+}
+
+async function creerBon(supabase, b) {
+  const jour = prochaineDate(b.jour);
+  try {
+    const r = await supabase('bons_commande', 'POST', {
+      user_id: b.user_id,
+      type: b.type,
+      nb_repas: b.nb_repas,
+      jour_livraison: jour,
+      semaine: lundiDe(jour),
+      adresse: b.adresse || null,
+      plats: b.plats || null,
+      abonnement_id: b.abonnement_id || null,
+      stripe_ref: b.stripe_ref || null,
+      statut: 'a_attribuer'
+    });
+    // 409 = déjà créé pour cette référence Stripe : un webhook rejoué. Normal.
+    if (!r.ok && r.status !== 409) {
+      console.log('bon de commande non créé — %s', r.status);
+    }
+  } catch (e) {
+    // Ne jamais faire échouer le webhook pour un bon : l'abonnement, lui, est
+    // écrit. Stripe rejouerait sinon l'événement entier.
+    console.log('bon de commande — %s', e.message);
   }
 }
