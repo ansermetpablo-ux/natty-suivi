@@ -311,6 +311,92 @@ Back-office multi-rôles — accessible à `natty-suivi.vercel.app/admin.html`.
 
 **Règles inline onclick** : TOUS les onclick inline avec `''+var+''` sont interdits — causent `Unexpected string`. Toujours utiliser `data-*` + `addEventListener`.
 
+#### L'onglet Clients, et la fiche (2026-09-16)
+Quatre défauts, tous trouvés au banc sur les VRAIES fonctions extraites du fichier, aucun
+visible à la lecture ni attrapé par un contrôle de syntaxe.
+
+> 🔴 ⚠️⚠️ **`sbFetch` N'EXISTE PAS DANS `admin.html`.** C'est le nom du helper d'`assets/
+> core.js` (`Natty.sbFetch`), que ce back-office ne charge pas — et ne doit pas charger, voir
+> l'encadré de `ciblesJour` plus bas. Cinq appels, donc cinq `ReferenceError`, donc **TROIS
+> panneaux de la fiche client morts** : Alimentation, RDV, Progression. On ouvrait un client,
+> on cliquait l'onglet, il restait sur « Chargement… ». Remplacés par `sb()`, qui envoie en
+> plus le jeton d'équipe — sans lequel la RLS ne rendrait rien.
+> ⚠️ La leçon vaut au-delà : **un nom emprunté à l'app ne prouve rien dans le back-office.**
+> Les deux fichiers n'ont aucun helper en commun.
+
+> 🔴 ⚠️ **`appliquerFiltres()` LEVAIT UNE `ReferenceError` À CHAQUE FRAPPE** : elle lisait
+> `currentAbonnFilter`, déclaré nulle part (lire une variable non déclarée lève, elle ne vaut
+> pas `undefined`). **La recherche client ne marchait donc pas du tout** — on tapait, la liste
+> ne bougeait pas, rien ne le disait. Et même sans ça, la fonction ne lisait **jamais**
+> `currentFilter` : `setFilter` allumait la pastille et c'était tout, les quatre filtres ne
+> filtraient rien.
+
+> 🔴 ⚠️ **LA FICHE PROGRESSION DEMANDAIT TROIS COLONNES QUI N'EXISTENT PAS** —
+> `onboarding?select=…,proteines,lipides,glucides` répond `42703`, et PostgREST rejette alors
+> **toute** la requête (§7). Le panneau n'aurait rien affiché même une fois `sbFetch` réparé.
+
+**`ciblesJour(onb)` — LA formule des cibles, et pourquoi il y en a une copie ici.**
+Elle vit dans `assets/core.js` (`Natty.macrosJour` + `Natty.baseObjectif`). `admin.html` en
+porte une copie parce que `core.js` pose au chargement un **intercepteur de clics sur tout le
+document** (`brancherLiens`) : l'importer dans un back-office de 4 900 lignes pour deux
+formules coûterait plus cher que la copie.
+> ⚠️⚠️ **Une copie est exactement ce qui a fait diverger `api/_nutrition.js` de `core.js`.**
+> D'où le garde-fou, qui manquait là-bas : **`node scripts/verifier-cibles-admin.mjs`** extrait
+> les deux fonctions de leur fichier (jamais une recopie — une copie ne prouverait que la
+> copie) et les compare sur **245 profils × 4 valeurs**. À lancer après toute retouche de
+> l'une OU de l'autre.
+> ⚠️ Ce qui existait ici était l'**ANCIENNE** formule (poids×2, tdee×0,25/9, tdee×0,5/4),
+> remplacée dans l'app le 2026-09-03 parce qu'elle ne faisait pas le compte : à 80 kg pour
+> 3 200 kcal ses trois macros n'en valaient que 3 041. Le nutritionniste comparait donc les
+> moyennes de son client à une cible que le client ne voyait nulle part. Elle vivait en **deux**
+> exemplaires (`chargerFicheProg` et `chargerMacrosClient`) ; il n'en reste qu'un.
+> ⚠️ Elle passe par `baseObjectif` : la base n'est pas `tdee` mais la dépense **corrigée par
+> l'objectif déclaré**. Sans ça, quelqu'un qui veut prendre 5 kg se voit fixer un objectif de
+> maintien — et l'app, elle, lui en affiche un autre.
+
+**Ce que la liste montre** — l'union de `membres_admin()` (les COMPTES, §4) et des lignes
+`onboarding`, appariée sur `user_id`. Elle lisait `onboarding?completed=eq.true` : seuls les
+gens allés au bout du questionnaire.
+- Un compte sans questionnaire n'a pas de scores : on affiche son compte (inscrit le, revu le,
+  par quel fournisseur) plutôt que trois « 5/10 » de repli qui ressembleraient à des réponses.
+- ⚠️ **Les lignes d'onboarding sans compte derrière — héritage Wix — sont GARDÉES et marquées.**
+  Un back-office qui cache ce qu'il y a en base ne sert à rien : c'est ce qu'on vient y chercher.
+  Le marquage n'est posé que si les comptes ont pu être lus — sinon on ne sait pas qu'il n'y a
+  pas de compte, on sait qu'on n'a pas regardé.
+- ⚠️ **`onboarding.user_id` n'a aucune contrainte d'unicité** et la table a de vrais doublons
+  (§4) : `richesseOnb()` retient la ligne la plus renseignée, pas la première venue — sinon on
+  affiche une fiche vide à côté de la vraie.
+- Pastilles : Tous · les trois motivations · 🚨 Alertes · ★ Abonnés · ⏳ Questionnaire à finir.
+  Et une quatrième tuile, **combien restent à relancer** : c'est le chiffre qu'on vient chercher
+  ici, et il ne pouvait pas exister tant que la liste ne contenait que des questionnaires finis.
+
+**La fiche montre enfin le suivi** (2026-09-16) — les cinq tables que
+`natty_admin_clients.sql` a ouvertes en lecture à l'équipe. Panneau **Progression** : le bilan
+du soir (note, muscle et graisse **estimés**, dix derniers jours avec ressenti / motivation /
+difficulté) et les séances (date, groupes, exercices, séries, durée). Panneau
+**Alimentation** : le matériel, le garde-manger, la semaine planifiée.
+> ⚠️ **NI tonnage, NI kcal, NI stimulus dans les séances** : ils se calculent dans
+> `assets/seance.js`, et les recalculer ici en ferait une seconde version qui dériverait au
+> premier ajustement du modèle. On montre ce qui a été **saisi**.
+> ⚠️ **Le matériel s'affiche par `materiel.resume`**, la phrase composée par le navigateur et
+> rangée à côté des clés EXPRÈS pour que personne d'autre n'ait à tenir une copie du catalogue
+> des 14 appareils (§3, `assets/materiel.js`). La refaire ici serait la même erreur.
+> ⚠️ **« Estimations, pas des mesures » est écrit ici AUSSI.** C'est le mot que le membre voit
+> sur son propre écran ; un chiffre qui change de statut en changeant d'écran est un chiffre
+> qu'on ne peut plus discuter avec lui.
+> ⚠️ **Seules les lignes `portee='jour'`** du bilan sont montrées : la semaine porte la même
+> note mais sur sept jours, les mêler ferait une série qui ne compare rien.
+> ⚠️ **Plus de sortie anticipée sur un questionnaire vide** dans `chargerFicheAlim` : elle
+> rendait la main avant ces trois sections, alors que quelqu'un qui n'a pas rempli le
+> questionnaire peut parfaitement avoir un garde-manger — et c'est là qu'on a le plus besoin
+> de le voir.
+> ⚠️ **Chaque lecture est ISOLÉE** (`lireSuivi`) : une policy manquante coûte sa section et
+> l'écran nomme le SQL, au lieu de faire tomber tout le panneau.
+> ⚠️ `liste()` : les champs à choix multiples de `questionnaire_alim` (`allergies`, `regime`,
+> `snacking`, `ressenti`) arrivent en tableau, mais peuvent arriver en **chaîne** selon la
+> version du questionnaire qui a écrit la ligne — `assets/creneaux.js` fait déjà ce test. Sans
+> lui, `'bureau'.forEach` emportait tout le panneau Alimentation.
+
 ### `login.html`
 Page de connexion standalone — `natty-suivi.vercel.app/login.html`
 
@@ -2321,7 +2407,7 @@ toujours noir dans les deux thèmes pendant que son panneau suit le thème.
 🔄 **Non vérifié sur téléphone ni avec une vraie session** : tout a tourné contre des doublures
 (les 401 de la clé anon sur un jeton factice). Restent à juger sur un iPhone : la vibration de
 chaque tap (`navigator.vibrate`), le rythme des transitions, et la zone sûre du bas.
-🔄 **`natty_seances.sql` reste à exécuter.** Sans lui tout fonctionne, mais par appareil.
+✅ **`natty_seances.sql` EST exécuté** — vérifié à la clé anon le 2026-09-16 (§4). Les séances suivent donc la personne d'un appareil à l'autre.
 🔄 **Les XP des séances ne parlent ni à ceux des recettes ni à ceux de `narration.html`** —
 trois compteurs, comme déjà noté en §8. Les réunir est une décision produit.
 
@@ -4157,8 +4243,56 @@ bons. Le webhook écrit avec la clé service.
 **`passif`** (bool) et **`poste`** (text). `bons_commande` est dans `TABLES_USER`
 d'`api/supprimer-compte.js` (une adresse de livraison est personnelle).
 
-#### `seances` — 🔄 **à créer** (`natty_seances.sql`)
+#### `production_postes` et `production_etapes` — ✅ **existent** (fin de `natty_production.sql`, appliqué le 2026-09-16)
+Qui tient quel poste en cuisine ce jour-là, et quelles étapes sont faites
+(`assets/admin-production.js`, §3). Vérifié à la clé anon le 2026-09-16 : les deux répondent
+`[]` et non `PGRST205`.
+
+| `production_postes` | | `production_etapes` | |
+|---|---|---|---|
+| jour | date, **PK** avec `poste` | jour | date, **PK** avec `etape_id` |
+| poste | text, **PK** | etape_id | uuid → `recettes_etapes` **on delete cascade** |
+| cuisinier_id | text | fait | boolean |
+| cuisinier_nom | text | cuisinier_nom | text |
+| pris_at | timestamptz | fait_at | timestamptz |
+
+RLS activée, policy `est_staff()` pour tout — ce sont des données d'équipe, pas de membre.
+> ⚠️ **La clé primaire `(jour, poste)` EST le verrou**, et c'est délibéré : deux cuisiniers
+> qui prennent le même poste à la même seconde, c'est la base qui tranche, pas l'écran. Un
+> `23505` au retour veut dire « quelqu'un vient de le prendre » — le module recharge et le
+> dit, plutôt que d'annuler en silence.
+> ⚠️ `production_etapes` est écrite en `merge-duplicates` **sans** `?on_conflict=` : PostgREST
+> résout sur la clé primaire. Avec un `id` uuid, recocher une étape repartirait en **409** —
+> même piège que `meal_likes`, `membre_amis` et `notes_nutritionniste`.
+
+#### `membres_admin()` et les cinq lectures d'équipe — (`natty_admin_clients.sql`)
+Pas une table : une **fonction** `SECURITY DEFINER` qui rend une ligne par COMPTE
+(`user_id`, `email`, `inscrit_le`, `derniere_connexion`, `fournisseur`, `email_confirme`),
+plus cinq policies de lecture pour l'équipe sur `bilan_jour`, `seances`, `planning_semaine`,
+`materiel` et `garde_manger`.
+
+> ⚠️ **`auth.users` n'est PAS exposé par PostgREST**, et c'est toute la raison d'être de cette
+> fonction : sans elle, quelqu'un entré par Google ou Apple qui n'a jamais rien écrit dans
+> `onboarding` n'existe nulle part pour le back-office. Relevé le 2026-09-16 : 68 comptes pour
+> 36 lignes affichées.
+> ⚠️ **Son existence n'est PAS vérifiable à la clé anon.** `revoke … from public` + `grant
+> execute … to authenticated` fait disparaître la fonction du cache de schéma vu par `anon` :
+> l'appel répond **`PGRST202`**, exactement comme une fonction qui n'existerait pas. Le seul
+> témoin fiable est une session d'équipe. `admin.html` en tient compte — il annonce la
+> dégradation en haut de la liste et nomme le SQL, plutôt que de servir une liste amputée qui
+> aurait l'air complète.
+> ⚠️ **Les cinq policies sont en LECTURE SEULE.** L'écriture reste au membre : ce sont ses
+> réponses du soir, ses séances, son garde-manger. Un back-office qui pourrait les réécrire
+> ferait douter de tout ce qu'il affiche.
+
+#### `seances` — ✅ **existe** (`natty_seances.sql`, exécuté)
 Le journal d'entraînement (`assets/seance.js`, §3).
+
+**Relevé à la clé anon le 2026-09-16** : la table répond `[]` (donc présente, et non
+`PGRST205`), ses cinq colonnes sont là, et le témoin sur une colonne inventée répond bien
+`42703` — c'est ce qui prouve que le relevé lit vraiment le schéma. Les sections qui suivent
+décrivaient l'état d'avant ; elles sont conservées pour le RAISONNEMENT (la clé primaire,
+ce que `exos` ne doit pas porter), pas pour leur statut.
 
 | Colonne | Type | Notes |
 |---|---|---|
@@ -4758,6 +4892,26 @@ renouvellement (`Natty.jeton(true)`, nouveau paramètre) et rejoue **une** fois.
 
 ---
 
+### ⚠️ Une variable CSS inconnue n'échoue pas : elle emporte sa déclaration
+Trouvé dans `admin.html` (2026-09-16) : `--bdr` était utilisée par plusieurs
+`border-bottom:.5px solid var(--bdr)` et **définie nulle part**. Une `var()` non résolue rend
+la déclaration **invalide**, et le navigateur la jette en silence — donc aucun séparateur,
+nulle part, sans le moindre message. Même famille que `.prog-stat-val.green`, posée sur tous
+les chiffres des moyennes et jamais définie.
+**Parade** : avant d'écrire `var(--x)` dans une page, vérifier que `--x` est dans son `:root`.
+Ces pages ont chacune leur jeu de jetons (§5) et ils ne se recouvrent pas — c'est précisément
+ce qui a fait inventer `--nm-out` et `--text` dans une autre session.
+
+### ⚠️ Lire une variable JS non déclarée LÈVE — elle ne vaut pas `undefined`
+`appliquerFiltres()` d'`admin.html` lisait `currentAbonnFilter`, déclaré nulle part : chaque
+frappe dans la recherche levait une `ReferenceError`, la liste ne se repeignait jamais, et
+**rien à l'écran ne le disait**. C'est le pire des deux mondes : une fonctionnalité morte qui
+a l'air présente. Même forme que le `sbFetch` d'`admin.html`, emprunté à `assets/core.js` que
+cette page ne charge pas, et qui tuait trois panneaux de la fiche client (§3).
+**Parade** : une fonction appelée depuis un gestionnaire d'événement ne se vérifie pas à la
+lecture — l'exception meurt dans la console de l'utilisateur. Un banc qui EXTRAIT la fonction
+du fichier et l'appelle avec ses vraies entrées la trouve en trois lignes.
+
 ## 8. État d'avancement
 
 ### ✅ PABLO A TESTÉ SUR IPHONE — 2026-08-13
@@ -5031,7 +5185,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   qui faisait BAISSER le muscle quand on déclarait sa séance (21 g → 13 g), `compter()` qui
   laissait « 0 g » sur une page qui ne peint pas, et la réserve du bas qui cachait la mention
   « gardées sur cet appareil » derrière la barre d'action. Détail en §3.
-- 🔄 **`natty_seances.sql` à exécuter** : sans lui les séances restent sur l'appareil.
+- ✅ **`natty_seances.sql` exécuté** — vérifié à la clé anon le 2026-09-16 (§4). Cette entrée le réclamait depuis plusieurs sessions ; il était fait.
 - 🔄 **Non vérifié sur téléphone ni avec une vraie session.**
 - ✅ **TOUT EST CALCULÉ EXERCICE PAR EXERCICE** (second passage du 2026-09-02, « ça ne doit
   pas être uniquement 48 g »). Durée, énergie et stimulus sont des SOMMES sur les exercices :
@@ -5116,6 +5270,36 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   approximations à valider en cuisine, avec le chef.
 - 🔄 `commandes`, `plans_repas` et l'onglet « Repas à programmer » vivent à côté sans être
   reliés aux bons — à fusionner ou retirer, décision de Pablo.
+- ✅ **Le service en cuisine, poste par poste** (2026-09-16, soir) — `production_postes` et
+  `production_etapes` (§4), « Je prends » sur chacun des 5 postes, les tâches d'un poste que
+  personne n'a pris barrées en rouge et **comptées** au-dessus du Gantt, et « Mon service,
+  écran par écran » : plein écran noir, une étape par écran, les grammes de chaque ingrédient
+  sur la balance. Vérifié au banc `_test-production.html` — jour sans livraison, prise et
+  libération d'un poste, poste déjà pris par un autre, service qui avance (2/4 · 1 ✓).
+
+**Admin — la liste des inscrits et la fiche client (2026-09-16, soir)**
+- 🔴 ✅ **`sbFetch` n'existe pas dans `admin.html`** : trois panneaux de la fiche client étaient
+  morts (Alimentation, RDV, Progression). Détail et leçon en §3 et §7.
+- 🔴 ✅ **La recherche client et les quatre pastilles ne marchaient pas** — `ReferenceError` sur
+  une variable jamais déclarée.
+- 🔴 ✅ **La fiche Progression demandait trois colonnes inexistantes** (`42703`).
+- 🔴 ✅ **L'admin calculait les cibles avec l'ancienne formule**, en deux exemplaires. Il n'en
+  reste qu'un, aligné sur `Natty.macrosJour`, et `scripts/verifier-cibles-admin.mjs` le
+  compare à la source sur 245 profils × 4 valeurs — **0 écart**.
+- ✅ **La liste montre les 68 inscrits**, plus seulement les 36 questionnaires finis
+  (`membres_admin()`, §4), avec les comptes sans questionnaire et les orphelins Wix marqués.
+- ✅ **La fiche montre le suivi** : bilan du soir, séances, matériel, garde-manger, semaine
+  planifiée — les cinq tables que `natty_admin_clients.sql` a ouvertes en lecture à l'équipe,
+  et que rien ne lisait.
+- ✅ Deux jetons CSS utilisés sans être définis (`--bdr`, `.prog-stat-val.green`) : les
+  séparateurs et la couleur des chiffres étaient silencieusement perdus.
+- 🔄 **Rien n'a été vu avec une session d'équipe réelle** : `admin.html` exige un compte staff,
+  et `membres_admin()` n'est pas interrogeable à la clé anon (§4). Tout a été vérifié au banc,
+  sur les fonctions extraites du fichier, plus un rendu en navigateur avec la vraie feuille
+  de style.
+- 🔄 **Le filtre par nutritionniste n'existe toujours pas** : `chargerClients()` charge tout le
+  monde (« nutritionniste_id not in schema »), donc chaque nutritionniste voit tous les
+  inscrits. À trancher avec Pablo — c'est une colonne à ajouter, pas un correctif.
 
 #### Les 38 fiches techniques Natty, le geste + l'aliment, et le récap de commande (2026-09-16, soir)
 - **`scripts/fiches-natty.mjs`** — les 38 fiches .docx de Pablo (dossier « fiche rectte
