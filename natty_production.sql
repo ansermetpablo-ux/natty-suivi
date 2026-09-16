@@ -105,3 +105,10 @@ create policy bons_attributions_soi on public.bons_attributions
 -- select count(*) from public.bons_commande;
 -- select column_name from information_schema.columns
 --  where table_name = 'recettes_etapes' and column_name in ('phase','passif','poste');
+
+-- ── Ajout du 2026-09-16 (déjà appliqué) : le GESTE et l'ALIMENT de chaque étape.
+-- C'est ce que l'onglet Production trie : « couper » × « oignons » sur trois
+-- recettes du même jour se fait en une fois. Vocabulaire des gestes = les 16
+-- d'assets/recette.js ; l'aliment est un texte libre (« oignons, carottes »).
+alter table public.recettes_etapes add column if not exists geste text;
+alter table public.recettes_etapes add column if not exists aliment text;

@@ -3926,7 +3926,9 @@ async function sauvegarderRecetteComplete() {
       temperature_c: Number.isFinite(temp) && temp > 0 ? temp : null,
       phase: row.querySelector('.etape-chef-phase')?.value || 'production',
       passif: !!row.querySelector('.etape-chef-passif')?.checked,
-      poste: (row.querySelector('.etape-chef-poste')?.value || '').trim() || null
+      poste: (row.querySelector('.etape-chef-poste')?.value || '').trim() || null,
+      geste: row.querySelector('.etape-chef-geste')?.value || null,
+      aliment: (row.querySelector('.etape-chef-aliment')?.value || '').trim() || null
     };
     try {
       // sb() envoie le jeton d'équipe ; la clé anon seule est refusée par la
@@ -3972,6 +3974,10 @@ async function supprimerIngChef(id) {
 
 // Une ligne d'étape de la fiche technique. Les valeurs passent par des
 // attributs, jamais par du texte inline dans un onclick (règle 8).
+const GESTES_CHEF = [['','— geste —'],['couper','🔪 Couper / hacher'],['saisir','🍳 Saisir / poêler'],['bouillir','♨️ Bouillir / vapeur'],
+  ['mijoter','🍲 Mijoter'],['enfourner','🔥 Enfourner'],['melanger','🥣 Mélanger'],['fouetter','🥄 Fouetter'],['mixer','🌀 Mixer / écraser'],
+  ['assaisonner','🧂 Assaisonner'],['huiler','🫒 Huiler'],['rincer','💧 Rincer / égoutter'],['peser','⚖️ Peser'],['refrigerer','❄️ Réfrigérer / mariner'],
+  ['reposer','⏸ Reposer'],['attendre','⏳ Attendre'],['dresser','🍽 Dresser']];
 function ligneEtapeChef(e, num) {
   const inp = 'border:none;background:var(--bg);border-radius:8px;padding:5px 8px;font-size:12px;box-shadow:var(--si);font-family:DM Sans,sans-serif;color:var(--black);';
   // Pas escHtml() ici : il traduit les retours à la ligne en <br>, qui
@@ -3983,6 +3989,11 @@ function ligneEtapeChef(e, num) {
     +'<input class="etape-chef-titre" type="text" placeholder="Titre court (ex. Émincer les oignons)" value="'+esc(e.titre)+'" style="'+inp+'font-weight:700;">'
     +'<textarea class="etape-chef-txt" placeholder="Décrivez cette étape..." data-id="'+e.id+'" rows="2">'+esc(e.description)+'</textarea>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted);">'
+    // Le GESTE (vocabulaire d'assets/recette.js, 16 entrées) et l'ALIMENT sur
+    // lequel il porte : c'est ce que l'onglet Production trie pour que
+    // « couper × oignons » de trois recettes se fasse en une seule fois.
+    +'<select class="etape-chef-geste" style="'+inp+'">'+GESTES_CHEF.map(function(g){ return '<option value="'+g[0]+'"'+((e.geste||'')===g[0]?' selected':'')+'>'+g[1]+'</option>'; }).join('')+'</select>'
+    +'<input class="etape-chef-aliment" type="text" placeholder="aliment (oignons, carottes…)" value="'+esc(e.aliment)+'" style="'+inp+'width:170px;">'
     +'<label>⏱ <input class="etape-chef-duree" type="number" min="0" placeholder="min" value="'+(e.duree_min||'')+'" style="'+inp+'width:58px;"> min</label>'
     +'<label>🌡 <input class="etape-chef-temp" type="number" min="0" placeholder="°C" value="'+(e.temperature_c||'')+'" style="'+inp+'width:58px;"> °C</label>'
     +'<select class="etape-chef-phase" style="'+inp+'"><option value="production"'+(e.phase!=='assemblage'?' selected':'')+'>Production (en masse)</option><option value="assemblage"'+(e.phase==='assemblage'?' selected':'')+'>Assemblage (par portion)</option></select>'

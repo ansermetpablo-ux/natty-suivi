@@ -94,7 +94,8 @@ export default async function handler(req) {
           nb_repas: nombreDePlats(session),
           jour: session.metadata?.livraison, adresse: session.metadata?.adresse,
           plats: lireJson(session.metadata?.plats),
-          stripe_ref: 'cs_' + session.id
+          stripe_ref: 'cs_' + session.id,
+          montant: session.amount_total, email: session.customer_details?.email
         });
         return new Response('ok', { status: 200 });
       }
@@ -143,7 +144,8 @@ export default async function handler(req) {
         jour: session.metadata?.livraison || sub.metadata?.livraison,
         adresse: session.metadata?.adresse || sub.metadata?.adresse,
         abonnement_id: aboId,
-        stripe_ref: 'cs_' + session.id
+        stripe_ref: 'cs_' + session.id,
+        montant: session.amount_total, email: session.customer_details?.email
       });
     }
 
@@ -174,7 +176,8 @@ export default async function handler(req) {
           nb_repas: Number(meta.repas) || 3,
           jour: meta.livraison, adresse: meta.adresse,
           abonnement_id: aboId,
-          stripe_ref: 'in_' + invoice.id
+          stripe_ref: 'in_' + invoice.id,
+          montant: invoice.amount_paid, email: invoice.customer_email
         });
       }
     }
@@ -258,13 +261,107 @@ async function creerBon(supabase, b) {
       stripe_ref: b.stripe_ref || null,
       statut: 'a_attribuer'
     });
-    // 409 = déjà créé pour cette référence Stripe : un webhook rejoué. Normal.
-    if (!r.ok && r.status !== 409) {
-      console.log('bon de commande non créé — %s', r.status);
-    }
+    // 409 = déjà créé pour cette référence Stripe : un webhook rejoué. Normal —
+    // et on ne renvoie pas le récapitulatif une seconde fois.
+    if (r.status === 409) return;
+    if (!r.ok) { console.log('bon de commande non créé — %s', r.status); return; }
+    let bon = null;
+    try { const a = await r.json(); bon = Array.isArray(a) ? a[0] : a; } catch (e) {}
+    await envoyerRecap(supabase, Object.assign({}, b, { jour_livraison: jour, id: bon && bon.id }));
   } catch (e) {
     // Ne jamais faire échouer le webhook pour un bon : l'abonnement, lui, est
     // écrit. Stripe rejouerait sinon l'événement entier.
     console.log('bon de commande — %s', e.message);
   }
+}
+
+
+/* ── Le récapitulatif de commande, aux trois endroits demandés ────────────
+   1. par EMAIL au client — l'adresse de son onboarding, sinon celle que
+      Stripe a vue au paiement ;
+   2. par EMAIL à contact@natty-nutrition.com — un mail par commande, c'est ce
+      qui prévient l'équipe avant même d'ouvrir l'admin (où le bon est déjà) ;
+   3. DANS L'APP — un message dans sa conversation (`messages`, expéditeur
+      « nutritionniste ») : c'est le seul canal in-app qui existe déjà et que
+      le client lit, et il déclenche la notification de message habituelle.
+   Tout est best-effort : un email qui ne part pas ne doit jamais faire
+   rejouer le webhook (Stripe réessaierait, et le bon existe déjà). */
+const CONTACT = 'contact@natty-nutrition.com';
+const JOURS_L = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+function dateLongue(ymd) {
+  if (!ymd) return 'à convenir';
+  const d = new Date(ymd + 'T12:00:00Z');
+  return JOURS_L[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MOIS_L[d.getUTCMonth()];
+}
+function euros(centimes) {
+  return Number.isFinite(centimes) ? (centimes / 100).toFixed(2).replace('.', ',') + ' €' : '';
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+async function envoyerRecap(supabase, b) {
+  let prenom = '', email = '';
+  try {
+    const r = await supabase('onboarding?user_id=eq.' + encodeURIComponent(b.user_id) + '&select=prenom,email&order=created_at.desc&limit=3', 'GET');
+    const rows = await r.json();
+    (Array.isArray(rows) ? rows : []).forEach(o => { prenom = prenom || o.prenom || ''; email = email || o.email || ''; });
+  } catch (e) {}
+  email = email || b.email || '';
+
+  // Les plats choisis à l'unité, par leur nom
+  let plats = '';
+  if (b.plats && b.plats.length) {
+    try {
+      const ids = b.plats.map(p => p.id).filter(Boolean);
+      const r = await supabase('plats_menu?id=in.(' + ids.join(',') + ')&select=id,nom', 'GET');
+      const rows = await r.json(); const nom = {};
+      (Array.isArray(rows) ? rows : []).forEach(p => { nom[p.id] = p.nom; });
+      plats = b.plats.map(p => (nom[p.id] || 'Plat') + ' × ' + p.n).join(', ');
+    } catch (e) {}
+  }
+
+  const type = b.type === 'unite' ? 'Commande à l’unité' : 'Abonnement hebdomadaire';
+  const lignes = [
+    ['Formule', type + ' — ' + b.nb_repas + ' repas'],
+    plats ? ['Plats', plats] : null,
+    ['Livraison', dateLongue(b.jour_livraison)],
+    ['Adresse', b.adresse || 'non renseignée — nous vous contactons'],
+    b.montant ? ['Montant réglé', euros(b.montant)] : null
+  ].filter(Boolean);
+
+  const texte = 'Votre commande est confirmée ✅\n' + lignes.map(l => l[0] + ' : ' + l[1]).join('\n')
+    + (b.type === 'abonnement' ? '\nVos recettes sont choisies par votre nutritionniste ; vous recevrez le détail avant la livraison.' : '');
+
+  // 3. dans l'app
+  try {
+    await supabase('messages', 'POST', { user_id: b.user_id, expediteur: 'nutritionniste', contenu: texte, lu: false });
+  } catch (e) { console.log('récap in-app — %s', e.message); }
+
+  // 1 et 2. par email
+  const RESEND = process.env.RESEND_API_KEY;
+  if (!RESEND) { console.log('récap : RESEND_API_KEY absente, aucun email'); return; }
+  const FROM = process.env.RESEND_FROM || 'Natty <onboarding@resend.dev>';
+  const tableau = lignes.map(l => '<tr><td style="padding:8px 0;color:#9a9aaa;font-size:13px;">' + esc(l[0]) + '</td><td style="padding:8px 0 8px 16px;font-weight:600;color:#1a1a2e;font-size:13px;">' + esc(l[1]) + '</td></tr>').join('');
+  const html = (titre, intro) => '<div style="font-family:-apple-system,Segoe UI,sans-serif;background:#f0f0f3;padding:28px;">'
+    + '<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:20px;overflow:hidden;">'
+    + '<div style="background:#1a1a2e;padding:26px 28px;color:#fff;"><div style="font-size:20px;font-weight:800;">' + esc(titre) + '</div>'
+    + '<div style="font-size:13px;opacity:.6;margin-top:4px;">' + esc(intro) + '</div></div>'
+    + '<div style="padding:22px 28px;"><table style="border-collapse:collapse;width:100%;">' + tableau + '</table>'
+    + (b.id ? '<div style="font-size:11px;color:#b0b0c0;margin-top:14px;">Référence ' + esc(String(b.id).slice(0, 8)) + '</div>' : '')
+    + '</div></div></div>';
+  const envoyer = (to, subject, corps) => fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + RESEND, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: FROM, to: [to], subject, html: corps })
+  }).then(r => { if (!r.ok) return r.text().then(t => console.log('récap email %s — %s', to === CONTACT ? 'équipe' : 'client', t.slice(0, 200))); })
+    .catch(e => console.log('récap email — %s', e.message));
+
+  const taches = [envoyer(CONTACT, '🧾 Nouvelle commande — ' + (prenom || 'client') + ' · ' + b.nb_repas + ' repas · ' + dateLongue(b.jour_livraison),
+    html('Nouvelle commande', (prenom || b.user_id) + (email ? ' · ' + email : '') + ' — le bon est dans l’onglet Production de l’admin.'))];
+  if (email) taches.push(envoyer(email, '✅ Votre commande Natty est confirmée',
+    html('Commande confirmée' + (prenom ? ', ' + prenom : ''), 'Merci ! Voici le récapitulatif de votre commande.')));
+  await Promise.all(taches);
 }

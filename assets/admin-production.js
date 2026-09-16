@@ -44,8 +44,19 @@
   var S = {
     vue: 'bons', bons: [], attribs: [], recettes: [], ings: {}, etapes: {},
     clients: {}, ingBase: {}, mois: null, jour: null, filtre: 'tous',
-    bonOuvert: null, cuisiniers: 2, debut: '08:00', charge: false
+    bonOuvert: null, cuisiniers: 2, debut: '08:00', charge: false, tri: 'cuisinier'
   };
+
+  /* Les 16 gestes d'assets/recette.js, dans l'ordre d'une cuisine : ce qui se
+     taille d'abord, ce qui cuit ensuite, ce qui attend, ce qui se dresse. C'est
+     l'ordre de la vue « par geste » — pas l'alphabet. */
+  var GESTES = [['couper', '🔪 Couper / hacher'], ['rincer', '💧 Rincer / égoutter'], ['peser', '⚖️ Peser'],
+    ['huiler', '🫒 Huiler'], ['assaisonner', '🧂 Assaisonner'], ['melanger', '🥣 Mélanger'], ['fouetter', '🥄 Fouetter'],
+    ['mixer', '🌀 Mixer / écraser'], ['saisir', '🍳 Saisir / poêler'], ['bouillir', '♨️ Bouillir / vapeur'],
+    ['mijoter', '🍲 Mijoter'], ['enfourner', '🔥 Enfourner'], ['refrigerer', '❄️ Réfrigérer / mariner'],
+    ['reposer', '⏸ Reposer'], ['attendre', '⏳ Attendre'], ['dresser', '🍽 Dresser'], ['', '❔ Sans geste']];
+  function libGeste(g) { var x = GESTES.find(function (p) { return p[0] === (g || ''); }); return x ? x[1] : '❔ ' + g; }
+  function emojiGeste(g) { return libGeste(g).split(' ')[0]; }
 
   var JOURS_C = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   var MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
@@ -597,7 +608,7 @@
 
     // ── mode MASSE : la production ────────────────────────────────────────
     html += '<div class="np-h">Production en masse — ' + lots.map(function (l) { return l.rec.nom + ' × ' + l.portions; }).join(' · ') + '</div>';
-    html += '<div class="np-leg">' + lots.map(function (l) { return '<span><i style="background:' + l.couleur + '"></i>' + h(l.rec.nom) + ' — ' + l.fiches.toFixed(1) + ' fiche(s), ' + Math.round(l.gTotal / 100) / 10 + ' kg</span>'; }).join('') + '<span><i style="background:repeating-linear-gradient(45deg,#0004 0 2px,#0001 2px 4px)"></i>attente (four, repos) : cuisinier libre</span></div>';
+    html += '<div class="np-leg">' + lots.map(function (l) { return '<span><i style="background:' + l.couleur + '"></i>' + h(l.rec.nom) + ' — ×' + l.fiches.toFixed(1) + ' de la fiche, ' + Math.round(l.gTotal / 100) / 10 + ' kg</span>'; }).join('') + '<span><i style="background:repeating-linear-gradient(45deg,#0004 0 2px,#0001 2px 4px)"></i>attente (four, repos) : cuisinier libre</span></div>';
     var manques = [];
     lots.forEach(function (l) {
       if (!l.etapesProd.length) manques.push(l.rec.nom + ' n’a aucune étape de production');
@@ -606,12 +617,11 @@
     if (manques.length) html += '<div class="np-note">⚠ ' + h(manques.join(' · ')) + ' — à compléter dans l’onglet Chef pour un plan juste.</div>';
     var plan = dispatcher(lots, S.cuisiniers, minDe(S.debut));
     html += gantt(plan);
-    html += '<div class="np-h">Dans l’ordre — qui fait quoi, quand</div>';
-    html += plan.taches.slice().sort(function (a, b) { return a.debut - b.debut || a.cuisinier - b.cuisinier; }).map(function (t) {
-      return '<div class="np-etape"><div class="t">' + hm(t.debut) + ' → ' + hm(t.fin) + '</div><i class="c" style="background:' + t.couleur + '"></i>'
-        + '<div class="b"><b>' + (t.passif ? '⏳ attente' : 'Cuisinier ' + (t.cuisinier + 1)) + '</b> · ' + h(t.rec) + ' — ' + h(t.titre)
-        + '<small>' + h(t.desc) + (t.temperature ? ' · ' + t.temperature + ' °C' : '') + (t.poste ? ' · ' + h(t.poste) : '') + (t.defaut ? ' · <i>durée par défaut</i>' : '') + '</small></div></div>';
-    }).join('');
+    html += '<div class="np-row" style="justify-content:space-between;margin-top:18px"><div class="np-h" style="margin:0">'
+      + (S.tri === 'geste' ? 'Par geste, puis par aliment — ce qui se fait en une fois' : 'Dans l’ordre — qui fait quoi, quand') + '</div>'
+      + '<div class="np-filtres" style="margin:0"><button data-tri="cuisinier" class="' + (S.tri !== 'geste' ? 'on' : '') + '">Par cuisinier</button>'
+      + '<button data-tri="geste" class="' + (S.tri === 'geste' ? 'on' : '') + '">Par geste + aliment</button></div></div>';
+    html += S.tri === 'geste' ? parGeste(plan) : plan.taches.slice().sort(function (a, b) { return a.debut - b.debut || a.cuisinier - b.cuisinier; }).map(ligneTache).join('');
     html += '<div class="np-note">Fin estimée <b>' + hm(plan.fin) + '</b> avec ' + S.cuisiniers + ' cuisinier(s). Les durées des étapes actives sont multipliées par √(nombre de fiches) — une estimation, pas une mesure : la fiche donne la durée pour une fiche, et doubler la masse ne double pas le temps de découpe.</div>';
 
     // ── mode PORTION : l'assemblage ───────────────────────────────────────
@@ -635,6 +645,53 @@
       });
     });
     return html;
+  }
+
+  function ligneTache(t) {
+    return '<div class="np-etape"><div class="t">' + hm(t.debut) + ' → ' + hm(t.fin) + '</div><i class="c" style="background:' + t.couleur + '"></i>'
+      + '<div class="b"><b>' + (t.passif ? '⏳ attente' : 'Cuisinier ' + (t.cuisinier + 1)) + '</b> · ' + h(t.rec) + ' — ' + emojiGeste(t.geste) + ' ' + h(t.titre)
+      + (t.aliment ? ' <span class="np-s">· ' + h(t.aliment) + '</span>' : '')
+      + '<small>' + h(t.desc) + (t.temperature ? ' · ' + t.temperature + ' °C' : '') + (t.poste ? ' · ' + h(t.poste) : '') + (t.defaut ? ' · <i>durée par défaut</i>' : '') + '</small></div></div>';
+  }
+
+  /* La vue « par geste » : toutes les tâches du jour rangées par geste (dans
+     l'ordre d'une cuisine), puis par aliment — deux recettes qui demandent de
+     hacher des oignons apparaissent côte à côte, avec leur heure et leur
+     cuisinier. C'est le tri demandé par Pablo : le geste ET l'aliment. Le
+     rapprochement des aliments est fait mot à mot sur le texte libre de la
+     fiche (« oignon, ail » et « oignons » se retrouvent sous « oignon »). */
+  function parGeste(plan) {
+    // (geste → aliment → tâches). Un aliment par entrée : une étape « oignons,
+    // ail, carottes » apparaît sous oignon, sous ail ET sous carotte — c'est
+    // comme ça qu'on voit d'un coup tous les oignons à hacher de la journée.
+    var groupes = {};
+    plan.taches.forEach(function (t) {
+      var g = t.geste || '';
+      var G = groupes[g] = groupes[g] || {};
+      var parts = String(t.aliment || '').split(/[,+;]/).map(function (a) { return a.trim(); }).filter(Boolean);
+      if (!parts.length) parts = [t.titre];
+      parts.forEach(function (a) {
+        var cle = norm(a).split(' ').map(function (m) { return m.length > 3 ? m.replace(/s$/, '') : m; }).join(' ');
+        (G[cle] = G[cle] || { lib: a, t: [] }).t.push(t);
+      });
+    });
+    return GESTES.map(function (p) {
+      var G = groupes[p[0]]; if (!G) return '';
+      var cles = Object.keys(G).sort(function (a, b) { return G[b].t.length - G[a].t.length || a.localeCompare(b, 'fr'); });
+      return '<div class="np-h" style="margin-top:14px">' + p[1] + ' <span class="np-pill g">' + cles.length + ' aliment(s)</span></div>'
+        + cles.map(function (k) {
+          var ts = G[k].t.slice().sort(function (a, b) { return a.debut - b.debut; });
+          var recs = {}; ts.forEach(function (t) { recs[t.rec] = 1; });
+          var multi = Object.keys(recs).length > 1;
+          return '<div class="np-card" style="padding:10px 14px">'
+            + '<div class="np-t" style="font-size:13px"><span style="text-transform:capitalize">' + h(G[k].lib) + '</span>' + (multi ? ' <span class="np-pill v">' + Object.keys(recs).length + ' recettes — à faire en une fois</span>' : '') + '</div>'
+            + ts.map(function (t) {
+              return '<div class="np-row" style="gap:8px;font-size:12px;margin-top:6px"><i style="width:9px;height:9px;border-radius:50%;background:' + t.couleur + ';flex-shrink:0"></i>'
+                + '<b style="color:var(--black)">' + h(t.rec) + '</b> <span class="np-s">' + h(t.titre) + ' · ×' + t.fiches.toFixed(1) + ' fiche · ' + t.duree + ' min</span>'
+                + '<span style="margin-left:auto" class="np-s">' + hm(t.debut) + ' · ' + (t.passif ? '⏳' : 'Cuisinier ' + (t.cuisinier + 1)) + '</span></div>';
+            }).join('') + '</div>';
+        }).join('');
+    }).join('');
   }
 
   /* Les lots du jour : par recette, toutes les portions de tous les bons, le
@@ -670,7 +727,8 @@
       var s = Math.max(1, l.fiches);
       var et = l.etapesProd.map(function (e, i) {
         var d = e.duree_min > 0 ? e.duree_min : DUREE_DEFAUT;
-        return { rec: l.rec.nom, couleur: l.couleur, titre: e.titre || ('Étape ' + (e.numero || i + 1)), desc: e.description || '',
+        return { rec: l.rec.nom, recId: l.rec.id, fiches: l.fiches, couleur: l.couleur, titre: e.titre || ('Étape ' + (e.numero || i + 1)), desc: e.description || '',
+          geste: e.geste || '', aliment: e.aliment || '',
           duree: e.passif ? d : Math.round(d * Math.sqrt(s)), passif: !!e.passif, temperature: e.temperature_c, poste: e.poste, defaut: !(e.duree_min > 0) };
       });
       var reste = 0; for (var i = et.length - 1; i >= 0; i--) { reste += et[i].duree; et[i].reste = reste; }
@@ -704,20 +762,29 @@
   function gantt(plan) {
     var tot = Math.max(30, plan.fin - plan.t0), lignes = [];
     for (var c = 0; c < plan.nbCuis; c++) lignes.push({ nom: 'Cuisinier ' + (c + 1), t: plan.taches.filter(function (x) { return x.cuisinier === c; }) });
-    lignes.push({ nom: '⏳ Attentes', t: plan.taches.filter(function (x) { return x.passif; }) });
+    // Les attentes se chevauchent souvent (deux mijotages en même temps) :
+    // autant de lignes qu'il en faut pour qu'aucune barre n'en couvre une autre.
+    var voies = [];
+    plan.taches.filter(function (x) { return x.passif; }).sort(function (a, b) { return a.debut - b.debut; }).forEach(function (t) {
+      var v = voies.find(function (l) { return l.fin <= t.debut; });
+      if (!v) { v = { fin: 0, t: [] }; voies.push(v); }
+      v.t.push(t); v.fin = t.fin;
+    });
+    voies.forEach(function (v, i) { lignes.push({ nom: '⏳ Attente' + (voies.length > 1 ? ' ' + (i + 1) : 's'), t: v.t }); });
     var pas = tot > 240 ? 60 : 30, axe = '';
     for (var m = 0; m <= tot; m += pas) axe += '<span style="left:' + (m / tot * 100) + '%">' + hm(plan.t0 + m) + '</span>';
     return '<div class="np-gantt"><div class="np-axe"><div></div><div>' + axe + '</div></div>' + lignes.map(function (l) {
       return '<div class="np-gl"><div class="n">' + l.nom + '</div><div class="np-gt">' + l.t.map(function (t) {
-        return '<div class="np-gb ' + (t.passif ? 'pas' : '') + '" style="left:' + ((t.debut - plan.t0) / tot * 100) + '%;width:' + Math.max(0.8, t.duree / tot * 100) + '%;background:' + t.couleur + '" title="' + h(t.rec + ' — ' + t.titre + ' (' + t.duree + ' min)') + '">' + h(t.rec.split(' ')[0] + ' · ' + t.titre) + '</div>';
+        return '<div class="np-gb ' + (t.passif ? 'pas' : '') + '" style="left:' + ((t.debut - plan.t0) / tot * 100) + '%;width:' + Math.max(0.8, t.duree / tot * 100) + '%;background:' + t.couleur + '" title="' + h(t.rec + ' — ' + t.titre + ' (' + t.duree + ' min)') + '">' + emojiGeste(t.geste) + ' ' + h(t.rec.split(' ')[0] + ' · ' + t.titre) + '</div>';
       }).join('') + '</div></div>';
     }).join('') + '</div>';
   }
 
   /* ── Événements ─────────────────────────────────────────────────────────── */
   function clic(ev) {
-    var b = ev.target.closest('[data-vue],[data-act],[data-filtre],[data-stp],[data-jour],[data-bon]');
+    var b = ev.target.closest('[data-vue],[data-act],[data-filtre],[data-stp],[data-jour],[data-bon],[data-tri]');
     if (!b) return;
+    if (b.dataset.tri) { S.tri = b.dataset.tri; rendre(); return; }
     if (b.dataset.vue) { S.vue = b.dataset.vue; if (S.vue === 'production' && !S.jour) S.jour = ymd(new Date()); rendre(); return; }
     if (b.dataset.stp) {
       var id = b.dataset.rec, n = (A.sel[id] || 0) + parseInt(b.dataset.stp, 10);

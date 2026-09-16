@@ -5111,10 +5111,42 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   `natty_production.sql` (appliqué), webhook et checkout qui créent les bons. Détail en §3.
 - ✅ Onglet Chef : durée, phase, attente et poste sur chaque étape de la fiche technique.
 - 🔄 **Non vérifié avec une session d'équipe réelle ni contre un vrai paiement Stripe.**
+- ✅ Les 38 fiches sont en base avec geste + aliment ; vue « Par geste + aliment » en Production (voir ci-dessous).
 - 🔄 Les durées scalent en √(fiches) et l'ordre des étapes vaut dépendance : deux
   approximations à valider en cuisine, avec le chef.
 - 🔄 `commandes`, `plans_repas` et l'onglet « Repas à programmer » vivent à côté sans être
   reliés aux bons — à fusionner ou retirer, décision de Pablo.
+
+#### Les 38 fiches techniques Natty, le geste + l'aliment, et le récap de commande (2026-09-16, soir)
+- **`scripts/fiches-natty.mjs`** — les 38 fiches .docx de Pablo (dossier « fiche rectte
+  natty »), transcrites : ingrédients en grammes **pour 6 portions** (la dernière fiche le
+  dit ; féculents en poids cuit, `qte` affiche le cru), étapes avec **geste** (les 16
+  d'`assets/recette.js`), **aliment**, durée, passif, phase. Codes : PS = prise de masse
+  (le titre du Bourguignon PS le dit), PP = perte de poids, VG, SG — **PM inconnu, à
+  confirmer**. `Steak de thon (2).docx` est un doublon du risotto de boulgour : ignoré.
+- **`scripts/importer-fiches.mjs`** — calcule les macros par portion avec la table de
+  `core.js` (jamais à la main), émet une fonction SQL + un appel JSON. ✅ **Importé** :
+  `recettes` (38, `nb_portions=6`, catégorie = code), `recettes_ingredients` (345),
+  `recettes_etapes` (236, avec `geste`/`aliment`), et **un `plats_menu` par fiche** (ce que
+  le client choisit à l'unité), relié par `recettes.plat_id`. Rejouable (remplace par nom).
+  Ajoutés à `core.js` pour chiffrer les fiches : millet, pamplemousse, vinaigre de cidre,
+  vinaigre balsamique, pignons de pin, piment ; `api/_nutrition.js` régénéré (0 écart).
+  ⚠️ Le vin du bourguignon est compté **0** (alcool évaporé) — le compter en entier
+  ajoutait 212 kcal/portion.
+- **`recettes_etapes.geste` / `aliment`** (colonnes ajoutées, appliquées) — l'onglet Chef les
+  édite (menu des 16 gestes + champ aliment) ; l'onglet **Production** a une vue **« Par
+  geste + aliment »** : toutes les tâches du jour rangées par geste dans l'ordre d'une
+  cuisine, puis par aliment **un par un** (« oignons, ail, carottes » apparaît sous oignon,
+  sous ail et sous carotte), avec « 3 recettes — à faire en une fois ». Le Gantt porte
+  l'emoji du geste et les attentes ont autant de lignes qu'il faut pour ne pas se couvrir.
+- **Le récap de commande part au paiement** (`api/webhook.js`, `envoyerRecap`) : email au
+  client (`onboarding.email`, sinon l'email vu par Stripe), email à
+  **contact@natty-nutrition.com** (un par commande), et **un message dans l'app**
+  (`messages`, expéditeur `nutritionniste` — la conversation est le seul canal in-app que le
+  client lit déjà). Best-effort : un email qui ne part pas ne fait jamais rejouer le webhook.
+  Un webhook rejoué (409 sur `stripe_ref`) n'envoie rien une seconde fois.
+  🔄 Dépend de `RESEND_API_KEY` et `RESEND_FROM` sur Vercel (voir `api/send-email.js`) :
+  sans domaine vérifié, Resend n'écrit qu'au titulaire du compte.
 
 **Le fil de la journée, la photo plein écran, l'analyse en scènes (2026-09-04, soir)**
 - ✅ **La jauge du bilan est centrée**, le pourcentage **au-dessus** de la barre et

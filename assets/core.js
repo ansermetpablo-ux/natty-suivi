@@ -302,7 +302,7 @@ var Natty = (function () {
     'riz':{c:130,p:2.7,l:0.3,g:28},'riz complet':{c:123,p:2.7,l:1,g:26},
     'pates':{c:131,p:5,l:1.1,g:25},'spaghetti':{c:131,p:5,l:1.1,g:25},'lasagne':{c:135,p:6,l:5,g:16},
     'quinoa':{c:120,p:4.4,l:1.9,g:22},'semoule':{c:112,p:4,l:0.2,g:23},'couscous':{c:112,p:4,l:0.2,g:23},
-    'boulgour':{c:83,p:3,l:0.2,g:18},'sarrasin':{c:92,p:3.4,l:0.6,g:20},'polenta':{c:83,p:2,l:0.5,g:18},
+    'boulgour':{c:83,p:3,l:0.2,g:18},'millet':{c:119,p:3.5,l:1,g:23.7},'sarrasin':{c:92,p:3.4,l:0.6,g:20},'polenta':{c:83,p:2,l:0.5,g:18},
     'pain':{c:265,p:9,l:3.2,g:49},'pain complet':{c:247,p:10,l:3.4,g:41},
     'pain de mie':{c:265,p:8,l:4,g:48},'baguette':{c:274,p:9,l:1.3,g:56},
     'biscotte':{c:390,p:12,l:5,g:73},'tortilla':{c:310,p:8,l:8,g:51},'wrap':{c:310,p:8,l:8,g:51},
@@ -338,7 +338,7 @@ var Natty = (function () {
     'avocat':{c:160,p:2,l:15,g:9},'olive':{c:145,p:1,l:15,g:4},
     // Fruits
     'pomme':{c:52,p:0.3,l:0.2,g:14},'banane':{c:89,p:1.1,l:0.3,g:23},'fraise':{c:32,p:0.7,l:0.3,g:7.7},
-    'orange':{c:47,p:0.9,l:0.1,g:12},'mangue':{c:60,p:0.8,l:0.4,g:15},'kiwi':{c:61,p:1.1,l:0.5,g:15},
+    'orange':{c:47,p:0.9,l:0.1,g:12},'pamplemousse':{c:42,p:0.8,l:0.1,g:11},'mangue':{c:60,p:0.8,l:0.4,g:15},'kiwi':{c:61,p:1.1,l:0.5,g:15},
     'raisin':{c:69,p:0.7,l:0.2,g:18},'poire':{c:57,p:0.4,l:0.1,g:15},'peche':{c:39,p:0.9,l:0.3,g:10},
     'ananas':{c:50,p:0.5,l:0.1,g:13},'myrtille':{c:57,p:0.7,l:0.3,g:14},'framboise':{c:52,p:1.2,l:0.7,g:12},
     'citron':{c:29,p:1.1,l:0.3,g:9},'pasteque':{c:30,p:0.6,l:0.2,g:8},'melon':{c:34,p:0.8,l:0.2,g:8},
@@ -404,7 +404,7 @@ var Natty = (function () {
     'graines':{c:559,p:19,l:49,g:20},'graines courge':{c:559,p:30,l:49,g:11},'chia':{c:486,p:17,l:31,g:42},
     'tahini':{c:595,p:17,l:54,g:21},'beurre cacahuete':{c:588,p:25,l:50,g:20},
     'mayonnaise':{c:680,p:1,l:75,g:1.5},'ketchup':{c:112,p:1.2,l:0.1,g:26},'moutarde':{c:66,p:4,l:3.3,g:5},
-    'vinaigrette':{c:450,p:0.5,l:48,g:3},'sauce tomate':{c:32,p:1.3,l:0.4,g:6},
+    'vinaigrette':{c:450,p:0.5,l:48,g:3},'vinaigre de cidre':{c:21,p:0,l:0,g:0.9},'vinaigre balsamique':{c:88,p:0.5,l:0,g:17},'pignons de pin':{c:673,p:14,l:68,g:13},'piment':{c:40,p:1.9,l:0.4,g:9},'sauce tomate':{c:32,p:1.3,l:0.4,g:6},
     'miel':{c:304,p:0.3,l:0,g:82},'sucre':{c:400,p:0,l:0,g:100},'confiture':{c:278,p:0.4,l:0.1,g:69},
     // Boissons
     'jus orange':{c:45,p:0.7,l:0.2,g:10},'soda':{c:42,p:0,l:0,g:10.6},'biere':{c:43,p:0.5,l:0,g:3.6},
