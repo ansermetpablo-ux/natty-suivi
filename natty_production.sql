@@ -112,3 +112,29 @@ create policy bons_attributions_soi on public.bons_attributions
 -- d'assets/recette.js ; l'aliment est un texte libre (« oignons, carottes »).
 alter table public.recettes_etapes add column if not exists geste text;
 alter table public.recettes_etapes add column if not exists aliment text;
+
+-- ── Ajout du 2026-09-16 (déjà appliqué) : les POSTES pris par les cuisiniers,
+-- et les étapes faites. Un poste pris un jour donné n'est plus disponible pour
+-- un autre cuisinier (clé primaire jour + poste) ; l'algorithme ne donne les
+-- tâches d'un poste qu'à la personne qui l'a pris. Les étapes faites sont
+-- partagées entre appareils : la cinématique d'un cuisinier les coche.
+create table if not exists public.production_postes (
+  jour           date not null,
+  poste          text not null,
+  cuisinier_id   text not null,
+  cuisinier_nom  text,
+  pris_at        timestamptz not null default now(),
+  primary key (jour, poste)
+);
+create table if not exists public.production_etapes (
+  jour           date not null,
+  etape_id       uuid not null references public.recettes_etapes(id) on delete cascade,
+  fait           boolean not null default true,
+  cuisinier_nom  text,
+  fait_at        timestamptz not null default now(),
+  primary key (jour, etape_id)
+);
+alter table public.production_postes enable row level security;
+alter table public.production_etapes enable row level security;
+create policy production_postes_staff on public.production_postes for all to authenticated using (public.est_staff()) with check (public.est_staff());
+create policy production_etapes_staff on public.production_etapes for all to authenticated using (public.est_staff()) with check (public.est_staff());

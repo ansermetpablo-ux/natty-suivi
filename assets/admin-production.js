@@ -187,6 +187,7 @@
       '.np-gt{position:relative;height:34px;background:#00000008;border-radius:8px}',
       '.np-gb{position:absolute;top:3px;bottom:3px;border-radius:6px;color:#fff;font-size:10px;font-weight:700;padding:0 6px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;box-sizing:border-box}',
       '.np-gb.pas{background:repeating-linear-gradient(45deg,#0002 0 4px,#0001 4px 8px)!important;color:var(--black);border:1px dashed #0004}',
+      '.np-gb.blo{background:#c0392b!important;opacity:.7}',
       '.np-axe{display:grid;grid-template-columns:110px 1fr;margin-bottom:4px}',
       '.np-axe div:last-child{position:relative;height:14px;font-size:10px;color:var(--muted)}',
       '.np-axe span{position:absolute;transform:translateX(-50%)}',
@@ -204,6 +205,36 @@
       '.np-ing b{font-size:15px;display:block}',
       '.np-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:10px}',
       '.np-leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}',
+      '.np-postes{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:10px}',
+      '.np-poste{background:var(--bg);border-radius:14px;box-shadow:var(--so);padding:12px;display:flex;flex-direction:column;gap:4px;align-items:flex-start}',
+      '.np-poste .em{font-size:24px}.np-poste .nm{font-weight:800;color:var(--black);font-size:13px}.np-poste .qui{font-size:12px;font-weight:700;color:var(--black)}',
+      '.np-poste.moi{outline:2px solid #2a9e4f}.np-poste.pris{opacity:.75}.np-poste.vide{opacity:.45}.np-poste .np-btn{margin-top:4px;font-size:11px;padding:8px 12px}',
+      /* la cinématique du service : noire, plein écran, un écran par étape */
+      '#npCine{position:fixed;inset:0;z-index:12000;background:#0e0e11;color:#f4f4f7;font-family:DM Sans,-apple-system,sans-serif;display:flex;flex-direction:column;opacity:0;transition:opacity .25s}',
+      '#npCine.on{opacity:1}#npCine:not(.on){pointer-events:none}',
+      '#npCine .top{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 16px 10px}',
+      '#npCine .top button{background:#ffffff14;border:none;color:#fff;border-radius:99px;padding:8px 14px;font-family:inherit;font-weight:700;cursor:pointer}',
+      '#npCine .prog{flex:1;height:6px;border-radius:3px;background:#ffffff1a;overflow:hidden}#npCine .prog i{display:block;height:100%;background:#34c759;transition:width .3s}',
+      '#npCine .cnt{font-size:12px;color:#ffffff8c;font-weight:700;white-space:nowrap}',
+      '#npCine .stage{flex:1;position:relative;overflow:hidden}',
+      '#npCine .plan{position:absolute;inset:0;overflow-y:auto;padding:18px 22px 120px;max-width:560px;margin:0 auto;animation:npIn .32s cubic-bezier(.22,1,.36,1)}',
+      '#npCine .plan.out{animation:npOut .26s forwards;pointer-events:none}',
+      '@keyframes npIn{from{opacity:0;transform:translateX(34px)}to{opacity:1;transform:none}}@keyframes npOut{to{opacity:0;transform:translateX(-34px)}}',
+      '#npCine .plan.ar{animation-name:npInAr}@keyframes npInAr{from{opacity:0;transform:translateX(-34px)}to{opacity:1;transform:none}}',
+      '#npCine .kick{font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:#ffffff8c;font-weight:700}',
+      '#npCine .rec{font-size:13px;color:#ffffffb3;margin-top:6px;display:flex;align-items:center;gap:8px}#npCine .rec i{width:10px;height:10px;border-radius:50%;display:inline-block}',
+      '#npCine h1{font-size:34px;line-height:1.1;margin:14px 0 6px;font-weight:800;letter-spacing:-.5px}',
+      '#npCine .ali{font-size:20px;color:#fff;font-weight:600;margin-bottom:14px}',
+      '#npCine .desc{font-size:15px;line-height:1.55;color:#ffffffd9;background:#ffffff0f;border-radius:16px;padding:14px 16px;margin-bottom:12px}',
+      '#npCine .qte{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}',
+      '#npCine .qte div{background:#ffffff14;border-radius:12px;padding:10px 12px;font-size:12px;color:#ffffffb3}#npCine .qte b{display:block;font-size:20px;color:#fff}',
+      '#npCine .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#ffffff8c;margin-bottom:12px}#npCine .meta span{background:#ffffff14;border-radius:99px;padding:5px 10px}',
+      '#npCine .port{background:#ffffff0f;border-radius:14px;padding:10px 12px;margin-bottom:8px}#npCine .port b{font-size:14px}#npCine .port .g{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#npCine .port .g span{background:#ffffff14;border-radius:8px;padding:5px 8px;font-size:12px}',
+      '#npCine .fait{position:absolute;top:0;right:0;background:#34c759;color:#fff;font-size:11px;font-weight:800;padding:6px 12px;border-radius:0 0 0 12px}',
+      '#npCine .cta{position:absolute;left:0;right:0;bottom:0;padding:14px 16px calc(16px + env(safe-area-inset-bottom));display:flex;gap:10px;background:linear-gradient(#0e0e1100,#0e0e11 40%)}',
+      '#npCine .cta button{flex:1;border:none;border-radius:16px;padding:16px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;background:#ffffff1a;color:#fff}',
+      '#npCine .cta button.ok{background:#fff;color:#0e0e11;flex:2}#npCine .cta button.ok.on{background:#34c759;color:#fff}#npCine .cta button:disabled{opacity:.3}',
+      '#npCine .som{position:absolute;inset:0;background:#0e0e11f2;overflow-y:auto;padding:18px 22px;z-index:2}#npCine .som .l{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:#ffffff0f;margin-bottom:6px;cursor:pointer;font-size:13px}#npCine .som .l.cur{outline:2px solid #fff}#npCine .som .l.ok{opacity:.55}',
       '@media(max-width:700px){.np-cell{min-height:70px;padding:5px;font-size:10px}.np-gl{grid-template-columns:70px 1fr}.np-axe{grid-template-columns:70px 1fr}}'
     ].join('\n');
     document.head.appendChild(st);
@@ -356,7 +387,56 @@
     if (S.vue === 'bons') el.innerHTML = vueBons();
     else if (S.vue === 'attribution') vueAttribution(el);
     else if (S.vue === 'calendrier') el.innerHTML = vueCalendrier();
-    else el.innerHTML = vueProduction();
+    else {
+      // Les postes pris et les étapes faites vivent en base (partagés entre les
+      // téléphones de la cuisine) : on les relit à chaque affichage du jour.
+      var jour = S.jour || ymd(new Date());
+      el.innerHTML = '<div class="np-vide">Chargement de la journée…</div>';
+      chargerJourProd(jour).then(function () { el.innerHTML = vueProduction(); })
+        .catch(function (e) { el.innerHTML = '<div class="np-alerte">' + h(e.message) + '<br>Si le message parle de <code>production_postes</code>, le SQL du 2026-09-16 (fin de natty_production.sql) n’a pas été exécuté.</div>'; });
+    }
+  }
+
+  /* ── Qui je suis, et ce que j'ai pris ───────────────────────────────────── */
+  function moi() {
+    var n = (typeof currentNutri !== 'undefined' && currentNutri && currentNutri.nom) || 'Cuisinier';
+    var id = (typeof STAFF_SESSION !== 'undefined' && STAFF_SESSION && STAFF_SESSION.user && STAFF_SESSION.user.id) || ('nom:' + n);
+    return { id: String(id), nom: n };
+  }
+  function chargerJourProd(jour) {
+    return Promise.all([
+      sbq('production_postes?jour=eq.' + jour + '&select=*'),
+      sbq('production_etapes?jour=eq.' + jour + '&fait=eq.true&select=etape_id,cuisinier_nom')
+    ]).then(function (r) { S.postes = r[0] || []; S.faits = {}; (r[1] || []).forEach(function (f) { S.faits[f.etape_id] = f.cuisinier_nom || true; }); });
+  }
+  /* Les cuisiniers du jour = les personnes qui ont pris au moins un poste, avec
+     leurs postes. Personne ? On retombe sur N cuisiniers anonymes, tous postes. */
+  function cuisiniersDuJour() {
+    var par = {};
+    (S.postes || []).forEach(function (p) {
+      var c = par[p.cuisinier_id] = par[p.cuisinier_id] || { id: p.cuisinier_id, nom: p.cuisinier_nom || 'Cuisinier', postes: [] };
+      c.postes.push(p.poste);
+    });
+    var l = Object.keys(par).map(function (k) { return par[k]; });
+    return l.length ? l : S.cuisiniers;
+  }
+  function prendrePoste(cle, prendre) {
+    var jour = S.jour || ymd(new Date()), m = moi();
+    var p = prendre
+      ? sbq('production_postes', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ jour: jour, poste: cle, cuisinier_id: m.id, cuisinier_nom: m.nom }) })
+      : sbq('production_postes?jour=eq.' + jour + '&poste=eq.' + cle, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+    p.then(function () { rendre(); }).catch(function (e) {
+      // 409 = quelqu'un l'a pris entre-temps : on recharge, et l'écran le montre.
+      toast(/23505|409|duplicate/.test(e.message) ? 'Ce poste vient d’être pris par quelqu’un d’autre' : 'Erreur : ' + e.message, 'err'); rendre();
+    });
+  }
+  function marquerFait(etapeId, fait) {
+    var jour = S.jour || ymd(new Date()), m = moi();
+    if (fait) S.faits[etapeId] = m.nom; else delete S.faits[etapeId];
+    var p = fait
+      ? sbq('production_etapes', { method: 'POST', headers: { 'Prefer': 'return=minimal,resolution=merge-duplicates' }, body: JSON.stringify({ jour: jour, etape_id: etapeId, fait: true, cuisinier_nom: m.nom }) })
+      : sbq('production_etapes?jour=eq.' + jour + '&etape_id=eq.' + etapeId, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+    return p.catch(function (e) { toast('Non enregistré : ' + e.message, 'err'); });
   }
 
   /* ── 1. Bons de commande ────────────────────────────────────────────────── */
@@ -598,7 +678,7 @@
     var html = '<div class="np-row" style="justify-content:space-between;margin-bottom:12px">'
       + '<div><div class="np-t">Production du ' + fmtJ(jour, true) + '</div><div class="np-s">' + (pj ? pj.bons.length + ' bon(s) · ' + Object.keys(pj.plats).length + ' recette(s)' : 'rien à livrer ce jour') + '</div></div>'
       + '<div class="np-row"><input type="date" class="np-in" id="npJourProd" value="' + jour + '">'
-      + '<label class="np-s">Cuisiniers <input type="number" class="np-in n" id="npCuis" value="' + S.cuisiniers + '" min="1" max="12"></label>'
+      + (typeof cuisiniersDuJour() === 'number' ? '<label class="np-s">Cuisiniers <input type="number" class="np-in n" id="npCuis" value="' + S.cuisiniers + '" min="1" max="12"></label>' : '')
       + '<label class="np-s">Début <input type="time" class="np-in" id="npDebut" value="' + S.debut + '"></label></div></div>';
     if (!pj) return html + '<div class="np-vide">Aucune livraison ce jour. Choisir un autre jour, ou passer par le calendrier.</div>';
     if (pj.rouges.length) html += '<div class="np-alerte">🔴 ' + pj.rouges.length + ' bon(s) sans attribution ce jour : ' + h(pj.rouges.map(function (b) { return nomClient(b.user_id); }).join(', ')) + '. Ils ne sont pas dans le plan ci-dessous.</div>';
@@ -615,7 +695,10 @@
       else if (l.etapesProd.some(function (e) { return !e.duree_min; })) manques.push(l.rec.nom + ' : des étapes sans durée (' + DUREE_DEFAUT + ' min par défaut)');
     });
     if (manques.length) html += '<div class="np-note">⚠ ' + h(manques.join(' · ')) + ' — à compléter dans l’onglet Chef pour un plan juste.</div>';
-    var plan = dispatcher(lots, S.cuisiniers, minDe(S.debut));
+    var cuis = cuisiniersDuJour();
+    var plan = dispatcher(lots, cuis, minDe(S.debut));
+    S.plan = plan; S.lots = lots;
+    html += sectionPostes(plan, lots);
     html += gantt(plan);
     html += '<div class="np-row" style="justify-content:space-between;margin-top:18px"><div class="np-h" style="margin:0">'
       + (S.tri === 'geste' ? 'Par geste, puis par aliment — ce qui se fait en une fois' : 'Dans l’ordre — qui fait quoi, quand') + '</div>'
@@ -647,9 +730,52 @@
     return html;
   }
 
+  /* ── Les postes du jour : qui tient quoi, et « je prends » ─────────────── */
+  function sectionPostes(plan, lots) {
+    var m = moi(), jour = S.jour || ymd(new Date());
+    var parPoste = {};
+    plan.taches.forEach(function (t) { if (!t.passif) (parPoste[t.poste] = parPoste[t.poste] || []).push(t); });
+    var mesPostes = (S.postes || []).filter(function (p) { return p.cuisinier_id === m.id; }).map(function (p) { return p.poste; });
+    var html = '<div class="np-h">Les postes — chacun prend le sien, l’algorithme ne donne ses tâches qu’à lui</div><div class="np-postes">';
+    POSTES.forEach(function (P) {
+      var ts = parPoste[P.cle] || [], tenu = (S.postes || []).find(function (p) { return p.poste === P.cle; });
+      var aMoi = tenu && tenu.cuisinier_id === m.id, min = ts.reduce(function (a, t) { return a + t.duree; }, 0);
+      var faits = ts.filter(function (t) { return S.faits[t.id]; }).length;
+      html += '<div class="np-poste ' + (tenu ? (aMoi ? 'moi' : 'pris') : '') + (ts.length ? '' : ' vide') + '">'
+        + '<div class="em">' + P.em + '</div><div class="nm">' + h(P.nom) + '</div>'
+        + '<div class="np-s">' + (ts.length ? ts.length + ' étape(s) · ~' + min + ' min' + (faits ? ' · ' + faits + ' faites' : '') : 'rien aujourd’hui') + '</div>'
+        + '<div class="qui">' + (tenu ? (aMoi ? '✅ Vous' : '👤 ' + h(tenu.cuisinier_nom || 'quelqu’un')) : '<span style="color:#c97a00">libre</span>') + '</div>'
+        + (tenu ? (aMoi ? '<button class="np-btn sec" data-poste="' + P.cle + '" data-prendre="0">Je libère</button>' : '<button class="np-btn sec" data-poste="' + P.cle + '" data-prendre="0" title="Libérer (chef)">Libérer</button>')
+                : (ts.length ? '<button class="np-btn" data-poste="' + P.cle + '" data-prendre="1">Je prends</button>' : ''))
+        + '</div>';
+    });
+    html += '</div>';
+    var bloquees = plan.taches.filter(function (t) { return t.bloque; });
+    if (typeof cuisiniersDuJour() !== 'number' && bloquees.length) html += '<div class="np-alerte">🔴 ' + bloquees.length + ' étape(s) sur un poste que personne n’a pris : ' + h([].concat.apply([], bloquees.map(function (t) { return infoPoste(t.poste).nom; })).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ')) + '. Elles attendent quelqu’un.</div>';
+    if (mesPostes.length) {
+      var mes = mesTaches(plan, lots), nb = mes.filter(function (t) { return S.faits[t.id]; }).length;
+      html += '<div class="np-row" style="justify-content:space-between;margin:10px 0 4px"><div class="np-s">Vous tenez <b>' + h(mesPostes.map(function (c) { return infoPoste(c).nom; }).join(' + ')) + '</b> — ' + mes.length + ' écran(s), ' + nb + ' fait(s).</div>'
+        + '<button class="np-btn" data-act="service">▶ Mon service, écran par écran</button></div>';
+    } else html += '<div class="np-s" style="margin:6px 0 4px">Prenez un poste pour ouvrir votre service écran par écran.</div>';
+    return html;
+  }
+
+  /* Mes écrans : mes tâches du plan, dans l'ordre prévu — plus, si je tiens
+     l'assemblage, un écran par recette avec toutes ses portions à peser. */
+  function mesTaches(plan, lots) {
+    var m = moi(), idx = plan.cuis.findIndex(function (c) { return c.id === m.id; });
+    var mes = plan.taches.filter(function (t) { return t.cuisinier === idx; }).sort(function (a, b) { return a.debut - b.debut; });
+    var tient = (S.postes || []).some(function (p) { return p.cuisinier_id === m.id && p.poste === 'assemblage'; });
+    if (tient) lots.forEach(function (l) {
+      var etapes = (S.etapes[l.rec.id] || []).filter(function (e) { return e.phase === 'assemblage'; });
+      mes.push({ id: 'ass_' + l.rec.id, assemblage: true, lot: l, etapes: etapes, rec: l.rec.nom, couleur: l.couleur, titre: 'Assembler ' + l.portions + ' portion(s)', geste: 'dresser', poste: 'assemblage', debut: plan.fin, fin: plan.fin, duree: 0 });
+    });
+    return mes;
+  }
+
   function ligneTache(t) {
     return '<div class="np-etape"><div class="t">' + hm(t.debut) + ' → ' + hm(t.fin) + '</div><i class="c" style="background:' + t.couleur + '"></i>'
-      + '<div class="b"><b>' + (t.passif ? '⏳ attente' : 'Cuisinier ' + (t.cuisinier + 1)) + '</b> · ' + h(t.rec) + ' — ' + emojiGeste(t.geste) + ' ' + h(t.titre)
+      + '<div class="b"><b' + (t.bloque ? ' style="color:#c0392b"' : '') + '>' + (t.passif ? '⏳ attente' : (t.bloque ? '🔴 ' : '') + h(t.qui)) + '</b> <span class="np-s">' + infoPoste(t.poste).em + ' ' + h(infoPoste(t.poste).nom) + '</span> · ' + h(t.rec) + ' — ' + emojiGeste(t.geste) + ' ' + h(t.titre)
       + (t.aliment ? ' <span class="np-s">· ' + h(t.aliment) + '</span>' : '')
       + '<small>' + h(t.desc) + (t.temperature ? ' · ' + t.temperature + ' °C' : '') + (t.poste ? ' · ' + h(t.poste) : '') + (t.defaut ? ' · <i>durée par défaut</i>' : '') + '</small></div></div>';
   }
@@ -688,7 +814,7 @@
             + ts.map(function (t) {
               return '<div class="np-row" style="gap:8px;font-size:12px;margin-top:6px"><i style="width:9px;height:9px;border-radius:50%;background:' + t.couleur + ';flex-shrink:0"></i>'
                 + '<b style="color:var(--black)">' + h(t.rec) + '</b> <span class="np-s">' + h(t.titre) + ' · ×' + t.fiches.toFixed(1) + ' fiche · ' + t.duree + ' min</span>'
-                + '<span style="margin-left:auto" class="np-s">' + hm(t.debut) + ' · ' + (t.passif ? '⏳' : 'Cuisinier ' + (t.cuisinier + 1)) + '</span></div>';
+                + '<span style="margin-left:auto" class="np-s">' + hm(t.debut) + ' · ' + (t.passif ? '⏳' : h(t.qui)) + '</span></div>';
             }).join('') + '</div>';
         }).join('');
     }).join('');
@@ -722,46 +848,84 @@
      repos) démarre dès que la précédente finit et ne prend personne : le
      cuisinier enchaîne sur une autre recette. C'est ce qui évite le temps
      mort « tout le monde attend le four ». */
-  function dispatcher(lots, nbCuis, t0) {
+  /* Les POSTES. Un poste est une famille de gestes ; un cuisinier « prend »
+     un ou plusieurs postes pour la journée, et dès lors les tâches de ce poste
+     ne vont qu'à lui — un poste pris n'est plus disponible aux autres. Une
+     étape peut forcer son poste (`recettes_etapes.poste`) si le texte est
+     l'une de ces clés ; sinon le geste décide. */
+  var POSTES = [
+    { cle: 'legumes', nom: 'Taille & légumes', em: '🔪', gestes: ['couper', 'rincer', 'peser'] },
+    { cle: 'feux', nom: 'Feux & cuissons', em: '🍳', gestes: ['saisir', 'bouillir', 'mijoter'] },
+    { cle: 'four', nom: 'Four', em: '🔥', gestes: ['enfourner'] },
+    { cle: 'sauces', nom: 'Sauces & mélanges', em: '🥣', gestes: ['melanger', 'fouetter', 'mixer', 'assaisonner', 'huiler'] },
+    { cle: 'assemblage', nom: 'Assemblage', em: '🍽', gestes: ['dresser'] }
+  ];
+  function posteDe(e) {
+    var p = norm(e.poste || '');
+    var force = POSTES.find(function (x) { return x.cle === p; });
+    if (force) return force.cle;
+    var g = e.geste || '';
+    var par = POSTES.find(function (x) { return x.gestes.indexOf(g) >= 0; });
+    return par ? par.cle : 'feux';
+  }
+  function infoPoste(cle) { return POSTES.find(function (x) { return x.cle === cle; }) || { cle: cle, nom: cle, em: '❔' }; }
+
+  /* `cuisiniers` : un nombre (N cuisiniers anonymes, tous postes) ou une liste
+     [{nom, id, postes:[…]}] — les vrais, avec les postes qu'ils ont pris. Une
+     tâche dont le poste n'est tenu par personne est BLOQUÉE : posée à l'heure
+     où elle serait prête, sans cuisinier, et signalée. Sa recette continue
+     d'être planifiée derrière elle, pour que le plan reste lisible. */
+  function dispatcher(lots, cuisiniers, t0) {
+    var cuis = typeof cuisiniers === 'number'
+      ? Array.apply(null, Array(cuisiniers)).map(function (_, i) { return { nom: 'Cuisinier ' + (i + 1), postes: null }; })
+      : cuisiniers.slice();
     var chaines = lots.map(function (l) {
       var s = Math.max(1, l.fiches);
       var et = l.etapesProd.map(function (e, i) {
         var d = e.duree_min > 0 ? e.duree_min : DUREE_DEFAUT;
-        return { rec: l.rec.nom, recId: l.rec.id, fiches: l.fiches, couleur: l.couleur, titre: e.titre || ('Étape ' + (e.numero || i + 1)), desc: e.description || '',
-          geste: e.geste || '', aliment: e.aliment || '',
-          duree: e.passif ? d : Math.round(d * Math.sqrt(s)), passif: !!e.passif, temperature: e.temperature_c, poste: e.poste, defaut: !(e.duree_min > 0) };
+        return { id: e.id, rec: l.rec.nom, recId: l.rec.id, fiches: l.fiches, couleur: l.couleur, titre: e.titre || ('Étape ' + (e.numero || i + 1)), desc: e.description || '',
+          geste: e.geste || '', aliment: e.aliment || '', poste: posteDe(e), numero: e.numero || i + 1,
+          duree: e.passif ? d : Math.round(d * Math.sqrt(s)), passif: !!e.passif, temperature: e.temperature_c, defaut: !(e.duree_min > 0) };
       });
       var reste = 0; for (var i = et.length - 1; i >= 0; i--) { reste += et[i].duree; et[i].reste = reste; }
       return { et: et, i: 0, pret: t0 };
     });
-    var libre = []; for (var c = 0; c < nbCuis; c++) libre.push(t0);
+    var libre = cuis.map(function () { return t0; });
+    function eligibles(t) {
+      var r = [];
+      cuis.forEach(function (c, i) { if (!c.postes || c.postes.indexOf(t.poste) >= 0) r.push(i); });
+      return r;
+    }
     var taches = [], fin = t0, garde = 0;
     while (garde++ < 5000) {
       var cand = chaines.filter(function (ch) { return ch.i < ch.et.length; });
       if (!cand.length) break;
-      cand.sort(function (a, b) { return a.pret - b.pret || b.et[b.i].reste - a.et[a.i].reste; });
-      // parmi les chaînes prêtes le plus tôt, la plus longue ; sinon la première prête
-      var ch = null, tMin = Math.min.apply(null, libre);
-      var pretes = cand.filter(function (x) { return x.pret <= tMin; });
-      if (pretes.length) { pretes.sort(function (a, b) { return b.et[b.i].reste - a.et[a.i].reste; }); ch = pretes[0]; }
-      else ch = cand[0];
-      var t = ch.et[ch.i], debut, ci = -1;
-      if (t.passif) { debut = ch.pret; }
-      else {
-        ci = 0; for (var k = 1; k < libre.length; k++) if (libre[k] < libre[ci]) ci = k;
-        debut = Math.max(libre[ci], ch.pret);
-        libre[ci] = debut + t.duree;
-      }
-      taches.push(Object.assign({}, t, { debut: debut, fin: debut + t.duree, cuisinier: ci }));
+      // pour chaque chaîne, l'heure à laquelle sa prochaine tâche peut VRAIMENT
+      // commencer : quand elle est prête ET qu'un cuisinier de son poste est libre
+      cand.forEach(function (ch) {
+        var t = ch.et[ch.i];
+        if (t.passif) { ch.possible = ch.pret; ch.ci = -1; return; }
+        var el = eligibles(t);
+        if (!el.length) { ch.possible = ch.pret; ch.ci = -2; return; }
+        var ci = el[0]; el.forEach(function (i) { if (libre[i] < libre[ci]) ci = i; });
+        ch.possible = Math.max(libre[ci], ch.pret); ch.ci = ci;
+      });
+      cand.sort(function (a, b) { return a.possible - b.possible || b.et[b.i].reste - a.et[a.i].reste; });
+      var ch = cand[0], t = ch.et[ch.i], debut = ch.possible;
+      if (ch.ci >= 0) libre[ch.ci] = debut + t.duree;
+      taches.push(Object.assign({}, t, { debut: debut, fin: debut + t.duree, cuisinier: ch.ci, bloque: ch.ci === -2,
+        qui: ch.ci >= 0 ? cuis[ch.ci].nom : (ch.ci === -2 ? 'poste non pris' : 'attente') }));
       ch.pret = debut + t.duree; ch.i++;
       if (ch.pret > fin) fin = ch.pret;
     }
-    return { taches: taches, fin: fin, t0: t0, nbCuis: nbCuis };
+    return { taches: taches, fin: fin, t0: t0, nbCuis: cuis.length, cuis: cuis };
   }
 
   function gantt(plan) {
     var tot = Math.max(30, plan.fin - plan.t0), lignes = [];
-    for (var c = 0; c < plan.nbCuis; c++) lignes.push({ nom: 'Cuisinier ' + (c + 1), t: plan.taches.filter(function (x) { return x.cuisinier === c; }) });
+    for (var c = 0; c < plan.nbCuis; c++) lignes.push({ nom: plan.cuis[c].nom, t: plan.taches.filter(function (x) { return x.cuisinier === c; }) });
+    var bloquees = plan.taches.filter(function (x) { return x.bloque; });
+    if (bloquees.length) lignes.push({ nom: '🔴 Poste non pris', t: bloquees });
     // Les attentes se chevauchent souvent (deux mijotages en même temps) :
     // autant de lignes qu'il en faut pour qu'aucune barre n'en couvre une autre.
     var voies = [];
@@ -775,16 +939,18 @@
     for (var m = 0; m <= tot; m += pas) axe += '<span style="left:' + (m / tot * 100) + '%">' + hm(plan.t0 + m) + '</span>';
     return '<div class="np-gantt"><div class="np-axe"><div></div><div>' + axe + '</div></div>' + lignes.map(function (l) {
       return '<div class="np-gl"><div class="n">' + l.nom + '</div><div class="np-gt">' + l.t.map(function (t) {
-        return '<div class="np-gb ' + (t.passif ? 'pas' : '') + '" style="left:' + ((t.debut - plan.t0) / tot * 100) + '%;width:' + Math.max(0.8, t.duree / tot * 100) + '%;background:' + t.couleur + '" title="' + h(t.rec + ' — ' + t.titre + ' (' + t.duree + ' min)') + '">' + emojiGeste(t.geste) + ' ' + h(t.rec.split(' ')[0] + ' · ' + t.titre) + '</div>';
+        return '<div class="np-gb ' + (t.passif ? 'pas' : '') + (t.bloque ? ' blo' : '') + '" style="left:' + ((t.debut - plan.t0) / tot * 100) + '%;width:' + Math.max(0.8, t.duree / tot * 100) + '%;background:' + t.couleur + '" title="' + h(t.rec + ' — ' + t.titre + ' (' + t.duree + ' min)') + '">' + emojiGeste(t.geste) + ' ' + h(t.rec.split(' ')[0] + ' · ' + t.titre) + '</div>';
       }).join('') + '</div></div>';
     }).join('') + '</div>';
   }
 
   /* ── Événements ─────────────────────────────────────────────────────────── */
   function clic(ev) {
-    var b = ev.target.closest('[data-vue],[data-act],[data-filtre],[data-stp],[data-jour],[data-bon],[data-tri]');
+    var b = ev.target.closest('[data-vue],[data-act],[data-filtre],[data-stp],[data-jour],[data-bon],[data-tri],[data-poste]');
     if (!b) return;
     if (b.dataset.tri) { S.tri = b.dataset.tri; rendre(); return; }
+    if (b.dataset.poste) { prendrePoste(b.dataset.poste, b.dataset.prendre === '1'); return; }
+    if (b.dataset.act === 'service') { ouvrirService(); return; }
     if (b.dataset.vue) { S.vue = b.dataset.vue; if (S.vue === 'production' && !S.jour) S.jour = ymd(new Date()); rendre(); return; }
     if (b.dataset.stp) {
       var id = b.dataset.rec, n = (A.sel[id] || 0) + parseInt(b.dataset.stp, 10);
@@ -830,6 +996,127 @@
     if (t.dataset.coche) {
       try { localStorage.setItem(t.dataset.coche, t.checked ? '1' : '0'); } catch (e) {}
       t.closest('.np-port').classList.toggle('ok', t.checked); return;
+    }
+  }
+
+  /* ── Le service, écran par écran ────────────────────────────────────────
+     Un écran par étape de MES postes, dans l'ordre prévu par l'algorithme :
+     l'heure, le poste, le geste, l'aliment, la recette, la consigne, et les
+     QUANTITÉS de la journée pour cet aliment (les grammes de la fiche × le
+     nombre de fiches). ‹ › naviguent librement, le sommaire saute n'importe où,
+     « Fait ✓ » écrit en base — l'écran d'à côté le voit. Le bouton d'action
+     est dans une barre FIXE, hors du plan animé (leçon narration.html). */
+  var C = { taches: [], i: 0, el: null, sortie: null };
+
+  function ouvrirService() {
+    if (!S.plan) return;
+    C.taches = mesTaches(S.plan, S.lots);
+    if (!C.taches.length) { toast('Aucune étape sur vos postes aujourd’hui', 'ok'); return; }
+    // on ouvre sur la première étape pas encore faite
+    C.i = Math.max(0, C.taches.findIndex(function (t) { return !S.faits[t.id]; }));
+    if (!C.el) {
+      C.el = document.createElement('div'); C.el.id = 'npCine';
+      C.el.innerHTML = '<div class="top"><button data-c="fermer">✕</button><div class="prog"><i></i></div><button data-c="som" class="cnt" style="background:none"></button></div>'
+        + '<div class="stage"></div><div class="cta"><button data-c="prec">‹</button><button data-c="fait" class="ok"></button><button data-c="suiv">›</button></div>';
+      document.body.appendChild(C.el);
+      C.el.addEventListener('click', clicCine);
+      document.addEventListener('keydown', function (ev) { if (!C.el.classList.contains('on')) return; if (ev.key === 'ArrowRight') aller(C.i + 1); if (ev.key === 'ArrowLeft') aller(C.i - 1); if (ev.key === 'Escape') fermerService(); });
+    }
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(function () { C.el.classList.add('on'); });
+    setTimeout(function () { C.el.classList.add('on'); }, 60);
+    aller(C.i, true);
+  }
+  function fermerService() {
+    if (!C.el) return;
+    C.el.classList.remove('on'); document.body.style.overflow = '';
+    setTimeout(function () { var st = C.el.querySelector('.stage'); if (st) st.innerHTML = ''; rendre(); }, 260);
+  }
+  function aller(i, sansAnim) {
+    if (i < 0 || i >= C.taches.length) return;
+    var arriere = i < C.i; C.i = i;
+    var stage = C.el.querySelector('.stage'), som = C.el.querySelector('.som'); if (som) som.remove();
+    // TOUS les plans sortants partent — deux taps rapprochés laisseraient sinon un
+    // plan orphelin sous le nouveau (le chevauchement connu de narration.html).
+    stage.querySelectorAll('.plan').forEach(function (p) { p.classList.add('out'); setTimeout(function () { p.remove(); }, 300); });
+    var p = document.createElement('div'); p.className = 'plan' + (arriere ? ' ar' : ''); if (sansAnim) p.style.animation = 'none';
+    p.innerHTML = htmlEcran(C.taches[i]);
+    stage.appendChild(p);
+    majBarre();
+  }
+  function majBarre() {
+    var t = C.taches[C.i], nb = C.taches.filter(function (x) { return S.faits[x.id]; }).length;
+    C.el.querySelector('.prog i').style.width = ((C.i + 1) / C.taches.length * 100) + '%';
+    C.el.querySelector('[data-c="som"]').textContent = (C.i + 1) + ' / ' + C.taches.length + ' · ' + nb + ' ✓';
+    C.el.querySelector('[data-c="prec"]').disabled = C.i === 0;
+    C.el.querySelector('[data-c="suiv"]').disabled = C.i === C.taches.length - 1;
+    var ok = C.el.querySelector('[data-c="fait"]');
+    ok.classList.toggle('on', !!S.faits[t.id]);
+    ok.textContent = S.faits[t.id] ? 'Fait ✓ (annuler)' : (t.assemblage ? 'Assemblage terminé ✓' : 'Fait ✓');
+  }
+  /* Les grammes de la journée pour l'aliment de l'étape : chaque mot de
+     l'aliment cherché dans les ingrédients de la recette, mot à mot, ×fiches. */
+  function quantitesEtape(t) {
+    var ings = S.ings[t.recId] || [], mots = norm(t.aliment).split(' ').filter(function (m) { return m.length > 2; }).map(function (m) { return m.replace(/s$/, ''); });
+    var out = [];
+    ings.forEach(function (i) {
+      var n = norm(i.ingredient_nom).split(' ').map(function (m) { return m.replace(/s$/, ''); });
+      if (mots.some(function (m) { return n.indexOf(m) >= 0; }) && parseFloat(i.quantite_g) > 0) {
+        var g = parseFloat(i.quantite_g) * t.fiches;
+        out.push({ nom: i.ingredient_nom, g: g, lib: g >= 1000 ? (Math.round(g / 10) / 100) + ' kg' : Math.round(g) + ' g' });
+      }
+    });
+    return out;
+  }
+  function htmlEcran(t) {
+    var P = infoPoste(t.poste), fait = S.faits[t.id];
+    var html = (fait ? '<div class="fait">FAIT' + (typeof fait === 'string' ? ' · ' + h(fait) : '') + '</div>' : '')
+      + '<div class="kick">' + (t.assemblage ? 'En fin de production' : hm(t.debut) + ' → ' + hm(t.fin)) + ' · ' + P.em + ' ' + h(P.nom) + '</div>'
+      + '<div class="rec"><i style="background:' + t.couleur + '"></i>' + h(t.rec) + (t.fiches ? ' · ×' + t.fiches.toFixed(1) + ' de la fiche' : '') + '</div>'
+      + '<h1>' + emojiGeste(t.geste) + ' ' + h(t.titre) + '</h1>';
+    if (t.assemblage) {
+      var l = t.lot, idx = 0;
+      html += '<div class="ali">' + l.portions + ' portion(s), une par une, sur la balance</div>';
+      if (t.etapes.length) html += '<div class="desc">' + t.etapes.map(function (e) { return '<b>' + h(e.titre || 'Étape') + '</b> ' + h(e.description || ''); }).join('<br>') + '</div>';
+      l.parClient.forEach(function (pc) {
+        for (var k = 0; k < pc.n; k++) {
+          idx++;
+          html += '<div class="port"><b>' + idx + '/' + l.portions + ' · ' + h(nomClient(pc.bon.user_id)) + '</b> <span style="color:#ffffff8c;font-size:12px">' + (pc.p.kcal ? Math.round(pc.p.kcal) + ' kcal · ' : '') + Math.round(pc.p.gPortion) + ' g</span><div class="g">'
+            + pc.p.ings.filter(function (g) { return g.g > 0; }).map(function (g) { return '<span><b>' + (g.g >= 10 ? Math.round(g.g) : Math.round(g.g * 10) / 10) + ' ' + h(g.unite) + '</b> ' + h(g.nom) + '</span>'; }).join('') + '</div></div>';
+        }
+      });
+      return html;
+    }
+    var q = quantitesEtape(t);
+    html += '<div class="ali">' + h(t.aliment || '') + '</div>';
+    if (q.length) html += '<div class="qte">' + q.map(function (x) { return '<div><b>' + h(x.lib) + '</b>' + h(x.nom) + '</div>'; }).join('') + '</div>';
+    if (t.desc) html += '<div class="desc">' + h(t.desc) + '</div>';
+    html += '<div class="meta"><span>⏱ ' + t.duree + ' min' + (t.defaut ? ' (par défaut)' : '') + '</span>' + (t.temperature ? '<span>🌡 ' + t.temperature + ' °C</span>' : '') + (t.passif ? '<span>⏳ attente : libre pendant ce temps</span>' : '') + '<span>' + h(t.rec) + ' · étape ' + t.numero + '</span></div>';
+    return html;
+  }
+  function sommaire() {
+    var st = C.el.querySelector('.stage'), old = st.querySelector('.som'); if (old) { old.remove(); return; }
+    var d = document.createElement('div'); d.className = 'som';
+    d.innerHTML = '<div class="kick" style="margin-bottom:10px">Toutes mes étapes</div>' + C.taches.map(function (t, i) {
+      return '<div class="l ' + (i === C.i ? 'cur' : '') + (S.faits[t.id] ? ' ok' : '') + '" data-som="' + i + '"><span style="color:#ffffff8c;min-width:44px">' + (t.assemblage ? 'fin' : hm(t.debut)) + '</span><i style="width:8px;height:8px;border-radius:50%;background:' + t.couleur + '"></i><span style="flex:1">' + emojiGeste(t.geste) + ' ' + h(t.titre) + ' <span style="color:#ffffff8c">· ' + h(t.rec) + '</span></span>' + (S.faits[t.id] ? '✓' : '') + '</div>';
+    }).join('');
+    st.appendChild(d);
+  }
+  function clicCine(ev) {
+    var s = ev.target.closest('[data-som]'); if (s) { aller(parseInt(s.dataset.som, 10)); return; }
+    var b = ev.target.closest('[data-c]'); if (!b) return;
+    var c = b.dataset.c;
+    if (c === 'fermer') fermerService();
+    else if (c === 'prec') aller(C.i - 1);
+    else if (c === 'suiv') aller(C.i + 1);
+    else if (c === 'som') sommaire();
+    else if (c === 'fait') {
+      var t = C.taches[C.i], fait = !S.faits[t.id];
+      if (t.assemblage) { if (fait) S.faits[t.id] = moi().nom; else delete S.faits[t.id]; } // pas d'id d'étape en base : local
+      else marquerFait(t.id, fait);
+      var pl = C.el.querySelector('.plan:not(.out)'); if (pl) pl.innerHTML = htmlEcran(t);
+      majBarre();
+      if (fait && C.i < C.taches.length - 1) setTimeout(function () { aller(C.i + 1); }, 420);
     }
   }
 
