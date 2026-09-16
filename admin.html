@@ -12,6 +12,10 @@
   --sm: 4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85);
   --green: #5a9e6f; --gl: #eaf4ee; --text: #3a3a4a; --muted: #aaa;
   --red: #c77b7b; --rl: #fde8e8; --amber: #ba7517; --al: #faeeda; --black: #1a1a2e;
+  /* ⚠️ `--bdr` était UTILISÉE sans être définie : `border-bottom:.5px solid
+     var(--bdr)` est alors une déclaration invalide, silencieusement jetée —
+     donc aucun séparateur dans la liste des repas de la fiche. */
+  --bdr: rgba(154,154,170,0.22);
 }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; color: var(--text); }
 .bg-pattern { position: fixed; inset: 0; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0); background-size: 26px 26px; z-index: 0; }
@@ -238,6 +242,7 @@ input[type="file"] { display: none; }
 .dc-lbl { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 .dc-val { font-size: 15px; font-weight: 500; }
 .dc-val.green { color: var(--green); }
+.prog-stat-val.green { color: var(--green); }
 .contact-row { display: flex; align-items: center; gap: 12px; background: var(--bg); border-radius: 16px; padding: 14px 16px; box-shadow: var(--si); margin-bottom: 10px; }
 .contact-icon { font-size: 22px; flex-shrink: 0; }
 .contact-info { flex: 1; min-width: 0; }
@@ -2052,12 +2057,16 @@ async function chargerFicheAlim(userId) {
   document.getElementById('ficheAlimContent').innerHTML = '<div class="loading">Chargement...</div>';
   try {
     var data = await sb('questionnaire_alim?user_id=eq.'+userId+'&limit=1');
-    if (!data||!data.length) {
-      document.getElementById('ficheAlimContent').innerHTML = '<div class="alim-empty" style="padding:20px;">Questionnaire alimentaire non complété.</div>';
-      return;
-    }
-    var q = data[0];
+    var q = (data && data[0]) || null;
     var html = '';
+    /* ⚠️ Plus de sortie anticipée sur un questionnaire vide. Elle rendait la
+       main avant les sections du bas — or quelqu'un qui n'a pas rempli le
+       questionnaire peut parfaitement avoir un garde-manger, du matériel et une
+       semaine planifiée, et c'est même là qu'on a le plus besoin de les voir. */
+    if (!q) {
+      html += '<div class="sec-card"><div class="alim-empty">Questionnaire alimentaire non complété.</div></div>';
+      q = {};
+    } else {
 
     // Allergies
     html += '<div class="sec-card"><div class="alim-section"><div class="alim-section-title">🚫 Allergies & Régimes</div>';
@@ -2124,6 +2133,17 @@ async function chargerFicheAlim(userId) {
     }
 
     html += '</div>';
+    }
+
+    // Ce avec quoi il peut cuisiner, ce qu'il a chez lui, et ce qu'il a prévu.
+    // Lectures isolées : une policy manquante coûte sa section, pas le panneau.
+    var [mat, gm, pl] = await Promise.all([
+      lireSuivi('materiel?user_id=eq.'+userId+'&select=*&limit=1'),
+      lireSuivi('garde_manger?user_id=eq.'+userId+'&select=*&limit=1'),
+      lireSuivi('planning_semaine?user_id=eq.'+userId+'&order=semaine.desc&select=*&limit=1')
+    ]);
+    html += htmlMateriel(mat) + htmlGardeManger(gm) + htmlPlanning(pl);
+
     document.getElementById('ficheAlimContent').innerHTML = html;
   } catch(e) {
     document.getElementById('ficheAlimContent').innerHTML = '<div class="alim-empty" style="padding:20px;">Erreur : '+e.message+'</div>';
@@ -2263,6 +2283,135 @@ function ciblesJour(onb) {
   return out;
 }
 
+/* ── CE QUE LE MEMBRE DÉCLARE, ET QUE L'ÉQUIPE PEUT ENFIN LIRE ─────────────
+   Cinq tables du suivi n'avaient qu'une policy « soi seulement » : le
+   nutritionniste ne voyait ni ce que son client répond le soir, ni ce qu'il
+   soulève, ni ce qu'il a prévu de cuisiner, ni ce avec quoi il peut le faire.
+   `natty_admin_clients.sql` pose une lecture pour l'équipe — l'écriture reste
+   au membre, ce sont ses réponses.
+   ⚠️ Chaque lecture est isolée : si UNE policy manque, on perd cette
+   section-là et on le dit, au lieu de faire tomber tout le panneau. */
+async function lireSuivi(path) {
+  try { return { ok: true, rows: await sb(path) }; }
+  catch(e) {
+    var m = e.message || '';
+    return { ok: false, rows: [], err: /PGRST205|42P01/.test(m) ? 'table absente'
+      : /42501|permission/.test(m) ? 'lecture refusée — exécuter natty_admin_clients.sql'
+      : m.slice(0, 90) };
+  }
+}
+function sectionVide(titre, r, phrase) {
+  return '<div class="sec-card"><div class="sec-label">'+titre+'</div><div class="alim-empty">'
+    + (r.ok ? phrase : '⚠️ '+escHtml(r.err)) + '</div></div>';
+}
+var RESSENTI_L = { oui:'😊 Bien mangé', moyen:'😐 Moyen', non:'😕 Pas terrible' };
+var MOTIV_L    = { haute:'Motivation haute', stable:'Motivation stable', basse:'Motivation basse' };
+var DIFF_L     = { temps:'⏱ Le temps', envies:'🍫 Les envies', quantite:'🍽 Les quantités', rien:'Rien de particulier' };
+
+/* Le bilan du soir. On montre les JOURS (portee=jour) : la semaine porte la
+   même note mais sur sept jours, les mêler ferait une série qui ne compare
+   rien. */
+function htmlBilans(r) {
+  var b = (r.rows || []).filter(function(x){ return (x.portee||'jour') === 'jour'; });
+  if (!b.length) return sectionVide('🌙 Bilan du soir', r, 'Aucun bilan rempli.');
+  var d = b[0];
+  var h = '<div class="sec-card"><div class="sec-label">🌙 Bilan du soir — '+b.length+' sur 30 jours</div>';
+  // Trois cartes : `.prog-stat-grid` en compte deux par ligne, la troisième
+  // resterait seule en bas.
+  h += '<div class="prog-stat-grid" style="grid-template-columns:repeat(3,1fr);">';
+  h += '<div class="prog-stat-card"><div class="prog-stat-val green">'+(d.note==null?'–':d.note)+'</div><div class="prog-stat-lbl">Dernière note /100</div></div>';
+  h += '<div class="prog-stat-card"><div class="prog-stat-val green">'+(d.muscle_g==null?'–':'+'+d.muscle_g+' g')+'</div><div class="prog-stat-lbl">Muscle estimé</div></div>';
+  h += '<div class="prog-stat-card"><div class="prog-stat-val green">'+(d.gras_g==null?'–':'−'+d.gras_g+' g')+'</div><div class="prog-stat-lbl">Graisse estimée</div></div>';
+  h += '</div>';
+  /* ⚠️ « Estimations » écrit ici aussi : c'est le mot que le membre voit sur
+     son propre écran, et un chiffre qui change de statut en changeant d'écran
+     est un chiffre qu'on ne peut plus discuter avec lui. */
+  h += '<div class="alim-empty" style="text-align:left;padding:6px 0 10px;">Muscle et graisse sont des <b>estimations</b> du modèle de l’app, pas des mesures.</div>';
+  h += '<div style="margin-top:4px;">' + b.slice(0, 10).map(function(x){
+    var tags = [RESSENTI_L[x.ressenti], MOTIV_L[x.motivation], DIFF_L[x.difficulte]]
+      .filter(Boolean).map(function(t){ return '<span class="alim-chip">'+escHtml(t)+'</span>'; }).join('');
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:.5px solid var(--bdr);">'
+      + '<div style="width:62px;flex-shrink:0;font-size:11px;color:var(--muted);">'+jourCourt(x.jour)+'</div>'
+      + '<div style="flex:1;min-width:0;">'+(tags || '<span class="alim-chip">Sans réponse</span>')+'</div>'
+      + '<div style="font-size:12px;font-weight:700;flex-shrink:0;">'+(x.note==null?'–':x.note)+'</div></div>';
+  }).join('') + '</div></div>';
+  return h;
+}
+
+/* Les séances. On montre CE QUI A ÉTÉ SAISI — groupes, exercices, séries,
+   durée — et rien de plus. Le tonnage, les kcal et le stimulus se calculent
+   dans `assets/seance.js` : les recalculer ici en ferait une seconde version,
+   qui dériverait au premier ajustement du modèle. */
+function htmlSeances(r) {
+  var s = r.rows || [];
+  if (!s.length) return sectionVide('🏋️ Séances', r, 'Aucune séance notée sur 30 jours.');
+  var total = 0;
+  var lignes = s.slice(0, 12).map(function(x){
+    var ex = Array.isArray(x.exos) ? x.exos : [];
+    var series = ex.reduce(function(n,e){ return n + ((Array.isArray(e.series) ? e.series.length : 0)); }, 0);
+    total += ex.length;
+    var groupes = {};
+    ex.forEach(function(e){ if (e.g) groupes[e.g] = 1; });
+    var gl = Object.keys(groupes);
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:.5px solid var(--bdr);">'
+      + '<div style="width:62px;flex-shrink:0;font-size:11px;color:var(--muted);">'+jourCourt(x.jour)+'</div>'
+      + '<div style="flex:1;min-width:0;">'+(gl.length ? gl.map(function(g){ return '<span class="alim-chip alim-chip-dark">'+escHtml(g)+'</span>'; }).join('')
+            : '<span class="alim-chip">'+escHtml((x.libre||'Séance').slice(0,60))+'</span>')+'</div>'
+      + '<div style="font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap;">'+ex.length+' exo · '+series+' séries'
+      + (x.duree_min ? ' · '+x.duree_min+' min' : '')+'</div></div>';
+  }).join('');
+  return '<div class="sec-card"><div class="sec-label">🏋️ Séances — '+s.length+' sur 30 jours, '+total+' exercices</div>'
+    + lignes + '</div>';
+}
+
+/* La semaine planifiée : ce qu'il a prévu de cuisiner, et quand. C'est ce qui
+   permet de parler de la semaine à venir plutôt que de celle qui vient de
+   passer. */
+function htmlPlanning(r) {
+  var p = (r.rows && r.rows[0] && r.rows[0].plan) || null;
+  if (!p || !p.repas || !p.repas.length) return sectionVide('🗓 Semaine planifiée', r, 'Aucune semaine planifiée.');
+  var J = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'], C = ['Matin','Midi','Soir'];
+  var h = '<div class="sec-card"><div class="sec-label">🗓 Semaine planifiée — '+p.repas.length+' repas placés'
+        + (r.rows[0].semaine ? ' (semaine du '+jourCourt(r.rows[0].semaine)+')' : '')+'</div>';
+  h += '<div class="alim-chips">' + p.repas.map(function(x){
+    return '<span class="alim-chip">'+(x.em||'🍽')+' '+escHtml(x.nom||'Repas')
+      + ' <span style="opacity:.6">'+(J[x.jour]||'?')+' '+(C[x.creneau]||'')+'</span></span>';
+  }).join('') + '</div></div>';
+  return h;
+}
+
+/* Le matériel. On affiche `resume`, la phrase composée par le navigateur et
+   rangée à côté des clés EXPRÈS pour que personne d'autre n'ait à tenir une
+   copie du catalogue des 14 appareils — c'est ce qui a fait diverger
+   `api/_nutrition.js` de `core.js`. Le refaire ici serait la même erreur. */
+function htmlMateriel(r) {
+  var m = (r.rows || [])[0];
+  if (!m) return sectionVide('🍳 Matériel de cuisine', r, 'Question jamais posée — ou gardée sur son appareil.');
+  if (m.resume) return '<div class="sec-card"><div class="sec-label">🍳 Matériel de cuisine</div>'
+    + '<div style="font-size:12px;line-height:1.6;">'+escHtml(m.resume)+'</div></div>';
+  var n = Array.isArray(m.items) ? m.items.length : 0;
+  return '<div class="sec-card"><div class="sec-label">🍳 Matériel de cuisine</div>'
+    + '<div class="alim-empty">'+n+' appareil(s) cochés, sans résumé enregistré.</div></div>';
+}
+
+function htmlGardeManger(r) {
+  var g = (r.rows || [])[0];
+  var it = (g && Array.isArray(g.items)) ? g.items : [];
+  if (!it.length) return sectionVide('🧺 Garde-manger', r, 'Vide — ou gardé sur son appareil.');
+  return '<div class="sec-card"><div class="sec-label">🧺 Garde-manger — '+it.length+' ingrédient(s)</div>'
+    + '<div class="alim-chips">' + it.slice(0, 40).map(function(x){
+        return '<span class="alim-chip alim-chip-green">'+(x.em||'🥄')+' '+escHtml(x.nom||'')
+             + (x.qte ? ' <span style="opacity:.6">'+escHtml(x.qte)+'</span>' : '')+'</span>';
+      }).join('') + '</div></div>';
+}
+
+function jourCourt(j) {
+  if (!j) return '–';
+  var d = new Date(String(j).length <= 10 ? j + 'T12:00:00' : j);
+  return isNaN(d) ? String(j) : d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+}
+function ilYA(n) { var d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
+
 async function chargerFicheProg(userId) {
   document.getElementById('ficheProgContent').innerHTML = '<div class="loading">Chargement...</div>';
   try {
@@ -2315,6 +2464,15 @@ async function chargerFicheProg(userId) {
       html += '<div class="alim-empty">Aucun repas enregistré</div>';
     }
     html += '</div>';
+
+    // Ce que le membre déclare le soir, et ce qu'il soulève. Lectures isolées :
+    // une policy manquante coûte sa section, pas le panneau entier.
+    var depuis = ilYA(30);
+    var [bil, sea] = await Promise.all([
+      lireSuivi('bilan_jour?user_id=eq.'+userId+'&jour=gte.'+depuis+'&order=jour.desc&select=*'),
+      lireSuivi('seances?user_id=eq.'+userId+'&jour=gte.'+depuis+'&order=jour.desc&select=*')
+    ]);
+    html += htmlBilans(bil) + htmlSeances(sea);
 
     document.getElementById('ficheProgContent').innerHTML = html;
   } catch(e) {
