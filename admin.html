@@ -1044,6 +1044,45 @@ const MASTER_PWD = 'Natty2026!';
 let allClients=[], allPlats=[], allNutris=[], allRdv=[];
 let currentFilter='tous', currentSearch='', currentCatFilter='all', currentRdvFilter='a_venir';
 let currentClient=null, semaineOffset=0, uploadedPhotoUrl=null;
+
+/* ═══ LA BARRE D'ONGLETS — UNE SEULE TABLE ═══
+   ⚠️ `navProduction` N'AVAIT AUCUN ÉCOUTEUR DE CLIC. Les dix autres onglets
+   avaient le leur, écrit à la main, en deux groupes séparés (ils ont été
+   ajoutés à des moments différents) ; celui-là a été oublié à la création de
+   l'onglet. Le bouton s'affichait, il était cliquable, et il ne faisait RIEN.
+   Ce que ça coûtait, selon le rôle : pour l'**admin** et la **logistique**,
+   Production était tout simplement inatteignable — leur premier onglet est
+   Clients ou Commandes, et seul le premier onglet d'un rôle est ouvert
+   d'office à la connexion (`switchNav(tabMap[firstTab])`). Pour le **chef**,
+   Production s'ouvrait à la connexion mais on ne pouvait plus y revenir dès
+   qu'on avait touché à Chef ou Stocks.
+   ⚠️ Ça n'était jamais apparu parce que le banc `_test-production.html` monte
+   `NattyProd` directement, sans passer par la barre : un banc qui court-circuite
+   la navigation ne peut pas voir un onglet qui ne s'ouvre pas.
+   D'où cette table unique et la boucle qui pose les écouteurs : un onglet
+   ajouté ici reçoit le sien, et l'oubli redevient impossible. */
+const NAV_IDS = {
+  clients:'navClients', repasAProg:'navRepasAProg', messages:'navMessages',
+  rdv:'navRdv', menu:'navMenu', commandes:'navCommandes',
+  production:'navProduction', chef:'navChef', stocks:'navStocks',
+  equipe:'navEquipe', signalements:'navSignalements'
+};
+const TAB_IDS = {
+  clients:'tabClients', repasAProg:'tabRepasAProg', messages:'tabMessages',
+  rdv:'tabRdv', menu:'tabMenu', commandes:'tabCommandes',
+  production:'tabProduction', chef:'tabChef', stocks:'tabStocks',
+  equipe:'tabEquipe', signalements:'tabSignalements'
+};
+const TITLES = {
+  clients:'Mes clients', repasAProg:'Repas à programmer', messages:'Messages',
+  rdv:'Rendez-vous', menu:'Menu', commandes:'Commandes',
+  production:'Production', chef:'Recettes & Production', stocks:'Stocks',
+  equipe:'Équipe', signalements:'Signalements'
+};
+const ALL_TABS = Object.keys(NAV_IDS);
+// L'inverse, pour retrouver l'onglet depuis l'id du bouton d'un rôle.
+const TAB_DE_NAV = {};
+ALL_TABS.forEach(t => { TAB_DE_NAV[NAV_IDS[t]] = t; });
 let chatMessagesMap={}, currentNutri=null, isMasterAdmin=false, selectedObjChips=[];
 
 /* ═══ SESSION DE L'ÉQUIPE ═══
@@ -1143,14 +1182,13 @@ document.addEventListener('DOMContentLoaded', function() {
     currentSearch = this.value.toLowerCase();
     appliquerFiltres();
   });
-  // Nav tabs
-  document.getElementById('navClients').addEventListener('click', () => switchNav('clients'));
-  document.getElementById('navMessages').addEventListener('click', () => switchNav('messages'));
-  document.getElementById('navRdv').addEventListener('click', () => switchNav('rdv'));
-  document.getElementById('navMenu').addEventListener('click', () => switchNav('menu'));
-  document.getElementById('navCommandes').addEventListener('click', () => switchNav('commandes'));
-  document.getElementById('navEquipe').addEventListener('click', () => switchNav('equipe'));
-  document.getElementById('navSignalements').addEventListener('click', () => switchNav('signalements'));
+  // Nav tabs — une boucle sur NAV_IDS, jamais une ligne par onglet : c'est
+  // comme ça que « Production » s'est retrouvé sans écouteur (voir l'encadré
+  // au-dessus de la table).
+  ALL_TABS.forEach(function (t) {
+    var b = document.getElementById(NAV_IDS[t]);
+    if (b) b.addEventListener('click', function () { switchNav(t); });
+  });
   document.getElementById('btnSignRecharger').addEventListener('click', () => chargerSignalements());
   document.getElementById('btnSignFiltre').addEventListener('click', function () {
     SIGN_TOUT = !SIGN_TOUT;
@@ -1160,9 +1198,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // data-* + addEventListener, jamais d'onclick inline (règle §9 #8).
   document.getElementById('btnRecalcDry').addEventListener('click', function(){ lancerRecalc(true); });
   document.getElementById('btnRecalcGo').addEventListener('click', function(){ lancerRecalc(false); });
-  document.getElementById('navRepasAProg').addEventListener('click', () => switchNav('repasAProg'));
-  document.getElementById('navChef').addEventListener('click', () => switchNav('chef'));
-  document.getElementById('navStocks').addEventListener('click', () => switchNav('stocks'));
   // Filtres clients
   document.getElementById('filterTous').addEventListener('click', function() { setFilter('tous', this); });
   document.getElementById('filterMieux').addEventListener('click', function() { setFilter('mieux_manger', this); });
@@ -1392,26 +1427,9 @@ document.addEventListener('click', function (e) {
 });
 
 function switchNav(tab) {
-  // All known tabs
-  const ALL_TABS = ['clients','repasAProg','messages','rdv','menu','commandes','production','chef','stocks','equipe','signalements'];
-  const NAV_IDS  = {
-    clients:'navClients', repasAProg:'navRepasAProg', messages:'navMessages',
-    rdv:'navRdv', menu:'navMenu', commandes:'navCommandes',
-    chef:'navChef', stocks:'navStocks', equipe:'navEquipe',
-    signalements:'navSignalements', production:'navProduction'
-  };
-  const TAB_IDS  = {
-    clients:'tabClients', repasAProg:'tabRepasAProg', messages:'tabMessages',
-    rdv:'tabRdv', menu:'tabMenu', commandes:'tabCommandes',
-    chef:'tabChef', stocks:'tabStocks', equipe:'tabEquipe',
-    signalements:'tabSignalements', production:'tabProduction'
-  };
-  const TITLES = {
-    clients:'Mes clients', repasAProg:'Repas à programmer', messages:'Messages',
-    rdv:'Rendez-vous', menu:'Menu', commandes:'Commandes',
-    chef:'Recettes & Production', stocks:'Stocks', equipe:'Équipe',
-    signalements:'Signalements', production:'Production'
-  };
+  // ALL_TABS / NAV_IDS / TAB_IDS / TITLES vivent au niveau du module : ils
+  // servent AUSSI à poser les écouteurs et à filtrer par rôle. Trois copies de
+  // la même liste, c'est trois qui divergent — et c'est ce qui est arrivé.
 
   // Deactivate all
   ALL_TABS.forEach(t => {
@@ -3366,7 +3384,7 @@ function demarrerAppAvecRole(deSecours) {
 
   // Show/hide tabs based on role
   const cfg = currentRole ? ROLE_CONFIG[currentRole] : ROLE_CONFIG.admin;
-  const allTabs = ['navClients','navRepasAProg','navMessages','navRdv','navMenu','navCommandes','navProduction','navChef','navStocks','navEquipe','navSignalements'];
+  const allTabs = ALL_TABS.map(t => NAV_IDS[t]);
   allTabs.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = cfg.tabs.includes(id) ? 'block' : 'none';
@@ -3374,13 +3392,7 @@ function demarrerAppAvecRole(deSecours) {
 
   // Activate first tab of role
   const firstTab = cfg.tabs[0];
-  const tabMap = {
-    navClients:'clients', navRepasAProg:'repasAProg', navMessages:'messages',
-    navRdv:'rdv', navMenu:'menu', navCommandes:'commandes', navChef:'chef',
-    navStocks:'stocks', navEquipe:'equipe', navSignalements:'signalements',
-    navProduction:'production'
-  };
-  switchNav(tabMap[firstTab] || 'clients');
+  switchNav(TAB_DE_NAV[firstTab] || 'clients');
 
   // Load data
   chargerClients();
