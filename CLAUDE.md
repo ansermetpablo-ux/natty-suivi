@@ -311,6 +311,33 @@ Back-office multi-rôles — accessible à `natty-suivi.vercel.app/admin.html`.
 
 **Règles inline onclick** : TOUS les onclick inline avec `''+var+''` sont interdits — causent `Unexpected string`. Toujours utiliser `data-*` + `addEventListener`.
 
+#### 🔴 La barre d'onglets : « Production » n'était branché sur rien (2026-09-17)
+Signalé par Pablo (« quand je clique sur production rien ne se passe »), et c'était exact au
+pied de la lettre : `navProduction` était le **seul des onze onglets sans
+`addEventListener`**. Les dix autres avaient le leur, écrit à la main, en deux groupes
+séparés du fichier ; celui-là a été oublié à la création de l'onglet.
+
+> ⚠️ **Ce que ça coûtait dépendait du rôle**, parce que seul le PREMIER onglet d'un rôle est
+> ouvert d'office à la connexion (`switchNav(TAB_DE_NAV[firstTab])`) : **admin** (premier
+> onglet Clients) et **logistique** (Commandes) ne pouvaient pas l'atteindre du tout ; le
+> **chef** (Production) l'avait à la connexion mais ne pouvait plus y revenir après être
+> passé sur Chef ou Stocks.
+> ⚠️⚠️ **POURQUOI ÇA N'AVAIT PAS ÉTÉ VU** : `_test-production.html` monte `NattyProd`
+> directement dans un hôte, **sans passer par la barre**. Un banc qui court-circuite la
+> navigation ne peut pas voir un onglet qui ne s'ouvre pas — tout le module était vérifié,
+> et sa porte d'entrée ne l'était pas. Vérifier un module, ce n'est pas vérifier qu'on peut
+> y arriver.
+> ⚠️ **Le correctif ne rajoute pas la onzième ligne** : `NAV_IDS` / `TAB_IDS` / `TITLES` /
+> `ALL_TABS` sont remontés au niveau du module et les écouteurs se posent par une **boucle**
+> sur `NAV_IDS`. Un onglet ajouté à la table reçoit le sien. La même liste vivait en TROIS
+> exemplaires (dans `switchNav`, dans le filtrage par rôle, dans le `tabMap` de la
+> connexion) — trois copies, trois qui divergent, et c'est ce qui est arrivé.
+> ⚠️ **Piège de banc, payé ici** : le premier banc cherchait le MOTIF
+> `getElementById('navX').addEventListener` dans la source, et a annoncé « 11 onglets sans
+> écouteur » sur le fichier CORRIGÉ — une boucle ne ressemble pas au motif. Un banc doit
+> **exécuter** la pose des écouteurs et cliquer. Celui qui vérifie la forme du code cesse
+> d'être vrai dès qu'on change la forme.
+
 #### L'onglet Clients, et la fiche (2026-09-16)
 Quatre défauts, tous trouvés au banc sur les VRAIES fonctions extraites du fichier, aucun
 visible à la lecture ni attrapé par un contrôle de syntaxe.
