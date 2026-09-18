@@ -3787,22 +3787,42 @@ PostgREST répond `PGRST204` et l'écran nomme le SQL.
 > et « carottes » ne fusionnent pas. Fusionner par mot mettrait une étape dans deux ateliers.
 > La vue « Par geste + aliment », elle, éclate bien par mot — c'est son rôle.
 
-**Le PERT (`sectionPert`)** — le même graphe que le Gantt, lu par la causalité : un nœud par
-tâche, en colonne selon sa plus longue chaîne d'amont (`niveau`), une arête SVG par
-dépendance, les ateliers en tête de colonne. Trois états lus en base : **Fait** (vert,
-estompé), **Prêt** (toutes ses dépendances faites — encadré noir : c'est là qu'on peut
-mettre la main), **En attente**. Marges au sens du PERT (ES/EF/LS/LF, sans les cuisiniers :
-la contrainte du graphe seul) ; **⚡ chemin critique** = marge nulle, arêtes noires. Toucher
-un nœud le marque fait — c'est le geste du chef qui suit la salle. Défilement horizontal
+**Les cumuls (`grapheDuJour`, après les ateliers)** — Pablo : « certaines tâches sont
+cumulables et réalisables en même temps, pour les mêmes recettes et les mêmes types de
+poste ». Dans une recette, au même poste, les étapes actives **prêtes au même moment** (même
+début au plus tôt sur le graphe — donc aucune ne dépend de l'autre) deviennent UN nœud
+`cumul` : « Feux : riz + poulet » pour le curry, « Taille : carottes + oignons ». La durée suit
+la règle du poste (`POSTES[].cumul`) : **`max`** aux feux et au four (deux casseroles côte à
+côte, la plus longue décide), **`somme`** à la taille, aux sauces, à l'assemblage (deux fois le
+couteau). Même mécanique que l'atelier (`fusionner` : parts entières, dépendances = l'union,
+suites remappées, fait = toutes les parts faites) ; les ateliers passent d'abord, une part
+n'est jamais dans deux nœuds. Bordure ambre dans le PERT, pastille « cumul » dans la liste.
+
+**Le PERT (`sectionPert`)** — le même graphe que le Gantt, lu par la causalité, **de haut en
+bas** : une rangée par niveau (plus longue chaîne d'amont, `niveau`), les nœuds côte à côte,
+une arête SVG par dépendance qui descend, groupes (ateliers, cumuls) en tête de rangée. Trois
+états lus en base : **Fait** (vert, estompé), **Prêt** (toutes ses dépendances faites —
+encadré noir : c'est là qu'on peut mettre la main), **En attente**. Marges au sens du PERT
+(ES/EF/LS/LF, sans les cuisiniers : la contrainte du graphe seul) ; **⚡ chemin critique** =
+marge nulle, arêtes noires. Toucher un nœud le marque fait — c'est le geste du chef qui suit
+la salle. **Sur le côté, les filtres** (`panneauFiltres`, `FILTRES`) : Aliment / Poste /
+Recette, chacun se déplie (`S.filtresOuverts`) et se coche ; `S.filtres[type]` porte les clés
+**exclues** (vide = tout), « tout · rien » par groupe, « tout afficher » en tête. Un groupe
+porte les clés de toutes ses parts : filtrer « carottes » garde l'atelier entier ; un nœud
+caché emporte ses arêtes, mais **les niveaux restent ceux du graphe entier** pour que « en
+dessous » garde son sens. Sous 700 px le panneau passe au-dessus du graphe. Défilement
 interne, aucun débordement de page à 375 px (mesuré).
 
 Vérifié au banc `_test-production-pert.html` (hors dépôt, doublure de `sb()` en mémoire,
 deux recettes qui coupent des carottes) : 14 contrôles sur les vraies fonctions du module
-(`_dependances`, `_decoupeDe`), puis en navigateur : 9 nœuds pour 10 étapes (l'atelier),
-9 arêtes, 5 prêtes au départ, atelier fait → « Cuire les légumes » attend encore les
-oignons, oignons faits → prêt ; « Monter la sauce » attend le poulet du wrap, indépendant
-du curry ; Spécifier → PATCH → badge rouge disparu ; Gantt : les trois chaînes du curry
-en parallèle sur deux cuisiniers, fin 08:51 = le chemin critique (16 + 10 + 25).
+(`_dependances`, `_decoupeDe`), puis en navigateur : 8 nœuds pour 10 étapes (1 atelier
+carottes, 1 cumul « Feux : riz + poulet » à 12 min = max(12, 8)), 9 arêtes, trois rangées ;
+atelier fait → « Cuire les légumes » attend encore les oignons, oignons faits → prêt ;
+« Monter la sauce » attend le poulet du wrap, indépendant du curry ; Spécifier → PATCH →
+badge rouge disparu ; filtre Recette = curry seul → 5/8 affichées, l'atelier reste ;
+« rien » sur Aliment → « Rien ne passe les filtres », « tout afficher » → 8 ; le service
+écran par écran affiche le cumul en un écran, part par part ; Gantt : les trois chaînes du
+curry en parallèle sur deux cuisiniers, fin 08:51 = le chemin critique (16 + 10 + 25).
 🔄 **Non vérifié avec une session d'équipe réelle**, ni sur les 38 vraies fiches : leurs
 aliments sont du texte libre, l'inférence y trouvera des cas à corriger par « dépend de ».
 
@@ -5379,8 +5399,10 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ **La vue Production refaite** (2026-09-18) — cinq tuiles héros, une section à la fois ;
   les étapes d'une recette forment un **graphe** (aliment → geste → `depend_de`) et non plus
   une file ; **ateliers** partagés par aliment avec grammes par recette et découpe, bouton
-  rouge « Spécifier » ; **diagramme de PERT** (Fait / Prêt / En attente, chemin critique),
-  toucher un nœud le marque fait. Détail en §3.
+  rouge « Spécifier » ; **cumuls** (même recette, même poste, prêtes en même temps → un
+  seul nœud, durée max aux feux / somme à la taille) ; **diagramme de PERT** de haut en bas
+  (Fait / Prêt / En attente, chemin critique), **filtres** Aliment / Poste / Recette sur le
+  côté, toucher un nœud le marque fait. Détail en §3.
 - 🔄 **`natty_production_ateliers.sql` à exécuter** (§4) — sans lui, « Spécifier » et « dépend
   de » répondent `PGRST204` ; l'écran le dit. Tout le reste marche sans.
 - 🔄 **À relire sur les 38 vraies fiches** : l'inférence lit des aliments en texte libre. Le
