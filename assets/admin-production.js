@@ -264,6 +264,23 @@
       '#npCine .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#ffffff8c;margin-bottom:12px}#npCine .meta span{background:#ffffff14;border-radius:99px;padding:5px 10px}',
       '#npCine .port{background:#ffffff0f;border-radius:14px;padding:10px 12px;margin-bottom:8px}#npCine .port b{font-size:14px}#npCine .port .g{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#npCine .port .g span{background:#ffffff14;border-radius:8px;padding:5px 8px;font-size:12px}',
       '#npCine .fait{position:absolute;top:0;right:0;background:#34c759;color:#fff;font-size:11px;font-weight:800;padding:6px 12px;border-radius:0 0 0 12px}',
+      /* la scène : la carte-notification et, sur les côtés, ce qui bloque */
+      '#npCine .scene{display:grid;grid-template-columns:1fr;gap:10px;align-items:center;margin-top:10px}',
+      '#npCine .cote{display:flex;flex-direction:column;gap:8px}#npCine .cote:empty{display:none}',
+      '#npCine .carte{display:flex;align-items:center;gap:18px;background:#ffffff12;border-radius:26px;padding:20px 18px}',
+      '#npCine .carte .illu{width:124px;height:124px;border-radius:30px;background:#ffffff1c;display:flex;align-items:center;justify-content:center;flex-shrink:0}',
+      '#npCine .carte .illu svg{width:88px;height:88px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}',
+      '#npCine .carte .txt{min-width:0;flex:1}',
+      '#npCine .carte .rec{margin:0;font-size:13px;color:#ffffffb3;display:flex;gap:6px;align-items:center;flex-wrap:wrap}#npCine .carte .rec i{width:12px;height:12px}',
+      '#npCine .carte .act{font-size:24px;font-weight:800;line-height:1.15;margin:6px 0 8px;letter-spacing:-.4px}',
+      '#npCine .carte .qte b{display:block;font-size:34px;font-weight:800;letter-spacing:-.8px;line-height:1}#npCine .carte .qte small{display:block;font-size:12px;color:#ffffff8c;margin-top:4px}',
+      '#npCine .carte .att{margin-top:10px;font-size:12px;color:#ffb347;font-weight:700}',
+      '#npCine .bloq{display:flex;gap:10px;align-items:center;background:#ffffff0a;border-radius:16px;padding:10px;opacity:.5;filter:grayscale(1)}',
+      '#npCine .bloq .illu{width:50px;height:50px;border-radius:14px;background:#ffffff14;flex-shrink:0;display:flex;align-items:center;justify-content:center}#npCine .bloq .illu svg{width:34px;height:34px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}',
+      '#npCine .bloq .txt{min-width:0}#npCine .bloq .rec{margin:0;font-size:11px;color:#ffffffb3;display:flex;gap:5px;align-items:center}#npCine .bloq .rec i{width:9px;height:9px}#npCine .bloq .act{font-size:13px;font-weight:700;line-height:1.2;margin:2px 0}#npCine .bloq .pst{font-size:11px;color:#ffffff8c}',
+      '#npCine .detbtn{margin:14px auto 0;display:block;background:#ffffff14;border:none;color:#fff;border-radius:99px;padding:9px 18px;font-family:inherit;font-weight:700;cursor:pointer;font-size:12px}',
+      '@media(min-width:900px){#npCine .plan{max-width:1040px}#npCine .scene{grid-template-columns:minmax(0,220px) minmax(0,1fr) minmax(0,220px)}#npCine .scene .cote:empty{display:flex}}',
+      '@media(max-width:899px){#npCine .cote.d{order:-1}}',
       '#npCine .sec{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:#ffffff8c;font-weight:800;margin:16px 0 8px}#npCine .sec small{text-transform:none;letter-spacing:0;font-weight:600}',
       '#npCine .rep{display:flex;flex-direction:column;gap:6px}#npCine .rep div{background:#ffffff0f;border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.45;color:#ffffffd9}#npCine .rep b{display:block;font-size:11px;color:#ffffff8c;margin-bottom:3px;text-transform:uppercase;letter-spacing:.6px}#npCine .rep i{color:#ffffff8c}',
       '#npCine .chaine{display:flex;flex-direction:column;gap:6px}#npCine .chaine>div{background:#ffffff0f;border-radius:12px;padding:10px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}#npCine .chaine b{flex:0 0 100%;font-size:11px;color:#ffffff8c;text-transform:uppercase;letter-spacing:.6px}#npCine .chaine span{background:#ffffff14;border-radius:8px;padding:4px 8px}#npCine .chaine span.ok{background:#34c75933}#npCine .chaine i{color:#ffffff8c}',
@@ -1663,7 +1680,7 @@
      nombre de fiches). ‹ › naviguent librement, le sommaire saute n'importe où,
      « Fait ✓ » écrit en base — l'écran d'à côté le voit. Le bouton d'action
      est dans une barre FIXE, hors du plan animé (leçon narration.html). */
-  var C = { taches: [], i: 0, el: null, sortie: null };
+  var C = { taches: [], i: 0, el: null, sortie: null, details: false };
 
   function ouvrirService() {
     if (!S.plan) return;
@@ -1772,12 +1789,121 @@
     return '<div class="sec">Repères du geste <small>— généraux, la fiche prime</small></div><div class="rep">' + lignes.map(function (l) { return '<div><b>' + l[0] + '</b>' + h(l[1]) + '</div>'; }).join('') + '</div>';
   }
 
+  /* ── Les illustrations d'ingrédients ─────────────────────────────────────
+     Pablo : « seulement l'ingrédient en illustration SVG, le geste ou action,
+     l'unité et la pastille de couleur pour désigner le plat ; l'illustration
+     doit être le plus gros élément, à gauche, comme une notification Apple ».
+     Traits blancs sur fond sombre, viewBox 64 × 64, deux ou trois tracés par
+     glyphe — assez pour être reconnu d'un coup d'œil à deux mètres de la
+     plaque, pas plus. Le choix se fait sur le premier mot de l'aliment qui
+     commence par une des clés (« carott » attrape carotte et carottes) ; sans
+     correspondance, l'assiette. Ajouter un glyphe = une ligne dans ILLUS. */
+  var ILLUS = [
+    [['carott'], '<path d="M40 12l12 12-24 30-10 2 2-10z"/><path d="M38 24l10 10M32 32l8 8M26 40l6 6"/><path d="M42 10c4-6 12-6 12 0M48 16c6-4 12 0 10 6"/>'],
+    [['oignon', 'echalot'], '<path d="M32 18c-12 0-20 10-20 20s8 16 20 16 20-6 20-16-8-20-20-20z"/><path d="M32 18c-6 8-8 20-6 34M32 18c6 8 8 20 6 34"/><path d="M28 18c0-6 2-10 4-12 2 2 4 6 4 12"/>'],
+    [['poulet', 'volaille', 'dinde', 'canard', 'blanc de'], '<path d="M44 14a12 12 0 0 1 8 20L30 52 12 34 34 14a12 12 0 0 1 10 0z"/><path d="M14 50l-4 4M12 42l-6-2M20 56l-2 6"/>'],
+    [['boeuf', 'bœuf', 'steak', 'viande', 'veau', 'agneau', 'porc', 'lardon', 'hach'], '<path d="M14 26c0-8 8-12 18-12s20 6 20 14c0 10-10 22-22 22S10 42 10 34c0-4 4-6 4-8z"/><path d="M22 30c4 0 6 4 4 8s-6 6-8 4"/>'],
+    [['poisson', 'saumon', 'truite', 'thon', 'merlu', 'cabillaud', 'dorade', 'bar', 'crevette', 'fruits de mer'], '<path d="M10 32c8-12 20-16 32-14 6 2 10 8 10 14s-4 12-10 14c-12 2-24-2-32-14z"/><path d="M52 32l8-8v16zM42 28a2 2 0 1 0 0 1"/><path d="M28 24c2 6 2 10 0 16"/>'],
+    [['riz', 'quinoa', 'boulgour', 'semoule', 'couscous', 'cereal', 'orge', 'epeautre'], '<path d="M8 30h48c0 14-10 24-24 24S8 44 8 30z"/><path d="M14 30c4-8 12-10 18-10s14 2 18 10"/><path d="M22 22l2-4M32 20v-4M42 22l-2-4"/>'],
+    [['pate', 'pâte', 'spaghetti', 'nouille', 'tagliatelle', 'penne', 'lasagne'], '<path d="M8 32h48c0 12-10 22-24 22S8 44 8 32z"/><path d="M12 32c6-6 8-14 4-22M24 32c6-6 8-14 4-22M36 32c6-6 8-14 4-22M48 32c4-6 6-14 2-22"/>'],
+    [['pomme de terre', 'patate', 'pdt'], '<path d="M16 22c6-8 26-10 32-2 6 8 2 26-8 30S10 48 10 36c0-6 2-10 6-14z"/><path d="M24 30h1M36 26h1M30 40h1M40 38h1"/>'],
+    [['tomate'], '<circle cx="32" cy="36" r="18"/><path d="M32 18c-4-4-10-4-12-2 4 0 8 2 12 2 4 0 8-2 12-2-2-2-8-2-12 2zM32 18v-6"/>'],
+    [['ail'], '<path d="M32 12c-4 8-16 12-16 26 0 10 8 16 16 16s16-6 16-16c0-14-12-18-16-26z"/><path d="M32 22c-4 8-6 16-4 32M32 22c4 8 6 16 4 32M32 12v-6"/>'],
+    [['citron', 'orange', 'lime', 'agrume'], '<circle cx="32" cy="32" r="20"/><path d="M32 12v40M12 32h40M18 18l28 28M46 18L18 46"/>'],
+    [['oeuf', 'œuf'], '<path d="M32 8c-12 0-20 18-20 32a20 16 0 0 0 40 0C52 26 44 8 32 8z"/>'],
+    [['fromage', 'feta', 'parmesan', 'mozzarella', 'gruyere', 'chevre', 'cheddar', 'ricotta'], '<path d="M8 40L48 16l8 8v20H8z"/><path d="M8 40l40-24M56 24L16 48"/><circle cx="28" cy="38" r="2"/><circle cx="40" cy="30" r="2"/>'],
+    [['yaourt', 'creme', 'crème', 'sauce', 'lait', 'coco', 'mayonnaise', 'vinaigrette', 'bouillon', 'fond'], '<path d="M18 16h28l-4 40H22z"/><path d="M14 16h36"/><path d="M22 28c6-4 14-4 20 0"/>'],
+    [['huile', 'beurre', 'graisse'], '<path d="M26 8h12v10c6 4 8 10 8 16v22H18V34c0-6 2-12 8-16z"/><path d="M26 14h12"/><path d="M26 40c4 2 8 2 12 0"/>'],
+    [['sel', 'poivre', 'epice', 'épice', 'curry', 'paprika', 'cumin', 'curcuma', 'piment', 'assaisonn'], '<path d="M22 22h20l4 34H18z"/><path d="M24 22a8 8 0 0 1 16 0"/><path d="M28 14h1M32 12h1M36 14h1"/>'],
+    [['persil', 'basilic', 'coriandre', 'menthe', 'thym', 'herbe', 'salade', 'epinard', 'épinard', 'chou', 'roquette', 'laitue', 'aromate', 'ciboulette', 'kale', 'mache'], '<path d="M32 56c0-20 8-34 24-42-2 18-10 30-24 34"/><path d="M32 56c0-16-6-30-22-36 2 16 8 26 22 30"/><path d="M32 56V40"/>'],
+    [['pain', 'galette', 'wrap', 'tortilla', 'pita', 'naan', 'tacos', 'burger'], '<path d="M10 34a22 12 0 1 0 44 0 22 12 0 1 0-44 0z"/><path d="M22 30c4-8 16-8 20 0"/><path d="M12 30c4 6 10 8 20 8s16-2 20-8"/>'],
+    [['champignon'], '<path d="M10 30c0-12 10-20 22-20s22 8 22 20H10z"/><path d="M24 30v16a8 4 0 0 0 16 0V30"/><path d="M22 20h1M32 16h1M42 22h1"/>'],
+    [['lentille', 'pois chiche', 'haricot rouge', 'haricot blanc', 'legumineuse', 'légumineuse', 'feve', 'fève', 'soja', 'edamame'], '<ellipse cx="22" cy="28" rx="9" ry="7"/><ellipse cx="42" cy="26" rx="9" ry="7"/><ellipse cx="32" cy="42" rx="9" ry="7"/>'],
+    [['courgette', 'concombre', 'aubergine', 'poivron', 'haricot', 'brocoli', 'legume', 'légume', 'poireau', 'celeri', 'céleri', 'navet', 'betterave', 'fenouil', 'asperge', 'petit pois', 'mais', 'maïs', 'patate douce', 'potiron', 'courge', 'radis'], '<path d="M20 20c-8 6-10 18-4 28s16 12 24 6 10-18 4-28-16-12-24-6z"/><path d="M26 16c2-6 8-8 12-6-2 2-2 6 0 8"/><path d="M24 30c4 6 6 12 6 20"/>'],
+    [['fruit', 'pomme', 'banane', 'poire', 'fraise', 'framboise', 'myrtille', 'mangue', 'ananas', 'raisin', 'kiwi', 'peche', 'pêche', 'abricot', 'cerise'], '<path d="M32 22c-6-6-18-4-20 8s6 24 20 26c14-2 22-14 20-26S38 16 32 22z"/><path d="M32 22v-8M32 14c4-4 8-4 10-2-2 4-6 6-10 2"/>'],
+    [['four', 'plaque', 'poele', 'poêle', 'casserole', 'marmite', 'cocotte', 'wok'], '<rect x="8" y="14" width="48" height="40" rx="4"/><path d="M8 26h48"/><rect x="16" y="32" width="32" height="14" rx="2"/><path d="M14 20h1M20 20h1M26 20h1"/>'],
+    [['eau', 'glacon', 'glaçon'], '<path d="M32 8c-10 14-16 22-16 32a16 16 0 0 0 32 0c0-10-6-18-16-32z"/><path d="M24 40c0 6 4 10 8 10"/>']
+  ];
+  var ILLU_DEFAUT = '<circle cx="32" cy="34" r="22"/><circle cx="32" cy="34" r="12"/><path d="M10 34h2M52 34h2"/>';
+  function illustration(aliment) {
+    // au singulier, mot à mot : « pommes de terre » doit trouver « pomme de
+    // terre » avant que « pommes » ne trouve le fruit
+    var sing = function (m) { return m.length > 3 ? m.replace(/s$/, '') : m; };
+    var mots = norm(aliment || '').split(' ').map(sing), texte = ' ' + mots.join(' ') + ' ';
+    var svg = ILLU_DEFAUT;
+    // d'abord une clé à plusieurs mots contenue telle quelle, puis un mot qui
+    // commence par une clé
+    ILLUS.some(function (e) {
+      if (e[0].some(function (k) { return k.indexOf(' ') >= 0 && texte.indexOf(' ' + norm(k).split(' ').map(sing).join(' ')) >= 0; })) { svg = e[1]; return true; }
+      return false;
+    }) || ILLUS.some(function (e) {
+      if (mots.some(function (m) { return e[0].some(function (k) { return k.indexOf(' ') < 0 && m.indexOf(sing(norm(k))) === 0; }); })) { svg = e[1]; return true; }
+      return false;
+    });
+    return '<svg viewBox="0 0 64 64" aria-hidden="true">' + svg + '</svg>';
+  }
+
+  /* La grosse quantité de l'écran : le premier ingrédient de l'étape (les
+     grammes du jour), les autres en petit. Sans ingrédient reconnu : la durée. */
+  function quantitePrincipale(t) {
+    var q = quantitesEtape(t);
+    if (!q.length) return { grand: t.duree + ' min', petit: t.aliment ? 'quantité non reliée à la fiche' : '' };
+    return { grand: q[0].lib, petit: (q.length > 1 ? q.slice(1).map(function (x) { return x.lib + ' ' + x.nom; }).join(' · ') : q[0].nom) };
+  }
+
+  /* Les étapes qui BLOQUENT celle-ci : ses dépendances pas encore faites, en
+     gris, avec leur poste — c'est souvent un autre poste, et c'est là que le
+     cuisinier voit qui il attend. */
+  function bloquantes(t) {
+    var plan = S.plan; if (!plan) return [];
+    return (t.preds || []).map(function (id) { return plan.parId[id]; }).filter(function (p) { return p && !estFait(p); });
+  }
+  function carteBloquante(p) {
+    var P = infoPoste(p.poste);
+    return '<div class="bloq"><div class="illu">' + illustration(p.atelier ? p.aliment : (p.aliment || p.titre)) + '</div><div class="txt">'
+      + '<div class="rec"><i style="background:' + p.couleur + '"></i>' + h(p.rec) + '</div>'
+      + '<div class="act">' + emojiGeste(p.geste) + ' ' + h(p.titre) + '</div>'
+      + '<div class="pst">' + P.em + ' ' + h(P.nom) + (p.qui && p.cuisinier >= 0 ? ' · ' + h(p.qui) : '') + ' · ' + hm(p.debut) + '</div></div></div>';
+  }
+
+  /* ── L'écran d'une étape ─────────────────────────────────────────────────
+     En haut, la SCÈNE : une carte façon notification — l'illustration de
+     l'ingrédient à gauche, la plus grosse chose de l'écran ; à droite la
+     pastille du plat, l'action, la quantité du jour avec son unité. Rien
+     d'autre. Si l'étape attend des étapes pas faites, elles sont là, en gris,
+     sur les côtés (au-dessus sur un téléphone) : on voit qui on attend, et à
+     quel poste. Tout le reste — consigne, chiffres, repères, avant/après — est
+     derrière « Détails », un écran plus bas. */
   function htmlEcran(t) {
     var P = infoPoste(t.poste), fait = t.atelier ? (estFait(t) ? true : null) : S.faits[t.id];
+    var bl = t.assemblage ? [] : bloquantes(t);
+    var gauche = bl.filter(function (_, i) { return i % 2 === 0; }), droite = bl.filter(function (_, i) { return i % 2 === 1; });
+    var q;
+    if (t.assemblage) q = { grand: t.lot.portions + ' portion' + (t.lot.portions > 1 ? 's' : ''), petit: 'une par une, sur la balance' };
+    else if (t.atelier) {
+      var g = t.parts.reduce(function (n, part) { return n + quantitesEtape(part).reduce(function (m, x) { return m + x.g; }, 0); }, 0);
+      q = { grand: g >= 1000 ? (Math.round(g / 10) / 100) + ' kg' : Math.round(g) + ' g', petit: t.parts.length + ' recettes, une seule fois' };
+    } else q = quantitePrincipale(t);
+    var recs = t.atelier ? t.parts.map(function (part) { return '<i style="background:' + part.couleur + '"></i>'; }).join('') + ' ' + h(t.rec) : '<i style="background:' + t.couleur + '"></i>' + h(t.rec);
     var html = (fait ? '<div class="fait">FAIT' + (typeof fait === 'string' ? ' · ' + h(fait) : '') + '</div>' : '')
-      + '<div class="kick">' + (t.assemblage ? 'En fin de production' : hm(t.debut) + ' → ' + hm(t.fin)) + ' · ' + P.em + ' ' + h(P.nom) + (t.qui && !t.assemblage ? ' · ' + h(t.qui) : '') + '</div>'
-      + '<div class="rec"><i style="background:' + t.couleur + '"></i>' + h(t.rec) + (t.fiches ? ' · ×' + t.fiches.toFixed(1) + ' de la fiche' : '') + '</div>'
-      + '<h1>' + emojiGeste(t.geste) + ' ' + h(t.titre) + '</h1>';
+      + '<div class="kick">' + (t.assemblage ? 'En fin de production' : hm(t.debut) + ' → ' + hm(t.fin)) + ' · ' + P.em + ' ' + h(P.nom) + (t.qui && !t.assemblage && t.cuisinier >= 0 ? ' · ' + h(t.qui) : '') + '</div>'
+      + '<div class="scene' + (bl.length ? ' bloquee' : '') + '"><div class="cote g">' + gauche.map(carteBloquante).join('') + '</div>'
+      + '<div class="carte"><div class="illu">' + illustration(t.assemblage ? 'assiette' : (t.aliment || t.titre)) + '</div><div class="txt">'
+      + '<div class="rec">' + recs + '</div>'
+      + '<div class="act">' + emojiGeste(t.geste) + ' ' + h(t.titre) + '</div>'
+      + '<div class="qte"><b>' + h(q.grand) + '</b><small>' + h(q.petit) + '</small></div>'
+      + (bl.length ? '<div class="att">⏳ attend ' + bl.length + ' étape' + (bl.length > 1 ? 's' : '') + (bl.some(function (p) { return p.poste !== t.poste; }) ? ' d’un autre poste' : '') + '</div>' : '')
+      + '</div></div><div class="cote d">' + droite.map(carteBloquante).join('') + '</div></div>'
+      + '<button class="detbtn" data-c="details">' + (C.details ? 'Masquer les détails ▴' : 'Détails ▾') + '</button>'
+      + '<div class="detail"' + (C.details ? '' : ' style="display:none"') + '>' + htmlDetail(t) + '</div>';
+    return html;
+  }
+
+  /* Le détail, sous la scène : ce que la fiche dit, ce qu'elle ne dit pas,
+     les repères du geste, avant / après. */
+  function htmlDetail(t) {
+    var P = infoPoste(t.poste), fait = t.atelier ? (estFait(t) ? true : null) : S.faits[t.id];
+    var html = '';
     if (t.assemblage) {
       var l = t.lot, idx = 0;
       html += '<div class="ali">' + l.portions + ' portion(s), une par une, sur la balance</div>';
@@ -1845,6 +1971,7 @@
     else if (c === 'prec') aller(C.i - 1);
     else if (c === 'suiv') aller(C.i + 1);
     else if (c === 'som') sommaire();
+    else if (c === 'details') { C.details = !C.details; var pd = C.el.querySelector('.plan:not(.out)'); if (pd) pd.innerHTML = htmlEcran(C.taches[C.i]); }
     else if (c === 'fait') {
       var t = C.taches[C.i], fait = !estFait(t);
       basculerFait(t); // un atelier coche toutes ses parts ; l'assemblage reste local
@@ -1862,6 +1989,6 @@
     rafraichir: function () { if (S.charge) chargerTout().then(rendre); },
     // exposés pour le banc
     _dispatcher: dispatcher, _portionPour: portionPour, _etat: S,
-    _dependances: dependances, _decoupeDe: decoupeDe, _grapheDuJour: grapheDuJour
+    _dependances: dependances, _decoupeDe: decoupeDe, _grapheDuJour: grapheDuJour, _illustration: illustration
   };
 })();

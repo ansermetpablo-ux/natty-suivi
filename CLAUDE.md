@@ -3841,7 +3841,26 @@ rang **n/N** dans sa recette, **« ▶ départ »** s'il n'attend rien, et un ha
 « ◀ on en est là » sur l'étape en cours de sa recette — quel que soit le tri. Un atelier
 compte comme une étape de chacune de ses recettes (son numéro y est celui de sa part).
 
-**La fiche d'une étape (`htmlEcran`, `REPERES`)** — Pablo : « le plus de détail possible :
+**L'écran d'une étape (`htmlEcran`) — la scène, puis le détail.** Pablo : « rendre l'interface
+plus simple : seulement l'ingrédient en illustration SVG, le geste ou action, l'unité et la
+pastille de couleur pour désigner le plat ; l'illustration doit être le plus gros élément, à
+gauche, comme une notification Apple ». La scène est donc une carte : à gauche
+l'**illustration** de l'ingrédient (`illustration`, `ILLUS` : ~25 glyphes en traits blancs,
+viewBox 64, choisis sur le premier mot de l'aliment qui commence par une clé, au singulier,
+clés à plusieurs mots d'abord — « pommes de terre » avant « pommes » ; sans correspondance,
+l'assiette) ; à droite la pastille du plat, l'action (le titre de l'étape), la **quantité du
+jour avec son unité** en gros (`quantitePrincipale` : le premier ingrédient de l'étape, les
+autres en petit ; sans ingrédient relié, la durée). Rien d'autre. Tout le reste est derrière
+**« Détails ▾ »** (`htmlDetail`, état `C.details` conservé d'un écran à l'autre).
+> ⚠️ **Les étapes bloquantes sont sur les côtés, en gris** (`bloquantes`, `carteBloquante`) :
+> les dépendances pas encore faites, avec leur poste et qui le tient — « ⏳ attend 2 étapes
+> d'un autre poste » sous la quantité. Sur un écran large (≥ 900 px) elles encadrent la carte
+> à gauche et à droite ; sur un téléphone elles passent au-dessus. C'est le même graphe que
+> le PERT, vu depuis l'étape où l'on est.
+> ⚠️ Ajouter un ingrédient = une ligne dans `ILLUS` (clés, tracés). Un glyphe est deux ou
+> trois `path` ; ne pas y mettre de couleur, c'est le CSS de la carte qui trace en blanc.
+
+**Le détail d'une étape (`htmlDetail`, `REPERES`)** — Pablo : « le plus de détail possible :
 ce qu'il faut faire, combien de grammes, de centimètres, pendant combien de temps, la
 température, la texture, le visuel, ce qu'il faut avoir à la fin ». L'écran, dans l'ordre :
 **À faire** (la consigne de la fiche, ou « aucune consigne écrite — à compléter dans
@@ -5455,7 +5474,10 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   côté ; toucher un bloc ouvre **sa fiche détaillée** (consigne, grammes, durée,
   température, découpe, repères du geste, avant/après). **Poste est un tri, pas un filtre**
   (Vague · Poste · Recette) ; **où on en est** : avancement par recette, étape en cours,
-  n/N et « ▶ départ » sur les blocs. Détail en §3.
+  n/N et « ▶ départ » sur les blocs. L'écran d'une étape est une **scène** façon
+  notification (illustration SVG de l'ingrédient à gauche, action, quantité + unité,
+  pastille du plat) avec les **étapes bloquantes en gris sur les côtés** ; le détail
+  derrière « Détails ». Détail en §3.
 - 🔄 **`natty_production_ateliers.sql` à exécuter** (§4) — sans lui, « Spécifier » et « dépend
   de » répondent `PGRST204` ; l'écran le dit. Tout le reste marche sans.
 - 🔄 **À relire sur les 38 vraies fiches** : l'inférence lit des aliments en texte libre. Le
