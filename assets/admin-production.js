@@ -264,6 +264,9 @@
       '#npCine .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#ffffff8c;margin-bottom:12px}#npCine .meta span{background:#ffffff14;border-radius:99px;padding:5px 10px}',
       '#npCine .port{background:#ffffff0f;border-radius:14px;padding:10px 12px;margin-bottom:8px}#npCine .port b{font-size:14px}#npCine .port .g{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#npCine .port .g span{background:#ffffff14;border-radius:8px;padding:5px 8px;font-size:12px}',
       '#npCine .fait{position:absolute;top:0;right:0;background:#34c759;color:#fff;font-size:11px;font-weight:800;padding:6px 12px;border-radius:0 0 0 12px}',
+      '#npCine .sec{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:#ffffff8c;font-weight:800;margin:16px 0 8px}#npCine .sec small{text-transform:none;letter-spacing:0;font-weight:600}',
+      '#npCine .rep{display:flex;flex-direction:column;gap:6px}#npCine .rep div{background:#ffffff0f;border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.45;color:#ffffffd9}#npCine .rep b{display:block;font-size:11px;color:#ffffff8c;margin-bottom:3px;text-transform:uppercase;letter-spacing:.6px}#npCine .rep i{color:#ffffff8c}',
+      '#npCine .chaine{display:flex;flex-direction:column;gap:6px}#npCine .chaine>div{background:#ffffff0f;border-radius:12px;padding:10px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}#npCine .chaine b{flex:0 0 100%;font-size:11px;color:#ffffff8c;text-transform:uppercase;letter-spacing:.6px}#npCine .chaine span{background:#ffffff14;border-radius:8px;padding:4px 8px}#npCine .chaine span.ok{background:#34c75933}#npCine .chaine i{color:#ffffff8c}',
       '#npCine .cta{position:absolute;left:0;right:0;bottom:0;padding:14px 16px calc(16px + env(safe-area-inset-bottom));display:flex;gap:10px;background:linear-gradient(#0e0e1100,#0e0e11 40%)}',
       '#npCine .cta button{flex:1;border:none;border-radius:16px;padding:16px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;background:#ffffff1a;color:#fff}',
       '#npCine .cta button.ok{background:#fff;color:#0e0e11;flex:2}#npCine .cta button.ok.on{background:#34c759;color:#fff}#npCine .cta button:disabled{opacity:.3}',
@@ -281,19 +284,27 @@
       '.np-tile .al{position:absolute;top:12px;right:12px;background:#c0392b;color:#fff;font-size:10px;font-weight:800;border-radius:99px;padding:3px 8px}',
       '.np-sec{animation:npSec .25s ease}@keyframes npSec{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}',
       /* le PERT : des nœuds par niveau, des arêtes en SVG dessous */
-      '.np-pert{background:var(--bg);border-radius:16px;box-shadow:var(--so);padding:12px;overflow-x:auto;margin-bottom:12px}',
+      '.np-pert{background:var(--bg);border-radius:16px;box-shadow:var(--so);padding:12px;margin-bottom:12px}',
       '.np-pert-in{position:relative}',
-      '.np-pert svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}',
+      '.np-pert svg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:0}',
       '.np-pert path{fill:none;stroke:#aeaec0;stroke-width:1.6}',
       '.np-pert path.ok{stroke:#2a9e4f;stroke-width:2}',
       '.np-pert path.crit{stroke:var(--black);stroke-width:2.4}',
-      '.np-node{position:absolute;width:212px;background:var(--bg);border-radius:14px;box-shadow:var(--sm);padding:10px 12px;box-sizing:border-box;cursor:pointer;font-size:12px;color:var(--black);border-left:4px solid transparent;transition:box-shadow .15s}',
+      '.np-node{position:relative;z-index:1;flex:1 1 210px;max-width:360px;background:var(--bg);border-radius:14px;box-shadow:var(--sm);padding:10px 12px;box-sizing:border-box;cursor:pointer;font-size:12px;color:var(--black);border-left:4px solid transparent;transition:box-shadow .15s}',
+      '.np-node .al{font-size:11px;color:var(--muted);margin-top:2px}',
+      '.np-node .cu{font-size:10px;font-weight:800;color:#c97a00;background:#c97a001f;border-radius:99px;padding:2px 7px}',
+      '.np-node .ouvrir{font-size:10px;font-weight:700;color:var(--muted);margin-top:6px;text-align:right}',
+      '.np-prow{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:flex-start;padding-bottom:40px;position:relative}',
+      '.np-prow:last-child{padding-bottom:6px}',
+      '.np-plvl{flex:0 0 100%;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);display:flex;gap:8px;align-items:baseline}',
+      '.np-plvl small{font-weight:600;text-transform:none;letter-spacing:0}',
+      '.np-pert-in{position:relative}',
       '.np-node:hover{box-shadow:var(--so)}',
       '.np-node.fait{opacity:.55;border-left-color:#2a9e4f}',
       '.np-node.pret{outline:2px solid var(--black)}',
       '.np-node.attente{color:#6b6b78}',
       '.np-node.bloque{border-left-color:#c0392b}',
-      '.np-node.atelier{background:linear-gradient(135deg,var(--bg),#e6e6ee);width:236px}',
+      '.np-node.atelier{background:linear-gradient(135deg,var(--bg),#e6e6ee);flex-basis:260px}',
       '.np-node .k{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}',
       '.np-node .k i{width:8px;height:8px;border-radius:50%;flex-shrink:0}',
       '.np-node .ti{font-size:13px;font-weight:800;line-height:1.25}',
@@ -308,7 +319,7 @@
       '.np-spec.ok{background:#2a9e4f1f;color:#2a9e4f;cursor:default}',
       '.np-specform{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}',
       '.np-specform input{flex:1;min-width:120px}',
-      '.np-node.cumul{border-left-color:#c97a00;width:236px}',
+      '.np-node.cumul{border-left-color:#c97a00}',
       /* le PERT et ses filtres, côte à côte */
       '.np-pert-wrap{display:flex;gap:12px;align-items:flex-start}',
       '.np-pert-wrap .np-pert{flex:1;min-width:0;margin-bottom:0}',
@@ -467,6 +478,8 @@
     host.addEventListener('change', change);
     // Entrée dans le champ de découpe enregistre ; Échap referme. Pas par
     // `change` : il partirait aussi au clic sur ✕, et enregistrerait quand même.
+    var chrono = null;
+    window.addEventListener('resize', function () { clearTimeout(chrono); chrono = setTimeout(tracerAretesPert, 120); });
     host.addEventListener('keydown', function (ev) {
       if (ev.target.id !== 'npSpecInput') return;
       if (ev.key === 'Enter') { ev.preventDefault(); enregistrerDecoupe(S.specif, ev.target.value); }
@@ -492,7 +505,7 @@
       // téléphones de la cuisine) : on les relit à chaque affichage du jour.
       var jour = S.jour || ymd(new Date());
       el.innerHTML = '<div class="np-vide">Chargement de la journée…</div>';
-      chargerJourProd(jour).then(function () { el.innerHTML = vueProduction(); })
+      chargerJourProd(jour).then(function () { el.innerHTML = vueProduction(); tracerAretesPert(); })
         .catch(function (e) { el.innerHTML = '<div class="np-alerte">' + h(e.message) + '<br>Si le message parle de <code>production_postes</code>, le SQL du 2026-09-16 (fin de natty_production.sql) n’a pas été exécuté.</div>'; });
     }
   }
@@ -826,7 +839,8 @@
   function tuilesHero(plan, lots) {
     var m = moi(), ts = plan.taches;
     var faits = ts.filter(estFait).length, prets = ts.filter(function (t) { return etatTache(t) === 'pret'; }).length;
-    var ateliers = ts.filter(function (t) { return t.groupe === 'atelier'; }), cumuls = ts.filter(function (t) { return t.groupe === 'cumul'; });
+    var ateliers = ts.filter(function (t) { return t.groupe === 'atelier'; });
+    var cumuls = ts.map(function (t) { return t.cumul; }).filter(function (v, i, arr) { return v && arr.indexOf(v) === i; });
     var aSpecifier = ts.filter(function (t) { return t.atelier; }).reduce(function (n, a) { return n + a.parts.filter(function (p) { return p.geste === 'couper' && !decoupeDe(p); }).length; }, 0);
     var pris = (S.postes || []).length, bloquees = ts.filter(function (t) { return t.bloque; }).length;
     var mesPostes = (S.postes || []).filter(function (p) { return p.cuisinier_id === m.id; }).length;
@@ -929,7 +943,7 @@
     return '<div class="np-etape"><div class="t">' + hm(t.debut) + ' → ' + hm(t.fin) + '</div><i class="c" style="background:' + t.couleur + '"></i>'
       + '<div class="b"><b' + (t.bloque ? ' style="color:#c0392b"' : '') + '>' + (t.passif ? '⏳ attente' : (t.bloque ? '🔴 ' : '') + h(t.qui)) + '</b> <span class="np-s">' + infoPoste(t.poste).em + ' ' + h(infoPoste(t.poste).nom) + '</span> · ' + h(t.rec) + ' — ' + emojiGeste(t.geste) + ' ' + h(t.titre)
       + (t.aliment ? ' <span class="np-s">· ' + h(t.aliment) + '</span>' : '')
-      + (t.groupe === 'atelier' ? ' <span class="np-pill v">atelier · ' + t.parts.length + ' recettes</span>' : t.groupe === 'cumul' ? ' <span class="np-pill o">cumul · ' + t.parts.length + ' étapes</span>' : '')
+      + (t.groupe === 'atelier' ? ' <span class="np-pill v">atelier · ' + t.parts.length + ' recettes</span>' : t.cumul ? ' <span class="np-pill o">⇆ en même temps</span>' : '')
       + '<small>' + h(t.desc) + (t.temperature ? ' · ' + t.temperature + ' °C' : '') + (t.defaut ? ' · <i>durée par défaut</i>' : '')
       + (apres.length ? ' · après : ' + h(apres.join(', ')) : '') + '</small></div></div>';
   }
@@ -1125,14 +1139,15 @@
         duree: parts.reduce(function (n, p) { return n + p.duree; }, 0) }, parts);
     });
     /* Les CUMULS (Pablo : « certaines tâches sont cumulables et réalisables en
-       même temps, pour les mêmes recettes et les mêmes types de poste »).
-       Dans une recette, au même poste, deux étapes actives qui sont PRÊTES AU
-       MÊME MOMENT — même début au plus tôt sur le graphe, donc aucune ne
-       dépend de l'autre — se font ensemble : « Couper les carottes » et
-       « Émincer les oignons » du curry, un seul passage à la taille ; « Cuire
-       le riz » et « Saisir le poulet », deux feux côte à côte. La durée suit
-       la règle du poste (POSTES[].cumul). Après les ateliers, qui priment :
-       une part n'est jamais dans deux nœuds. */
+       même temps, pour les mêmes recettes et les mêmes types de poste » — et
+       ensuite : « 1 bloc = 1 étape »). Dans une recette, au même poste, les
+       étapes actives PRÊTES AU MÊME MOMENT — même début au plus tôt sur le
+       graphe, donc aucune ne dépend de l'autre — sont MARQUÉES d'une même clé
+       de cumul : « Cuire le riz » et « Saisir le poulet », deux feux côte à
+       côte. Chacune garde son bloc, sa fiche, sa coche ; c'est `dispatcher`
+       qui les pose ensemble, sur le même cuisinier, et le PERT qui les met
+       côte à côte. Rien n'est fusionné — l'atelier reste le seul nœud
+       composé, parce qu'il l'a demandé ainsi. */
     var ES = {};
     function es(t) {
       if (ES[t.id] != null) return ES[t.id];
@@ -1149,12 +1164,8 @@
     });
     Object.keys(cumuls).forEach(function (k) {
       var parts = cumuls[k]; if (parts.length < 2) return;
-      var P = infoPoste(parts[0].poste), regle = P.cumul || 'somme';
-      var alims = parts.map(function (p) { return (p.aliment || p.titre).split(/[,+;]/)[0].trim().toLowerCase(); }).filter(function (v, i, arr) { return v && arr.indexOf(v) === i; });
-      fusionner({ id: 'cumul_' + k.replace(/[^a-z0-9]+/gi, '_'), groupe: 'cumul', rec: parts[0].rec, recId: parts[0].recId, fiches: parts[0].fiches, couleur: parts[0].couleur,
-        titre: P.nom.split(' ')[0] + ' : ' + alims.join(' + '), desc: parts.length + ' étapes de la même recette, au même poste, prêtes en même temps : ' + (regle === 'max' ? 'en parallèle, la plus longue décide' : 'à la suite, sans changer de poste') + '.',
-        geste: parts[0].geste, aliment: parts.map(function (p) { return p.aliment; }).filter(Boolean).join(', '), poste: parts[0].poste, numero: parts[0].numero, passif: false, temperature: null, defaut: parts.some(function (p) { return p.defaut; }),
-        duree: regle === 'max' ? parts.reduce(function (n, p) { return Math.max(n, p.duree); }, 0) : parts.reduce(function (n, p) { return n + p.duree; }, 0) }, parts);
+      var cle = 'cumul_' + k.replace(/[^a-z0-9]+/gi, '_'), regle = infoPoste(parts[0].poste).cumul || 'somme';
+      parts.forEach(function (t) { t.cumul = cle; t.cumulRegle = regle; t.cumulAvec = parts.filter(function (x) { return x !== t; }).map(function (x) { return x.id; }); });
     });
     // le plus long chemin restant (durée), pour la priorité
     var memo = {};
@@ -1239,6 +1250,21 @@
       fins[t.id] = debut + t.duree;
       restants = restants.filter(function (x) { return x !== t; });
       if (fins[t.id] > fin) fin = fins[t.id];
+      // ses cumulables, prêtes elles aussi : même cuisinier, tout de suite.
+      // `max` (feux, four) : en même temps, la plus longue tient le cuisinier ;
+      // `somme` (taille, sauces) : à la suite, sans changer de poste.
+      if (t.cumul && t.ci >= 0) {
+        var suivant = fins[t.id];
+        restants.filter(function (x) { return x.cumul === t.cumul && x.preds.every(function (id) { return fins[id] != null || !g.parId[id]; }); }).forEach(function (x) {
+          var d0 = t.cumulRegle === 'max' ? debut : suivant;
+          var px = Object.assign({}, x, { debut: d0, fin: d0 + x.duree, cuisinier: t.ci, bloque: false, qui: cuis[t.ci].nom, possible: d0, ci: t.ci });
+          taches.push(px); g.parId[x.id] = px; fins[x.id] = d0 + x.duree;
+          if (t.cumulRegle !== 'max') suivant = fins[x.id];
+          if (fins[x.id] > libre[t.ci]) libre[t.ci] = fins[x.id];
+          if (fins[x.id] > fin) fin = fins[x.id];
+          restants = restants.filter(function (y) { return y !== x; });
+        });
+      }
     }
     return { taches: taches, fin: fin, t0: t0, nbCuis: cuis.length, cuis: cuis, parId: g.parId, cycle: cycle };
   }
@@ -1354,63 +1380,93 @@
     var crit = {}; ts.forEach(function (t) { crit[t.id] = LS[t.id] - ES[t.id] < 0.5; });
 
     var vis = ts.filter(visiblePert);
-    // disposition : une RANGÉE par niveau, les nœuds côte à côte, hauteur de
-    // rangée = le plus haut de ses nœuds
-    var W = 212, WA = 236, GAPX = 16, GAPY = 46, X0 = 12, Y0 = 12;
-    function hauteur(t) { return t.atelier ? 96 + 24 * t.parts.length + (S.specif && t.parts.some(function (p) { return p.id === S.specif; }) ? 40 : 0) : 84; }
+    // une RANGÉE par niveau — une « vague » — en flux normal, qui passe à la
+    // ligne : rien ne déborde, la page se lit de haut en bas. Les positions ne
+    // sont pas calculées ici : `tracerAretesPert` mesure les blocs une fois
+    // posés et dessine les arêtes par-dessus.
     var rangs = {}; vis.forEach(function (t) { (rangs[niv[t.id]] = rangs[niv[t.id]] || []).push(t); });
-    var pos = {}, y = Y0, largeur = 0;
-    Object.keys(rangs).sort(function (a, b) { return a - b; }).forEach(function (n) {
-      var x = X0, hRang = 0;
-      // les groupes (ateliers, cumuls) en tête de rangée : c'est ce qui se partage
-      rangs[n].sort(function (a, b) { return (b.atelier ? 1 : 0) - (a.atelier ? 1 : 0) || a.debut - b.debut || a.rec.localeCompare(b.rec, 'fr'); }).forEach(function (t) {
-        var w = t.atelier ? WA : W, hh = hauteur(t);
-        pos[t.id] = { x: x, y: y, w: w, h: hh };
-        x += w + GAPX; if (hh > hRang) hRang = hh;
-      });
-      if (x > largeur) largeur = x;
-      y += hRang + GAPY;
-    });
-    var hauteurTot = y - GAPY + 12; largeur += 8;
-
-    var aretes = vis.map(function (t) {
-      return t.preds.map(function (id) {
-        var a = pos[id], b = pos[t.id]; if (!a || !b) return '';
-        var x1 = a.x + a.w / 2, y1 = a.y + a.h, x2 = b.x + b.w / 2, y2 = b.y, dy = Math.max(18, (y2 - y1) / 2);
-        var cls = crit[id] && crit[t.id] ? 'crit' : (estFait(parId[id]) ? 'ok' : '');
-        return '<path class="' + cls + '" d="M' + x1 + ' ' + y1 + ' C' + x1 + ' ' + (y1 + dy) + ' ' + x2 + ' ' + (y2 - dy) + ' ' + x2 + ' ' + y2 + '"/>'
-          + '<circle cx="' + x2 + '" cy="' + y2 + '" r="3" fill="' + (cls === 'crit' ? '#1a1a2e' : cls === 'ok' ? '#2a9e4f' : '#aeaec0') + '"/>';
-      }).join('');
-    }).join('');
-
-    var noeuds = vis.map(function (t) {
-      var p = pos[t.id], et = etatTache(t), ETAT = { fait: 'Fait ✓', pret: 'Prêt', attente: 'En attente' };
-      var html = '<div class="np-node ' + et + (t.bloque ? ' bloque' : '') + (t.atelier ? ' atelier' : '') + (t.groupe === 'cumul' ? ' cumul' : '') + '" data-node="' + h(t.id) + '" style="left:' + p.x + 'px;top:' + p.y + 'px" title="' + h(t.rec + ' — ' + t.titre) + '">'
-        + '<div class="k"><i style="background:' + t.couleur + '"></i>' + h(t.groupe === 'atelier' ? t.parts.length + ' recettes · ' + infoPoste(t.poste).nom : t.groupe === 'cumul' ? t.rec + ' · cumul' : t.rec) + (crit[t.id] ? ' <span class="crit" title="chemin critique : aucune marge">⚡</span>' : '') + '</div>'
-        + '<div class="ti">' + emojiGeste(t.geste) + ' ' + h(t.titre) + '</div>'
-        + '<div class="me"><span class="et">' + (t.bloque && et !== 'fait' ? 'Poste non pris' : ETAT[et]) + '</span><span>' + hm(t.debut) + ' · ' + t.duree + ' min</span>' + (t.passif ? '<span>⏳</span>' : '') + '</div>';
-      if (t.atelier) html += t.parts.map(function (part) {
-        var dc = part.geste === 'couper' ? decoupeDe(part) : null, q = quantitesEtape(part), g = q.map(function (x) { return x.lib; }).join(' + ');
-        var ligne = '<div class="np-part"><i style="background:' + part.couleur + '"></i><b title="' + h(part.rec + ' — ' + part.titre) + '">' + h(t.groupe === 'cumul' ? part.titre : part.rec) + '</b>'
-          + (part.geste !== 'couper' ? '' : dc ? '<span class="np-spec ok" data-spec="' + h(part.id) + '" title="modifier la découpe">' + h(dc) + '</span>' : '<button class="np-spec" data-spec="' + h(part.id) + '">Spécifier</button>')
-          + '<span class="g">' + h(g || (part.duree + ' min')) + '</span></div>';
-        if (S.specif === part.id) ligne += '<div class="np-specform"><input class="np-in" list="npDecoupes" id="npSpecInput" placeholder="julienne, dés, lamelles…" value="' + h(part.decoupe || dc || '') + '">'
-          + '<button class="np-btn" data-spec-save="' + h(part.id) + '" style="padding:7px 10px">OK</button><button class="np-btn sec" data-spec-annuler="1" style="padding:7px 10px">✕</button></div>';
-        return ligne;
+    var ordrePert = [];
+    var lignes = Object.keys(rangs).sort(function (a, b) { return a - b; }).map(function (n) {
+      // groupes d'abord, puis les cumulables côte à côte, puis l'heure
+      rangs[n].sort(function (a, b) { return (b.atelier ? 1 : 0) - (a.atelier ? 1 : 0) || (a.cumul || '').localeCompare(b.cumul || '') || a.debut - b.debut || a.rec.localeCompare(b.rec, 'fr'); });
+      var html = '<div class="np-prow" data-vague="' + n + '"><div class="np-plvl">Vague ' + (+n + 1) + '<small>' + (+n === 0 ? 'dès l’ouverture' : 'après la vague ' + n) + '</small></div>';
+      html += rangs[n].map(function (t) {
+        ordrePert.push(t.id);
+        var et = etatTache(t), ETAT = { fait: 'Fait ✓', pret: 'Prêt', attente: 'En attente' };
+        var b = '<div class="np-node ' + et + (t.bloque ? ' bloque' : '') + (t.atelier ? ' atelier' : '') + (t.cumul ? ' cumul' : '') + '" data-node="' + h(t.id) + '" title="' + h(t.rec + ' — ' + t.titre) + '">'
+          + '<div class="k"><i style="background:' + t.couleur + '"></i>' + h(t.groupe === 'atelier' ? t.parts.length + ' recettes · ' + infoPoste(t.poste).nom : t.rec) + (crit[t.id] ? ' <span class="crit" title="chemin critique : aucune marge">⚡</span>' : '') + '</div>'
+          + '<div class="ti">' + emojiGeste(t.geste) + ' ' + h(t.titre) + '</div>'
+          + (t.aliment && !t.atelier ? '<div class="al">' + h(t.aliment) + '</div>' : '')
+          + '<div class="me"><span class="et">' + (t.bloque && et !== 'fait' ? 'Poste non pris' : ETAT[et]) + '</span><span>' + hm(t.debut) + ' · ' + t.duree + ' min</span>' + (t.passif ? '<span>⏳</span>' : '')
+          + (t.cumul ? '<span class="cu" title="' + h('En même temps que : ' + t.cumulAvec.map(function (id) { return (parId[id] || {}).titre; }).filter(Boolean).join(', ')) + '">⇆ en même temps</span>' : '') + '</div>';
+        if (t.atelier) b += t.parts.map(function (part) {
+          var dc = part.geste === 'couper' ? decoupeDe(part) : null, q = quantitesEtape(part), g = q.map(function (x) { return x.lib; }).join(' + ');
+          var ligne = '<div class="np-part"><i style="background:' + part.couleur + '"></i><b title="' + h(part.rec + ' — ' + part.titre) + '">' + h(part.rec) + '</b>'
+            + (part.geste !== 'couper' ? '' : dc ? '<span class="np-spec ok" data-spec="' + h(part.id) + '" title="modifier la découpe">' + h(dc) + '</span>' : '<button class="np-spec" data-spec="' + h(part.id) + '">Spécifier</button>')
+            + '<span class="g">' + h(g || (part.duree + ' min')) + '</span></div>';
+          if (S.specif === part.id) ligne += '<div class="np-specform"><input class="np-in" list="npDecoupes" id="npSpecInput" placeholder="julienne, dés, lamelles…" value="' + h(part.decoupe || dc || '') + '">'
+            + '<button class="np-btn" data-spec-save="' + h(part.id) + '" style="padding:7px 10px">OK</button><button class="np-btn sec" data-spec-annuler="1" style="padding:7px 10px">✕</button></div>';
+          return ligne;
+        }).join('');
+        return b + '<div class="ouvrir">Ouvrir la fiche ›</div></div>';
       }).join('');
       return html + '</div>';
     }).join('');
+    // ce que le traceur dessinera, et l'ordre des écrans quand on ouvre une fiche
+    S.pertAretes = []; S.pertOrdre = ordrePert;
+    vis.forEach(function (t) { t.preds.forEach(function (id) { if (pos(id)) S.pertAretes.push({ de: id, vers: t.id, cls: crit[id] && crit[t.id] ? 'crit' : (estFait(parId[id]) ? 'ok' : '') }); }); });
+    function pos(id) { return vis.some(function (x) { return x.id === id; }); }
 
     var faits = ts.filter(estFait).length, prets = ts.filter(function (t) { return etatTache(t) === 'pret'; }).length;
     var nbFiltres = FILTRES.filter(function (f) { return filtreActif(f.cle); }).length;
     return '<div class="np-row" style="justify-content:space-between;margin-bottom:8px"><div class="np-h" style="margin:0">Dépendances — ce qui doit être fini pour passer à la suite</div>'
       + '<div class="np-s">' + faits + ' faite(s) · <b>' + prets + ' prête(s)</b> · chemin critique ' + hm(plan.t0 + finP) + ' au plus tôt' + (nbFiltres ? ' · <b>' + vis.length + '/' + ts.length + ' affichées</b> <a href="#" data-filtre-raz="1">tout afficher</a>' : '') + '</div></div>'
-      + '<div class="np-leg"><span><i style="background:#2a9e4f"></i>fait</span><span><i style="background:var(--black)"></i>prêt : ses dépendances sont faites</span><span><i style="background:#aeaec0"></i>en attente</span><span>⚡ chemin critique (aucune marge)</span><span><i style="background:#1a1a2e"></i>atelier partagé</span><span><i style="background:#c97a00"></i>cumul (même recette, même poste, en même temps)</span></div>'
+      + '<div class="np-leg"><span><i style="background:#2a9e4f"></i>fait</span><span><i style="background:var(--black)"></i>prêt : ses dépendances sont faites</span><span><i style="background:#aeaec0"></i>en attente</span><span>⚡ chemin critique (aucune marge)</span><span><i style="background:#1a1a2e"></i>atelier partagé</span><span><i style="background:#c97a00"></i>⇆ en même temps (même recette, même poste)</span></div>'
       + '<datalist id="npDecoupes">' + DECOUPES.map(function (d) { return '<option value="' + h(d) + '">'; }).join('') + '</datalist>'
       + '<div class="np-pert-wrap">' + panneauFiltres(ts)
-      + '<div class="np-pert">' + (vis.length ? '<div class="np-pert-in" style="width:' + largeur + 'px;height:' + hauteurTot + 'px"><svg viewBox="0 0 ' + largeur + ' ' + hauteurTot + '" width="' + largeur + '" height="' + hauteurTot + '">' + aretes + '</svg>' + noeuds + '</div>' : '<div class="np-vide">Rien ne passe les filtres.</div>') + '</div></div>'
-      + '<div class="np-note">Les dépendances sont <b>lues</b> dans les fiches : même aliment → l’étape attend la précédente qui le porte ; sans aliment reconnu, un geste de départ (couper, rincer, peser, saisir, bouillir) part seul, tout autre geste attend ce qui est en cours. Pour forcer : « dépend de » dans l’onglet Chef. Un <b>cumul</b> réunit les étapes d’une même recette, au même poste, prêtes en même temps. Toucher un nœud le marque fait.'
+      + '<div class="np-pert"><div class="np-pert-in" id="npPertIn">' + (vis.length ? '<svg id="npPertSvg"></svg>' + lignes : '<div class="np-vide">Rien ne passe les filtres.</div>') + '</div></div></div>'
+      + '<div class="np-note">Une <b>vague</b> = tout ce qui peut se faire une fois la vague précédente finie. Les dépendances sont <b>lues</b> dans les fiches : même aliment → l’étape attend la précédente qui le porte ; sans aliment reconnu, un geste de départ (couper, rincer, peser, saisir, bouillir) part seul, tout autre geste attend ce qui est en cours. Pour forcer : « dépend de » dans l’onglet Chef. Toucher un bloc ouvre sa fiche, écran par écran.'
       + (plan.cycle ? ' <b style="color:#c0392b">Une boucle de « dépend de » a été coupée.</b>' : '') + '</div>';
+  }
+
+  /* Les arêtes du PERT, tracées APRÈS que les blocs sont posés : on mesure
+     chaque bloc (position dans le conteneur, pas dans la page) et on relie le
+     bas du prédécesseur au haut de sa suite. Refaites à chaque rendu et à
+     chaque redimensionnement — le flux passe à la ligne, les positions bougent. */
+  function tracerAretesPert() {
+    var box = document.getElementById('npPertIn'), svg = document.getElementById('npPertSvg');
+    if (!box || !svg) return;
+    var R = box.getBoundingClientRect(), pos = {};
+    box.querySelectorAll('.np-node').forEach(function (n) {
+      var r = n.getBoundingClientRect();
+      pos[n.dataset.node] = { x: r.left - R.left, y: r.top - R.top, w: r.width, h: r.height };
+    });
+    svg.setAttribute('width', R.width); svg.setAttribute('height', R.height);
+    svg.setAttribute('viewBox', '0 0 ' + R.width + ' ' + R.height);
+    svg.innerHTML = (S.pertAretes || []).map(function (a) {
+      var p = pos[a.de], q = pos[a.vers]; if (!p || !q) return '';
+      // le départ glisse le long du bas du bloc vers la suite, pour que deux
+      // arêtes du même bloc ne se confondent pas
+      var x1 = p.x + p.w / 2 + Math.max(-p.w / 3, Math.min(p.w / 3, (q.x + q.w / 2 - p.x - p.w / 2) / 4)), y1 = p.y + p.h;
+      var x2 = q.x + q.w / 2, y2 = q.y, dy = Math.max(16, (y2 - y1) / 2);
+      var col = a.cls === 'crit' ? '#1a1a2e' : a.cls === 'ok' ? '#2a9e4f' : '#aeaec0';
+      return '<path class="' + a.cls + '" d="M' + x1 + ' ' + y1 + ' C' + x1 + ' ' + (y1 + dy) + ' ' + x2 + ' ' + (y2 - dy) + ' ' + x2 + ' ' + y2 + '"/>'
+        + '<circle cx="' + x2 + '" cy="' + y2 + '" r="3.5" fill="' + col + '"/>';
+    }).join('');
+  }
+
+  /* Ouvrir la fiche d'un bloc du PERT : les mêmes écrans que « Mon service »,
+     dans l'ordre des vagues, ouverts sur le bloc touché. */
+  function ouvrirDetail(id) {
+    if (!S.plan || !S.pertOrdre) return;
+    C.taches = S.pertOrdre.map(function (k) { return S.plan.parId[k]; }).filter(Boolean);
+    var i = C.taches.findIndex(function (t) { return t.id === id; }); if (i < 0) return;
+    C.i = i; C.depuisPert = true;
+    if (!C.el) construireCine();
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(function () { C.el.classList.add('on'); });
+    setTimeout(function () { C.el.classList.add('on'); }, 60);
+    aller(C.i, true);
   }
 
   /* Spécifier la découpe d'une part d'atelier : écrit `recettes_etapes.decoupe`.
@@ -1447,11 +1503,10 @@
     if (b.dataset.spec) { S.specif = S.specif === b.dataset.spec ? null : b.dataset.spec; rendre(); return; }
     if (b.dataset.specSave) { var inp = document.getElementById('npSpecInput'); enregistrerDecoupe(b.dataset.specSave, inp ? inp.value : ''); return; }
     if (b.dataset.specAnnuler) { S.specif = null; rendre(); return; }
-    // un nœud du PERT : fait ⇄ pas fait, écrit en base, l'écran d'à côté le voit
+    // un bloc du PERT : sa fiche, écran par écran (« Fait ✓ » y est)
     if (b.dataset.node) {
       if (ev.target.closest('.np-specform')) return;
-      var t = S.plan && S.plan.parId[b.dataset.node]; if (!t) return;
-      basculerFait(t).then(function () { rendre(); }); return;
+      ouvrirDetail(b.dataset.node); return;
     }
     if (b.dataset.poste) { prendrePoste(b.dataset.poste, b.dataset.prendre === '1'); return; }
     if (b.dataset.act === 'service') { ouvrirService(); return; }
@@ -1524,18 +1579,20 @@
     if (!C.taches.length) { toast('Aucune étape sur vos postes aujourd’hui', 'ok'); return; }
     // on ouvre sur la première étape pas encore faite
     C.i = Math.max(0, C.taches.findIndex(function (t) { return !estFait(t); }));
-    if (!C.el) {
-      C.el = document.createElement('div'); C.el.id = 'npCine';
-      C.el.innerHTML = '<div class="top"><button data-c="fermer">✕</button><div class="prog"><i></i></div><button data-c="som" class="cnt" style="background:none"></button></div>'
-        + '<div class="stage"></div><div class="cta"><button data-c="prec">‹</button><button data-c="fait" class="ok"></button><button data-c="suiv">›</button></div>';
-      document.body.appendChild(C.el);
-      C.el.addEventListener('click', clicCine);
-      document.addEventListener('keydown', function (ev) { if (!C.el.classList.contains('on')) return; if (ev.key === 'ArrowRight') aller(C.i + 1); if (ev.key === 'ArrowLeft') aller(C.i - 1); if (ev.key === 'Escape') fermerService(); });
-    }
+    C.depuisPert = false;
+    if (!C.el) construireCine();
     document.body.style.overflow = 'hidden';
     requestAnimationFrame(function () { C.el.classList.add('on'); });
     setTimeout(function () { C.el.classList.add('on'); }, 60);
     aller(C.i, true);
+  }
+  function construireCine() {
+    C.el = document.createElement('div'); C.el.id = 'npCine';
+    C.el.innerHTML = '<div class="top"><button data-c="fermer">✕</button><div class="prog"><i></i></div><button data-c="som" class="cnt" style="background:none"></button></div>'
+      + '<div class="stage"></div><div class="cta"><button data-c="prec">‹</button><button data-c="fait" class="ok"></button><button data-c="suiv">›</button></div>';
+    document.body.appendChild(C.el);
+    C.el.addEventListener('click', clicCine);
+    document.addEventListener('keydown', function (ev) { if (!C.el.classList.contains('on')) return; if (ev.key === 'ArrowRight') aller(C.i + 1); if (ev.key === 'ArrowLeft') aller(C.i - 1); if (ev.key === 'Escape') fermerService(); });
   }
   function fermerService() {
     if (!C.el) return;
@@ -1578,10 +1635,55 @@
     });
     return out;
   }
+  /* ── Les repères GÉNÉRAUX d'un geste ─────────────────────────────────────
+     Pablo : « écrire le plus de détail possible sur l'étape : ce qu'il faut
+     faire, combien de grammes, de centimètres, pendant combien de temps, la
+     température, la texture, le visuel, ce qu'il faut avoir à la fin ».
+     La fiche donne ce qu'elle donne — consigne, durée, température, découpe,
+     grammes. Le reste vient d'ici : des repères de cuisine par geste, valables
+     pour n'importe quelle recette, et ANNONCÉS comme tels (« repères du
+     geste »). ⚠️ Rien de spécifique à une recette n'est écrit ici : ce que la
+     fiche ne dit pas est affiché comme manquant, à compléter dans l'onglet
+     Chef — jamais deviné. */
+  var REPERES = {
+    couper:      { feu: null, texture: 'Morceaux réguliers : même taille, même cuisson. La découpe demandée fait le calibre.', visuel: 'Tranche nette, sans écrasement ni fibres arrachées.', fin: 'Tout l’aliment taillé au calibre, réservé À PART pour chaque recette, planche nettoyée.', pieges: 'Planche stable, lame affûtée. Ne pas mélanger deux découpes du même aliment.' },
+    rincer:      { feu: 'Eau froide courante.', texture: 'Égoutté À FOND : l’eau qui reste fait chuter la température de cuisson.', visuel: 'Eau claire au dernier rinçage, sans terre ni sable.', fin: 'Aliment propre, essoré, prêt à tailler ou à cuire.', pieges: 'Essorer les feuilles ; ne pas laisser tremper.' },
+    peser:       { feu: null, texture: null, visuel: 'La balance à zéro avant chaque récipient (tare).', fin: 'Chaque quantité pesée et étiquetée par recette.', pieges: 'Peser le cru, pas le cuit — les grammages de la fiche sont crus.' },
+    huiler:      { feu: null, texture: 'Un film fin et régulier : le surplus fume et amertume.', visuel: 'Surface brillante, sans flaque.', fin: 'Aliment enrobé, prêt à saisir ou à enfourner.', pieges: 'Huile d’olive à feu vif : elle fume vite. Huile neutre pour saisir fort.' },
+    assaisonner: { feu: null, texture: 'Goûter AVANT et APRÈS. Saler en plusieurs fois.', visuel: 'Sel réparti, pas en amas.', fin: 'Assaisonnement équilibré au goût, noté si corrigé.', pieges: 'Une masse ×3 ne se sale pas ×3 : ajouter par paliers.' },
+    melanger:    { feu: null, texture: 'Homogène : plus aucune trace de l’un ou de l’autre.', visuel: 'Couleur uniforme, sans grumeau.', fin: 'Mélange lié, couvert, réservé.', pieges: 'Ne pas travailler trop une farce ou une pâte : elle durcit.' },
+    fouetter:    { feu: null, texture: 'Lisse et aérée, selon le but : une émulsion se tient, des blancs forment un bec.', visuel: 'Brillant pour une émulsion, mat et ferme pour des blancs.', fin: 'Texture stable une minute après l’arrêt.', pieges: 'Verser l’huile en filet ; bol et fouet propres et froids pour monter.' },
+    mixer:       { feu: null, texture: 'Lisse, sans morceau ; passer au tamis si la fiche le demande.', visuel: 'Couleur homogène, sans bulle si c’est une sauce.', fin: 'Consistance voulue (nappante ou ferme), assaisonnement rectifié.', pieges: 'Mixer chaud : couvercle entrouvert, petites quantités.' },
+    saisir:      { feu: 'Feu VIF, poêle ou plaque très chaude, matière grasse à peine fumante.', texture: 'Croûte en surface, cœur encore tendre et juteux.', visuel: 'Coloration dorée à brune, uniforme sur toutes les faces ; sucs au fond.', fin: 'Toutes les faces colorées, réservé à plat (pas en tas : la vapeur ramollit la croûte).', pieges: 'Ne pas surcharger — l’aliment BOUT au lieu de dorer. Ne pas remuer trop tôt : laisser accrocher puis décoller.' },
+    bouillir:    { feu: 'Eau salée (10 g/l) à gros bouillons ; à la vapeur, couvercle fermé, feu régulier.', texture: 'Cuit à cœur, tenue conservée — al dente pour pâtes et riz, la pointe du couteau entre sans forcer pour un légume.', visuel: 'Légumes verts : couleur vive, plongés en eau glacée pour la fixer.', fin: 'Égoutté aussitôt, étalé à plat pour arrêter la cuisson.', pieges: 'Saler l’eau, pas après. Ne pas couvrir des pâtes. Une eau qui a cessé de bouillir n’est plus une cuisson.' },
+    mijoter:     { feu: 'Feu doux, FRÉMISSEMENT (85–95 °C) — jamais à gros bouillons. Couvercle selon la fiche.', texture: 'Fondant : la viande se détache, la sauce nappe la cuillère.', visuel: 'Petites bulles espacées en surface, sauce brillante, réduite d’un tiers environ.', fin: 'Sauce à la consistance voulue, assaisonnement rectifié en fin.', pieges: 'Remuer de temps en temps pour ne pas attacher ; compléter en liquide chaud, jamais froid.' },
+    enfourner:   { feu: 'Four PRÉCHAUFFÉ à la température de la fiche ; chaleur tournante sauf mention.', texture: 'Cuit à cœur (sonde si la fiche donne une température), gratiné ou croustillant dessus.', visuel: 'Coloration régulière ; tourner la plaque à mi-cuisson.', fin: 'Sorti dès la couleur atteinte ; repos si la fiche le dit.', pieges: 'Une plaque trop chargée cuit à la vapeur. Ne pas ouvrir le four les dix premières minutes.' },
+    refrigerer:  { feu: '≤ 4 °C au réfrigérateur ; mariner À COUVERT.', texture: 'Une marinade doit enrober, pas noyer.', visuel: 'Film ou couvercle, étiquette avec l’heure.', fin: 'Refroidi À CŒUR avant de conditionner.', pieges: 'Jamais chaud au frigo : refroidir d’abord (bain glacé, cellule).' },
+    reposer:     { feu: 'Hors du feu, à couvert lâche.', texture: 'Le repos finit la cuisson et redistribue les jus : la viande se détend.', visuel: 'Les jus ne coulent plus à la découpe.', fin: 'Temps de la fiche écoulé, chronomètre à l’appui.', pieges: 'Ne pas couvrir hermétiquement : ça ramollit une croûte.' },
+    attendre:    { feu: null, texture: null, visuel: 'Un chronomètre lancé, visible.', fin: 'L’attente est une étape : elle a une fin, et on y revient.', pieges: 'Pendant ce temps, une autre tâche — le plan en donne une.' },
+    dresser:     { feu: null, texture: 'Les éléments à la température de service prévue par la fiche.', visuel: 'Même présentation d’une portion à l’autre : la photo de la fiche fait foi.', fin: 'Portion pesée, fermée, étiquetée (recette, client, date).', pieges: 'Ne pas fermer une boîte chaude : condensation, texture perdue.' }
+  };
+
+  function ligneAvantApres(t) {
+    var plan = S.plan; if (!plan) return '';
+    var avant = (t.preds || []).map(function (id) { var p = plan.parId[id]; return p ? '<span class="' + (estFait(p) ? 'ok' : '') + '">' + (estFait(p) ? '✓ ' : '○ ') + h(p.titre) + '</span>' : ''; }).filter(Boolean);
+    var apres = plan.taches.filter(function (x) { return (x.preds || []).indexOf(t.id) >= 0; }).map(function (x) { return '<span>' + emojiGeste(x.geste) + ' ' + h(x.titre) + (x.rec !== t.rec ? ' <i>(' + h(x.rec) + ')</i>' : '') + '</span>'; });
+    if (!avant.length && !apres.length) return '';
+    return '<div class="sec">Avant · après</div><div class="chaine">'
+      + (avant.length ? '<div><b>Doit être fini avant</b>' + avant.join('') + '</div>' : '<div><b>Rien à attendre</b><span>peut partir dès l’ouverture</span></div>')
+      + (apres.length ? '<div><b>Débloque ensuite</b>' + apres.join('') + '</div>' : '<div><b>Dernière de sa chaîne</b><span>rien n’attend derrière</span></div>') + '</div>';
+  }
+
+  function reperesGeste(t) {
+    var r = REPERES[t.geste]; if (!r) return '';
+    var lignes = [['🔥 Feu / température', r.feu], ['🖐 Texture', r.texture], ['👁 Visuel', r.visuel], ['🏁 À la fin', r.fin], ['⚠️ Pièges', r.pieges]].filter(function (l) { return l[1]; });
+    return '<div class="sec">Repères du geste <small>— généraux, la fiche prime</small></div><div class="rep">' + lignes.map(function (l) { return '<div><b>' + l[0] + '</b>' + h(l[1]) + '</div>'; }).join('') + '</div>';
+  }
+
   function htmlEcran(t) {
     var P = infoPoste(t.poste), fait = t.atelier ? (estFait(t) ? true : null) : S.faits[t.id];
     var html = (fait ? '<div class="fait">FAIT' + (typeof fait === 'string' ? ' · ' + h(fait) : '') + '</div>' : '')
-      + '<div class="kick">' + (t.assemblage ? 'En fin de production' : hm(t.debut) + ' → ' + hm(t.fin)) + ' · ' + P.em + ' ' + h(P.nom) + '</div>'
+      + '<div class="kick">' + (t.assemblage ? 'En fin de production' : hm(t.debut) + ' → ' + hm(t.fin)) + ' · ' + P.em + ' ' + h(P.nom) + (t.qui && !t.assemblage ? ' · ' + h(t.qui) : '') + '</div>'
       + '<div class="rec"><i style="background:' + t.couleur + '"></i>' + h(t.rec) + (t.fiches ? ' · ×' + t.fiches.toFixed(1) + ' de la fiche' : '') + '</div>'
       + '<h1>' + emojiGeste(t.geste) + ' ' + h(t.titre) + '</h1>';
     if (t.assemblage) {
@@ -1595,27 +1697,44 @@
             + pc.p.ings.filter(function (g) { return g.g > 0; }).map(function (g) { return '<span><b>' + (g.g >= 10 ? Math.round(g.g) : Math.round(g.g * 10) / 10) + ' ' + h(g.unite) + '</b> ' + h(g.nom) + '</span>'; }).join('') + '</div></div>';
         }
       });
-      return html;
+      return html + reperesGeste({ geste: 'dresser' });
     }
     if (t.atelier) {
-      // un atelier : les parts, chacune avec sa recette, ses grammes du jour et
-      // sa découpe — ou « à spécifier », qui se règle depuis le PERT, pas ici
-      html += '<div class="ali">' + h(t.aliment || '') + ' — ' + t.parts.length + (t.groupe === 'cumul' ? ' étapes en même temps' : ' recettes, une seule fois') + '</div><div class="desc">' + h(t.desc) + '</div>';
+      // un atelier : les parts, chacune avec sa recette, sa consigne, ses
+      // grammes du jour et sa découpe — ou « à spécifier », qui se règle
+      // depuis le PERT, pas ici
+      html += '<div class="ali">' + h(t.aliment || '') + ' — ' + t.parts.length + ' recettes, une seule fois</div><div class="desc">' + h(t.desc) + '</div>';
       html += t.parts.map(function (part) {
         var dc = decoupeDe(part), q = quantitesEtape(part);
-        return '<div class="port"><b><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + part.couleur + ';margin-right:6px"></i>' + h(part.rec) + '</b> <span style="color:#ffffff8c;font-size:12px">' + h(part.titre) + '</span>'
+        return '<div class="port"><b><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + part.couleur + ';margin-right:6px"></i>' + h(part.rec) + '</b> <span style="color:#ffffff8c;font-size:12px">' + h(part.titre) + ' · ' + part.duree + ' min</span>'
           + '<div class="g">' + (part.geste !== 'couper' ? '' : dc ? '<span style="background:#34c75933"><b>' + h(dc) + '</b></span>' : '<span style="background:#c0392b"><b>découpe à spécifier</b></span>')
           + q.map(function (x) { return '<span><b>' + h(x.lib) + '</b> ' + h(x.nom) + '</span>'; }).join('') + '</div>'
-          + (part.desc ? '<div style="font-size:13px;color:#ffffffb3;margin-top:6px">' + h(part.desc) + '</div>' : '') + '</div>';
+          + '<div style="font-size:13px;color:#ffffffb3;margin-top:6px">' + (part.desc ? h(part.desc) : '<i>Aucune consigne écrite dans la fiche.</i>') + '</div></div>';
       }).join('');
       html += '<div class="meta"><span>⏱ ' + t.duree + ' min au total' + (t.defaut ? ' (durées par défaut)' : '') + '</span><span>' + P.em + ' ' + h(P.nom) + '</span></div>';
-      return html;
+      return html + reperesGeste(t) + ligneAvantApres(t);
     }
     var q = quantitesEtape(t);
     html += '<div class="ali">' + h(t.aliment || '') + '</div>';
-    if (q.length) html += '<div class="qte">' + q.map(function (x) { return '<div><b>' + h(x.lib) + '</b>' + h(x.nom) + '</div>'; }).join('') + '</div>';
-    if (t.desc) html += '<div class="desc">' + h(t.desc) + '</div>';
-    html += '<div class="meta"><span>⏱ ' + t.duree + ' min' + (t.defaut ? ' (par défaut)' : '') + '</span>' + (t.temperature ? '<span>🌡 ' + t.temperature + ' °C</span>' : '') + (t.passif ? '<span>⏳ attente : libre pendant ce temps</span>' : '') + '<span>' + h(t.rec) + ' · étape ' + t.numero + '</span></div>';
+    // 1. ce qu'il faut faire — la consigne de la fiche, ou son absence, dite
+    html += '<div class="sec">À faire</div><div class="desc">' + (t.desc ? h(t.desc) : '<i>Aucune consigne écrite dans la fiche — à compléter dans l’onglet Chef.</i>') + '</div>';
+    // 2. combien — les grammes du jour, par ingrédient de l'étape
+    if (q.length) html += '<div class="sec">Quantités du jour <small>— fiche × ' + t.fiches.toFixed(1) + '</small></div><div class="qte">' + q.map(function (x) { return '<div><b>' + h(x.lib) + '</b>' + h(x.nom) + '</div>'; }).join('') + '</div>';
+    else if (t.aliment) html += '<div class="sec">Quantités du jour</div><div class="desc"><i>Aucun ingrédient de la fiche ne porte le mot « ' + h(t.aliment) + ' » — vérifier l’aliment de l’étape dans l’onglet Chef.</i></div>';
+    // 3. les chiffres de la fiche : durée, température, découpe, attente —
+    //    chacun dit s'il vient de la fiche ou s'il manque
+    var dc = t.geste === 'couper' ? decoupeDe(t) : null;
+    var chiffres = [
+      ['⏱ Durée', t.defaut ? DUREE_DEFAUT + ' min <i>par défaut, la fiche ne le dit pas</i>' : t.duree + ' min' + (t.fiches && !t.passif && Math.round(t.duree) !== Math.round(t.duree / Math.sqrt(Math.max(1, t.fiches))) ? ' <i>(' + Math.round(t.duree / Math.sqrt(Math.max(1, t.fiches))) + ' min pour une fiche, ×√' + t.fiches.toFixed(1) + ')</i>' : '')],
+      ['🌡 Température', t.temperature ? t.temperature + ' °C' : (['enfourner', 'mijoter', 'saisir', 'bouillir', 'refrigerer'].indexOf(t.geste) >= 0 ? '<i>non renseignée dans la fiche</i>' : null)],
+      ['🔪 Découpe', t.geste === 'couper' ? (dc ? h(dc) : '<span style="color:#ff7b6b">à spécifier</span>') : null],
+      ['⏳ Attente', t.passif ? 'oui — le cuisinier est libre pendant ce temps' : null],
+      ['⇆ En même temps', t.cumul ? h(t.cumulAvec.map(function (id) { return (S.plan.parId[id] || {}).titre; }).filter(Boolean).join(', ')) + (t.cumulRegle === 'max' ? ' <i>(deux feux côte à côte)</i>' : ' <i>(à la suite, même poste)</i>') : null]
+    ].filter(function (c) { return c[1]; });
+    html += '<div class="sec">Les chiffres</div><div class="rep">' + chiffres.map(function (c) { return '<div><b>' + c[0] + '</b>' + c[1] + '</div>'; }).join('') + '</div>';
+    // 4. les repères du geste, puis avant / après
+    html += reperesGeste(t) + ligneAvantApres(t);
+    html += '<div class="meta"><span>' + h(t.rec) + ' · étape ' + t.numero + '</span><span>' + P.em + ' ' + h(P.nom) + '</span>' + (typeof fait === 'string' ? '<span>fait par ' + h(fait) + '</span>' : '') + '</div>';
     return html;
   }
   function sommaire() {

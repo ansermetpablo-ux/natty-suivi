@@ -3789,34 +3789,63 @@ PostgREST répond `PGRST204` et l'écran nomme le SQL.
 
 **Les cumuls (`grapheDuJour`, après les ateliers)** — Pablo : « certaines tâches sont
 cumulables et réalisables en même temps, pour les mêmes recettes et les mêmes types de
-poste ». Dans une recette, au même poste, les étapes actives **prêtes au même moment** (même
-début au plus tôt sur le graphe — donc aucune ne dépend de l'autre) deviennent UN nœud
-`cumul` : « Feux : riz + poulet » pour le curry, « Taille : carottes + oignons ». La durée suit
-la règle du poste (`POSTES[].cumul`) : **`max`** aux feux et au four (deux casseroles côte à
-côte, la plus longue décide), **`somme`** à la taille, aux sauces, à l'assemblage (deux fois le
-couteau). Même mécanique que l'atelier (`fusionner` : parts entières, dépendances = l'union,
-suites remappées, fait = toutes les parts faites) ; les ateliers passent d'abord, une part
-n'est jamais dans deux nœuds. Bordure ambre dans le PERT, pastille « cumul » dans la liste.
+poste », puis « **1 bloc = 1 étape** ». Dans une recette, au même poste, les étapes actives
+**prêtes au même moment** (même début au plus tôt sur le graphe — donc aucune ne dépend de
+l'autre) reçoivent une même clé `cumul` (+ `cumulAvec`, `cumulRegle`). **Rien n'est
+fusionné** : chaque étape garde son bloc, sa fiche, sa coche. C'est `dispatcher` qui les
+pose ensemble sur le même cuisinier — **`max`** aux feux et au four (deux casseroles côte à
+côte, la plus longue tient le cuisinier), **`somme`** à la taille, aux sauces, à l'assemblage
+(à la suite, sans changer de poste) — et le PERT qui les met côte à côte avec la pastille
+« ⇆ en même temps ». L'atelier reste le seul nœud composé, parce qu'il l'a demandé ainsi.
+> ⚠️ Une première version FUSIONNAIT les cumuls en un nœud (« Feux : riz + poulet ») ;
+> Pablo l'a refusée sur ses vraies fiches (« pour le bœuf… c'est un seul bloc, or ça doit
+> être deux blocs »). Le groupement vit dans le planning, pas dans les blocs.
 
-**Le PERT (`sectionPert`)** — le même graphe que le Gantt, lu par la causalité, **de haut en
-bas** : une rangée par niveau (plus longue chaîne d'amont, `niveau`), les nœuds côte à côte,
-une arête SVG par dépendance qui descend, groupes (ateliers, cumuls) en tête de rangée. Trois
-états lus en base : **Fait** (vert, estompé), **Prêt** (toutes ses dépendances faites —
-encadré noir : c'est là qu'on peut mettre la main), **En attente**. Marges au sens du PERT
-(ES/EF/LS/LF, sans les cuisiniers : la contrainte du graphe seul) ; **⚡ chemin critique** =
-marge nulle, arêtes noires. Toucher un nœud le marque fait — c'est le geste du chef qui suit
-la salle. **Sur le côté, les filtres** (`panneauFiltres`, `FILTRES`) : Aliment / Poste /
-Recette, chacun se déplie (`S.filtresOuverts`) et se coche ; `S.filtres[type]` porte les clés
-**exclues** (vide = tout), « tout · rien » par groupe, « tout afficher » en tête. Un groupe
-porte les clés de toutes ses parts : filtrer « carottes » garde l'atelier entier ; un nœud
-caché emporte ses arêtes, mais **les niveaux restent ceux du graphe entier** pour que « en
-dessous » garde son sens. Sous 700 px le panneau passe au-dessus du graphe. Défilement
-interne, aucun débordement de page à 375 px (mesuré).
+**Le PERT (`sectionPert` + `tracerAretesPert`)** — le même graphe que le Gantt, lu par la
+causalité, **de haut en bas et déroulé dans la page** : une **vague** par niveau (plus longue
+chaîne d'amont, `niveau`) — « Vague 1 · dès l'ouverture », « Vague 2 · après la vague 1 » —
+dont les blocs sont en **flux normal et passent à la ligne** (`flex-wrap`) : rien ne défile
+horizontalement, un bloc par ligne à 375 px. Les arêtes ne sont pas calculées au rendu : le
+HTML est posé, puis `tracerAretesPert` **mesure les blocs** (`getBoundingClientRect`
+relatif au conteneur) et dessine le SVG par-dessus, du bas du prédécesseur au haut de sa
+suite ; refait à chaque rendu et au redimensionnement. Groupes en tête de vague, cumulables
+côte à côte. Trois états lus en base : **Fait** (vert, estompé), **Prêt** (toutes ses
+dépendances faites — encadré noir), **En attente**. Marges au sens du PERT (ES/EF/LS/LF,
+sans les cuisiniers) ; **⚡ chemin critique** = marge nulle, arêtes noires. **Toucher un bloc
+ouvre sa fiche** (`ouvrirDetail`) : les mêmes écrans que « Mon service », dans l'ordre des
+vagues, ouverts sur le bloc touché — « Fait ✓ » y est ; le PERT n'a plus de bascule directe.
+**Sur le côté, les filtres** (`panneauFiltres`, `FILTRES`) : Aliment / Poste / Recette,
+chacun se déplie (`S.filtresOuverts`) et se coche ; `S.filtres[type]` porte les clés
+**exclues** (vide = tout), « tout · rien » par groupe, « tout afficher » en tête. Un atelier
+porte les clés de toutes ses parts : filtrer « carottes » le garde entier ; un bloc caché
+emporte ses arêtes, mais **les niveaux restent ceux du graphe entier**. Sous 700 px le
+panneau passe au-dessus.
+
+**La fiche d'une étape (`htmlEcran`, `REPERES`)** — Pablo : « le plus de détail possible :
+ce qu'il faut faire, combien de grammes, de centimètres, pendant combien de temps, la
+température, la texture, le visuel, ce qu'il faut avoir à la fin ». L'écran, dans l'ordre :
+**À faire** (la consigne de la fiche, ou « aucune consigne écrite — à compléter dans
+l'onglet Chef ») ; **Quantités du jour** (grammes par ingrédient × fiches, ou « aucun
+ingrédient ne porte ce mot ») ; **Les chiffres** — durée (et « par défaut » si la fiche ne
+le dit pas, avec le ×√fiches expliqué), température (ou « non renseignée » pour les gestes
+qui en demandent une), découpe (ou « à spécifier »), attente, « en même temps que » ;
+**Repères du geste** — `REPERES[geste]` : feu, texture, visuel, à la fin, pièges — des
+repères de cuisine **généraux**, valables pour toute recette, et affichés comme tels (« la
+fiche prime ») ; **Avant · après** — ce qui doit être fini avant (avec ✓/○) et ce que
+l'étape débloque, recette voisine comprise.
+> ⚠️ **Rien de spécifique à une recette n'est inventé.** Une température, une découpe, une
+> durée que la fiche ne donne pas sont affichées **manquantes**, jamais devinées — c'est la
+> règle du module. Les repères par geste sont la seule chose écrite ici, et ils sont
+> annoncés comme généraux. Si Pablo veut du spécifique (« 2 cm », « cœur à 75 °C »), c'est
+> la fiche qu'il faut enrichir (consigne, température, découpe), pas ce tableau.
 
 Vérifié au banc `_test-production-pert.html` (hors dépôt, doublure de `sb()` en mémoire,
 deux recettes qui coupent des carottes) : 14 contrôles sur les vraies fonctions du module
-(`_dependances`, `_decoupeDe`), puis en navigateur : 8 nœuds pour 10 étapes (1 atelier
-carottes, 1 cumul « Feux : riz + poulet » à 12 min = max(12, 8)), 9 arêtes, trois rangées ;
+(`_dependances`, `_decoupeDe`), puis en navigateur : 9 blocs pour 10 étapes (1 atelier
+carottes ; riz et poulet du curry marqués ⇆, chacun son bloc), 9 arêtes tracées après la
+pose, trois vagues ; un bloc touché ouvre sa fiche (À faire, quantités, chiffres, repères,
+avant/après), « Fait ✓ » depuis la fiche → bloc vert, arête verte ; à 375 px : un bloc par
+ligne, aucun débordement, SVG redimensionné au resize ;
 atelier fait → « Cuire les légumes » attend encore les oignons, oignons faits → prêt ;
 « Monter la sauce » attend le poulet du wrap, indépendant du curry ; Spécifier → PATCH →
 badge rouge disparu ; filtre Recette = curry seul → 5/8 affichées, l'atelier reste ;
@@ -5399,10 +5428,12 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ **La vue Production refaite** (2026-09-18) — cinq tuiles héros, une section à la fois ;
   les étapes d'une recette forment un **graphe** (aliment → geste → `depend_de`) et non plus
   une file ; **ateliers** partagés par aliment avec grammes par recette et découpe, bouton
-  rouge « Spécifier » ; **cumuls** (même recette, même poste, prêtes en même temps → un
-  seul nœud, durée max aux feux / somme à la taille) ; **diagramme de PERT** de haut en bas
+  rouge « Spécifier » ; **cumuls** (même recette, même poste, prêtes en même temps →
+  posées ensemble sur le même cuisinier, max aux feux / somme à la taille, mais **un bloc
+  par étape**) ; **diagramme de PERT** déroulé de haut en bas dans la page, par vagues
   (Fait / Prêt / En attente, chemin critique), **filtres** Aliment / Poste / Recette sur le
-  côté, toucher un nœud le marque fait. Détail en §3.
+  côté ; toucher un bloc ouvre **sa fiche détaillée** (consigne, grammes, durée,
+  température, découpe, repères du geste, avant/après). Détail en §3.
 - 🔄 **`natty_production_ateliers.sql` à exécuter** (§4) — sans lui, « Spécifier » et « dépend
   de » répondent `PGRST204` ; l'écran le dit. Tout le reste marche sans.
 - 🔄 **À relire sur les 38 vraies fiches** : l'inférence lit des aliments en texte libre. Le
