@@ -3787,59 +3787,41 @@ PostgREST répond `PGRST204` et l'écran nomme le SQL.
 > et « carottes » ne fusionnent pas. Fusionner par mot mettrait une étape dans deux ateliers.
 > La vue « Par geste + aliment », elle, éclate bien par mot — c'est son rôle.
 
-**Les cumuls (`grapheDuJour`, après les ateliers)** — Pablo : « certaines tâches sont
-cumulables et réalisables en même temps, pour les mêmes recettes et les mêmes types de
-poste », puis « **1 bloc = 1 étape** ». Dans une recette, au même poste, les étapes actives
-**prêtes au même moment** (même début au plus tôt sur le graphe — donc aucune ne dépend de
-l'autre) reçoivent une même clé `cumul` (+ `cumulAvec`, `cumulRegle`). **Rien n'est
-fusionné** : chaque étape garde son bloc, sa fiche, sa coche. C'est `dispatcher` qui les
-pose ensemble sur le même cuisinier — **`max`** aux feux et au four (deux casseroles côte à
-côte, la plus longue tient le cuisinier), **`somme`** à la taille, aux sauces, à l'assemblage
-(à la suite, sans changer de poste) — et le PERT qui les met côte à côte avec la pastille
-« ⇆ en même temps ». L'atelier reste le seul nœud composé, parce qu'il l'a demandé ainsi.
-> ⚠️ Une première version FUSIONNAIT les cumuls en un nœud (« Feux : riz + poulet ») ;
-> Pablo l'a refusée sur ses vraies fiches (« pour le bœuf… c'est un seul bloc, or ça doit
-> être deux blocs »). Le groupement vit dans le planning, pas dans les blocs.
+**Les cumuls (`grapheDuJour`, après les ateliers)** — dans une recette, au même poste, les
+étapes actives **prêtes au même moment** reçoivent une même clé `cumul` ; rien n'est
+fusionné, `dispatcher` les pose ensemble sur le même cuisinier (**`max`** aux feux et au
+four, **`somme`** ailleurs, `POSTES[].cumul`), et la carte les met côte à côte.
 
-**Le PERT (`sectionPert` + `tracerAretesPert`)** — le même graphe que le Gantt, lu par la
-causalité, **de haut en bas et déroulé dans la page** : une **vague** par niveau (plus longue
-chaîne d'amont, `niveau`) — « Vague 1 · dès l'ouverture », « Vague 2 · après la vague 1 » —
-dont les blocs sont en **flux normal et passent à la ligne** (`flex-wrap`) : rien ne défile
-horizontalement, un bloc par ligne à 375 px. Les arêtes ne sont pas calculées au rendu : le
-HTML est posé, puis `tracerAretesPert` **mesure les blocs** (`getBoundingClientRect`
-relatif au conteneur) et dessine le SVG par-dessus, du bas du prédécesseur au haut de sa
-suite ; refait à chaque rendu et au redimensionnement. Groupes en tête de vague, cumulables
-côte à côte. Trois états lus en base : **Fait** (vert, estompé), **Prêt** (toutes ses
-dépendances faites — encadré noir), **En attente**. Marges au sens du PERT (ES/EF/LS/LF,
-sans les cuisiniers) ; **⚡ chemin critique** = marge nulle, arêtes noires. **Toucher un bloc
-ouvre sa fiche** (`ouvrirDetail`) : les mêmes écrans que « Mon service », dans l'ordre des
-vagues, ouverts sur le bloc touché — « Fait ✓ » y est ; le PERT n'a plus de bascule directe.
-**Sur le côté, le tri puis les filtres** (`panneauFiltres`, `TRIS`, `FILTRES`). Pablo :
-« décider de juste afficher n'est pas pareil que réorganiser en fonction du poste » — donc
-**Poste n'est pas un filtre mais un TRI** (`S.triPert`), à côté de Vague et Recette :
-- **Vague** (défaut) : une rangée par niveau ; la vague en cours (première avec un bloc à
-  faire) est marquée « ◀ on en est là », une vague finie « ✓ terminée ».
-- **Poste** : une section par poste dans l'ordre de `POSTES`, ses blocs dans l'ordre des
-  vagues, « x/n faites · qui le tient » ; chaque bloc porte sa vague.
-- **Recette** : les ateliers partagés d'abord, puis une section par fiche **dans l'ordre de
-  la fiche** (n/N), « x/N faites · en cours : … » ; c'est la vue qui montre le **début** de
-  chaque recette.
-Les filtres qui restent — Aliment, Recette — se déplient (`S.filtresOuverts`) et se
-cochent ; `S.filtres[type]` porte les clés **exclues** (vide = tout), « tout · rien » par
-groupe, « tout afficher » en tête. Un atelier porte les clés de toutes ses parts : filtrer
-« carottes » le garde entier ; un bloc caché emporte ses arêtes, mais **les niveaux restent
-ceux du graphe entier**. Sous 700 px le panneau passe au-dessus.
-> ⚠️ Quand le tri met une suite PLUS HAUT que ce qu'elle attend (par poste, par recette),
-> `tracerAretesPert` fait sortir l'arête par la droite et remonter en arc — on voit qu'elle
-> remonte, au lieu d'une courbe en S retournée qui ne se lit pas.
-
-**Où on en est** (`avancementRecette`, `resumeAvancement`) — Pablo : « distinguer le début
-des étapes et recettes, à quelle étape on en est ». Au-dessus du graphe, une carte par
-recette : x/N faites, barre, et l'**étape en cours** = la première non faite qui est prête
-(sinon la première non faite), « ▶ en cours » ou « ▶ à commencer ». Sur chaque bloc : son
-rang **n/N** dans sa recette, **« ▶ départ »** s'il n'attend rien, et un halo ambre
-« ◀ on en est là » sur l'étape en cours de sa recette — quel que soit le tri. Un atelier
-compte comme une étape de chacune de ses recettes (son numéro y est celui de sa part).
+**La carte de production (`sectionPert`)** — le croquis de Pablo (2026-09-18, soir) : « en
+un coup d'œil, ce que font tous les membres et comment ils interagissent ; les recettes ont
+une colonne bien précise et identifiable avec un début et une fin, rangées pour voir les
+dépendances le plus clairement possible ». Donc **une colonne par recette** : un pill de
+départ noir en haut, une vertèbre, un pill d'arrivée en bas qui porte l'état (rouge « à
+commencer », vert « x/N · en cours », vert plein « ✓ terminée »). **L'heure descend** : chaque
+étape est un pill posé sur sa colonne à son heure prévue (`dispatcher`), avec le geste, le
+titre et le cuisinier (« C1 »). Une étape partagée (atelier) **enjambe** les colonnes des
+recettes qu'elle sert — pill noir — et sous chacune on lit ce que cette recette en attend :
+« 404 g · lamelles », « 167 g · julienne » (`np-lab`, avec le bouton **Spécifier** en rouge
+quand la découpe manque). C'est là qu'on voit les recettes interagir.
+- **Échelle** (`ECH`) réglée sur la colonne la plus dense : deux étapes qui se suivent à
+  g minutes ne se chevauchent pas (H + 6 px), plafond 10 px/min ; deux étapes qui partent en
+  même temps (cumul) se partagent la largeur, sinon la seconde descend sous la première.
+- **Largeur de colonne** : la largeur disponible partagée, 170 px au moins, 280 au plus ;
+  défilement horizontal seulement quand ça ne tient pas. Sous 700 px, toute la largeur.
+- **Puces « Éclairer »** (`pucesFocus`, `S.focus`) : un poste ou un cuisinier, tout le reste
+  s'estompe — pas un filtre, rien ne bouge. C'est « ce que font tous les membres ».
+- Filtres qui restent : Aliment, Recette (cacher une colonne a un sens).
+- États sur le pill : prêt (bord noir), fait (vert, estompé, ✓), en attente (gris), poste
+  non pris (rouge), attente four/repos (tirets), **l'étape en cours de sa recette** (halo
+  ambre, `avancementRecette`).
+> ⚠️ **Les ateliers ne sont plus réservés à la taille** : tout geste actif (sauf dresser,
+> attendre, reposer, réfrigérer) sur le même aliment dans deux recettes se fait en une fois
+> — le croquis met « Mettre le poulet au four » à cheval sur le curry et le wrap. Clé =
+> geste + aliment ; titre = celui des parts s'il est le même, sinon « Saisir : poulet » ;
+> poste et règle de durée = ceux du geste. La découpe n'a de sens que pour « couper ».
+> ⚠️ Les vagues, les tris et les arêtes SVG de la version du matin ont été **retirés** :
+> Pablo les a jugés trop compliqués. La dépendance se lit par la position dans la colonne
+> (plus bas = après) et par l'enjambement ; le détail « avant · après » reste dans la scène.
 
 **L'écran d'une étape (`htmlEcran`) — la scène, puis le détail.** Pablo : « rendre l'interface
 plus simple : seulement l'ingrédient en illustration SVG, le geste ou action, l'unité et la
@@ -3859,6 +3841,10 @@ autres en petit ; sans ingrédient relié, la durée). Rien d'autre. Tout le res
 > le PERT, vu depuis l'étape où l'on est.
 > ⚠️ Ajouter un ingrédient = une ligne dans `ILLUS` (clés, tracés). Un glyphe est deux ou
 > trois `path` ; ne pas y mettre de couleur, c'est le CSS de la carte qui trace en blanc.
+> ⚠️ **Sous la carte, « Pour » et « Débloque à HH:MM »** (`suitesScene`) : pour un atelier,
+> les recettes servies ; pour toute étape, ses suites dans le plan avec leur recette, leur
+> poste, qui les tient et l'heure où elles partent — celles d'une autre recette encadrées.
+> C'est « avec quelle étape d'une autre recette on interagit, et à quel moment ».
 
 **Le détail d'une étape (`htmlDetail`, `REPERES`)** — Pablo : « le plus de détail possible :
 ce qu'il faut faire, combien de grammes, de centimètres, pendant combien de temps, la
@@ -5473,8 +5459,10 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   (Fait / Prêt / En attente, chemin critique), **filtres** Aliment / Poste / Recette sur le
   côté ; toucher un bloc ouvre **sa fiche détaillée** (consigne, grammes, durée,
   température, découpe, repères du geste, avant/après). **Poste est un tri, pas un filtre**
-  (Vague · Poste · Recette) ; **où on en est** : avancement par recette, étape en cours,
-  n/N et « ▶ départ » sur les blocs. L'écran d'une étape est une **scène** façon
+  ~~(Vague · Poste · Recette)~~ → remplacés le soir même par la **carte de production** :
+  une colonne par recette, départ et arrivée, l'heure qui descend, les étapes partagées à
+  cheval sur leurs colonnes avec grammes et découpe par recette, puces « Éclairer » par
+  poste ou cuisinier. L'écran d'une étape est une **scène** façon
   notification (illustration SVG de l'ingrédient à gauche, action, quantité + unité,
   pastille du plat) avec les **étapes bloquantes en gris sur les côtés** ; le détail
   derrière « Détails ». Détail en §3.

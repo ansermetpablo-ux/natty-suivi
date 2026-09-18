@@ -62,7 +62,7 @@
     section: null, specif: null,
     // les filtres du PERT : par type, les clés EXCLUES (vide = tout) ; et les
     // groupes dépliés
-    filtres: {}, filtresOuverts: {}, triPert: 'vague'
+    filtres: {}, filtresOuverts: {}, focus: null
   };
 
   /* Les gestes qui PARTENT d'un aliment brut. Sans aliment déjà vu dans la
@@ -70,10 +70,12 @@
      dépend de rien). Tout autre geste sans aliment reconnu RÉUNIT ce qui est
      en cours — mijoter, enfourner, mélanger, dresser attendent tout. */
   var GESTES_DEPART = ['couper', 'rincer', 'peser', 'saisir', 'bouillir'];
-  /* Le geste qui fait un atelier partagé : la découpe. Deux recettes qui
-     coupent des carottes se servent du même plan de travail, des mêmes
-     carottes, du même couteau — pas deux recettes qui les cuisent. */
-  var GESTES_ATELIER = ['couper'];
+  /* Les gestes qui NE font PAS d'atelier partagé : ce qui se dresse par
+     portion, ce qui attend. Tout le reste — couper, saisir, enfourner,
+     mijoter… — sur le même aliment dans deux recettes se fait en une fois
+     (le croquis de Pablo : « Mettre le poulet au four » à cheval sur le curry
+     et le wrap). La découpe, elle, n'a de sens que pour « couper ». */
+  var GESTES_SANS_ATELIER = ['dresser', 'attendre', 'reposer', 'refrigerer', ''];
   /* Les découpes qu'on sait lire dans un titre ou une consigne. La clé est
      normalisée (norm), la valeur est ce qu'on affiche. */
   var DECOUPES = ['julienne', 'brunoise', 'mirepoix', 'paysanne', 'lamelles', 'rondelles', 'dés', 'cubes', 'bâtonnets',
@@ -278,6 +280,7 @@
       '#npCine .bloq{display:flex;gap:10px;align-items:center;background:#ffffff0a;border-radius:16px;padding:10px;opacity:.5;filter:grayscale(1)}',
       '#npCine .bloq .illu{width:50px;height:50px;border-radius:14px;background:#ffffff14;flex-shrink:0;display:flex;align-items:center;justify-content:center}#npCine .bloq .illu svg{width:34px;height:34px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}',
       '#npCine .bloq .txt{min-width:0}#npCine .bloq .rec{margin:0;font-size:11px;color:#ffffffb3;display:flex;gap:5px;align-items:center}#npCine .bloq .rec i{width:9px;height:9px}#npCine .bloq .act{font-size:13px;font-weight:700;line-height:1.2;margin:2px 0}#npCine .bloq .pst{font-size:11px;color:#ffffff8c}',
+      '#npCine .suites{margin-top:10px;display:flex;flex-direction:column;gap:6px}#npCine .suites .l{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px}#npCine .suites b{color:#ffffff8c;font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin-right:2px}#npCine .suites span{background:#ffffff14;border-radius:99px;padding:5px 10px;display:inline-flex;align-items:center;gap:6px}#npCine .suites span.autre{outline:1.5px solid #ffffff40}#npCine .suites i{width:9px;height:9px;border-radius:50%;display:inline-block}#npCine .suites small{color:#ffffff8c}',
       '#npCine .detbtn{margin:14px auto 0;display:block;background:#ffffff14;border:none;color:#fff;border-radius:99px;padding:9px 18px;font-family:inherit;font-weight:700;cursor:pointer;font-size:12px}',
       '@media(min-width:900px){#npCine .plan{max-width:1040px}#npCine .scene{grid-template-columns:minmax(0,220px) minmax(0,1fr) minmax(0,220px)}#npCine .scene .cote:empty{display:flex}}',
       '@media(max-width:899px){#npCine .cote.d{order:-1}}',
@@ -299,63 +302,43 @@
       '.np-tile .kp{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-top:auto}',
       '.np-tile .kp small{display:block;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0;margin-top:2px}',
       '.np-tile .al{position:absolute;top:12px;right:12px;background:#c0392b;color:#fff;font-size:10px;font-weight:800;border-radius:99px;padding:3px 8px}',
-      '.np-sec{animation:npSec .25s ease}@keyframes npSec{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}',
       /* le PERT : des nœuds par niveau, des arêtes en SVG dessous */
-      '.np-pert{background:var(--bg);border-radius:16px;box-shadow:var(--so);padding:12px;margin-bottom:12px}',
-      '.np-pert-in{position:relative}',
-      '.np-pert svg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:0}',
-      '.np-pert path{fill:none;stroke:#aeaec0;stroke-width:1.6}',
-      '.np-pert path.ok{stroke:#2a9e4f;stroke-width:2}',
-      '.np-pert path.crit{stroke:var(--black);stroke-width:2.4}',
-      '.np-node{position:relative;z-index:1;flex:1 1 210px;max-width:360px;background:var(--bg);border-radius:14px;box-shadow:var(--sm);padding:10px 12px;box-sizing:border-box;cursor:pointer;font-size:12px;color:var(--black);border-left:4px solid transparent;transition:box-shadow .15s}',
-      '.np-node .al{font-size:11px;color:var(--muted);margin-top:2px}',
-      '.np-node .cu{font-size:10px;font-weight:800;color:#c97a00;background:#c97a001f;border-radius:99px;padding:2px 7px}',
-      '.np-node .ouvrir{font-size:10px;font-weight:700;color:var(--muted);margin-top:6px;text-align:right}',
-      '.np-node .nx{font-size:10px;font-weight:800;color:var(--black);background:#00000010;border-radius:6px;padding:1px 5px;letter-spacing:0}',
-      '.np-node .dep{font-size:10px;font-weight:800;color:#185FA5;background:#185FA51a;border-radius:99px;padding:2px 7px}',
-      '.np-node .vg{font-size:10px;font-weight:700;color:var(--muted);background:#00000008;border-radius:99px;padding:2px 7px}',
-      '.np-node.courant{box-shadow:var(--so),0 0 0 3px #c97a00}',
-      '.np-node.courant .ouvrir{color:#c97a00}',
-      '.np-prow.courante .np-plvl{color:var(--black)}',
-      '.np-plvl .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}',
-      '.np-tris{display:flex;flex-wrap:wrap;gap:6px;padding:0 8px 10px}',
-      '.np-tris button{flex:1;min-width:70px;padding:8px 6px;border-radius:10px;border:none;background:var(--bg);box-shadow:var(--sm);font-family:inherit;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer}',
-      '.np-tris button.on{background:var(--black);color:#fff}',
       /* où en est chaque recette */
-      '.np-avance{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin:6px 0 8px}',
-      '.np-avrec{background:var(--bg);border-radius:14px;box-shadow:var(--si);padding:10px 12px}',
-      '.np-avrec .hd{display:flex;align-items:center;gap:7px;font-size:12px}.np-avrec .hd i{width:9px;height:9px;border-radius:50%;flex-shrink:0}.np-avrec .hd b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--black)}.np-avrec .hd span{font-weight:800;color:var(--black)}',
-      '.np-avrec .bar{height:6px;border-radius:3px;background:#00000010;margin:7px 0 6px;overflow:hidden}.np-avrec .bar i{display:block;height:100%;border-radius:3px}',
-      '.np-avrec .cur{font-size:11px;color:var(--black);font-weight:600}.np-avrec .cur small{color:var(--muted)}',
-      '.np-prow{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:flex-start;padding-bottom:40px;position:relative}',
-      '.np-prow:last-child{padding-bottom:6px}',
-      '.np-plvl{flex:0 0 100%;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);display:flex;gap:8px;align-items:baseline}',
-      '.np-plvl small{font-weight:600;text-transform:none;letter-spacing:0}',
-      '.np-pert-in{position:relative}',
-      '.np-node:hover{box-shadow:var(--so)}',
-      '.np-node.fait{opacity:.55;border-left-color:#2a9e4f}',
-      '.np-node.pret{outline:2px solid var(--black)}',
-      '.np-node.attente{color:#6b6b78}',
-      '.np-node.bloque{border-left-color:#c0392b}',
-      '.np-node.atelier{background:linear-gradient(135deg,var(--bg),#e6e6ee);flex-basis:260px}',
-      '.np-node .k{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}',
-      '.np-node .k i{width:8px;height:8px;border-radius:50%;flex-shrink:0}',
-      '.np-node .ti{font-size:13px;font-weight:800;line-height:1.25}',
-      '.np-node .me{font-size:11px;color:var(--muted);margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}',
-      '.np-node .et{font-size:10px;font-weight:800;border-radius:99px;padding:2px 8px;background:#7777771f;color:#555}',
-      '.np-node.fait .et{background:#2a9e4f1f;color:#2a9e4f}.np-node.pret .et{background:var(--black);color:#fff}.np-node.bloque .et{background:#c0392b1f;color:#c0392b}',
-      '.np-node .crit{font-size:10px;font-weight:800;color:var(--black)}',
-      '.np-part{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #0000000f;font-size:11px}',
-      '.np-part i{width:8px;height:8px;border-radius:50%;flex-shrink:0}',
-      '.np-part b{color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px}.np-part .g{margin-left:auto;font-weight:700;white-space:nowrap}',
-      '.np-spec{background:#c0392b;color:#fff;border:none;border-radius:99px;padding:3px 9px;font-size:10px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap}',
-      '.np-spec.ok{background:#2a9e4f1f;color:#2a9e4f;cursor:default}',
-      '.np-specform{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}',
-      '.np-specform input{flex:1;min-width:120px}',
-      '.np-node.cumul{border-left-color:#c97a00}',
       /* le PERT et ses filtres, côte à côte */
       '.np-pert-wrap{display:flex;gap:12px;align-items:flex-start}',
-      '.np-pert-wrap .np-pert{flex:1;min-width:0;margin-bottom:0}',
+      /* la carte de production : colonnes = recettes, l'heure descend */
+      '.np-map{flex:1;min-width:0;background:var(--bg);border-radius:16px;box-shadow:var(--so);padding:10px;overflow-x:auto}',
+      '.np-map-in{position:relative}',
+      '.np-axe-t{position:absolute;left:0;transform:translateY(-50%);font-size:10px;font-weight:700;color:var(--muted)}',
+      '.np-axe-l{position:absolute;height:0;border-top:1px dashed #0000000f}',
+      '.np-spine{position:absolute;width:2px;background:var(--black);transform:translateX(-1px);opacity:.85}',
+      '.np-col-hd{position:absolute;top:4px;height:38px;border-radius:99px;background:var(--black);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2}',
+      '.np-col-hd i{width:10px;height:10px;border-radius:50%;flex-shrink:0}',
+      '.np-col-fin{position:absolute;height:40px;border-radius:99px;background:var(--bg);border:2px solid #c0392b;color:#c0392b;font-size:13px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;box-sizing:border-box;z-index:2}',
+      '.np-col-fin small{font-size:10px;font-weight:700;opacity:.8}',
+      '.np-col-fin.encours{border-color:#2a9e4f;color:#2a9e4f}.np-col-fin.fini{background:#2a9e4f;border-color:#2a9e4f;color:#fff}',
+      '.np-pill{position:absolute;box-sizing:border-box;border-radius:99px;background:var(--bg);border:1.5px solid #9a9aaa;color:var(--black);font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;padding:0 10px 0 8px;cursor:pointer;z-index:3;box-shadow:var(--sm);transition:box-shadow .15s,opacity .15s}',
+      '.np-pill:hover{box-shadow:var(--so)}',
+      '.np-pill .g{flex-shrink:0}.np-pill .ti{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.np-pill .qui{flex-shrink:0;font-size:10px;font-weight:800;color:var(--muted);background:#00000008;border-radius:99px;padding:2px 6px}.np-pill .qui.rouge{color:#c0392b;background:#c0392b14}',
+      '.np-pill .ok{flex-shrink:0;color:#2a9e4f;font-weight:800}',
+      '.np-pill.pret{border-color:var(--black);border-width:2px}',
+      '.np-pill.fait{border-color:#2a9e4f;opacity:.6}',
+      '.np-pill.attente{color:#6b6b78}',
+      '.np-pill.bloque{border-color:#c0392b}',
+      '.np-pill.atelier{background:#1a1a2e;color:#fff;border-color:#1a1a2e}.np-pill.atelier .qui{color:#ffffffb3;background:#ffffff1f}',
+      '.np-pill.passif{border-style:dashed}',
+      '.np-pill.courant{box-shadow:var(--sm),0 0 0 3px #c97a00}',
+      '.np-pill.dim{opacity:.18;filter:grayscale(1)}',
+      '.np-lab{position:absolute;font-size:10.5px;color:var(--black);white-space:nowrap;overflow:visible;z-index:4;line-height:1.3}',
+      '.np-lab b{font-weight:800}',
+      '.np-spec{background:#c0392b;color:#fff;border:none;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap}',
+      '.np-spec.ok{background:#2a9e4f1f;color:#2a9e4f;cursor:pointer;padding:2px 7px;border-radius:99px;font-weight:800;font-size:10px}',
+      '.np-specform{position:absolute;left:0;top:18px;display:flex;gap:6px;align-items:center;background:var(--bg);box-shadow:var(--so);border-radius:12px;padding:8px;z-index:9}',
+      '.np-specform input{width:140px}',
+      '.np-focus{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:4px 0 10px}',
+      '.np-focus button{padding:6px 12px;border-radius:99px;border:none;background:var(--bg);box-shadow:var(--sm);font-family:inherit;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer}',
+      '.np-focus button.on{background:var(--black);color:#fff}.np-focus .sep{width:1px;height:18px;background:#0002;margin:0 4px}',
       '.np-fpanel{width:196px;flex-shrink:0;display:flex;flex-direction:column;gap:8px}',
       '.np-fgrp{background:var(--bg);border-radius:14px;box-shadow:var(--so);overflow:hidden}',
       '.np-fgrp.on{box-shadow:var(--si)}',
@@ -511,8 +494,6 @@
     host.addEventListener('change', change);
     // Entrée dans le champ de découpe enregistre ; Échap referme. Pas par
     // `change` : il partirait aussi au clic sur ✕, et enregistrerait quand même.
-    var chrono = null;
-    window.addEventListener('resize', function () { clearTimeout(chrono); chrono = setTimeout(tracerAretesPert, 120); });
     host.addEventListener('keydown', function (ev) {
       if (ev.target.id !== 'npSpecInput') return;
       if (ev.key === 'Enter') { ev.preventDefault(); enregistrerDecoupe(S.specif, ev.target.value); }
@@ -538,7 +519,7 @@
       // téléphones de la cuisine) : on les relit à chaque affichage du jour.
       var jour = S.jour || ymd(new Date());
       el.innerHTML = '<div class="np-vide">Chargement de la journée…</div>';
-      chargerJourProd(jour).then(function () { el.innerHTML = vueProduction(); tracerAretesPert(); })
+      chargerJourProd(jour).then(function () { el.innerHTML = vueProduction(); })
         .catch(function (e) { el.innerHTML = '<div class="np-alerte">' + h(e.message) + '<br>Si le message parle de <code>production_postes</code>, le SQL du 2026-09-16 (fin de natty_production.sql) n’a pas été exécuté.</div>'; });
     }
   }
@@ -1147,8 +1128,8 @@
     // les ateliers : (geste de taille, aliment) partagé par ≥ 2 recettes
     var groupes = {};
     taches.forEach(function (t) {
-      if (GESTES_ATELIER.indexOf(t.geste) < 0 || t.passif) return;
-      var k = motsAliment(t.aliment).sort().join(' '); if (!k) return;
+      if (GESTES_SANS_ATELIER.indexOf(t.geste) >= 0 || t.passif) return;
+      var k = t.geste + ' ' + motsAliment(t.aliment).sort().join(' '); if (!motsAliment(t.aliment).length) return;
       (groupes[k] = groupes[k] || []).push(t);
     });
     /* Fusionne des parts en UN nœud : dépendances = l'union de celles des
@@ -1166,10 +1147,15 @@
     Object.keys(groupes).forEach(function (k) {
       var parts = groupes[k], recs = {}; parts.forEach(function (p) { recs[p.recId] = 1; });
       if (Object.keys(recs).length < 2) return;
-      fusionner({ id: 'atelier_' + k.replace(/ /g, '_'), groupe: 'atelier', rec: parts.map(function (p) { return p.rec; }).filter(function (v, i, arr) { return arr.indexOf(v) === i; }).join(' + '),
-        recId: null, fiches: 0, couleur: '#1a1a2e', titre: 'Atelier ' + parts[0].aliment.split(/[,+;]/)[0].trim().toLowerCase(), desc: parts.length + ' recettes taillent le même aliment : une seule fois, découpe par découpe.',
-        geste: parts[0].geste, aliment: parts[0].aliment, poste: 'legumes', numero: 0, passif: false, temperature: null, defaut: parts.some(function (p) { return p.defaut; }),
-        duree: parts.reduce(function (n, p) { return n + p.duree; }, 0) }, parts);
+      // le titre : celui des parts si elles disent la même chose, sinon
+      // « Geste : aliment » ; le poste : celui du geste
+      var titres = parts.map(function (p) { return p.titre; }).filter(function (v, i, arr) { return arr.indexOf(v) === i; });
+      var titre = titres.length === 1 ? titres[0] : libGeste(parts[0].geste).replace(/^\S+\s/, '').split(' / ')[0] + ' : ' + parts[0].aliment.split(/[,+;]/)[0].trim().toLowerCase();
+      var P = infoPoste(posteDe(parts[0])), regle = P.cumul || 'somme';
+      fusionner({ id: 'atelier_' + k.replace(/[^a-z0-9]+/gi, '_'), groupe: 'atelier', rec: parts.map(function (p) { return p.rec; }).filter(function (v, i, arr) { return arr.indexOf(v) === i; }).join(' + '),
+        recId: null, fiches: 0, couleur: '#1a1a2e', titre: titre, desc: parts.length + ' recettes font le même geste sur le même aliment : une seule fois, ' + (regle === 'max' ? 'en même temps' : 'à la suite') + ', chacune sa quantité' + (parts[0].geste === 'couper' ? ' et sa découpe' : '') + '.',
+        geste: parts[0].geste, aliment: parts[0].aliment, poste: P.cle, numero: 0, passif: false, temperature: parts[0].temperature, defaut: parts.some(function (p) { return p.defaut; }),
+        duree: regle === 'max' ? parts.reduce(function (n, p) { return Math.max(n, p.duree); }, 0) : parts.reduce(function (n, p) { return n + p.duree; }, 0) }, parts);
     });
     /* Les CUMULS (Pablo : « certaines tâches sont cumulables et réalisables en
        même temps, pour les mêmes recettes et les mêmes types de poste » — et
@@ -1326,25 +1312,24 @@
     }).join('') + '</div>';
   }
 
-  /* Les FILTRES cachent des blocs ; le TRI les réorganise. Pablo : « décider de
-     juste afficher n'est pas pareil que réorganiser en fonction du poste » —
-     donc Poste n'est pas un filtre mais un tri, à côté de Vague et Recette.
-     Restent en filtres l'aliment et la recette : là, cacher a un sens. */
+  /* ── La carte de production ──────────────────────────────────────────────
+     Le croquis de Pablo : UNE COLONNE PAR RECETTE, du pill de départ (noir,
+     en haut) au pill d'arrivée (l'état, en bas), une colonne vertébrale entre
+     les deux, et les étapes posées dessus DANS LE TEMPS — l'heure descend.
+     Une étape partagée (atelier) ENJAMBE les colonnes des recettes qu'elle
+     sert, et sous chacune on lit ce que cette recette en attend : « 404 g ·
+     lamelles ». C'est là qu'on voit les recettes interagir. Le cuisinier est
+     écrit sur chaque pill ; les puces Postes / Cuisiniers éclairent ce que
+     fait chacun sans rien déplacer. Toucher un pill ouvre sa scène.
+     Les filtres qui restent : l'aliment et la recette (cacher a un sens là). */
   var FILTRES = [
     { cle: 'aliment', nom: 'Aliment', em: '🥕' },
     { cle: 'recette', nom: 'Recette', em: '🍽' }
   ];
-  var TRIS = [
-    { cle: 'vague', nom: 'Vague', em: '🌊', aide: 'par niveau de dépendance : ce qui peut partir ensemble' },
-    { cle: 'poste', nom: 'Poste', em: '👥', aide: 'chaque poste voit sa file, dans l’ordre des vagues' },
-    { cle: 'recette', nom: 'Recette', em: '🍽', aide: 'chaque fiche du début à la fin, et où elle en est' }
-  ];
-  /* Les clés d'une tâche pour chaque filtre. Un groupe (atelier) porte celles
-     de toutes ses parts : filtrer « carottes » garde l'atelier entier. */
   function clesFiltre(t, type) {
     var src = t.parts ? t.parts.concat([t]) : [t], out = [];
     src.forEach(function (x) {
-      var k = type === 'poste' ? [x.poste] : type === 'recette' ? (x.recId ? [x.recId] : []) : (motsAliment(x.aliment).length ? motsAliment(x.aliment) : ['']);
+      var k = type === 'recette' ? (x.recId ? [x.recId] : []) : (motsAliment(x.aliment).length ? motsAliment(x.aliment) : ['']);
       k.forEach(function (v) { if (out.indexOf(v) < 0) out.push(v); });
     });
     return out;
@@ -1358,12 +1343,8 @@
   }
 
   function panneauFiltres(ts) {
-    S.filtres = S.filtres || {}; S.filtresOuverts = S.filtresOuverts || {}; S.triPert = S.triPert || 'vague';
-    var tri = '<div class="np-fgrp on"><div class="np-fhd" style="cursor:default"><span>↕ Organiser par</span></div><div class="np-fbody np-tris">'
-      + TRIS.map(function (t) { return '<button class="' + (S.triPert === t.cle ? 'on' : '') + '" data-tri-pert="' + t.cle + '" title="' + h(t.aide) + '">' + t.em + ' ' + t.nom + '</button>'; }).join('')
-      + '<div class="np-s" style="padding:6px 4px 0;font-size:11px">' + h(TRIS.find(function (t) { return t.cle === S.triPert; }).aide) + '</div></div></div>';
-    return '<div class="np-fpanel">' + tri + FILTRES.map(function (f) {
-      // les valeurs possibles, comptées, avec un libellé lisible
+    S.filtres = S.filtres || {}; S.filtresOuverts = S.filtresOuverts || {};
+    return '<div class="np-fpanel">' + FILTRES.map(function (f) {
       var comptes = {}, libs = {};
       ts.forEach(function (t) { clesFiltre(t, f.cle).forEach(function (k) { comptes[k] = (comptes[k] || 0) + 1; }); });
       Object.keys(comptes).forEach(function (k) {
@@ -1385,8 +1366,7 @@
 
   /* Où en est chaque recette : ses étapes de production dans l'ordre de la
      fiche, combien sont faites, et l'ÉTAPE EN COURS — la première non faite
-     qui est prête (sinon la première non faite). C'est ce que Pablo demande
-     de voir d'un coup d'œil : « à quelle étape on en est ». */
+     qui est prête (sinon la première non faite). */
   function avancementRecette(recId, ts) {
     var etapes = ts.filter(function (t) { return t.recId === recId || (t.parts && t.parts.some(function (p) { return p.recId === recId; })); })
       .sort(function (a, b) { return numeroPour(a, recId) - numeroPour(b, recId); });
@@ -1398,169 +1378,134 @@
     if (!t.parts) return t.numero;
     var p = t.parts.find(function (x) { return x.recId === recId; }); return p ? p.numero : 0;
   }
-  function resumeAvancement(ts, vagueEnCours) {
-    var recs = S.lots.map(function (l) { return l.rec; });
-    return '<div class="np-avance">' + recs.map(function (r) {
-      var a = avancementRecette(r.id, ts);
-      var pct = a.total ? Math.round(a.faites / a.total * 100) : 0;
-      return '<div class="np-avrec"><div class="hd"><i style="background:' + couleur(r.id) + '"></i><b>' + h(r.nom) + '</b><span>' + a.faites + '/' + a.total + '</span></div>'
-        + '<div class="bar"><i style="width:' + pct + '%;background:' + couleur(r.id) + '"></i></div>'
-        + '<div class="cur">' + (a.fini ? '✓ terminée' : a.enCours ? (a.faites ? '▶ en cours : ' : '▶ à commencer : ') + emojiGeste(a.enCours.geste) + ' ' + h(a.enCours.titre) + ' <small>(' + numeroPour(a.enCours, r.id) + '/' + a.total + ')</small>' : '—') + '</div></div>';
-    }).join('') + '</div>'
-      + (vagueEnCours != null ? '<div class="np-s" style="margin:6px 0 10px">Vague en cours : <b>' + (vagueEnCours + 1) + '</b> — les blocs encadrés en noir sont ceux où mettre la main maintenant.</div>' : '');
+
+  /* Les puces d'éclairage : un poste ou un cuisinier, et tout le reste
+     s'estompe. Ce n'est pas un filtre — rien ne bouge, rien ne disparaît. */
+  function pucesFocus(plan) {
+    var f = S.focus || null;
+    var puce = function (type, cle, lib) {
+      var on = f && f.type === type && f.cle === cle;
+      return '<button class="' + (on ? 'on' : '') + '" data-focus-type="' + type + '" data-focus-cle="' + h(cle) + '">' + lib + '</button>';
+    };
+    var postes = POSTES.filter(function (P) { return plan.taches.some(function (t) { return t.poste === P.cle && !t.passif; }); });
+    var cuis = plan.cuis.map(function (c, i) { return { i: i, nom: c.nom }; }).filter(function (c) { return plan.taches.some(function (t) { return t.cuisinier === c.i; }); });
+    return '<div class="np-focus"><span class="np-s">Éclairer :</span><button class="' + (f ? '' : 'on') + '" data-focus-type="" data-focus-cle="">Tout</button>'
+      + postes.map(function (P) { return puce('poste', P.cle, P.em + ' ' + h(P.nom)); }).join('')
+      + (cuis.length > 1 ? '<span class="sep"></span>' + cuis.map(function (c) { return puce('cuisinier', String(c.i), '👤 ' + h(c.nom)); }).join('') : '') + '</div>';
+  }
+  function estEclaire(t) {
+    var f = S.focus; if (!f) return true;
+    if (f.type === 'poste') return t.poste === f.cle;
+    if (f.type === 'cuisinier') return String(t.cuisinier) === f.cle;
+    return true;
   }
 
   function sectionPert(plan) {
     var ts = plan.taches, parId = plan.parId;
     if (!ts.length) return '<div class="np-vide">Aucune étape.</div>';
-    // niveaux : 0 pour les sources, 1 + max(niveau des dépendances) sinon —
-    // sur le graphe ENTIER, filtré ou pas
-    var niv = {};
-    function niveau(t) {
-      if (niv[t.id] != null) return niv[t.id];
-      niv[t.id] = 0; // garde contre une boucle
-      niv[t.id] = t.preds.reduce(function (m, id) { return parId[id] ? Math.max(m, niveau(parId[id]) + 1) : m; }, 0);
-      return niv[t.id];
-    }
-    ts.forEach(niveau);
-    // marges : au plus tôt (ES/EF) depuis les sources, au plus tard (LS/LF)
-    // depuis la fin — sans les cuisiniers, c'est la contrainte du graphe seul
-    var ES = {}, EF = {}, LS = {}, LF = {};
-    var ordre = ts.slice().sort(function (a, b) { return niv[a.id] - niv[b.id]; });
-    ordre.forEach(function (t) { ES[t.id] = t.preds.reduce(function (m, id) { return EF[id] != null ? Math.max(m, EF[id]) : m; }, 0); EF[t.id] = ES[t.id] + t.duree; });
-    var finP = ordre.reduce(function (m, t) { return Math.max(m, EF[t.id]); }, 0);
-    ordre.slice().reverse().forEach(function (t) {
-      var succ = ts.filter(function (x) { return x.preds.indexOf(t.id) >= 0; });
-      LF[t.id] = succ.length ? succ.reduce(function (m, x) { return Math.min(m, LS[x.id]); }, Infinity) : finP;
-      LS[t.id] = LF[t.id] - t.duree;
+    var vis = ts.filter(visiblePert);
+    // les colonnes : les recettes du jour qui ont au moins un pill visible
+    var recs = S.lots.map(function (l) { return l.rec; }).filter(function (r) { return vis.some(function (t) { return t.recId === r.id || (t.parts && t.parts.some(function (p) { return p.recId === r.id; })); }); });
+    if (!recs.length) return '<div class="np-pert-wrap">' + panneauFiltres(ts) + '<div class="np-map"><div class="np-vide">Rien ne passe les filtres.</div></div></div>';
+    var colDe = {}; recs.forEach(function (r, i) { colDe[r.id] = i; });
+    // l'ÉCHELLE : l'heure descend. Une minute = `ECH` px ; les colonnes se
+    // partagent la largeur disponible, 170 px au moins, 280 au plus.
+    // sous 700 px le panneau des filtres passe au-dessus : toute la largeur est à la carte
+    var hote = document.getElementById('npVue'), largeurDispo = hote ? hote.clientWidth - (hote.clientWidth < 700 ? 24 : 232) : 900;
+    var GUT = 46, COLW = Math.max(170, Math.min(280, Math.floor((largeurDispo - GUT) / recs.length))), Y0 = 64, H = 36;
+    var tot = Math.max(30, plan.fin - plan.t0);
+    // l'échelle se règle sur la colonne la plus dense : deux étapes qui se
+    // suivent à g minutes d'écart ne doivent pas se chevaucher (H + 6 px),
+    // sans dépasser 10 px/min — sinon une journée de 5 h ferait 3 m de haut
+    var ECH = 3;
+    recs.forEach(function (r) {
+      var l = vis.filter(function (t) { return t.recId === r.id || (t.parts && t.parts.some(function (p) { return p.recId === r.id; })); }).map(function (t) { return t.debut; }).sort(function (a, b) { return a - b; });
+      for (var i = 1; i < l.length; i++) { var g = l[i] - l[i - 1]; if (g > 0) ECH = Math.max(ECH, Math.min(10, (H + 6) / g)); }
     });
-    var crit = {}; ts.forEach(function (t) { crit[t.id] = LS[t.id] - ES[t.id] < 0.5; });
-    // la vague en cours : la première qui a encore un bloc à faire
-    var vagueEnCours = null;
-    ts.slice().sort(function (a, b) { return niv[a.id] - niv[b.id]; }).some(function (t) { if (!estFait(t)) { vagueEnCours = niv[t.id]; return true; } return false; });
-    // le rang de chaque étape dans sa recette (n/N), pour dire où on en est
-    var rang = {}, courants = {};
-    S.lots.forEach(function (l) {
-      var a = avancementRecette(l.rec.id, ts);
-      a.etapes.forEach(function (t, i) { if (!t.parts) rang[t.id] = (i + 1) + '/' + a.total; });
-      if (a.enCours) courants[a.enCours.id] = true; // l'étape où en est CETTE recette, quel que soit le tri
-    });
+    var yDe = function (min) { return Y0 + (min - plan.t0) * ECH; };
+    // avancement et étape en cours par recette (pour le halo et le pill d'arrivée)
+    var av = {}, courants = {};
+    recs.forEach(function (r) { av[r.id] = avancementRecette(r.id, ts); if (av[r.id].enCours) courants[av[r.id].enCours.id] = true; });
 
-    var vis = ts.filter(visiblePert), tri = S.triPert || 'vague';
-    // ── les groupes selon le tri ──────────────────────────────────────────
-    var groupes = [];
-    if (tri === 'poste') {
-      POSTES.forEach(function (P) {
-        var l = vis.filter(function (t) { return t.poste === P.cle; }); if (!l.length) return;
-        var faits = l.filter(estFait).length, tenu = (S.postes || []).find(function (p) { return p.poste === P.cle; });
-        groupes.push({ cle: P.cle, titre: P.em + ' ' + P.nom, sous: faits + '/' + l.length + ' faites' + (tenu ? ' · ' + h(tenu.cuisinier_nom || 'pris') : ' · libre'),
-          blocs: l.sort(function (a, b) { return niv[a.id] - niv[b.id] || a.debut - b.debut; }) });
-      });
-    } else if (tri === 'recette') {
-      var atel = vis.filter(function (t) { return t.groupe === 'atelier'; });
-      if (atel.length) groupes.push({ cle: 'ateliers', titre: '🔪 Ateliers partagés', sous: 'à faire une fois pour plusieurs recettes', blocs: atel.sort(function (a, b) { return a.debut - b.debut; }) });
-      S.lots.forEach(function (l) {
-        // le compte inclut l'atelier (c'est une étape de la fiche), la liste
-        // ne le répète pas : il a sa section au-dessus
-        var a = avancementRecette(l.rec.id, vis), blocs = a.etapes.filter(function (t) { return !t.parts; });
-        if (!blocs.length) return;
-        groupes.push({ cle: l.rec.id, titre: '<i class="dot" style="background:' + couleur(l.rec.id) + '"></i>' + h(l.rec.nom), couleur: couleur(l.rec.id),
-          sous: a.fini ? '✓ terminée' : (a.faites + '/' + a.total + ' faites' + (a.enCours ? ' · en cours : ' + h(a.enCours.titre) : '')), blocs: blocs });
-      });
-    } else {
-      var rangs = {}; vis.forEach(function (t) { (rangs[niv[t.id]] = rangs[niv[t.id]] || []).push(t); });
-      Object.keys(rangs).sort(function (a, b) { return a - b; }).forEach(function (n) {
-        var l = rangs[n], faits = l.filter(estFait).length, toutFait = faits === l.length;
-        groupes.push({ cle: 'v' + n, titre: 'Vague ' + (+n + 1), courante: +n === vagueEnCours,
-          sous: (+n === 0 ? 'dès l’ouverture' : 'après la vague ' + n) + (toutFait ? ' · ✓ terminée' : +n === vagueEnCours ? ' · ◀ on en est là' : ''),
-          blocs: l.sort(function (a, b) { return (b.atelier ? 1 : 0) - (a.atelier ? 1 : 0) || (a.cumul || '').localeCompare(b.cumul || '') || a.debut - b.debut || a.rec.localeCompare(b.rec, 'fr'); }) });
-      });
+    // ── la position de chaque pill ────────────────────────────────────────
+    // par colonne, dans l'ordre de l'heure ; deux pills qui se chevauchent
+    // se partagent la largeur s'ils partent en même temps (cumul), sinon le
+    // second descend sous le premier
+    var pos = {}, occupe = {}; // occupe[col] = [{y, h, x, w, debut}]
+    function poser(t, c0, c1) {
+      var x = GUT + c0 * COLW + 10, w = (c1 - c0 + 1) * COLW - 20, y = yDe(t.debut);
+      var pris = [];
+      for (var c = c0; c <= c1; c++) (occupe[c] || []).forEach(function (o) { if (pris.indexOf(o) < 0) pris.push(o); });
+      var memeHeure = pris.filter(function (o) { return o.debut === t.debut && c0 === c1 && o.c0 === c0 && o.c1 === c1; });
+      if (memeHeure.length && !t.atelier) {
+        // côte à côte : on resserre ceux déjà posés et on se met à droite
+        var n = memeHeure.length + 1, wc = Math.floor((COLW - 20) / n) - 4;
+        memeHeure.forEach(function (o, i) { o.x = GUT + c0 * COLW + 10 + i * (wc + 4); o.w = wc; });
+        x = GUT + c0 * COLW + 10 + memeHeure.length * (wc + 4); w = wc;
+      } else {
+        pris.forEach(function (o) { if (y < o.y + o.h + 6 && y + H > o.y) y = o.y + o.h + 6; });
+      }
+      var p = { x: x, w: w, y: y, h: H, debut: t.debut, c0: c0, c1: c1 };
+      pos[t.id] = p;
+      for (var cc = c0; cc <= c1; cc++) (occupe[cc] = occupe[cc] || []).push(p);
     }
+    vis.slice().sort(function (a, b) { return a.debut - b.debut || (b.atelier ? 1 : 0) - (a.atelier ? 1 : 0); }).forEach(function (t) {
+      if (t.atelier) {
+        var cols = t.parts.map(function (p) { return colDe[p.recId]; }).filter(function (c) { return c != null; });
+        if (!cols.length) return;
+        poser(t, Math.min.apply(null, cols), Math.max.apply(null, cols));
+      } else if (colDe[t.recId] != null) poser(t, colDe[t.recId], colDe[t.recId]);
+    });
+    var yFin = Object.keys(pos).reduce(function (m, k) { return Math.max(m, pos[k].y + pos[k].h); }, yDe(plan.fin)) + 46;
+    var hauteur = yFin + 60, largeur = GUT + recs.length * COLW;
 
+    // ── le dessin ──────────────────────────────────────────────────────────
+    var html = '';
+    // l'axe des heures, à gauche
+    var pas = tot > 240 ? 60 : 30;
+    for (var m = 0; m <= tot; m += pas) html += '<div class="np-axe-t" style="top:' + yDe(plan.t0 + m) + 'px">' + hm(plan.t0 + m) + '</div><div class="np-axe-l" style="top:' + yDe(plan.t0 + m) + 'px;left:' + GUT + 'px;width:' + (recs.length * COLW) + 'px"></div>';
+    // les colonnes : vertèbre, pill de départ, pill d'arrivée
+    recs.forEach(function (r, i) {
+      var cx = GUT + i * COLW + COLW / 2, a = av[r.id];
+      var etat = a.fini ? 'fini' : a.faites ? 'encours' : 'attente';
+      html += '<div class="np-spine" style="left:' + cx + 'px;top:' + (Y0 - 14) + 'px;height:' + (yFin - Y0 + 14) + 'px"></div>'
+        + '<div class="np-col-hd" style="left:' + (GUT + i * COLW + 8) + 'px;width:' + (COLW - 16) + 'px"><i style="background:' + couleur(r.id) + '"></i>' + h(r.nom) + '</div>'
+        + '<div class="np-col-fin ' + etat + '" style="left:' + (GUT + i * COLW + 8) + 'px;width:' + (COLW - 16) + 'px;top:' + yFin + 'px" title="' + h(a.faites + ' étape(s) sur ' + a.total) + '">' + h(r.nom) + '<small>' + (a.fini ? '✓ terminée' : a.faites ? a.faites + '/' + a.total + ' · en cours' : 'à commencer') + '</small></div>';
+    });
+    // les pills
     var ordrePert = [];
-    function bloc(t, g) {
+    vis.slice().sort(function (a, b) { return a.debut - b.debut; }).forEach(function (t) {
+      var p = pos[t.id]; if (!p) return;
       ordrePert.push(t.id);
-      var et = etatTache(t), ETAT = { fait: 'Fait ✓', pret: 'Prêt', attente: 'En attente' };
-      var depart = !t.preds.length, courant = !!courants[t.id];
-      var b = '<div class="np-node ' + et + (t.bloque ? ' bloque' : '') + (t.atelier ? ' atelier' : '') + (t.cumul ? ' cumul' : '') + (courant ? ' courant' : '') + '" data-node="' + h(t.id) + '" title="' + h(t.rec + ' — ' + t.titre) + '">'
-        + '<div class="k"><i style="background:' + t.couleur + '"></i>' + h(t.groupe === 'atelier' ? t.parts.length + ' recettes · ' + infoPoste(t.poste).nom : t.rec)
-        + (rang[t.id] ? ' <span class="nx" title="étape ' + rang[t.id] + ' de la recette">' + rang[t.id] + '</span>' : '')
-        + (crit[t.id] ? ' <span class="crit" title="chemin critique : aucune marge">⚡</span>' : '') + '</div>'
-        + '<div class="ti">' + emojiGeste(t.geste) + ' ' + h(t.titre) + '</div>'
-        + (t.aliment && !t.atelier ? '<div class="al">' + h(t.aliment) + '</div>' : '')
-        + '<div class="me"><span class="et">' + (t.bloque && et !== 'fait' ? 'Poste non pris' : ETAT[et]) + '</span>'
-        + (depart ? '<span class="dep" title="rien à attendre : peut partir dès l’ouverture">▶ départ</span>' : '')
-        + (tri !== 'vague' ? '<span class="vg">vague ' + (niv[t.id] + 1) + '</span>' : '')
-        + (tri !== 'poste' ? '<span>' + infoPoste(t.poste).em + '</span>' : '')
-        + '<span>' + hm(t.debut) + ' · ' + t.duree + ' min</span>' + (t.passif ? '<span>⏳</span>' : '')
-        + (t.cumul ? '<span class="cu" title="' + h('En même temps que : ' + t.cumulAvec.map(function (id) { return (parId[id] || {}).titre; }).filter(Boolean).join(', ')) + '">⇆ en même temps</span>' : '') + '</div>';
-      if (t.atelier) b += t.parts.map(function (part) {
-        var dc = part.geste === 'couper' ? decoupeDe(part) : null, q = quantitesEtape(part), gq = q.map(function (x) { return x.lib; }).join(' + ');
-        var ligne = '<div class="np-part"><i style="background:' + part.couleur + '"></i><b title="' + h(part.rec + ' — ' + part.titre) + '">' + h(part.rec) + '</b>'
-          + (part.geste !== 'couper' ? '' : dc ? '<span class="np-spec ok" data-spec="' + h(part.id) + '" title="modifier la découpe">' + h(dc) + '</span>' : '<button class="np-spec" data-spec="' + h(part.id) + '">Spécifier</button>')
-          + '<span class="g">' + h(gq || (part.duree + ' min')) + '</span></div>';
-        if (S.specif === part.id) ligne += '<div class="np-specform"><input class="np-in" list="npDecoupes" id="npSpecInput" placeholder="julienne, dés, lamelles…" value="' + h(part.decoupe || dc || '') + '">'
-          + '<button class="np-btn" data-spec-save="' + h(part.id) + '" style="padding:7px 10px">OK</button><button class="np-btn sec" data-spec-annuler="1" style="padding:7px 10px">✕</button></div>';
-        return ligne;
-      }).join('');
-      return b + '<div class="ouvrir">' + (courant ? '◀ on en est là · ' : '') + 'Ouvrir la fiche ›</div></div>';
-    }
-    var lignes = groupes.map(function (g) {
-      return '<div class="np-prow' + (g.courante ? ' courante' : '') + '"><div class="np-plvl"' + (g.couleur ? ' style="color:' + g.couleur + '"' : '') + '>' + g.titre + '<small>' + g.sous + '</small></div>' + g.blocs.map(function (t) { return bloc(t, g); }).join('') + '</div>';
-    }).join('');
-    // ce que le traceur dessinera, et l'ordre des écrans quand on ouvre une fiche
-    S.pertAretes = []; S.pertOrdre = ordrePert;
-    vis.forEach(function (t) { t.preds.forEach(function (id) { if (vis.some(function (x) { return x.id === id; })) S.pertAretes.push({ de: id, vers: t.id, cls: crit[id] && crit[t.id] ? 'crit' : (estFait(parId[id]) ? 'ok' : '') }); }); });
+      var et = etatTache(t), P = infoPoste(t.poste);
+      var cls = 'np-pill ' + et + (t.bloque ? ' bloque' : '') + (t.atelier ? ' atelier' : '') + (t.passif ? ' passif' : '') + (courants[t.id] ? ' courant' : '') + (estEclaire(t) ? '' : ' dim');
+      html += '<div class="' + cls + '" data-node="' + h(t.id) + '" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + p.w + 'px;height:' + p.h + 'px" title="' + h(t.rec + ' — ' + t.titre + ' · ' + hm(t.debut) + '–' + hm(t.fin) + ' · ' + P.nom + (t.cuisinier >= 0 ? ' · ' + t.qui : '')) + '">'
+        + '<span class="g">' + emojiGeste(t.geste) + '</span><span class="ti">' + h(t.titre) + '</span>'
+        + (t.cuisinier >= 0 ? '<span class="qui">' + h(plan.cuis[t.cuisinier].nom.replace(/^Cuisinier /, 'C')) + '</span>' : t.bloque ? '<span class="qui rouge">poste non pris</span>' : '')
+        + (et === 'fait' ? '<span class="ok">✓</span>' : '') + '</div>';
+      // sous un atelier, dans chaque colonne servie : ce que cette recette en attend
+      if (t.atelier) t.parts.forEach(function (part) {
+        var c = colDe[part.recId]; if (c == null) return;
+        var dc = part.geste === 'couper' ? decoupeDe(part) : null, q = quantitesEtape(part), g = q.map(function (x) { return x.lib; }).join(' + ');
+        html += '<div class="np-lab" style="left:' + (GUT + c * COLW + COLW / 2 + 8) + 'px;top:' + (p.y + p.h + 3) + 'px;max-width:' + (COLW / 2 - 14) + 'px"><b>' + h(g || part.duree + ' min') + '</b>'
+          + (part.geste !== 'couper' ? '' : dc ? ' · <span class="np-spec ok" data-spec="' + h(part.id) + '" title="modifier la découpe">' + h(dc) + '</span>' : ' · <button class="np-spec" data-spec="' + h(part.id) + '">Spécifier</button>')
+          + (S.specif === part.id ? '<div class="np-specform"><input class="np-in" list="npDecoupes" id="npSpecInput" placeholder="julienne, dés…" value="' + h(part.decoupe || dc || '') + '"><button class="np-btn" data-spec-save="' + h(part.id) + '" style="padding:7px 10px">OK</button><button class="np-btn sec" data-spec-annuler="1" style="padding:7px 10px">✕</button></div>' : '')
+          + '</div>';
+      });
+    });
+    S.pertOrdre = ordrePert;
 
     var faits = ts.filter(estFait).length, prets = ts.filter(function (t) { return etatTache(t) === 'pret'; }).length;
     var nbFiltres = FILTRES.filter(function (f) { return filtreActif(f.cle); }).length;
-    return '<div class="np-row" style="justify-content:space-between;margin-bottom:8px"><div class="np-h" style="margin:0">Dépendances — ce qui doit être fini pour passer à la suite</div>'
-      + '<div class="np-s">' + faits + ' faite(s) · <b>' + prets + ' prête(s)</b> · chemin critique ' + hm(plan.t0 + finP) + ' au plus tôt' + (nbFiltres ? ' · <b>' + vis.length + '/' + ts.length + ' affichées</b> <a href="#" data-filtre-raz="1">tout afficher</a>' : '') + '</div></div>'
-      + resumeAvancement(ts, vagueEnCours)
-      + '<div class="np-leg"><span><i style="background:#2a9e4f"></i>fait</span><span><i style="background:var(--black)"></i>prêt : ses dépendances sont faites</span><span><i style="background:#aeaec0"></i>en attente</span><span>▶ départ : rien à attendre</span><span>⚡ chemin critique</span><span><i style="background:#1a1a2e"></i>atelier partagé</span><span><i style="background:#c97a00"></i>⇆ en même temps</span></div>'
+    return '<div class="np-row" style="justify-content:space-between;margin-bottom:8px"><div class="np-h" style="margin:0">Carte de production — chaque recette, du début à la fin, et où elles se croisent</div>'
+      + '<div class="np-s">' + faits + ' faite(s) · <b>' + prets + ' prête(s)</b> · fin ' + hm(plan.fin) + (nbFiltres ? ' · <b>' + vis.length + '/' + ts.length + ' affichées</b> <a href="#" data-filtre-raz="1">tout afficher</a>' : '') + '</div></div>'
+      + pucesFocus(plan)
+      + '<div class="np-leg"><span><i style="background:#2a9e4f"></i>fait</span><span><i style="background:var(--black)"></i>prêt : ses dépendances sont faites</span><span><i style="background:#aeaec0"></i>en attente</span><span><i style="background:#c97a00"></i>l’étape en cours de la recette</span><span><i style="background:#1a1a2e;border-radius:3px;width:18px"></i>partagée entre recettes</span><span><i style="border:1.5px dashed #888;background:none"></i>attente (four, repos)</span></div>'
       + '<datalist id="npDecoupes">' + DECOUPES.map(function (d) { return '<option value="' + h(d) + '">'; }).join('') + '</datalist>'
       + '<div class="np-pert-wrap">' + panneauFiltres(ts)
-      + '<div class="np-pert"><div class="np-pert-in" id="npPertIn">' + (vis.length ? '<svg id="npPertSvg"></svg>' + lignes : '<div class="np-vide">Rien ne passe les filtres.</div>') + '</div></div></div>'
-      + '<div class="np-note">' + (tri === 'vague' ? 'Une <b>vague</b> = tout ce qui peut se faire une fois la vague précédente finie. ' : tri === 'poste' ? 'Chaque <b>poste</b> lit sa file dans l’ordre des vagues ; les flèches relient toujours ce qui dépend de quoi, d’un poste à l’autre. ' : 'Chaque <b>recette</b> du début à la fin, dans l’ordre de la fiche (n/N) ; les flèches montrent ce qu’une étape attend, y compris d’une autre recette. ')
-      + 'Les dépendances sont <b>lues</b> dans les fiches : même aliment → l’étape attend la précédente qui le porte ; sans aliment reconnu, un geste de départ (couper, rincer, peser, saisir, bouillir) part seul, tout autre geste attend ce qui est en cours. Pour forcer : « dépend de » dans l’onglet Chef. Toucher un bloc ouvre sa fiche, écran par écran.'
+      + '<div class="np-map"><div class="np-map-in" style="width:' + largeur + 'px;height:' + hauteur + 'px">' + html + '</div></div></div>'
+      + '<div class="np-note">L’heure descend. Une étape à cheval sur plusieurs colonnes se fait <b>une fois pour toutes ces recettes</b> — sous chaque colonne, ce que la recette en attend (grammes, découpe). Les dépendances sont <b>lues</b> dans les fiches : même aliment → l’étape attend la précédente qui le porte ; pour forcer : « dépend de » dans l’onglet Chef. Toucher un pill ouvre sa scène.'
       + (plan.cycle ? ' <b style="color:#c0392b">Une boucle de « dépend de » a été coupée.</b>' : '') + '</div>';
-  }
-
-  /* Les arêtes du PERT, tracées APRÈS que les blocs sont posés : on mesure
-     chaque bloc (position dans le conteneur, pas dans la page) et on relie le
-     bas du prédécesseur au haut de sa suite. Quand le tri met la suite PLUS
-     HAUT que ce qu'elle attend (par poste, par recette), l'arête sort par la
-     droite et remonte en arc : on voit qu'elle remonte. Refaites à chaque
-     rendu et à chaque redimensionnement — le flux passe à la ligne, les
-     positions bougent. */
-  function tracerAretesPert() {
-    var box = document.getElementById('npPertIn'), svg = document.getElementById('npPertSvg');
-    if (!box || !svg) return;
-    var R = box.getBoundingClientRect(), pos = {};
-    box.querySelectorAll('.np-node').forEach(function (n) {
-      var r = n.getBoundingClientRect();
-      pos[n.dataset.node] = { x: r.left - R.left, y: r.top - R.top, w: r.width, h: r.height };
-    });
-    svg.setAttribute('width', R.width); svg.setAttribute('height', R.height);
-    svg.setAttribute('viewBox', '0 0 ' + R.width + ' ' + R.height);
-    svg.innerHTML = (S.pertAretes || []).map(function (a) {
-      var p = pos[a.de], q = pos[a.vers]; if (!p || !q) return '';
-      var col = a.cls === 'crit' ? '#1a1a2e' : a.cls === 'ok' ? '#2a9e4f' : '#aeaec0', d, cx, cy;
-      if (q.y >= p.y + p.h - 4) {
-        // la suite est plus bas : du bas vers le haut, en S. Le départ glisse le
-        // long du bas du bloc vers la suite, pour que deux arêtes du même bloc
-        // ne se confondent pas.
-        var x1 = p.x + p.w / 2 + Math.max(-p.w / 3, Math.min(p.w / 3, (q.x + q.w / 2 - p.x - p.w / 2) / 4)), y1 = p.y + p.h;
-        cx = q.x + q.w / 2; cy = q.y; var dy = Math.max(16, (cy - y1) / 2);
-        d = 'M' + x1 + ' ' + y1 + ' C' + x1 + ' ' + (y1 + dy) + ' ' + cx + ' ' + (cy - dy) + ' ' + cx + ' ' + cy;
-      } else {
-        // la suite est plus haut ou au même niveau : par la droite, en arc
-        var xa = p.x + p.w, ya = p.y + p.h / 2, xb = q.x + q.w, yb = q.y + q.h / 2, bx = Math.max(xa, xb) + 28;
-        cx = xb; cy = yb;
-        d = 'M' + xa + ' ' + ya + ' C' + bx + ' ' + ya + ' ' + bx + ' ' + yb + ' ' + xb + ' ' + yb;
-      }
-      return '<path class="' + a.cls + '" d="' + d + '"/><circle cx="' + cx + '" cy="' + cy + '" r="3.5" fill="' + col + '"/>';
-    }).join('');
   }
 
   /* Ouvrir la fiche d'un bloc du PERT : les mêmes écrans que « Mon service »,
@@ -1594,7 +1539,7 @@
 
   /* ── Événements ─────────────────────────────────────────────────────────── */
   function clic(ev) {
-    var b = ev.target.closest('[data-vue],[data-act],[data-filtre],[data-stp],[data-jour],[data-bon],[data-section],[data-poste],[data-spec],[data-spec-save],[data-spec-annuler],[data-node],[data-filtre-groupe],[data-filtre-tous],[data-filtre-raz],[data-tri-pert]');
+    var b = ev.target.closest('[data-vue],[data-act],[data-filtre],[data-stp],[data-jour],[data-bon],[data-section],[data-poste],[data-spec],[data-spec-save],[data-spec-annuler],[data-node],[data-filtre-groupe],[data-filtre-tous],[data-filtre-raz],[data-focus-type]');
     if (!b) return;
     // les filtres du PERT : déplier un groupe, tout cocher / décocher, remettre à zéro
     if (b.dataset.filtreGroupe) { S.filtresOuverts = S.filtresOuverts || {}; S.filtresOuverts[b.dataset.filtreGroupe] = !S.filtresOuverts[b.dataset.filtreGroupe]; rendre(); return; }
@@ -1605,7 +1550,7 @@
       rendre(); return;
     }
     if (b.dataset.filtreRaz) { ev.preventDefault(); S.filtres = {}; rendre(); return; }
-    if (b.dataset.triPert) { S.triPert = b.dataset.triPert; rendre(); return; }
+    if (b.dataset.focusType !== undefined) { S.focus = b.dataset.focusType ? { type: b.dataset.focusType, cle: b.dataset.focusCle } : null; rendre(); return; }
     // une tuile héros : ouvre sa section, ou la referme si c'était elle
     if (b.dataset.section) { S.section = S.section === b.dataset.section ? null : b.dataset.section; S.specif = null; rendre(); return; }
     // la découpe d'une part d'atelier — AVANT le nœud, qui l'englobe
@@ -1851,6 +1796,19 @@
     return { grand: q[0].lib, petit: (q.length > 1 ? q.slice(1).map(function (x) { return x.lib + ' ' + x.nom; }).join(' · ') : q[0].nom) };
   }
 
+  /* Ce que cette étape DÉBLOQUE, et à quel moment : ses suites dans le plan,
+     avec leur recette, leur poste, qui les tient, et l'heure où elles
+     partent — c'est là qu'on voit avec quelle étape d'une autre recette on
+     interagit. Sous la carte, en une ligne. */
+  function suitesScene(t) {
+    var plan = S.plan; if (!plan || t.assemblage) return '';
+    var suites = plan.taches.filter(function (x) { return (x.preds || []).indexOf(t.id) >= 0; }).sort(function (a, b) { return a.debut - b.debut; });
+    var autres = t.atelier ? t.parts.map(function (p) { return { rec: p.rec, couleur: p.couleur }; }) : [];
+    if (!suites.length && !autres.length) return '';
+    return '<div class="suites">' + (autres.length ? '<div class="l"><b>Pour</b>' + autres.map(function (a) { return '<span><i style="background:' + a.couleur + '"></i>' + h(a.rec) + '</span>'; }).join('') + '</div>' : '')
+      + (suites.length ? '<div class="l"><b>Débloque à ' + hm(t.fin) + '</b>' + suites.map(function (x) { var P = infoPoste(x.poste); return '<span' + (x.rec !== t.rec ? ' class="autre"' : '') + '><i style="background:' + x.couleur + '"></i>' + emojiGeste(x.geste) + ' ' + h(x.titre) + ' <small>' + h(x.rec) + ' · ' + P.em + (x.cuisinier >= 0 ? ' ' + h(x.qui) : '') + ' · ' + hm(x.debut) + '</small></span>'; }).join('') + '</div>' : '') + '</div>';
+  }
+
   /* Les étapes qui BLOQUENT celle-ci : ses dépendances pas encore faites, en
      gris, avec leur poste — c'est souvent un autre poste, et c'est là que le
      cuisinier voit qui il attend. */
@@ -1894,6 +1852,7 @@
       + '<div class="qte"><b>' + h(q.grand) + '</b><small>' + h(q.petit) + '</small></div>'
       + (bl.length ? '<div class="att">⏳ attend ' + bl.length + ' étape' + (bl.length > 1 ? 's' : '') + (bl.some(function (p) { return p.poste !== t.poste; }) ? ' d’un autre poste' : '') + '</div>' : '')
       + '</div></div><div class="cote d">' + droite.map(carteBloquante).join('') + '</div></div>'
+      + suitesScene(t)
       + '<button class="detbtn" data-c="details">' + (C.details ? 'Masquer les détails ▴' : 'Détails ▾') + '</button>'
       + '<div class="detail"' + (C.details ? '' : ' style="display:none"') + '>' + htmlDetail(t) + '</div>';
     return html;
