@@ -4270,6 +4270,15 @@ async function sauvegarderRecetteComplete() {
       geste: row.querySelector('.etape-chef-geste')?.value || null,
       aliment: (row.querySelector('.etape-chef-aliment')?.value || '').trim() || null
     };
+    // Les deux colonnes de natty_production_ateliers.sql, seulement si le
+    // formulaire les a affichées (donc si la base les a).
+    const dec = row.querySelector('.etape-chef-decoupe');
+    if (dec) corps.decoupe = dec.value.trim() || null;
+    const dep = row.querySelector('.etape-chef-depend');
+    if (dep) {
+      const nums = dep.value.split(/[^0-9]+/).map(Number).filter(n => Number.isInteger(n) && n > 0 && n !== i+1);
+      corps.depend_de = nums.length ? nums : null;
+    }
     try {
       // sb() envoie le jeton d'équipe ; la clé anon seule est refusée par la
       // RLS sur cette table depuis natty_staff.sql.
@@ -4339,6 +4348,13 @@ function ligneEtapeChef(e, num) {
     +'<select class="etape-chef-phase" style="'+inp+'"><option value="production"'+(e.phase!=='assemblage'?' selected':'')+'>Production (en masse)</option><option value="assemblage"'+(e.phase==='assemblage'?' selected':'')+'>Assemblage (par portion)</option></select>'
     +'<label><input class="etape-chef-passif" type="checkbox"'+(e.passif?' checked':'')+'> attente (four, repos)</label>'
     +'<input class="etape-chef-poste" type="text" placeholder="poste (four, plan 1…)" value="'+esc(e.poste)+'" style="'+inp+'width:130px;">'
+    // La DÉCOUPE (julienne, dés…) et « DÉPEND DE » (numéros d'étapes) : deux
+    // colonnes facultatives de natty_production_ateliers.sql, que l'onglet
+    // Production lit pour l'atelier partagé et le PERT. Sans elles, il infère.
+    // On ne les envoie que si la ligne chargée les porte : sinon PostgREST
+    // refuserait TOUTE la sauvegarde de l'étape pour une colonne inconnue.
+    +('decoupe' in e ? '<input class="etape-chef-decoupe" type="text" placeholder="découpe (julienne, dés…)" value="'+esc(e.decoupe)+'" style="'+inp+'width:150px;">' : '')
+    +('depend_de' in e ? '<label title="Numéros des étapes que celle-ci attend. Vide : déduit de l’aliment et du geste.">⤴ dépend de <input class="etape-chef-depend" type="text" placeholder="ex. 1,3" value="'+esc((e.depend_de||[]).join(','))+'" style="'+inp+'width:70px;"></label>' : '')
     +'</div></div>'
     +'<button class="btn-del-etape" data-delid="'+e.id+'" style="background:#ffecec;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#c0392b;font-size:12px;flex-shrink:0;">✕</button>'
     +'</div>';

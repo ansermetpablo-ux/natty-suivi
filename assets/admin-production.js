@@ -14,11 +14,23 @@
         les bons sans attribution en rouge. En dessous, la table de toutes les
         commandes détaillées, triée par recette puis par date. Un tap sur un
         jour ouvre la production de ce jour.
-     4. Production (un jour) — combien de cuisiniers ; l'algorithme répartit
-        les étapes de TOUTES les recettes du jour pour que chacun avance en
-        même temps (`dispatcher`). Puis l'ASSEMBLAGE : on quitte la masse pour
-        la portion, et l'écran dit, ingrédient par ingrédient, combien de
-        grammes poser sur la balance pour chaque portion de chaque client.
+     4. Production (un jour) — cinq SECTIONS derrière cinq tuiles héros, une
+        seule ouverte à la fois (Pablo : « pas tout en vrac ») : les postes,
+        le planning (Gantt), les dépendances (PERT), le tri par geste, et
+        l'ASSEMBLAGE — on quitte la masse pour la portion, et l'écran dit,
+        ingrédient par ingrédient, combien de grammes poser sur la balance
+        pour chaque portion de chaque client.
+
+   LES ÉTAPES D'UNE RECETTE FORMENT UN GRAPHE, PAS UNE FILE (`dependances`).
+     « Cuire les carottes » attend « Couper les carottes » ; « Cuire le riz »
+     n'attend personne. La dépendance est INFÉRÉE de l'aliment (mot à mot), et
+     `recettes_etapes.depend_de` (numéros) la force quand l'inférence se
+     trompe. Deux recettes qui coupent des carottes le même jour partagent un
+     ATELIER : un seul nœud, les grammes de chacune, la découpe de chacune —
+     et « Spécifier » en rouge tant que la fiche ne dit pas comment couper.
+     Les suites (cuisson pour l'une, dressage pour l'autre) redeviennent
+     indépendantes. Le PERT montre ce graphe ; le Gantt, le même graphe posé
+     sur les cuisiniers.
 
    CE QUE LA FICHE TECHNIQUE DOIT DIRE, et ce qu'on déduit quand elle ne le
    dit pas (`fiche`) :
@@ -44,8 +56,26 @@
   var S = {
     vue: 'bons', bons: [], attribs: [], recettes: [], ings: {}, etapes: {},
     clients: {}, ingBase: {}, mois: null, jour: null, filtre: 'tous',
-    bonOuvert: null, cuisiniers: 2, debut: '08:00', charge: false, tri: 'cuisinier'
+    bonOuvert: null, cuisiniers: 2, debut: '08:00', charge: false, tri: 'cuisinier',
+    // la section ouverte sous les tuiles héros (null = aucune), et l'étape
+    // dont on est en train de spécifier la découpe
+    section: null, specif: null
   };
+
+  /* Les gestes qui PARTENT d'un aliment brut. Sans aliment déjà vu dans la
+     recette, une telle étape ouvre une nouvelle chaîne (« Cuire le riz » ne
+     dépend de rien). Tout autre geste sans aliment reconnu RÉUNIT ce qui est
+     en cours — mijoter, enfourner, mélanger, dresser attendent tout. */
+  var GESTES_DEPART = ['couper', 'rincer', 'peser', 'saisir', 'bouillir'];
+  /* Le geste qui fait un atelier partagé : la découpe. Deux recettes qui
+     coupent des carottes se servent du même plan de travail, des mêmes
+     carottes, du même couteau — pas deux recettes qui les cuisent. */
+  var GESTES_ATELIER = ['couper'];
+  /* Les découpes qu'on sait lire dans un titre ou une consigne. La clé est
+     normalisée (norm), la valeur est ce qu'on affiche. */
+  var DECOUPES = ['julienne', 'brunoise', 'mirepoix', 'paysanne', 'lamelles', 'rondelles', 'dés', 'cubes', 'bâtonnets',
+    'quartiers', 'tranches', 'émincé', 'haché', 'ciselé', 'râpé', 'concassé', 'effiloché', 'sifflets', 'chiffonnade',
+    'tronçons', 'demi-lunes', 'morceaux', 'grossièrement', 'finement', 'entier'];
 
   /* Les 16 gestes d'assets/recette.js, dans l'ordre d'une cuisine : ce qui se
      taille d'abord, ce qui cuit ensuite, ce qui attend, ce qui se dresse. C'est
@@ -235,7 +265,47 @@
       '#npCine .cta button{flex:1;border:none;border-radius:16px;padding:16px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;background:#ffffff1a;color:#fff}',
       '#npCine .cta button.ok{background:#fff;color:#0e0e11;flex:2}#npCine .cta button.ok.on{background:#34c759;color:#fff}#npCine .cta button:disabled{opacity:.3}',
       '#npCine .som{position:absolute;inset:0;background:#0e0e11f2;overflow-y:auto;padding:18px 22px;z-index:2}#npCine .som .l{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:#ffffff0f;margin-bottom:6px;cursor:pointer;font-size:13px}#npCine .som .l.cur{outline:2px solid #fff}#npCine .som .l.ok{opacity:.55}',
-      '@media(max-width:700px){.np-cell{min-height:70px;padding:5px;font-size:10px}.np-gl{grid-template-columns:70px 1fr}.np-axe{grid-template-columns:70px 1fr}}'
+      /* les tuiles héros : une par section, une seule ouverte */
+      '.np-hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0 18px}',
+      '.np-tile{background:var(--bg);border-radius:18px;box-shadow:var(--so);padding:16px 16px 14px;border:none;text-align:left;cursor:pointer;font-family:inherit;color:var(--black);display:flex;flex-direction:column;gap:6px;min-height:118px;position:relative;transition:transform .15s,box-shadow .15s}',
+      '.np-tile:hover{transform:translateY(-2px)}',
+      '.np-tile.on{box-shadow:var(--si);transform:none}',
+      '.np-tile.on:after{content:"";position:absolute;left:18px;right:18px;bottom:8px;height:3px;border-radius:2px;background:var(--black)}',
+      '.np-tile .em{font-size:26px;line-height:1}',
+      '.np-tile .nm{font-size:13px;font-weight:800;letter-spacing:-.2px}',
+      '.np-tile .kp{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-top:auto}',
+      '.np-tile .kp small{display:block;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0;margin-top:2px}',
+      '.np-tile .al{position:absolute;top:12px;right:12px;background:#c0392b;color:#fff;font-size:10px;font-weight:800;border-radius:99px;padding:3px 8px}',
+      '.np-sec{animation:npSec .25s ease}@keyframes npSec{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}',
+      /* le PERT : des nœuds par niveau, des arêtes en SVG dessous */
+      '.np-pert{background:var(--bg);border-radius:16px;box-shadow:var(--so);padding:12px;overflow-x:auto;margin-bottom:12px}',
+      '.np-pert-in{position:relative}',
+      '.np-pert svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}',
+      '.np-pert path{fill:none;stroke:#aeaec0;stroke-width:1.6}',
+      '.np-pert path.ok{stroke:#2a9e4f;stroke-width:2}',
+      '.np-pert path.crit{stroke:var(--black);stroke-width:2.4}',
+      '.np-node{position:absolute;width:212px;background:var(--bg);border-radius:14px;box-shadow:var(--sm);padding:10px 12px;box-sizing:border-box;cursor:pointer;font-size:12px;color:var(--black);border-left:4px solid transparent;transition:box-shadow .15s}',
+      '.np-node:hover{box-shadow:var(--so)}',
+      '.np-node.fait{opacity:.55;border-left-color:#2a9e4f}',
+      '.np-node.pret{outline:2px solid var(--black)}',
+      '.np-node.attente{color:#6b6b78}',
+      '.np-node.bloque{border-left-color:#c0392b}',
+      '.np-node.atelier{background:linear-gradient(135deg,var(--bg),#e6e6ee);width:236px}',
+      '.np-node .k{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}',
+      '.np-node .k i{width:8px;height:8px;border-radius:50%;flex-shrink:0}',
+      '.np-node .ti{font-size:13px;font-weight:800;line-height:1.25}',
+      '.np-node .me{font-size:11px;color:var(--muted);margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}',
+      '.np-node .et{font-size:10px;font-weight:800;border-radius:99px;padding:2px 8px;background:#7777771f;color:#555}',
+      '.np-node.fait .et{background:#2a9e4f1f;color:#2a9e4f}.np-node.pret .et{background:var(--black);color:#fff}.np-node.bloque .et{background:#c0392b1f;color:#c0392b}',
+      '.np-node .crit{font-size:10px;font-weight:800;color:var(--black)}',
+      '.np-part{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #0000000f;font-size:11px}',
+      '.np-part i{width:8px;height:8px;border-radius:50%;flex-shrink:0}',
+      '.np-part b{color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px}.np-part .g{margin-left:auto;font-weight:700;white-space:nowrap}',
+      '.np-spec{background:#c0392b;color:#fff;border:none;border-radius:99px;padding:3px 9px;font-size:10px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap}',
+      '.np-spec.ok{background:#2a9e4f1f;color:#2a9e4f;cursor:default}',
+      '.np-specform{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}',
+      '.np-specform input{flex:1;min-width:120px}',
+      '@media(max-width:700px){.np-cell{min-height:70px;padding:5px;font-size:10px}.np-gl{grid-template-columns:70px 1fr}.np-axe{grid-template-columns:70px 1fr}.np-hero{grid-template-columns:repeat(2,1fr)}}'
     ].join('\n');
     document.head.appendChild(st);
   }
@@ -372,6 +442,13 @@
       + '<div id="npVue"><div class="np-vide">Chargement…</div></div>';
     host.addEventListener('click', clic);
     host.addEventListener('change', change);
+    // Entrée dans le champ de découpe enregistre ; Échap referme. Pas par
+    // `change` : il partirait aussi au clic sur ✕, et enregistrerait quand même.
+    host.addEventListener('keydown', function (ev) {
+      if (ev.target.id !== 'npSpecInput') return;
+      if (ev.key === 'Enter') { ev.preventDefault(); enregistrerDecoupe(S.specif, ev.target.value); }
+      if (ev.key === 'Escape') { S.specif = null; rendre(); }
+    });
     if (!S.mois) { S.mois = new Date(); S.mois.setDate(1); }
     chargerTout().then(rendre).catch(function (e) {
       document.getElementById('npVue').innerHTML = '<div class="np-alerte">Impossible de charger : ' + h(e.message)
@@ -673,6 +750,16 @@
   }
 
   /* ── 4. Production ──────────────────────────────────────────────────────── */
+  /* Les cinq sections, dans l'ordre du travail. Chacune a sa tuile héros, qui
+     porte le chiffre qu'on vient y chercher ; une seule est ouverte à la fois. */
+  var SECTIONS = [
+    { cle: 'postes', em: '👥', nom: 'Postes' },
+    { cle: 'planning', em: '📊', nom: 'Planning' },
+    { cle: 'pert', em: '🕸', nom: 'Dépendances' },
+    { cle: 'geste', em: '🔪', nom: 'Par geste' },
+    { cle: 'assemblage', em: '⚖️', nom: 'Assemblage' }
+  ];
+
   function vueProduction() {
     var jour = S.jour || ymd(new Date()), pj = parJour()[jour];
     var html = '<div class="np-row" style="justify-content:space-between;margin-bottom:12px">'
@@ -686,29 +773,70 @@
     var lots = lotsDuJour(pj);
     if (!lots.length) return html + '<div class="np-vide">Rien d’attribué ce jour.</div>';
 
-    // ── mode MASSE : la production ────────────────────────────────────────
-    html += '<div class="np-h">Production en masse — ' + lots.map(function (l) { return l.rec.nom + ' × ' + l.portions; }).join(' · ') + '</div>';
-    html += '<div class="np-leg">' + lots.map(function (l) { return '<span><i style="background:' + l.couleur + '"></i>' + h(l.rec.nom) + ' — ×' + l.fiches.toFixed(1) + ' de la fiche, ' + Math.round(l.gTotal / 100) / 10 + ' kg</span>'; }).join('') + '<span><i style="background:repeating-linear-gradient(45deg,#0004 0 2px,#0001 2px 4px)"></i>attente (four, repos) : cuisinier libre</span></div>';
     var manques = [];
     lots.forEach(function (l) {
       if (!l.etapesProd.length) manques.push(l.rec.nom + ' n’a aucune étape de production');
       else if (l.etapesProd.some(function (e) { return !e.duree_min; })) manques.push(l.rec.nom + ' : des étapes sans durée (' + DUREE_DEFAUT + ' min par défaut)');
     });
     if (manques.length) html += '<div class="np-note">⚠ ' + h(manques.join(' · ')) + ' — à compléter dans l’onglet Chef pour un plan juste.</div>';
+
     var cuis = cuisiniersDuJour();
     var plan = dispatcher(lots, cuis, minDe(S.debut));
     S.plan = plan; S.lots = lots;
-    html += sectionPostes(plan, lots);
-    html += gantt(plan);
-    html += '<div class="np-row" style="justify-content:space-between;margin-top:18px"><div class="np-h" style="margin:0">'
-      + (S.tri === 'geste' ? 'Par geste, puis par aliment — ce qui se fait en une fois' : 'Dans l’ordre — qui fait quoi, quand') + '</div>'
-      + '<div class="np-filtres" style="margin:0"><button data-tri="cuisinier" class="' + (S.tri !== 'geste' ? 'on' : '') + '">Par cuisinier</button>'
-      + '<button data-tri="geste" class="' + (S.tri === 'geste' ? 'on' : '') + '">Par geste + aliment</button></div></div>';
-    html += S.tri === 'geste' ? parGeste(plan) : plan.taches.slice().sort(function (a, b) { return a.debut - b.debut || a.cuisinier - b.cuisinier; }).map(ligneTache).join('');
-    html += '<div class="np-note">Fin estimée <b>' + hm(plan.fin) + '</b> avec ' + S.cuisiniers + ' cuisinier(s). Les durées des étapes actives sont multipliées par √(nombre de fiches) — une estimation, pas une mesure : la fiche donne la durée pour une fiche, et doubler la masse ne double pas le temps de découpe.</div>';
 
-    // ── mode PORTION : l'assemblage ───────────────────────────────────────
-    html += '<div class="np-h">Assemblage — portion par portion, sur la balance</div>';
+    html += '<div class="np-leg">' + lots.map(function (l) { return '<span><i style="background:' + l.couleur + '"></i>' + h(l.rec.nom) + ' — ×' + l.fiches.toFixed(1) + ' de la fiche, ' + Math.round(l.gTotal / 100) / 10 + ' kg</span>'; }).join('') + '</div>';
+    html += tuilesHero(plan, lots);
+
+    var sec = S.section;
+    if (!sec) return html + '<div class="np-s" style="text-align:center;padding:6px 0 14px">Toucher une tuile pour ouvrir sa section. Fin estimée <b>' + hm(plan.fin) + '</b>.</div>';
+    html += '<div class="np-sec">';
+    if (sec === 'postes') html += sectionPostes(plan, lots);
+    else if (sec === 'planning') html += sectionPlanning(plan);
+    else if (sec === 'pert') html += sectionPert(plan);
+    else if (sec === 'geste') html += '<div class="np-h">Par geste, puis par aliment — ce qui se fait en une fois</div>' + parGeste(plan);
+    else if (sec === 'assemblage') html += sectionAssemblage(lots, jour);
+    return html + '</div>';
+  }
+
+  /* Chaque tuile dit son chiffre : autant de raisons de l'ouvrir — ou de ne
+     pas l'ouvrir. Le rouge n'est posé que sur ce qui bloque vraiment. */
+  function tuilesHero(plan, lots) {
+    var m = moi(), ts = plan.taches;
+    var faits = ts.filter(estFait).length, prets = ts.filter(function (t) { return etatTache(t) === 'pret'; }).length;
+    var ateliers = ts.filter(function (t) { return t.atelier; });
+    var aSpecifier = ateliers.reduce(function (n, a) { return n + a.parts.filter(function (p) { return !decoupeDe(p); }).length; }, 0);
+    var pris = (S.postes || []).length, bloquees = ts.filter(function (t) { return t.bloque; }).length;
+    var mesPostes = (S.postes || []).filter(function (p) { return p.cuisinier_id === m.id; }).length;
+    var portions = lots.reduce(function (n, l) { return n + l.portions; }, 0);
+    var alim = {}; ts.forEach(function (t) { String(t.aliment || '').split(/[,+;]/).forEach(function (a) { if (a.trim()) alim[norm(a)] = 1; }); });
+    var kp = {
+      postes: '<b>' + pris + '/' + POSTES.length + '</b><small>' + (mesPostes ? 'vous en tenez ' + mesPostes : 'poste(s) pris') + '</small>',
+      planning: '<b>' + hm(plan.fin) + '</b><small>fin estimée · ' + plan.nbCuis + ' cuisinier(s)</small>',
+      pert: '<b>' + faits + '/' + ts.length + '</b><small>étapes faites · ' + prets + ' prête(s)' + (ateliers.length ? ' · ' + ateliers.length + ' atelier(s)' : '') + '</small>',
+      geste: '<b>' + Object.keys(alim).length + '</b><small>aliment(s) · ' + ts.filter(function (t) { return !t.passif; }).length + ' geste(s)</small>',
+      assemblage: '<b>' + portions + '</b><small>portion(s) · ' + lots.length + ' recette(s)</small>'
+    };
+    var al = { postes: bloquees ? bloquees + ' sans poste' : '', pert: aSpecifier ? aSpecifier + ' à spécifier' : '' };
+    return '<div class="np-hero">' + SECTIONS.map(function (s) {
+      return '<button class="np-tile ' + (S.section === s.cle ? 'on' : '') + '" data-section="' + s.cle + '">'
+        + (al[s.cle] ? '<span class="al">' + h(al[s.cle]) + '</span>' : '')
+        + '<div class="em">' + s.em + '</div><div class="nm">' + s.nom + '</div><div class="kp">' + kp[s.cle] + '</div></button>';
+    }).join('') + '</div>';
+  }
+
+  function sectionPlanning(plan) {
+    var html = '<div class="np-h">Production en masse — ' + S.lots.map(function (l) { return h(l.rec.nom) + ' × ' + l.portions; }).join(' · ') + '</div>';
+    html += '<div class="np-leg"><span><i style="background:repeating-linear-gradient(45deg,#0004 0 2px,#0001 2px 4px)"></i>attente (four, repos) : cuisinier libre</span><span><i style="background:#1a1a2e"></i>atelier partagé entre recettes</span></div>';
+    html += gantt(plan);
+    html += '<div class="np-h">Dans l’ordre — qui fait quoi, quand</div>';
+    html += plan.taches.slice().sort(function (a, b) { return a.debut - b.debut || a.cuisinier - b.cuisinier; }).map(ligneTache).join('');
+    html += '<div class="np-note">Fin estimée <b>' + hm(plan.fin) + '</b> avec ' + plan.nbCuis + ' cuisinier(s). Les durées des étapes actives sont multipliées par √(nombre de fiches) — une estimation, pas une mesure : la fiche donne la durée pour une fiche, et doubler la masse ne double pas le temps de découpe.'
+      + (plan.cycle ? ' <b style="color:#c0392b">Une boucle de dépendances a été coupée</b> (des « dépend de » qui se renvoient l’un à l’autre) : vérifier les fiches.' : '') + '</div>';
+    return html;
+  }
+
+  function sectionAssemblage(lots, jour) {
+    var html = '<div class="np-h">Assemblage — portion par portion, sur la balance</div>';
     html += '<div class="np-note">On quitte la masse. Pour chaque recette, toutes les portions de tous les clients, avec les grammes de <b>chaque</b> ingrédient : ils découlent de la cible calorique du client (×facteur sur la fiche). Cocher une portion quand elle est en boîte.</div>';
     lots.forEach(function (l) {
       var ass = (S.etapes[l.rec.id] || []).filter(function (e) { return e.phase === 'assemblage'; });
@@ -740,7 +868,7 @@
     POSTES.forEach(function (P) {
       var ts = parPoste[P.cle] || [], tenu = (S.postes || []).find(function (p) { return p.poste === P.cle; });
       var aMoi = tenu && tenu.cuisinier_id === m.id, min = ts.reduce(function (a, t) { return a + t.duree; }, 0);
-      var faits = ts.filter(function (t) { return S.faits[t.id]; }).length;
+      var faits = ts.filter(estFait).length;
       html += '<div class="np-poste ' + (tenu ? (aMoi ? 'moi' : 'pris') : '') + (ts.length ? '' : ' vide') + '">'
         + '<div class="em">' + P.em + '</div><div class="nm">' + h(P.nom) + '</div>'
         + '<div class="np-s">' + (ts.length ? ts.length + ' étape(s) · ~' + min + ' min' + (faits ? ' · ' + faits + ' faites' : '') : 'rien aujourd’hui') + '</div>'
@@ -753,7 +881,7 @@
     var bloquees = plan.taches.filter(function (t) { return t.bloque; });
     if (typeof cuisiniersDuJour() !== 'number' && bloquees.length) html += '<div class="np-alerte">🔴 ' + bloquees.length + ' étape(s) sur un poste que personne n’a pris : ' + h([].concat.apply([], bloquees.map(function (t) { return infoPoste(t.poste).nom; })).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ')) + '. Elles attendent quelqu’un.</div>';
     if (mesPostes.length) {
-      var mes = mesTaches(plan, lots), nb = mes.filter(function (t) { return S.faits[t.id]; }).length;
+      var mes = mesTaches(plan, lots), nb = mes.filter(estFait).length;
       html += '<div class="np-row" style="justify-content:space-between;margin:10px 0 4px"><div class="np-s">Vous tenez <b>' + h(mesPostes.map(function (c) { return infoPoste(c).nom; }).join(' + ')) + '</b> — ' + mes.length + ' écran(s), ' + nb + ' fait(s).</div>'
         + '<button class="np-btn" data-act="service">▶ Mon service, écran par écran</button></div>';
     } else html += '<div class="np-s" style="margin:6px 0 4px">Prenez un poste pour ouvrir votre service écran par écran.</div>';
@@ -768,16 +896,19 @@
     var tient = (S.postes || []).some(function (p) { return p.cuisinier_id === m.id && p.poste === 'assemblage'; });
     if (tient) lots.forEach(function (l) {
       var etapes = (S.etapes[l.rec.id] || []).filter(function (e) { return e.phase === 'assemblage'; });
-      mes.push({ id: 'ass_' + l.rec.id, assemblage: true, lot: l, etapes: etapes, rec: l.rec.nom, couleur: l.couleur, titre: 'Assembler ' + l.portions + ' portion(s)', geste: 'dresser', poste: 'assemblage', debut: plan.fin, fin: plan.fin, duree: 0 });
+      mes.push({ id: 'ass_' + l.rec.id, assemblage: true, lot: l, etapes: etapes, rec: l.rec.nom, couleur: l.couleur, titre: 'Assembler ' + l.portions + ' portion(s)', geste: 'dresser', poste: 'assemblage', debut: plan.fin, fin: plan.fin, duree: 0, preds: [] });
     });
     return mes;
   }
 
   function ligneTache(t) {
+    var apres = (t.preds || []).map(function (id) { var p = S.plan && S.plan.parId[id]; return p ? p.titre : null; }).filter(Boolean);
     return '<div class="np-etape"><div class="t">' + hm(t.debut) + ' → ' + hm(t.fin) + '</div><i class="c" style="background:' + t.couleur + '"></i>'
       + '<div class="b"><b' + (t.bloque ? ' style="color:#c0392b"' : '') + '>' + (t.passif ? '⏳ attente' : (t.bloque ? '🔴 ' : '') + h(t.qui)) + '</b> <span class="np-s">' + infoPoste(t.poste).em + ' ' + h(infoPoste(t.poste).nom) + '</span> · ' + h(t.rec) + ' — ' + emojiGeste(t.geste) + ' ' + h(t.titre)
       + (t.aliment ? ' <span class="np-s">· ' + h(t.aliment) + '</span>' : '')
-      + '<small>' + h(t.desc) + (t.temperature ? ' · ' + t.temperature + ' °C' : '') + (t.poste ? ' · ' + h(t.poste) : '') + (t.defaut ? ' · <i>durée par défaut</i>' : '') + '</small></div></div>';
+      + (t.atelier ? ' <span class="np-pill v">atelier · ' + t.parts.length + ' recettes</span>' : '')
+      + '<small>' + h(t.desc) + (t.temperature ? ' · ' + t.temperature + ' °C' : '') + (t.defaut ? ' · <i>durée par défaut</i>' : '')
+      + (apres.length ? ' · après : ' + h(apres.join(', ')) : '') + '</small></div></div>';
   }
 
   /* La vue « par geste » : toutes les tâches du jour rangées par geste (dans
@@ -785,13 +916,16 @@
      hacher des oignons apparaissent côte à côte, avec leur heure et leur
      cuisinier. C'est le tri demandé par Pablo : le geste ET l'aliment. Le
      rapprochement des aliments est fait mot à mot sur le texte libre de la
-     fiche (« oignon, ail » et « oignons » se retrouvent sous « oignon »). */
+     fiche (« oignon, ail » et « oignons » se retrouvent sous « oignon »).
+     Un atelier est déplié en ses parts : chaque recette garde sa ligne. */
   function parGeste(plan) {
-    // (geste → aliment → tâches). Un aliment par entrée : une étape « oignons,
-    // ail, carottes » apparaît sous oignon, sous ail ET sous carotte — c'est
-    // comme ça qu'on voit d'un coup tous les oignons à hacher de la journée.
     var groupes = {};
+    var taches = [];
     plan.taches.forEach(function (t) {
+      if (t.atelier) t.parts.forEach(function (p) { taches.push(Object.assign({}, p, { debut: t.debut, fin: t.fin, qui: t.qui, passif: false })); });
+      else taches.push(t);
+    });
+    taches.forEach(function (t) {
       var g = t.geste || '';
       var G = groupes[g] = groupes[g] || {};
       var parts = String(t.aliment || '').split(/[,+;]/).map(function (a) { return a.trim(); }).filter(Boolean);
@@ -812,8 +946,9 @@
           return '<div class="np-card" style="padding:10px 14px">'
             + '<div class="np-t" style="font-size:13px"><span style="text-transform:capitalize">' + h(G[k].lib) + '</span>' + (multi ? ' <span class="np-pill v">' + Object.keys(recs).length + ' recettes — à faire en une fois</span>' : '') + '</div>'
             + ts.map(function (t) {
+              var dc = t.geste === 'couper' ? decoupeDe(t) : null;
               return '<div class="np-row" style="gap:8px;font-size:12px;margin-top:6px"><i style="width:9px;height:9px;border-radius:50%;background:' + t.couleur + ';flex-shrink:0"></i>'
-                + '<b style="color:var(--black)">' + h(t.rec) + '</b> <span class="np-s">' + h(t.titre) + ' · ×' + t.fiches.toFixed(1) + ' fiche · ' + t.duree + ' min</span>'
+                + '<b style="color:var(--black)">' + h(t.rec) + '</b> <span class="np-s">' + h(t.titre) + (dc ? ' · <b>' + h(dc) + '</b>' : '') + ' · ×' + t.fiches.toFixed(1) + ' fiche · ' + t.duree + ' min</span>'
                 + '<span style="margin-left:auto" class="np-s">' + hm(t.debut) + ' · ' + (t.passif ? '⏳' : h(t.qui)) + '</span></div>';
             }).join('') + '</div>';
         }).join('');
@@ -840,19 +975,12 @@
     return Object.keys(m).map(function (k) { return m[k]; });
   }
 
-  /* ── L'algorithme de répartition ──────────────────────────────────────────
-     Ordonnancement de liste : les étapes d'une recette sont séquentielles ;
-     entre recettes tout est parallèle. À chaque instant, la tâche prête dont
-     la recette a le plus long chemin restant passe en premier (le chemin
-     critique), sur le premier cuisinier libre. Une étape PASSIVE (four,
-     repos) démarre dès que la précédente finit et ne prend personne : le
-     cuisinier enchaîne sur une autre recette. C'est ce qui évite le temps
-     mort « tout le monde attend le four ». */
-  /* Les POSTES. Un poste est une famille de gestes ; un cuisinier « prend »
-     un ou plusieurs postes pour la journée, et dès lors les tâches de ce poste
-     ne vont qu'à lui — un poste pris n'est plus disponible aux autres. Une
-     étape peut forcer son poste (`recettes_etapes.poste`) si le texte est
-     l'une de ces clés ; sinon le geste décide. */
+  /* ── Les POSTES ──────────────────────────────────────────────────────────
+     Un poste est une famille de gestes ; un cuisinier « prend » un ou plusieurs
+     postes pour la journée, et dès lors les tâches de ce poste ne vont qu'à
+     lui — un poste pris n'est plus disponible aux autres. Une étape peut
+     forcer son poste (`recettes_etapes.poste`) si le texte est l'une de ces
+     clés ; sinon le geste décide. */
   var POSTES = [
     { cle: 'legumes', nom: 'Taille & légumes', em: '🔪', gestes: ['couper', 'rincer', 'peser'] },
     { cle: 'feux', nom: 'Feux & cuissons', em: '🍳', gestes: ['saisir', 'bouillir', 'mijoter'] },
@@ -870,55 +998,185 @@
   }
   function infoPoste(cle) { return POSTES.find(function (x) { return x.cle === cle; }) || { cle: cle, nom: cle, em: '❔' }; }
 
-  /* `cuisiniers` : un nombre (N cuisiniers anonymes, tous postes) ou une liste
+  /* ── Les dépendances d'une recette ───────────────────────────────────────
+     La fiche est écrite dans l'ordre où le chef y pense, pas dans l'ordre où
+     tout doit s'enchaîner : « Cuire le riz » écrit après « Couper les
+     carottes » n'attend pas les carottes. Ce qu'on lit, étape par étape :
+       1. `depend_de` (numéros d'étapes, colonne facultative) : le chef a
+          tranché, on le suit — parmi les étapes PRÉCÉDENTES seulement, pour
+          qu'aucune boucle ne soit possible.
+       2. Sinon, l'ALIMENT : chaque mot de l'aliment de l'étape est cherché
+          dans les étapes précédentes ; la plus proche qui le porte est une
+          dépendance. « Cuire les carottes » attend « Couper les carottes ».
+       3. Sinon, le GESTE : un geste de départ (couper, rincer, peser, saisir,
+          bouillir) ouvre une chaîne neuve — rien à attendre. Tout autre geste
+          (mijoter, enfourner, mélanger, dresser…) RÉUNIT : il attend toutes
+          les étapes en cours qui n'ont pas encore de suite.
+     ⚠️ C'est une lecture, pas une vérité : le PERT la montre en toutes lettres
+     pour que le chef la corrige dans la fiche (aliment, ou « dépend de »). */
+  function motsAliment(txt) {
+    return norm(txt).split(' ').filter(function (m) { return m.length > 2; }).map(function (m) { return m.replace(/s$/, ''); });
+  }
+  function dependances(etapes) {
+    var mots = etapes.map(function (e) { return motsAliment(e.aliment); });
+    var frontiere = [], preds = {};
+    etapes.forEach(function (e, i) {
+      var p = [];
+      if (Array.isArray(e.depend_de) && e.depend_de.length) {
+        e.depend_de.forEach(function (n) {
+          for (var j = 0; j < i; j++) if (etapes[j].numero === n) { p.push(etapes[j].id); break; }
+        });
+      } else {
+        mots[i].forEach(function (m) {
+          for (var j = i - 1; j >= 0; j--) if (mots[j].indexOf(m) >= 0) { if (p.indexOf(etapes[j].id) < 0) p.push(etapes[j].id); break; }
+        });
+        if (!p.length && i > 0 && !(mots[i].length && GESTES_DEPART.indexOf(e.geste || '') >= 0)) p = frontiere.slice();
+      }
+      preds[e.id] = p;
+      frontiere = frontiere.filter(function (id) { return p.indexOf(id) < 0; });
+      frontiere.push(e.id);
+    });
+    return preds;
+  }
+
+  /* ── La découpe d'une étape de taille ───────────────────────────────────
+     `recettes_etapes.decoupe` si la colonne existe et est remplie ; sinon on
+     la LIT dans le titre et la consigne (« émincer », « en julienne »).
+     Rien de lisible → null, et l'atelier affiche « Spécifier » en rouge. */
+  function decoupeDe(e) {
+    if (e.decoupe) return e.decoupe;
+    var txt = ' ' + norm((e.titre || '') + ' ' + (e.desc || e.description || '')) + ' ';
+    var mots = txt.split(' ');
+    for (var i = 0; i < DECOUPES.length; i++) {
+      var k = norm(DECOUPES[i]);
+      if (mots.some(function (m) { return m.indexOf(k) === 0; })) return DECOUPES[i];
+    }
+    return null;
+  }
+
+  /* Le graphe du jour : les étapes de production de tous les lots, avec leurs
+     dépendances, puis les ATELIERS — un même geste de taille sur un même
+     aliment dans deux recettes devient un seul nœud, dont dépendent les suites
+     de chacune. Les parts gardent leur recette, leurs grammes, leur découpe. */
+  function grapheDuJour(lots) {
+    var taches = [], parId = {};
+    lots.forEach(function (l) {
+      var s = Math.max(1, l.fiches), deps = dependances(l.etapesProd);
+      l.etapesProd.forEach(function (e, i) {
+        var d = e.duree_min > 0 ? e.duree_min : DUREE_DEFAUT;
+        var t = { id: e.id, etapeId: e.id, rec: l.rec.nom, recId: l.rec.id, fiches: l.fiches, couleur: l.couleur, titre: e.titre || ('Étape ' + (e.numero || i + 1)), desc: e.description || '',
+          geste: e.geste || '', aliment: e.aliment || '', poste: posteDe(e), numero: e.numero || i + 1, decoupe: e.decoupe || null,
+          duree: e.passif ? d : Math.round(d * Math.sqrt(s)), passif: !!e.passif, temperature: e.temperature_c, defaut: !(e.duree_min > 0),
+          preds: deps[e.id] || [] };
+        taches.push(t); parId[t.id] = t;
+      });
+    });
+    // les ateliers : (geste de taille, aliment) partagé par ≥ 2 recettes
+    var groupes = {};
+    taches.forEach(function (t) {
+      if (GESTES_ATELIER.indexOf(t.geste) < 0 || t.passif) return;
+      var k = motsAliment(t.aliment).sort().join(' '); if (!k) return;
+      (groupes[k] = groupes[k] || []).push(t);
+    });
+    Object.keys(groupes).forEach(function (k) {
+      var parts = groupes[k], recs = {}; parts.forEach(function (p) { recs[p.recId] = 1; });
+      if (Object.keys(recs).length < 2) return;
+      var ids = parts.map(function (p) { return p.id; });
+      var a = { id: 'atelier_' + k.replace(/ /g, '_'), atelier: true, parts: parts, rec: parts.map(function (p) { return p.rec; }).filter(function (v, i, arr) { return arr.indexOf(v) === i; }).join(' + '),
+        recId: null, fiches: 0, couleur: '#1a1a2e', titre: 'Atelier ' + parts[0].aliment.split(/[,+;]/)[0].trim().toLowerCase(), desc: parts.length + ' recettes taillent le même aliment : une seule fois, découpe par découpe.',
+        geste: parts[0].geste, aliment: parts[0].aliment, poste: 'legumes', numero: 0, passif: false, temperature: null, defaut: parts.some(function (p) { return p.defaut; }),
+        duree: parts.reduce(function (n, p) { return n + p.duree; }, 0), preds: [] };
+      parts.forEach(function (p) { p.preds.forEach(function (id) { if (ids.indexOf(id) < 0 && a.preds.indexOf(id) < 0) a.preds.push(id); }); });
+      taches = taches.filter(function (t) { return ids.indexOf(t.id) < 0; });
+      taches.forEach(function (t) { t.preds = t.preds.map(function (id) { return ids.indexOf(id) >= 0 ? a.id : id; }).filter(function (v, i, arr) { return arr.indexOf(v) === i; }); });
+      taches.push(a); parId[a.id] = a;
+      ids.forEach(function (id) { delete parId[id]; });
+    });
+    // le plus long chemin restant (durée), pour la priorité
+    var memo = {};
+    function reste(t) {
+      if (memo[t.id] != null) return memo[t.id];
+      memo[t.id] = t.duree; // garde contre une boucle : la valeur provisoire
+      var succ = taches.filter(function (x) { return x.preds.indexOf(t.id) >= 0; });
+      memo[t.id] = t.duree + succ.reduce(function (m, x) { return Math.max(m, reste(x)); }, 0);
+      return memo[t.id];
+    }
+    taches.forEach(function (t) { t.reste = reste(t); });
+    return { taches: taches, parId: parId };
+  }
+
+  /* Une tâche est FAITE quand son étape l'est en base — un atelier, quand
+     toutes ses parts le sont. Prête : toutes ses dépendances sont faites. */
+  function estFait(t) {
+    if (t.atelier) return t.parts.every(function (p) { return !!S.faits[p.id]; });
+    return !!S.faits[t.id];
+  }
+  function etatTache(t) {
+    if (estFait(t)) return 'fait';
+    var plan = S.plan;
+    var ok = (t.preds || []).every(function (id) { var p = plan && plan.parId[id]; return !p || estFait(p); });
+    return ok ? 'pret' : 'attente';
+  }
+  function basculerFait(t) {
+    var fait = !estFait(t);
+    if (t.assemblage) { if (fait) S.faits[t.id] = moi().nom; else delete S.faits[t.id]; return Promise.resolve(); } // pas d'id d'étape en base : local
+    var ids = t.atelier ? t.parts.map(function (p) { return p.id; }) : [t.id];
+    return Promise.all(ids.map(function (id) { return marquerFait(id, fait); }));
+  }
+
+  /* ── L'algorithme de répartition ──────────────────────────────────────────
+     Ordonnancement de liste sur le GRAPHE du jour : une tâche est prête quand
+     toutes ses dépendances sont finies ; entre chaînes indépendantes tout est
+     parallèle — y compris DANS une recette. À chaque instant, la tâche prête
+     qui a le plus long chemin restant passe en premier (le chemin critique),
+     sur le premier cuisinier libre de son poste. Une étape PASSIVE (four,
+     repos) démarre dès que ses dépendances finissent et ne prend personne :
+     le cuisinier enchaîne ailleurs. C'est ce qui évite le temps mort « tout
+     le monde attend le four ».
+     `cuisiniers` : un nombre (N cuisiniers anonymes, tous postes) ou une liste
      [{nom, id, postes:[…]}] — les vrais, avec les postes qu'ils ont pris. Une
      tâche dont le poste n'est tenu par personne est BLOQUÉE : posée à l'heure
-     où elle serait prête, sans cuisinier, et signalée. Sa recette continue
-     d'être planifiée derrière elle, pour que le plan reste lisible. */
+     où elle serait prête, sans cuisinier, et signalée. Ses suites continuent
+     d'être planifiées derrière elle, pour que le plan reste lisible. */
   function dispatcher(lots, cuisiniers, t0) {
     var cuis = typeof cuisiniers === 'number'
       ? Array.apply(null, Array(cuisiniers)).map(function (_, i) { return { nom: 'Cuisinier ' + (i + 1), postes: null }; })
       : cuisiniers.slice();
-    var chaines = lots.map(function (l) {
-      var s = Math.max(1, l.fiches);
-      var et = l.etapesProd.map(function (e, i) {
-        var d = e.duree_min > 0 ? e.duree_min : DUREE_DEFAUT;
-        return { id: e.id, rec: l.rec.nom, recId: l.rec.id, fiches: l.fiches, couleur: l.couleur, titre: e.titre || ('Étape ' + (e.numero || i + 1)), desc: e.description || '',
-          geste: e.geste || '', aliment: e.aliment || '', poste: posteDe(e), numero: e.numero || i + 1,
-          duree: e.passif ? d : Math.round(d * Math.sqrt(s)), passif: !!e.passif, temperature: e.temperature_c, defaut: !(e.duree_min > 0) };
-      });
-      var reste = 0; for (var i = et.length - 1; i >= 0; i--) { reste += et[i].duree; et[i].reste = reste; }
-      return { et: et, i: 0, pret: t0 };
-    });
+    var g = grapheDuJour(lots);
     var libre = cuis.map(function () { return t0; });
     function eligibles(t) {
       var r = [];
       cuis.forEach(function (c, i) { if (!c.postes || c.postes.indexOf(t.poste) >= 0) r.push(i); });
       return r;
     }
-    var taches = [], fin = t0, garde = 0;
-    while (garde++ < 5000) {
-      var cand = chaines.filter(function (ch) { return ch.i < ch.et.length; });
-      if (!cand.length) break;
-      // pour chaque chaîne, l'heure à laquelle sa prochaine tâche peut VRAIMENT
-      // commencer : quand elle est prête ET qu'un cuisinier de son poste est libre
-      cand.forEach(function (ch) {
-        var t = ch.et[ch.i];
-        if (t.passif) { ch.possible = ch.pret; ch.ci = -1; return; }
+    var fins = {}, restants = g.taches.slice(), taches = [], fin = t0, garde = 0, cycle = false;
+    while (restants.length && garde++ < 5000) {
+      var pretes = restants.filter(function (t) { return t.preds.every(function (id) { return fins[id] != null || !g.parId[id]; }); });
+      if (!pretes.length) {
+        // des « dépend de » qui se renvoient l'un à l'autre : on coupe la
+        // boucle à la tâche la moins attendue, et le plan le dit
+        cycle = true;
+        pretes = [restants.slice().sort(function (a, b) { return a.preds.length - b.preds.length; })[0]];
+      }
+      pretes.forEach(function (t) {
+        var pret = t.preds.reduce(function (m, id) { return fins[id] != null ? Math.max(m, fins[id]) : m; }, t0);
+        if (t.passif) { t.possible = pret; t.ci = -1; return; }
         var el = eligibles(t);
-        if (!el.length) { ch.possible = ch.pret; ch.ci = -2; return; }
+        if (!el.length) { t.possible = pret; t.ci = -2; return; }
         var ci = el[0]; el.forEach(function (i) { if (libre[i] < libre[ci]) ci = i; });
-        ch.possible = Math.max(libre[ci], ch.pret); ch.ci = ci;
+        t.possible = Math.max(libre[ci], pret); t.ci = ci;
       });
-      cand.sort(function (a, b) { return a.possible - b.possible || b.et[b.i].reste - a.et[a.i].reste; });
-      var ch = cand[0], t = ch.et[ch.i], debut = ch.possible;
-      if (ch.ci >= 0) libre[ch.ci] = debut + t.duree;
-      taches.push(Object.assign({}, t, { debut: debut, fin: debut + t.duree, cuisinier: ch.ci, bloque: ch.ci === -2,
-        qui: ch.ci >= 0 ? cuis[ch.ci].nom : (ch.ci === -2 ? 'poste non pris' : 'attente') }));
-      ch.pret = debut + t.duree; ch.i++;
-      if (ch.pret > fin) fin = ch.pret;
+      pretes.sort(function (a, b) { return a.possible - b.possible || b.reste - a.reste; });
+      var t = pretes[0], debut = t.possible;
+      if (t.ci >= 0) libre[t.ci] = debut + t.duree;
+      var pose = Object.assign({}, t, { debut: debut, fin: debut + t.duree, cuisinier: t.ci, bloque: t.ci === -2,
+        qui: t.ci >= 0 ? cuis[t.ci].nom : (t.ci === -2 ? 'poste non pris' : 'attente') });
+      taches.push(pose); g.parId[t.id] = pose;
+      fins[t.id] = debut + t.duree;
+      restants = restants.filter(function (x) { return x !== t; });
+      if (fins[t.id] > fin) fin = fins[t.id];
     }
-    return { taches: taches, fin: fin, t0: t0, nbCuis: cuis.length, cuis: cuis };
+    return { taches: taches, fin: fin, t0: t0, nbCuis: cuis.length, cuis: cuis, parId: g.parId, cycle: cycle };
   }
 
   function gantt(plan) {
@@ -939,16 +1197,131 @@
     for (var m = 0; m <= tot; m += pas) axe += '<span style="left:' + (m / tot * 100) + '%">' + hm(plan.t0 + m) + '</span>';
     return '<div class="np-gantt"><div class="np-axe"><div></div><div>' + axe + '</div></div>' + lignes.map(function (l) {
       return '<div class="np-gl"><div class="n">' + l.nom + '</div><div class="np-gt">' + l.t.map(function (t) {
-        return '<div class="np-gb ' + (t.passif ? 'pas' : '') + (t.bloque ? ' blo' : '') + '" style="left:' + ((t.debut - plan.t0) / tot * 100) + '%;width:' + Math.max(0.8, t.duree / tot * 100) + '%;background:' + t.couleur + '" title="' + h(t.rec + ' — ' + t.titre + ' (' + t.duree + ' min)') + '">' + emojiGeste(t.geste) + ' ' + h(t.rec.split(' ')[0] + ' · ' + t.titre) + '</div>';
+        var lib = t.atelier ? '🔪 ' + t.titre : emojiGeste(t.geste) + ' ' + t.rec.split(' ')[0] + ' · ' + t.titre;
+        return '<div class="np-gb ' + (t.passif ? 'pas' : '') + (t.bloque ? ' blo' : '') + '" style="left:' + ((t.debut - plan.t0) / tot * 100) + '%;width:' + Math.max(0.8, t.duree / tot * 100) + '%;background:' + t.couleur + '" title="' + h(t.rec + ' — ' + t.titre + ' (' + t.duree + ' min)') + '">' + h(lib) + '</div>';
       }).join('') + '</div></div>';
     }).join('') + '</div>';
   }
 
+  /* ── Le PERT ─────────────────────────────────────────────────────────────
+     Le même graphe que le Gantt, mais lu par la CAUSALITÉ et non par l'heure :
+     un nœud par tâche, rangé au niveau de sa plus longue chaîne d'amont, une
+     arête par dépendance. Trois états, lus en base : FAIT (vert, estompé),
+     PRÊT (toutes ses dépendances sont faites — encadré noir : c'est là qu'on
+     peut mettre la main), EN ATTENTE. Le chemin critique — les tâches qui
+     n'ont aucune marge, au sens du PERT : plus tôt = plus tard — est tracé en
+     noir. Toucher un nœud le marque fait (et le contraire) ; c'est le geste
+     du chef qui suit la salle, pas celui du cuisinier, qui a son service. */
+  function sectionPert(plan) {
+    var ts = plan.taches, parId = plan.parId;
+    if (!ts.length) return '<div class="np-vide">Aucune étape.</div>';
+    // niveaux : 0 pour les sources, 1 + max(niveau des dépendances) sinon
+    var niv = {};
+    function niveau(t) {
+      if (niv[t.id] != null) return niv[t.id];
+      niv[t.id] = 0; // garde contre une boucle
+      niv[t.id] = t.preds.reduce(function (m, id) { return parId[id] ? Math.max(m, niveau(parId[id]) + 1) : m; }, 0);
+      return niv[t.id];
+    }
+    ts.forEach(niveau);
+    // marges : au plus tôt (ES/EF) depuis les sources, au plus tard (LS/LF)
+    // depuis la fin — sans les cuisiniers, c'est la contrainte du graphe seul
+    var ES = {}, EF = {}, LS = {}, LF = {};
+    var ordre = ts.slice().sort(function (a, b) { return niv[a.id] - niv[b.id]; });
+    ordre.forEach(function (t) { ES[t.id] = t.preds.reduce(function (m, id) { return EF[id] != null ? Math.max(m, EF[id]) : m; }, 0); EF[t.id] = ES[t.id] + t.duree; });
+    var finP = ordre.reduce(function (m, t) { return Math.max(m, EF[t.id]); }, 0);
+    ordre.slice().reverse().forEach(function (t) {
+      var succ = ts.filter(function (x) { return x.preds.indexOf(t.id) >= 0; });
+      LF[t.id] = succ.length ? succ.reduce(function (m, x) { return Math.min(m, LS[x.id]); }, Infinity) : finP;
+      LS[t.id] = LF[t.id] - t.duree;
+    });
+    var crit = {}; ts.forEach(function (t) { crit[t.id] = LS[t.id] - ES[t.id] < 0.5; });
+
+    // disposition : une colonne par niveau, hauteur propre à chaque nœud
+    var COL = 262, W = 212, WA = 236, GAP = 14, X0 = 12, Y0 = 12;
+    function hauteur(t) { return t.atelier ? 96 + 24 * t.parts.length + (S.specif && t.parts.some(function (p) { return p.id === S.specif; }) ? 40 : 0) : 84; }
+    var cols = {}; ts.forEach(function (t) { (cols[niv[t.id]] = cols[niv[t.id]] || []).push(t); });
+    var pos = {}, hMax = 0, nbCols = Object.keys(cols).length;
+    Object.keys(cols).forEach(function (n) {
+      var y = Y0;
+      // les ateliers en tête de leur colonne : c'est ce qui se partage
+      cols[n].sort(function (a, b) { return (b.atelier ? 1 : 0) - (a.atelier ? 1 : 0) || a.debut - b.debut || a.rec.localeCompare(b.rec, 'fr'); }).forEach(function (t) {
+        pos[t.id] = { x: X0 + n * COL, y: y, w: t.atelier ? WA : W, h: hauteur(t) };
+        y += pos[t.id].h + GAP;
+      });
+      if (y > hMax) hMax = y;
+    });
+    var largeur = X0 + nbCols * COL + 20;
+
+    var aretes = ts.map(function (t) {
+      return t.preds.map(function (id) {
+        var a = pos[id], b = pos[t.id]; if (!a || !b) return '';
+        var x1 = a.x + a.w, y1 = a.y + a.h / 2, x2 = b.x, y2 = b.y + b.h / 2, dx = Math.max(30, (x2 - x1) / 2);
+        var cls = crit[id] && crit[t.id] ? 'crit' : (estFait(parId[id]) ? 'ok' : '');
+        return '<path class="' + cls + '" d="M' + x1 + ' ' + y1 + ' C' + (x1 + dx) + ' ' + y1 + ' ' + (x2 - dx) + ' ' + y2 + ' ' + x2 + ' ' + y2 + '"/>'
+          + '<circle cx="' + x2 + '" cy="' + y2 + '" r="3" fill="' + (cls === 'crit' ? '#1a1a2e' : cls === 'ok' ? '#2a9e4f' : '#aeaec0') + '"/>';
+      }).join('');
+    }).join('');
+
+    var noeuds = ts.map(function (t) {
+      var p = pos[t.id], et = etatTache(t), ETAT = { fait: 'Fait ✓', pret: 'Prêt', attente: 'En attente' };
+      var html = '<div class="np-node ' + et + (t.bloque ? ' bloque' : '') + (t.atelier ? ' atelier' : '') + '" data-node="' + h(t.id) + '" style="left:' + p.x + 'px;top:' + p.y + 'px" title="' + h(t.rec + ' — ' + t.titre) + '">'
+        + '<div class="k"><i style="background:' + t.couleur + '"></i>' + h(t.atelier ? t.parts.length + ' recettes · ' + infoPoste(t.poste).nom : t.rec) + (crit[t.id] ? ' <span class="crit" title="chemin critique : aucune marge">⚡</span>' : '') + '</div>'
+        + '<div class="ti">' + emojiGeste(t.geste) + ' ' + h(t.titre) + '</div>'
+        + '<div class="me"><span class="et">' + (t.bloque && et !== 'fait' ? 'Poste non pris' : ETAT[et]) + '</span><span>' + hm(t.debut) + ' · ' + t.duree + ' min</span>' + (t.passif ? '<span>⏳</span>' : '') + '</div>';
+      if (t.atelier) html += t.parts.map(function (part) {
+        var dc = decoupeDe(part), q = quantitesEtape(part), g = q.map(function (x) { return x.lib; }).join(' + ');
+        var ligne = '<div class="np-part"><i style="background:' + part.couleur + '"></i><b title="' + h(part.rec + ' — ' + part.titre) + '">' + h(part.rec) + '</b>'
+          + (dc ? '<span class="np-spec ok" data-spec="' + h(part.id) + '" title="modifier la découpe">' + h(dc) + '</span>' : '<button class="np-spec" data-spec="' + h(part.id) + '">Spécifier</button>')
+          + '<span class="g">' + h(g || '—') + '</span></div>';
+        if (S.specif === part.id) ligne += '<div class="np-specform"><input class="np-in" list="npDecoupes" id="npSpecInput" placeholder="julienne, dés, lamelles…" value="' + h(part.decoupe || dc || '') + '">'
+          + '<button class="np-btn" data-spec-save="' + h(part.id) + '" style="padding:7px 10px">OK</button><button class="np-btn sec" data-spec-annuler="1" style="padding:7px 10px">✕</button></div>';
+        return ligne;
+      }).join('');
+      return html + '</div>';
+    }).join('');
+
+    var faits = ts.filter(estFait).length, prets = ts.filter(function (t) { return etatTache(t) === 'pret'; }).length;
+    return '<div class="np-row" style="justify-content:space-between;margin-bottom:8px"><div class="np-h" style="margin:0">Dépendances — ce qui doit être fini pour passer à la suite</div>'
+      + '<div class="np-s">' + faits + ' faite(s) · <b>' + prets + ' prête(s)</b> · chemin critique ' + hm(plan.t0 + finP) + ' au plus tôt</div></div>'
+      + '<div class="np-leg"><span><i style="background:#2a9e4f"></i>fait</span><span><i style="background:var(--black)"></i>prêt : ses dépendances sont faites</span><span><i style="background:#aeaec0"></i>en attente</span><span>⚡ chemin critique (aucune marge)</span><span><i style="background:#1a1a2e"></i>atelier partagé</span></div>'
+      + '<datalist id="npDecoupes">' + DECOUPES.map(function (d) { return '<option value="' + h(d) + '">'; }).join('') + '</datalist>'
+      + '<div class="np-pert"><div class="np-pert-in" style="width:' + largeur + 'px;height:' + hMax + 'px"><svg viewBox="0 0 ' + largeur + ' ' + hMax + '" width="' + largeur + '" height="' + hMax + '">' + aretes + '</svg>' + noeuds + '</div></div>'
+      + '<div class="np-note">Les dépendances sont <b>lues</b> dans les fiches : même aliment → l’étape attend la précédente qui le porte ; sans aliment reconnu, un geste de départ (couper, rincer, peser, saisir, bouillir) part seul, tout autre geste attend ce qui est en cours. Pour forcer : « dépend de » dans l’onglet Chef. Toucher un nœud le marque fait.'
+      + (plan.cycle ? ' <b style="color:#c0392b">Une boucle de « dépend de » a été coupée.</b>' : '') + '</div>';
+  }
+
+  /* Spécifier la découpe d'une part d'atelier : écrit `recettes_etapes.decoupe`.
+     Si la colonne n'existe pas encore (natty_production_ateliers.sql), PostgREST
+     répond PGRST204 — et l'écran nomme le SQL au lieu d'un message cryptique. */
+  function enregistrerDecoupe(etapeId, valeur) {
+    var v = String(valeur || '').trim() || null;
+    return sbq('recettes_etapes?id=eq.' + etapeId, { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ decoupe: v }) })
+      .then(function () {
+        Object.keys(S.etapes).forEach(function (rid) { S.etapes[rid].forEach(function (e) { if (e.id === etapeId) e.decoupe = v; }); });
+        S.specif = null; toast(v ? 'Découpe : ' + v : 'Découpe effacée', 'ok'); rendre();
+      })
+      .catch(function (e) {
+        toast(/decoupe|PGRST204|column/.test(e.message) ? 'Colonne « decoupe » absente : exécuter natty_production_ateliers.sql' : 'Non enregistré : ' + e.message, 'err');
+      });
+  }
+
   /* ── Événements ─────────────────────────────────────────────────────────── */
   function clic(ev) {
-    var b = ev.target.closest('[data-vue],[data-act],[data-filtre],[data-stp],[data-jour],[data-bon],[data-tri],[data-poste]');
+    var b = ev.target.closest('[data-vue],[data-act],[data-filtre],[data-stp],[data-jour],[data-bon],[data-section],[data-poste],[data-spec],[data-spec-save],[data-spec-annuler],[data-node]');
     if (!b) return;
-    if (b.dataset.tri) { S.tri = b.dataset.tri; rendre(); return; }
+    // une tuile héros : ouvre sa section, ou la referme si c'était elle
+    if (b.dataset.section) { S.section = S.section === b.dataset.section ? null : b.dataset.section; S.specif = null; rendre(); return; }
+    // la découpe d'une part d'atelier — AVANT le nœud, qui l'englobe
+    if (b.dataset.spec) { S.specif = S.specif === b.dataset.spec ? null : b.dataset.spec; rendre(); return; }
+    if (b.dataset.specSave) { var inp = document.getElementById('npSpecInput'); enregistrerDecoupe(b.dataset.specSave, inp ? inp.value : ''); return; }
+    if (b.dataset.specAnnuler) { S.specif = null; rendre(); return; }
+    // un nœud du PERT : fait ⇄ pas fait, écrit en base, l'écran d'à côté le voit
+    if (b.dataset.node) {
+      if (ev.target.closest('.np-specform')) return;
+      var t = S.plan && S.plan.parId[b.dataset.node]; if (!t) return;
+      basculerFait(t).then(function () { rendre(); }); return;
+    }
     if (b.dataset.poste) { prendrePoste(b.dataset.poste, b.dataset.prendre === '1'); return; }
     if (b.dataset.act === 'service') { ouvrirService(); return; }
     if (b.dataset.vue) { S.vue = b.dataset.vue; if (S.vue === 'production' && !S.jour) S.jour = ymd(new Date()); rendre(); return; }
@@ -1013,7 +1386,7 @@
     C.taches = mesTaches(S.plan, S.lots);
     if (!C.taches.length) { toast('Aucune étape sur vos postes aujourd’hui', 'ok'); return; }
     // on ouvre sur la première étape pas encore faite
-    C.i = Math.max(0, C.taches.findIndex(function (t) { return !S.faits[t.id]; }));
+    C.i = Math.max(0, C.taches.findIndex(function (t) { return !estFait(t); }));
     if (!C.el) {
       C.el = document.createElement('div'); C.el.id = 'npCine';
       C.el.innerHTML = '<div class="top"><button data-c="fermer">✕</button><div class="prog"><i></i></div><button data-c="som" class="cnt" style="background:none"></button></div>'
@@ -1045,14 +1418,14 @@
     majBarre();
   }
   function majBarre() {
-    var t = C.taches[C.i], nb = C.taches.filter(function (x) { return S.faits[x.id]; }).length;
+    var t = C.taches[C.i], nb = C.taches.filter(estFait).length;
     C.el.querySelector('.prog i').style.width = ((C.i + 1) / C.taches.length * 100) + '%';
     C.el.querySelector('[data-c="som"]').textContent = (C.i + 1) + ' / ' + C.taches.length + ' · ' + nb + ' ✓';
     C.el.querySelector('[data-c="prec"]').disabled = C.i === 0;
     C.el.querySelector('[data-c="suiv"]').disabled = C.i === C.taches.length - 1;
     var ok = C.el.querySelector('[data-c="fait"]');
-    ok.classList.toggle('on', !!S.faits[t.id]);
-    ok.textContent = S.faits[t.id] ? 'Fait ✓ (annuler)' : (t.assemblage ? 'Assemblage terminé ✓' : 'Fait ✓');
+    ok.classList.toggle('on', estFait(t));
+    ok.textContent = estFait(t) ? 'Fait ✓ (annuler)' : (t.assemblage ? 'Assemblage terminé ✓' : 'Fait ✓');
   }
   /* Les grammes de la journée pour l'aliment de l'étape : chaque mot de
      l'aliment cherché dans les ingrédients de la recette, mot à mot, ×fiches. */
@@ -1069,7 +1442,7 @@
     return out;
   }
   function htmlEcran(t) {
-    var P = infoPoste(t.poste), fait = S.faits[t.id];
+    var P = infoPoste(t.poste), fait = t.atelier ? (estFait(t) ? true : null) : S.faits[t.id];
     var html = (fait ? '<div class="fait">FAIT' + (typeof fait === 'string' ? ' · ' + h(fait) : '') + '</div>' : '')
       + '<div class="kick">' + (t.assemblage ? 'En fin de production' : hm(t.debut) + ' → ' + hm(t.fin)) + ' · ' + P.em + ' ' + h(P.nom) + '</div>'
       + '<div class="rec"><i style="background:' + t.couleur + '"></i>' + h(t.rec) + (t.fiches ? ' · ×' + t.fiches.toFixed(1) + ' de la fiche' : '') + '</div>'
@@ -1087,6 +1460,20 @@
       });
       return html;
     }
+    if (t.atelier) {
+      // un atelier : les parts, chacune avec sa recette, ses grammes du jour et
+      // sa découpe — ou « à spécifier », qui se règle depuis le PERT, pas ici
+      html += '<div class="ali">' + h(t.aliment || '') + ' — ' + t.parts.length + ' recettes, une seule fois</div><div class="desc">' + h(t.desc) + '</div>';
+      html += t.parts.map(function (part) {
+        var dc = decoupeDe(part), q = quantitesEtape(part);
+        return '<div class="port"><b><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + part.couleur + ';margin-right:6px"></i>' + h(part.rec) + '</b> <span style="color:#ffffff8c;font-size:12px">' + h(part.titre) + '</span>'
+          + '<div class="g">' + (dc ? '<span style="background:#34c75933"><b>' + h(dc) + '</b></span>' : '<span style="background:#c0392b"><b>découpe à spécifier</b></span>')
+          + q.map(function (x) { return '<span><b>' + h(x.lib) + '</b> ' + h(x.nom) + '</span>'; }).join('') + '</div>'
+          + (part.desc ? '<div style="font-size:13px;color:#ffffffb3;margin-top:6px">' + h(part.desc) + '</div>' : '') + '</div>';
+      }).join('');
+      html += '<div class="meta"><span>⏱ ' + t.duree + ' min au total' + (t.defaut ? ' (durées par défaut)' : '') + '</span><span>' + P.em + ' ' + h(P.nom) + '</span></div>';
+      return html;
+    }
     var q = quantitesEtape(t);
     html += '<div class="ali">' + h(t.aliment || '') + '</div>';
     if (q.length) html += '<div class="qte">' + q.map(function (x) { return '<div><b>' + h(x.lib) + '</b>' + h(x.nom) + '</div>'; }).join('') + '</div>';
@@ -1098,7 +1485,7 @@
     var st = C.el.querySelector('.stage'), old = st.querySelector('.som'); if (old) { old.remove(); return; }
     var d = document.createElement('div'); d.className = 'som';
     d.innerHTML = '<div class="kick" style="margin-bottom:10px">Toutes mes étapes</div>' + C.taches.map(function (t, i) {
-      return '<div class="l ' + (i === C.i ? 'cur' : '') + (S.faits[t.id] ? ' ok' : '') + '" data-som="' + i + '"><span style="color:#ffffff8c;min-width:44px">' + (t.assemblage ? 'fin' : hm(t.debut)) + '</span><i style="width:8px;height:8px;border-radius:50%;background:' + t.couleur + '"></i><span style="flex:1">' + emojiGeste(t.geste) + ' ' + h(t.titre) + ' <span style="color:#ffffff8c">· ' + h(t.rec) + '</span></span>' + (S.faits[t.id] ? '✓' : '') + '</div>';
+      return '<div class="l ' + (i === C.i ? 'cur' : '') + (estFait(t) ? ' ok' : '') + '" data-som="' + i + '"><span style="color:#ffffff8c;min-width:44px">' + (t.assemblage ? 'fin' : hm(t.debut)) + '</span><i style="width:8px;height:8px;border-radius:50%;background:' + t.couleur + '"></i><span style="flex:1">' + emojiGeste(t.geste) + ' ' + h(t.titre) + ' <span style="color:#ffffff8c">· ' + h(t.rec) + '</span></span>' + (estFait(t) ? '✓' : '') + '</div>';
     }).join('');
     st.appendChild(d);
   }
@@ -1111,9 +1498,8 @@
     else if (c === 'suiv') aller(C.i + 1);
     else if (c === 'som') sommaire();
     else if (c === 'fait') {
-      var t = C.taches[C.i], fait = !S.faits[t.id];
-      if (t.assemblage) { if (fait) S.faits[t.id] = moi().nom; else delete S.faits[t.id]; } // pas d'id d'étape en base : local
-      else marquerFait(t.id, fait);
+      var t = C.taches[C.i], fait = !estFait(t);
+      basculerFait(t); // un atelier coche toutes ses parts ; l'assemblage reste local
       var pl = C.el.querySelector('.plan:not(.out)'); if (pl) pl.innerHTML = htmlEcran(t);
       majBarre();
       if (fait && C.i < C.taches.length - 1) setTimeout(function () { aller(C.i + 1); }, 420);
@@ -1127,6 +1513,7 @@
     },
     rafraichir: function () { if (S.charge) chargerTout().then(rendre); },
     // exposés pour le banc
-    _dispatcher: dispatcher, _portionPour: portionPour, _etat: S
+    _dispatcher: dispatcher, _portionPour: portionPour, _etat: S,
+    _dependances: dependances, _decoupeDe: decoupeDe, _grapheDuJour: grapheDuJour
   };
 })();

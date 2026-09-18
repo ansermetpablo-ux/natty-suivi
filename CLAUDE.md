@@ -3725,21 +3725,93 @@ Sans tdee : 650 kcal, et c'est dit. Le raisonnement s'affiche en toutes lettres 
   `quantite_g ÷ nb_portions × facteur`. Le facteur est **recalculé** à l'affichage depuis
   `kcal_portion` (la colonne `facteur` n'est qu'un instantané).
 
-**L'algorithme de répartition (`dispatcher`)** — ordonnancement de liste : les étapes d'une
-recette sont **séquentielles dans l'ordre de la fiche**, tout est parallèle entre recettes.
-À chaque instant, la tâche prête dont la recette a le plus long chemin restant passe en
-premier, sur le premier cuisinier libre. Une étape **passive** (`recettes_etapes.passif` :
-four, repos, marinade) démarre dès que la précédente finit et **ne prend personne** — le
-cuisinier enchaîne sur une autre recette. Durée d'une étape active = `duree_min ×
-√(nombre de fiches à produire)` (une estimation, annoncée) ; sans `duree_min`, 10 min par
-défaut, et le plan le dit.
-> ⚠️ **L'ordre des étapes de la fiche EST l'ordre de dépendance.** Un « Cuire le riz » écrit
-> après « Mijoter 30 min » attendra la fin du mijotage ; l'écrire avant le fait tourner en
-> parallèle. C'est au chef de l'ordonner.
+**L'algorithme de répartition (`dispatcher`)** — ordonnancement de liste sur le **graphe**
+du jour (`grapheDuJour`, ci-dessous) : une tâche est prête quand toutes ses dépendances sont
+finies ; entre chaînes indépendantes tout est parallèle — **y compris dans une recette**.
+À chaque instant, la tâche prête qui a le plus long chemin restant passe en premier, sur le
+premier cuisinier libre de son poste. Une étape **passive** (`recettes_etapes.passif` :
+four, repos, marinade) démarre dès que ses dépendances finissent et **ne prend personne** —
+le cuisinier enchaîne ailleurs. Durée d'une étape active = `duree_min × √(nombre de fiches à
+produire)` (une estimation, annoncée) ; sans `duree_min`, 10 min par défaut, et le plan le dit.
+> ~~⚠️ L'ordre des étapes de la fiche EST l'ordre de dépendance.~~ **Plus depuis le
+> 2026-09-18** : la fiche est écrite dans l'ordre où le chef y pense, et « Cuire le riz »
+> écrit après « Couper les carottes » n'attend plus les carottes. Voir ci-dessous.
+
+#### La vue Production, refaite le 2026-09-18 : tuiles héros, dépendances, ateliers, PERT
+Demande de Pablo : plus rien « en vrac » ; la causalité entre étapes (« on ne cuit pas les
+légumes pendant qu'on les coupe ») ; un **atelier** quand deux recettes taillent le même
+aliment, avec les quantités par découpe et « Spécifier » en rouge quand la découpe n'est pas
+dite ; et un diagramme de PERT à côté du planning, dans le neumorphisme de l'admin.
+
+**Cinq tuiles héros** (`tuilesHero`, `SECTIONS`) — Postes · Planning · Dépendances · Par
+geste · Assemblage. Chacune porte son chiffre (postes pris, fin estimée, étapes faites /
+prêtes, aliments, portions) et son alerte rouge s'il y a lieu (« 6 sans poste », « 1 à
+spécifier »). **Une seule section ouverte à la fois** (`S.section`), la même tuile la
+referme. Le Gantt (`gantt`) et la liste « qui fait quoi, quand » vivent sous Planning — le
+« mapping des tâches » est conservé tel quel.
+
+**Les dépendances d'une recette (`dependances`)** — lues étape par étape, dans cet ordre :
+1. `recettes_etapes.depend_de` (numéros, colonne facultative de
+   `natty_production_ateliers.sql`) : le chef a tranché. Seules des étapes **précédentes**
+   sont retenues — une boucle est impossible par construction.
+2. Sinon l'**aliment**, mot à mot (`motsAliment` : normalisé, singularisé) : chaque mot est
+   cherché dans les étapes précédentes, **la plus proche** qui le porte est une dépendance.
+   « Cuire les légumes » (carottes, oignons) attend « Couper les carottes » ET « Émincer les
+   oignons ».
+3. Sinon le **geste** : un geste de départ (`GESTES_DEPART` : couper, rincer, peser, saisir,
+   bouillir) sur un aliment jamais vu ouvre une chaîne neuve — rien à attendre. Tout autre
+   geste (mijoter, enfourner, mélanger, dresser…) **réunit** : il attend toutes les étapes en
+   cours qui n'ont pas encore de suite (la « frontière »).
+> ⚠️ **C'est une lecture, pas une vérité**, et le PERT l'affiche pour qu'elle soit corrigée
+> dans la fiche : l'aliment d'abord (c'est lui qui relie), « dépend de » si ça ne suffit pas.
+> Le choix 3 est délibérément **prudent dans un sens** : « Mijoter » sans aliment reconnu
+> attend tout — un plan qui fait mijoter avant d'avoir saisi la viande est une erreur de
+> cuisine, un plan qui attend le riz pour rien n'est qu'une minute de perdue.
+> ⚠️ Un `depend_de` qui, via un atelier, boucle sur lui-même (deux recettes qui se font
+> attendre l'une l'autre) est **coupé** par `dispatcher` à la tâche la moins attendue, et
+> le plan le dit en rouge (`plan.cycle`).
+
+**Les ateliers (`grapheDuJour`)** — un geste de `GESTES_ATELIER` (aujourd'hui : `couper`)
+sur le même aliment (clé = mots triés) dans **≥ 2 recettes** devient UN nœud `atelier`, de
+durée Σ des parts, au poste Taille & légumes, dont les dépendances sont l'union de celles
+des parts ; les suites de chaque recette pointent sur lui. Les parts gardent leur recette,
+leurs grammes du jour (`quantitesEtape`) et leur **découpe** (`decoupeDe`) :
+`recettes_etapes.decoupe` si remplie, sinon lue dans titre + consigne (`DECOUPES` :
+julienne, brunoise, dés, lamelles, émincé…, par préfixe de mot), sinon **null → bouton rouge
+« Spécifier »**, qui écrit la colonne (`enregistrerDecoupe`, PATCH). Sans la colonne,
+PostgREST répond `PGRST204` et l'écran nomme le SQL.
+> ⚠️ **Un atelier est FAIT quand toutes ses parts le sont** (`estFait`) ; le cocher coche
+> chaque part en base (`basculerFait`), donc l'écran du cuisinier d'à côté le voit. Le
+> service écran par écran affiche l'atelier en un seul écran, part par part.
+> ⚠️ **La clé d'atelier est l'aliment ENTIER**, pas chacun de ses mots : « carottes, oignons »
+> et « carottes » ne fusionnent pas. Fusionner par mot mettrait une étape dans deux ateliers.
+> La vue « Par geste + aliment », elle, éclate bien par mot — c'est son rôle.
+
+**Le PERT (`sectionPert`)** — le même graphe que le Gantt, lu par la causalité : un nœud par
+tâche, en colonne selon sa plus longue chaîne d'amont (`niveau`), une arête SVG par
+dépendance, les ateliers en tête de colonne. Trois états lus en base : **Fait** (vert,
+estompé), **Prêt** (toutes ses dépendances faites — encadré noir : c'est là qu'on peut
+mettre la main), **En attente**. Marges au sens du PERT (ES/EF/LS/LF, sans les cuisiniers :
+la contrainte du graphe seul) ; **⚡ chemin critique** = marge nulle, arêtes noires. Toucher
+un nœud le marque fait — c'est le geste du chef qui suit la salle. Défilement horizontal
+interne, aucun débordement de page à 375 px (mesuré).
+
+Vérifié au banc `_test-production-pert.html` (hors dépôt, doublure de `sb()` en mémoire,
+deux recettes qui coupent des carottes) : 14 contrôles sur les vraies fonctions du module
+(`_dependances`, `_decoupeDe`), puis en navigateur : 9 nœuds pour 10 étapes (l'atelier),
+9 arêtes, 5 prêtes au départ, atelier fait → « Cuire les légumes » attend encore les
+oignons, oignons faits → prêt ; « Monter la sauce » attend le poulet du wrap, indépendant
+du curry ; Spécifier → PATCH → badge rouge disparu ; Gantt : les trois chaînes du curry
+en parallèle sur deux cuisiniers, fin 08:51 = le chemin critique (16 + 10 + 25).
+🔄 **Non vérifié avec une session d'équipe réelle**, ni sur les 38 vraies fiches : leurs
+aliments sont du texte libre, l'inférence y trouvera des cas à corriger par « dépend de ».
 
 **Onglet Chef** — chaque étape porte désormais titre, durée, température, **phase**
 (Production en masse / Assemblage par portion), **attente** et poste. Le PATCH passe par
-`sb()` (jeton d'équipe) et non plus par la clé anon, refusée par la RLS.
+`sb()` (jeton d'équipe) et non plus par la clé anon, refusée par la RLS. Depuis le
+2026-09-18, **découpe** et **« dépend de »** (numéros) s'y saisissent aussi — mais les deux
+champs n'apparaissent que si la ligne chargée porte la colonne (`'decoupe' in e`) : envoyer
+une colonne inconnue ferait refuser TOUTE la sauvegarde de l'étape par PostgREST.
 
 **D'où viennent les bons** — `api/webhook.js` crée un `bons_commande` au paiement :
 achat à l'unité (`checkout.session.completed`, `type=unite`, plats choisis dans `plats`),
@@ -4269,6 +4341,13 @@ bons. Le webhook écrit avec la clé service.
 `recettes_etapes` a reçu **`phase`** (`production` / `assemblage`, défaut `production`),
 **`passif`** (bool) et **`poste`** (text). `bons_commande` est dans `TABLES_USER`
 d'`api/supprimer-compte.js` (une adresse de livraison est personnelle).
+
+#### `recettes_etapes.depend_de` et `.decoupe` — 🔄 **à créer** (`natty_production_ateliers.sql`, 2026-09-18)
+Deux colonnes **facultatives** : `depend_de int[]` (numéros des étapes de la même recette que
+celle-ci attend ; null = inféré de l'aliment et du geste) et `decoupe text` (julienne, dés… ;
+null = lu dans titre/consigne, sinon « Spécifier » en rouge dans l'atelier). L'onglet
+Production marche sans elles ; elles servent à corriger sa lecture. Écrites depuis le PERT
+(bouton Spécifier) et l'onglet Chef — qui n'envoie ces champs que s'il les a reçus (§3).
 
 #### `production_postes` et `production_etapes` — ✅ **existent** (fin de `natty_production.sql`, appliqué le 2026-09-16)
 Qui tient quel poste en cuisine ce jour-là, et quelles étapes sont faites
@@ -5297,6 +5376,15 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   approximations à valider en cuisine, avec le chef.
 - 🔄 `commandes`, `plans_repas` et l'onglet « Repas à programmer » vivent à côté sans être
   reliés aux bons — à fusionner ou retirer, décision de Pablo.
+- ✅ **La vue Production refaite** (2026-09-18) — cinq tuiles héros, une section à la fois ;
+  les étapes d'une recette forment un **graphe** (aliment → geste → `depend_de`) et non plus
+  une file ; **ateliers** partagés par aliment avec grammes par recette et découpe, bouton
+  rouge « Spécifier » ; **diagramme de PERT** (Fait / Prêt / En attente, chemin critique),
+  toucher un nœud le marque fait. Détail en §3.
+- 🔄 **`natty_production_ateliers.sql` à exécuter** (§4) — sans lui, « Spécifier » et « dépend
+  de » répondent `PGRST204` ; l'écran le dit. Tout le reste marche sans.
+- 🔄 **À relire sur les 38 vraies fiches** : l'inférence lit des aliments en texte libre. Le
+  PERT montre ce qu'elle a compris ; ce qui est faux se corrige dans la fiche.
 - ✅ **Le service en cuisine, poste par poste** (2026-09-16, soir) — `production_postes` et
   `production_etapes` (§4), « Je prends » sur chacun des 5 postes, les tâches d'un poste que
   personne n'a pris barrées en rouge et **comptées** au-dessus du Gantt, et « Mon service,
