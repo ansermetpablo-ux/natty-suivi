@@ -3814,12 +3814,32 @@ dépendances faites — encadré noir), **En attente**. Marges au sens du PERT (
 sans les cuisiniers) ; **⚡ chemin critique** = marge nulle, arêtes noires. **Toucher un bloc
 ouvre sa fiche** (`ouvrirDetail`) : les mêmes écrans que « Mon service », dans l'ordre des
 vagues, ouverts sur le bloc touché — « Fait ✓ » y est ; le PERT n'a plus de bascule directe.
-**Sur le côté, les filtres** (`panneauFiltres`, `FILTRES`) : Aliment / Poste / Recette,
-chacun se déplie (`S.filtresOuverts`) et se coche ; `S.filtres[type]` porte les clés
-**exclues** (vide = tout), « tout · rien » par groupe, « tout afficher » en tête. Un atelier
-porte les clés de toutes ses parts : filtrer « carottes » le garde entier ; un bloc caché
-emporte ses arêtes, mais **les niveaux restent ceux du graphe entier**. Sous 700 px le
-panneau passe au-dessus.
+**Sur le côté, le tri puis les filtres** (`panneauFiltres`, `TRIS`, `FILTRES`). Pablo :
+« décider de juste afficher n'est pas pareil que réorganiser en fonction du poste » — donc
+**Poste n'est pas un filtre mais un TRI** (`S.triPert`), à côté de Vague et Recette :
+- **Vague** (défaut) : une rangée par niveau ; la vague en cours (première avec un bloc à
+  faire) est marquée « ◀ on en est là », une vague finie « ✓ terminée ».
+- **Poste** : une section par poste dans l'ordre de `POSTES`, ses blocs dans l'ordre des
+  vagues, « x/n faites · qui le tient » ; chaque bloc porte sa vague.
+- **Recette** : les ateliers partagés d'abord, puis une section par fiche **dans l'ordre de
+  la fiche** (n/N), « x/N faites · en cours : … » ; c'est la vue qui montre le **début** de
+  chaque recette.
+Les filtres qui restent — Aliment, Recette — se déplient (`S.filtresOuverts`) et se
+cochent ; `S.filtres[type]` porte les clés **exclues** (vide = tout), « tout · rien » par
+groupe, « tout afficher » en tête. Un atelier porte les clés de toutes ses parts : filtrer
+« carottes » le garde entier ; un bloc caché emporte ses arêtes, mais **les niveaux restent
+ceux du graphe entier**. Sous 700 px le panneau passe au-dessus.
+> ⚠️ Quand le tri met une suite PLUS HAUT que ce qu'elle attend (par poste, par recette),
+> `tracerAretesPert` fait sortir l'arête par la droite et remonter en arc — on voit qu'elle
+> remonte, au lieu d'une courbe en S retournée qui ne se lit pas.
+
+**Où on en est** (`avancementRecette`, `resumeAvancement`) — Pablo : « distinguer le début
+des étapes et recettes, à quelle étape on en est ». Au-dessus du graphe, une carte par
+recette : x/N faites, barre, et l'**étape en cours** = la première non faite qui est prête
+(sinon la première non faite), « ▶ en cours » ou « ▶ à commencer ». Sur chaque bloc : son
+rang **n/N** dans sa recette, **« ▶ départ »** s'il n'attend rien, et un halo ambre
+« ◀ on en est là » sur l'étape en cours de sa recette — quel que soit le tri. Un atelier
+compte comme une étape de chacune de ses recettes (son numéro y est celui de sa part).
 
 **La fiche d'une étape (`htmlEcran`, `REPERES`)** — Pablo : « le plus de détail possible :
 ce qu'il faut faire, combien de grammes, de centimètres, pendant combien de temps, la
@@ -5433,7 +5453,9 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   par étape**) ; **diagramme de PERT** déroulé de haut en bas dans la page, par vagues
   (Fait / Prêt / En attente, chemin critique), **filtres** Aliment / Poste / Recette sur le
   côté ; toucher un bloc ouvre **sa fiche détaillée** (consigne, grammes, durée,
-  température, découpe, repères du geste, avant/après). Détail en §3.
+  température, découpe, repères du geste, avant/après). **Poste est un tri, pas un filtre**
+  (Vague · Poste · Recette) ; **où on en est** : avancement par recette, étape en cours,
+  n/N et « ▶ départ » sur les blocs. Détail en §3.
 - 🔄 **`natty_production_ateliers.sql` à exécuter** (§4) — sans lui, « Spécifier » et « dépend
   de » répondent `PGRST204` ; l'écran le dit. Tout le reste marche sans.
 - 🔄 **À relire sur les 38 vraies fiches** : l'inférence lit des aliments en texte libre. Le
