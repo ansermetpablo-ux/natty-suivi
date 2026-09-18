@@ -3792,6 +3792,16 @@ PostgREST répond `PGRST204` et l'écran nomme le SQL.
 fusionné, `dispatcher` les pose ensemble sur le même cuisinier (**`max`** aux feux et au
 four, **`somme`** ailleurs, `POSTES[].cumul`), et la carte les met côte à côte.
 
+> 🔴 ⚠️ **AUCUN NŒUD COMPOSÉ, NULLE PART** (2026-09-18, dernier retour de Pablo : « 1 bloc =
+> 1 étape — je ne vois que deux étapes dans le Natty wrap alors qu'il faut préparer et cuire
+> le poulet »). L'atelier n'est plus un pill à cheval sur les colonnes qui remplaçait les
+> étapes des recettes : c'est un **marquage** (`marquer`, `ensemble: 'atelier'`, même clé
+> `cumul`), exactement comme le cumul. Chaque étape garde son pill dans sa colonne, sa coche,
+> sa scène, sa quantité. Ce qui se fait ensemble se voit par un **pont** (`np-pont`) entre les
+> pills que le même cuisinier fait en une session — en même temps (feux) ou à la suite
+> (taille) —, avec un **pied** vers celles qui viennent après, et par « Ensemble avec » dans la
+> scène. `fusionner` et `parts` n'existent plus.
+
 **La carte de production (`sectionPert`)** — le croquis de Pablo (2026-09-18, soir) : « en
 un coup d'œil, ce que font tous les membres et comment ils interagissent ; les recettes ont
 une colonne bien précise et identifiable avec un début et une fin, rangées pour voir les
@@ -3799,10 +3809,10 @@ dépendances le plus clairement possible ». Donc **une colonne par recette** : 
 départ noir en haut, une vertèbre, un pill d'arrivée en bas qui porte l'état (rouge « à
 commencer », vert « x/N · en cours », vert plein « ✓ terminée »). **L'heure descend** : chaque
 étape est un pill posé sur sa colonne à son heure prévue (`dispatcher`), avec le geste, le
-titre et le cuisinier (« C1 »). Une étape partagée (atelier) **enjambe** les colonnes des
-recettes qu'elle sert — pill noir — et sous chacune on lit ce que cette recette en attend :
-« 404 g · lamelles », « 167 g · julienne » (`np-lab`, avec le bouton **Spécifier** en rouge
-quand la découpe manque). C'est là qu'on voit les recettes interagir.
+titre et le cuisinier (« C1 »). Une étape d'atelier (bord noir épais) porte sous elle ce que
+sa recette en attend : « 404 g · lamelles · avec Natty wrap » (`np-lab`, avec le bouton
+**Spécifier** en rouge quand la découpe manque), et un **pont** la relie à sa jumelle de
+l'autre colonne. C'est là qu'on voit les recettes interagir.
 - **Échelle** (`ECH`) réglée sur la colonne la plus dense : deux étapes qui se suivent à
   g minutes ne se chevauchent pas (H + 6 px), plafond 10 px/min ; deux étapes qui partent en
   même temps (cumul) se partagent la largeur, sinon la seconde descend sous la première.
