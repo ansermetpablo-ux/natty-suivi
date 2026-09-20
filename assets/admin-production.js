@@ -453,22 +453,44 @@
   function fiche(r) {
     var ings = S.ings[r.id] || [];
     var gTotal = ings.reduce(function (t, i) { return t + (parseFloat(i.quantite_g) || 0); }, 0);
-    var kcalTot = 0, connus = 0, inconnus = [];
+    var kcalTot = 0, connus = 0, inconnus = [], mTot = { p: 0, g: 0, l: 0 }, connusMac = 0;
     ings.forEach(function (i) {
       var n = nutri100(i.ingredient_nom);
       var g = parseFloat(i.quantite_g) || 0;
       if (n && n.cal_per_100g != null) { kcalTot += g * (parseFloat(n.cal_per_100g) || 0) / 100; connus += g; }
       else if (g > 0) inconnus.push(i.ingredient_nom);
+      // ⚠️ Les macros se comptent SÉPARÉMENT des kcal, sur leurs propres grammes :
+      // une ligne d'`ingredients_base` peut porter ses calories et laisser les
+      // trois macros à null. Les compter 0 ferait dire « 0 g de lipides » à une
+      // huile — le chiffre inventé que tout ce module s'interdit.
+      if (n && (n.prot_per_100g != null || n.gluc_per_100g != null || n.lip_per_100g != null)) {
+        mTot.p += g * (parseFloat(n.prot_per_100g) || 0) / 100;
+        mTot.g += g * (parseFloat(n.gluc_per_100g) || 0) / 100;
+        mTot.l += g * (parseFloat(n.lip_per_100g) || 0) / 100;
+        connusMac += g;
+      }
     });
     var kcal100 = connus > 0 ? kcalTot / connus * 100 : null;
+    var mac100 = connusMac > 0 ? { p: mTot.p / connusMac * 100, g: mTot.g / connusMac * 100, l: mTot.l / connusMac * 100 } : null;
     var nb = r.nb_portions && r.nb_portions > 0 ? r.nb_portions : null;
     var kcalPortion = parseFloat(r.calories_portion) > 0 ? parseFloat(r.calories_portion) : null;
     var src = 'fiche';
     if (!kcalPortion && kcal100 && nb) { kcalPortion = gTotal / nb * kcal100 / 100; src = 'deduit'; }
     var gPortionFiche = nb ? gTotal / nb : null;
+    // Les macros de la portion de fiche, du même pas que les kcal : ce que la
+    // fiche ÉCRIT d'abord, ce que ses ingrédients permettent de DÉDUIRE ensuite.
+    // ⚠️ Et `null` quand on ne sait pas — « 0 g de protéines » se lirait comme
+    // une mesure, alors que c'est un manque (règle du module, cf. les kcal).
+    var lus = { p: parseFloat(r.prot_portion) || 0, g: parseFloat(r.gluc_portion) || 0, l: parseFloat(r.lip_portion) || 0 };
+    var macPortion = null, macSrc = null;
+    if (lus.p > 0 || lus.g > 0 || lus.l > 0) { macPortion = lus; macSrc = 'fiche'; }
+    else if (mac100 && nb) {
+      macPortion = { p: gTotal / nb * mac100.p / 100, g: gTotal / nb * mac100.g / 100, l: gTotal / nb * mac100.l / 100 };
+      macSrc = 'deduit';
+    }
     return { ings: ings, gTotal: gTotal, nb: nb, kcalPortion: kcalPortion, kcalSrc: src,
       kcal100: kcal100, gPortionFiche: gPortionFiche, inconnus: inconnus,
-      prot: parseFloat(r.prot_portion) || 0, gluc: parseFloat(r.gluc_portion) || 0, lip: parseFloat(r.lip_portion) || 0 };
+      mac100: mac100, macPortion: macPortion, macSrc: macSrc };
   }
 
   /* La portion d'UN client sur cette fiche : le facteur par rapport à la
@@ -487,11 +509,25 @@
       gPortion = f.gPortionFiche || f.gTotal;
       mode = f.nb ? 'portion de la fiche, non adaptée (kcal inconnues)' : 'fiche entière = 1 portion (rien de chiffré)';
     }
-    return { facteur: facteur, gPortion: gPortion, mode: mode, fiche: f,
+    var mac = f.macPortion ? { p: f.macPortion.p * facteur, g: f.macPortion.g * facteur, l: f.macPortion.l * facteur }
+           : (f.mac100 ? { p: gPortion * f.mac100.p / 100, g: gPortion * f.mac100.g / 100, l: gPortion * f.mac100.l / 100 } : null);
+    return { facteur: facteur, gPortion: gPortion, mode: mode, fiche: f, mac: mac,
       kcal: f.kcalPortion ? f.kcalPortion * facteur : (f.kcal100 ? gPortion * f.kcal100 / 100 : null),
       ings: f.ings.map(function (i) {
         return { nom: i.ingredient_nom, g: (parseFloat(i.quantite_g) || 0) / (f.nb || 1) * facteur, unite: i.unite || 'g' };
       }) };
+  }
+
+  /* Les macros d'une portion, dites comme elles sont connues — et rien du tout
+     quand elles ne le sont pas. `titre` dit d'où elles sortent : la balance
+     pèse des grammes, elle ne pèse pas des protéines, donc celui qui met la
+     boîte en sachet doit pouvoir savoir s'il lit la fiche ou un calcul. */
+  function libMacros(m) {
+    return m ? Math.round(m.p) + ' g P · ' + Math.round(m.g) + ' g G · ' + Math.round(m.l) + ' g L' : '';
+  }
+  function srcMacros(f) {
+    return f && f.macSrc === 'fiche' ? 'protéines · glucides · lipides, écrites sur la fiche technique'
+         : (f && f.macSrc === 'deduit' ? 'protéines · glucides · lipides, déduites des ingrédients de la fiche (ingredients_base)' : '');
   }
 
   /* ── La cible calorique d'un repas, pour CE client ──────────────────────
@@ -984,7 +1020,8 @@
           var cle = 'np_' + jour + '_' + l.rec.id + '_' + pc.bon.id + '_' + i, fait = false;
           try { fait = localStorage.getItem(cle) === '1'; } catch (e) {}
           html += '<div class="np-port ' + (fait ? 'ok' : '') + '"><div class="hd"><input type="checkbox" data-coche="' + h(cle) + '" ' + (fait ? 'checked' : '') + '><b>' + idx + '/' + l.portions + ' · ' + h(nomClient(pc.bon.user_id)) + '</b>'
-            + '<span class="np-s">' + (pc.p.kcal ? Math.round(pc.p.kcal) + ' kcal · ' : '') + Math.round(pc.p.gPortion) + ' g · ×' + pc.p.facteur.toFixed(2) + '</span></div><div class="np-ing">'
+            + '<span class="np-s"' + (pc.p.mac ? ' title="' + h(srcMacros(pc.p.fiche)) + '"' : '') + '>' + (pc.p.kcal ? Math.round(pc.p.kcal) + ' kcal · ' : '')
+            + (pc.p.mac ? libMacros(pc.p.mac) + ' · ' : '') + Math.round(pc.p.gPortion) + ' g · ×' + pc.p.facteur.toFixed(2) + '</span></div><div class="np-ing">'
             + pc.p.ings.map(function (g) { return '<div><b>' + (g.g >= 10 ? Math.round(g.g) : Math.round(g.g * 10) / 10) + ' ' + h(g.unite) + '</b>' + h(g.nom) + '</div>'; }).join('')
             + '</div></div>';
         }
@@ -2343,7 +2380,8 @@
       l.parClient.forEach(function (pc) {
         for (var k = 0; k < pc.n; k++) {
           idx++;
-          html += '<div class="port"><b>' + idx + '/' + l.portions + ' · ' + h(nomClient(pc.bon.user_id)) + '</b> <span style="color:#ffffff8c;font-size:12px">' + (pc.p.kcal ? Math.round(pc.p.kcal) + ' kcal · ' : '') + Math.round(pc.p.gPortion) + ' g</span><div class="g">'
+          html += '<div class="port"><b>' + idx + '/' + l.portions + ' · ' + h(nomClient(pc.bon.user_id)) + '</b> <span style="color:#ffffff8c;font-size:12px">' + (pc.p.kcal ? Math.round(pc.p.kcal) + ' kcal · ' : '')
+            + (pc.p.mac ? libMacros(pc.p.mac) + ' · ' : '') + Math.round(pc.p.gPortion) + ' g</span><div class="g">'
             + pc.p.ings.filter(function (g) { return g.g > 0; }).map(function (g) { return '<span><i class="ill">' + illustration(g.nom) + '</i><b>' + (g.g >= 10 ? Math.round(g.g) : Math.round(g.g * 10) / 10) + ' ' + h(g.unite) + '</b> ' + h(g.nom) + '</span>'; }).join('') + '</div></div>';
         }
       });
