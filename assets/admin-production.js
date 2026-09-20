@@ -297,6 +297,8 @@
       '#npCine .matl{display:flex;flex-wrap:wrap;gap:6px}#npCine .matl span{background:#ffffff14;border-radius:99px;padding:6px 11px;font-size:13px;font-weight:700;color:#ffffffd9}',
       '#npCine .sec{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:#ffffff8c;font-weight:800;margin:16px 0 8px}#npCine .sec small{text-transform:none;letter-spacing:0;font-weight:600}',
       '#npCine .rep{display:flex;flex-direction:column;gap:6px}#npCine .rep div{background:#ffffff0f;border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.45;color:#ffffffd9}#npCine .rep b{display:block;font-size:11px;color:#ffffff8c;margin-bottom:3px;text-transform:uppercase;letter-spacing:.6px}#npCine .rep i{color:#ffffff8c}',
+      // la feuille du cours d'une étape vit avec son contenu (assets/admin-savoir.js)
+      (window.NattySavoir ? window.NattySavoir.CSS : ''),
       '#npCine .chaine{display:flex;flex-direction:column;gap:6px}#npCine .chaine>div{background:#ffffff0f;border-radius:12px;padding:10px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}#npCine .chaine b{flex:0 0 100%;font-size:11px;color:#ffffff8c;text-transform:uppercase;letter-spacing:.6px}#npCine .chaine span{background:#ffffff14;border-radius:8px;padding:4px 8px}#npCine .chaine span.ok{background:#34c75933}#npCine .chaine i{color:#ffffff8c}',
       '#npCine .cta{position:absolute;left:0;right:0;bottom:0;padding:14px 16px calc(16px + env(safe-area-inset-bottom));display:flex;gap:10px;background:linear-gradient(#0e0e1100,#0e0e11 40%)}',
       '#npCine .cta button{flex:1;border:none;border-radius:16px;padding:16px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;background:#ffffff1a;color:#fff}',
@@ -1554,7 +1556,7 @@
             // ce qu'on lit sur le pill et dans le sommaire : l'ingrédient quand
             // l'étape en nomme un, le titre de l'étape sinon
             etiquette: x ? x.nom : (e.titre || ('Étape ' + (e.numero || i + 1))),
-            geste: e.geste || '', aliment: x ? x.nom : (e.aliment || ''), ingrs: x ? [x] : ing,
+            geste: e.geste || '', aliment: x ? x.nom : (e.aliment || ''), alimentEtape: e.aliment || '', ingrs: x ? [x] : ing,
             poste: posteDe(e, l.rec.id), numero: e.numero || i + 1, decoupe: e.decoupe || null,
             duree: Math.max(1, Math.round(base * (e.passif ? 1 : Math.sqrt(s)))), passif: !!e.passif,
             temperature: e.temperature_c, defaut: !(e.duree_min > 0), preds: [] };
@@ -2279,34 +2281,26 @@
     });
     return out;
   }
-  /* ── Les repères GÉNÉRAUX d'un geste ─────────────────────────────────────
-     Pablo : « écrire le plus de détail possible sur l'étape : ce qu'il faut
-     faire, combien de grammes, de centimètres, pendant combien de temps, la
-     température, la texture, le visuel, ce qu'il faut avoir à la fin ».
-     La fiche donne ce qu'elle donne — consigne, durée, température, découpe,
-     grammes. Le reste vient d'ici : des repères de cuisine par geste, valables
-     pour n'importe quelle recette, et ANNONCÉS comme tels (« repères du
-     geste »). ⚠️ Rien de spécifique à une recette n'est écrit ici : ce que la
-     fiche ne dit pas est affiché comme manquant, à compléter dans l'onglet
-     Chef — jamais deviné. */
-  var REPERES = {
-    couper:      { feu: null, texture: 'Morceaux réguliers : même taille, même cuisson. La découpe demandée fait le calibre.', visuel: 'Tranche nette, sans écrasement ni fibres arrachées.', fin: 'Tout l’aliment taillé au calibre, réservé À PART pour chaque recette, planche nettoyée.', pieges: 'Planche stable, lame affûtée. Ne pas mélanger deux découpes du même aliment.' },
-    rincer:      { feu: 'Eau froide courante.', texture: 'Égoutté À FOND : l’eau qui reste fait chuter la température de cuisson.', visuel: 'Eau claire au dernier rinçage, sans terre ni sable.', fin: 'Aliment propre, essoré, prêt à tailler ou à cuire.', pieges: 'Essorer les feuilles ; ne pas laisser tremper.' },
-    peser:       { feu: null, texture: null, visuel: 'La balance à zéro avant chaque récipient (tare).', fin: 'Chaque quantité pesée et étiquetée par recette.', pieges: 'Peser le cru, pas le cuit — les grammages de la fiche sont crus.' },
-    huiler:      { feu: null, texture: 'Un film fin et régulier : le surplus fume et amertume.', visuel: 'Surface brillante, sans flaque.', fin: 'Aliment enrobé, prêt à saisir ou à enfourner.', pieges: 'Huile d’olive à feu vif : elle fume vite. Huile neutre pour saisir fort.' },
-    assaisonner: { feu: null, texture: 'Goûter AVANT et APRÈS. Saler en plusieurs fois.', visuel: 'Sel réparti, pas en amas.', fin: 'Assaisonnement équilibré au goût, noté si corrigé.', pieges: 'Une masse ×3 ne se sale pas ×3 : ajouter par paliers.' },
-    melanger:    { feu: null, texture: 'Homogène : plus aucune trace de l’un ou de l’autre.', visuel: 'Couleur uniforme, sans grumeau.', fin: 'Mélange lié, couvert, réservé.', pieges: 'Ne pas travailler trop une farce ou une pâte : elle durcit.' },
-    fouetter:    { feu: null, texture: 'Lisse et aérée, selon le but : une émulsion se tient, des blancs forment un bec.', visuel: 'Brillant pour une émulsion, mat et ferme pour des blancs.', fin: 'Texture stable une minute après l’arrêt.', pieges: 'Verser l’huile en filet ; bol et fouet propres et froids pour monter.' },
-    mixer:       { feu: null, texture: 'Lisse, sans morceau ; passer au tamis si la fiche le demande.', visuel: 'Couleur homogène, sans bulle si c’est une sauce.', fin: 'Consistance voulue (nappante ou ferme), assaisonnement rectifié.', pieges: 'Mixer chaud : couvercle entrouvert, petites quantités.' },
-    saisir:      { feu: 'Feu VIF, poêle ou plaque très chaude, matière grasse à peine fumante.', texture: 'Croûte en surface, cœur encore tendre et juteux.', visuel: 'Coloration dorée à brune, uniforme sur toutes les faces ; sucs au fond.', fin: 'Toutes les faces colorées, réservé à plat (pas en tas : la vapeur ramollit la croûte).', pieges: 'Ne pas surcharger — l’aliment BOUT au lieu de dorer. Ne pas remuer trop tôt : laisser accrocher puis décoller.' },
-    bouillir:    { feu: 'Eau salée (10 g/l) à gros bouillons ; à la vapeur, couvercle fermé, feu régulier.', texture: 'Cuit à cœur, tenue conservée — al dente pour pâtes et riz, la pointe du couteau entre sans forcer pour un légume.', visuel: 'Légumes verts : couleur vive, plongés en eau glacée pour la fixer.', fin: 'Égoutté aussitôt, étalé à plat pour arrêter la cuisson.', pieges: 'Saler l’eau, pas après. Ne pas couvrir des pâtes. Une eau qui a cessé de bouillir n’est plus une cuisson.' },
-    mijoter:     { feu: 'Feu doux, FRÉMISSEMENT (85–95 °C) — jamais à gros bouillons. Couvercle selon la fiche.', texture: 'Fondant : la viande se détache, la sauce nappe la cuillère.', visuel: 'Petites bulles espacées en surface, sauce brillante, réduite d’un tiers environ.', fin: 'Sauce à la consistance voulue, assaisonnement rectifié en fin.', pieges: 'Remuer de temps en temps pour ne pas attacher ; compléter en liquide chaud, jamais froid.' },
-    enfourner:   { feu: 'Four PRÉCHAUFFÉ à la température de la fiche ; chaleur tournante sauf mention.', texture: 'Cuit à cœur (sonde si la fiche donne une température), gratiné ou croustillant dessus.', visuel: 'Coloration régulière ; tourner la plaque à mi-cuisson.', fin: 'Sorti dès la couleur atteinte ; repos si la fiche le dit.', pieges: 'Une plaque trop chargée cuit à la vapeur. Ne pas ouvrir le four les dix premières minutes.' },
-    refrigerer:  { feu: '≤ 4 °C au réfrigérateur ; mariner À COUVERT.', texture: 'Une marinade doit enrober, pas noyer.', visuel: 'Film ou couvercle, étiquette avec l’heure.', fin: 'Refroidi À CŒUR avant de conditionner.', pieges: 'Jamais chaud au frigo : refroidir d’abord (bain glacé, cellule).' },
-    reposer:     { feu: 'Hors du feu, à couvert lâche.', texture: 'Le repos finit la cuisson et redistribue les jus : la viande se détend.', visuel: 'Les jus ne coulent plus à la découpe.', fin: 'Temps de la fiche écoulé, chronomètre à l’appui.', pieges: 'Ne pas couvrir hermétiquement : ça ramollit une croûte.' },
-    attendre:    { feu: null, texture: null, visuel: 'Un chronomètre lancé, visible.', fin: 'L’attente est une étape : elle a une fin, et on y revient.', pieges: 'Pendant ce temps, une autre tâche — le plan en donne une.' },
-    dresser:     { feu: null, texture: 'Les éléments à la température de service prévue par la fiche.', visuel: 'Même présentation d’une portion à l’autre : la photo de la fiche fait foi.', fin: 'Portion pesée, fermée, étiquetée (recette, client, date).', pieges: 'Ne pas fermer une boîte chaude : condensation, texture perdue.' }
-  };
+  /* ── Le cours d'une étape : geste × aliment ──────────────────────────────
+     Pablo (2026-09-20) : « détailler les étapes avec le plus de détails
+     possible afin que quelqu'un qui ne connaît pas du tout la cuisine puisse
+     réaliser le plat au niveau d'un grand chef — les réactions, textures,
+     eau, température ». Ce qu'il y avait ici : cinq lignes par GESTE
+     (`REPERES`), les mêmes pour du bœuf, du cabillaud ou un oignon. Le
+     savoir vit désormais dans assets/admin-savoir.js (`NattySavoir`) — un
+     cours par geste × famille d'aliment : la réaction qui se joue, le
+     pas-à-pas, les chiffres, ce qu'on perçoit, « réussi quand », les erreurs
+     et leur rattrapage. Il reste GÉNÉRAL et annoncé comme tel : ce que la
+     fiche ne dit pas est affiché manquant, jamais deviné.
+     ⚠️ Le module est facultatif : sans lui, l'écran le dit au lieu de se
+     taire (un panneau qui disparaît sans un mot, c'est le défaut de la
+     question du garde-manger, §3). */
+  function reperesGeste(t) {
+    if (!window.NattySavoir) return '<div class="sec">Le cours de l’étape</div><div class="desc"><i>assets/admin-savoir.js n’est pas chargé — aucun cours disponible.</i></div>';
+    var parTitre = ['melanger', 'assaisonner', 'mixer', 'dresser'].indexOf(t.geste) >= 0;
+    var cands = parTitre ? [t.titre, t.alimentEtape, t.aliment] : [t.aliment, t.alimentEtape, t.titre];
+    return window.NattySavoir.html(t.geste, cands.filter(Boolean));
+  }
 
   function ligneAvantApres(t) {
     var plan = S.plan; if (!plan) return '';
@@ -2316,12 +2310,6 @@
     return '<div class="sec">Avant · après</div><div class="chaine">'
       + (avant.length ? '<div><b>Doit être fini avant</b>' + avant.join('') + '</div>' : '<div><b>Rien à attendre</b><span>peut partir dès l’ouverture</span></div>')
       + (apres.length ? '<div><b>Débloque ensuite</b>' + apres.join('') + '</div>' : '<div><b>Dernière de sa chaîne</b><span>rien n’attend derrière</span></div>') + '</div>';
-  }
-
-  function reperesGeste(t) {
-    var r = REPERES[t.geste]; if (!r) return '';
-    var lignes = [['🔥 Feu / température', r.feu], ['🖐 Texture', r.texture], ['👁 Visuel', r.visuel], ['🏁 À la fin', r.fin], ['⚠️ Pièges', r.pieges]].filter(function (l) { return l[1]; });
-    return '<div class="sec">Repères du geste <small>— généraux, la fiche prime</small></div><div class="rep">' + lignes.map(function (l) { return '<div><b>' + l[0] + '</b>' + h(l[1]) + '</div>'; }).join('') + '</div>';
   }
 
   /* ── Les illustrations d'ingrédients ─────────────────────────────────────
