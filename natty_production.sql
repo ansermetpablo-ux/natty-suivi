@@ -116,7 +116,21 @@ alter table public.recettes_etapes add column if not exists aliment text;
 -- ── Ajout du 2026-09-16 (déjà appliqué) : les POSTES pris par les cuisiniers,
 -- et les étapes faites. Un poste pris un jour donné n'est plus disponible pour
 -- un autre cuisinier (clé primaire jour + poste) ; l'algorithme ne donne les
--- tâches d'un poste qu'à la personne qui l'a pris. Les étapes faites sont
+-- tâches d'un poste qu'à la personne qui l'a pris.
+--
+-- ⚠️ DEPUIS LE 2026-09-20, `poste` PORTE UN IDENTIFIANT DE RECETTE
+-- (`recettes.id`), et plus une famille de gestes (« feux », « legumes »,
+-- « four »). Un poste = une recette, menée du début à la fin par une seule
+-- personne : c'est ce que montre déjà la carte de production, dont chaque
+-- colonne est une recette. Rien à migrer — la colonne est un `text` et la clé
+-- primaire ne change pas — mais une ligne écrite AVANT cette date ne désigne
+-- aucune recette : `admin.html` l'affiche comme une prise de l'ancienne
+-- organisation, ne la compte pas comme un cuisinier, et invite à la libérer.
+-- Pour nettoyer d'un coup :
+--   delete from public.production_postes
+--    where poste not in (select id::text from public.recettes);
+--
+-- Les étapes faites sont
 -- partagées entre appareils : la cinématique d'un cuisinier les coche.
 create table if not exists public.production_postes (
   jour           date not null,
@@ -126,6 +140,12 @@ create table if not exists public.production_postes (
   pris_at        timestamptz not null default now(),
   primary key (jour, poste)
 );
+-- ⚠️ `etape_id` RÉFÉRENCE UNE ÉTAPE DE FICHE, et rien de plus fin. Depuis que
+-- l'écran détaille une étape en un morceau par ingrédient (« Tailler » →
+-- carottes, oignons, ail…), ces morceaux n'ont pas d'identifiant ici : ils
+-- sont cochés sur l'APPAREIL (`localStorage`, `natty_prod_faits_<jour>`), et
+-- la ligne ci-dessous n'est écrite que lorsque TOUS les morceaux d'une étape
+-- sont faits. C'est ce que les autres écrans voient.
 create table if not exists public.production_etapes (
   jour           date not null,
   etape_id       uuid not null references public.recettes_etapes(id) on delete cascade,
