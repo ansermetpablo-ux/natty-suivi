@@ -4010,6 +4010,24 @@ il passe — la puce du haut nomme alors les recettes qui le partagent.
 - ⚠️ `COLW` est monté de 170 à **210 px minimum** et la carte défile : une carte qu'on fait
   défiler se lit, une carte illisible non.
 
+**LES MACROS DE CHAQUE PORTION, À CÔTÉ DE SES CALORIES** (`fiche.macPortion`,
+`portionPour().mac`, `libMacros`). Une portion annonçait « 900 kcal · 478 g · ×0,75 » — le
+chiffre qui décide de sa taille, rien de ce qu'il y a dedans, alors que c'est là qu'on ferme
+la boîte et qu'on pose l'étiquette. Elle dit « 900 kcal · 71 g P · 59 g G · 38 g L · 478 g »,
+dans l'écran Assemblage comme dans le service écran par écran. **Même chemin que les kcal** :
+ce que la fiche ÉCRIT (`prot_portion`…), ce que ses ingrédients permettent de DÉDUIRE
+(`ingredients_base`), puis le facteur client.
+> ⚠️⚠️ **Elles se comptent sur LEURS PROPRES GRAMMES.** Une ligne d'`ingredients_base` peut
+> porter ses calories et laisser les trois macros à `null` : les additionner sous la condition
+> des kcal les compte **zéro**, et l'écran annonce « 0 g de lipides » sur une huile d'olive. Un
+> zéro se lit comme une mesure. D'où `connusMac` à côté de `connus` — et **rien du tout**
+> quand aucun ingrédient n'en porte (vérifié en retirant les trois colonnes du banc : les kcal
+> restent, les macros disparaissent).
+> ⚠️ **L'infobulle dit laquelle des deux sources parle** : la balance pèse des grammes, pas des
+> protéines.
+> ⚠️ `fiche()` portait déjà `prot`/`gluc`/`lip` avec un `|| 0`, que **rien ne lisait** :
+> remplacés par `macPortion`, qui vaut `null` quand on ne sait pas.
+
 **LES HÉROS DANS L'ÉCRAN PAR ÉCRAN.** « Ajouter les héros illustrations des aliments dans
 l'écran par écran. » L'illustration de l'aliment passe de 124 à **170 px** de boîte (124 px de
 glyphe) : le cuisinier sait qu'il taille, il veut savoir QUOI, et à deux mètres de la plaque
