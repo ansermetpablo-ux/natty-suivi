@@ -11,8 +11,16 @@
    notification. Ici ça se paierait en nutritionniste qui compare les moyennes
    de son client à une cible que le client ne voit pas.
 
-   Les deux fonctions sont EXTRAITES de leur fichier, jamais recopiées ici : une
-   copie ne prouverait que la copie. */
+   ⚠️ DEPUIS LE 2026-09-20, IL VÉRIFIE AUSSI LE MÉTABOLISME DE BASE ET LA
+   DÉPENSE. La section « Objectif, besoins et macros » de la fiche client les
+   recalcule et les ÉCRIT en base (`onboarding.bmr` / `.tdee`) : ce sont eux que
+   lisent ensuite l'app, le bilan du soir et la cuisine. Une divergence avec
+   `suivi.html` (Mifflin-St Jeor, puis le facteur d'activité) donnerait deux
+   dépenses pour la même personne selon la porte d'entrée — et celle de l'admin
+   écraserait celle de l'app.
+
+   Toutes les fonctions sont EXTRAITES de leur fichier, jamais recopiées ici :
+   une copie ne prouverait que la copie. */
 import fs from 'node:fs';
 
 function extraire(src, nom, mot = 'function') {
@@ -45,6 +53,47 @@ return function (o) {
 
 const adm = new Function(`${extraire(admin, 'ciblesJour')} return ciblesJour;`)();
 
+/* ── BMR et dépense : admin.html contre suivi.html ─────────────────────────
+   `ACT_TYPES` / `ACT_ADMIN` sont extraits eux aussi : c'est le COEFFICIENT
+   d'activité qui diverge en premier quand quelqu'un ajoute un palier. */
+const suivi = fs.readFileSync('suivi.html', 'utf8');
+function tableau(src, nom) {
+  const i = src.indexOf('var ' + nom + ' = [');
+  if (i < 0) throw new Error('introuvable : ' + nom);
+  let p = 0, k = src.indexOf('[', i);
+  for (; k < src.length; k++) { if (src[k] === '[') p++; else if (src[k] === ']') { p--; if (!p) break; } }
+  return src.slice(i, k + 1) + ';';
+}
+const appBt = new Function(`${tableau(suivi, 'ACT_TYPES')}
+${extraire(suivi, 'objBmr')}
+${extraire(suivi, 'objTdee')}
+return function (o) { return { bmr: objBmr(o), tdee: objTdee(o) }; };`)();
+const admBt = new Function(`${tableau(admin, 'ACT_ADMIN')}
+${extraire(admin, 'bmrDe')}
+${extraire(admin, 'tdeeDe')}
+return function (o) { return { bmr: bmrDe(o), tdee: tdeeDe(o) }; };`)();
+
+const CORPS = [];
+for (const age of [0, 18, 30, 45, 70])
+  for (const poids of [0, 52, 70, 88, 120])
+    for (const taille of [0, 155, 172, 190])
+      for (const sexe of ['', 'homme', 'femme'])
+        for (const activite of ['sedentaire', 'leger', 'modere', 'actif', 'inconnu'])
+          CORPS.push({ age, poids, taille, sexe, activite });
+
+let koBt = 0;
+for (const o of CORPS) {
+  const a = appBt(o), b = admBt(o);
+  for (const k of ['bmr', 'tdee']) {
+    if (a[k] !== b[k]) {
+      koBt++;
+      console.log(`🔴 ${o.sexe || 'sexe ?'} ${o.age} ans · ${o.poids} kg · ${o.taille} cm · ${o.activite}`
+        + ` → ${k} : suivi ${a[k]}, admin ${b[k]}`);
+    }
+  }
+}
+console.log(`${CORPS.length} profils × 2 valeurs (bmr, dépense) — ${koBt} écart(s)`);
+
 const PROFILS = [];
 for (const poids of [0, 48, 60, 70, 80, 95, 150])
   for (const tdee of [0, 1400, 1800, 2000, 2400, 3200, 4000])
@@ -62,5 +111,5 @@ for (const o of PROFILS) {
     }
   }
 }
-console.log(`${PROFILS.length} profils × 4 valeurs — ${ko} écart(s)`);
-process.exit(ko ? 1 : 0);
+console.log(`${PROFILS.length} profils × 4 valeurs (macros) — ${ko} écart(s)`);
+process.exit(ko + koBt ? 1 : 0);

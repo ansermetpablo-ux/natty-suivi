@@ -2517,7 +2517,52 @@
     }
   }
 
+  /* ── Quand la fiche client change, la cuisine suit ──────────────────────
+     Appelé par `admin.html` après un « Enregistrer et propager » : on relit le
+     besoin du client avec ses NOUVELLES données et on réécrit la cible des
+     portions qui ne sont pas encore parties en cuisine.
+
+     ⚠️ SEULS LES BONS `a_attribuer` ET `attribue` SONT REPRIS. Un bon en
+     production ou livré porte des portions déjà pesées : les recalculer ne
+     changerait rien à ce qui est dans la boîte, ça ne ferait que mentir sur ce
+     qu'elle contient.
+     ⚠️ Le FACTEUR est réécrit avec la cible — il n'est qu'un instantané, mais
+     un instantané qui contredirait `kcal_portion` se lirait comme un bug le
+     jour où quelqu'un compare les deux colonnes.
+     ⚠️ Rien n'est touché si le client n'a pas de besoin calculable : on
+     laisserait alors la cuisine sur une cible de repli (650 kcal) en effaçant
+     une cible que quelqu'un avait peut-être posée à la main. */
+  function recalculerClient(uid) {
+    if (!uid) return Promise.resolve(0);
+    return chargerTout().then(function () {
+      return cibleClient(uid);
+    }).then(function (c) {
+      if (!c || !c.besoin) return 0;                       // aucun tdee : on ne touche à rien
+      var bons = S.bons.filter(function (b) {
+        return b.user_id === uid && ['a_attribuer', 'attribue'].indexOf(b.statut) >= 0;
+      });
+      var maj = [];
+      bons.forEach(function (b) {
+        attribsDe(b.id).forEach(function (a) {
+          if (Math.abs((parseFloat(a.kcal_portion) || 0) - c.cible) < 5) return;  // déjà à jour
+          var r = recette(a.recette_id);
+          var f = Math.round((r ? portionPour(r, c.cible).facteur : 1) * 1000) / 1000;
+          maj.push(sbq('bons_attributions?id=eq.' + a.id, { method: 'PATCH',
+            body: JSON.stringify({ kcal_portion: c.cible, facteur: f }) })
+            // ⚠️ La copie en mémoire prend la valeur ARRONDIE, celle qui part en
+            // base : garder la précision pleine ici ferait dire deux chiffres
+            // au même facteur selon qu'on recharge ou non.
+            .then(function () { a.kcal_portion = c.cible; a.facteur = f; return a.nb_portions || 1; }));
+        });
+      });
+      if (!maj.length) return 0;
+      return Promise.all(maj).then(function (n) { return n.reduce(function (t, x) { return t + x; }, 0); })
+        .then(function (n) { if (document.getElementById('npVue')) rendre(); return n; });
+    });
+  }
+
   window.NattyProd = {
+    recalculerClient: recalculerClient,
     monter: function (host) {
       sbq('plats_menu?select=id,nom').then(function (p) { PLATS_MENU = p; }).catch(function () {});
       monter(host);

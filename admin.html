@@ -312,6 +312,21 @@ input[type="file"] { display: none; }
 .edit-field-lbl { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
 .edit-field-lbl button { background: none; border: none; cursor: pointer; font-size: 11px; color: var(--green); font-family: 'DM Sans', sans-serif; font-weight: 500; }
 .edit-field-inp { width: 100%; background: var(--bg); border: none; border-radius: 10px; padding: 10px 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; box-shadow: var(--shadow-in, var(--si)); }
+/* ── Objectif & besoins, dans la fiche client ───────────────────────────── */
+.obj-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.obj-f { background: var(--bg); border-radius: 14px; padding: 9px 12px; box-shadow: var(--si); }
+.obj-f label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+.obj-f input, .obj-f select { width: 100%; background: transparent; border: none; outline: none; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); }
+.obj-res { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0 4px; }
+.obj-res > div { background: var(--bg); border-radius: 14px; padding: 10px 8px; box-shadow: var(--so); text-align: center; }
+.obj-res b { display: block; font-size: 17px; font-weight: 600; color: var(--green); letter-spacing: -.5px; }
+.obj-res small { display: block; font-size: 9px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+.obj-note { font-size: 11px; color: var(--muted); line-height: 1.6; margin-top: 10px; }
+.obj-note b { color: var(--text); }
+.obj-actions { display: flex; gap: 10px; margin-top: 12px; }
+.obj-actions button { flex: 1; padding: 12px; background: var(--bg); border: none; border-radius: 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; box-shadow: var(--so); }
+.obj-actions button.principal { color: var(--green); }
+.obj-actions button:disabled { opacity: .5; cursor: default; }
 .edit-field-inp:focus { box-shadow: var(--si), 0 0 0 2px var(--green); }
 .edit-field-inp::placeholder { color: #ccc; }
 .edit-save-btn { width: 100%; padding: 12px; background: var(--black); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px; }
@@ -1984,12 +1999,8 @@ function afficherFiche(cl) {
   });
   html += '</div>';
 
-  // Données physiques
-  html += '<div class="sec-card"><div class="sec-label">📏 Données physiques</div><div class="data-grid">';
-  [['Âge','age',cl.age,'ans'],['Sexe','sexe',cl.sexe,''],['Poids','poids',cl.poids,'kg'],['Taille','taille',cl.taille,'cm'],['BMR','bmr',cl.bmr,'kcal'],['TDEE','tdee',cl.tdee,'kcal'],['Activité','activite',actL[cl.activite]||cl.activite,'']].forEach(function(f){
-    html += '<div class="data-cell"><div class="dc-lbl">'+f[0]+' <button class="edit-trigger" data-field="'+f[1]+'" data-val="'+(cl[f[1]]||'')+'">✏️</button></div><div class="dc-val green">'+(f[2]||'–')+(f[3]?' '+f[3]:'')+'</div></div>';
-  });
-  html += '</div></div>';
+  // Objectif, besoins et macros — une seule section, et c'est elle qui CALCULE
+  html += htmlObjectif(cl);
 
   // Journal + notes
   html += '<div class="sec-card"><div class="sec-label">Journal alimentaire</div><div id="repasSection"><div class="loading">Chargement...</div></div></div>';
@@ -2021,8 +2032,213 @@ function afficherFiche(cl) {
     envoyerRecapFiche(recapBtn.dataset.uid, recapBtn.dataset.email, recapBtn);
   });
   document.getElementById('btnSaveNotes').addEventListener('click', sauvegarderNotes);
+  brancherObjectif();
 }
 
+
+/* ══ OBJECTIF, BESOINS ET MACROS — la section qui CALCULE ═══════════════════
+   Demande de Pablo (2026-09-20) : « quand on rentre les infos dans la fiche
+   client manuellement depuis admin, il faut pouvoir avoir un bouton qui
+   recalcule ses macros et besoins ; il faut une section qui regroupe
+   l'entièreté des infos liées à l'objectif saisi, qu'on peut remplir
+   manuellement et qui recalcule aussi les macros ».
+
+   ⚠️⚠️ ELLE REMPLACE « Données physiques », elle ne s'y ajoute pas. Les mêmes
+   cinq champs saisis à deux endroits, c'est deux endroits qui divergent — et
+   surtout l'ancienne carte les faisait modifier UN PAR UN dans une fenêtre,
+   sans jamais recalculer ni le BMR, ni la dépense, ni les macros : on pouvait
+   corriger un poids de 92 à 80 kg et garder une dépense calculée sur les 92.
+
+   ⚠️ CE QUI EST SAISI ET CE QUI EST CALCULÉ NE SE MÉLANGENT PAS. Âge, sexe,
+   poids, taille, activité, objectif et durée se saisissent ; BMR, dépense,
+   besoin du jour et macros se calculent et s'affichent en vert. Le bouton
+   « Recalculer » ne fait que rejouer le calcul à l'écran ; « Enregistrer »
+   écrit — les deux sont séparés pour qu'on puisse essayer un objectif sans
+   toucher au dossier.
+
+   ⚠️ BMR ET DÉPENSE SONT ÉCRITS EN BASE, pas seulement affichés. `onboarding.
+   tdee` est ce que lisent l'app, le bilan du soir ET la production : recalculer
+   sans l'écrire laisserait la cuisine servir des portions calées sur l'ancien
+   poids. C'est tout l'objet du bouton. */
+var ACT_ADMIN = [
+  { c: 'sedentaire', n: 'Sédentaire',  k: 1.2   },
+  { c: 'leger',      n: 'Peu actif',   k: 1.375 },
+  { c: 'modere',     n: 'Actif',       k: 1.55  },
+  { c: 'actif',      n: 'Très actif',  k: 1.725 }
+];
+var OBJ_ADMIN = [
+  { c: 'perte_poids', n: 'Perte de poids' },
+  { c: 'prise_masse', n: 'Prise de masse' },
+  { c: 'maintien',    n: 'Maintien' },
+  { c: 'performance', n: 'Performance' },
+  { c: 'bien_etre',   n: 'Bien-être' }
+];
+
+/* ⚠️ LA MÊME FORMULE QUE `onboarding.html` ET `suivi.html` — Mifflin-St Jeor,
+   puis le facteur d'activité. C'est la TROISIÈME copie du dépôt, et elle est
+   couverte par le même garde-fou que `ciblesJour` :
+   `node scripts/verifier-cibles-admin.mjs` la compare à celle de `suivi.html`.
+   Deux formules donneraient deux dépenses pour la même personne selon la porte
+   d'entrée, et c'est déjà arrivé (§7). */
+function bmrDe(o) {
+  var age = parseFloat(o.age) || 0, poids = parseFloat(o.poids) || 0, taille = parseFloat(o.taille) || 0;
+  if (!age || !poids || !taille || !o.sexe) return 0;
+  return Math.round(10 * poids + 6.25 * taille - 5 * age + (o.sexe === 'homme' ? 5 : -161));
+}
+function tdeeDe(o) {
+  var b = bmrDe(o);
+  if (!b) return 0;
+  var a = ACT_ADMIN.filter(function (x) { return x.c === o.activite; })[0];
+  return Math.round(b * (a ? a.k : 1.375));
+}
+
+function champObj(lbl, id, val, attrs) {
+  return '<div class="obj-f"><label>' + lbl + '</label><input id="' + id + '" value="' + escapeAttr(val == null ? '' : val) + '" ' + (attrs || '') + '></div>';
+}
+function selectObj(lbl, id, val, options) {
+  return '<div class="obj-f"><label>' + lbl + '</label><select id="' + id + '">'
+    + options.map(function (o) { return '<option value="' + escapeAttr(o.c) + '"' + (String(val || '') === o.c ? ' selected' : '') + '>' + escapeHtmlObj(o.n) + '</option>'; }).join('')
+    + '</select></div>';
+}
+function escapeAttr(v) { return String(v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function escapeHtmlObj(v) { return String(v).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+
+function htmlObjectif(cl) {
+  var h = '<div class="sec-card"><div class="sec-label">🎯 Objectif, besoins et macros</div>';
+  h += '<div class="obj-grid">'
+    + selectObj('Sexe', 'objSexe', cl.sexe, [{ c: '', n: '—' }, { c: 'homme', n: 'Homme' }, { c: 'femme', n: 'Femme' }])
+    + champObj('Âge (ans)', 'objAge', cl.age, 'type="number" min="10" max="100"')
+    + champObj('Poids (kg)', 'objPoids', cl.poids, 'type="number" step="0.1" min="30" max="250"')
+    + champObj('Taille (cm)', 'objTaille', cl.taille, 'type="number" min="120" max="230"')
+    + selectObj('Activité', 'objAct', cl.activite || 'leger', ACT_ADMIN)
+    + selectObj('Objectif', 'objType', cl.objectif_type || 'maintien', OBJ_ADMIN)
+    /* ⚠️ Le SIGNE porte la direction : −5 pour perdre 5 kg, +4 pour en prendre.
+       C'est ce que l'app écrit et ce que `ciblesJour` attend ; un 5 positif sur
+       une perte de poids ferait calculer un SURPLUS. Le libellé le dit. */
+    + champObj('Objectif poids (kg, − pour perdre)', 'objKg', cl.objectif_valeur, 'type="number" step="0.5" min="-40" max="40"')
+    + champObj('En combien de semaines', 'objSem', cl.objectif_semaines, 'type="number" min="1" max="104"')
+    + '</div>';
+  h += '<div class="obj-res" id="objRes"></div>';
+  h += '<div class="obj-note" id="objNote"></div>';
+  h += '<div class="obj-actions"><button id="objRecalc">↻ Recalculer</button>'
+    + '<button id="objSave" class="principal">Enregistrer et propager</button></div>';
+  h += '</div>';
+  return h;
+}
+
+/** Ce que la section a sous les yeux — jamais ce qui est en base. */
+function objLire() {
+  var g = function (id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; };
+  return {
+    sexe: g('objSexe'), age: g('objAge'), poids: g('objPoids'), taille: g('objTaille'),
+    activite: g('objAct'), objectif_type: g('objType'),
+    objectif_valeur: g('objKg'), objectif_semaines: g('objSem')
+  };
+}
+
+/* Le calcul, affiché : BMR → dépense → besoin du jour → macros. Chaque nombre
+   dit d'où il vient, et ce qui MANQUE est nommé plutôt que remplacé par un
+   zéro — un « 0 kcal » se lirait comme une mesure. */
+function objApercu() {
+  var o = objLire();
+  var bmr = bmrDe(o), tdee = tdeeDe(o);
+  var cib = ciblesJour({ poids: o.poids, tdee: tdee, objectif_valeur: o.objectif_valeur, objectif_semaines: o.objectif_semaines });
+  var ecart = tdee ? cib.c - tdee : 0;
+  var res = document.getElementById('objRes'), note = document.getElementById('objNote');
+  if (!res) return null;
+  res.innerHTML = [
+    ['<b>' + (bmr || '–') + '</b><small>BMR<br>métabolisme de base</small>'],
+    ['<b>' + (tdee || '–') + '</b><small>dépense<br>kcal / jour</small>'],
+    ['<b>' + (tdee ? cib.c : '–') + '</b><small>besoin du jour<br>' + (ecart ? (ecart > 0 ? '+' : '') + ecart + ' kcal pour l’objectif' : 'aucun objectif daté') + '</small>'],
+    ['<b>' + (tdee ? cib.p + '/' + cib.g + '/' + cib.l : '–') + '</b><small>P / G / L<br>grammes par jour</small>']
+  ].map(function (x) { return '<div>' + x[0] + '</div>'; }).join('');
+  var manque = [];
+  if (!o.sexe) manque.push('le sexe'); if (!o.age) manque.push('l’âge');
+  if (!o.poids) manque.push('le poids'); if (!o.taille) manque.push('la taille');
+  /* Le rythme demandé est-il tenable ? L'écart brut que demande l'objectif,
+     contre le plafond que la formule s'autorise (20 % en surplus, 25 % en
+     déficit). Quand il est borné, la durée réelle sera plus longue que celle
+     qui est saisie — et le taire ferait promettre une date. */
+  var kg = parseFloat(o.objectif_valeur) || 0, sem = parseFloat(o.objectif_semaines) || 0;
+  var brut = (tdee && kg && sem) ? (kg * 7700) / (sem * 7) : 0;
+  var borne = brut && Math.abs(brut) - Math.abs(ecart) > 1;
+  note.innerHTML = manque.length
+    ? '⚠️ Il manque <b>' + manque.join(', ') + '</b> : ' + (manque.length > 1 ? 'sans eux' : 'sans elle') + ' le métabolisme de base ne se calcule pas, et tout le reste avec.'
+    : (kg && sem
+        ? 'Mifflin-St Jeor × activité = <b>' + tdee + ' kcal</b> de dépense. L’objectif (' + kg + ' kg en ' + sem + ' semaines) la corrige de <b>' + (ecart > 0 ? '+' : '') + ecart + ' kcal/jour</b>'
+          + (borne ? ' — <b>rythme ramené</b> : il en demandait ' + Math.round(brut) + ', ce qui n’est pas tenable ; il faudra plus de ' + sem + ' semaines' : '')
+          + '. C’est ce <b>besoin du jour</b> que la cuisine découpe en portions.'
+        : 'Dépense calculée. <b>Sans objectif chiffré ET daté</b>, le besoin du jour reste la dépense de maintien : renseigner les deux derniers champs pour que la production serve des portions qui vont dans le sens de l’objectif.');
+  return { o: o, bmr: bmr, tdee: tdee, cib: cib };
+}
+
+function brancherObjectif() {
+  if (!document.getElementById('objRes')) return;
+  objApercu();
+  ['objSexe','objAge','objPoids','objTaille','objAct','objType','objKg','objSem'].forEach(function (id) {
+    var e = document.getElementById(id);
+    if (e) e.addEventListener('input', objApercu);
+    if (e) e.addEventListener('change', objApercu);
+  });
+  document.getElementById('objRecalc').addEventListener('click', function () { objApercu(); toast('Recalculé — pas encore enregistré', 'ok'); });
+  document.getElementById('objSave').addEventListener('click', objEnregistrer);
+}
+
+/* ⚠️⚠️ ON ÉCRIT PAR `id`, JAMAIS PAR `user_id`. `onboarding.user_id` n'a aucune
+   contrainte d'unicité et la table contient de vrais doublons (§4) : un PATCH
+   par `user_id` réécrit PLUSIEURS lignes, dont celles que `richesseOnb` a
+   justement écartées. Sans ligne du tout (compte sans questionnaire), on en
+   crée une — `completed` reste faux, cette section ne remplace pas le
+   questionnaire d'inscription. */
+async function objEnregistrer() {
+  var btn = document.getElementById('objSave');
+  var a = objApercu();
+  if (!a) return;
+  if (!a.tdee && !confirm('Le métabolisme de base n’est pas calculable (il manque des données). Enregistrer quand même ce qui est saisi ?')) return;
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+  var corps = {
+    sexe: a.o.sexe || null,
+    age: a.o.age ? parseInt(a.o.age, 10) : null,
+    poids: a.o.poids ? parseFloat(a.o.poids) : null,
+    taille: a.o.taille ? parseFloat(a.o.taille) : null,
+    activite: a.o.activite || null,
+    objectif_type: a.o.objectif_type || null,
+    objectif_valeur: a.o.objectif_valeur ? parseFloat(a.o.objectif_valeur) : null,
+    objectif_semaines: a.o.objectif_semaines ? parseInt(a.o.objectif_semaines, 10) : null,
+    bmr: a.bmr || null,
+    tdee: a.tdee || null,
+    deficit: a.tdee ? Math.round(a.tdee * 0.15) : null
+  };
+  try {
+    if (currentClient.id) {
+      await sb('onboarding?id=eq.' + encodeURIComponent(currentClient.id), { method: 'PATCH', body: JSON.stringify(corps) });
+    } else {
+      var cree = await sb('onboarding', { method: 'POST', body: JSON.stringify(Object.assign({ user_id: currentClient.user_id, completed: false }, corps)) });
+      if (cree && cree[0] && cree[0].id) currentClient.id = cree[0].id;
+    }
+    Object.assign(currentClient, corps);
+    var idx = allClients.findIndex(function (c) { return c.user_id === currentClient.user_id; });
+    if (idx >= 0) Object.assign(allClients[idx], corps);
+
+    /* ⚠️ LA PRODUCTION SUIT, ET C'EST LE POINT. Les portions déjà attribuées
+       portent la cible calculée le jour de l'attribution : sans cette reprise,
+       on corrige un poids dans la fiche et la cuisine continue de peser selon
+       l'ancien. Le module recalcule et réécrit les bons NON ENCORE en
+       production — ceux qui sont en cuisine ou livrés ne bougent plus, on ne
+       réécrit pas une barquette déjà pesée. */
+    var msg = 'Besoins et macros enregistrés';
+    if (window.NattyProd && typeof NattyProd.recalculerClient === 'function') {
+      try {
+        var n = await NattyProd.recalculerClient(currentClient.user_id);
+        if (n) msg += ' · ' + n + ' portion(s) de production recalculée(s)';
+      } catch (e) { msg += ' · production non recalculée (' + e.message + ')'; }
+    }
+    toast(msg, 'ok');
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Enregistrer et propager';
+}
 
 var _editField = null;
 function editField(field, currentVal) {
@@ -2046,7 +2262,12 @@ async function saveEditField() {
   var payload = {};
   payload[_editField] = val;
   try {
-    await sb('onboarding?user_id=eq.'+currentClient.user_id, {method:'PATCH', body:JSON.stringify(payload)});
+    /* ⚠️ PAR `id`, JAMAIS PAR `user_id` : la table a de vrais doublons (§4) et
+       un filtre sur `user_id` réécrit TOUTES les lignes de la personne — y
+       compris celles que `richesseOnb` avait écartées, qui remonteraient
+       ensuite avec une moitié de profil. */
+    if (currentClient.id) await sb('onboarding?id=eq.'+encodeURIComponent(currentClient.id), {method:'PATCH', body:JSON.stringify(payload)});
+    else await sb('onboarding', {method:'POST', body:JSON.stringify(Object.assign({user_id:currentClient.user_id, completed:false}, payload))});
     // Update local
     currentClient[_editField] = val;
     var idx = allClients.findIndex(function(c){return c.user_id===currentClient.user_id;});
