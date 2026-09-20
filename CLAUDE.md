@@ -3890,6 +3890,89 @@ curry en parallèle sur deux cuisiniers, fin 08:51 = le chemin critique (16 + 10
 🔄 **Non vérifié avec une session d'équipe réelle**, ni sur les 38 vraies fiches : leurs
 aliments sont du texte libre, l'inférence y trouvera des cas à corriger par « dépend de ».
 
+#### 🔴 La refonte du 2026-09-20 : 1 ingrédient = 1 étape, 1 poste = 1 recette
+Quatre demandes de Pablo, dont la première remet en cause le découpage. **Les paragraphes
+au-dessus décrivent l'état d'avant** ; ils sont conservés pour le RAISONNEMENT (la cible
+calorique, la fiche lue comme elle est écrite, l'ordonnancement), pas pour leur description
+des postes.
+
+**1 INGRÉDIENT = 1 ÉTAPE.** « "Tailler" regroupe 4 étapes en 1, alors qu'il faut détailler
+1 étape par aliment, avec l'illustration de l'aliment pour s'y retrouver. » Une étape de
+fiche dont l'aliment nomme plusieurs ingrédients de la recette devient autant de tâches
+(`ingredientsEtape`), chacune avec son illustration, ses grammes, sa coche et son écran.
+Mesuré : le Natty wrap passe de 2 étapes de production à 6, la journée de 20 à 43.
+> ⚠️ **La liste vient des INGRÉDIENTS DE LA FICHE**, jamais du texte de l'aliment découpé aux
+> virgules : on obtient des noms exacts et des grammages, là où découper la chaîne aurait
+> donné des libellés sans quantité et « pommes de terre » en deux morceaux.
+> ⚠️ **La durée se PARTAGE** (15 min ÷ 4 = 4 min par tâche), sinon la journée s'allonge le
+> jour où le chef détaille mieux ses fiches. Et **une étape passive ne se découpe pas** : un
+> mijotage de 30 min n'est pas trois mijotages de dix.
+> ⚠️ **Ça répare l'atelier au passage.** Le rapprochement « même geste, même aliment, deux
+> recettes » exigeait que deux étapes portent EXACTEMENT les mêmes mots : le wrap, qui taille
+> « poivron, carotte, concombre, poulet », n'en formait aucun avec le curry alors que les
+> carottes et le poulet se taillent en une fois. Ingrédient par ingrédient, les deux se
+> retrouvent — 7 ateliers au banc.
+
+**1 POSTE = 1 RECETTE.** Les familles de gestes faisaient passer une recette par quatre
+personnes : nul ne la suivait, et la carte — une colonne par recette — racontait autre chose
+que le plan.
+> ⚠️ **La règle de cumul n'a jamais appartenu au poste, elle appartient au GESTE**
+> (`regleCumul`) : deux cuissons en même temps, c'est deux feux et la plus longue décide ;
+> deux tailles, c'est deux fois le couteau.
+> ⚠️ **`production_postes.poste` porte un identifiant de RECETTE** depuis cette date. Rien à
+> migrer (text, même clé primaire), mais une ligne d'avant ne désigne aucune recette : elle
+> est affichée comme telle, **ne compte pas comme un cuisinier** — sinon elle mangerait une
+> place de renfort — et `natty_production.sql` donne le DELETE.
+
+**LES COCHES, À DEUX ÉTAGES.** `production_etapes.etape_id` référence une étape de FICHE ; un
+morceau n'a pas d'identifiant en base. Le morceau se coche sur l'appareil
+(`natty_prod_faits_<jour>`), l'étape passe en base quand TOUS ses morceaux sont faits.
+> ⚠️ **Décocher un morceau garde les autres cochés** : la ligne repart de la base, mais les
+> frères restent locaux — sinon corriger une carotte effacerait les oignons, l'ail et le
+> poulet. Vérifié dans les deux sens au banc.
+> ⚠️ **Une étape non éclatée garde `id === etapeId`** : son comportement est exactement celui
+> d'avant, base comprise. L'étage local n'existe que pour ce que la base ne sait pas nommer.
+
+**LE MATÉRIEL** (`MATERIEL`, `materielDe`, `materielRecette`) — la mise en place complète sur
+la carte d'une recette, ce qu'il faut sortir sur l'écran d'une étape.
+> ⚠️ **C'est DÉDUIT DU GESTE et annoncé comme tel.** La fiche ne porte aucune colonne
+> « matériel » ; l'inventer par recette serait écrire à la place du chef. Ce qui est propre à
+> un plat — un chinois, un cercle — se met dans la consigne, onglet Chef.
+
+**LE NOMBRE DE CUISINIERS SE CHANGE EN COURS DE PRODUCTION.** Le champ disparaissait dès
+qu'une personne avait pris quelque chose : arriver à trois en renfort ne changeait rien, et
+les recettes non réclamées restaient bloquées. Les **renforts** anonymes complètent jusqu'au
+nombre saisi. Mesuré : 2 cuisiniers → fin 09:42, 4 → fin 09:05.
+> ⚠️ **Un renfort ne reçoit QUE des recettes libres**, sinon il prendrait le travail de
+> quelqu'un qui l'a nommément réclamée. Même garde dans le dispatcher : un atelier ne tire la
+> part de l'autre recette que si ce cuisinier a le droit de la faire.
+
+**🍗 ET L'APP DIT CE QUE LA FICHE NE PRÉPARE PAS.** Pablo, sur le wrap : « il faut préparer et
+cuire le poulet » — aucune étape ne le nommait. L'app ne peut pas inventer l'étape manquante ;
+elle nomme les ingrédients que personne ne taille, ne cuit ni ne dresse.
+> ⚠️ **Huiles, sel, poivre et épices exclus** (`estAssaisonnement`) : ils s'ajoutent en cours
+> de route. Sans cette exception l'avertissement sortait « huile olive » sur trois recettes sur
+> quatre et noyait le seul cas qui comptait — les haricots verts du curry. Un avertissement
+> qu'on apprend à ignorer ne sert plus à rien.
+
+**Le survol d'un nom de recette** ouvre ses ingrédients du jour et leurs grammes ; ceux qu'une
+autre recette demande aussi sont en couleur, et les toucher éclaire cet ingrédient partout où
+il passe — la puce du haut nomme alors les recettes qui le partagent.
+
+**Trois défauts de mise en page, tous trouvés en MESURANT :**
+- ⚠️ les pills se partageaient la largeur quand ils partaient à la même minute : **107 px**
+  chacun, et « oignon » s'affichait « oi… ». Ils s'empilent désormais — la simultanéité se lit
+  déjà au pont et à la ligne d'heure, pas besoin de la payer deux fois ;
+- ⚠️ l'étiquette sous un pill d'atelier était en `overflow:visible` et **courait sur les deux
+  colonnes voisines** ;
+- ⚠️⚠️ et la hauteur réservée à un pill **ignorait cette étiquette**, qui passait donc SOUS le
+  pill suivant. Quatrième occurrence dans ce dépôt d'une hauteur demandée mais pas réservée.
+  Remesuré : 17 étiquettes, 43 pills, **0 chevauchement**, aucun débordement horizontal.
+- ⚠️ `COLW` est monté de 170 à **210 px minimum** et la carte défile : une carte qu'on fait
+  défiler se lit, une carte illisible non.
+
+🔄 **Non vérifié avec une session d'équipe réelle ni sur les 5 recettes du jour.**
+
 **Onglet Chef** — chaque étape porte désormais titre, durée, température, **phase**
 (Production en masse / Assemblage par portion), **attente** et poste. Le PATCH passe par
 `sb()` (jeton d'équipe) et non plus par la clé anon, refusée par la RLS. Depuis le
