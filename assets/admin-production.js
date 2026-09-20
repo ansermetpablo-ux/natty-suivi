@@ -68,8 +68,20 @@
   /* Les gestes qui PARTENT d'un aliment brut. Sans aliment déjà vu dans la
      recette, une telle étape ouvre une nouvelle chaîne (« Cuire le riz » ne
      dépend de rien). Tout autre geste sans aliment reconnu RÉUNIT ce qui est
-     en cours — mijoter, enfourner, mélanger, dresser attendent tout. */
-  var GESTES_DEPART = ['couper', 'rincer', 'peser', 'saisir', 'bouillir'];
+     en cours — mijoter, mélanger, dresser attendent tout.
+     ⚠️ Élargi le 2026-09-20, en relisant l'inférence sur les 38 fiches
+     réécrites : « Saler le poulet », « Marinade », « Huiler la truite »,
+     « Presser le tofu », « Préchauffer » sur un aliment jamais vu sont des
+     DÉPARTS — la version d'avant les faisait attendre le riz et les épinards
+     d'à côté (« Saler le poulet ← cuire le riz, émincer l'ail, laver les
+     épinards »), donc un plan où l'on ne peut pas saler avant que tout le
+     reste ne soit fait. */
+  var GESTES_DEPART = ['couper', 'rincer', 'peser', 'saisir', 'bouillir', 'assaisonner', 'fouetter', 'huiler', 'refrigerer', 'enfourner'];
+  /* L'aliment « four » désigne le préchauffage. Il n'entre jamais dans la
+     frontière (une croûte d'amandes n'attend pas que le four chauffe) ; en
+     revanche toute étape `enfourner` de la recette en dépend, même si son
+     aliment ne le nomme pas — c'est le seul lien qui compte pour lui. */
+  var ALIMENT_FOUR = 'four';
   /* Les gestes qui NE font PAS d'atelier partagé : ce qui se dresse par
      portion, ce qui attend. Tout le reste — couper, saisir, enfourner,
      mijoter… — sur le même aliment dans deux recettes se fait en une fois
@@ -1476,10 +1488,14 @@
           for (var j = i - 1; j >= 0; j--) if (mots[j].indexOf(m) >= 0) { if (p.indexOf(etapes[j].id) < 0) p.push(etapes[j].id); break; }
         });
         if (!p.length && i > 0 && !(mots[i].length && GESTES_DEPART.indexOf(e.geste || '') >= 0)) p = frontiere.slice();
+        // une étape au four attend le préchauffage de sa recette
+        if (e.geste === 'enfourner' && norm(e.aliment) !== ALIMENT_FOUR) {
+          for (var f = i - 1; f >= 0; f--) if (norm(etapes[f].aliment) === ALIMENT_FOUR) { if (p.indexOf(etapes[f].id) < 0) p.push(etapes[f].id); break; }
+        }
       }
       preds[e.id] = p;
       frontiere = frontiere.filter(function (id) { return p.indexOf(id) < 0; });
-      frontiere.push(e.id);
+      if (norm(e.aliment) !== ALIMENT_FOUR) frontiere.push(e.id);
     });
     return preds;
   }

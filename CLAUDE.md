@@ -4037,6 +4037,65 @@ du jour, les grammes de chaque portion à l'assemblage — il porte désormais l
 
 🔄 **Non vérifié avec une session d'équipe réelle ni sur les 5 recettes du jour.**
 
+#### 📚 Le cours de l'étape, et les fiches réécrites (2026-09-20, soir)
+Demande de Pablo : « détailler les étapes avec le plus de détails possible afin que quelqu'un
+qui ne connaît pas du tout la cuisine puisse réaliser le plat au niveau d'un grand chef —
+décrire exactement toutes les réactions, textures, eau, température », puis « n'hésite pas à
+modifier et ajouter des étapes pour être plus précis ».
+
+**1. `assets/admin-savoir.js` (`NattySavoir`) — un cours par geste × famille d'aliment.**
+Ce qu'il y avait derrière « Détails » : cinq lignes par GESTE (`REPERES`), les mêmes qu'on
+saisisse du bœuf, du cabillaud ou un oignon. Ce qu'il y a : 23 familles (`FAMILLES`, mêmes
+règles de rapprochement que les illustrations), ~90 couples, écrits à partir des couples que
+les 38 fiches produisent RÉELLEMENT. Chaque cours : `pourquoi` (la réaction — Maillard,
+collagène, chlorophylle, amidon, émulsion), `pas` (pas-à-pas), `chiffres` (températures, eau,
+temps, ratios), `sens` (voir / entendre / sentir / toucher), `fin` (réussi quand), `erreurs`
+(✗ → rattrapage). `html(geste, candidats)` rend les six blocs ; `CSS` est posé par
+`admin-production.js` dans sa feuille.
+> ⚠️ **GÉNÉRAL et annoncé comme tel** (« la fiche prime ») : rien n'y est propre à une recette,
+> ce que la fiche ne dit pas reste affiché manquant. Températures à cœur d'un plat LIVRÉ :
+> volaille 74, haché 70, poisson 63.
+> ⚠️ **Le cours se choisit par le TITRE pour mélanger, assaisonner, mixer, dresser**
+> (`[titre, aliment de la fiche, ingrédient]`), par l'ingrédient pour les autres. Depuis que
+> 1 ingrédient = 1 étape, choisir sur l'ingrédient donnait « salsa de tomates » pour la
+> courgette d'une soupe qu'on mouille — vu au banc. `FAMILLES` porte donc aussi des mots de
+> titre (`mouill`, `singer`, `faconn`, `vinaigrette`, `sauce yaourt`). Et `plat` ne contient
+> plus `salsa` ni les sauces : elles précédaient les émulsions dans l'ordre des familles.
+> ⚠️ `condiments` (sauce soja, miel) est distinct de `liquides` (bouillon, vin) : « Mouiller »
+> ne doit pas tomber sur le cours de la sauce soja.
+> ⚠️ Le module est **facultatif** : sans lui l'écran le dit, il ne se tait pas.
+
+**2. Les 38 fiches réécrites — 236 → 317 étapes** (`scripts/fiches-natty.mjs`, importées).
+Chaque description porte les grammes pour 6, les temps, les températures, le repère de fin
+(« la fourchette entre sans forcer », « anneau blanc sur chaque grain »). Étapes ajoutées là où
+une seule en cachait plusieurs : rincer le riz et le quinoa, sécher et saler avant de dorer,
+raffermir les boulettes au froid, fleurir les épices, frire la pâte de curry dans la crème de
+coco, reposer, **refroidir à 10 °C en moins de 2 h avant de dresser** (sur toutes), émincer le
+chou (il manquait). Le format gagne deux champs facultatifs : `°C` (→ `temperature_c`, 41
+étapes) et `dépend de` (→ `depend_de`, 42 étapes).
+> ⚠️ **Passé en base par UPDATE/INSERT ciblés, pas par `importer-fiches.mjs`** : l'import
+> complet réécrit aussi les ingrédients et cascade `production_etapes` (0 ligne ce jour-là,
+> donc rien perdu — mais à vérifier avant de le relancer). L'importeur écrit désormais
+> `temperature_c` et `depend_de` lui aussi.
+
+**3. L'inférence des dépendances relue sur les 38 fiches** (`_dependances`, banc en
+navigateur) — deux causes d'erreur, deux correctifs :
+- un mot de plat qui retombe sur un ingrédient : « Mijoter le chili » attendait « Fleurir les
+  épices » (aliment `chili, cumin`), « Mijoter le curry » la pâte de curry. Aliments renommés
+  (`épices`, `pâte`, `curry`) ;
+- un geste sur un aliment jamais vu qui attendait toute la frontière : « Saler le poulet ←
+  cuire le riz, émincer l'ail, laver les épinards ». **`GESTES_DEPART` élargi** à assaisonner,
+  fouetter, huiler, refrigerer, enfourner. Contrepartie : « Mouiller » (assaisonner sur des
+  liquides jamais vus) devient un départ — il porte `dépend de` dans les trois fiches
+  concernées. ⚠️ L'aliment `four` (préchauffage) n'entre plus dans la frontière, et toute
+  étape `enfourner` de la recette en dépend implicitement.
+Le reste (« même poêle », parures pour la sauce vierge, jus d'agrumes pour les raisins) est
+posé en `dépend de`. Vérifié : les 38 graphes lus étape par étape, banc `_test-production.html`
+sans régression (fin 09:48 inchangée).
+
+🔄 **Non vérifié avec une session d'équipe réelle** : le cours a été vu dans le service écran
+par écran du banc (fixtures), pas sur les 317 vraies étapes.
+
 **Onglet Chef** — chaque étape porte désormais titre, durée, température, **phase**
 (Production en masse / Assemblage par portion), **attente** et poste. Le PATCH passe par
 `sb()` (jeton d'équipe) et non plus par la clé anon, refusée par la RLS. Depuis le

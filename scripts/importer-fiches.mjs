@@ -47,11 +47,12 @@ function lireIng(s) {
   return { nom, g: Number(g) || 0, qte: qte || '' };
 }
 function lireEtape(s, i) {
-  const [geste, aliment, min, flags, titre, desc] = s.split('|').map(x => (x || '').trim());
+  const [geste, aliment, min, flags, titre, desc, temp, dep] = s.split('|').map(x => (x || '').trim());
   if (GESTES.indexOf(geste) < 0) gestesKo.push(geste);
+  const depend_de = dep ? dep.split(',').map(Number).filter(n => n > 0 && n <= i) : null;
   return { numero: i + 1, geste, aliment, duree_min: Number(min) || null,
     passif: (flags || '').includes('P'), phase: (flags || '').includes('A') ? 'assemblage' : 'production',
-    titre, description: desc };
+    titre, description: desc, temperature_c: Number(temp) || null, depend_de };
 }
 function macros(ings) {
   let c = 0, p = 0, g = 0, l = 0;
@@ -108,9 +109,10 @@ begin
     k := 0;
     for e in select * from jsonb_array_elements(f->'etapes') loop
       k := k + 1;
-      insert into public.recettes_etapes (recette_id, numero, titre, description, duree_min, phase, passif, geste, aliment)
+      insert into public.recettes_etapes (recette_id, numero, titre, description, duree_min, phase, passif, geste, aliment, temperature_c, depend_de)
         values (rid, k, e->>4, e->>5, nullif(e->>2,'')::int, case when position('A' in coalesce(e->>3,'')) > 0 then 'assemblage' else 'production' end,
-          position('P' in coalesce(e->>3,'')) > 0, e->>0, e->>1);
+          position('P' in coalesce(e->>3,'')) > 0, e->>0, e->>1, nullif(e->>6,'')::int,
+          case when coalesce(e->>7,'') = '' then null else string_to_array(e->>7, ',')::int[] end);
     end loop;
     n := n + 1;
   end loop;
