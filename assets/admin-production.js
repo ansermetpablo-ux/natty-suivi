@@ -262,16 +262,24 @@
       '#npCine .ali{font-size:20px;color:#fff;font-weight:600;margin-bottom:14px}',
       '#npCine .desc{font-size:15px;line-height:1.55;color:#ffffffd9;background:#ffffff0f;border-radius:16px;padding:14px 16px;margin-bottom:12px}',
       '#npCine .qte{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}',
-      '#npCine .qte div{background:#ffffff14;border-radius:12px;padding:10px 12px;font-size:12px;color:#ffffffb3}#npCine .qte b{display:block;font-size:20px;color:#fff}',
+      '#npCine .qte div{background:#ffffff14;border-radius:12px;padding:10px 12px;font-size:12px;color:#ffffffb3;display:flex;align-items:center;gap:10px;flex-wrap:wrap}#npCine .qte b{font-size:20px;color:#fff}',
       '#npCine .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#ffffff8c;margin-bottom:12px}#npCine .meta span{background:#ffffff14;border-radius:99px;padding:5px 10px}',
-      '#npCine .port{background:#ffffff0f;border-radius:14px;padding:10px 12px;margin-bottom:8px}#npCine .port b{font-size:14px}#npCine .port .g{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#npCine .port .g span{background:#ffffff14;border-radius:8px;padding:5px 8px;font-size:12px}',
+      '#npCine .port{background:#ffffff0f;border-radius:14px;padding:10px 12px;margin-bottom:8px}#npCine .port b{font-size:14px}#npCine .port .g{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#npCine .port .g span{background:#ffffff14;border-radius:10px;padding:5px 9px;font-size:12px;display:inline-flex;align-items:center;gap:6px}#npCine .port .g .ill{width:20px;height:20px}#npCine .port .g .ill svg{width:20px;height:20px}',
       '#npCine .fait{position:absolute;top:0;right:0;background:#34c759;color:#fff;font-size:11px;font-weight:800;padding:6px 12px;border-radius:0 0 0 12px}',
       /* la scène : la carte-notification et, sur les côtés, ce qui bloque */
       '#npCine .scene{display:grid;grid-template-columns:1fr;gap:10px;align-items:center;margin-top:10px}',
       '#npCine .cote{display:flex;flex-direction:column;gap:8px}#npCine .cote:empty{display:none}',
       '#npCine .carte{display:flex;align-items:center;gap:18px;background:#ffffff12;border-radius:26px;padding:20px 18px}',
-      '#npCine .carte .illu{width:124px;height:124px;border-radius:30px;background:#ffffff1c;display:flex;align-items:center;justify-content:center;flex-shrink:0}',
-      '#npCine .carte .illu svg{width:88px;height:88px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}',
+      // ⚠️ LE HÉROS, c'est l'aliment. Demandé par Pablo, et c'est aussi ce que
+      // le cuisinier cherche des yeux à deux mètres de la plaque : il sait
+      // qu'il taille, il veut savoir QUOI. 124 px ne se voyaient pas à cette
+      // distance ; 170, si.
+      '#npCine .carte .illu{width:170px;height:170px;border-radius:34px;background:#ffffff1c;display:flex;align-items:center;justify-content:center;flex-shrink:0}',
+      '#npCine .carte .illu svg{width:124px;height:124px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}',
+      '@media (max-width:720px){#npCine .carte{gap:12px}#npCine .carte .illu{width:112px;height:112px;border-radius:26px}#npCine .carte .illu svg{width:80px;height:80px}}',
+      // et partout où un ingrédient est NOMMÉ dans ces écrans, il porte le sien
+      '#npCine .ill{width:26px;height:26px;flex-shrink:0;display:block}',
+      '#npCine .ill svg{width:26px;height:26px;fill:none;stroke:#ffffffb3;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}',
       '#npCine .carte .txt{min-width:0;flex:1}',
       '#npCine .carte .rec{margin:0;font-size:13px;color:#ffffffb3;display:flex;gap:6px;align-items:center;flex-wrap:wrap}#npCine .carte .rec i{width:12px;height:12px}',
       '#npCine .carte .act{font-size:24px;font-weight:800;line-height:1.15;margin:6px 0 8px;letter-spacing:-.4px}',
@@ -360,6 +368,11 @@
       '.np-ings .pt{display:flex;gap:2px;flex-shrink:0}.np-ings .pt i{width:8px;height:8px;border-radius:50%}',
       // le matériel : sur la carte d'une recette, et dans l'écran d'une étape
       '.np-poste .mat{font-size:10.5px;color:var(--muted);font-weight:600;line-height:1.35;white-space:normal}',
+      '.np-poste .recs{display:flex;flex-direction:column;gap:3px;width:100%}',
+      '.np-poste .recs span{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--black);line-height:1.3}',
+      '.np-poste .recs i{width:9px;height:9px;border-radius:50%;flex-shrink:0}',
+      // ce qui justifie le regroupement : ce que ces recettes font ensemble
+      '.np-poste .ens{font-size:11px;font-weight:700;color:#8a5500;background:#c97a0014;border-radius:9px;padding:5px 8px;line-height:1.35;white-space:normal;width:100%;box-sizing:border-box}',
       // ⚠️ `overflow:hidden` : en `visible`, « 87 g · lamelles · avec Curry de
       // poulet rôti, Soupe de légumes » courait par-dessus les deux colonnes
       // voisines et se mêlait à LEURS étiquettes (mesuré à 1250 px).
@@ -573,46 +586,36 @@
       S.faitsLoc = lireLoc();   // les morceaux d'étape cochés sur CET appareil
     });
   }
-  /* Les cuisiniers du jour = les personnes qui ont pris au moins une recette,
-     plus autant de RENFORTS anonymes qu'il en faut pour atteindre le nombre
-     saisi en haut de l'écran. Personne n'a rien pris ? On retombe sur N
-     cuisiniers anonymes, toutes recettes.
-     > ⚠️ LES RENFORTS SONT LA RÉPONSE À « CHANGER LE NOMBRE DE CUISINIERS
-     > MÊME QUAND LA PRODUCTION A DÉMARRÉ » (Pablo, 2026-09-20). Avant, dès
-     > qu'une seule personne avait pris quelque chose, le champ « Cuisiniers »
-     > DISPARAISSAIT de l'écran et le plan ne comptait plus que les gens
-     > inscrits : arriver à trois en renfort ne changeait rien au planning, et
-     > les recettes que personne n'avait prises restaient bloquées jusqu'à ce
-     > qu'on les prenne nommément. Le champ reste là, et les renforts prennent
-     > ce qui est LIBRE — on voit tout de suite ce que deux bras de plus
-     > changent à l'heure de fin.
-     > ⚠️ Un renfort ne se voit attribuer QUE des recettes libres : lui ouvrir
-     > toutes les recettes lui ferait prendre le travail de quelqu'un qui l'a
-     > nommément réclamé. */
+  /* Un cuisinier par POSTE, et autant de postes que le nombre saisi en haut
+     de l'écran. Celui qui a pris le poste lui donne son nom ; sinon c'est un
+     cuisinier anonyme — le plan compte sur lui, ce qui est bien ce qu'on veut
+     dire quand on annonce « 3 cuisiniers ».
+     > ⚠️ RIEN N'EST PLUS « BLOQUÉ » PAR DÉFAUT. Avant, une recette que
+     > personne n'avait nommément réclamée n'allait à personne et sortait en
+     > rouge : on ne pouvait pas voir l'heure de fin d'une journée à trois sans
+     > que trois personnes se soient inscrites. Le nombre de cuisiniers est une
+     > donnée de planification, pas une liste de présence. */
   function cuisiniersDuJour(lots) {
-    var par = {};
-    (S.postes || []).forEach(function (p) {
-      var c = par[p.cuisinier_id] = par[p.cuisinier_id] || { id: p.cuisinier_id, nom: p.cuisinier_nom || 'Cuisinier', postes: [] };
-      c.postes.push(p.poste);
+    var P = postesDuJour(lots || S.lots || [], S.cuisiniers);
+    S.postesJour = P;
+    return P.map(function (p, i) {
+      var pris = (S.postes || []).find(function (x) { return p.recs.indexOf(x.poste) >= 0; });
+      return { id: pris ? pris.cuisinier_id : 'poste_' + p.cle, nom: pris ? (pris.cuisinier_nom || 'Cuisinier') : 'Cuisinier ' + (i + 1),
+        postes: p.recs, poste: p.cle, pris: !!pris };
     });
-    /* ⚠️ Une prise de l'ancienne organisation (« feux », « legumes ») ne tient
-       AUCUNE recette : la compter comme un cuisinier lui ferait manger une
-       place de renfort, donc une recette resterait bloquée à cause d'une ligne
-       périmée. L'écran la signale par ailleurs, et invite à la libérer. */
-    var l = Object.keys(par).map(function (k) { return par[k]; })
-      .filter(function (c) { c.postes = c.postes.filter(function (x) { return recette(x); }); return c.postes.length > 0; });
-    if (!l.length) return S.cuisiniers;
-    var prises = {}; l.forEach(function (c) { c.postes.forEach(function (x) { prises[x] = 1; }); });
-    var libres = (lots || S.lots || []).map(function (x) { return x.rec.id; }).filter(function (id) { return !prises[id]; });
-    var n = Math.max(0, (S.cuisiniers || 0) - l.length);
-    for (var i = 0; i < n; i++) l.push({ id: 'renfort_' + i, nom: 'Renfort ' + (i + 1), postes: libres, renfort: true });
-    return l;
   }
+  /* Prendre un poste, c'est prendre TOUTES ses recettes : une ligne par
+     recette, puisque la base garde « une recette, une personne ». */
   function prendrePoste(cle, prendre) {
     var jour = S.jour || ymd(new Date()), m = moi();
+    var P = (S.postesJour || []).find(function (x) { return x.cle === cle; });
+    if (!P || !P.recs.length) { toast('Ce poste n’a aucune recette aujourd’hui', 'err'); return; }
     var p = prendre
-      ? sbq('production_postes', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ jour: jour, poste: cle, cuisinier_id: m.id, cuisinier_nom: m.nom }) })
-      : sbq('production_postes?jour=eq.' + jour + '&poste=eq.' + cle, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+      ? sbq('production_postes', { method: 'POST', headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify(P.recs.map(function (r) { return { jour: jour, poste: r, cuisinier_id: m.id, cuisinier_nom: m.nom }; })) })
+      : Promise.all(P.recs.map(function (r) {
+          return sbq('production_postes?jour=eq.' + jour + '&poste=eq.' + r, { method: 'DELETE', headers: { 'Prefer': 'return=minimal' } });
+        }));
     p.then(function () { rendre(); }).catch(function (e) {
       // 409 = quelqu'un l'a pris entre-temps : on recharge, et l'écran le montre.
       toast(/23505|409|duplicate/.test(e.message) ? 'Ce poste vient d’être pris par quelqu’un d’autre' : 'Erreur : ' + e.message, 'err'); rendre();
@@ -864,7 +867,7 @@
   /* Les cinq sections, dans l'ordre du travail. Chacune a sa tuile héros, qui
      porte le chiffre qu'on vient y chercher ; une seule est ouverte à la fois. */
   var SECTIONS = [
-    { cle: 'postes', em: '👥', nom: 'Recettes' },
+    { cle: 'postes', em: '👥', nom: 'Postes' },
     { cle: 'planning', em: '📊', nom: 'Planning' },
     { cle: 'pert', em: '🕸', nom: 'Dépendances' },
     { cle: 'geste', em: '🔪', nom: 'Par geste' },
@@ -876,7 +879,7 @@
     var html = '<div class="np-row" style="justify-content:space-between;margin-bottom:12px">'
       + '<div><div class="np-t">Production du ' + fmtJ(jour, true) + '</div><div class="np-s">' + (pj ? pj.bons.length + ' bon(s) · ' + Object.keys(pj.plats).length + ' recette(s)' : 'rien à livrer ce jour') + '</div></div>'
       + '<div class="np-row"><input type="date" class="np-in" id="npJourProd" value="' + jour + '">'
-      + '<label class="np-s" title="les personnes qui ont pris une recette, plus des renforts anonymes pour atteindre ce nombre">Cuisiniers <input type="number" class="np-in n" id="npCuis" value="' + S.cuisiniers + '" min="1" max="12"></label>'
+      + '<label class="np-s" title="autant de postes que de cuisiniers ; les recettes qui se font ensemble tombent dans le même poste">Cuisiniers <input type="number" class="np-in n" id="npCuis" value="' + S.cuisiniers + '" min="1" max="12"></label>'
       + '<label class="np-s">Début <input type="time" class="np-in" id="npDebut" value="' + S.debut + '"></label></div></div>';
     if (!pj) return html + '<div class="np-vide">Aucune livraison ce jour. Choisir un autre jour, ou passer par le calendrier.</div>';
     if (pj.rouges.length) html += '<div class="np-alerte">🔴 ' + pj.rouges.length + ' bon(s) sans attribution ce jour : ' + h(pj.rouges.map(function (b) { return nomClient(b.user_id); }).join(', ')) + '. Ils ne sont pas dans le plan ci-dessous.</div>';
@@ -933,13 +936,16 @@
     var cles = function (e) { return ts.filter(function (t) { return t.ensemble === e; }).map(function (t) { return t.cumul; }).filter(function (v, i, arr) { return arr.indexOf(v) === i; }); };
     var ateliers = cles('atelier'), cumuls = cles('cumul');
     var aSpecifier = ts.filter(function (t) { return t.ensemble === 'atelier' && t.geste === 'couper' && !decoupeDe(t); }).length;
-    var pris = (S.postes || []).length, bloquees = ts.filter(function (t) { return t.bloque; }).length;
-    var mesPostes = (S.postes || []).filter(function (p) { return p.cuisinier_id === m.id; }).length;
+    // un poste est PRIS dès qu'une de ses recettes l'est ; il y en a autant
+    // que de cuisiniers, et c'est ce que la tuile compte
+    var P = S.postesJour || [];
+    var pris = P.filter(function (p) { return p.recs.some(function (r) { return (S.postes || []).some(function (x) { return x.poste === r; }); }); }).length;
+    var bloquees = ts.filter(function (t) { return t.bloque; }).length;
+    var mesPostes = P.filter(function (p) { return p.recs.some(function (r) { return (S.postes || []).some(function (x) { return x.poste === r && x.cuisinier_id === m.id; }); }); }).length;
     var portions = lots.reduce(function (n, l) { return n + l.portions; }, 0);
     var alim = {}; ts.forEach(function (t) { String(t.aliment || '').split(/[,+;]/).forEach(function (a) { if (a.trim()) alim[norm(a)] = 1; }); });
     var kp = {
-      // un poste EST une recette : la tuile compte les recettes prises
-      postes: '<b>' + pris + '/' + lots.length + '</b><small>' + (mesPostes ? 'vous en tenez ' + mesPostes : 'recette(s) prise(s)') + '</small>',
+      postes: '<b>' + pris + '/' + P.length + '</b><small>' + (mesPostes ? 'vous en tenez ' + mesPostes : 'poste(s) pris') + '</small>',
       planning: '<b>' + hm(plan.fin) + '</b><small>fin estimée · ' + plan.nbCuis + ' cuisinier(s)</small>',
       pert: '<b>' + faits + '/' + ts.length + '</b><small>étapes faites · ' + prets + ' prête(s)' + (ateliers.length ? ' · ' + ateliers.length + ' atelier(s)' : '') + (cumuls.length ? ' · ' + cumuls.length + ' cumul(s)' : '') + '</small>',
       geste: '<b>' + Object.keys(alim).length + '</b><small>aliment(s) · ' + ts.filter(function (t) { return !t.passif; }).length + ' geste(s)</small>',
@@ -987,45 +993,49 @@
     return html;
   }
 
-  /* ── Les recettes du jour : qui en tient une, et « je prends » ──────────
-     Un cuisinier prend une RECETTE et la mène du début à la fin. Ce qui
-     s'affiche est donc exactement ce que la carte montre en colonnes. */
+  /* ── Les postes du jour : autant que de cuisiniers ──────────────────────
+     Chaque carte est un poste — un lot de recettes que l'on prend d'un bloc —
+     avec ce que ses recettes ont en commun, sa charge, et sa mise en place. */
   function sectionPostes(plan, lots) {
-    var m = moi(), parRec = {};
+    var m = moi(), P = S.postesJour || postesDuJour(lots, S.cuisiniers);
+    var parRec = {};
     plan.taches.forEach(function (t) { if (!t.passif) (parRec[t.recId] = parRec[t.recId] || []).push(t); });
-    var mesRec = (S.postes || []).filter(function (p) { return p.cuisinier_id === m.id; }).map(function (p) { return p.poste; });
-    var html = '<div class="np-h">Les recettes — chacun prend la sienne et la mène du début à la fin</div><div class="np-postes">';
-    lots.forEach(function (l) {
-      var cle = l.rec.id, ts = parRec[cle] || [], tenu = (S.postes || []).find(function (p) { return p.poste === cle; });
-      var aMoi = tenu && tenu.cuisinier_id === m.id, min = ts.reduce(function (a, t) { return a + t.duree; }, 0);
-      var faits = ts.filter(estFait).length;
-      html += '<div class="np-poste ' + (tenu ? (aMoi ? 'moi' : 'pris') : '') + (ts.length ? '' : ' vide') + '">'
-        + '<div class="em"><i style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + l.couleur + '"></i></div>'
-        + '<div class="nm">' + h(l.rec.nom) + '</div>'
-        + '<div class="np-s">' + (ts.length ? ts.length + ' étape(s) · ~' + min + ' min' + (faits ? ' · ' + faits + ' faites' : '') : 'rien aujourd’hui') + '</div>'
+    var html = '<div class="np-h">Les postes — un par cuisinier, et les recettes qui se font ensemble sont dans la même main</div><div class="np-postes">';
+    P.forEach(function (p, i) {
+      var ts = [].concat.apply([], p.recs.map(function (r) { return parRec[r] || []; }));
+      var tenu = (S.postes || []).find(function (x) { return p.recs.indexOf(x.poste) >= 0; });
+      var aMoi = tenu && tenu.cuisinier_id === m.id, faits = ts.filter(estFait).length;
+      // partiel : quelqu'un tient une partie seulement des recettes du poste
+      var tenues = p.recs.filter(function (r) { return (S.postes || []).some(function (x) { return x.poste === r; }); }).length;
+      html += '<div class="np-poste ' + (tenu ? (aMoi ? 'moi' : 'pris') : '') + (p.lots.length ? '' : ' vide') + '">'
+        + '<div class="em">' + (i + 1) + '</div><div class="nm">Poste ' + (i + 1) + '</div>'
+        + (p.lots.length
+            ? '<div class="recs">' + p.lots.map(function (l) { return '<span><i style="background:' + l.couleur + '"></i>' + h(l.rec.nom) + '</span>'; }).join('') + '</div>'
+            : '<div class="np-s">aucune recette — il y a plus de cuisiniers que de plats aujourd’hui</div>')
+        + (p.lots.length ? '<div class="np-s">' + ts.length + ' étape(s) · ~' + p.min + ' min' + (faits ? ' · ' + faits + ' faites' : '') + '</div>' : '')
+        // ce qui JUSTIFIE le regroupement : ce que ces recettes font ensemble
+        + (p.partage.length ? '<div class="ens">🔗 ' + h(p.partage.slice(0, 6).map(function (k) { var x = k.split('|'); return emojiGeste(x[0]) + ' ' + x[1]; }).join(' · ')) + (p.partage.length > 6 ? ' …' : '')
+            + (p.eco ? '<br><b>~' + p.eco + ' min gagnées</b> à les faire ensemble' : '') + '</div>' : '')
         + (ts.length ? '<div class="mat" title="déduit des gestes de la fiche">🧰 ' + h(materielRecette(ts).join(' · ')) + '</div>' : '')
-        + '<div class="qui">' + (tenu ? (aMoi ? '✅ Vous' : '👤 ' + h(tenu.cuisinier_nom || 'quelqu’un')) : '<span style="color:#c97a00">libre</span>') + '</div>'
-        + (tenu ? (aMoi ? '<button class="np-btn sec" data-poste="' + h(cle) + '" data-prendre="0">Je libère</button>' : '<button class="np-btn sec" data-poste="' + h(cle) + '" data-prendre="0" title="Libérer (chef)">Libérer</button>')
-                : (ts.length ? '<button class="np-btn" data-poste="' + h(cle) + '" data-prendre="1">Je prends</button>' : ''))
+        + '<div class="qui">' + (tenu ? (aMoi ? '✅ Vous' : '👤 ' + h(tenu.cuisinier_nom || 'quelqu’un')) : '<span style="color:#c97a00">libre — un cuisinier anonyme dans le plan</span>') + '</div>'
+        + (tenues && tenues < p.recs.length ? '<div class="np-s" style="color:#c0392b">⚠️ ' + tenues + '/' + p.recs.length + ' recette(s) de ce poste sont prises séparément</div>' : '')
+        + (p.lots.length
+            ? (tenu ? '<button class="np-btn sec" data-poste="' + p.cle + '" data-prendre="0">' + (aMoi ? 'Je libère' : 'Libérer') + '</button>'
+                    : '<button class="np-btn" data-poste="' + p.cle + '" data-prendre="1">Je prends</button>')
+            : '')
         + '</div>';
     });
     html += '</div>';
-    // les lignes d'un ancien poste (« feux », « legumes ») ne désignent plus
-    // rien : on le DIT plutôt que de les laisser tenir une recette fantôme
-    var perimes = (S.postes || []).filter(function (p) { return !recette(p.poste); });
-    if (perimes.length) html += '<div class="np-alerte">⚠️ ' + perimes.length + ' prise(s) de poste de l’ancienne organisation (' + h(perimes.map(function (p) { return p.poste; }).join(', ')) + ') : elles ne tiennent aucune recette. Libérez-les.</div>';
-    var renforts = (plan.cuis || []).filter(function (c) { return c.renfort; });
-    if (renforts.length) html += '<div class="np-s" style="margin:6px 0 0">👥 ' + renforts.length + ' renfort(s) anonyme(s) comptés dans le plan — ils prennent les recettes que personne n’a réclamées. Changez le nombre en haut de l’écran.</div>';
-    var bloquees = plan.taches.filter(function (t) { return t.bloque; });
-    if (bloquees.length) {
-      var recsBl = bloquees.map(function (t) { return t.rec; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
-      html += '<div class="np-alerte">🔴 ' + bloquees.length + ' étape(s) sur une recette que personne n’a prise : ' + h(recsBl.join(', ')) + '. Elles attendent quelqu’un.</div>';
-    }
+    var perimes = (S.postes || []).filter(function (x) { return !recette(x.poste); });
+    if (perimes.length) html += '<div class="np-alerte">⚠️ ' + perimes.length + ' prise(s) de poste de l’ancienne organisation (' + h(perimes.map(function (x) { return x.poste; }).join(', ')) + ') : elles ne tiennent aucune recette. Libérez-les.</div>';
+    var vides = P.filter(function (p) { return !p.lots.length; }).length;
+    if (vides) html += '<div class="np-s" style="margin:6px 0 0">👥 ' + vides + ' poste(s) sans recette : il y a plus de cuisiniers que de plats. Baissez le nombre en haut de l’écran, ou ils aideront à la main.</div>';
+    var mesRec = (S.postes || []).filter(function (x) { return x.cuisinier_id === m.id; }).map(function (x) { return x.poste; });
     if (mesRec.length) {
       var mes = mesTaches(plan, lots), nb = mes.filter(estFait).length;
       html += '<div class="np-row" style="justify-content:space-between;margin:10px 0 4px"><div class="np-s">Vous tenez <b>' + h(mesRec.map(function (c) { return infoPoste(c).nom; }).join(' + ')) + '</b> — ' + mes.length + ' écran(s), ' + nb + ' fait(s).</div>'
         + '<button class="np-btn" data-act="service">▶ Mon service, écran par écran</button></div>';
-    } else html += '<div class="np-s" style="margin:6px 0 4px">Prenez une recette pour ouvrir votre service écran par écran.</div>';
+    } else html += '<div class="np-s" style="margin:6px 0 4px">Prenez un poste pour ouvrir votre service écran par écran.</div>';
     return html;
   }
 
@@ -1202,6 +1212,118 @@
     ts.slice().sort(function (a, b) { return (a.numero - b.numero) || ((a.sousIndex || 0) - (b.sousIndex || 0)); })
       .forEach(function (t) { materielDe(t).forEach(function (m) { if (m !== '—' && !vus[m]) { vus[m] = 1; out.push(m); } }); });
     return out;
+  }
+
+  /* ── LES POSTES : AUTANT QUE DE CUISINIERS ───────────────────────────────
+     Demande de Pablo (2026-09-20, second passage) : « il faut qu'il y ait
+     3 postes s'il y a 3 cuisiniers. Toujours 1 poste = 1 cuisinier. Regrouper
+     les recettes les plus similaires dans le dispatch des postes, comme ça un
+     cuisinier qui fait deux recettes fait des recettes aux étapes similaires
+     ou qui ont des dépendances. Il faut que la répartition suive la logique de
+     la production de masse. »
+     Un poste est donc un LOT DE RECETTES confié à une personne, et il y en a
+     exactement autant que de cuisiniers. Le regroupement est le cœur : deux
+     recettes qui taillent les mêmes carottes et saisissent le même poulet
+     doivent tomber dans la MÊME main — c'est la production de masse, on taille
+     une fois pour deux plats. Séparées, le même geste se fait deux fois.
+     > ⚠️ CE QUE ÇA REMPLACE. Un poste valait UNE recette : avec cinq recettes
+     > et trois cuisiniers, il y avait cinq postes pour trois paires de mains,
+     > deux restaient « libres » (donc bloquées), et rien ne disait qui devait
+     > prendre quoi. Les « renforts anonymes » ajoutés le matin même étaient un
+     > pansement sur ce défaut : ils bouchaient les trous sans jamais dire
+     > POURQUOI telle recette allait avec telle autre.
+     > ⚠️ LA BASE NE CHANGE PAS. `production_postes` garde une ligne PAR
+     > RECETTE (clé primaire `(jour, poste)` = une recette tenue par une seule
+     > personne) ; prendre un poste écrit autant de lignes qu'il contient de
+     > recettes. Faire porter un numéro de poste à la colonne aurait été pire :
+     > le regroupement se recalcule dès qu'un bon arrive, et « poste 2 » aurait
+     > changé de contenu sous les mains de celui qui l'avait pris. */
+
+  /* Ce que deux recettes ont en commun : les couples (geste, ingrédient). Deux
+     recettes qui coupent des carottes partagent « couper|carotte » — c'est
+     exactement ce que l'atelier fera en une fois. */
+  /* ⚠️ CHAQUE CLÉ PORTE SES MINUTES, et ce n'est pas un détail : c'est ce qui
+     rend le regroupement équilibré tout seul. Deux recettes qui taillent les
+     mêmes carottes ne les taillent qu'UNE FOIS une fois réunies — l'atelier.
+     Additionner bêtement leurs deux charges surestime donc le poste, et le
+     garde-fou d'équilibre refuse alors des regroupements qui font justement
+     gagner du temps. Mesuré au banc avant correction : Chili + Curry annoncés
+     à 97 min alors qu'ils partagent quatre gestes. */
+  function clesRecette(l) {
+    var out = {}, f = Math.sqrt(Math.max(1, l.fiches));
+    (l.etapesProd || []).forEach(function (e) {
+      if (e.passif) return;
+      var d = (e.duree_min > 0 ? e.duree_min : DUREE_DEFAUT) * f;
+      var ing = ingredientsEtape(e, l.rec.id, 1);
+      var cles = ing.length ? ing.map(function (x) { return (e.geste || '') + '|' + cleIng(x.nom); })
+                            : motsAliment(e.aliment).map(function (m) { return (e.geste || '') + '|' + m; });
+      if (!cles.length) return;
+      cles.forEach(function (k) { out[k] = (out[k] || 0) + d / cles.length; });
+    });
+    return out;
+  }
+  function chargeLot(l) {
+    var f = Math.sqrt(Math.max(1, l.fiches));
+    return (l.etapesProd || []).reduce(function (a, e) {
+      var d = e.duree_min > 0 ? e.duree_min : DUREE_DEFAUT;
+      return a + (e.passif ? 0 : d * f);   // une attente ne tient personne
+    }, 0);
+  }
+  function communs(a, b) {
+    var n = [];
+    Object.keys(a).forEach(function (k) { if (b[k]) n.push(k); });
+    return n;
+  }
+  /* Ce que le regroupement FAIT GAGNER : le geste partagé se fait une fois,
+     donc on économise le plus court des deux côtés. */
+  function economie(a, b) {
+    return communs(a, b).reduce(function (m, k) { return m + Math.min(a[k], b[k]); }, 0);
+  }
+
+  /* Le regroupement, par fusions successives : on part d'une recette par
+     poste, et on fusionne à chaque tour LA PAIRE QUI PARTAGE LE PLUS, jusqu'à
+     n'avoir plus que `n` postes.
+     ⚠️ À égalité de partage, la paire la plus LÉGÈRE gagne, et une fusion qui
+     dépasserait 1,6 × la charge moyenne est écartée tant qu'une autre est
+     possible. Sans ce garde-fou, trois recettes qui partagent un oignon
+     finissaient dans la même main pendant qu'un cuisinier n'avait rien — la
+     production de masse a besoin des deux : regrouper ce qui se fait ensemble,
+     et que personne ne reste les bras ballants.
+     ⚠️ Plus de cuisiniers que de recettes : les postes en trop restent VIDES,
+     et l'écran le dit. Découper une recette entre deux personnes annulerait ce
+     qu'on vient de gagner — c'est précisément ce que « 1 poste = 1 recette »
+     avait corrigé, et un plat suivi par deux mains n'est suivi par personne. */
+  function postesDuJour(lots, n) {
+    n = Math.max(1, Math.min(12, parseInt(n, 10) || 1));
+    var g = lots.map(function (l) { return { lots: [l], min: chargeLot(l), cles: clesRecette(l), partage: [] }; });
+    var total = g.reduce(function (a, x) { return a + x.min; }, 0), plafond = (total / n) * 1.25;
+    while (g.length > n) {
+      var best = null;
+      for (var i = 0; i < g.length; i++) for (var j = i + 1; j < g.length; j++) {
+        var c = communs(g[i].cles, g[j].cles), eco = economie(g[i].cles, g[j].cles);
+        // la charge du poste fusionné : le travail partagé n'est fait qu'une fois
+        var charge = g[i].min + g[j].min - eco;
+        var cand = { i: i, j: j, sim: c.length, charge: charge, eco: eco, part: c, ok: charge <= plafond };
+        if (!best) { best = cand; continue; }
+        // une fusion qui tient dans le plafond passe devant ; puis le partage ;
+        // puis la charge la plus faible
+        if (cand.ok !== best.ok) { if (cand.ok) best = cand; continue; }
+        if (cand.sim !== best.sim) { if (cand.sim > best.sim) best = cand; continue; }
+        if (cand.charge < best.charge) best = cand;
+      }
+      var A = g[best.i], B = g[best.j];
+      A.lots = A.lots.concat(B.lots); A.min = best.charge; A.eco = (A.eco || 0) + best.eco;
+      Object.keys(B.cles).forEach(function (k) { A.cles[k] = (A.cles[k] || 0) + B.cles[k]; });
+      A.partage = A.partage.concat(best.part);
+      g.splice(best.j, 1);
+    }
+    g.sort(function (a, b) { return b.min - a.min; });
+    while (g.length < n) g.push({ lots: [], min: 0, cles: {}, partage: [] });
+    return g.map(function (x, i) {
+      return { cle: 'P' + (i + 1), i: i, lots: x.lots, recs: x.lots.map(function (l) { return l.rec.id; }),
+        min: Math.round(x.min), eco: Math.round(x.eco || 0),
+        partage: x.partage.filter(function (v, k, a) { return a.indexOf(v) === k; }) };
+    });
   }
 
   /* ── Les dépendances d'une recette ───────────────────────────────────────
@@ -2222,7 +2344,7 @@
         for (var k = 0; k < pc.n; k++) {
           idx++;
           html += '<div class="port"><b>' + idx + '/' + l.portions + ' · ' + h(nomClient(pc.bon.user_id)) + '</b> <span style="color:#ffffff8c;font-size:12px">' + (pc.p.kcal ? Math.round(pc.p.kcal) + ' kcal · ' : '') + Math.round(pc.p.gPortion) + ' g</span><div class="g">'
-            + pc.p.ings.filter(function (g) { return g.g > 0; }).map(function (g) { return '<span><b>' + (g.g >= 10 ? Math.round(g.g) : Math.round(g.g * 10) / 10) + ' ' + h(g.unite) + '</b> ' + h(g.nom) + '</span>'; }).join('') + '</div></div>';
+            + pc.p.ings.filter(function (g) { return g.g > 0; }).map(function (g) { return '<span><i class="ill">' + illustration(g.nom) + '</i><b>' + (g.g >= 10 ? Math.round(g.g) : Math.round(g.g * 10) / 10) + ' ' + h(g.unite) + '</b> ' + h(g.nom) + '</span>'; }).join('') + '</div></div>';
         }
       });
       html += '<div class="sec">Matériel</div><div class="matl">' + materielDe({ geste: 'dresser' }).map(function (m) { return '<span>' + h(m) + '</span>'; }).join('') + '</div>';
@@ -2233,7 +2355,7 @@
     // 1. ce qu'il faut faire — la consigne de la fiche, ou son absence, dite
     html += '<div class="sec">À faire</div><div class="desc">' + (t.desc ? h(t.desc) : '<i>Aucune consigne écrite dans la fiche — à compléter dans l’onglet Chef.</i>') + '</div>';
     // 2. combien — les grammes du jour, par ingrédient de l'étape
-    if (q.length) html += '<div class="sec">Quantités du jour <small>— fiche × ' + t.fiches.toFixed(1) + '</small></div><div class="qte">' + q.map(function (x) { return '<div><b>' + h(x.lib) + '</b>' + h(x.nom) + '</div>'; }).join('') + '</div>';
+    if (q.length) html += '<div class="sec">Quantités du jour <small>— fiche × ' + t.fiches.toFixed(1) + '</small></div><div class="qte">' + q.map(function (x) { return '<div><span class="ill">' + illustration(x.nom) + '</span><b>' + h(x.lib) + '</b>' + h(x.nom) + '</div>'; }).join('') + '</div>';
     else if (t.aliment) html += '<div class="sec">Quantités du jour</div><div class="desc"><i>Aucun ingrédient de la fiche ne porte le mot « ' + h(t.aliment) + ' » — vérifier l’aliment de l’étape dans l’onglet Chef.</i></div>';
     // 3. les chiffres de la fiche : durée, température, découpe, attente —
     //    chacun dit s'il vient de la fiche ou s'il manque
