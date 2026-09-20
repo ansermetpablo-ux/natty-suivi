@@ -3890,7 +3890,7 @@ curry en parallèle sur deux cuisiniers, fin 08:51 = le chemin critique (16 + 10
 🔄 **Non vérifié avec une session d'équipe réelle**, ni sur les 38 vraies fiches : leurs
 aliments sont du texte libre, l'inférence y trouvera des cas à corriger par « dépend de ».
 
-#### 🔴 La refonte du 2026-09-20 : 1 ingrédient = 1 étape, 1 poste = 1 recette
+#### 🔴 La refonte du 2026-09-20 : 1 ingrédient = 1 étape, 1 poste = 1 cuisinier
 Quatre demandes de Pablo, dont la première remet en cause le découpage. **Les paragraphes
 au-dessus décrivent l'état d'avant** ; ils sont conservés pour le RAISONNEMENT (la cible
 calorique, la fiche lue comme elle est écrite, l'ordonnancement), pas pour leur description
@@ -3913,16 +3913,55 @@ Mesuré : le Natty wrap passe de 2 étapes de production à 6, la journée de 20
 > carottes et le poulet se taillent en une fois. Ingrédient par ingrédient, les deux se
 > retrouvent — 7 ateliers au banc.
 
-**1 POSTE = 1 RECETTE.** Les familles de gestes faisaient passer une recette par quatre
-personnes : nul ne la suivait, et la carte — une colonne par recette — racontait autre chose
-que le plan.
+**UN POSTE EST UN LOT DE RECETTES, ET IL Y EN A AUTANT QUE DE CUISINIERS.** Deux demandes
+successives du même jour, la seconde remplaçant la première — « 1 poste = 1 recette », puis
+« il faut qu'il y ait 3 postes si il y a 3 cuisiniers ; toujours 1 poste = 1 cuisinier ;
+regrouper les recettes les plus similaires dans le dispatch des postes ». Les deux corrigeaient
+le même défaut de départ (les familles de gestes faisaient passer une recette par quatre
+personnes, et la carte — une colonne par recette — racontait autre chose que le plan) ; la
+seconde va plus loin, parce qu'une recette par poste laissait **cinq** postes pour trois paires
+de mains, deux « libres » donc bloquées, et rien pour dire qui devait prendre quoi.
+
+**LE REGROUPEMENT EST LE CŒUR** (`postesDuJour`). On part d'une recette par poste et on fusionne
+à chaque tour la paire qui PARTAGE LE PLUS, en couples **(geste, ingrédient)** — c'est-à-dire
+exactement ce que l'atelier fera en une fois. Deux recettes qui taillent les mêmes carottes et
+saisissent le même poulet tombent dans la MÊME main : on taille une fois pour deux plats.
+Séparées, le même geste se fait deux fois.
+> ⚠️⚠️ **CHAQUE CLÉ PORTE SES MINUTES** (`clesRecette`), et ce n'est pas un détail comptable :
+> c'est ce qui rend la répartition équilibrée toute seule. Deux recettes réunies ne taillent les
+> carottes qu'UNE fois, donc additionner leurs deux charges surestime le poste — et le garde-fou
+> d'équilibre refuse alors les regroupements qui font justement gagner du temps. Mesuré avant
+> correction : Chili + Curry annoncés à **97 min** contre 43 pour les deux autres, et une fin à
+> 10 h 13 à deux cuisiniers. `economie()` retranche le travail partagé et le plafond est tombé de
+> 1,6 à **1,25 × la moyenne**.
+>
+> | cuisiniers | postes | fin |
+> |---|---|---|
+> | 1 | [Chili+Curry+Soupe+Natty] 116 min (−24) | 10:17 |
+> | 2 | [Chili+Curry] 87 (−10) · [Natty+Soupe] 40 (−3) | 09:48 |
+> | 3 | [Curry] 56 · [Chili] 41 · [Natty+Soupe] 40 (−3) | 09:05 |
+> | 4 | une recette chacun | 09:05 |
+>
+> ⚠️ **Plus de cuisiniers que de recettes : les postes en trop restent VIDES, et l'écran le
+> dit.** Découper une recette entre deux personnes annulerait ce qu'on vient de gagner — un plat
+> suivi par deux mains n'est suivi par personne.
+> ⚠️ **La carte d'un poste dit POURQUOI il est constitué ainsi** : ses recettes, ce qu'elles ont
+> en commun (« 🔗 🔪 carotte »), et ce que ça fait gagner (« ~3 min à les faire ensemble »). Un
+> regroupement qu'on ne comprend pas est un regroupement qu'on défait.
 > ⚠️ **La règle de cumul n'a jamais appartenu au poste, elle appartient au GESTE**
 > (`regleCumul`) : deux cuissons en même temps, c'est deux feux et la plus longue décide ;
 > deux tailles, c'est deux fois le couteau.
-> ⚠️ **`production_postes.poste` porte un identifiant de RECETTE** depuis cette date. Rien à
-> migrer (text, même clé primaire), mais une ligne d'avant ne désigne aucune recette : elle
-> est affichée comme telle, **ne compte pas comme un cuisinier** — sinon elle mangerait une
-> place de renfort — et `natty_production.sql` donne le DELETE.
+> ⚠️⚠️ **`production_postes` GARDE UNE LIGNE PAR RECETTE**, et la colonne `poste` porte un
+> identifiant de RECETTE (depuis le 2026-09-20). Prendre un poste écrit autant de lignes qu'il
+> contient de recettes. Faire porter un **numéro de poste** à la colonne aurait été pire : le
+> regroupement se recalcule dès qu'un bon arrive, et « poste 2 » aurait changé de contenu sous
+> les mains de celui qui l'avait pris. La clé primaire `(jour, poste)` continue donc de dire
+> « une recette, une personne ». Une ligne d'avant ne désigne aucune recette : elle est affichée
+> comme telle, ne compte pas comme un cuisinier, et `natty_production.sql` donne le DELETE.
+> ⚠️ **Et plus rien n'est « bloqué » par défaut.** Une recette que personne n'avait nommément
+> réclamée sortait en rouge : on ne pouvait pas voir l'heure de fin d'une journée à trois sans
+> que trois personnes se soient inscrites. Le nombre de cuisiniers est une donnée de
+> planification, pas une liste de présence.
 
 **LES COCHES, À DEUX ÉTAGES.** `production_etapes.etape_id` référence une étape de FICHE ; un
 morceau n'a pas d'identifiant en base. Le morceau se coche sur l'appareil
@@ -3934,18 +3973,18 @@ morceau n'a pas d'identifiant en base. Le morceau se coche sur l'appareil
 > d'avant, base comprise. L'étage local n'existe que pour ce que la base ne sait pas nommer.
 
 **LE MATÉRIEL** (`MATERIEL`, `materielDe`, `materielRecette`) — la mise en place complète sur
-la carte d'une recette, ce qu'il faut sortir sur l'écran d'une étape.
+la carte d'un poste, ce qu'il faut sortir sur l'écran d'une étape.
 > ⚠️ **C'est DÉDUIT DU GESTE et annoncé comme tel.** La fiche ne porte aucune colonne
 > « matériel » ; l'inventer par recette serait écrire à la place du chef. Ce qui est propre à
 > un plat — un chinois, un cercle — se met dans la consigne, onglet Chef.
 
-**LE NOMBRE DE CUISINIERS SE CHANGE EN COURS DE PRODUCTION.** Le champ disparaissait dès
-qu'une personne avait pris quelque chose : arriver à trois en renfort ne changeait rien, et
-les recettes non réclamées restaient bloquées. Les **renforts** anonymes complètent jusqu'au
-nombre saisi. Mesuré : 2 cuisiniers → fin 09:42, 4 → fin 09:05.
-> ⚠️ **Un renfort ne reçoit QUE des recettes libres**, sinon il prendrait le travail de
-> quelqu'un qui l'a nommément réclamée. Même garde dans le dispatcher : un atelier ne tire la
-> part de l'autre recette que si ce cuisinier a le droit de la faire.
+**LE NOMBRE DE CUISINIERS SE CHANGE EN COURS DE PRODUCTION**, et c'est lui qui commande le
+nombre de postes. Le champ disparaissait dès qu'une personne avait pris quelque chose : arriver
+à trois en renfort ne changeait rien, et les recettes non réclamées restaient bloquées.
+> ⚠️ **Les « renforts » anonymes ont disparu**, et c'est le même chantier. Ils étaient un
+> pansement sur le défaut d'origine : ils bouchaient les trous d'une répartition à une recette
+> par poste sans jamais dire POURQUOI telle recette allait avec telle autre. Le regroupement le
+> dit ; les renforts n'ont plus rien à boucher.
 
 **🍗 ET L'APP DIT CE QUE LA FICHE NE PRÉPARE PAS.** Pablo, sur le wrap : « il faut préparer et
 cuire le poulet » — aucune étape ne le nommait. L'app ne peut pas inventer l'étape manquante ;
@@ -3970,6 +4009,13 @@ il passe — la puce du haut nomme alors les recettes qui le partagent.
   Remesuré : 17 étiquettes, 43 pills, **0 chevauchement**, aucun débordement horizontal.
 - ⚠️ `COLW` est monté de 170 à **210 px minimum** et la carte défile : une carte qu'on fait
   défiler se lit, une carte illisible non.
+
+**LES HÉROS DANS L'ÉCRAN PAR ÉCRAN.** « Ajouter les héros illustrations des aliments dans
+l'écran par écran. » L'illustration de l'aliment passe de 124 à **170 px** de boîte (124 px de
+glyphe) : le cuisinier sait qu'il taille, il veut savoir QUOI, et à deux mètres de la plaque
+124 px ne se voyaient pas. Et partout où un ingrédient est nommé dans ces écrans — les quantités
+du jour, les grammes de chaque portion à l'assemblage — il porte désormais la sienne (`.ill`,
+26 px).
 
 🔄 **Non vérifié avec une session d'équipe réelle ni sur les 5 recettes du jour.**
 
