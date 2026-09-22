@@ -692,17 +692,28 @@
   async function chargerCibles() {
     try {
       var r = await Natty.sbFetch('onboarding?user_id=eq.' + Natty.USER_ID
-        + '&completed=eq.true&select=poids,tdee&order=created_at.desc&limit=1');
+        + '&completed=eq.true&select=poids,tdee,objectif_valeur,objectif_semaines'
+        + '&order=created_at.desc&limit=1');
       var d = (r && r[0]) || {};
       var poids = parseFloat(d.poids) || 0;
       var tdee = parseFloat(d.tdee) || 0;
       if (poids || tdee) {
-        cibleJour = {
-          p: poids ? Math.round(poids * 2) : 0,
-          l: tdee ? Math.round(tdee * 0.25 / 9) : 0,
-          g: tdee ? Math.round(tdee * 0.5 / 4) : 0,
-          c: tdee ? Math.round(tdee) : 0
-        };
+        /* ⚠️ `Natty.macrosJour`, PAS une formule recopiée ici. Celle qui vivait à
+           cet endroit était l'ANCIENNE (poids×2, tdee×0,25/9, tdee×0,5/4) : elle
+           ne faisait pas le compte — à 80 kg pour 3 200 kcal ses trois macros
+           n'en valaient que 3 041 — et elle ignorait le supplément
+           d'entraînement. Tant que ces chiffres n'étaient qu'un repli, la
+           divergence restait discrète ; depuis que les anneaux affichent le
+           CUMUL DU JOUR SUR LA CIBLE DU JOUR, c'est le dénominateur affiché à
+           l'écran, donc il doit être celui de tout le reste de l'app. */
+        var base = (window.Natty && Natty.baseObjectif)
+          ? Natty.baseObjectif(tdee, d.objectif_valeur, d.objectif_semaines) : tdee;
+        cibleJour = (window.Natty && Natty.macrosJour)
+          ? Natty.macrosJour(poids, base, 0)
+          : { p: poids ? Math.round(poids * 2) : 0,
+              l: tdee ? Math.round(tdee * 0.25 / 9) : 0,
+              g: tdee ? Math.round(tdee * 0.5 / 4) : 0,
+              c: tdee ? Math.round(tdee) : 0 };
       }
     } catch (e) { /* on retombe sur le fallback ci-dessous */ }
 
@@ -727,7 +738,16 @@
        le repli, puis se corrigent — plutôt que d'attendre trois requêtes devant
        un écran vide. */
     if (window.NattyCreneaux) {
-      try { await NattyCreneaux.charger(true); } catch (e) {}
+      try {
+        await NattyCreneaux.charger(true);
+        /* La cible du jour vient de là quand le module est présent : lui seul
+           sait ajouter le supplément d'entraînement du jour (`assets/seance.js`).
+           Sans cette ligne, le `+` annoncerait « sur 3 200 » un jour de salle
+           pendant que l'écran Suivi annonce « sur 3 500 » — deux dénominateurs
+           pour la même journée. */
+        var cj = NattyCreneaux.cibleJour();
+        if (cj && cj.c) cibleJour = cj;
+      } catch (e) {}
     }
 
     majTitre();
@@ -744,6 +764,42 @@
   function creneauCourant() {
     if (!window.NattyCreneaux) return null;
     return NattyCreneaux.courant();
+  }
+
+  /* L'heure qu'on donne au modèle comme indice, au moment où le repas a été
+     pris — `MOMENT` quand la personne a corrigé « quand l'avez-vous mangé ? »,
+     maintenant sinon. Prendre l'heure de la SAISIE serait faux précisément dans
+     le cas que cet écran gère : un dîner noté le lendemain matin. */
+  function heureIndice() {
+    var d = MOMENT || new Date();
+    return d.getHours() + ' h ' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  /* Le type rendu par le modèle, ramené au vocabulaire canonique — ou `null`.
+     ⚠️ `NattyCreneaux.normType` est la SEULE table de correspondance, et elle
+     vit là-bas : en écrire une seconde ici, c'est deux tables qui divergent dès
+     qu'un modèle rend un mot nouveau. Sans le module, on n'écrit rien plutôt que
+     d'écrire un mot que personne d'autre ne saura relire. */
+  function typeRepas(v) {
+    if (!v) return null;
+    if (window.NattyCreneaux && NattyCreneaux.normType) return NattyCreneaux.normType(v);
+    return null;
+  }
+
+  /* Ce qu'on range dans `meals.meal_type` : le type canonique du plat. À défaut
+     de réponse du modèle, celui de l'heure — une information vraie, contrairement
+     à l'ancien défaut `'déjeuner'` de la colonne. */
+  function typePourBase(pl) {
+    var t = pl && pl.repas;
+    if (!t && window.NattyCreneaux && NattyCreneaux.typeHeure) {
+      t = NattyCreneaux.typeHeure(MOMENT || new Date());
+    }
+    if (!t) return undefined;
+    var c = window.NattyCreneaux && NattyCreneaux.canonPar ? NattyCreneaux.canonPar(t) : null;
+    // On écrit le LIBELLÉ humain (« Petit déjeuner ») : la colonne est lue par
+    // `assets/social.js` pour l'afficher tel quel, et `normType()` sait le
+    // relire. Écrire la clé interne obligerait chaque lecteur à la traduire.
+    return c ? c.nom : undefined;
   }
 
   function cibleRepas() {
@@ -906,6 +962,32 @@
     return {
       p: Math.max(0, Math.round(c.p - u.p)), l: Math.max(0, Math.round(c.l - u.l)),
       g: Math.max(0, Math.round(c.g - u.g)), c: Math.max(0, Math.round(c.c - u.c))
+    };
+  }
+
+  /* Ce qui est déjà noté AUJOURD'HUI, tous créneaux confondus. C'est le socle du
+     compteur cumulé : le petit déjeuner compte encore à 20 h. */
+  function dejaJour() {
+    if (!window.NattyCreneaux || !NattyCreneaux.mangeJour) return { p: 0, l: 0, g: 0, c: 0, n: 0 };
+    var m = NattyCreneaux.mangeJour();
+    m.n = (NattyCreneaux.liste() || []).reduce(function (t, c) { return t + NattyCreneaux.nbDeja(c.cle); }, 0);
+    return m;
+  }
+
+  /* Ce qu'il reste sur la JOURNÉE — le dénominateur qu'on affiche.
+     ⚠️ À NE PAS CONFONDRE AVEC `restant()`, qui porte sur le CRÉNEAU et qui
+     reste ce que lisent les suggestions d'« Enrichir ». Les deux répondent à
+     deux questions différentes : « où en suis-je dans ma journée ? » pour
+     l'affichage, « qu'est-ce qui tient encore dans CE repas ? » pour proposer
+     un complément. Confondre les deux ferait proposer 2 200 kcal de dessert au
+     petit déjeuner sous prétexte que la journée n'est pas finie. */
+  function restantJour() {
+    var t = prisJour();
+    return {
+      p: Math.max(0, Math.round((cibleJour.p || 0) - t.p)),
+      l: Math.max(0, Math.round((cibleJour.l || 0) - t.l)),
+      g: Math.max(0, Math.round((cibleJour.g || 0) - t.g)),
+      c: Math.max(0, Math.round((cibleJour.c || 0) - t.c))
     };
   }
 
@@ -1081,7 +1163,14 @@
       + '    </div>'
       + '    <div class="na-rsheet" id="naRSheet">'
       + '      <div class="na-poign"></div>'
-      + '      <div class="na-sec">Valeurs nutritionnelles<i></i></div>'
+      /* ⚠️ « Votre journée », et plus « Valeurs nutritionnelles ». Depuis que les
+         trois cartes portent le CUMUL DU JOUR, un titre qui ne dit pas de quoi
+         elles parlent se lit comme les valeurs de l'assiette qu'on vient de
+         photographier — or les calories de CETTE assiette sont juste en dessous,
+         en tête de la liste des ingrédients. Deux nombres différents sur le même
+         écran doivent chacun dire ce qu'ils comptent : c'est le défaut déjà payé
+         par « Votre objectif » posé au-dessus d'un restant. */
+      + '      <div class="na-sec">Votre journée<i></i></div>'
       /* Les calories du repas : le total, et la cible du créneau juste en
          dessous. Un grand chiffre seul ne dit pas s'il est haut ou bas. */
       + '    <div class="na-kcard">'
@@ -1440,9 +1529,31 @@
       + 'boire se compte en grammes de boisson (≈ 300 g).\n'
       + '- Ne les fonds jamais dans « boisson » ou « verre de lait » : leurs macros n’ont rien à '
       + 'voir.\n\n'
+      /* ── DE QUEL REPAS S'AGIT-IL ? ──────────────────────────────
+         Demande de Pablo : « dans l'analyse des plats, il faut détecter s'il
+         s'agit d'un déjeuner, petit déjeuner, d'un dîner ou d'une collation pour
+         faire l'analytique du bilan ».
+
+         ⚠️ POURQUOI LE DEMANDER AU MODÈLE ALORS QUE L'HEURE EST CONNUE.
+         L'heure répond dans le cas courant, et c'est le repli
+         (`NattyCreneaux.typeHeure`). Mais elle se trompe exactement là où ça
+         compte : un bol de céréales noté à 11 h est un petit déjeuner, un yaourt
+         à 16 h est une collation et pas un dîner, et un plat photographié le soir
+         mais saisi le lendemain matin porterait l'heure de la SAISIE. L'assiette,
+         elle, dit ce qu'elle est.
+
+         ⚠️ On lui donne l'heure comme INDICE, sans la lui imposer : sans elle il
+         classerait une omelette en petit déjeuner à 20 h. */
+      + 'TYPE DE REPAS\n'
+      + '- Il est ' + heureIndice() + '. Dis de quel repas il s’agit, d’après ce que tu vois '
+      + 'dans l’assiette avant tout, l’heure ne servant que d’indice.\n'
+      + '- `repas` vaut exactement l’une de ces quatre valeurs : "petit_dejeuner", "dejeuner", '
+      + '"collation", "diner".\n'
+      + '- Une portion réduite et simple (fruit, yaourt, poignée d’oléagineux, barre) est une '
+      + '"collation", même à une heure de repas.\n\n'
       + 'Réponds UNIQUEMENT en JSON, sans backticks :\n'
-      + '{"nom":"nom du plat","ingredients":[{"emoji":"🍗","nom":"Poulet grillé","quantite_g":150,'
-      + '"pour100":{"kcal":165,"prot":31,"gluc":0,"lip":3.6}}]}';
+      + '{"nom":"nom du plat","repas":"dejeuner","ingredients":[{"emoji":"🍗","nom":"Poulet grillé",'
+      + '"quantite_g":150,"pour100":{"kcal":165,"prot":31,"gluc":0,"lip":3.6}}]}';
 
     try {
       var res = await fetch(CLAUDE_API, {
@@ -1462,6 +1573,12 @@
         nom: data.nom || 'Plat',
         photo: S.photoDataUrl,
         file: file,
+        /* ⚠️ `null` quand le modèle n'a rien rendu d'exploitable, JAMAIS un repli
+           sur « déjeuner » : c'est précisément le défaut de l'ancienne valeur par
+           défaut de la colonne, qui étiquetait 190 repas d'un mot que personne
+           n'avait choisi. Un `null` se rattrape par l'heure à la lecture
+           (`NattyCreneaux.typeDe`), une fausse valeur ne se rattrape pas. */
+        repas: typeRepas(data.repas),
         ingredients: data.ingredients.map(function (i) {
           var p1 = i.pour100 || null;
           return {
@@ -1710,22 +1827,46 @@
   }
 
   /* Ce qui est COMPTÉ sur ce créneau : ce qui est déjà en base plus ce qui est
-     dans la session en cours. C'est ce que montrent les anneaux depuis le
-     2026-08-10 (demande de Pablo) : ils se remplissent au fil des ajouts, au
-     lieu de se vider. `restant()` sert encore, mais pour la marge d'« Enrichir »
-     et le second rang des libellés. */
+     dans la session en cours. Sert encore à la marge d'« Enrichir » et aux
+     suggestions, plus à l'affichage depuis le 2026-09-22. */
   function pris() {
     var u = totalSession(), dj = dejaCreneau();
     return { p: r1(u.p + dj.p), l: r1(u.l + dj.l), g: r1(u.g + dj.g), c: Math.round(u.c + dj.c) };
   }
 
+  /* ⚠️⚠️ CE QUE MONTRENT LES ANNEAUX : LE CUMUL DE LA JOURNÉE SUR LA CIBLE DE LA
+     JOURNÉE (demande de Pablo, 2026-09-22 — « le repas fait 500 calories, le
+     graphique affiche 500/3000 ; au deuxième repas je vois déjà le 500/3000 et
+     j'ajoute 300, donc 800/3000 »).
+
+     Ce qui change n'est QUE le couple numérateur/dénominateur : les anneaux, le
+     grand chiffre, la barre et la carte des calories sont exactement les mêmes
+     éléments, peints par le même code. Ce qui a été demandé est un changement de
+     système, pas de présentation.
+
+     Pourquoi c'est mieux : la cible d'un créneau est une répartition CALCULÉE
+     (déclaratif + habitudes, voir assets/creneaux.js), donc un chiffre que
+     l'utilisateur n'a jamais choisi et ne peut pas vérifier. « 3 000 kcal », lui,
+     est son objectif — il le lit sur l'écran Suivi, il l'a réglé lui-même. Un
+     anneau qui se remplit sur la journée se compare aussi d'un repas à l'autre :
+     c'est la même jauge toute la journée, elle ne se réinitialise pas à chaque
+     assiette.
+
+     ⚠️ Ce qui est déjà en base est RELU à l'ouverture (`NattyCreneaux.charger`)
+     et non gardé en mémoire : c'est ce qui fait qu'un plat noté à 12 h 03 compte
+     encore quand on rouvre le `+` à 12 h 40. */
+  function prisJour() {
+    var u = totalSession(), dj = dejaJour();
+    return { p: r1(u.p + dj.p), l: r1(u.l + dj.l), g: r1(u.g + dj.g), c: Math.round(u.c + dj.c) };
+  }
+
   function majAnneaux() {
     if (!dom || !S || !cibleJour) return;
-    var c = cibleRepas(), r = restant(), t = pris();
-    /* Les DEUX jeux d'anneaux (prise de vue en −30 %, récap à taille normale)
-       sont peints du même coup : ils montrent la même chose, ils ne peuvent pas
-       se contredire d'un écran à l'autre.
-       ⚠️ L'anneau se REMPLIT — la fraction est le CONSOMMÉ sur la cible, plafonné
+    /* ⚠️ `c` EST LA CIBLE DE LA JOURNÉE, et `t` le cumul de la journée : c'est
+       tout le changement du 2026-09-22. `restant()` (le créneau) reste lu juste
+       en dessous pour la marge d'« Enrichir », qui est une autre question. */
+    var c = cibleJour, t = prisJour(), r = restant();
+    /* ⚠️ L'anneau se REMPLIT — la fraction est le CONSOMMÉ sur la cible, plafonné
        à 1. Sans plafond, un dépassement enroulerait l'arc une seconde fois par
        dessus le premier tour et un gros excès ressemblerait à un petit. */
     ['p', 'l', 'g'].forEach(function (k) {
@@ -1739,15 +1880,19 @@
       var b = q('#naBar' + k);
       if (b) b.style.width = (frac * 100).toFixed(1) + '%';
     });
-    /* Ce qui est DÉJÀ noté sur le créneau, sous la carte des calories. C'est
-       cette ligne qui rend le total compréhensible : « 900 kcal » ressemble à
-       une erreur quand elle compte un plat pris une demi-heure plus tôt. */
-    var cr = creneauCourant(), dj = dejaCreneau();
-    var nomRepas = cr ? cr.nom.toLowerCase() : 'ce repas';
+    /* Ce qui est DÉJÀ noté AUJOURD'HUI, sous la carte des calories. C'est cette
+       ligne qui rend le total compréhensible : « 1 400 kcal » ressemble à une
+       erreur quand elle compte le petit déjeuner et le déjeuner de la personne.
+       ⚠️ Elle parle de la journée depuis que le compteur est cumulé — annoncer
+       « 1 plat déjà noté » en ne comptant que le créneau courant, sous un total
+       qui compte toute la journée, ferait deux chiffres qui ne s'expliquent
+       pas l'un l'autre. */
+    var dj = dejaJour();
     var dejaEl = q('#naResteDeja2');
     if (dejaEl) {
       dejaEl.textContent = dj.n
-        ? dj.n + (dj.n > 1 ? ' plats déjà notés' : ' plat déjà noté') + ' · ' + dj.c + ' kcal comptées'
+        ? dj.n + (dj.n > 1 ? ' plats déjà notés aujourd’hui' : ' plat déjà noté aujourd’hui')
+          + ' · ' + dj.c + ' kcal comptées'
         : '';
     }
     /* La carte des calories du repas. Le grand chiffre est ce qui a été COMPTÉ ;
@@ -1755,14 +1900,14 @@
        remplaçant le chiffre — on veut toujours pouvoir lire ce qu'on a mangé, y
        compris quand on a mangé plus que prévu. */
     var n = q('#naKmodN'), su = q('#naKmodS'), un = q('#naKmodU'), ti = q('#naKmodT');
-    var depasse = r.c <= 0 && t.c > c.c;
+    var depasse = c.c > 0 && t.c > c.c;
     if (n && su && un) {
-      if (ti) ti.textContent = 'Calories comptées';
+      if (ti) ti.textContent = 'Calories de la journée';
       n.textContent = t.c;
       un.textContent = 'kcal';
       su.textContent = depasse
-        ? '+' + (t.c - c.c) + ' au-delà de votre ' + nomRepas + ' (' + c.c + ')'
-        : 'sur ' + c.c + ' pour votre ' + nomRepas;
+        ? '+' + (t.c - c.c) + ' au-delà de vos ' + c.c + ' du jour'
+        : 'sur ' + c.c + ' pour aujourd’hui';
       n.style.color = depasse ? '#ff9500' : '#f4f4f7';
     }
     /* La barre de la carte calories. Blanche tant qu'on est dans la cible,
@@ -2262,14 +2407,23 @@
              avant, tout plat enregistré partait dans le fil sans que personne
              ne l'ait demandé. Si la colonne n'existe pas sur l'instance,
              PostgREST refuse l'INSERT entier — d'où le repli plus bas. */
-          partage: false
+          partage: false,
+          /* ⚠️ LE TYPE DE REPAS, ENFIN ÉCRIT. La colonne existait depuis toujours
+             avec un défaut `'déjeuner'` que personne ne renseignait : les 190
+             lignes en base l'annonçaient toutes, petits déjeuners et dîners
+             compris, et `assets/social.js` affichait ça. Le défaut est retiré
+             (migration du 2026-09-22) et c'est désormais l'analyse du plat qui
+             remplit la colonne, l'heure servant de repli. C'est ce qui permet au
+             bilan de répartir les macros par repas. */
+          meal_type: typePourBase(pl)
         }).catch(async function (e) {
           if (!/partage/.test(String(e && e.message || e))) throw e;
           PARTAGE_OK = false;
           return Natty.sbPost('meals', {
             user_id: Natty.USER_ID, name: pl.nom || 'Repas',
             photo_url: photoUrl, meal_date: momentJour(),
-            created_at: quandISO || undefined
+            created_at: quandISO || undefined,
+            meal_type: typePourBase(pl)
           });
         });
         var meal = saved && saved[0];
@@ -2611,8 +2765,14 @@
         + '&meal_date=eq.' + today() + '&select=id');
       var ids = (ms || []).map(function (m) { return m.id; });
       if (ids.length) {
+        /* ⚠️ Les QUATRE colonnes de macros, pas seulement le nom et les grammes.
+           `Natty.calcMac` préfère les macros écrites à la table, et une colonne
+           non demandée arrive `undefined` — donc « rien d'écrit », donc on
+           retombait en silence sur la table pour des lignes qui portaient la
+           vraie mesure de l'analyse photo. Même défaut que `api/rappel-macros`
+           (§3 de CLAUDE.md). */
         var ings = await Natty.sbFetch('meal_ingredients?meal_id=in.(' + ids.join(',') + ')'
-          + '&select=name,quantity_g&limit=400');
+          + '&select=name,quantity_g,calories,proteins_g,carbs_g,fats_g&limit=400');
         var t = Natty.calcMac(ings);
         deja = { p: t.p, l: t.l, g: t.g, c: t.c };
       }

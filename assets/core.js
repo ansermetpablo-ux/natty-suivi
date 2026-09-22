@@ -618,6 +618,42 @@ var Natty = (function () {
 
   function r1(v) { return Math.round(v * 10) / 10; }
 
+  /* ═══ L'INSTANT D'UNE LIGNE DE BASE ═══════════════════════
+     ⚠️⚠️ `meals.created_at` EST UN `timestamp WITHOUT time zone`, ET POSTGRES Y
+     RANGE L'HEURE UTC. PostgREST le rend donc SANS décalage —
+     `"2026-09-22T16:12:03.801"` — et `new Date()` parse une date-heure sans
+     décalage comme une heure LOCALE (c'est la spec, pas une bizarrerie de
+     moteur). Toute l'app lisait donc ses repas deux heures trop tôt l'été, une
+     heure trop tôt l'hiver.
+
+     Ce n'est pas un détail d'affichage, c'est le CRÉNEAU qui se trompe : relevé
+     sur les 190 repas en base, 23 déjeuners enregistrés à 12 h à Paris (10 h
+     UTC) tombaient dans la tranche du MATIN. Le `+` repartait d'une cible de
+     petit déjeuner à midi, le guide du jour cochait la mauvaise étape, et le
+     bilan rangeait un déjeuner dans le petit déjeuner.
+
+     Le même piège que `Natty.jour()`, dans l'autre sens : là il fallait cesser
+     de convertir en UTC, ici il faut cesser d'oublier que c'en est déjà.
+
+     ⚠️ La colonne est homogène — `now()` comme le `toISOString()` d'ajout.js y
+     écrivent tous deux l'horloge UTC — donc une seule normalisation à la
+     lecture suffit, et il n'y a rien à migrer.
+     ⚠️ Une chaîne qui porte DÉJÀ son décalage (`Z`, `+02:00`) est laissée
+     telle quelle : les colonnes `timestamptz` de la base, elles, sont justes.
+
+     @param {string|Date} v  ce que la base a rendu
+     @returns {Date}
+  */
+  function quand(v) {
+    if (v instanceof Date) return v;
+    var s = String(v || '');
+    if (!s) return new Date(NaN);
+    // Déjà daté : un `Z` final, ou un ±HH:MM après l'heure.
+    if (/(?:Z|[+-]\d\d:?\d\d)$/.test(s)) return new Date(s);
+    // Sinon c'est une heure UTC nue : on le lui dit.
+    return new Date(s.replace(' ', 'T') + 'Z');
+  }
+
   /**
    * La date LOCALE au format YYYY-MM-DD.
    *
@@ -1159,6 +1195,9 @@ var Natty = (function () {
     ecartObjectif: ecartObjectif, dureeConseillee: dureeConseillee,
     baseObjectif: baseObjectif,
     jour: jour, aMinuit: aMinuit,
+    // L'instant d'une ligne de base — voir l'encadre : `created_at` est en
+    // UTC et arrive sans decalage, donc `new Date()` seul se trompe d'heure.
+    quand: quand,
     // Un plein écran est-il déjà ouvert ? (voir l'encadré ci-dessus)
     ecranOccupe: ecranOccupe,
     // Questions et avertissements, sans dialogue natif (voir plus haut).

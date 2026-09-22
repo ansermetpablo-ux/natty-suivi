@@ -302,7 +302,7 @@ var Natty = (function () {
     'riz':{c:130,p:2.7,l:0.3,g:28},'riz complet':{c:123,p:2.7,l:1,g:26},
     'pates':{c:131,p:5,l:1.1,g:25},'spaghetti':{c:131,p:5,l:1.1,g:25},'lasagne':{c:135,p:6,l:5,g:16},
     'quinoa':{c:120,p:4.4,l:1.9,g:22},'semoule':{c:112,p:4,l:0.2,g:23},'couscous':{c:112,p:4,l:0.2,g:23},
-    'boulgour':{c:83,p:3,l:0.2,g:18},'sarrasin':{c:92,p:3.4,l:0.6,g:20},'polenta':{c:83,p:2,l:0.5,g:18},
+    'boulgour':{c:83,p:3,l:0.2,g:18},'millet':{c:119,p:3.5,l:1,g:23.7},'sarrasin':{c:92,p:3.4,l:0.6,g:20},'polenta':{c:83,p:2,l:0.5,g:18},
     'pain':{c:265,p:9,l:3.2,g:49},'pain complet':{c:247,p:10,l:3.4,g:41},
     'pain de mie':{c:265,p:8,l:4,g:48},'baguette':{c:274,p:9,l:1.3,g:56},
     'biscotte':{c:390,p:12,l:5,g:73},'tortilla':{c:310,p:8,l:8,g:51},'wrap':{c:310,p:8,l:8,g:51},
@@ -338,7 +338,7 @@ var Natty = (function () {
     'avocat':{c:160,p:2,l:15,g:9},'olive':{c:145,p:1,l:15,g:4},
     // Fruits
     'pomme':{c:52,p:0.3,l:0.2,g:14},'banane':{c:89,p:1.1,l:0.3,g:23},'fraise':{c:32,p:0.7,l:0.3,g:7.7},
-    'orange':{c:47,p:0.9,l:0.1,g:12},'mangue':{c:60,p:0.8,l:0.4,g:15},'kiwi':{c:61,p:1.1,l:0.5,g:15},
+    'orange':{c:47,p:0.9,l:0.1,g:12},'pamplemousse':{c:42,p:0.8,l:0.1,g:11},'mangue':{c:60,p:0.8,l:0.4,g:15},'kiwi':{c:61,p:1.1,l:0.5,g:15},
     'raisin':{c:69,p:0.7,l:0.2,g:18},'poire':{c:57,p:0.4,l:0.1,g:15},'peche':{c:39,p:0.9,l:0.3,g:10},
     'ananas':{c:50,p:0.5,l:0.1,g:13},'myrtille':{c:57,p:0.7,l:0.3,g:14},'framboise':{c:52,p:1.2,l:0.7,g:12},
     'citron':{c:29,p:1.1,l:0.3,g:9},'pasteque':{c:30,p:0.6,l:0.2,g:8},'melon':{c:34,p:0.8,l:0.2,g:8},
@@ -404,7 +404,7 @@ var Natty = (function () {
     'graines':{c:559,p:19,l:49,g:20},'graines courge':{c:559,p:30,l:49,g:11},'chia':{c:486,p:17,l:31,g:42},
     'tahini':{c:595,p:17,l:54,g:21},'beurre cacahuete':{c:588,p:25,l:50,g:20},
     'mayonnaise':{c:680,p:1,l:75,g:1.5},'ketchup':{c:112,p:1.2,l:0.1,g:26},'moutarde':{c:66,p:4,l:3.3,g:5},
-    'vinaigrette':{c:450,p:0.5,l:48,g:3},'sauce tomate':{c:32,p:1.3,l:0.4,g:6},
+    'vinaigrette':{c:450,p:0.5,l:48,g:3},'vinaigre de cidre':{c:21,p:0,l:0,g:0.9},'vinaigre balsamique':{c:88,p:0.5,l:0,g:17},'pignons de pin':{c:673,p:14,l:68,g:13},'piment':{c:40,p:1.9,l:0.4,g:9},'sauce tomate':{c:32,p:1.3,l:0.4,g:6},
     'miel':{c:304,p:0.3,l:0,g:82},'sucre':{c:400,p:0,l:0,g:100},'confiture':{c:278,p:0.4,l:0.1,g:69},
     // Boissons
     'jus orange':{c:45,p:0.7,l:0.2,g:10},'soda':{c:42,p:0,l:0,g:10.6},'biere':{c:43,p:0.5,l:0,g:3.6},
@@ -617,6 +617,42 @@ var Natty = (function () {
   }
 
   function r1(v) { return Math.round(v * 10) / 10; }
+
+  /* ═══ L'INSTANT D'UNE LIGNE DE BASE ═══════════════════════
+     ⚠️⚠️ `meals.created_at` EST UN `timestamp WITHOUT time zone`, ET POSTGRES Y
+     RANGE L'HEURE UTC. PostgREST le rend donc SANS décalage —
+     `"2026-09-22T16:12:03.801"` — et `new Date()` parse une date-heure sans
+     décalage comme une heure LOCALE (c'est la spec, pas une bizarrerie de
+     moteur). Toute l'app lisait donc ses repas deux heures trop tôt l'été, une
+     heure trop tôt l'hiver.
+
+     Ce n'est pas un détail d'affichage, c'est le CRÉNEAU qui se trompe : relevé
+     sur les 190 repas en base, 23 déjeuners enregistrés à 12 h à Paris (10 h
+     UTC) tombaient dans la tranche du MATIN. Le `+` repartait d'une cible de
+     petit déjeuner à midi, le guide du jour cochait la mauvaise étape, et le
+     bilan rangeait un déjeuner dans le petit déjeuner.
+
+     Le même piège que `Natty.jour()`, dans l'autre sens : là il fallait cesser
+     de convertir en UTC, ici il faut cesser d'oublier que c'en est déjà.
+
+     ⚠️ La colonne est homogène — `now()` comme le `toISOString()` d'ajout.js y
+     écrivent tous deux l'horloge UTC — donc une seule normalisation à la
+     lecture suffit, et il n'y a rien à migrer.
+     ⚠️ Une chaîne qui porte DÉJÀ son décalage (`Z`, `+02:00`) est laissée
+     telle quelle : les colonnes `timestamptz` de la base, elles, sont justes.
+
+     @param {string|Date} v  ce que la base a rendu
+     @returns {Date}
+  */
+  function quand(v) {
+    if (v instanceof Date) return v;
+    var s = String(v || '');
+    if (!s) return new Date(NaN);
+    // Déjà daté : un `Z` final, ou un ±HH:MM après l'heure.
+    if (/(?:Z|[+-]\d\d:?\d\d)$/.test(s)) return new Date(s);
+    // Sinon c'est une heure UTC nue : on le lui dit.
+    return new Date(s.replace(' ', 'T') + 'Z');
+  }
 
   /**
    * La date LOCALE au format YYYY-MM-DD.
@@ -1159,6 +1195,9 @@ var Natty = (function () {
     ecartObjectif: ecartObjectif, dureeConseillee: dureeConseillee,
     baseObjectif: baseObjectif,
     jour: jour, aMinuit: aMinuit,
+    // L'instant d'une ligne de base — voir l'encadre : `created_at` est en
+    // UTC et arrive sans decalage, donc `new Date()` seul se trompe d'heure.
+    quand: quand,
     // Un plein écran est-il déjà ouvert ? (voir l'encadré ci-dessus)
     ecranOccupe: ecranOccupe,
     // Questions et avertissements, sans dialogue natif (voir plus haut).

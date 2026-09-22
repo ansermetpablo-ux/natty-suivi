@@ -101,10 +101,14 @@ window.NattyPlanning = (function () {
 
   /* Lundi = 0, dimanche = 6. `getDay()` compte à partir du dimanche : le
      décalage est fait une seule fois, ici, plutôt que dans chaque boucle. */
-  function jourIndex(date) { var j = new Date(date).getDay(); return j === 0 ? 6 : j - 1; }
+  /* ⚠️ `Natty.quand()` et non `new Date()` : `created_at` porte l'heure UTC et
+     arrive sans décalage, donc `new Date()` se trompe d'une à deux heures — et
+     ici l'heure décide du créneau, donc de la case du calendrier. Voir
+     l'encadré de `assets/core.js`. */
+  function jourIndex(date) { var j = Natty.quand(date).getDay(); return j === 0 ? 6 : j - 1; }
 
   function creneauIndex(date) {
-    var h = new Date(date).getHours();
+    var h = Natty.quand(date).getHours();
     if (h >= CRENEAUX[0].h0 && h < CRENEAUX[0].h1) return 0;
     if (h >= CRENEAUX[1].h0 && h < CRENEAUX[1].h1) return 1;
     return 2;                      // avant 3 h du matin = dîner de la veille

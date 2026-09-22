@@ -128,7 +128,7 @@ window.NattyMacrosCal = (function () {
     }
     (repas || []).forEach(function (m) {
       if (!m || !m.created_at) return;
-      var t = new Date(m.created_at);
+      var t = Natty.quand(m.created_at);   // UTC sans décalage — voir core.js
       if (isNaN(t) || t < debut || t >= fin) return;
       var ji = jourIndex(t), ci = creneauIndex(t);
       // Un repas enregistré avant 3 h du matin appartient au dîner de la

@@ -320,7 +320,10 @@ window.NattyBilan = (function () {
         });
       }
       (ms || []).forEach(function (m) {
-        var d = new Date(m.created_at), j = jourDe(d);
+        /* ⚠️ `Natty.quand()` : `created_at` est en UTC et arrive sans décalage
+           (encadré de core.js). Sans lui le fil de la journée décalait chaque
+           repas de deux heures, et un déjeuner passait pour un petit déjeuner. */
+        var d = Natty.quand(m.created_at), j = jourDe(d);
         var e = jours[j] || (jours[j] = {
           jour: j, date: d, nbRepas: 0, heures: [], ingredients: [],
           mac: { p: 0, l: 0, g: 0, c: 0 }, noms: [], protRepas: [], repas: []

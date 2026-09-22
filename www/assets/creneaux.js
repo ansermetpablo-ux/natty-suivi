@@ -89,7 +89,15 @@ var NattyCreneaux = (function () {
 
   /* ── 2. Dans quel créneau tombe une heure ────────────────────
      ⚠️ L'heure vient de `created_at`, jamais de `meal_date` : une date sèche n'a
-     pas d'heure, donc pas de créneau — le même piège que dans planning.js. */
+     pas d'heure, donc pas de créneau — le même piège que dans planning.js.
+
+     ⚠️⚠️ ET ELLE SE LIT PAR `Natty.quand()`, JAMAIS PAR `new Date()`.
+     `meals.created_at` est un `timestamp WITHOUT time zone` qui porte l'heure
+     UTC et arrive sans décalage : `new Date()` la prend pour une heure locale et
+     rend deux heures de moins l'été. Relevé sur les 190 repas en base, 23
+     déjeuners de 12 h à Paris tombaient dans la tranche du MATIN — donc le `+`
+     repartait d'une cible de petit déjeuner à midi. Voir l'encadré de
+     `assets/core.js`. */
   function creneauDe(d, liste) {
     liste = liste || etat.creneaux;
     if (!liste.length) return null;
@@ -104,6 +112,86 @@ var NattyCreneaux = (function () {
   }
 
   function courant(d) { return creneauDe(d || new Date()); }
+
+  /* ── 2 bis. LE TYPE D'UN REPAS — les quatre blocs canoniques ──
+     Demande de Pablo : « dans l'analyse des plats, il faut détecter s'il s'agit
+     d'un déjeuner, petit déjeuner, d'un dîner ou d'une collation ».
+
+     ⚠️ CE VOCABULAIRE EST FIXE, ET INDÉPENDANT DU DÉCOUPAGE DE LA PERSONNE.
+     `DECOUPAGES` répond à « comment SA journée est-elle découpée » — 2, 3 ou 4
+     créneaux —, alors qu'ici on qualifie UNE ASSIETTE. Un bol de céréales est un
+     petit déjeuner même chez quelqu'un qui déclare deux repas par jour, et c'est
+     précisément ce qui permet au bilan de dire « vous ne prenez pas de
+     collation » : sans un quatrième bloc qui existe toujours, l'absence n'aurait
+     nulle part pour s'afficher.
+
+     ⚠️⚠️ ET `meals.meal_type` NE FAIT PAS FOI TANT QU'ON NE L'A PAS ÉCRITE.
+     La colonne existait avec un DÉFAUT `'déjeuner'` que personne ne renseignait :
+     les 190 lignes en base annonçaient toutes « déjeuner », petits déjeuners et
+     dîners compris, et `assets/social.js` lisait ça. Le défaut a été retiré et ces
+     lignes remises à NULL (migration `meal_type_sans_defaut_et_avatar_membre`) —
+     une valeur uniforme est indiscernable d'une mesure, donc pire qu'un manque.
+     `typeDe()` retombe sur l'HEURE dans ce cas : c'est une information vraie,
+     là où la valeur stockée n'en était pas une. */
+  var CANON = [
+    { cle: 'matin',     nom: 'Petit déjeuner', court: 'Matin',     em: '🥐', illu: 'soleil' },
+    { cle: 'midi',      nom: 'Déjeuner',       court: 'Midi',      em: '🥗', illu: 'assiette' },
+    { cle: 'collation', nom: 'Collation',      court: 'Collation', em: '🍎', illu: 'pomme' },
+    { cle: 'soir',      nom: 'Dîner',          court: 'Soir',      em: '🍽️', illu: 'lune' }
+  ];
+
+  /* Les bornes canoniques, en continu de 3 h à 3 h comme `DECOUPAGES` — sans
+     continuité, un repas de 1 h du matin n'aurait aucun type. */
+  var BORNES_CANON = [
+    { cle: 'matin', h0: 3, h1: 11 },
+    { cle: 'midi', h0: 11, h1: 15 },
+    { cle: 'collation', h0: 15, h1: 18.5 },
+    { cle: 'soir', h0: 18.5, h1: 27 }
+  ];
+
+  /** Le type canonique déduit de la seule heure. */
+  function typeHeure(d) {
+    var h = (d instanceof Date ? d : Natty.quand(d)).getHours()
+          + (d instanceof Date ? d : Natty.quand(d)).getMinutes() / 60;
+    for (var i = 0; i < BORNES_CANON.length; i++) {
+      var b = BORNES_CANON[i];
+      if (h >= b.h0 && h < b.h1) return b.cle;
+      if (b.h1 > 24 && h + 24 >= b.h0 && h + 24 < b.h1) return b.cle;
+    }
+    return 'midi';
+  }
+
+  /* Ce qu'on peut trouver dans `meal_type` : ce que l'analyse écrit, mais aussi
+     ce qu'un modèle ou une ancienne version a pu y laisser. On normalise sans
+     accent ni ponctuation, et on rend `null` sur ce qu'on ne reconnaît pas —
+     jamais un repli silencieux sur « déjeuner », qui est exactement la valeur
+     qui a rendu cette colonne inutilisable. */
+  function normType(v) {
+    var s = String(v || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z]+/g, ' ').trim();
+    if (!s) return null;
+    if (s.indexOf('petit') === 0 || s === 'matin' || s.indexOf('breakfast') > -1) return 'matin';
+    if (s.indexOf('collation') > -1 || s.indexOf('snack') > -1 || s.indexOf('gouter') > -1) return 'collation';
+    if (s.indexOf('diner') > -1 || s.indexOf('dinner') > -1 || s === 'soir' || s.indexOf('souper') > -1) return 'soir';
+    if (s.indexOf('dejeuner') > -1 || s.indexOf('lunch') > -1 || s === 'midi') return 'midi';
+    return null;
+  }
+
+  /**
+   * Le type canonique d'un repas : ce que l'analyse a ÉCRIT si elle l'a écrit,
+   * sinon ce que dit l'heure.
+   * @param {object} m  une ligne `meals` (ou {meal_type, created_at})
+   * @returns {string} 'matin' | 'midi' | 'collation' | 'soir'
+   */
+  function typeDe(m) {
+    if (!m) return 'midi';
+    return normType(m.meal_type) || typeHeure(m.created_at || m.quand || new Date());
+  }
+
+  function canonPar(cle) {
+    return CANON.filter(function (c) { return c.cle === cle; })[0] || null;
+  }
 
   /* ── 3. Les poids ─────────────────────────────────────────────
      On part des parts de base du découpage, on les corrige avec ce que la
@@ -275,7 +363,7 @@ var NattyCreneaux = (function () {
         });
       }
       repas = (ms || []).map(function (m) {
-        var d = new Date(m.created_at);
+        var d = Natty.quand(m.created_at);
         var c = creneauDe(d, liste);
         return { id: m.id, nom: m.name || 'Repas', creneau: c ? c.cle : null, quand: d,
                  macros: Natty.calcMac(parRepas[m.id] || []) };
@@ -399,7 +487,7 @@ var NattyCreneaux = (function () {
       }
       var jour = Natty.jour();
       etat.repasDuJour = (ms || []).map(function (m) {
-        var d = new Date(m.created_at);
+        var d = Natty.quand(m.created_at);
         var c = creneauDe(d);
         return { id: m.id, nom: m.name || 'Repas', creneau: c ? c.cle : null, quand: d,
                  macros: Natty.calcMac(parRepas[m.id] || []) };
@@ -415,6 +503,10 @@ var NattyCreneaux = (function () {
     supplement: function () { return etat.sup || 0; },
     mange: mange, mangeJour: mangeJour, restant: restant, depasse: depasse,
     nbDeja: nbDeja, repas: repasDe,
+    /* Le type d'une ASSIETTE — les quatre blocs canoniques, indépendants du
+       découpage de la personne (voir l'encadré §2 bis). */
+    CANON: CANON, canonPar: canonPar,
+    typeDe: typeDe, typeHeure: typeHeure, normType: normType,
     nb: function () { return etat.nb; },
     source: function () { return etat.source; },
     nbMesures: function () { return etat.nbMesures; }
