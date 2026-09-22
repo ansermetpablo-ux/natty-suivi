@@ -303,7 +303,11 @@ window.NattyBilan = (function () {
     try {
       var ms = await Natty.sbFetch('meals?user_id=eq.' + uid()
         + '&created_at=gte.' + depuis.toISOString()
-        + '&order=created_at.desc&limit=500&select=id,name,created_at');
+        /* ⚠️ `meal_type` EST DEMANDÉ : c'est ce qui permet de répartir les
+           macros par repas (scène « Repas par repas »). La colonne peut être
+           NULL — elle l'est sur tout l'historique, son ancien défaut ayant été
+           retiré — et `NattyCreneaux.typeDe()` retombe alors sur l'heure. */
+        + '&order=created_at.desc&limit=500&select=id,name,created_at,meal_type');
       var ids = (ms || []).map(function (m) { return m.id; });
       var parRepas = {};
       // Par lots de 50 : PostgREST plafonne la longueur d'URL, et un `in.()` de
@@ -343,6 +347,12 @@ window.NattyBilan = (function () {
            et c'est précisément la question de cet écran. `protRepas` reste —
            il sert au facteur de répartition, qui ne regarde que les doses. */
         e.repas.push({ h: d.getHours() + d.getMinutes() / 60, nom: m.name || '',
+                       /* Le bloc canonique de ce repas : ce que l'analyse a écrit,
+                          sinon ce que dit l'heure. Sans `NattyCreneaux`, on laisse
+                          `null` — la scène de répartition se saute alors, plutôt
+                          que de ranger tous les repas dans le même bloc. */
+                       type: (window.NattyCreneaux && NattyCreneaux.typeDe)
+                         ? NattyCreneaux.typeDe(m) : null,
                        p: mac.p, l: mac.l, g: mac.g, c: mac.c });
         e.heures.push(d.getHours() + d.getMinutes() / 60);
         e.noms.push(m.name || '');
@@ -1033,6 +1043,85 @@ window.NattyBilan = (function () {
       'border-radius:50%;pointer-events:none;z-index:-1;',
       'background:radial-gradient(50% 50% at 50% 50%,var(--mg) 0%,transparent 70%)}',
       '#nbil .mch{display:flex;align-items:center;gap:8px}',
+
+      /* ══ REPAS PAR REPAS, ET LA RÉPARTITION PROPOSÉE ════════════
+         Les quatre blocs canoniques, chacun avec ses trois barres. La barre se
+         REMPLIT (le consommé sur la part du bloc), comme les anneaux et la jauge
+         des calories depuis le 2026-08-10 : une seule grammaire dans toute
+         l'app, sinon il faut relire la légende à chaque écran.
+
+         ⚠️ Les barres naissent à `width:0` et sont posées par `animerBarres()`
+         APRÈS le rendu. Sans ça la transition n'a rien à animer — elle partirait
+         déjà de sa valeur finale —, et c'est précisément l'animation que Pablo a
+         demandée. Le filet de `cine.js` les force à leur largeur finale sur une
+         page qui ne peint pas.
+
+         ⚠️ `flex:0 0 auto` sur la piste de chaque barre : c'est une largeur
+         demandée dans une rangée flex, donc exactement la famille de défauts
+         déjà payée quatre fois dans ce dépôt (le cadre photo 3/4, les barres de
+         la semaine, la photo du récap). Ici c'est l'inverse qu'on veut — la
+         piste DOIT se comprimer —, d'où `flex:1 1 auto` sur elle et `flex:none`
+         sur ce qui l'encadre. */
+      '#nbil .rps{display:flex;flex-direction:column;gap:11px;margin:18px auto 0;max-width:430px}',
+      '#nbil .rpb{border-radius:20px;padding:12px 13px 11px;text-align:left}',
+      '#nbil .rph{display:flex;align-items:center;gap:8px}',
+      '#nbil .rph .em{font-size:17px;flex:none}',
+      '#nbil .rph .nm{font-size:13.5px;font-weight:600;color:var(--b-ink);flex:1 1 auto}',
+      '#nbil .rph .kc{font-size:12px;font-weight:600;color:var(--b-mut);flex:none}',
+      '#nbil .rpq{font-size:11px;color:var(--b-mut);margin:3px 0 9px;line-height:1.35}',
+      /* Un bloc tenu, un bloc court, un bloc hors plan : trois états, et la
+         couleur ne fait que redire ce que la phrase dit déjà. Elle ne porte
+         jamais l'information seule — un daltonien lit la même chose. */
+      '#nbil .rpb.ok .rpq{color:#5ad07a}',
+      '#nbil .rpb.bas .rpq{color:#f0b429}',
+      '#nbil .rpb.hp{opacity:.62}',
+      '#nbil .rpl{display:flex;align-items:center;gap:8px;margin-top:6px}',
+      '#nbil .rpe{font-size:12px;flex:none;width:16px;text-align:center}',
+      '#nbil .rpt{flex:1 1 auto;height:7px;border-radius:4px;overflow:hidden;',
+      'background:var(--b-creux);min-width:40px}',
+      '#nbil .rpt i{display:block;height:100%;width:0;border-radius:4px;background:var(--c);',
+      'transition:width .9s cubic-bezier(.22,1,.36,1)}',
+      '#nbil .rpn{flex:none;font-size:11.5px;font-weight:600;color:var(--b-ink);',
+      'min-width:74px;text-align:right}',
+      '#nbil .rpn u{text-decoration:none;font-weight:500;color:var(--b-mut)}',
+
+      /* Les propositions. Fond identique aux autres panneaux ; seule l'arête
+         gauche change, pour qu'une proposition ne se lise pas comme une mesure. */
+      '#nbil .rpps{display:flex;flex-direction:column;gap:10px;margin:16px auto 0;max-width:430px}',
+      '#nbil .rpp{border-radius:19px;padding:12px 13px;text-align:left}',
+      '#nbil .rpp::after{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;',
+      'border-radius:3px;background:#5ad07a;opacity:.85}',
+      '#nbil .rpp.neuf::after{background:#f0b429}',
+      '#nbil .rpph{display:flex;align-items:center;gap:8px}',
+      '#nbil .rpph .em{font-size:17px;flex:none}',
+      '#nbil .rpph .nm{font-size:13.5px;font-weight:600;color:var(--b-ink);flex:1 1 auto}',
+      '#nbil .rpph .pl{font-size:12.5px;font-weight:700;color:#5ad07a;flex:none}',
+      '#nbil .rpp.neuf .rpph .pl{color:#f0b429}',
+      /* ⚠️ `flex-wrap` : trois pastilles de macro plus un nombre à trois
+         chiffres débordent la carte à 375 px, et un débordement horizontal ne
+         se lit pas dans le code — il se mesure (règle 39). */
+      '#nbil .rppm{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}',
+      '#nbil .rppm span{font-size:11px;font-weight:600;color:var(--c);',
+      'background:var(--b-creux);border-radius:8px;padding:3px 7px}',
+      '#nbil .rppw{font-size:11px;color:var(--b-mut);margin-top:8px;line-height:1.4}',
+
+      /* L'habitude, sous la proposition : la mesure d'où elle sort. */
+      '#nbil .rph2{border-radius:20px;padding:13px;margin:16px auto 0;max-width:430px;text-align:left}',
+      '#nbil .rph2t{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;',
+      'color:var(--b-mut);margin-bottom:10px}',
+      '#nbil .rph2l{display:flex;align-items:center;gap:8px;margin-top:7px}',
+      '#nbil .rph2l .em{font-size:13px;flex:none;width:17px;text-align:center}',
+      '#nbil .rph2l .nm{font-size:12px;color:var(--b-ink);flex:none;width:92px}',
+      '#nbil .rph2l .tr{flex:1 1 auto;height:6px;border-radius:3px;overflow:hidden;',
+      'background:var(--b-creux);min-width:30px}',
+      '#nbil .rph2l .tr i{display:block;height:100%;width:0;border-radius:3px;',
+      'background:var(--b-mut);transition:width .9s cubic-bezier(.22,1,.36,1)}',
+      '#nbil .rph2l.ok .tr i{background:#5ad07a}',
+      '#nbil .rph2l.bas .tr i{background:#f0b429}',
+      '#nbil .rph2l .vl{flex:none;font-size:11px;font-weight:600;color:var(--b-mut);',
+      'min-width:52px;text-align:right}',
+      '#nbil .rph2l.hp{opacity:.55}',
+      '#nbil .rph2s{font-size:10.5px;color:var(--b-mut);margin-top:11px;line-height:1.4;opacity:.85}',
       '#nbil .mch .e{font-size:15px}',
       '#nbil .mch .n{font-size:13.5px;font-weight:800;flex:1;min-width:0}',
       '#nbil .mch .pc{font-size:15px;font-weight:800;color:var(--m);flex:none}',
@@ -1086,10 +1175,15 @@ window.NattyBilan = (function () {
          ⚠️ `#nbil *{border:0}` (le pare-feu) n'atteint pas les pseudo-éléments.
          C'est aussi pourquoi l'arête ne peut PAS être faite avec `border`. */
       '#nbil .carte,#nbil .st,#nbil .cr,#nbil .dc,#nbil .cp,#nbil .kmod,',
+      /* `.rpb` (un repas), `.rpp` (une proposition), `.rph2` (l'habitude) :
+         ajoutés à CETTE liste et pas dotés de leur propre recette — c'est
+         exactement la règle 44, et la raison pour laquelle ce groupe existe. */
+      '#nbil .rpb,#nbil .rpp,#nbil .rph2,',
       '#nbil .chx button{position:relative;',
       'background:linear-gradient(157deg,var(--b-c1) 0%,var(--b-c2) 66%);',
       'box-shadow:var(--b-ombre-c)}',
       '#nbil .carte::before,#nbil .st::before,#nbil .cr::before,#nbil .dc::before,',
+      '#nbil .rpb::before,#nbil .rpp::before,#nbil .rph2::before,',
       '#nbil .cp::before,#nbil .kmod::before,#nbil .chx button::before{',
       'content:"";position:absolute;inset:0;border-radius:inherit;',
       'padding:1px;pointer-events:none;',
@@ -1103,6 +1197,9 @@ window.NattyBilan = (function () {
       ':root[data-theme="light"] #nbil .dc::before,',
       ':root[data-theme="light"] #nbil .cp::before,',
       ':root[data-theme="light"] #nbil .kmod::before,',
+      ':root[data-theme="light"] #nbil .rpb::before,',
+      ':root[data-theme="light"] #nbil .rpp::before,',
+      ':root[data-theme="light"] #nbil .rph2::before,',
       ':root[data-theme="light"] #nbil .chx button::before{background:var(--b-rim2)}',
       // Un bouton retenu passe en plein : l'arête d'un panneau sombre n'a plus
       // rien à éclairer sur un aplat clair, elle y dessine un liseré sale.
@@ -1248,7 +1345,12 @@ window.NattyBilan = (function () {
          autres, SANS RIEN SIGNALER, et la mise en avant aurait simplement
          disparu sur les vieux téléphones. Les trois arrêts sont donc calculés
          depuis la couleur de la note (voir `peindreBarres`). */
-      '#nbil .sem .d.top .bar{box-shadow:0 0 26px -6px var(--b-acc)}',
+      /* 🔴 `--b-acc` n'etait declare NULLE PART : `var()` non resolu rend la
+         declaration invalide et le navigateur la jette sans un mot, donc la
+         lueur de la barre la plus haute n'a jamais ete peinte. Meme famille que
+         le `--b-ombre` declare deux fois (2026-09-04) et que le `--bdr`
+         d'admin.html. */
+      '#nbil .sem .d.top .bar{box-shadow:0 0 26px -6px var(--b-vif)}',
       /* La poignée : le disque blanc au sommet de la barre choisie. C'est elle
          qui dit « c'est celle-là », avant même qu'on lise la bulle. */
       '#nbil .sem .d.top .bar{position:relative}',
@@ -1406,7 +1508,14 @@ window.NattyBilan = (function () {
     delai = delai == null ? 0 : delai;
     /* Un mot entouré d'astérisques est SURLIGNÉ. Le passage par un marqueur
        plutôt que par du HTML est délibéré : chaque mot reste échappé, donc un
-       prénom ou un nom de plat ne peut rien injecter ici. */
+       prénom ou un nom de plat ne peut rien injecter ici.
+
+       ⚠️⚠️ UN SEUL MOT À LA FOIS. Le découpage se fait sur les espaces AVANT le
+       motif : `*petit déjeuner*` n'est donc jamais reconnu, et s'affiche avec
+       ses astérisques — vu à l'écran, invisible à la lecture. Tout titre
+       construit avec un nom venu des données doit surligner un mot dont on sait
+       qu'il en est un (les `court` de `NattyCreneaux.CANON`), ou ne rien
+       surligner du tout. */
     var mots = String(txt).split(' ').map(function (m, i) {
       /* ⚠️ LA PONCTUATION RESTE DEHORS. Sans le groupe final, « *Hier*, » ne
          correspondait plus au motif et s'affichait avec ses astérisques —
@@ -1852,6 +1961,576 @@ window.NattyBilan = (function () {
     }, 100);
   }
 
+  /* ═══════════════════════════════════════════════════════════
+     LA RÉPARTITION PAR REPAS — et ce qu'on propose d'en changer
+     ───────────────────────────────────────────────────────────
+     Demande de Pablo (2026-09-22) : « ajouter l'analyse par repas du nombre de
+     macros atteints — si je mange 120/200 g de glucides dans mon premier plat,
+     il faut le montrer par des diagrammes en barre avec animation, la
+     répartition actuelle des macros en fonction des 3 repas et collation, puis
+     montrer la nouvelle proposition de répartition : si les macros sont
+     insuffisantes le midi et le dîner, booster le petit déjeuner s'il a plus de
+     facilité à absorber ses quantités le matin ; s'il ne mange pas de
+     collation, lui en proposer une. »
+
+     Deux écrans, donc deux questions, et il ne faut pas les mélanger :
+     • « Repas par repas » décrit AUJOURD'HUI. C'est une mesure.
+     • « Ce qu'on peut déplacer » propose, et se fonde sur l'HABITUDE des jours
+       journalisés — pas sur la seule journée qui vient de se passer. Déduire
+       « vous absorbez mal le midi » d'un seul déjeuner léger serait une
+       affirmation que rien ne soutient.
+
+     ⚠️ LES QUATRE BLOCS SONT CANONIQUES, indépendants du découpage de la
+     personne (`NattyCreneaux.CANON`). C'est ce qui permet de dire « vous ne
+     prenez pas de collation » : un bloc qui n'existerait pas dans son rythme
+     n'aurait nulle part pour afficher son absence. Il est alors marqué HORS
+     PLAN — montré, mais sans cible, parce qu'il n'y en a pas.
+
+     ⚠️ ET LE MODULE EST FACULTATIF. Sans `NattyCreneaux`, il n'y a ni blocs ni
+     cibles par bloc : les deux scènes se sautent SANS UN MOT, comme `scSeance`
+     le fait sans `NattySeance`. Un écran qui annoncerait une répartition sans
+     rien pour la calculer serait pire qu'un écran absent.
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Le seuil sous lequel un bloc est « court », et celui au-dessus duquel il
+     est « tenu ». Entre les deux, on ne dit rien : un bloc à 88 % de sa cible
+     n'est ni un problème ni un point d'appui, et le présenter comme l'un des
+     deux serait forcer la lecture. */
+  var COURT = 0.80, TENU = 0.95;
+  /* En dessous, « ce que vous faites d'habitude » ne veut rien dire. Quatre
+     jours journalisés ne décrivent pas des habitudes alimentaires — même
+     prudence que le `MIN_REPAS_HABITUDE` de `assets/creneaux.js`. */
+  var MIN_JOURS_HABITUDE = 5;
+
+  function blocsCanon() {
+    return (window.NattyCreneaux && NattyCreneaux.CANON) ? NattyCreneaux.CANON : null;
+  }
+
+  /** La cible d'un bloc, ou `null` si le rythme de la personne ne le prévoit pas. */
+  function cibleBloc(cle) {
+    if (!window.NattyCreneaux || !NattyCreneaux.par) return null;
+    var c = NattyCreneaux.par(cle);
+    return (c && c.cible) ? c.cible : null;
+  }
+
+  /**
+   * La répartition d'UNE journée sur les quatre blocs.
+   * @returns {null|{blocs:Array, nb:number}}
+   */
+  function repartitionJour(repasDuJour) {
+    var canon = blocsCanon();
+    if (!canon) return null;
+    var repas = repasDuJour || [];
+    var blocs = canon.map(function (b) {
+      var miens = repas.filter(function (r) { return r.type === b.cle; });
+      var m = { p: 0, l: 0, g: 0, c: 0 };
+      miens.forEach(function (r) { m.p += r.p || 0; m.l += r.l || 0; m.g += r.g || 0; m.c += r.c || 0; });
+      var ci = cibleBloc(b.cle);
+      return {
+        cle: b.cle, nom: b.nom, em: b.em, illu: b.illu,
+        nb: miens.length,
+        noms: miens.map(function (r) { return r.nom; }).filter(Boolean),
+        mange: { p: r0(m.p), l: r0(m.l), g: r0(m.g), c: r0(m.c) },
+        cible: ci,
+        horsPlan: !ci,
+        /* La couverture en CALORIES : c'est elle qui dit si le bloc a été
+           servi. Les trois macros ont chacune la leur, affichée barre par
+           barre — un bloc peut tenir ses glucides et manquer ses protéines. */
+        couv: (ci && ci.c) ? m.c / ci.c : null
+      };
+    });
+    return { blocs: blocs, nb: repas.length };
+  }
+
+  /**
+   * L'HABITUDE : la même répartition, moyennée sur les jours journalisés.
+   * @param {object} jours  `cache.jours`
+   */
+  function habitudeBlocs(jours) {
+    var canon = blocsCanon();
+    if (!canon) return null;
+    var cles = Object.keys(jours || {});
+    /* Seuls les jours où quelque chose a été noté. Compter un jour vide
+       reviendrait à décrire un jeûne : c'est le même parti pris que la courbe
+       des 30 jours, qui relie les trous sans prétendre les avoir mesurés. */
+    var notes = cles.filter(function (j) { return jours[j] && jours[j].nbRepas; });
+    if (!notes.length) return null;
+
+    var som = {}, avec = {};
+    canon.forEach(function (b) { som[b.cle] = { p: 0, l: 0, g: 0, c: 0 }; avec[b.cle] = 0; });
+    notes.forEach(function (j) {
+      var vus = {};
+      (jours[j].repas || []).forEach(function (r) {
+        if (!som[r.type]) return;
+        som[r.type].p += r.p || 0; som[r.type].l += r.l || 0;
+        som[r.type].g += r.g || 0; som[r.type].c += r.c || 0;
+        vus[r.type] = 1;
+      });
+      Object.keys(vus).forEach(function (k) { avec[k]++; });
+    });
+
+    var blocs = canon.map(function (b) {
+      var n = notes.length, ci = cibleBloc(b.cle);
+      var moy = { p: som[b.cle].p / n, l: som[b.cle].l / n, g: som[b.cle].g / n, c: som[b.cle].c / n };
+      return {
+        cle: b.cle, nom: b.nom, em: b.em, illu: b.illu,
+        /* ⚠️ La moyenne se divise par TOUS les jours notés, pas par les jours
+           où ce bloc a reçu quelque chose. Un petit déjeuner pris un jour sur
+           cinq doit ressortir comme non tenu — c'est justement l'information
+           qu'on vient chercher. Diviser par `avec` le ferait paraître parfait
+           les jours où il a lieu, et muet le reste du temps. */
+        moy: { p: r0(moy.p), l: r0(moy.l), g: r0(moy.g), c: r0(moy.c) },
+        jours: avec[b.cle], surJours: notes.length,
+        cible: ci, horsPlan: !ci,
+        couv: (ci && ci.c) ? moy.c / ci.c : null
+      };
+    });
+
+    /* ⚠️⚠️ `aisance` : LA PART OBSERVÉE RAPPORTÉE À LA PART PRÉVUE, et c'est
+       une mesure DIFFÉRENTE de `couv`. Trouvé au banc en navigateur, sur un
+       profil qui mange 1 600 kcal pour une cible de 3 000 : tous les blocs
+       étaient sous leur cible, donc aucun n'était « tenu », donc la proposition
+       n'avait nulle part où déplacer quoi que ce soit et se contentait de dire
+       « aucun repas n'est assez régulier ». Vrai, et inutile.
+
+       Or « il a plus de facilité à absorber ses quantités le matin » — les mots
+       de Pablo — ne parle pas de valeur absolue : il parle de RÉPARTITION. Un
+       petit déjeuner qui reçoit 44 % de ce que la personne mange alors qu'il
+       n'en prévoit que 22 % est le repas sur lequel elle s'appuie, même s'il
+       reste sous sa cible en grammes. `couv` dit ce qui manque, `aisance` dit où
+       ça passe — il faut les deux, et les confondre ferait conclure l'un à
+       partir de l'autre. */
+    var totalMange = blocs.reduce(function (t, b) { return t + (b.moy.c || 0); }, 0);
+    var totalCible = blocs.reduce(function (t, b) { return t + ((b.cible && b.cible.c) || 0); }, 0);
+    blocs.forEach(function (b) {
+      var partMange = totalMange ? (b.moy.c || 0) / totalMange : 0;
+      var partCible = totalCible ? ((b.cible && b.cible.c) || 0) / totalCible : 0;
+      b.partMange = partMange;
+      b.partCible = partCible;
+      b.aisance = (partCible > 0 && partMange > 0) ? partMange / partCible : null;
+    });
+    return { blocs: blocs, surJours: notes.length, totalMange: r0(totalMange), totalCible: r0(totalCible) };
+  }
+
+  /**
+   * La proposition de rééquilibrage.
+   *
+   * ⚠️ ELLE NE DÉPLACE QUE CE QUI MANQUE, et vers les seuls blocs que la
+   * personne TIENT déjà. « Booster le petit déjeuner » n'a de sens que si elle
+   * mange le matin : proposer d'y mettre 600 kcal de plus à quelqu'un qui saute
+   * le petit déjeuner, c'est proposer de sauter 600 kcal de plus.
+   * C'est là que se lit « s'il a plus de facilité à absorber ses quantités le
+   * matin » — non pas déclaré, mais MESURÉ sur ses propres journées.
+   *
+   * @returns {null|object}
+   */
+  function reequilibrage(jours) {
+    var h = habitudeBlocs(jours);
+    if (!h) return null;
+    if (h.surJours < MIN_JOURS_HABITUDE) {
+      return { trop_tot: true, surJours: h.surJours, manque: MIN_JOURS_HABITUDE - h.surJours, blocs: h.blocs };
+    }
+
+    var tenus = h.blocs.filter(function (b) { return b.couv !== null && b.couv >= TENU; });
+
+    /* La collation : proposée quand le rythme ne la prévoit pas, ou quand elle
+       est prévue mais quasi jamais prise. Les deux cas se disent différemment —
+       « votre rythme n'en prévoit pas » n'est pas « vous ne la prenez pas ». */
+    var col = h.blocs.filter(function (b) { return b.cle === 'collation'; })[0];
+    var collation = null;
+    if (col && (col.horsPlan || col.jours <= Math.max(1, Math.round(h.surJours * 0.2)))) {
+      collation = { horsPlan: !!col.horsPlan, jours: col.jours, surJours: h.surJours };
+    }
+
+    /* 🔴 ⚠️ LA COLLATION PROPOSÉE SORT DES BLOCS COURTS, et c'est un défaut
+       trouvé au banc. Une collation prévue mais jamais prise a une couverture
+       nulle : elle entrait donc dans `courts`, et ses 390 kcal partaient se faire
+       redistribuer vers le petit déjeuner — pendant que l'écran proposait, deux
+       cartes plus bas, d'AJOUTER une collation de 390 kcal. Les deux propositions
+       se contredisaient : « déplacez votre collation vers le matin » et « reprenez
+       une collation ». Mesuré : le manque annoncé valait 1 440 kcal au lieu des
+       1 050 réellement déplaçables.
+       Ce qu'une collation reprise doit couvrir, c'est SA part — pas celle des
+       autres, et pas deux fois. */
+    var courts = h.blocs.filter(function (b) {
+      if (b.couv === null || b.couv >= COURT) return false;
+      if (collation && b.cle === 'collation') return false;
+      return true;
+    });
+
+    /* Ce qui manque, en kcal et macro par macro, sur les blocs courts. */
+    var manque = { p: 0, l: 0, g: 0, c: 0 };
+    courts.forEach(function (b) {
+      ['p', 'l', 'g', 'c'].forEach(function (k) {
+        manque[k] += Math.max(0, (b.cible[k] || 0) - (b.moy[k] || 0));
+      });
+    });
+
+    /* ── OÙ LE METTRE ────────────────────────────────────────
+       Deux situations, et l'écran doit dire laquelle :
+
+       • `appui: 'tenu'` — au moins un bloc atteint sa part. On s'appuie sur
+         lui, c'est la lecture la plus forte : la personne y mange DÉJÀ ce qui
+         était prévu, donc ces quantités-là passent.
+       • `appui: 'aisance'` — aucun bloc n'atteint sa part (la journée entière
+         est courte). On s'appuie alors sur celui où les apports se concentrent
+         le plus, part pour part. Dire « vous tenez votre petit déjeuner » dans
+         ce cas serait faux ; dire « c'est là que vous mangez le plus » est vrai,
+         et c'est actionnable.
+
+       Sans cette seconde branche, tout profil globalement en dessous de sa cible
+       — donc le cas le plus courant chez quelqu'un qui vient d'installer l'app —
+       recevait un écran qui constatait le manque et ne proposait rien. */
+    var appui = 'tenu';
+    var cibles = tenus;
+    if (!cibles.length) {
+      appui = 'aisance';
+      cibles = h.blocs
+        .filter(function (b) {
+          if (b.aisance === null || b.horsPlan) return false;
+          if (collation && b.cle === 'collation') return false;
+          // Un bloc quasi jamais servi n'est pas un appui : l'étoffer, c'est
+          // demander de créer un repas, pas d'en grossir un.
+          return b.moy.c > 0 && b.jours >= Math.max(2, Math.round(h.surJours * 0.5));
+        })
+        .sort(function (a, b) { return b.aisance - a.aisance; })
+        .slice(0, 1);
+    }
+
+    /* Le manque va sur ces blocs, au prorata de leur cible — un bloc deux fois
+       plus gros absorbe deux fois plus. */
+    var poidsTotal = cibles.reduce(function (t, b) { return t + (b.cible.c || 0); }, 0);
+    var vers = [];
+    if (poidsTotal > 0 && manque.c > 0) {
+      cibles.forEach(function (b) {
+        var part = (b.cible.c || 0) / poidsTotal;
+        var d = { p: r0(manque.p * part), l: r0(manque.l * part), g: r0(manque.g * part), c: r0(manque.c * part) };
+        /* ⚠️ PLAFOND À +50 % DE LA CIBLE DU BLOC. Sans lui, deux blocs courts
+           sur trois feraient doubler le troisième : « mettez 1 400 kcal à votre
+           petit déjeuner » est un conseil que personne ne suit, et qui décrédibilise
+           les autres. Ce qui ne rentre pas reste annoncé comme non replacé. */
+        var plaf = Math.round((b.cible.c || 0) * 0.5);
+        var rogne = d.c > plaf;
+        if (rogne && d.c > 0) {
+          var f = plaf / d.c;
+          d = { p: r0(d.p * f), l: r0(d.l * f), g: r0(d.g * f), c: r0(d.c * f) };
+        }
+        if (d.c > 0) vers.push({ cle: b.cle, nom: b.nom, em: b.em, illu: b.illu, delta: d, rogne: rogne, bloc: b });
+      });
+    }
+    var replace = vers.reduce(function (t, v) { return t + v.delta.c; }, 0);
+
+    return {
+      trop_tot: false, surJours: h.surJours, blocs: h.blocs,
+      courts: courts, tenus: tenus, appui: appui, manque: manque,
+      totalMange: h.totalMange, totalCible: h.totalCible,
+      vers: vers, replace: replace, reste: Math.max(0, manque.c - replace),
+      collation: collation,
+      /* Rien à déplacer : la répartition tient. On le DIT, au lieu d'afficher
+         un écran de conseils vides. */
+      equilibre: !courts.length
+    };
+  }
+
+  /* ── Repas par repas : ce qui est allé où ────────────────────
+     Les quatre blocs, et pour chacun ses trois barres. C'est la scène que Pablo
+     décrit : « 120/200 g de glucides dans mon premier plat », montré en barres,
+     animées. La barre se remplit, comme partout ailleurs dans l'app depuis le
+     2026-08-10 : elle porte le CONSOMMÉ sur la cible du bloc. */
+  function scRepartition() {
+    var rp = repartitionJour(S.a && S.a.repas);
+    // Sans `NattyCreneaux`, aucun bloc et aucune cible : on saute, sans un mot.
+    if (!rp) { scSeance(); return; }
+
+    enTete('REPAS PAR REPAS');
+    if (!rp.nb) {
+      bloc({
+        html: ill('balance', 78) + titre('Rien à répartir', 'p', 0.1)
+          + '<div class="sous" data-in style="animation-delay:.35s">Aucun repas noté '
+          + quandMot() + ' : il n’y a pas de répartition à montrer. Un seul repas '
+          + 'enregistré suffit à faire apparaître ces barres.</div>',
+        boutons: [{ txt: 'Continuer', on: scPlanRepas }]
+      });
+      return;
+    }
+
+    /* La phrase du haut nomme le bloc le plus court — c'est l'information qu'on
+       vient chercher, et la lire dans quatre groupes de barres demanderait de
+       les comparer soi-même. */
+    var servis = rp.blocs.filter(function (b) { return b.nb > 0; });
+    var manquants = rp.blocs.filter(function (b) { return !b.horsPlan && b.couv !== null && b.couv < COURT; });
+    /* ⚠️ « Il reste de la place sur petit déjeuner, déjeuner, collation et
+       dîner » — c'est-à-dire partout — est une énumération qui ne renseigne
+       rien : autant le dire en un mot. Vu au banc sur le rendu, pas dans le
+       code. */
+    var prevus = rp.blocs.filter(function (b) { return !b.horsPlan; });
+    var phrase = servis.length + (servis.length > 1 ? ' repas notés' : ' repas noté')
+      + (!manquants.length ? ' — chaque repas est à sa place.'
+         : manquants.length >= prevus.length ? ' — il reste de la place sur chacun.'
+         : ' — il reste de la place sur '
+           + liste2(manquants.map(function (b) { return b.nom.toLowerCase(); })) + '.');
+
+    bloc({
+      html: ill('balance', 76) + titre('Repas par repas', 'p', 0.1)
+        + '<div class="sous" data-in style="animation-delay:.32s">' + esc(phrase) + '</div>'
+        + '<div class="rps">' + rp.blocs.map(function (b, i) {
+            return blocBarresHTML(b, 0.42 + i * 0.1);
+          }).join('') + '</div>',
+      pret: animerBarres,
+      boutons: [{ txt: 'Et si on déplaçait ?', on: scPlanRepas }]
+    });
+  }
+
+  /* « midi et dîner » plutôt que « midi, dîner » : une énumération de deux
+     éléments se lit avec un « et ». */
+  function liste2(arr) {
+    if (arr.length <= 1) return arr[0] || '';
+    return arr.slice(0, -1).join(', ') + ' et ' + arr[arr.length - 1];
+  }
+
+  /* Un bloc : son en-tête, ses trois barres, son total.
+     ⚠️ Les barres naissent à `width:0` et sont posées par `animerBarres()` —
+     donc APRÈS le rendu, sinon la transition CSS n'a rien à animer (elle part
+     déjà de sa valeur finale). Et `animer()` de `cine.js` pose le filet qui les
+     force à leur largeur finale sur une page qui ne peint pas. */
+  function blocBarresHTML(b, delai) {
+    var m = b.mange, ci = b.cible;
+    var etat = b.horsPlan ? 'hp' : (b.couv === null ? '' : (b.couv >= TENU ? 'ok' : (b.couv < COURT ? 'bas' : 'moy')));
+
+    var barres = MACROS.map(function (d) {
+      var v = m[d.k] || 0, o = ci ? (ci[d.k] || 0) : 0;
+      var pc = o ? Math.max(0, Math.min(100, Math.round(v / o * 100))) : 0;
+      return '<div class="rpl">'
+        + '<span class="rpe">' + d.em + '</span>'
+        + '<span class="rpt" style="--c:' + COUL[d.k] + '">'
+        +   '<i data-pc="' + pc + '"></i>'
+        + '</span>'
+        /* ⚠️ « 120 / 200 g », les DEUX nombres. Le pourcentage seul ne se
+           vérifie pas, et l'exemple de Pablo est écrit comme une fraction. Sans
+           cible connue (bloc hors plan), on n'invente pas de dénominateur : on
+           montre ce qui a été mangé, et rien d'autre. */
+        + '<span class="rpn">' + r0(v) + (o ? ' <u>/ ' + r0(o) + ' g</u>' : ' <u>g</u>') + '</span>'
+        + '</div>';
+    }).join('');
+
+    return '<div class="rpb ' + etat + '" data-in style="animation-delay:' + delai.toFixed(2) + 's">'
+      + '<div class="rph"><span class="em">' + b.em + '</span>'
+      + '<span class="nm">' + esc(b.nom) + '</span>'
+      + '<span class="kc">' + (b.nb ? r0(m.c) + ' kcal' : '—') + '</span></div>'
+      + '<div class="rpq">' + esc(etiquetteBloc(b)) + '</div>'
+      + barres + '</div>';
+  }
+
+  /* Ce que le bloc dit de lui-même. Trois situations distinctes, et les
+     confondre serait mentir : « rien de noté » n'est pas « pas prévu », et
+     « pas prévu » n'est pas « en retard ». */
+  function etiquetteBloc(b) {
+    if (b.horsPlan) {
+      return b.nb ? 'Hors de votre rythme habituel — ' + r0(b.mange.c) + ' kcal quand même'
+                  : 'Votre rythme n’en prévoit pas';
+    }
+    if (!b.nb) return 'Rien de noté sur ce repas';
+    var pc = Math.round((b.couv || 0) * 100);
+    if (b.couv >= 1.15) return pc + ' % de sa part — au-delà de ce qui était prévu';
+    if (b.couv >= TENU) return pc + ' % de sa part — tenu';
+    if (b.couv < COURT) return pc + ' % de sa part — il reste ' + r0((b.cible.c || 0) - b.mange.c) + ' kcal';
+    return pc + ' % de sa part';
+  }
+
+  /* Les barres se posent après le rendu — voir l'encadré de `blocBarresHTML`.
+     ⚠️ Un `setTimeout` double la rAF : sur une page qui ne peint pas, aucune
+     image n'arrive et les barres resteraient à zéro (règle 43). */
+  function animerBarres(d) {
+    var poser = function () {
+      /* ⚠️ `[data-pc]` TOUT COURT, et c'est un défaut trouvé au banc. Le
+         sélecteur ne visait que `.rpt i` — les barres des repas — et laissait
+         donc les QUATRE barres de « ce que vous faites d'habitude » (`.tr i`) à
+         `width:0`, juste à côté des pourcentages qui annonçaient 72 %, 51 %,
+         49 %. Deux nombres de la même ligne qui se contredisent : la famille de
+         défauts déjà payée par le titre du plat à « 0 kcal » au-dessus d'anneaux
+         à 680. Une largeur non posée ne se voit pas dans le code — elle se
+         mesure. */
+      (d || document).querySelectorAll('[data-pc]').forEach(function (i) {
+        i.style.width = i.getAttribute('data-pc') + '%';
+      });
+    };
+    requestAnimationFrame(function () { requestAnimationFrame(poser); });
+    setTimeout(poser, 120);
+  }
+
+  /* ── Ce qu'on peut déplacer ──────────────────────────────────
+     La proposition. Elle se fonde sur l'HABITUDE, jamais sur la seule journée
+     qui vient de se passer, et elle le dit. */
+  function scPlanRepas() {
+    var r = reequilibrage(S.jours || {});
+    if (!r) { scSeance(); return; }
+
+    enTete('LA RÉPARTITION PROPOSÉE');
+
+    if (r.trop_tot) {
+      bloc({
+        html: ill('calendrier', 76) + titre('Encore un peu tôt', 'p', 0.1)
+          + '<div class="sous" data-in style="animation-delay:.35s">'
+          + r.surJours + (r.surJours > 1 ? ' journées notées' : ' journée notée')
+          + ' : ce n’est pas assez pour parler de vos habitudes. Encore '
+          + r.manque + (r.manque > 1 ? ' journées' : ' journée')
+          + ' et cet écran pourra proposer une répartition qui vous ressemble.</div>'
+          + '<div class="note-est" data-in style="animation-delay:.6s">On préfère ne rien '
+          + 'proposer plutôt que de déduire vos habitudes d’une seule semaine incomplète.</div>',
+        boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
+      });
+      return;
+    }
+
+    if (r.equilibre && !r.collation) {
+      bloc({
+        html: ill('cible', 78) + titre('Votre répartition *tient*', 'p', 0.1)
+          + '<div class="sous" data-in style="animation-delay:.35s">Sur vos '
+          + r.surJours + ' derniers jours notés, chaque repas reçoit sa part. '
+          + 'Il n’y a rien à déplacer.</div>'
+          + habitudeHTML(r.blocs, 0.55),
+        boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
+      });
+      return;
+    }
+
+    /* ⚠️ UN SEUL MOT ENTRE ASTÉRISQUES, et pas un nom venu des données :
+       `titre()` découpe sur les espaces avant de chercher le motif, donc
+       « *petit déjeuner* » s'afficherait avec ses astérisques (vu au banc). Le
+       nom du repas est de toute façon en gros sur la carte juste en dessous. */
+    var titreTxt = r.courts.length ? 'Ce qu’on peut *déplacer*' : 'Ajoutons une *collation*';
+
+    bloc({
+      html: ill('balance', 74) + titre(titreTxt, 'p', 0.1)
+        + '<div class="sous" data-in style="animation-delay:.32s">'
+        + esc(phraseProposition(r)) + '</div>'
+        + propositionHTML(r)
+        + habitudeHTML(r.blocs, 0.8)
+        + '<div class="note-est" data-in style="animation-delay:.95s">Une proposition, '
+        + 'pas une consigne : elle part de vos ' + r.surJours + ' derniers jours notés, '
+        + 'et de rien d’autre.</div>',
+      pret: animerBarres,
+      boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
+    });
+  }
+
+  /* La phrase qui explique le déplacement. Elle nomme le RAISONNEMENT, pas
+     seulement le résultat : un objectif qui change de place sans qu'on dise
+     pourquoi se lit comme un caprice de l'app. */
+  function phraseProposition(r) {
+    if (!r.courts.length && r.collation) {
+      return r.collation.horsPlan
+        ? 'Votre rythme ne prévoit pas de collation. En glisser une libère les autres repas.'
+        : 'Vous prenez rarement de collation. En reprendre une libère les autres repas.';
+    }
+    var quoi = liste2(r.courts.map(function (b) { return b.nom.toLowerCase(); }));
+    if (!r.vers.length) {
+      return 'Vos apports sont courts sur ' + quoi + ', et aucun repas n’est assez '
+        + 'régulier pour reprendre ce qui manque. Commencez par en tenir un seul : '
+        + 'celui que vous ne sautez jamais.';
+    }
+    var ou = liste2(r.vers.map(function (v) { return v.nom.toLowerCase(); }));
+
+    /* ⚠️ DEUX PHRASES, PARCE QUE CE SONT DEUX CONSTATS DIFFÉRENTS. « Vous tenez
+       votre petit déjeuner » est faux quand il est à 53 % de sa part : ce qui
+       est vrai, c'est que c'est là que les apports se concentrent. Employer la
+       première formule dans le second cas, c'est féliciter pour quelque chose
+       qui n'a pas eu lieu — et rendre tout le reste de l'écran suspect. */
+    if (r.appui === 'tenu') {
+      return 'Vos apports sont courts sur ' + quoi + ' — ' + r0(r.manque.c) + ' kcal par jour. '
+        + 'Vous tenez ' + ou + ' : c’est là que ces quantités passent le mieux, '
+        + 'parce que c’est là que vous mangez déjà ce qui était prévu.';
+    }
+    /* ⚠️ ET ON N'ÉNUMÈRE PLUS LES BLOCS COURTS DANS CE CAS : le bloc d'appui EST
+       l'un d'eux (tout est court, par définition de cette branche), donc la
+       phrase disait « vos apports sont courts sur petit déjeuner » avant de
+       proposer, deux lignes plus bas, d'ajouter au petit déjeuner. Vu au banc.
+       Quand rien n'atteint sa part, ce qu'il faut annoncer est le TOTAL qui
+       manque, pas la liste de ce qui manque — elle contient tout. */
+    var v0 = r.vers[0], b0 = v0.bloc;
+    return 'Aucun repas n’atteint sa part : il manque ' + r0(r.manque.c) + ' kcal par jour. '
+      + 'C’est sur ' + ou + ' que vos apports se concentrent le plus — '
+      + Math.round((b0.partMange || 0) * 100) + ' % de ce que vous mangez pour '
+      + Math.round((b0.partCible || 0) * 100) + ' % de prévu. '
+      + 'C’est donc le repas le plus simple à étoffer.';
+  }
+
+  /* Les cartes de proposition : une par bloc à renforcer, plus la collation. */
+  function propositionHTML(r) {
+    /* Un repas qui dépasse nettement sa part — c'est ce qui rend la phrase de la
+       collation vraie ou fausse (voir plus bas). */
+    var deborde = r.blocs.some(function (b) { return b.couv !== null && b.couv > 1.15; });
+    var out = r.vers.map(function (v, i) {
+      var d = v.delta;
+      return '<div class="rpp" data-in style="animation-delay:' + (0.45 + i * 0.1).toFixed(2) + 's">'
+        + '<div class="rpph"><span class="em">' + v.em + '</span>'
+        + '<span class="nm">' + esc(v.nom) + '</span>'
+        + '<span class="pl">+' + r0(d.c) + ' kcal</span></div>'
+        + '<div class="rppm">'
+        + MACROS.map(function (m) {
+            return '<span style="--c:' + COUL[m.k] + '">' + m.em + ' +' + r0(d[m.k]) + ' g</span>';
+          }).join('')
+        + '</div>'
+        + '<div class="rppw">' + r0(v.bloc.moy.c) + ' kcal en moyenne aujourd’hui → '
+        + r0(v.bloc.moy.c + d.c) + ' kcal visées'
+        + (v.rogne ? ' · plafonné à +50 % pour rester tenable' : '')
+        + (r.appui === 'aisance' && v.bloc.aisance
+            ? ' · ' + Math.round(v.bloc.partMange * 100) + ' % de vos apports y passent déjà'
+            : '')
+        + '</div>'
+        + '</div>';
+    }).join('');
+
+    if (r.collation) {
+      /* La collation proposée reprend ce qui manque, dans la limite de la part
+         canonique d'une collation. On ne propose pas un quatrième repas de
+         900 kcal sous prétexte que la journée est creuse. */
+      var ci = cibleBloc('collation');
+      var kc = ci ? ci.c : Math.round((r.manque.c || 0) * 0.6);
+      kc = Math.min(kc || 0, Math.max(120, Math.round(r.manque.c || 0)));
+      out += '<div class="rpp neuf" data-in style="animation-delay:'
+        + (0.45 + r.vers.length * 0.1).toFixed(2) + 's">'
+        + '<div class="rpph"><span class="em">🍎</span>'
+        + '<span class="nm">Une collation</span>'
+        + '<span class="pl">' + r0(kc) + ' kcal</span></div>'
+        + '<div class="rppw">'
+        /* ⚠️ « Allège les repas qui débordent » N'EST VRAI QUE S'IL Y EN A.
+           Sur un profil globalement en dessous de sa cible, aucun repas ne
+           déborde : la phrase annonçait alors un soulagement imaginaire, juste
+           sous un écran qui venait de dire qu'il manquait 1 164 kcal. Vu au
+           banc, sur le texte rendu — pas dans le code. */
+        + (r.collation.horsPlan
+            ? 'Votre rythme n’en prévoit pas. Un fruit et un yaourt, ou une poignée '
+              + 'd’oléagineux, suffisent à la remplir.'
+            : 'Notée ' + r.collation.jours + ' fois sur ' + r.collation.surJours + ' jours. '
+              + (deborde
+                  ? 'La reprendre allège les repas qui débordent.'
+                  : 'La reprendre ajoute un rendez-vous sans alourdir les autres.'))
+        + '</div></div>';
+    }
+    return out ? '<div class="rpps">' + out + '</div>' : '';
+  }
+
+  /* Le rappel de l'habitude, sous la proposition : c'est la mesure d'où elle
+     sort. Sans lui, la proposition serait un chiffre à croire. */
+  function habitudeHTML(blocs, delai) {
+    return '<div class="rph2" data-in style="animation-delay:' + delai.toFixed(2) + 's">'
+      + '<div class="rph2t">Ce que vous faites d’habitude</div>'
+      + blocs.map(function (b) {
+          var pc = b.couv === null ? null : Math.round(b.couv * 100);
+          var etat = b.horsPlan ? 'hp' : (pc >= TENU * 100 ? 'ok' : (pc < COURT * 100 ? 'bas' : 'moy'));
+          return '<div class="rph2l ' + etat + '">'
+            + '<span class="em">' + b.em + '</span>'
+            + '<span class="nm">' + esc(b.nom) + '</span>'
+            + '<span class="tr"><i data-pc="' + Math.max(0, Math.min(100, pc || 0)) + '"></i></span>'
+            + '<span class="vl">' + (b.horsPlan ? 'hors plan' : (pc === null ? '—' : pc + ' %')) + '</span>'
+            + '</div>';
+        }).join('')
+      + '<div class="rph2s">Moyenne par jour noté, sur ' + (blocs[0] && blocs[0].surJours || 0)
+      + ' jours. Un repas sauté compte : c’est ce qui fait descendre sa part.</div>'
+      + '</div>';
+  }
+
   function scJournee() {
     enTete('LE FIL DE LA JOURNÉE');
     var a = S.a, c = a.cible || S.profil.cible;
@@ -1862,7 +2541,7 @@ window.NattyBilan = (function () {
           + '<div class="sous" data-in style="animation-delay:.35s">Aucun repas noté '
           + quandMot() + ' : il n’y a pas de fil à suivre. Un seul repas enregistré suffit '
           + 'à faire apparaître cette courbe.</div>',
-        boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
+        boutons: [{ txt: 'Repas par repas', on: scRepartition }]
       });
       return;
     }
@@ -1886,7 +2565,7 @@ window.NattyBilan = (function () {
           }).join('') + '</div>'
         + momentsHTML(m),
       pret: animerFil,
-      boutons: [{ txt: 'Et mon corps ?', on: scSeance }]
+      boutons: [{ txt: 'Repas par repas', on: scRepartition }]
     });
   }
 
@@ -2966,6 +3645,9 @@ window.NattyBilan = (function () {
       var ctx = ctxSeance(j, journalise());
       S = {
         profil: cache.profil, a: a, corps: corpsDuJour(a, cache.profil, ctx),
+        /* Les journées chargées, pour la scène de rééquilibrage : elle se fonde
+           sur l'HABITUDE, pas sur la seule journée qui vient de se passer. */
+        jours: cache.jours,
         serie30: serie(JOURS_COURBE, base), sem: semaineEnCours(base),
         seance: ctx.seance, rep: {}, q: 0, semaine: !!semaine,
         jour: j, veille: j !== jourCourant()
@@ -3076,6 +3758,11 @@ window.NattyBilan = (function () {
     analyse: analyse, reponses: reponses,
     estOuvert: function () { return !!racine; },
     // Pour les bancs de test : la logique sans l'écran.
-    _calc: { analyserJour: analyserJour, corpsDuJour: corpsDuJour, noteRatio: noteRatio }
+    _calc: { analyserJour: analyserJour, corpsDuJour: corpsDuJour, noteRatio: noteRatio,
+             /* La répartition par repas et sa proposition. Exposées parce
+                qu'elles se vérifient au chiffre près, ce qu'un écran ne permet
+                pas : « +240 kcal sur le petit déjeuner » doit se recompter. */
+             repartitionJour: repartitionJour, habitudeBlocs: habitudeBlocs,
+             reequilibrage: reequilibrage }
   };
 })();
