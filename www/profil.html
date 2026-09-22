@@ -389,9 +389,52 @@ function toast(msg){
   clearTimeout(t._tm); t._tm = setTimeout(function(){ t.classList.remove('show'); }, 2200);
 }
 
-/* Bio et photo de profil n'ont pas de colonne dédiée en base : on les garde
-   par utilisateur dans localStorage plutôt que d'inventer un schéma. */
+/* ═══ Bio et photo de profil ═══════════════════════════════
+   🔴 ELLES NE VIVAIENT QUE DANS LE `localStorage`, et c'était le défaut signalé
+   par Pablo : « je ne vois pas la photo de profil choisie par les personnes
+   dans le social ni quand je clique sur leur profil ». Une photo rangée dans le
+   stockage local de celui qui la choisit est invisible aux autres membres PAR
+   CONSTRUCTION — aucun autre appareil ne peut lire ce stockage — et perdue dès
+   qu'il change de téléphone.
+
+   Elles sont désormais dans `membre_prefs` (colonnes `avatar_url` et `bio`,
+   migration du 2026-09-22), dont la policy de lecture est `USING (true)` et
+   l'écriture réservée à `auth.uid() = user_id`. C'est exactement le contrat
+   qu'il faut : une photo de profil est faite pour être vue par les autres, et
+   modifiable par son seul propriétaire.
+
+   ⚠️ LE `localStorage` RESTE, mais comme CACHE d'affichage : il évite que
+   l'avatar clignote le temps de la requête au chargement de l'écran. La base
+   fait foi — `chargerProfilPublic()` l'écrase avec ce qu'elle rend. */
 function lsKey(k){ return 'natty_profil_' + k + '_' + Natty.USER_ID; }
+
+/* ⚠️ `user_id` est la CLÉ PRIMAIRE de `membre_prefs` : on écrit donc en
+   `merge-duplicates` SANS `?on_conflict=`, PostgREST résolvant sur la clé
+   primaire. Y mettre un `on_conflict` serait inutile ; l'oublier sur une table
+   dont la clé primaire est un `id` uuid repartirait en 409 — le piège payé sur
+   `meal_likes`, `membre_amis` et `notes_nutritionniste`. */
+async function ecrireProfilPublic(champs){
+  return Natty.sbPost('membre_prefs',
+    Object.assign({ user_id: Natty.USER_ID }, champs),
+    'return=minimal,resolution=merge-duplicates');
+}
+
+/* Ce que la base sait de mon profil public. Le repli est SILENCIEUX : sans la
+   colonne, l'écran garde le cache local et continue de fonctionner — c'est
+   juste la photo qui ne suivra pas d'un appareil à l'autre. */
+async function chargerProfilPublic(){
+  try{
+    var r = await Natty.sbFetch('membre_prefs?user_id=eq.' + Natty.USER_ID
+      + '&select=avatar_url,bio&limit=1');
+    var d = (r && r[0]) || null;
+    if (!d) return;
+    if (d.avatar_url) localStorage.setItem(lsKey('photo'), d.avatar_url);
+    if (d.bio != null) {
+      if (d.bio) localStorage.setItem(lsKey('bio'), d.bio);
+      else localStorage.removeItem(lsKey('bio'));
+    }
+  }catch(e){ /* colonne absente ou hors ligne : le cache local suffit */ }
+}
 
 /* ═══ Identité ═══ */
 function renderIdentite(){
@@ -828,6 +871,9 @@ $('btnSave').addEventListener('click', async function(){
       ONB = (r && r[0]) || payload;
     }
     if (bio) localStorage.setItem(lsKey('bio'), bio); else localStorage.removeItem(lsKey('bio'));
+    // Même raison que la photo : une description que les autres ne peuvent pas
+    // lire n'est pas une description de profil.
+    try{ await ecrireProfilPublic({ bio: bio || null }); }catch(e2){}
     renderIdentite();
     closeSheet('ovSettings');
     toast('Profil mis à jour');
@@ -952,7 +998,15 @@ $('avatarInput').addEventListener('change', async function(){
     if (!j.secure_url) throw new Error('upload');
     localStorage.setItem(lsKey('photo'), j.secure_url);
     renderIdentite();
-    toast('Photo mise à jour');
+    /* ⚠️ Et en base, sinon personne d'autre ne la verra. L'échec est annoncé
+       PLUTÔT QUE MASQUÉ : une photo qui s'affiche chez soi sans être partie
+       serait exactement le défaut qu'on vient de corriger, en plus discret. */
+    try{
+      await ecrireProfilPublic({ avatar_url: j.secure_url });
+      toast('Photo mise à jour');
+    }catch(e2){
+      toast('Photo enregistrée sur cet appareil seulement');
+    }
   }catch(e){
     toast('Envoi impossible');
   }
@@ -966,6 +1020,13 @@ async function charger(){
       + '&select=prenom,nom,age&limit=1');
     ONB = (r && r.length) ? r[0] : null;
   }catch(e){ ONB = null; }
+  renderIdentite();
+
+  /* La photo et la bio depuis la base, puis on repeint. Volontairement APRÈS un
+     premier `renderIdentite()` : celui-ci part du cache local et affiche donc
+     l'avatar tout de suite, au lieu de laisser une initiale le temps d'un
+     aller-retour réseau. */
+  await chargerProfilPublic();
   renderIdentite();
 
   try{

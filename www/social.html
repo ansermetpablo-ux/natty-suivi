@@ -44,10 +44,19 @@ body{overflow-x:hidden}
 .hero-foot .nm{font-weight:900;font-size:19px;letter-spacing:-.2px;line-height:1.2}
 .hero-foot .st{font-size:11.5px;font-weight:700;opacity:.8;margin-top:4px}
 
-/* ══ Avatar initiale ══ */
-.av{width:34px;height:34px;flex:none;border-radius:50%;background:var(--ink);color:var(--on-ink);
+/* ══ Avatar : la photo si le membre en a une, son initiale sinon ══
+   ⚠️ L'initiale reste DANS la pastille, sous l'image : une photo qui n'arrive
+   pas (URL Cloudinary périmée, hors ligne) laisse alors la lettre à sa place au
+   lieu de l'icône cassée du navigateur — la même précaution que
+   `brancherVignettes()` d'`assets/planning.js`.
+   ⚠️ `object-fit:cover` : un avatar rond doit être rempli, et une photo de
+   profil est cadrée sur un visage — la rogner est ce qu'on attend, la déformer
+   non. */
+.av{position:relative;overflow:hidden;width:34px;height:34px;flex:none;border-radius:50%;
+  background:var(--ink);color:var(--on-ink);
   display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
 .av.sm{width:28px;height:28px;font-size:11px}
+.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 
 /* ══ Grille de posts ══ */
 /* Gouttières réduites de 60 % et photos allongées de 30 % (demande de
@@ -205,9 +214,12 @@ body{overflow-x:hidden}
 
 /* ══ Profil d'un membre ══ */
 .pf-head{display:flex;align-items:center;gap:14px;margin-top:8px}
-.pf-av{width:64px;height:64px;border-radius:50%;background:var(--ink);color:var(--on-ink);flex:none;
+.pf-av{position:relative;overflow:hidden;width:64px;height:64px;border-radius:50%;
+  background:var(--ink);color:var(--on-ink);flex:none;
   display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800}
+.pf-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .pf-nm{font-weight:900;font-size:22px;letter-spacing:-.3px}
+.pf-bio{font-size:13px;color:var(--muted);line-height:1.5;margin-top:12px}
 .pf-sub{font-size:12px;color:var(--muted);margin-top:3px}
 .pf-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
 .pf-stats .st{background:var(--card);border-radius:var(--r-lg);padding:13px 0;text-align:center}
@@ -322,6 +334,16 @@ body{overflow-x:hidden}
   </div>
 
   <div id="fil" class="hidden">
+    <!-- ⚠️ EN PREMIER, et avant « Tendances ». Le fil ouvrait sur les plats les
+         plus vus — donc sur les plus anciens, un plat gagnant ses vues avec le
+         temps. Ce qui vient d'être publié n'apparaissait nulle part en haut de
+         l'écran. -->
+    <div id="secNouv" class="hidden">
+      <div class="sec-title" id="ttNouv">Dernières publications</div>
+      <div class="sec-sub">Ce qui vient d'arriver dans le fil</div>
+      <div class="posts" id="nouv"></div>
+    </div>
+
     <div id="secTend" class="hidden">
       <div class="sec-title" id="ttTend">Tendances</div>
       <div id="vedette"></div>
@@ -441,6 +463,24 @@ function toast(msg){
 
 function initiale(prenom){ return (prenom || '?').trim().charAt(0).toUpperCase(); }
 
+/* ⚠️ UN SEUL RENDU D'AVATAR, et c'est le point. L'initiale était dessinée à
+   QUATRE endroits — l'en-tête d'un plat, la barre du héros, une ligne de
+   l'annuaire, la fiche de profil — chacun à sa façon. Ajouter la photo à trois
+   d'entre eux et oublier le quatrième est exactement ce qui est arrivé partout
+   ailleurs dans ce dépôt (les ombres de `suivi.html`, `api/_nutrition.js`,
+   `www/menu.html`). Un seul appel, donc, et la photo apparaît aux quatre.
+   @param {string} cls  '' | 'sm' (petit) | 'pf-av' (la fiche de profil) */
+function avatarHTML(prenom, photo, cls){
+  var base = (cls === 'pf-av') ? 'pf-av' : ('av' + (cls ? ' ' + cls : ''));
+  return '<div class="' + base + '">' + esc(initiale(prenom))
+    + (photo ? '<img src="' + esc(photo) + '" alt="" loading="lazy"'
+        /* Une URL morte retire l'image et découvre l'initiale. Le test sur
+           `complete && !naturalWidth` n'est pas nécessaire ici : l'attribut
+           `onerror` est posé avant que le navigateur ne charge la source. */
+        + ' onerror="this.remove()">' : '')
+    + '</div>';
+}
+
 /* ══ Illustrations ══════════════════════════════════════════
    Du trait sur `currentColor`, jamais d'aplat coloré : le même dessin
    sert en thème clair et en thème sombre, sans pendant à maintenir
@@ -486,7 +526,7 @@ var ILLU = {
    déjà rendues conditionnellement. */
 function poserIcones(){
   var carte = {
-    ttDecouv:'globe', ttEnvies:'etoile', ttSel:'bol', ttTend:'flamme', ttAmis:'amis',
+    ttDecouv:'globe', ttEnvies:'etoile', ttSel:'bol', ttNouv:'flamme', ttTend:'flamme', ttAmis:'amis',
     ttComm:'comm', ttTop:'cible', ttSim:'bouss', ttRech:'loupe', ttRechMonde:'globe'
   };
   Object.keys(carte).forEach(function(id){
@@ -566,7 +606,7 @@ function coeur(p){
 function carte(p, avecScore){
   return '<div class="post" data-id="' + p.id + '">'
     + '<div class="post-head" data-membre="' + esc(p.user_id) + '">'
-    + '<div class="av sm">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
+    + avatarHTML(p.auteur && p.auteur.prenom, p.photoAuteur, 'sm')
     + '<div class="who">' + esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div></div>'
     /* Le nom est DANS la photo : la bulle est en position absolue, et un
        élément absolu se cale sur son premier ancêtre positionné — .post-img.
@@ -591,7 +631,7 @@ function rendreVedette(p){
   if (c.vues) stats.push(c.vues + (c.vues > 1 ? ' vues' : ' vue'));
   $('vedette').innerHTML = '<div class="hero" data-id="' + p.id + '">'
     + visuel(p)
-    + '<div class="hero-bar"><div class="av">' + esc(initiale(p.auteur && p.auteur.prenom)) + '</div>'
+    + '<div class="hero-bar">' + avatarHTML(p.auteur && p.auteur.prenom, p.photoAuteur, '')
     + '<div class="who">' + esc((p.auteur && p.auteur.prenom) || 'Membre Natty') + '</div>'
     + '<div class="badge-ink sm">Top 1 🔥</div></div>'
     + '<div class="hero-foot"><div class="nm">' + esc(p.nom) + '</div>'
@@ -621,7 +661,7 @@ function ligneMembre(m){
   // La ligne entière mène au profil ; le bouton Suivre garde son propre geste
   // (il appelle stopPropagation, cf. le gestionnaire [data-follow]).
   return '<div class="mbr' + (m.bloque ? ' masq' : '') + '" data-membre="' + esc(m.user_id) + '" style="cursor:pointer">'
-    + '<div class="av">' + esc(initiale(m.prenom)) + '</div>'
+    + avatarHTML(m.prenom, m.photo, '')
     + '<div class="mbr-body"><div class="mbr-nm">' + esc(m.prenom) + '</div>'
     + '<div class="mbr-sub">' + esc(bouts.join(' · ')) + '</div></div>'
     + boutonSuivre(m) + '</div>';
@@ -680,6 +720,10 @@ function rendre(){
   }
   $('etat').classList.add('hidden');
   $('fil').classList.remove('hidden');
+
+  /* Les dernières publications d'abord : c'est la réponse à « qu'est-ce qui
+     est nouveau », et c'est ce qu'on vient chercher en rouvrant le fil. */
+  if (section('secNouv', VUE.nouveautes)) grille($('nouv'), VUE.nouveautes, false);
 
   if (VUE.vedette){
     $('secTend').classList.remove('hidden');
@@ -1034,10 +1078,11 @@ function ouvrirProfil(uid){
       + '<div class="ttl">' + esc(prenom) + '</div>'
       + '<button data-follow="' + esc(uid) + '" class="follow' + (ami?' on':'') + '">'
       + (ami ? 'Suivi ✓' : 'Suivre') + '</button></div>'
-    + '<div class="pf-head"><div class="pf-av">' + esc(initiale(prenom)) + '</div>'
+    + '<div class="pf-head">' + avatarHTML(prenom, a && a.photo, 'pf-av')
     + '<div><div class="pf-nm">' + esc(prenom) + '</div>'
     + '<div class="pf-sub">' + n + ' plat' + (n>1?'s':'') + ' publié' + (n>1?'s':'')
     + (jour ? ' · besoin ' + jour.c + ' kcal / jour' : '') + '</div></div></div>'
+    + ((a && a.bio) ? '<div class="pf-bio">' + esc(a.bio) + '</div>' : '')
     + '<div class="pf-stats">'
     +   '<div class="st"><div class="v">' + (n ? Math.round(moy.c/n) : '–') + '</div><div class="k">Kcal / plat</div></div>'
     +   '<div class="st"><div class="v">' + (n ? Math.round(moy.p/n) + 'g' : '–') + '</div><div class="k">Prot / plat</div></div>'

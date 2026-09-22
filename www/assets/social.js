@@ -23,6 +23,12 @@ var NattySocial = (function () {
   var VUES = {};         // meal_id → n
   var AMIS = {};         // ami_id → true (membres que l'on suit)
   var PREFS = {};        // user_id → false si le membre s'est retiré du fil
+  /* user_id → { photo, bio }. La photo de profil ne vivait que dans le
+     `localStorage` de celui qui la choisit : invisible aux autres membres PAR
+     CONSTRUCTION, et perdue au changement d'appareil. Elle est désormais dans
+     `membre_prefs`, dont la policy de lecture est `USING (true)` — c'est
+     exactement ce qu'il faut pour une photo destinée à être vue. */
+  var PROFILS = {};
   var BLOQUES = {};      // user_id → true (membres masqués, guideline 1.2)
   var SIGNALES = {};     // meal_id → true (plats que J'AI signalés)
   var supportLikes = null;   // 'table' | 'local' — résolu au premier chargement
@@ -262,11 +268,29 @@ var NattySocial = (function () {
      l'interrupteur (voir estPrefsDispo). */
   async function chargerPrefs(users) {
     PREFS = {};
+    PROFILS = {};
     if (supportPrefs === 'absent') return;
     try {
-      var rows = await enLots('membre_prefs', 'user_id', users, 'user_id,fil_public');
+      /* ⚠️ `avatar_url` et `bio` DANS LA MÊME REQUÊTE : ce sont des colonnes de
+         `membre_prefs`, et la lecture y est déjà faite. En faire une seconde
+         requête doublerait les allers-retours pour deux chaînes.
+         ⚠️ MAIS avec un repli sans elles : PostgREST refuse la requête ENTIÈRE
+         sur une colonne inconnue (42703, §7) — donc sur une instance où la
+         migration n'est pas passée, demander `avatar_url` ferait perdre AUSSI
+         le réglage de confidentialité, et tous les plats redeviendraient
+         visibles. Une photo manquante est un désagrément ; un réglage de
+         confidentialité qui saute est un manquement. */
+      var rows;
+      try {
+        rows = await enLots('membre_prefs', 'user_id', users, 'user_id,fil_public,avatar_url,bio');
+      } catch (e) {
+        rows = await enLots('membre_prefs', 'user_id', users, 'user_id,fil_public');
+      }
       supportPrefs = 'table';
-      rows.forEach(function (r) { PREFS[r.user_id] = r.fil_public !== false; });
+      rows.forEach(function (r) {
+        PREFS[r.user_id] = r.fil_public !== false;
+        if (r.avatar_url || r.bio) PROFILS[r.user_id] = { photo: r.avatar_url || '', bio: r.bio || '' };
+      });
     } catch (e) { supportPrefs = 'absent'; }
   }
 
@@ -390,7 +414,11 @@ var NattySocial = (function () {
         anonyme: !prenom,
         jour: jour,
         repas: ciblesRepas(jour, nbRepas[u]),
-        nbPlats: nbPlats[u] || 0
+        nbPlats: nbPlats[u] || 0,
+        /* La photo choisie par le membre, et sa bio. Vides quand il n'en a pas
+           mis — l'initiale prend alors le relais, comme avant. */
+        photo: (PROFILS[u] && PROFILS[u].photo) || '',
+        bio: (PROFILS[u] && PROFILS[u].bio) || ''
       };
     });
     MOI = Natty.USER_ID ? AUTEURS[Natty.USER_ID] : null;
@@ -428,6 +456,7 @@ var NattySocial = (function () {
         ingredients: ings,
         macros: mac,
         auteur: auteur,
+        photoAuteur: (auteur && auteur.photo) || '',
         score: scoreDe(mac, auteur && auteur.repas),
         proximite: MOI ? proximite(MOI.jour, auteur && auteur.jour) : 0
       };
@@ -451,6 +480,23 @@ var NattySocial = (function () {
        a moins de 4 » n'a donc plus d'objet : il ne pouvait que rendre PLATS
        tout entier. Retiré plutôt que laissé — une condition qui ne peut plus
        être fausse se lit comme un garde-fou actif. */
+    /* ── LES DERNIÈRES PUBLICATIONS, EN PREMIER ────────────────
+       Demande de Pablo : « dans le social, mettre en avant les dernières
+       publications ». Le fil ouvrait sur « Tendances », c'est-à-dire sur les
+       plats les plus VUS — donc sur les plus anciens, puisqu'un plat gagne ses
+       vues avec le temps. Quelqu'un qui publie à l'instant n'apparaissait nulle
+       part en haut de l'écran, et celui qui revenait deux fois par jour voyait
+       deux fois la même chose.
+
+       ⚠️ AUCUN PLAFOND PAR MEMBRE ICI, contrairement à « La communauté ». Cette
+       section répond à « qu'est-ce qui vient d'être publié » : écarter le
+       deuxième plat d'un membre parce qu'il en a déjà un, c'est répondre à une
+       autre question. Le plafond garde tout son sens plus bas, où il s'agit de
+       faire découvrir des gens. */
+    var nouveautes = PLATS.slice().sort(function (a, b) {
+      return new Date(b.cree || 0) - new Date(a.cree || 0);
+    }).slice(0, 10);
+
     var tendances = PLATS.slice().sort(function (a, b) {
       var d = popularite(b) - popularite(a);
       if (d) return d;
@@ -501,6 +547,7 @@ var NattySocial = (function () {
       .slice(0, 12);
 
     return {
+      nouveautes: nouveautes,
       vedette: vedette,
       tendances: tendances.slice(1, 5),
       amis: amis,
@@ -537,7 +584,7 @@ var NattySocial = (function () {
         var a = AUTEURS[u];
         return {
           user_id: u, prenom: a.prenom, anonyme: a.anonyme,
-          nbPlats: a.nbPlats, jour: a.jour,
+          nbPlats: a.nbPlats, jour: a.jour, photo: a.photo || '', bio: a.bio || '',
           proximite: a.proximite || 0, ami: !!AMIS[u], bloque: !!BLOQUES[u]
         };
       })
