@@ -986,6 +986,11 @@ var Natty = (function () {
        jour et le bilan viendraient se poser par-dessus au bout de leurs 6,5 et
        9 secondes, en plein réglage des séries. */
     'nsea',
+    /* `nmg` — le guide d'une macro (assets/macro-guide.js). Il s'ouvre depuis un
+       anneau de l'écran Suivi et se parcourt en plusieurs plans : sans cette
+       entrée, le guide du jour et le bilan du soir viendraient se poser
+       par-dessus au bout de leurs 6,5 et 9 secondes. */
+    'nmg',
     'mjOverlay', 'nnotifInv'
   ];
 

@@ -298,6 +298,23 @@ var NattyCine = (function () {
       '<path class="t" style="--l:150" d="M40 12a22 22 0 1 0 12 26 17 17 0 0 1-12-26Z"/>'
       + '<circle class="f b" cx="16" cy="16" r="2"/><circle class="f b" cx="50" cy="10" r="1.6"/>'
       + '<circle class="f b" cx="55" cy="48" r="1.8"/>',
+    /* Les deux blocs de repas qui manquaient : le matin et la collation.
+       `lune` sert déjà le dîner et `assiette` le déjeuner — il fallait donc un
+       lever de soleil et un fruit pour compléter les quatre blocs canoniques de
+       `NattyCreneaux.CANON`, qui les nomme par leur clé `illu`. */
+    soleil:
+      '<circle class="t" style="--l:60" cx="32" cy="38" r="10"/>'
+      + '<line class="t" style="--l:44" x1="6" y1="52" x2="58" y2="52"/>'
+      + '<line class="t m" style="--l:14" x1="32" y1="18" x2="32" y2="24"/>'
+      + '<line class="t m" style="--l:14" x1="14" y1="24" x2="18" y2="28"/>'
+      + '<line class="t m" style="--l:14" x1="50" y1="24" x2="46" y2="28"/>'
+      + '<line class="t m" style="--l:14" x1="8" y1="40" x2="14" y2="40"/>'
+      + '<line class="t m" style="--l:14" x1="50" y1="40" x2="56" y2="40"/>',
+    pomme:
+      '<path class="t" style="--l:160" d="M32 22c-9-6-20-1-20 12 0 12 9 22 20 22s20-10 20-22'
+      + 'c0-13-11-18-20-12Z"/>'
+      + '<path class="t" style="--l:26" d="M32 22c0-6 1-9 4-12"/>'
+      + '<path class="t b" style="--l:30" d="M33 13c4-3 9-3 12-1-1 5-5 8-9 8"/>',
     balance:
       '<line class="t" style="--l:26" x1="32" y1="14" x2="32" y2="50"/>'
       + '<line class="t" style="--l:46" x1="12" y1="20" x2="52" y2="20"/>'

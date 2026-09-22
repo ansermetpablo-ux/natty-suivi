@@ -1362,7 +1362,7 @@ html.no-scroll {
          même chose finissent par diverger. -->
     <h2 id="objTitre">Consommé aujourd'hui</h2>
     <div class="rings">
-      <div class="ring-item" onclick="openMacroPopup('prot')">
+      <div class="ring-item" onclick="ouvrirMacro('prot')">
         <div class="ring-box">
           <svg viewBox="0 0 88 88">
             <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
@@ -1374,7 +1374,7 @@ html.no-scroll {
         <div class="macro-tag">Protéines 🥩</div>
         <div class="ring-obj" id="oProt">Obj. –g</div>
       </div>
-      <div class="ring-item" onclick="openMacroPopup('gluc')">
+      <div class="ring-item" onclick="ouvrirMacro('gluc')">
         <div class="ring-box">
           <svg viewBox="0 0 88 88">
             <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
@@ -1386,7 +1386,7 @@ html.no-scroll {
         <div class="macro-tag">Glucides 🌾</div>
         <div class="ring-obj" id="oGluc">Obj. –g</div>
       </div>
-      <div class="ring-item" onclick="openMacroPopup('lip')">
+      <div class="ring-item" onclick="ouvrirMacro('lip')">
         <div class="ring-box">
           <svg viewBox="0 0 88 88">
             <circle cx="44" cy="44" r="38" fill="none" stroke="#33353b" stroke-width="7"/>
@@ -3089,6 +3089,26 @@ function macroBrancherGeste(type, ordre) {
     if (j < 0 || j >= ordre.length) return;   // pas de bouclage : on sent le bord
     macroGlisser(ordre[j], dx < 0 ? 1 : -1);
   }, { passive: true });
+}
+
+/* ── Le détail d'une macro passe d'abord par le GUIDE ────────
+   Demande de Pablo (2026-09-22) : « pour les conseils de nutrition, il faudrait
+   le faire en cinétique aussi — quand on clique sur la macro, choix entre quatre
+   blocs posés en quadrillage ».
+
+   ⚠️ LE GUIDE NE REMPLACE PAS `#ovMacro`, il le précède. L'overlay porte le
+   conseil de la semaine, le plat généré et les aliments à privilégier — tout
+   cela vient de la génération hebdomadaire et n'a pas d'équivalent dans le
+   guide. Son dernier bouton y mène (« Voir le conseil de la semaine »).
+   Remplacer l'un par l'autre aurait perdu du contenu que personne n'a demandé
+   de perdre.
+
+   ⚠️ Et `ouvrir()` rend `false` quand `NattyCreneaux` manque : on retombe alors
+   sur l'overlay, au lieu d'ouvrir quatre blocs sans cible ni contenu. */
+function ouvrirMacro(type) {
+  var k = { prot: 'p', gluc: 'g', lip: 'l' }[type] || 'p';
+  if (window.NattyMacroGuide && NattyMacroGuide.ouvrir && NattyMacroGuide.ouvrir(k)) return;
+  openMacroPopup(type);
 }
 
 function openMacroPopup(type) {
@@ -7079,6 +7099,10 @@ window.addEventListener('natty:repas-ajoute', function(){
      Chargée AVANT `seance.js` et `bilan.js`, qui s'en servent tous les deux —
      et qui savent s'en passer si elle manque. -->
 <script src="/assets/cine.js"></script>
+<!-- ⚠️ APRÈS `cine.js`, `creneaux.js` et `decouverte.js` : le guide les utilise
+     tous les trois. Aucun n'est lu au chargement — ils ne servent qu'au clic —
+     mais placer la balise avant eux serait un piège pour la prochaine retouche. -->
+<script src="/assets/macro-guide.js"></script>
 <script src="/assets/seance.js"></script>
 <script src="/assets/bilan.js"></script>
 <script>
