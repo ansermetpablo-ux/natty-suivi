@@ -81,7 +81,8 @@
     [['liquides'], ['mouill', 'deglac', 'bouillon', 'fond', 'vin', 'lait de coco', 'lait', 'eau', 'coulis', 'jus']],
     [['epices'], ['epice', 'cumin', 'paprika', 'curry en poudre', 'pate de curry', 'garam', 'curcuma', 'coriandre moulue', 'sel', 'poivre', 'cannelle', 'sumac']],
     [['liaison'], ['farine de riz', 'singer', 'lier', 'monter au beurre', 'farine', 'fecule', 'maizena', 'beurre', 'parmesan', 'fromage', 'feta', 'chapelure', 'oeuf']],
-    [['pain'], ['tortilla', 'pain', 'galette', 'pita', 'naan', 'wrap']]
+    [['pain'], ['tortilla', 'pain', 'galette', 'pita', 'naan', 'wrap']],
+    [['four'], ['four']]
   ];
   function sing(m) { return m.length > 3 ? m.replace(/s$/, '') : m; }
   function famille(aliment) {
@@ -590,7 +591,7 @@
       erreurs: ['✗ Colle élastique → mixeur : irrécupérable en purée, réutiliser en soupe ou en galettes.'] },
     fruits: { nom: 'Écraser des avocats : guacamole', pourquoi: 'L’avocat brunit à l’air (enzyme) : la lime, ajoutée tout de suite, bloque l’oxydation et donne l’acidité. Écrasé à la fourchette il garde du grain ; mixé, il devient une mousse lisse qui brunit plus vite (plus de surface).', pas: ['Chair d’avocat, jus de lime AUSSITÔT, sel.', 'Fourchette : écraser en gardant des morceaux. Oignon, coriandre, piment.', 'Film au contact, pas d’air.'], chiffres: ['🍋 1 lime pour 2 avocats · ⏱ tient 3–4 h filmé'], sens: ['👁 Vert vif, grain visible.'], fin: 'Guacamole vert, texturé, filmé au contact.', erreurs: ['✗ Brun → retirer la couche du dessus, relimer.'] },
     legumineuses: { nom: 'Mixer lentilles, chou-fleur pour une farce : par impulsions', pourquoi: 'Une farce de galettes a besoin de GRAIN pour tenir et avoir de la mâche : mixée en purée lisse, elle devient une pâte qui s’étale et ne croustille pas. On mixe par impulsions, une seconde à la fois, jusqu’à une texture de gros sable.', pas: ['Lentilles cuites et ÉGOUTTÉES à fond (sinon la farce est liquide), chou-fleur cuit et pressé.', '5 à 10 impulsions d’une seconde. Arrêter dès que ça se tient quand on presse.', 'Flocons, épices, légumes revenus, 15 min au frais.'], chiffres: ['⏱ 5–10 impulsions'], sens: ['🖐 Se presse en boule sans couler ; grain visible.'], fin: 'Farce granuleuse qui se tient.', erreurs: ['✗ Purée lisse → ajouter 2 c. à s. de flocons, 20 min au frais.'] },
-    graines: { nom: 'Mixer des flocons d’avoine en farine grossière', pourquoi: 'Les flocons mixés 10 s deviennent une farine grossière qui lie une farce ; entiers, ils restent visibles.', pas: ['10 s au mixeur sec.'], chiffres: ['⏱ 10 s'], sens: ['👁 Poudre grossière.'], fin: 'Liant prêt.', erreurs: [] }
+    graines: { nom: 'Mixer des flocons d’avoine en farine grossière', pourquoi: 'Les flocons mixés 10 s deviennent une farine grossière qui lie une farce ; entiers, ils restent visibles.', pas: ['10 s au mixeur sec.'], chiffres: ['⏱ 10 s'], sens: ['👁 Poudre grossière.'], fin: 'Liant prêt.', erreurs: ['✗ Réduit en poudre fine et collante → mixé trop longtemps : elle liera trop et la farce sera compacte, compenser avec un peu moins de liant au prochain lot.', '✗ Encore des flocons entiers → bol trop plein : mixer en deux fois.'] }
   };
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -666,7 +667,7 @@
       erreurs: ['✗ Tranché trop tôt → les jus sont sur la planche : les verser sur les tranches, c’est tout.'] },
     volaille: { nom: 'Laisser tiédir un poulet avant de le trancher', pourquoi: 'Le blanc de poulet tranché brûlant perd ses jus ; à 60 °C, il les a repris. 5 à 8 min couvert, puis tranches de 1 cm en travers des fibres, pour un wrap ou une salade.', pas: ['Couvrir lâchement, 5–8 min.', 'Trancher en travers des fibres, 1 cm.'], chiffres: ['⏱ 5–8 min'], sens: ['👁 Tranche humide, jus qui ne coulent pas.'], fin: 'Tranché juteux.', erreurs: ['✗ Tranché chaud → jus perdus, verser sur les tranches.'] },
     graines: { nom: 'Reposer le quinoa, le millet, le riz', pourquoi: 'Le feu coupé, la vapeur enfermée finit d’hydrater le cœur des grains et le fond se détache. Sans repos : dessus cuit, fond attaché et grains humides.', pas: ['Feu coupé, couvercle FERMÉ, 5–10 min.', 'Égrener à la fourchette, étaler pour refroidir.'], chiffres: ['⏱ 5–10 min'], sens: ['👁 Grains détachés, secs, cratères en surface.'], fin: 'Égrené, refroidi.', erreurs: ['✗ Couvercle soulevé pendant le repos → 3 min de plus.'] },
-    viande: { nom: 'Reposer une viande', pourquoi: 'Voir le repos en général : +3–5 °C, jus redistribués, 5 min pour une pièce, 15 pour un rôti.', pas: ['Couvrir lâchement, chronomètre.'], chiffres: ['⏱ 5–15 min'], sens: ['👁 Pas de flaque.'], fin: 'Reposée, tranchée.', erreurs: [] }
+    viande: { nom: 'Reposer une viande', pourquoi: 'Voir le repos en général : +3–5 °C, jus redistribués, 5 min pour une pièce, 15 pour un rôti.', pas: ['Couvrir lâchement, chronomètre.'], chiffres: ['⏱ 5–15 min'], sens: ['👁 Pas de flaque.'], fin: 'Reposée, tranchée.', erreurs: ['✗ Flaque de jus sur la planche après tranchage → tranchée trop tôt : les 5 min de repos ne se rattrapent pas, récupérer le jus et le verser sur les tranches.', '✗ Viande refroidie pendant le repos → couverte trop serré ou repos trop long : couvrir LÂCHEMENT d’aluminium, 5 min pour une pièce, pas 20.'] }
   };
 
   SAVOIR.peser = {
@@ -727,6 +728,131 @@
   SAVOIR.assaisonner.poisson = SAVOIR.assaisonner.volaille;
   SAVOIR.saisir.fruits = { nom: 'Poêler des fruits (mangue, agrumes)', pourquoi: 'Un fruit poêlé caramélise par ses propres sucres à feu vif, 1–2 min par face, sans remuer : plus longtemps, il rend son jus et compote.', pas: ['Poêle chaude, filet d’huile, tranches de 1 cm, 1–2 min par face sans toucher.'], chiffres: ['⏱ 1–2 min par face'], sens: ['👁 Marques dorées, chair encore ferme.'], fin: 'Fruits marqués, fermes.', erreurs: ['✗ Compote → trop long : en faire une salsa.'] };
 
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     LES COUPLES QUE LA MESURE A TROUVÉS VIDES (2026-09-23)
+     ─────────────────────────────────────────────────────────────────────
+     Les 38 fiches produisent 490 tâches de production (1 ingrédient = 1
+     étape). Passées une par une dans `pour()`, 98 retombaient sur le repli
+     `_` de leur geste — dont TOUT le dressage (63 sur 63) et le
+     refroidissement d'un plat chaud (17), c'est-à-dire la fin de journée
+     et le seul point sanitaire de la production. Un repli n'est pas une
+     absence de cours, c'est un cours qui ne parle pas de l'aliment qu'on a
+     dans les mains : il dit « peser, refroidir, fermer » sans dire qu'une
+     sauce de braisé fige, qu'un riz boit, qu'un filet se casse.
+     ⚠️ Deux de ces trous étaient des CÂBLAGES, pas des manques : le cours
+     du riz rincé existait (`rincer.graines`) et n'était jamais montré,
+     parce que `riz` est une famille à part dans FAMILLES ; celui des
+     feuilles lavées (`rincer.herbes`) ne servait pas aux épinards. Deux
+     alias les rendent visibles — c'est le défaut maison d'un savoir écrit
+     et jamais atteint (le `K_ENTERS` de narration.html, §3).
+     Mesure de couverture : scripts/verifier-savoir.mjs. */
+
+  SAVOIR.rincer.riz = SAVOIR.rincer.graines;          // le cours du riz existait, rien n'y menait
+  SAVOIR.rincer.legumes_verts = SAVOIR.rincer.herbes; // épinards, blettes : des feuilles
+
+  SAVOIR.refrigerer.plat = { nom: 'Refroidir un plat chaud : de 63 à 10 °C en moins de 2 h',
+    pourquoi: 'C’est le seul geste de la journée où une erreur ne se voit pas et ne se goûte pas. Entre 63 et 10 °C, les bactéries qui ont survécu à la cuisson redémarrent, et une population double toutes les 20 minutes vers 37 °C : un bac de 8 kg posé tel quel au réfrigérateur met cinq à six heures à refroidir au centre, donc passe quatre heures dans cette zone. Ce qui refroidit, ce n’est pas le froid autour : c’est la SURFACE. Un bac de 10 cm de haut refroidit quatre fois plus lentement qu’un bac de 5 cm — la chaleur sort par le carré de l’épaisseur, exactement comme elle entre à la cuisson. Et un couvercle posé sur un plat chaud bloque l’évaporation, qui est la moitié du refroidissement.',
+    pas: ['Sortir le plat du feu et le transvaser TOUT DE SUITE dans des bacs larges, en couche de 3 à 5 cm. Un plat laissé dans sa cocotte refroidit par le haut seulement, et la fonte garde la chaleur une heure.', 'À DÉCOUVERT, en cellule de refroidissement si on en a une. Sinon : bac posé dans un évier d’eau glacée (eau + glace à mi-hauteur du bac), et on remue toutes les 10 min — remuer double la vitesse.', 'Sonder AU CENTRE du bac le plus épais, jamais sur le bord. Noter l’heure de sortie du feu : la montre décide, pas l’impression.', 'À 21 °C (environ 1 h) on peut passer au réfrigérateur, toujours à découvert. À 10 °C : filmer, étiqueter (plat, date, heure), ≤ 4 °C.', 'Ne jamais empiler les bacs tant qu’ils sont tièdes : celui du dessous ne refroidit plus.'],
+    chiffres: ['🌡 63 → 21 °C en 2 h maximum, puis 21 → 4 °C en 4 h. La règle courte à tenir en cuisine : moins de 2 h pour arriver à 10 °C.', '📏 Couche de 3 à 5 cm. Au-delà de 8 cm, le centre ne suit plus.', '🧊 Bain d’eau glacée : autant de glace que d’eau, remuer toutes les 10 min.', '📅 DLC d’un plat cuisiné réfrigéré : 3 jours en général, ce que dit la fiche sinon.'],
+    sens: ['🖐 Le fond du bac est froid mais le centre est tiède : ce n’est pas refroidi, c’est refroidi en surface. Seule la sonde tranche.', '👁 Une sauce qui fige en surface pendant que le dessous fume : remuer, la croûte isole.', '👃 Une odeur aigre ou piquante sur un plat refroidi trop lentement : il se jette, sans discussion.'],
+    fin: '10 °C au centre, sonde à l’appui, en moins de 2 h ; filmé, étiqueté avec l’heure, au froid.',
+    erreurs: ['✗ Plus de 2 h pour descendre → le plat se jette. C’est cher, et c’est la seule réponse : rien ne rattrape une multiplication bactérienne, la recuisson ne détruit pas les toxines déjà produites.', '✗ Bac couvert trop tôt → rouvrir, remuer, remettre en cellule : on perd 20 min, pas le plat.', '✗ Pas de cellule ni de glace → étaler sur des plaques à pâtisserie en couche de 2 cm : beaucoup de surface, ça descend en 40 min.'] };
+  SAVOIR.refrigerer.legumes_fruits = SAVOIR.refrigerer.plat;
+  SAVOIR.refrigerer.legumes_verts = SAVOIR.refrigerer.plat;
+
+  SAVOIR.refrigerer.tofu = { nom: 'Presser et garder le tofu',
+    pourquoi: 'Le tofu ferme est un caillé : il est gorgé d’eau, et cette eau est ce qui l’empêche de dorer et de prendre le goût d’une marinade. Pressé, il perd 15 à 20 % de son poids en eau, sa texture se resserre, et la place libérée se remplit de marinade. Le froid pendant la presse évite qu’il s’acidifie.',
+    pas: ['Sortir le bloc de son eau, l’envelopper dans deux feuilles de papier absorbant ou un torchon propre.', 'Poser sur une assiette creuse, une seconde assiette dessus, et un poids dessus (une boîte de conserve, une casserole d’eau) — environ 1 kg pour un bloc de 400 g.', '30 min au réfrigérateur, 1 h si on a le temps. Changer le papier à mi-parcours s’il est trempé.', 'Tailler ensuite, puis mariner : un tofu taillé prend la marinade sur toutes ses faces.', 'Un bloc entamé se garde immergé dans de l’eau froide, au réfrigérateur, eau changée chaque jour, 3 jours.'],
+    chiffres: ['⏱ 30 min à 1 h sous 1 kg · 💧 le bloc perd 15–20 % de son poids · 🌡 ≤ 4 °C · 📅 3 jours immergé, eau changée tous les jours'],
+    sens: ['👁 Le papier est trempé et le bloc a visiblement diminué d’épaisseur.', '🖐 Le tofu pressé résiste sous le doigt au lieu de s’enfoncer ; une tranche se tient sans se briser.'],
+    fin: 'Bloc ferme, sec en surface, qui ne rend plus d’eau sur la planche.',
+    erreurs: ['✗ Tofu qui s’écrase sous le poids → trop lourd ou tofu soyeux : le soyeux ne se presse pas, il se mixe.', '✗ Pas pressé et mis à dorer → il grésille, colle et reste blanc : sécher au torchon, feu plus vif, et accepter qu’il dorera moins.'] };
+
+  SAVOIR.enfourner.four = { nom: 'Préchauffer : le four ment avant d’être chaud',
+    pourquoi: 'Le voyant s’éteint quand l’AIR atteint la consigne — au bout de 6 à 8 minutes. Mais ce qui cuit, ce sont aussi les parois, la sole et la plaque, qui mettent deux fois plus longtemps à monter et qui rayonnent. Enfourner sur le voyant, c’est cuire dans un four dont les parois sont 40 °C en dessous : le dessous ne saisit pas, le gratin ne prend pas de couleur, et tout dure un tiers de temps de plus. Et chaque ouverture de porte coûte 20 à 30 °C, que le four met plusieurs minutes à reprendre.',
+    pas: ['Vider le four de tout ce qui n’y cuit pas : une plaque oubliée fait écran et crée une zone froide.', 'Régler la température de la fiche et la CHALEUR TOURNANTE quand elle est demandée (elle cuit plus vite et plus régulièrement, on baisse de 20 °C par rapport à la chaleur statique).', 'Laisser 15 minutes à partir du moment où le voyant s’éteint, pas à partir de l’allumage.', 'Si la fiche demande de saisir le dessous (pommes de terre, légumes rôtis) : la plaque préchauffe DANS le four, et on pose les aliments dessus au dernier moment.', 'Vérifier avec un thermomètre de four posé au milieu si on en a un : beaucoup de fours de production affichent 20 à 30 °C de plus ou de moins que la réalité.'],
+    chiffres: ['⏱ 15 min après extinction du voyant ; 20–25 min pour un four plein ou une plaque dedans.', '🌡 Chaleur tournante : −20 °C par rapport à la chaleur statique de la fiche.', '🚪 Chaque ouverture : −20 à −30 °C, 3 à 4 min pour les reprendre.'],
+    sens: ['🖐 La main tendue à 20 cm de la porte ouverte prend une chaleur sèche et franche, pas une tiédeur.', '👂 Le grésillement doit démarrer dans les secondes qui suivent l’enfournement d’un aliment huilé. S’il ne vient pas, le four n’était pas prêt.'],
+    fin: 'Four et plaque à température, vide de tout le reste, prêt à recevoir sans attendre.',
+    erreurs: ['✗ Enfourné trop tôt → ne pas monter la température pour rattraper (le dessus brûlerait) : prolonger, et sonder.', '✗ Four qui n’atteint jamais la consigne → joint de porte abîmé ou résistance faible : cuire 10 °C au-dessus de la consigne et sonder, et le signaler.'] };
+
+  /* ⚠️ DRESSER NE PORTE PAS SUR UN INGRÉDIENT, MAIS SUR LA BOÎTE ENTIÈRE, et
+     c'est pour ça qu'il a son propre aiguillage. L'aliment d'une étape de
+     dressage est l'assemblage — « salade + poulet + vinaigrette », « bourguignon
+     + pommes de terre » —, et la famille rend celle du PREMIER mot reconnu :
+     mesuré, le bourguignon tombait sur la pomme de terre et recevait le cours du
+     bol composé, pendant qu'un wrap et une soupe recevaient celui d'un plat en
+     sauce. On classe donc la BOÎTE, du plus spécifique au plus général, et le
+     bol composé est le défaut. Ordre : un poisson d'abord (c'est lui qui casse),
+     puis ce qui s'emballe, ce qui se verse, ce qui est froid, ce qui a une
+     sauce ; une émulsion en dernier, sinon « quinoa + légumes + tahini »
+     deviendrait un pot de sauce. */
+  SAVOIR.dresser._aiguillage = [
+    ['poisson', ['poisson', 'saumon', 'truite', 'thon', 'merlu', 'cabillaud', 'dorade', 'papillote', 'crevette', 'lieu', 'colin']],
+    ['wrap', ['wrap', 'burrito', 'tacos', 'tortilla', 'burger', 'pita', 'naan']],
+    ['soupe', ['soupe', 'veloute', 'potage']],
+    ['salade', ['salade', 'taboule']],
+    ['sauce', ['bourguignon', 'braise', 'chili', 'curry', 'risotto', 'saute', 'mijote', 'ragout', 'tajine', 'bolognaise', 'daube']],
+    ['emulsion', ['vinaigrette', 'sauce yaourt', 'sauce vierge']]
+  ];
+
+  SAVOIR.dresser.sauce = { nom: 'Mettre un plat en sauce en boîte : les morceaux d’abord, la sauce ensuite',
+    pourquoi: 'Un plat en sauce se sépare dès qu’on le laisse reposer : le gras remonte, les morceaux tombent au fond, la sauce reste au milieu. Servi à la louche sans avoir remué, les trois premières boîtes prennent la viande et les trois dernières la sauce — deux clients paient la même chose et n’ont pas le même plat. Et la sauce change d’état en refroidissant : la gélatine d’un braisé et l’amidon d’un singé figent vers 30 °C. Une sauce qui nappe parfaitement à chaud devient une gelée en boîte, et c’est normal : elle redeviendra liquide au réchauffage. Ce qu’il ne faut pas faire, c’est l’allonger pour « corriger » ce qu’on voit à froid.',
+    pas: ['Plat refroidi à ≤ 10 °C (voir « réfrigérer · plat »). Dégraisser à la louche si une couche de gras a figé en surface.', 'Remuer le bac de bas en haut avant de commencer, et re-remuer toutes les cinq boîtes.', 'Compter : nombre de morceaux ÷ nombre de boîtes. On sert les morceaux à la pince, ce nombre-là, dans chaque boîte — puis la sauce à la louche par-dessus.', 'Tare avec la boîte vide, peser chaque portion. Le féculent, s’il est dans la même boîte, se pose à côté et non dessous : sous la sauce il devient pâteux en une nuit.', 'Laisser 1 cm de vide sous le bord : le plat gonfle au réchauffage et déborde sous l’opercule.', 'Essuyer le bord de la boîte avant d’operculer — une trace de sauce empêche la soudure et la boîte fuit.'],
+    chiffres: ['⚖️ Poids de la fiche, tolérance ± 5 % · 🥄 environ un tiers de sauce pour deux tiers de morceaux, sauf indication', '📏 1 cm de vide sous le bord · 🌡 ≤ 10 °C avant fermeture, stockage ≤ 4 °C'],
+    sens: ['👁 Ouvrir deux boîtes au hasard : on doit y voir le même nombre de morceaux. C’est le seul contrôle qui compte.', '👁 Une flaque d’eau claire séparée au fond dit que le plat a été mis en boîte trop chaud et a rendu son eau.', '🖐 À froid, la sauce se tient et se détache du bord en bloc souple : c’est ce qu’on attend d’un braisé, pas un défaut.'],
+    fin: 'Toutes les boîtes se ressemblent, même poids, même proportion de morceaux, bord propre, aucune buée sous l’opercule.',
+    erreurs: ['✗ Morceaux épuisés avant la fin des boîtes → rattraper en répartissant ce qui reste et en rééquilibrant les boîtes déjà faites, avant d’operculer. Ensuite, compter d’abord.', '✗ Sauce en gelée compacte au froid → normal pour un braisé : ne pas allonger, elle redevient liquide au réchauffage.', '✗ Gras figé en plaque blanche sur le dessus → le retirer à la cuillère : il ne se remélangera pas et le client le verra.'] };
+
+  SAVOIR.dresser.bol = { nom: 'Une boîte composée : féculent, protéine, légumes',
+    pourquoi: 'Trois composants qui n’ont ni la même eau ni le même comportement au froid, et qui vont rester 72 h côte à côte. Un féculent absorbe : posé sous une sauce ou contre un légume qui rend son eau, il l’aspire et devient pâteux — le riz double presque de volume dans une boîte mal montée. Un légume vert perd sa couleur au contact d’un acide (une vinaigrette, un jus de citron) : la chlorophylle vire au kaki en quelques heures. Et la boîte se réchauffe d’un bloc : ce qui touche le fond chauffe le plus, donc le féculent, qui est aussi ce qui supporte le mieux le micro-ondes, va dessous.',
+    pas: ['Tous les éléments refroidis séparément à ≤ 10 °C avant de monter la boîte. Un élément tiède contre un élément froid fait de la condensation à l’intérieur.', 'Tare avec la boîte vide. FÉCULENT d’abord, étalé en couche régulière au fond, sur son tiers de surface — il fait le lit.', 'PROTÉINE posée dessus ou à côté, entière ou tranchée régulièrement, jamais noyée. Une pièce unique (farci, gratin, pavé) se pose de la même façon, d’un seul geste, du côté le plus régulier vers le haut.', 'LÉGUMES dans leur zone, pas mélangés aux deux autres : on doit reconnaître les trois en ouvrant.', 'SAUCE et vinaigrette à part, en pot, ou en filet au tout dernier moment si la fiche le dit. Jamais sur les légumes verts la veille.', 'Herbes fraîches, graines et fruits secs torréfiés : posés SUR le dessus, jamais dessous — ils ramollissent dans l’humidité.', 'La première boîte devient le modèle : on la garde sous les yeux jusqu’à la dernière.'],
+    chiffres: ['⚖️ Les grammages de la fiche, composant par composant, ± 5 % · 🌡 ≤ 10 °C à la fermeture · 📅 3 jours'],
+    sens: ['👁 En ouvrant, on nomme les trois éléments sans réfléchir. Si l’œil hésite, c’est mélangé.', '👁 Légumes verts francs : un vert terne ou kaki dit qu’ils ont attendu dans un acide ou qu’ils ont été dressés chauds.', '🖐 Le riz se détache en grains sous la fourchette, il ne fait pas bloc.'],
+    fin: 'Trois zones nettes, poids juste au composant, sauce à part, dessus propre, toutes les boîtes identiques à la première.',
+    erreurs: ['✗ Riz détrempé le lendemain → la sauce ou les légumes le touchaient : boîte à compartiments, ou sauce en pot.', '✗ Légumes verts ternis → dressés avec l’acide : vinaigrette à part, et légumes refroidis vite après cuisson.', '✗ Graines ramollies → elles étaient sous les légumes : sur le dessus, et en petit sachet si la fiche le permet.'] };
+
+  SAVOIR.dresser.salade = { nom: 'Une salade en boîte : elle rend son eau, et l’acide l’attaque',
+    pourquoi: 'Une salade assaisonnée est une salade qui a commencé à mourir. Le sel de la vinaigrette tire l’eau des cellules par osmose : en quelques heures, les feuilles s’affaissent, le taboulé baigne, et la vinaigrette diluée ne colle plus à rien. L’acide, lui, attaque la chlorophylle et fait virer le vert au kaki. Une salade de graines (quinoa, lentilles, millet) est plus tolérante — la graine a déjà bu — mais ses herbes fraîches et ses crudités, non. La règle est donc simple et sans exception : ce qui est acide ou salé voyage à part, et la salade se monte froide.',
+    pas: ['Tous les éléments à ≤ 10 °C : une salade montée tiède fait de la buée et se ramollit en une nuit.', 'Égoutter à fond ce qui a été lavé, et ce qui a dégorgé (chou salé, concombre) : presser à la main, l’eau restante finira au fond de la boîte.', 'Tare avec la boîte. Salade ou graines au fond, sur toute la surface ; la protéine posée à CÔTÉ, jamais dessus — elle écrase et son jus coule.', 'Crudités fragiles (tomate, concombre, avocat) et herbes fraîches sur le dessus, en dernier.', 'Vinaigrette et sauce en pot à part, TOUJOURS, sauf si la fiche dit explicitement le contraire pour une salade de graines qu’on veut marinée.', 'Sur l’étiquette : « verser la sauce au moment de servir ».'],
+    chiffres: ['⚖️ Grammages de la fiche, ± 5 % · 🌡 ≤ 10 °C au montage, ≤ 4 °C au stockage · 📅 3 jours', '🥄 30–40 g de vinaigrette par portion, en pot, sauf indication'],
+    sens: ['👁 Aucun liquide libre au fond de la boîte. S’il y en a, quelque chose n’était pas égoutté.', '👁 Le vert est franc ; un vert olive ou kaki dit que l’acide a agi.', '🖐 Les feuilles sont encore fermes et bruissent ; molles, elles ont été salées trop tôt.'],
+    fin: 'Deux zones nettes, rien de mouillé au fond, herbes intactes sur le dessus, sauce en pot, étiquette qui le dit.',
+    erreurs: ['✗ Flaque au fond → refaire la boîte avec de la salade égouttée ; celle-ci ne se rattrape pas, elle continuera de rendre de l’eau.', '✗ Vinaigrette déjà versée → la boîte est perdue pour 72 h de conservation : la sortir du lot et la consommer le jour même.', '✗ Herbes noircies → hachées trop tôt et mouillées : hacher au dernier moment, sur des feuilles sèches.'] };
+
+  SAVOIR.dresser.soupe = { nom: 'Verser une soupe : le niveau, et ce qui ne va pas dedans',
+    pourquoi: 'Un liquide se dilate en gelant et gonfle en chauffant : une boîte remplie à ras déborde sous l’opercule au réchauffage, et fait sauter le couvercle au congélateur. Une soupe mixée, elle, se sépare au repos — la partie légère remonte et laisse un dépôt au fond : versée sans remuer, les premières boîtes sont claires et les dernières épaisses. Et tout ce qui doit rester croquant (graines, croûtons, herbes) se ramollit en une heure dans un liquide : ça voyage à côté.',
+    pas: ['Soupe refroidie à ≤ 10 °C (voir « réfrigérer · plat ») : une soupe chaude est le pire cas, c’est le plus gros volume et le moins de surface.', 'Remuer le bac à fond avant chaque série de boîtes : une soupe mixée se sépare en quelques minutes.', 'Louche calibrée ou balance, tare avec la boîte. Remplir en laissant 1,5 à 2 cm sous le bord.', 'Essuyer le bord et l’extérieur : une coulure sèche colle les boîtes entre elles et empêche l’opercule de souder.', 'Garniture (graines, herbes, crème, croûtons) en sachet ou en pot à part, jamais dedans.'],
+    chiffres: ['📏 1,5 à 2 cm de vide sous le bord · ⚖️ portion de la fiche au poids, ± 5 % · 🌡 ≤ 10 °C à la fermeture, ≤ 4 °C au stockage'],
+    sens: ['👁 Deux boîtes prises au hasard ont la même épaisseur et la même couleur : sinon, on n’a pas assez remué.', '👁 Aucune coulure sur le bord ni sur les côtés.'],
+    fin: 'Boîtes au même niveau, même texture d’une boîte à l’autre, bords propres, garniture à part.',
+    erreurs: ['✗ Boîtes qui débordent au réchauffage → remplies trop haut : 2 cm de vide.', '✗ Dernières boîtes trop épaisses → le dépôt : remuer, et rééquilibrer en reversant un peu des premières.', '✗ Opercule qui se décolle → bord gras ou mouillé : essuyer chaque boîte avant de sceller.'] };
+
+  SAVOIR.dresser.wrap = { nom: 'Rouler et emballer un wrap, un burrito, un burger',
+    pourquoi: 'Une galette de blé est une éponge : la garniture humide la traverse en quelques heures et elle se déchire à l’ouverture. On monte donc en couches, du plus sec au plus humide, avec le féculent ou la salade en barrière contre la pâte, et la sauce au centre — jamais au contact du pain. Un rouleau serré tient parce que la garniture est comprimée, pas parce qu’on a mis un pique : trop garni, il ne ferme pas ; trop lâche, il se déroule et la coupe s’effondre.',
+    pas: ['Tous les éléments à ≤ 10 °C. Une garniture tiède fait de la vapeur dans le rouleau et détrempe la galette de l’intérieur.', 'Tiédir la galette 10 s à la poêle sèche ou au four : froide, elle craque en pliant. La laisser revenir à température avant de garnir.', 'Garnir sur le TIERS INFÉRIEUR, pas au centre : on laisse 4 cm libres à gauche et à droite pour les rabats, et le tiers du haut sert à fermer.', 'Ordre : élément sec (salade, riz, fromage) contre la galette → protéine → légumes → sauce AU CENTRE de la garniture.', 'Rabattre les deux côtés, puis rouler du bas vers le haut en serrant avec les pouces, la garniture repoussée vers soi à chaque tour.', 'Couper en deux EN BIAIS avec un couteau-scie, d’un seul mouvement, sans appuyer. Emballer serré dans du papier ou filmer, soudure dessous.', 'BURGER : sauce sur les deux faces internes du pain (elle l’imperméabilise), salade contre le pain du bas, steak, puis ce qui est humide ; tomate jamais au contact du pain. Le pain se transporte à part quand la fiche le permet.'],
+    chiffres: ['📏 4 cm libres de chaque côté · garniture sur le tiers inférieur · ⚖️ poids de la fiche, ± 5 %', '⏱ Galette tiédie 10 s par face · 🌡 ≤ 10 °C au montage'],
+    sens: ['👁 La coupe en biais montre les couches empilées, pas une bouillie : c’est le contrôle du montage.', '🖐 Le rouleau est ferme sous le doigt et ne se déroule pas quand on le lâche.', '👁 Aucune tache humide sur le papier au bout d’une heure.'],
+    fin: 'Rouleau serré, coupé net en biais, couches visibles, emballage propre, soudure dessous.',
+    erreurs: ['✗ Il ne ferme pas → trop garni : retirer un quart et recommencer, c’est plus rapide que de le rattraper.', '✗ Galette déchirée en roulant → elle était froide : 10 s à la poêle.', '✗ Pain détrempé le lendemain → la sauce touchait la galette : sauce au centre, élément sec contre le pain.'] };
+
+  SAVOIR.dresser.poisson = { nom: 'Dresser un poisson : il se casse, et il ne pardonne pas la chaleur',
+    pourquoi: 'La chair d’un poisson cuit tient par des feuillets très peu collés entre eux : une spatule étroite ou une pince les sépare. Et un filet chaud posé en boîte continue de cuire dans sa propre chaleur pendant plusieurs minutes — un saumon parfait à 63 °C à la sortie du four finit sec s’il est enfermé tout de suite. Il refroidit donc à découvert, à plat, avant d’être touché.',
+    pas: ['Laisser le filet refroidir à découvert, à plat sur sa plaque, jusqu’à ≤ 10 °C. Ne jamais l’empiler.', 'Le soulever d’une SEULE fois, avec une spatule large qui prend tout le filet, jamais avec une pince.', 'Poser côté peau vers le bas (ou côté le plus régulier vers le haut), sur le féculent ou à côté, sans le faire glisser.', 'Le jus de cuisson ou de papillote se verse en filet dessus au dernier moment, ou se garde à part : il détrempe tout ce qu’il touche pendant 72 h.', 'Citron et herbes sur le dessus, au dressage, jamais la veille : l’acide blanchit la chair.', 'Graines, amandes ou chapelure qui recouvrent le poisson : posées en dernier, sur un filet déjà froid, jamais avant le refroidissement — elles boiraient la vapeur.'],
+    chiffres: ['🌡 63 °C à cœur à la cuisson, ≤ 10 °C au dressage · ⚖️ portion de la fiche, ± 5 %'],
+    sens: ['👁 Le filet est entier, ses feuillets encore serrés. Un filet qui s’ouvre en trois dit qu’on l’a pris à la pince ou qu’il était chaud.', '👁 Une chair très blanche et granuleuse sur les bords : il a été trop cuit ou enfermé chaud.'],
+    fin: 'Filet entier, froid, posé d’un seul geste, jus à part, sans miettes autour.',
+    erreurs: ['✗ Filet cassé en deux → le présenter en deux morceaux nets côte à côte plutôt qu’en miettes ; c’est plus honnête à l’œil.', '✗ Boîte pleine d’eau le lendemain → le jus était dedans : à part, en pot.'] };
+
+  SAVOIR.dresser.emulsion = { nom: 'Une sauce à part : pourquoi, et combien',
+    pourquoi: 'Une vinaigrette, une sauce au yaourt ou au tahini se sépare en quelques heures au froid — l’huile remonte, l’eau descend. Ce n’est pas un défaut, c’est ce que fait une émulsion qu’on laisse reposer : elle se remonte d’un coup de cuillère. Mais versée sur des légumes la veille, elle fait deux dégâts irréversibles : son acide ternit les verts, et son sel les fait rendre leur eau, ce qui dilue la sauce et noie la boîte.',
+    pas: ['Sauce refroidie, remuée juste avant de doser.', 'Pot individuel, rempli à 80 % (elle prend du volume en se figeant si elle contient du yaourt).', 'Doser à la cuillère ou à la pipette, jamais à l’œil : c’est du gras, donc des calories que le client compte.', 'Pot fermé, posé DANS la boîte ou scellé à part selon le conditionnement. Étiqueter s’il contient un allergène (moutarde, sésame, lait).', 'Sur l’étiquette ou dans la boîte : « à verser au moment de servir ».'],
+    chiffres: ['⚖️ Le grammage de la fiche, à la cuillère · 🥄 30 à 40 g par portion pour une vinaigrette, 50 à 60 g pour une sauce yaourt, sauf indication', '🌡 ≤ 4 °C · 📅 même DLC que le plat'],
+    sens: ['👁 Une sauce séparée dans le pot est normale ; une sauce tranchée en grains (le yaourt a caillé) ne l’est pas et se refait.'],
+    fin: 'Pot dosé au poids, fermé, étiqueté si allergène, jamais versé sur le plat.',
+    erreurs: ['✗ Sauce déjà versée sur les légumes → la boîte se refait : les légumes ont commencé à rendre leur eau.', '✗ Pot rempli à ras → il déborde à l’ouverture : 80 %.'] };
+
   /* ── Choisir le cours d'une étape ────────────────────────────────────────
      La famille de l'aliment d'abord, le repli du geste sinon. Une étape
      d'assemblage (dresser) n'a pas d'aliment : le repli sert. */
@@ -738,10 +864,32 @@
      sur l'ingrédient donnait « salsa de tomates » pour la courgette d'une
      soupe qu'on mouille. L'appelant passe donc [titre, aliment de la fiche,
      ingrédient] pour ces gestes, et [ingrédient, titre] pour les autres. */
+  /* ⚠️ L'AIGUILLAGE DU GESTE PASSE AVANT LES FAMILLES, et il n'existe que
+     là où le geste ne porte pas sur un ingrédient mais sur le plat entier
+     (dresser). Il lit la chaîne ENTIÈRE de chaque candidat, du plus spécifique
+     au plus général, et rend une clé de SAVOIR[geste] — voir l'encadré de
+     `SAVOIR.dresser._aiguillage`. Sans lui, la famille du premier mot reconnu
+     décidait : « bourguignon + pommes de terre » recevait le cours du bol
+     composé, et un wrap celui d'un plat en sauce. */
+  function aiguiller(G, cands) {
+    if (!G._aiguillage) return null;
+    var cle = null;
+    G._aiguillage.some(function (e) {
+      var ok = cands.some(function (a) {
+        var t = ' ' + norm(a).split(' ').map(sing).join(' ') + ' ';
+        return e[1].some(function (k) { return t.indexOf(' ' + norm(k).split(' ').map(sing).join(' ')) >= 0; });
+      });
+      if (ok && G[e[0]]) { cle = e[0]; return true; }
+      return false;
+    });
+    return cle || (G[G._defaut || 'bol'] ? (G._defaut || 'bol') : null);
+  }
+
   function pour(geste, aliment) {
     var G = SAVOIR[geste]; if (!G) return null;
-    var cands = Array.isArray(aliment) ? aliment : [aliment], f = null;
-    cands.some(function (a) { var x = famille(a); if (x && G[x]) { f = x; return true; } return false; });
+    var cands = (Array.isArray(aliment) ? aliment : [aliment]).filter(Boolean), f = null;
+    f = aiguiller(G, cands);
+    if (!f) cands.some(function (a) { var x = famille(a); if (x && G[x]) { f = x; return true; } return false; });
     var e = (f && G[f]) || G._ || null;
     return e ? { geste: geste, famille: f, cours: e } : null;
   }

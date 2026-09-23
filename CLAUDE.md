@@ -4392,6 +4392,60 @@ sans régression (fin 09:48 inchangée).
 🔄 **Non vérifié avec une session d'équipe réelle** : le cours a été vu dans le service écran
 par écran du banc (fixtures), pas sur les 317 vraies étapes.
 
+#### 🔴 La couverture MESURÉE, et l'aiguillage du dressage (2026-09-23)
+Le cours avait un **repli silencieux** : quand aucune famille ne correspond, `pour()` rend le
+`_` du geste, qui s'affiche exactement comme un vrai cours. Mesuré pour la première fois sur
+les tâches que les 38 fiches produisent réellement (**490**, éclatement « 1 ingrédient = 1
+étape » compris) : **98 en repli, soit 20 %** — dont **TOUT le dressage (63 sur 63)** et le
+**refroidissement d'un plat chaud (17)**, c'est-à-dire la fin de journée et le seul point
+sanitaire de la production. Le cuisinier lisait « peser, refroidir, fermer » sans qu'on lui
+dise qu'une sauce de braisé fige, qu'un riz boit ou qu'un filet se casse.
+**`node scripts/verifier-savoir.mjs`** rejoue la mesure (sortie 1 s'il reste un repli) et
+nomme les couples manquants. Après cette passe : **490 / 490, zéro repli.**
+
+> ⚠️⚠️ **DEUX DE CES TROUS N'ÉTAIENT PAS DES MANQUES MAIS DES CÂBLAGES.** Le cours du riz
+> rincé existait — `rincer.graines`, « Rincer le quinoa, le riz » — et n'était **jamais
+> montré**, parce que `riz` est une famille à part dans `FAMILLES` ; celui des feuilles lavées
+> (`rincer.herbes`) ne servait pas aux épinards. Deux alias suffisent. C'est le défaut maison
+> d'un savoir écrit et jamais atteint (`K_ENTERS` de `narration.html`, §3), et il ne se voit
+> qu'en mesurant : à la lecture, le cours est là.
+> ⚠️ **Et un cours PIRE que le repli** : sur l'étape « rincer | pois chiches, épinards », la
+> tâche des épinards recevait « Rincer lentilles corail, pois chiches en boîte » — `pour()`
+> essaie les candidats dans l'ordre et prend le premier dont la famille a un cours, donc
+> l'aliment de l'ÉTAPE l'emportait sur l'ingrédient qu'on a dans les mains.
+
+**⚠️⚠️ DRESSER NE PORTE PAS SUR UN INGRÉDIENT, MAIS SUR LA BOÎTE ENTIÈRE** — d'où
+`SAVOIR.dresser._aiguillage`, consulté par `pour()` **avant** les familles. L'aliment d'une
+étape de dressage est l'assemblage (« salade + poulet + vinaigrette », « bourguignon + pommes
+de terre »), et `famille()` rend celle du **premier mot reconnu** : mesuré, le bourguignon
+tombait sur la pomme de terre et recevait le cours du bol composé, pendant qu'un wrap et une
+soupe recevaient celui d'un plat en sauce. On classe donc la BOÎTE, du plus spécifique au plus
+général — **poisson** (c'est lui qui casse) · **wrap** · **soupe** · **salade** · **sauce** ·
+**émulsion** —, le **bol** composé étant le défaut.
+> ⚠️ L'émulsion est **en dernier**, sinon « quinoa + légumes + tahini » deviendrait un pot de
+> sauce. Et le déclencheur ne retient que `vinaigrette`, `sauce yaourt`, `sauce vierge` — pas
+> `tahini` ni `sauce` nu.
+> ⚠️ Les 40 étapes de dressage des fiches ont été relues une par une après coup : 11 sauce,
+> 9 poisson, 8 bol, 7 salade, 5 wrap, 2 soupe, 1 émulsion — **aucune mal classée**.
+> ⚠️ `_aiguillage` n'est PAS un cours : tout parcours de `SAVOIR[geste]` doit sauter ce qui
+> n'est pas un objet de cours (c'est ce que fait le contrôle des sept champs).
+
+**Sept cours écrits ou réécrits** : `dresser.sauce` (les morceaux comptés à la pince AVANT la
+sauce, sinon les trois premières boîtes prennent la viande), `dresser.bol`, `dresser.salade`
+(le sel tire l'eau, l'acide vire la chlorophylle), `dresser.soupe` (2 cm sous le bord, le
+dépôt qui se sépare), `dresser.wrap` (garnir sur le tiers inférieur, sec contre la galette),
+`dresser.poisson`, `dresser.emulsion` ; plus `refrigerer.plat` (63 → 10 °C en moins de 2 h, la
+couche de 3–5 cm, **et le plat qui se jette au-delà — la recuisson ne détruit pas les toxines
+déjà produites**), `refrigerer.tofu`, `enfourner.four` (le voyant s'éteint avant les parois).
+Deux cours préexistants avaient un bloc « si ça tourne mal » **vide**, donc absent à l'écran
+sans que rien ne le dise (`mixer.graines`, `reposer.viande`) : complétés.
+
+**A/B contre `HEAD`** : 391 tâches au cours **inchangé**, 98 qui gagnent une famille, **1
+corrigée** (les épinards ci-dessus). La nouvelle famille `four` ne capte que l'aliment `four`
+du préchauffage — aucun ingrédient des 38 fiches ne porte ce mot. Vérifié en navigateur
+(375 × 812 et 768 × 1024) : 12 cours, **72 blocs sur 72**, aucun bloc vide, aucun élément qui
+déborde en largeur.
+
 **Onglet Chef** — chaque étape porte désormais titre, durée, température, **phase**
 (Production en masse / Assemblage par portion), **attente** et poste. Le PATCH passe par
 `sb()` (jeton d'équipe) et non plus par la clé anon, refusée par la RLS. Depuis le
@@ -6154,6 +6208,13 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
   de » répondent `PGRST204` ; l'écran le dit. Tout le reste marche sans.
 - 🔄 **À relire sur les 38 vraies fiches** : l'inférence lit des aliments en texte libre. Le
   PERT montre ce qu'elle a compris ; ce qui est faux se corrige dans la fiche.
+- ✅ **Le cours de chaque étape couvre les 490 tâches des 38 fiches** (2026-09-23) — il en
+  laissait 98 sur le repli générique du geste, dont tout le dressage et le refroidissement
+  d'un plat chaud. Mesure rejouable : `node scripts/verifier-savoir.mjs`. Détail, aiguillage
+  du dressage et les deux cours qui existaient sans être atteints : §3.
+- 🔄 **La mesure lit `scripts/fiches-natty.mjs`, pas la base** : `recettes_etapes` ne répond
+  plus à la clé anon depuis les RLS. C'est le même contenu — c'est ce qui a été importé —,
+  mais une fiche retouchée EN BASE et pas dans le script passerait sous le radar.
 - ✅ **Le service en cuisine, poste par poste** (2026-09-16, soir) — `production_postes` et
   `production_etapes` (§4), « Je prends » sur chacun des 5 postes, les tâches d'un poste que
   personne n'a pris barrées en rouge et **comptées** au-dessus du Gantt, et « Mon service,
@@ -7003,6 +7064,22 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
     « les plus gros apports » classée par NOTE affiche douze « Excellent » : la
     note ne dit plus rien, elle confirme le tri. Classer par ce que la demande
     nomme, et laisser le qualificatif varier — c'est là qu'il informe.
+51. **Un repli silencieux se MESURE, il ne se lit pas.** Une table de savoir
+    (ou d'illustrations, ou de libellés) indexée par clé avec un défaut rend
+    toujours quelque chose : à la lecture tout a l'air couvert, à l'écran le
+    défaut ressemble au vrai contenu. Mesuré sur `assets/admin-savoir.js`,
+    20 % des tâches de production tombaient sur le défaut du geste — et deux
+    des trous étaient des cours EXISTANTS que rien n'atteignait. Toute table à
+    défaut vient donc avec un script qui la passe sur les **vraies** entrées et
+    sort 1 s'il reste un repli (`scripts/verifier-savoir.mjs`).
+52. **Une clé choisie dans une liste de candidats prend le PREMIER qui répond,
+    pas le plus juste.** `pour()` essayait l'aliment de l'étape avant
+    l'ingrédient de la tâche : les épinards recevaient le cours des pois
+    chiches. Et quand le sujet du geste est le plat entier (dresser), la
+    famille du premier mot reconnu décide — « bourguignon + pommes de terre »
+    devenait une pomme de terre. Un geste dont le sujet n'est pas un ingrédient
+    a besoin de son propre aiguillage, classé du plus spécifique au plus
+    général, et il se vérifie en listant les vrais cas un par un.
 
 32. **Push automatique autorisé** (décidé le 2026-07-26) : une fois un commit créé sur ce repo, `git push origin main` peut être fait directement, **sans redemander confirmation à chaque fois**. Authentification via clé SSH dédiée (`~/.ssh/id_ed25519_github`, clé "Claude Accès" sur GitHub, remote `origin` en SSH). Cette autorisation est spécifique à ce repo — ne pas l'étendre à un autre dépôt ou à d'autres actions destructrices (force-push, reset, etc., qui restent soumises à confirmation).
 
