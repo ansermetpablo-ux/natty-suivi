@@ -991,6 +991,12 @@ var Natty = (function () {
        entrée, le guide du jour et le bilan du soir viendraient se poser
        par-dessus au bout de leurs 6,5 et 9 secondes. */
     'nmg',
+    /* `nperm` — la chaîne d'autorisations de la première ouverture
+       (assets/permissions.js). Elle enchaîne des dialogues SYSTÈME : un guide
+       plein écran qui viendrait se poser dessus au bout de ses 6,5 secondes
+       laisserait l'utilisateur répondre à une demande d'accès par-dessus un
+       écran qui parle d'autre chose. */
+    'nperm',
     'mjOverlay', 'nnotifInv'
   ];
 

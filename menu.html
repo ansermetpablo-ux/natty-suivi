@@ -180,6 +180,21 @@ async function loadFormule(){
   }
 </script>
 <script src="/assets/notifs.js"></script>
+<!-- ⚠️ APRÈS `notifs.js` : la chaîne lui délègue la demande de
+     notification (`NattyNotifs.activer()`), qui planifie aussi les rappels et
+     enchaîne sur le jeton push. -->
+<script src="/assets/permissions.js"></script>
+<script>
+  /* ⚠️ ARMÉ ICI, ET AVANT LES QUATRE AUTRES. C'est l'écran d'arrivée après
+     l'inscription comme après la connexion — le seul endroit où « la première
+     ouverture » veut dire quelque chose. La chaîne attend 1,2 s, la
+     planification 5 s, le guide du jour 6,5 s, le bilan 9 s, le programme des
+     séances 11 s : `nperm` étant dans `PLEIN_ECRAN`, tous les quatre la voient
+     et se taisent.
+     Elle ne monte rien si les trois autorisations sont déjà réglées, et rien du
+     tout hors application native. */
+  if (window.NattyPermissions) NattyPermissions.demanderSiPremiereFois();
+</script>
 <script src="/assets/push.js"></script>
 <script src="/assets/nav.js"></script>
 </body>
