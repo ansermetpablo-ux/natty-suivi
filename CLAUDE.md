@@ -9,6 +9,16 @@
 >
 > **Mise à jour audit complet (session lecture/état des lieux — juillet 2026)** : renommage `CLAUDE FINAL.md` → `CLAUDE.md`. Documentation de tous les fichiers non couverts jusqu'ici (`accueil.html`, `chat.html`, `challenges.html`, `offre.html`, `questionnaire-alim.html`, `progression.html`, `api/checkout.js`, `api/scan-plat.js`, `api/supabase.js`, `api/webhook.js`). Correction de deux erreurs de statut ("à faire" alors que déjà fait). Ajout d'une section compatibilité Capacitor (§10). Aucun code fonctionnel modifié pendant cette session.
 >
+> **Mise à jour série du 22 septembre 2026 (session « six chantiers »)** : compteur
+> cumulé sur la journée dans le `+`, détection du type de repas, répartition par
+> repas dans le bilan avec proposition de rééquilibrage, guide cinématique d'une
+> macro (`assets/macro-guide.js`), social (dernières publications + photos de
+> profil), chaîne d'autorisations à la première ouverture
+> (`assets/permissions.js`). Deux défauts de base corrigés dessous :
+> `meals.created_at` lu avec deux heures d'écart, et `meals.meal_type` rempli
+> d'un défaut que personne n'écrivait — voir §4 et §7. Un plugin natif ajouté
+> (`@capacitor/camera`, §11) : **un nouveau build est nécessaire**.
+>
 > **Objectif produit à moyen terme** : porter cette app web (HTML/CSS/JS vanilla, déployée sur Vercel, embarquée en iframe Wix) sur l'App Store et le Play Store via **Capacitor** (empaquetage du code web existant, PAS une réécriture native). Chantier séparé et ultérieur — voir §10 pour les points de vigilance à garder en tête dès maintenant.
 
 ---
@@ -930,9 +940,80 @@ redessinés, voir la refonte du 2026-09-04 ci-dessus) :
 5. `naScCarou` — carrousel scroll-snap de 5 cartes (titre, emoji, pastille kcal, 3 pastilles
    macro, raison). Un tap ajoute au repas et renvoie à l'écran 3.
 
+#### 🔄 LE COMPTEUR EST CUMULÉ SUR LA JOURNÉE (2026-09-22)
+Demande de Pablo : « besoins généraux de 3 000 calories, je prends le repas en
+photo, le repas fait 500 calories → le graphique affiche 500/3000 ; au deuxième
+repas je vois déjà le 500/3000 et j'ajoute 300, donc 800/3000 — **sans changer
+en aucun point la présentation, juste le système** ».
+
+Les anneaux comparaient le repas à la cible de SON créneau. Ils portent
+désormais `prisJour()` sur `cibleJour` : le cumul de la journée sur la cible de
+la journée. **Rien n'a bougé à l'écran** — mêmes anneaux, même grand chiffre,
+même barre, même carte —, c'est le couple numérateur/dénominateur qui change.
+
+⚠️ **« RESTANT » VEUT DIRE DEUX CHOSES, ET LES CONFONDRE SERAIT UN CONTRESENS.**
+`restantJour()` est le dénominateur affiché ; `restant()` — le CRÉNEAU — reste ce
+que lisent les suggestions d'« Enrichir » et sa marge. Les deux répondent à deux
+questions différentes : « où en suis-je dans ma journée ? » pour l'affichage,
+« qu'est-ce qui tient encore dans CE repas ? » pour proposer un complément.
+Brancher les suggestions sur le jour ferait proposer 2 200 kcal de dessert au
+petit déjeuner sous prétexte que la journée n'est pas finie.
+
+⚠️ **Le titre de section dit « Votre journée »**, et non plus « Valeurs
+nutritionnelles ». Depuis que les trois cartes portent le cumul, un titre muet se
+lit comme les valeurs de l'assiette qu'on vient de photographier — or les
+calories de CETTE assiette sont juste en dessous, en tête de la liste des
+ingrédients. Deux nombres du même écran doivent chacun dire ce qu'ils comptent.
+
+⚠️ **La cible du jour vient de `NattyCreneaux.cibleJour()`** quand le module est
+là : lui seul ajoute le supplément d'entraînement. La formule qui vivait dans
+`chargerCibles()` était l'ANCIENNE (poids × 2, tdee × 0,25/9, tdee × 0,5/4),
+celle dont les trois macros ne faisaient pas le compte — tolérable en repli,
+inacceptable comme dénominateur affiché.
+
+#### `meal_type` est écrit à l'enregistrement (2026-09-22)
+Le prompt de l'analyse photo demande désormais `repas` parmi quatre valeurs, avec
+l'heure du repas donnée comme **indice** et non comme consigne — sans elle le
+modèle classerait une omelette en petit déjeuner à 20 h ; sans l'assiette, un bol
+de céréales à 11 h serait un déjeuner.
+- `typeRepas()` passe par `NattyCreneaux.normType` — **la seule** table de
+  correspondance. En écrire une seconde ici, c'est deux tables qui divergent au
+  premier mot nouveau rendu par un modèle.
+- `typePourBase(pl)` écrit le **libellé humain** (« Petit déjeuner ») : la colonne
+  est lue par `assets/social.js` pour l'afficher tel quel. Repli sur l'heure, et
+  `undefined` — donc NULL — si rien n'est connaissable. **Jamais « déjeuner » par
+  défaut** : c'est l'erreur qu'on vient de réparer en base.
+- `heureIndice()` prend `MOMENT` quand la personne a corrigé « quand l'avez-vous
+  mangé ? » : l'heure de la SAISIE serait fausse précisément dans le cas que cet
+  écran gère, un dîner noté le lendemain matin.
+
 ### `assets/creneaux.js` — combien de repas, lequel maintenant, et combien de macros chacun
 Chargé partout où `assets/ajout.js` l'est (les 5 écrans porteurs de la nav + `www/`).
 Dépend de `assets/core.js` (`Natty.jour`, `Natty.calcMac`).
+
+#### Les quatre blocs CANONIQUES — `CANON`, `typeDe`, `typeHeure`, `normType`
+Ajoutés le 2026-09-22. « Dans l'analyse des plats, il faut détecter s'il s'agit
+d'un déjeuner, petit déjeuner, d'un dîner ou d'une collation » (Pablo).
+
+⚠️ **CE VOCABULAIRE EST FIXE, ET INDÉPENDANT DU DÉCOUPAGE DE LA PERSONNE.**
+`DECOUPAGES` répond à « comment SA journée est-elle découpée » — 2, 3 ou 4
+créneaux ; `CANON` qualifie **une assiette**. Un bol de céréales est un petit
+déjeuner même chez quelqu'un qui déclare deux repas par jour, et c'est
+précisément ce qui permet au bilan de dire « vous ne prenez pas de collation » :
+sans un quatrième bloc qui existe toujours, l'absence n'aurait nulle part pour
+s'afficher. Un bloc absent du rythme de la personne est marqué **hors plan** —
+montré, sans cible, parce qu'il n'y en a pas.
+
+- `typeDe(m)` — le type d'un repas : `meal_type` si elle est écrite, sinon
+  l'HEURE. **C'est le seul point d'entrée** ; ne jamais lire `meal_type` en
+  direct (voir l'encadré rouge de §4 sur son ancien défaut).
+- `typeHeure(d)` — bornes canoniques, en continu de 3 h à 3 h : matin 3→11,
+  midi 11→15, collation 15→18 h 30, soir 18 h 30→27.
+- `normType(v)` — ce qu'on peut trouver en base, ramené aux quatre clés, et
+  **`null` sur ce qu'on ne reconnaît pas**, jamais un repli sur « déjeuner » :
+  c'est exactement la valeur qui a rendu cette colonne inutilisable.
+- `CANON[].illu` nomme des clés de `assets/cine.js` (`soleil`, `assiette`,
+  `pomme`, `lune`) — les deux premières ont été ajoutées pour ça.
 
 **Deux défauts qu'il corrige**, signalés par Pablo le 2026-08-09 :
 - 🔴 **un plat enregistré à 12 h 03 n'était pas compté quand on rouvrait `+` à
@@ -2876,6 +2957,193 @@ jour : l'écran à sept est alors **intestable**, et on conclut à tort que le g
 cassé. Le banc remplace `Date` lui-même, avant tout le reste, pour que la doublure des repas,
 `core.js` et `bilan.js` lisent la même heure.
 
+#### `scRepartition` et `scPlanRepas` — repas par repas, et ce qu'on déplace (2026-09-22)
+Demande de Pablo : « ajouter l'analyse par repas du nombre de macros atteints —
+si je mange 120/200 g de glucides dans mon premier plat, le montrer par des
+diagrammes en barre avec animation, la répartition actuelle sur les 3 repas et la
+collation, puis montrer la nouvelle proposition de répartition : si les macros
+sont insuffisantes le midi et le dîner, booster le petit déjeuner s'il a plus de
+facilité à absorber ses quantités le matin ; s'il ne mange pas de collation, lui
+en proposer une ».
+
+Deux scènes, entre le fil de la journée et le corps, **et deux questions qu'il ne
+faut pas mélanger** :
+- **« Repas par repas »** décrit AUJOURD'HUI. C'est une mesure. Quatre blocs,
+  trois barres chacun, la fraction écrite en clair (« 145 / 168 g »), l'état dit
+  en mots autant qu'en couleur.
+- **« Ce qu'on peut déplacer »** PROPOSE, et se fonde sur l'HABITUDE des jours
+  journalisés. Déduire « vous absorbez mal le midi » d'un seul déjeuner léger
+  serait une affirmation que rien ne soutient. En dessous de 5 jours notés
+  (`MIN_JOURS_HABITUDE`), l'écran refuse de conclure et **le dit**.
+
+⚠️⚠️ **`couv` ET `aisance` SONT DEUX MESURES, ET IL FAUT LES DEUX.** `couv`
+compare l'apport d'un bloc à sa cible — il dit ce qui MANQUE. `aisance` compare
+la part observée à la part prévue — il dit OÙ ÇA PASSE. Mesuré au banc sur un
+profil à 1 600 kcal pour 3 000 : aucun bloc n'atteignait sa cible, donc aucun
+n'était « tenu », donc l'écran constatait le manque et ne proposait **rien**.
+Vrai, et inutile. Or « il a plus de facilité à absorber ses quantités le matin »
+ne parle pas de grammes mais de RÉPARTITION : un petit déjeuner qui reçoit 44 %
+des apports pour 22 % de prévu est le repas sur lequel la personne s'appuie, même
+sous sa cible. D'où `appui: 'tenu' | 'aisance'`, et **deux phrases distinctes** :
+« vous tenez X » n'est employé que quand c'est vrai.
+
+⚠️ **La collation proposée SORT des blocs courts.** Défaut trouvé au banc : une
+collation prévue mais jamais prise a une couverture nulle, elle entrait donc dans
+`courts` et ses 390 kcal partaient se faire redistribuer vers le matin — pendant
+que l'écran proposait, deux cartes plus bas, d'AJOUTER une collation de 390 kcal.
+Les deux propositions se contredisaient, et le manque annoncé valait 1 440 kcal
+au lieu des 1 050 réellement déplaçables.
+
+⚠️ **La moyenne de l'habitude se divise par TOUS les jours notés**, pas par les
+jours où le bloc a reçu quelque chose. Un petit déjeuner pris un jour sur cinq
+doit ressortir non tenu — c'est justement l'information qu'on vient chercher.
+
+⚠️ **Plafond à +50 % de la cible d'un bloc.** Sans lui, deux blocs courts sur
+trois feraient doubler le troisième : « mettez 1 400 kcal à votre petit
+déjeuner » est un conseil que personne ne suit, et qui décrédibilise les autres.
+Ce qui ne rentre pas est annoncé comme non replacé.
+
+⚠️ **`animerBarres()` pose TOUT ce qui porte `[data-pc]`**, et pas seulement
+`.rpt i`. Défaut trouvé au banc : les quatre barres de « ce que vous faites
+d'habitude » restaient à `width:0` juste à côté des « 72 % », « 51 % », « 49 % »
+qui les expliquent — deux nombres de la même ligne qui se contredisent.
+
+⚠️ **Sans `NattyCreneaux`, les deux scènes se sautent SANS UN MOT**, comme
+`scSeance` sans `NattySeance`. Un écran qui annoncerait une répartition sans rien
+pour la calculer serait pire qu'un écran absent.
+
+Les trois panneaux (`.rpb`, `.rpp`, `.rph2`) rejoignent **LA** liste de sélecteurs
+de la peau commune (règle 44) plutôt que d'avoir leur propre recette.
+🔴 Deux jetons non déclarés corrigés au passage : `--b-piste` (mon invention) et
+`--b-acc` (préexistant — la lueur de la barre la plus haute du graphique de la
+semaine n'avait **jamais** été peinte, un `var()` non résolu rendant la
+déclaration invalide et silencieusement jetée).
+
+### `assets/macro-guide.js` — le guide d'une macro, en cinématique
+Chargé par `suivi.html` seulement (+ `www/`), **après** `creneaux.js`,
+`decouverte.js` et `cine.js` — il les utilise tous les trois. Dépend de
+`assets/core.js`.
+
+Demande de Pablo (2026-09-22) : « pour les conseils de nutrition, il faudrait le
+faire en cinétique aussi — quand on clique sur la macro, choix entre quatre blocs
+posés en quadrillage, petit déjeuner / déjeuner / collation / dîner, avec
+illustrations. Lorsqu'on clique, un carrousel de propositions de plats dans le
+style d'“enrichir”. En dessous, une liste des ingrédients qui détiennent le plus
+gros apport pour la macro, avec une note (bon, excellent, très bien, moyen,
+mauvais) et un code couleur. Illustration de l'aliment + nom + macros + note. »
+
+**Deux scènes** : la grille des quatre blocs canoniques, chacun avec son
+illustration et sa fraction (« 22 / 35 g ») ; puis le repas choisi — six plats du
+catalogue en carrousel à crans, et douze ingrédients notés.
+
+⚠️ **IL NE REMPLACE PAS `#ovMacro` DE `suivi.html`, IL LE PRÉCÈDE.** L'overlay
+porte le conseil de la semaine, le plat généré et les aliments à privilégier —
+tout cela vient de la génération hebdomadaire et n'a **aucun** équivalent ici. Son
+dernier bouton y mène (« Voir le conseil de la semaine »). Détruire l'existant
+pour le refaire en cinématique aurait perdu du contenu que personne n'a demandé
+de perdre. `ouvrirMacro(type)` de `suivi.html` essaie le guide et **retombe sur
+l'overlay** quand `ouvrir()` rend `false` (pas de `NattyCreneaux`) : quatre blocs
+sans cible seraient pires qu'un écran absent.
+
+⚠️ **AUCUN CHIFFRE INVENTÉ.** Les valeurs des aliments viennent de
+`Natty.getNutri` — LA table qui compte les repas ; celles des plats de
+`NattyDecouverte.recette()`, calculées depuis leurs grammages. Les listes du
+module ne portent que des **NOMS** : y recopier une valeur créerait la seconde
+table qui a fait diverger `api/_nutrition.js`.
+
+⚠️ **Le carrousel vient du CATALOGUE, pas de l'IA**, et pour trois raisons : les
+plats sont déjà là (pas d'attente, pas de facture, ça marche hors ligne), leurs
+macros sont **recomptables** là où un plat inventé annonce des chiffres que
+personne ne peut vérifier, et ils portent une recette — donc le plat proposé se
+cuisine. Un carrousel qui ne mène à rien n'aurait servi qu'à décorer.
+
+#### ⚠️⚠️ LA NOTE, ET POURQUOI ELLE A BESOIN D'UNE COUCHE ÉDITORIALE
+Elle part de deux mesures : la **densité** (g de la macro pour 100 g) et le
+**coût** (kcal à avaler par gramme de la macro, rapporté au minimum théorique de
+4/4/9). Mais le coût mesure la **pureté** — donc il **récompense le raffinement**.
+
+Le banc l'a mis à nu : le SUCRE BLANC (100 g de glucides pour 400 kcal) et la
+MAYONNAISE (78 g de lipides pour 700 kcal) atteignent le coût **parfait de 1,0**,
+et ressortaient « Très bien ». `NT` ne porte que quatre chiffres : ni fibres, ni
+type de gras, ni degré de transformation. Une note calculée sur les seuls chiffres
+affiche donc du sucre blanc en vert.
+
+Trois listes de familles (`QUALITE`) corrigent ce que les quatre chiffres ne
+peuvent pas voir, et **l'écran affiche la raison retenue** — « sucres rapides, peu
+de fibres », « gras insaturés » — pour que la note se discute au lieu d'être à
+croire. Même parti pris que les `REPERES` par geste d'`assets/admin-savoir.js` :
+un savoir général, annoncé comme tel.
+- un **bonus** décale d'un cran ;
+- un **malus PLAFONNE à « Moyen »** au lieu de décaler. Ce n'est pas une nuance
+  mais un jugement : une charcuterie n'est jamais une BONNE source de protéines,
+  quelle qu'en soit la teneur ;
+- **« Mauvais » est réservé aux calories vides**, ce qui est MESURABLE : un
+  aliment de la famille pénalisée qui apporte moins de 2 g des deux autres macros
+  pour 100 g. Sucre, miel, confiture, mayonnaise, beurre en sont ; un biscuit,
+  qui apporte au moins du gras, reste « Moyen ». Sans ce second critère, la note
+  la plus basse que Pablo a demandée n'aurait jamais servi.
+
+⚠️ **La liste est classée PAR APPORT, jamais par note.** C'est la demande au mot
+(« les ingrédients qui détiennent le plus gros apport »). Triée par note — ce
+qu'a fait la première version —, les douze premiers étaient tous « Excellent » :
+la note n'apprenait rien, elle confirmait un tri qu'on venait d'appliquer. Classée
+par apport, le saucisson (24 g/100 g) apparaît près du poulet (31 g), et c'est LÀ
+que son « Moyen » dit quelque chose.
+
+⚠️ **Les noms de `SOURCES` sont une liste, pas la table entière.** `NT` compte
+326 clés, dont des alias et des fautes de frappe volontaires (`steack`,
+`amendes`, `pouivron`) ajoutés pour que l'analyse photo les rattrape. Utiles là
+où elles sont, elles auraient l'air d'un bug dans une liste de « meilleures
+sources ». On choisit quoi PROPOSER, jamais combien ça vaut — et le banc vérifie
+que chaque nom est résolu par la table, un nom orphelin s'affichant sinon à 0 g.
+
+⚠️ **Toutes les classes sont préfixées `nmg-`** — voir le piège de §7 : `.hero`
+de `suivi.html` posait un bandeau noir derrière l'illustration du titre.
+⚠️ Un **emoji** et non un SVG pour l'illustration d'un aliment : dessiner 70
+aliments reconnaissables au trait de 2,4 px dans une boîte de 64 est un autre
+métier, et un dessin approximatif est moins lisible qu'un emoji juste. Le reste
+de l'app fait déjà ce choix.
+
+### `assets/permissions.js` — les trois accès, demandés à la chaîne
+Chargé par `menu.html` / `www/index.html` / `www/menu.html`, **après**
+`notifs.js`. Plein écran (`#nperm`, tout préfixé `np-`), armé à **1,2 s** sur
+l'écran d'arrivée.
+
+Demande de Pablo (2026-09-22) : « dès que la personne vient de s'inscrire ou de se
+connecter pour la première fois, Natty demande directement l'accès à la caméra et
+à la galerie et à activer les notifications, tout d'un coup à la chaîne. »
+
+⚠️⚠️ **IL A FALLU INSTALLER `@capacitor/camera`, ET C'ÉTAIT LE VRAI OBSTACLE.**
+L'app n'ouvre la caméra que par `<input type="file" capture>` : iOS ne présente
+alors sa demande qu'au moment où l'appareil photo s'ouvre **vraiment**, et il
+n'existe AUCUNE façon de la poser à l'avance depuis une WebView. Le plugin ne
+sert qu'à `requestPermissions()` ; le parcours d'ajout d'un plat continue de
+passer par l'`input`, qui marche et qu'on ne touche pas.
+
+⚠️⚠️ **CHAQUE DEMANDE EST PRÉCÉDÉE DE SON MOTIF, ÉCRAN PAR ÉCRAN.** La guideline
+5.1.1(ii) d'Apple veut qu'une app demande l'accès aux photos « au moment où elle
+en a besoin » : trois dialogues système enchaînés à l'inscription, sans un mot,
+est un motif de refus classique en revue. La séquence dit donc ce que Natty fera
+de chaque accès, avec un exemple — une permission se comprend par ce qu'elle
+permet, pas par son nom. **Un refus ne bloque rien**, « Passer » saute sans
+demander, et l'écran final nomme ce qui n'a pas été accordé et où le changer,
+sans insister ni féliciter à vide.
+
+⚠️ **Elle ne monte rien quand il n'y a rien à demander** : `ouvrir()` lit l'état
+réel des trois permissions. Redemander une autorisation refusée est précisément
+ce qu'iOS interdit — le dialogue ne s'affiche plus, donc le bouton ne ferait rien.
+⚠️ **`limited`** (l'accès partiel aux photos d'iOS 14+) est traité comme un **OUI**.
+Le prendre pour un refus ferait redemander indéfiniment un accès déjà accordé.
+⚠️ **`nperm` est dans `PLEIN_ECRAN`** : la planification attend 5 s, le guide du
+jour 6,5 s, le bilan 9 s, le programme des séances 11 s — tous les quatre voient
+la chaîne et se taisent. Sans cette entrée, un guide plein écran viendrait se
+poser par-dessus un dialogue système.
+⚠️ **La demande de notification passe par `NattyNotifs.activer()`**, pas par le
+plugin en direct : c'est elle qui planifie aussi les sept rappels et enchaîne sur
+le jeton push. L'appeler autrement obtiendrait l'autorisation sans rien programmer.
+⚠️ Son `titre()` découpe sur le **MOTIF** et non sur les espaces, donc plusieurs
+mots peuvent être surlignés — contrairement à celui de `bilan.js` (voir §7).
+
 ### `assets/zoom.js` — aucun zoom, nulle part
 Chargé **en synchrone dans le `<head>`** de tous les écrans de l'app (34 pages, racine +
 `www/`), juste après le `<meta name="viewport">` — il corrige cette balise, donc il doit la
@@ -3329,6 +3597,34 @@ sont recalculées côté client par `Natty.calcMac` (les colonnes `calories`/`pr
 `meal_ingredients` existent mais sont **à 0 sur les 227 lignes en base** — ne pas s'y fier).
 Auteurs lus dans `onboarding` (prénom, `poids`, `tdee`) et `questionnaire_alim` (`nb_repas`),
 tout par lots de 50 ids (`?col=in.(…)`) pour ne pas dépasser la longueur d'URL.
+
+**LES DERNIÈRES PUBLICATIONS, EN PREMIER** (2026-09-22, demande de Pablo :
+« mettre en avant les dernières publications »). Le fil ouvrait sur
+« Tendances », c'est-à-dire sur les plats les plus **vus** — donc les plus
+anciens, un plat gagnant ses vues avec le temps. Ce qui venait d'être publié
+n'apparaissait nulle part en haut de l'écran, et quelqu'un qui revenait deux fois
+par jour voyait deux fois la même chose. `vues().nouveautes` rend les 10 plus
+récents, et `#secNouv` est la première section de `social.html`.
+> ⚠️ **AUCUN PLAFOND PAR MEMBRE ICI**, contrairement à « La communauté ». Cette
+> section répond à « qu'est-ce qui vient d'arriver » : écarter le deuxième plat
+> d'un membre parce qu'il en a déjà un répondrait à une autre question. Le
+> plafond de 2 garde tout son sens plus bas, où il s'agit de découvrir des gens.
+
+**LES PHOTOS DE PROFIL SE VOIENT** (même date). Détail du défaut et du schéma en
+§4 (`membre_prefs`). Côté rendu :
+> ⚠️ **UN SEUL RENDU D'AVATAR — `avatarHTML(prenom, photo, cls)`.** L'initiale
+> était dessinée à **QUATRE** endroits, chacun à sa façon : l'en-tête d'un plat,
+> la barre du héros, une ligne de l'annuaire, la fiche de profil. Ajouter la
+> photo à trois et oublier le quatrième est exactement ce qui est arrivé partout
+> ailleurs dans ce dépôt (les ombres de `suivi.html`, `api/_nutrition.js`,
+> `www/menu.html`).
+> ⚠️ **L'initiale reste DANS la pastille, sous l'image** : une URL morte
+> (`onerror="this.remove()"`) la découvre au lieu de laisser l'icône cassée du
+> navigateur — même précaution que `brancherVignettes()` d'`assets/planning.js`.
+> ⚠️ `object-fit:cover` : un avatar rond doit être rempli, et une photo de profil
+> est cadrée sur un visage — la rogner est ce qu'on attend, la déformer non.
+> ⚠️ Chaque plat porte `photoAuteur`, posé au moment où `PLATS` est construit :
+> `carte()` n'a alors rien à aller chercher.
 
 **Cinq sections** :
 1. **Tendances** — tri par `likes × 5 + vues`, à égalité le plus récent. Le premier passe en
@@ -4334,7 +4630,39 @@ Ces trois éléments sont décrits dans les sections `[narration]` de ce documen
 | name | text | Nom du plat |
 | photo_url | text | URL Cloudinary |
 | meal_date | date | |
-| created_at | timestamptz | |
+| meal_type | text | `Petit déjeuner` / `Déjeuner` / `Collation` / `Dîner`, ou **NULL** |
+| created_at | **timestamp WITHOUT time zone** | ⚠️ voir l'encadré ci-dessous |
+| partage | boolean | `false` = gardé pour soi (écrit par `assets/ajout.js`) |
+| analyse_json | jsonb | l'analyse critique du plat, en cache |
+
+> ⚠️⚠️ **`created_at` N'EST PAS UN `timestamptz`, ET C'EST UN PIÈGE ACTIF.**
+> C'est un `timestamp WITHOUT time zone` dans lequel Postgres range l'heure
+> **UTC** (le `now()` par défaut comme le `toISOString()` d'`assets/ajout.js`).
+> PostgREST le rend donc **sans décalage** — `"2026-09-22T16:12:03.801"` — et
+> `new Date()` parse une date-heure sans décalage comme une heure **LOCALE**
+> (c'est la spec). Toute lecture directe se trompe donc de l'écart UTC : deux
+> heures l'été à Paris, une l'hiver.
+> **Toujours passer par `Natty.quand()`** (§3, `assets/core.js`), jamais par
+> `new Date(m.created_at)`. Relevé sur les 190 repas en base : 23 déjeuners
+> enregistrés à 12 h à Paris (10 h UTC) tombaient dans la tranche du **matin**.
+> Corrigé le 2026-09-22 dans `creneaux.js`, `planning.js`, `bilan.js` et
+> `macros-cal.js` — mais `suivi.html`, `index.html`, `chat.html` et
+> `coaching.html` ont encore des `new Date(...created_at)` : ils ne servent qu'à
+> afficher une date ou à trier, donc l'écart n'y change rien de visible. À
+> basculer si l'un d'eux se met à raisonner sur l'HEURE.
+
+> 🔴 ⚠️ **`meal_type` A LONGTEMPS PORTÉ UN DÉFAUT `'déjeuner'` QUE PERSONNE
+> N'ÉCRIVAIT.** Les 190 lignes l'annonçaient donc toutes — petits déjeuners et
+> dîners compris — et `assets/social.js` affichait cette valeur. Une valeur
+> uniforme est **indiscernable d'une mesure**, donc pire qu'un manque : le fil
+> étiquetait tout en « déjeuner » sans que rien ne le signale.
+> Le défaut a été retiré et ces lignes remises à **NULL** (migration
+> `meal_type_sans_defaut_et_avatar_membre`, 2026-09-22). `assets/ajout.js`
+> remplit maintenant la colonne depuis l'analyse du plat, et
+> `NattyCreneaux.typeDe()` retombe sur l'HEURE quand elle est nulle — une
+> information vraie, contrairement à l'ancien défaut.
+> ⚠️ Ne jamais lire `meal_type` en direct pour classer un repas : passer par
+> `NattyCreneaux.typeDe(m)`, qui connaît le repli et les libellés.
 
 #### `meal_ingredients`
 | Colonne | Type | Notes |
@@ -4761,6 +5089,39 @@ logement et les moyens. `materiel` est dans `TABLES_USER` d'`api/supprimer-compt
 > le module navigateur, et en tenir une copie côté Node est exactement ce qui a fait diverger
 > `api/_nutrition.js` de `core.js`.
 
+#### `membre_prefs` — le réglage du fil, la photo de profil et la bio
+| Colonne | Type | Notes |
+|---|---|---|
+| user_id | text | **PK** — voir ci-dessous, c'est structurel |
+| fil_public | boolean | `false` = le membre sort du fil des autres |
+| avatar_url | text | la photo de profil (Cloudinary) — **ajoutée le 2026-09-22** |
+| bio | text | la description du profil — **ajoutée le 2026-09-22** |
+| updated_at | timestamptz | |
+
+> 🔴 ⚠️ **LA PHOTO DE PROFIL NE VIVAIT QUE DANS LE `localStorage`**, et c'était
+> le défaut signalé par Pablo (« je ne vois pas la photo de profil choisie par
+> les personnes dans le social ni quand je clique sur leur profil »). Une photo
+> rangée dans le stockage local de celui qui la choisit est invisible aux autres
+> membres **par construction** — aucun autre appareil ne peut lire ce stockage —
+> et perdue au changement de téléphone. Ce n'était donc pas un oubli
+> d'affichage : la donnée n'existait nulle part d'où le fil aurait pu la lire.
+> ⚠️ **La policy de lecture de cette table est `USING (true)`**, l'écriture
+> réservée à `auth.uid() = user_id` : exactement le contrat d'une photo de
+> profil — faite pour être vue, modifiable par son seul propriétaire.
+> Conséquence à connaître : `avatar_url` et `bio` sont lisibles par **tout
+> membre connecté**. C'est l'intention, mais rien d'autre ne doit être ajouté
+> ici sans se reposer la question.
+> ⚠️ **`user_id` en clé primaire, et c'est structurel** : `ecrireProfilPublic()`
+> de `profil.html` écrit en `merge-duplicates` **sans** `?on_conflict=`, donc
+> PostgREST résout sur la clé primaire. Même piège que `garde_manger`,
+> `materiel` et `seances`.
+> ⚠️ **Toute lecture de `avatar_url` doit avoir un repli SANS elle.** PostgREST
+> refuse la requête ENTIÈRE sur une colonne inconnue (42703) : sans ce repli,
+> une instance où la migration n'est pas passée perdrait aussi `fil_public`, et
+> tous les plats redeviendraient visibles. Une photo manquante est un
+> désagrément ; un réglage de confidentialité qui saute est un manquement.
+> C'est ce que fait `chargerPrefs()` d'`assets/social.js`.
+
 #### `signalements` et `membre_bloques` — ✅ **existent** (`natty_moderation.sql`, exécuté le 2026-08-14)
 Modération du fil social (App Store Review Guideline 1.2, voir §11).
 
@@ -5121,6 +5482,76 @@ une luminance > 0,8 et qui ne porte pas d'image. Ce qui passe par une variable
 a déjà basculé ; ce qui ressort est écrit en dur. Sur les six écrans de la nav
 il ne reste ainsi que des boutons principaux **volontairement** inversés.
 
+### 🔴 `created_at` est en UTC et arrive SANS décalage — `Natty.quand()`
+Corrigé le 2026-09-22. `meals.created_at` est un `timestamp WITHOUT time zone`,
+Postgres y range l'heure **UTC**, et PostgREST la rend **nue** :
+`"2026-09-22T16:12:03.801"`. Or `new Date()` parse une date-heure sans décalage
+comme une heure **locale** — c'est la spec, pas une bizarrerie de moteur. Toute
+l'app lisait donc ses repas deux heures trop tôt l'été.
+
+Ce n'est pas un défaut d'affichage, c'est le **créneau** qui se trompe. Relevé
+sur les 190 repas en base : **23 déjeuners** enregistrés à 12 h à Paris (10 h
+UTC) tombaient dans la tranche du MATIN. Conséquences mesurées : le `+`
+repartait d'une cible de petit déjeuner à midi, le guide du jour cochait la
+mauvaise étape, `planning.js` plaçait la mauvaise case, et le fil de la journée
+du bilan décalait chaque repas.
+
+**Parade** : `Natty.quand(v)` (`assets/core.js`). Une chaîne qui porte déjà son
+décalage (`Z`, `+02:00`) est rendue intacte — les colonnes `timestamptz` de la
+base sont justes. La colonne étant homogène, il n'y a **rien à migrer**.
+
+> ⚠️ C'est le pendant exact de `Natty.jour()` : là il fallait cesser de
+> convertir en UTC, ici il faut cesser d'oublier que c'en est déjà.
+> ⚠️ Vérifier avant d'ajouter un calcul d'heure : `grep -n "new Date(.*created_at"`
+> rend encore des résultats dans `suivi.html`, `index.html`, `chat.html` et
+> `coaching.html`. Ils n'affichent ou ne trient que des dates, donc l'écart n'y
+> est pas visible — mais le premier qui raisonnera sur l'HEURE devra passer par
+> `Natty.quand()`.
+
+### 🔴 `titre()` du bilan ne surligne QU'UN MOT, et il ne le dit pas
+Le marqueur `*mot*` de `titre()` (`assets/bilan.js`) est cherché **après** un
+découpage sur les espaces : `*petit déjeuner*` n'est donc jamais reconnu et
+s'affiche **avec ses astérisques**. Vu à l'écran deux fois le même jour
+(2026-09-22) — dans la scène de rééquilibrage du bilan, puis dans
+`assets/permissions.js`.
+
+⚠️ **Ce n'est pas un défaut à corriger dans `bilan.js`** : c'est ce découpage par
+mot qui porte le délai d'animation mot à mot, l'essentiel de la cinématique. La
+contrainte est donc voulue, et désormais écrite dans le code. Tout titre
+construit depuis une donnée doit surligner un mot **dont on sait qu'il en est
+un** (les `court` de `NattyCreneaux.CANON`), ou ne rien surligner.
+`assets/permissions.js`, qui n'a pas d'animation par mot, découpe lui sur le
+MOTIF et accepte plusieurs mots.
+
+### 🔴 Les classes courtes d'un module injecté héritent du style de la page
+Trouvé en mesurant, le 2026-09-22, sur `assets/macro-guide.js`. Un module qui
+s'invite sur `suivi.html` avec des classes comme `.hero`, `.col` ou `.dots`
+reçoit les règles de la page : `.hero{border-radius:28px;padding:26px 22px;
+background:var(--metal-black)}` — la carte noire des calories — posait un grand
+bandeau sombre derrière l'illustration du titre, et `.dots{font-size:16px;
+letter-spacing:1px}` cassait les points du carrousel.
+
+⚠️ **Le pare-feu de `bilan.js` (`#id *{margin:0;padding:0;border:0}`) NE SUFFIT
+PAS** : il ne couvre ni `background`, ni `border-radius`, ni `box-shadow`. Seul
+un **préfixe** met à l'abri — `nmg-` pour le guide de macro, `np-` pour les
+permissions — et il faut le tenir sur toute nouvelle classe.
+Relevé des collisions connues sur les écrans porteurs : `suivi.html` définit
+`.hero` et `.dots` ; `repas.html` `.v` et `.em` ; `social.html` `.st`, `.n`,
+`.v`. La liste n'est pas figée : préfixer est plus sûr que la relire.
+
+### ⚠️ Une animation d'entrée EN VOL se mesure comme un débordement
+Payé le 2026-09-22 : j'ai lu 409 px de contenu pour 375 de large dans le guide
+de macro, conclu à un débordement horizontal, et déplacé un rembourrage pour
+rien. C'était l'animation d'entrée (`ncEavIn` de `cine.js`, un
+`translateX(34px)`) mesurée sur un volet qui **ne peint pas** : l'animation y
+reste « running » avec une horloge à 0, donc l'élément est mesuré à son état de
+DÉPART. Remesuré après coup : 375 = 375.
+
+**Parade** : forcer la fin des animations avant toute mesure de géométrie —
+`el.getAnimations().forEach(a => a.finish())` sur le sous-arbre, puis mesurer.
+C'est le pendant du piège déjà connu (« un banc qui ne peint pas gèle les
+animations ») : là on lisait l'état de départ d'une opacité, ici d'une position.
+
 ### Colonnes fantômes de `onboarding` (`42703`)
 **Problème** : demander `nb_repas`, `proteines`, `glucides`, `lipides`, `calories`, `freins`,
 `repas_sautes` ou `temps_cuisine` dans un `select` sur `onboarding` renvoie
@@ -5309,6 +5740,43 @@ lecture — l'exception meurt dans la console de l'utilisateur. Un banc qui EXTR
 du fichier et l'appelle avec ses vraies entrées la trouve en trois lignes.
 
 ## 8. État d'avancement
+
+### ✅ La série du 22 septembre 2026 — six chantiers, tous livrés
+Demandés en deux messages, faits dans l'ordre où ils se tiennent (le socle
+d'abord, parce que deux d'entre eux en dépendaient).
+
+| Chantier | État |
+|---|---|
+| Compteur cumulé sur la journée dans le `+` | ✅ §3, `assets/ajout.js` |
+| Détection du type de repas (petit déj / déj / collation / dîner) | ✅ §3, `creneaux.js` + `ajout.js` |
+| Répartition par repas dans le bilan, et proposition de rééquilibrage | ✅ §3, `assets/bilan.js` |
+| Guide cinématique d'une macro (4 blocs → carrousel → aliments notés) | ✅ §3, `assets/macro-guide.js` |
+| Social : dernières publications en tête, photos de profil visibles | ✅ §3 + §4 |
+| Chaîne d'autorisations à la première ouverture | ✅ §3, `assets/permissions.js` |
+
+**Deux défauts de base trouvés sous les pieds de ces demandes, et corrigés :**
+- 🔴 `meals.created_at` lu avec deux heures d'écart (23 déjeuners sur 190
+  classés en petits déjeuners) — voir §7 et §4 ;
+- 🔴 `meals.meal_type` rempli d'un défaut `'déjeuner'` que personne n'écrivait,
+  et que `social.js` affichait — voir §4.
+
+**Six défauts trouvés au banc, aucun par `node --check` :** la collation à la
+fois redistribuée et proposée ; les barres d'habitude jamais posées ; `titre()`
+qui ne surligne qu'un mot ; `--b-acc` et `--b-piste` non déclarés ; les classes
+courtes du guide de macro héritant du style de `suivi.html` ; le sucre blanc noté
+« Très bien » comme source de glucides.
+
+🔄 **Rien n'a été vu sur un téléphone ni avec une vraie session.** Tous les bancs
+tournent contre des doublures de `Natty`, `NattyCreneaux`, `NattyDecouverte`,
+`fetch` et de Capacitor. Trois choses ne se jugent que sur un iPhone :
+- la **chaîne d'autorisations** — les dialogues système n'existent pas dans un
+  navigateur, et c'est tout l'objet de l'écran ;
+- la **prise de vue** du `+` : le viseur plein écran et le recadrage de la
+  capture n'ont jamais été joués sur une vraie caméra ;
+- le **rythme** des deux nouvelles cinématiques (bilan, guide de macro).
+
+🔄 **Et un nouveau build est nécessaire** : `@capacitor/camera` est un plugin
+natif, il ne s'ajoute pas à un binaire déjà signé (§11).
 
 ### ✅ PABLO A TESTÉ SUR IPHONE — 2026-08-13
 Rapporté tel quel : « j'ai testé sur iPhone, tout est ok ». Cette section existe pour ne pas
@@ -6510,6 +6978,32 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
     les trois cas — sans donnée, avec une donnée faible, avec une donnée forte — et vérifier
     que le troisième bat le premier.
 
+46. **L'heure d'une ligne de base se lit par `Natty.quand()`, jamais par
+    `new Date()`.** `meals.created_at` est un `timestamp WITHOUT time zone` qui
+    porte l'heure UTC et arrive sans décalage : `new Date()` la prend pour une
+    heure locale et se trompe de deux heures l'été. Ce n'est pas un détail
+    d'affichage — c'est le CRÉNEAU qui change, donc la cible du `+`, l'étape du
+    guide et la case du calendrier. Voir §7.
+47. **Un module injecté préfixe TOUTES ses classes.** Le pare-feu
+    `#id *{margin:0;padding:0;border:0}` ne couvre ni `background`, ni
+    `border-radius`, ni `box-shadow` : avec des noms courts, les règles de la
+    page hôte s'appliquent. Mesuré — `.hero` de `suivi.html` posait un bandeau
+    noir derrière un titre. Voir §7.
+48. **Mesurer une géométrie exige de finir les animations d'abord.** Un plan qui
+    entre par un `translateX` se mesure à son état de DÉPART sur une page qui ne
+    peint pas : `el.getAnimations().forEach(a => a.finish())` sur le sous-arbre,
+    puis mesurer. Sinon on lit un débordement qui n'existe pas. Voir §7.
+49. **Une note affichée dit de quoi elle est faite.** Toute note, score ou
+    estimation posée à l'écran s'accompagne de la mesure d'où elle sort — « 1,9 g
+    par kilo », « 80 g / 100 g · 5 kcal par gramme ». Une note sans son assiette
+    de calcul est une note à croire, et elle rend tout le reste de l'écran
+    suspect. Et quand une couche de jugement s'ajoute à la mesure (fibres, type
+    de gras), elle est **nommée** à l'écran, pas fondue dans le chiffre.
+50. **Un tri ne doit pas rendre son propre critère invisible.** Une liste
+    « les plus gros apports » classée par NOTE affiche douze « Excellent » : la
+    note ne dit plus rien, elle confirme le tri. Classer par ce que la demande
+    nomme, et laisser le qualificatif varier — c'est là qu'il informe.
+
 32. **Push automatique autorisé** (décidé le 2026-07-26) : une fois un commit créé sur ce repo, `git push origin main` peut être fait directement, **sans redemander confirmation à chaque fois**. Authentification via clé SSH dédiée (`~/.ssh/id_ed25519_github`, clé "Claude Accès" sur GitHub, remote `origin` en SSH). Cette autorisation est spécifique à ce repo — ne pas l'étendre à un autre dépôt ou à d'autres actions destructrices (force-push, reset, etc., qui restent soumises à confirmation).
 
 ### [narration] Règles spécifiques au module parcours
@@ -6785,6 +7279,29 @@ fichiers est celle du premier paragraphe, plus le `git mv` du package Java et le
 Supabase. Un `grep -rn` sur l'ancien identifiant en dehors de `.git` doit ne rien rendre —
 attention à ne pas compter les copies générées (`*/public/`, `*/assets/capacitor.config.json`),
 qui sont ignorées par git et régénérées par `npx cap sync`.
+
+### `@capacitor/camera` — installé, et pour une seule chose (2026-09-22)
+`@capacitor/camera@8.2.4` est le **cinquième** plugin. Il ne sert **qu'à**
+`requestPermissions()` / `checkPermissions()`, pour la chaîne d'autorisations de
+`assets/permissions.js` (§3).
+
+⚠️ **Le parcours d'ajout d'un plat ne l'utilise PAS** et continue de passer par
+`<input type="file" capture="environment">` et `getUserMedia`. C'est délibéré :
+ce chemin marche, il est éprouvé, et le remplacer n'apporterait rien — le plugin
+n'a été installé que parce qu'**iOS ne permet pas de demander l'accès à la
+caméra à l'avance depuis une WebView**. Sans lui, la demande n'apparaît qu'au
+moment où l'appareil photo s'ouvre vraiment.
+
+⚠️ Les deux descriptions d'usage étaient **déjà** dans `Info.plist`
+(`NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`) et bien rédigées :
+rien à y ajouter. `NSPhotoLibraryAddUsageDescription` n'est **pas** nécessaire —
+elle ne concerne que l'écriture DANS la galerie, que l'app ne fait pas.
+
+`npx cap sync ios` et `npx cap sync android` faits : les cinq plugins sont
+déclarés des deux côtés (`Package.swift` pour iOS, `capacitor.settings.gradle` et
+`capacitor.build.gradle` pour Android).
+🔄 **Un nouveau build est donc nécessaire** avant que la chaîne fonctionne sur un
+téléphone : un plugin natif ne s'ajoute pas à un binaire déjà signé.
 
 ### Deep links — `com.nattynutrition.app://`
 Le scheme est déclaré dans `ios/App/App/Info.plist` (`CFBundleURLTypes`) et dans `AndroidManifest.xml` (intent-filter `VIEW`/`BROWSABLE`, activité déjà en `launchMode="singleTask"`). Deux usages :
@@ -8023,3 +8540,72 @@ le module un défaut qui vient de la page d'essai.
 🔄 **Rien n'a été vu sur un téléphone, ni avec une vraie session** : doublures de `Natty`,
 `NattyCreneaux` et `/api/claude`, et un navigateur sans caméra — le mode plein écran de la
 photo a été mesuré en forçant sa classe, pas sur une prise de vue réelle.
+
+---
+
+*Contribution session « six chantiers » (Claude Opus 5, 22 septembre 2026) — deux
+messages de Pablo, six demandes, et deux défauts de base trouvés dessous :*
+
+**Ce qui a été demandé, dans l'ordre où ça a été fait.** Le socle d'abord, parce
+que deux chantiers en dépendaient : la lecture de l'heure d'un repas et le
+vocabulaire des quatre blocs de repas. Puis le compteur cumulé du `+`, la
+détection du type de repas, la répartition par repas du bilan, le guide
+cinématique d'une macro, le social (dernières publications + photos de profil) et
+la chaîne d'autorisations.
+
+**🔴 Deux défauts de base, trouvés en regardant la base avant de coder, et qui
+auraient rendu deux des six chantiers faux dès le départ :**
+- `meals.created_at` est un `timestamp WITHOUT time zone` portant l'heure **UTC**,
+  rendu **sans décalage** : `new Date()` le lisait comme une heure locale, donc
+  avec deux heures d'écart l'été. Sur les 190 repas en base, **23 déjeuners** de
+  12 h à Paris tombaient dans la tranche du matin. D'où `Natty.quand()`, et son
+  usage partout où l'heure décide d'un créneau ;
+- `meals.meal_type` existait avec un **défaut `'déjeuner'`** que personne
+  n'écrivait : les 190 lignes l'annonçaient toutes, et `assets/social.js` affichait
+  cette valeur. Une valeur uniforme est indiscernable d'une mesure, donc pire
+  qu'un manque. Défaut retiré, lignes remises à NULL, colonne enfin écrite par
+  l'analyse du plat.
+
+**Six défauts trouvés au banc, aucun par `node --check`, et chacun instructif :**
+- la collation était à la fois comptée comme manque à redistribuer **et** proposée
+  comme repas à ajouter : l'écran se contredisait à deux cartes d'intervalle ;
+- les quatre barres de « ce que vous faites d'habitude » n'étaient **jamais
+  posées** — le sélecteur ne visait que les barres des repas — et restaient plates
+  à côté des pourcentages qui les expliquent ;
+- `titre()` du bilan ne surligne qu'**un mot** : « *petit déjeuner* » s'affichait
+  avec ses astérisques. Je suis retombé dans le même piège le jour même, dans
+  `permissions.js` ;
+- `--b-acc` (préexistant) et `--b-piste` (mon invention) n'étaient déclarés
+  nulle part : un `var()` non résolu rend la déclaration invalide et le navigateur
+  la jette **sans un mot** — la lueur de la barre la plus haute du graphique de la
+  semaine n'avait jamais été peinte ;
+- les classes courtes du guide de macro héritaient du style de `suivi.html` :
+  `.hero` y est la carte noire des calories, et posait un bandeau sombre derrière
+  l'illustration du titre. Le pare-feu de `bilan.js` ne suffit pas, seul un
+  préfixe met à l'abri ;
+- le **sucre blanc** ressortait « Très bien » comme source de glucides. Le coût en
+  calories par gramme mesure la **pureté**, donc il récompense le raffinement :
+  c'est le défaut de fond d'une note calculée sur les quatre seuls chiffres de la
+  table.
+
+**Trois pièges de banc payés, tous déjà de la famille documentée :**
+- les doublures posées **avant** `core.js` sont écrasées par lui, et l'écran part
+  vers `login.html` ;
+- une **animation d'entrée en vol** se mesure comme un débordement : le plan entre
+  par un `translateX(34px)` et, sur un volet qui ne peint pas, reste à son état de
+  départ. J'ai déplacé un rembourrage pour rien avant de le comprendre ;
+- `loading="lazy"` laisse un avatar à `naturalWidth:0` tant que sa section est
+  sous le pli — mesurer là fait conclure que les images ne chargent pas.
+
+**Un plugin natif installé, à contrecœur et pour une seule chose** :
+`@capacitor/camera`, uniquement pour `requestPermissions()`. iOS ne permet pas de
+demander l'accès à la caméra à l'avance depuis une WebView, et c'était toute la
+demande. Le parcours d'ajout d'un plat n'y touche pas.
+
+**Ce qui a été écrit en base** (migration `meal_type_sans_defaut_et_avatar_membre`,
+appliquée par MCP) : retrait du défaut de `meals.meal_type` et remise à NULL des
+190 lignes ; ajout de `membre_prefs.avatar_url` et `membre_prefs.bio`.
+
+🔄 **Rien n'a été vu sur un téléphone ni avec une vraie session** — tout a tourné
+contre des doublures. Et un nouveau build est nécessaire pour que la chaîne
+d'autorisations existe (§11).
