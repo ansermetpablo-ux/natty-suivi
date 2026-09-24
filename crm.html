@@ -1,0 +1,1079 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Natty CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* ═══ Jetons — même langage visuel que le mockup "Natty OS" validé par Pablo ═══ */
+:root{
+  --bg:#ffffff;--card:#ececef;--panel:#f6f6f8;--ink:#101014;--on-ink:#ffffff;--muted:#85858f;--line:#e8e8ee;
+  --green:#34c759;--amber:#ff9f0a;--red:#ff3b30;--blue:#0a84ff;--violet:#8e5cf7;
+  --green-bg:rgba(52,199,89,.12);--amber-bg:rgba(255,159,10,.14);--red-bg:rgba(255,59,48,.11);--blue-bg:rgba(10,132,255,.1);--violet-bg:rgba(142,92,247,.12);
+  --r-xl:30px;--r-lg:22px;--r-md:16px;--r-sm:11px;--r-full:999px;
+  --nm-soft:0 8px 22px rgba(20,20,30,.07);--nm-pop:0 18px 50px rgba(20,20,30,.18);
+  --metal:radial-gradient(130% 65% at 12% -10%,rgba(255,255,255,.11) 0%,rgba(255,255,255,0) 42%),linear-gradient(135deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 28%),linear-gradient(165deg,#0c0d0f 0%,#050506 55%,#000 100%);
+  --sh-metal:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -1px 0 rgba(0,0,0,.6),0 10px 24px rgba(0,0,0,.3);
+  --metal-ink:#f4f4f7;--metal-mut:#9a9aa6;--scrim:rgba(10,10,14,.38);
+  --f:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'DM Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0e0e11;--card:#1f1f26;--panel:#16161b;--ink:#f4f4f7;--on-ink:#0e0e11;--muted:#8e8e99;--line:#2a2a32;--green:#32d74b;--amber:#ffb340;--red:#ff453a;--blue:#409cff;--violet:#a98bff;--nm-soft:0 8px 24px rgba(0,0,0,.5);--nm-pop:0 18px 50px rgba(0,0,0,.6);--metal:radial-gradient(130% 65% at 12% -10%,rgba(255,255,255,.09) 0%,rgba(255,255,255,0) 42%),linear-gradient(165deg,#25262c 0%,#18191d 55%,#101114 100%);--scrim:rgba(0,0,0,.6)}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0e0e11;--card:#1f1f26;--panel:#16161b;--ink:#f4f4f7;--on-ink:#0e0e11;--muted:#8e8e99;--line:#2a2a32;--green:#32d74b;--amber:#ffb340;--red:#ff453a;--blue:#409cff;--violet:#a98bff;--nm-soft:0 8px 24px rgba(0,0,0,.5);--nm-pop:0 18px 50px rgba(0,0,0,.6);--metal:radial-gradient(130% 65% at 12% -10%,rgba(255,255,255,.09) 0%,rgba(255,255,255,0) 42%),linear-gradient(165deg,#25262c 0%,#18191d 55%,#101114 100%);--scrim:rgba(0,0,0,.6)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--ink)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}.mono{font-family:var(--mono)}.muted{color:var(--muted)}
+a{color:inherit}
+[hidden]{display:none!important}
+
+/* ═══ Connexion ═══ */
+.loginwrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.logincard{width:min(380px,100%);background:var(--bg);border-radius:var(--r-xl);box-shadow:var(--nm-pop);padding:32px 28px;border:1px solid var(--line)}
+.logincard .logo{width:52px;height:52px;border-radius:16px;background:var(--metal);box-shadow:var(--sh-metal);display:grid;place-items:center;color:#fff;font-weight:700;font-size:22px;margin-bottom:16px}
+.logincard h1{margin:0 0 4px;font-size:21px;letter-spacing:-.02em}
+.logincard p.sub{color:var(--muted);margin:0 0 22px;font-size:13px}
+.logincard input{width:100%;margin-bottom:10px;border:1px solid var(--line);background:var(--panel);border-radius:var(--r-sm);padding:11px 13px}
+.loginerr{color:var(--red);font-size:12.5px;min-height:16px;margin:2px 0 10px}
+
+/* ═══ App shell ═══ */
+.app{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100%}
+.side{position:sticky;top:env(safe-area-inset-top,0px);height:100vh;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--bg);z-index:12}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 18px 12px}
+.logo{width:34px;height:34px;border-radius:11px;background:var(--metal);box-shadow:var(--sh-metal);display:grid;place-items:center;color:#fff;font-weight:700;font-size:17px}
+.brand b{font-size:16px;letter-spacing:-.02em;display:block}.brand small{color:var(--muted);font-size:11.5px}
+.navscroll{flex:1;overflow-y:auto;padding:4px 12px 12px}
+.ngroup{margin-top:10px}
+.ngroup>div{padding:8px 8px 4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.nitem{width:100%;display:flex;align-items:center;gap:10px;border:0;background:none;padding:9px 10px;border-radius:var(--r-sm);text-align:left;font-weight:500;color:var(--muted)}
+.nitem svg{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nitem:hover{background:var(--panel);color:var(--ink)}
+.nitem[aria-current="page"]{background:var(--ink);color:var(--on-ink)}
+.nitem .b{margin-left:auto;font-size:10.5px;font-family:var(--mono);min-width:20px;text-align:center;padding:1px 6px;border-radius:var(--r-full);background:var(--card);color:var(--muted)}
+.nitem .b.r{background:var(--red);color:#fff}
+.nitem[aria-current="page"] .b{background:rgba(255,255,255,.18);color:inherit}
+.side-foot{padding:12px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.av{width:32px;height:32px;border-radius:10px;background:var(--card);display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+.av.dk{background:var(--ink);color:var(--on-ink)}.av.lg{width:52px;height:52px;border-radius:16px;font-size:17px}
+.side-foot .who{min-width:0;flex:1}.side-foot .who b{display:block;font-size:13px}.side-foot .who small{color:var(--muted)}
+.side-foot .out{border:0;background:var(--card);border-radius:50%;width:32px;height:32px;display:grid;place-items:center;flex:none}
+.side-foot .out svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:10px clamp(16px,3vw,32px)}
+.ib.menu-btn{display:none}
+.crumb{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.crumb b{color:var(--ink)}
+.spacer{flex:1}
+.searchbtn{display:flex;align-items:center;gap:8px;white-space:nowrap;border:0;background:var(--card);border-radius:var(--r-full);padding:8px 14px;color:var(--muted);width:260px;max-width:100%}
+.searchbtn kbd{margin-left:auto;font-family:var(--mono);font-size:11px;background:var(--bg);padding:1px 6px;border-radius:6px}
+.ib{width:36px;height:36px;border-radius:50%;border:0;background:var(--card);display:grid;place-items:center;flex:none}
+.ib svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.btn{border:0;border-radius:var(--r-full);padding:9px 16px;font-weight:600;background:var(--card);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{filter:brightness(.97)}
+.btn.primary{background:var(--ink);color:var(--on-ink)}
+.btn.ghost{background:none;border:1px solid var(--line)}
+.btn.danger{background:var(--red-bg);color:var(--red)}
+.btn.sm{padding:6px 12px;font-size:12.5px}
+.btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+main{padding-block:22px 80px;padding-inline:clamp(16px,3vw,32px);min-width:0}
+.ph{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:16px}
+.ph h1{font-size:25px;letter-spacing:-.03em;margin:0;line-height:1.15;text-wrap:balance}
+.ph p{margin:4px 0 0;color:var(--muted);max-width:70ch}
+.ph .acts{display:flex;gap:8px;flex-wrap:wrap}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto;scrollbar-width:none}
+.tabs button{border:0;background:none;padding:10px 12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;display:flex;gap:6px;align-items:center}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.tabs .b{font-size:10.5px;font-family:var(--mono);background:var(--card);padding:1px 6px;border-radius:var(--r-full)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card{background:var(--panel);border-radius:var(--r-lg);padding:18px;min-width:0}
+.card.lift{background:var(--bg);box-shadow:var(--nm-soft);border:1px solid var(--line)}
+.card.click{cursor:pointer;transition:transform .12s}.card.click:hover{transform:translateY(-2px)}
+.card h3{margin:0 0 3px;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.card .sub{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+.metal{background:var(--metal);box-shadow:var(--sh-metal);color:var(--metal-ink)}
+.kpi .lbl{font-size:12px;color:var(--muted);font-weight:500;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.kpi .val{font-size:26px;font-weight:700;letter-spacing:-.03em;margin:8px 0 3px;line-height:1}
+.kpi .val small{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0}
+.kpi .foot{font-size:12px;color:var(--muted)}
+.bar{height:7px;border-radius:var(--r-full);background:var(--card);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;border-radius:inherit;background:var(--ink)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:var(--r-full);background:var(--card);color:var(--muted);white-space:nowrap;border:0}
+.chip.ok{background:var(--green-bg);color:var(--green)}.chip.warn{background:var(--amber-bg);color:var(--amber)}.chip.bad{background:var(--red-bg);color:var(--red)}.chip.info{background:var(--blue-bg);color:var(--blue)}.chip.vi{background:var(--violet-bg);color:var(--violet)}.chip.ink{background:var(--ink);color:var(--on-ink)}
+.sect{margin:26px 0 10px;display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sect h2{margin:0;font-size:17px;letter-spacing:-.02em}.sect span{color:var(--muted);font-size:12.5px}
+.exbar{display:flex;gap:10px;align-items:center;padding:9px 14px;border-radius:var(--r-md);border:1px dashed var(--red);color:var(--red);font-size:12.5px;margin-bottom:14px;background:var(--red-bg)}
+.tbl-wrap{overflow-x:auto;border-radius:var(--r-lg);border:1px solid var(--line);background:var(--bg)}
+table{width:100%;border-collapse:collapse;min-width:640px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--panel)}
+tr:last-child td{border-bottom:0}
+tbody tr.rowc{cursor:pointer}tbody tr.rowc:hover td{background:var(--panel)}
+.who{display:flex;align-items:center;gap:10px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.seg{display:inline-flex;background:var(--card);border-radius:var(--r-full);padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:none;border-radius:var(--r-full);padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--bg);color:var(--ink);box-shadow:var(--nm-soft)}
+select,.inp{font-size:13px;border:1px solid var(--line);background:var(--bg);border-radius:var(--r-sm);padding:8px 11px;min-width:0}
+select.pill{border:0;background:var(--card);border-radius:var(--r-full);font-weight:600;font-size:12.5px;padding:7px 12px}
+.inp.search{border-radius:var(--r-full);background:var(--card);border:0;padding:8px 14px;width:220px;max-width:100%}
+textarea.inp{width:100%;min-height:70px;resize:vertical}
+.list{display:flex;flex-direction:column}
+.li{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:0}
+.li.c{cursor:pointer}.li.c:hover{background:var(--panel);margin-inline:-10px;padding-inline:10px;border-radius:10px}
+.li .grow{flex:1;min-width:0}.li .meta{font-size:12px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none;background:var(--muted)}
+.dot.ok{background:var(--green)}.dot.warn{background:var(--amber)}.dot.bad{background:var(--red)}.dot.info{background:var(--blue)}.dot.vi{background:var(--violet)}
+.check{width:20px;height:20px;border-radius:7px;border:1.8px solid var(--line);flex:none;display:grid;place-items:center;background:var(--bg);padding:0;margin-top:1px}
+.check[aria-checked="true"]{background:var(--ink);border-color:var(--ink)}
+.check[aria-checked="true"]::after{content:"";width:9px;height:5px;border-left:2px solid var(--on-ink);border-bottom:2px solid var(--on-ink);transform:rotate(-45deg) translate(1px,-1px)}
+.li.done b{text-decoration:line-through;color:var(--muted)}
+.empty{border:1.5px dashed var(--line);border-radius:var(--r-md);padding:16px;color:var(--muted);font-size:12.5px;text-align:center}
+.prog{display:flex;align-items:center;gap:8px;font-size:12px}
+.prog .bar{flex:1;margin:0}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:8px 12px;font-size:13px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0;min-width:0}
+/* Drawer / modal / palette */
+.scrim{position:fixed;inset:0;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .2s;z-index:30}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(560px,100%);background:var(--bg);z-index:31;transform:translateX(100%);transition:transform .25s ease;padding:calc(20px + env(safe-area-inset-top,0px)) 22px calc(22px + env(safe-area-inset-bottom,0px));overflow-y:auto;box-shadow:-12px 0 40px rgba(0,0,0,.15)}
+.drawer.on{transform:none}
+.dh{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}
+.dh h2{margin:4px 0 2px;font-size:20px;letter-spacing:-.02em}
+.x{border:0;background:var(--card);border-radius:50%;width:34px;height:34px;font-size:18px;line-height:1;flex:none;margin-left:auto}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-46%) scale(.98);opacity:0;pointer-events:none;width:min(520px,calc(100% - 32px));max-height:calc(100% - 40px);overflow-y:auto;background:var(--bg);border-radius:var(--r-lg);box-shadow:var(--nm-pop);z-index:32;padding:22px;transition:.18s}
+.modal.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
+.modal h2{margin:0 0 4px;font-size:18px}
+.form{display:grid;gap:12px;margin-top:14px}
+.form label{display:grid;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.form .inp,.form select,.form textarea{width:100%;font-weight:400}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.pal{position:fixed;left:50%;top:12vh;transform:translateX(-50%);width:min(620px,calc(100% - 32px));background:var(--bg);border-radius:var(--r-lg);box-shadow:var(--nm-pop);z-index:33;display:none;overflow:hidden}
+.pal.on{display:block}
+.pal input{width:100%;border:0;border-bottom:1px solid var(--line);padding:16px 18px;font-size:16px;background:none;outline:none}
+.pal .res{max-height:52vh;overflow-y:auto;padding:6px}
+.pal .r{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:10px;cursor:pointer}
+.pal .r.sel,.pal .r:hover{background:var(--panel)}
+.pal .r small{margin-left:auto;color:var(--muted);font-size:11.5px}
+.pal .gh{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:8px 12px 2px;font-weight:600}
+.pop{position:fixed;z-index:34;background:var(--bg);border:1px solid var(--line);box-shadow:var(--nm-pop);border-radius:var(--r-md);padding:6px;min-width:220px;display:none}
+.pop.on{display:block}
+.pop button{display:flex;width:100%;gap:10px;align-items:center;border:0;background:none;padding:9px 11px;border-radius:9px;text-align:left}
+.pop button:hover{background:var(--panel)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--on-ink);padding:10px 18px;border-radius:var(--r-full);font-weight:600;font-size:13px;opacity:0;transition:.2s;z-index:40;pointer-events:none;max-width:calc(100% - 32px)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.hide{display:none!important}
+
+/* ═══ Accueil : carrousel des échéances ═══ */
+.hero-carousel{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 2px 10px;-webkit-overflow-scrolling:touch}
+.hero-card{scroll-snap-align:start;flex:0 0 auto;width:230px;background:var(--metal);box-shadow:var(--sh-metal);color:var(--metal-ink);border-radius:var(--r-lg);padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:8px}
+.hero-card .hc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.hero-card .hc-act{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--metal-mut);font-weight:700}
+.hero-card .hc-days{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.hero-card .hc-days small{font-size:12px;font-weight:600;color:var(--metal-mut)}
+.hero-card b{font-size:13.5px;line-height:1.3;font-weight:600}
+.hero-card.urgent{box-shadow:var(--sh-metal),0 0 0 2px var(--red)}
+
+/* ═══ Accueil : grille des activités ═══ */
+.actgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.acttile{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;display:flex;flex-direction:column;gap:10px;cursor:pointer;box-shadow:var(--nm-soft);text-align:left}
+.acttile:hover{transform:translateY(-2px);transition:transform .12s}
+.acttile .ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center}
+.acttile .ic svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.acttile b{font-size:15px}
+.acttile .cnt{font-size:12px;color:var(--muted)}
+.acttile .cnt b{font-size:12px;color:var(--ink)}
+
+/* ═══ Accueil : scénario global (lanes par activité) ═══ */
+.lane{margin-bottom:16px}
+.lane-h{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:8px}
+.lane-h .dot{margin:0;width:10px;height:10px}
+.lane-items{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.litem{display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:var(--r-full);padding:5px 12px 5px 5px;font-size:12.5px;cursor:pointer;border:1px solid transparent}
+.litem:hover{border-color:var(--line)}
+.litem .lcheck{width:19px;height:19px;border-radius:50%;border:1.6px solid var(--line);flex:none;background:var(--bg)}
+.litem .lcheck:hover{border-color:var(--green);background:var(--green-bg)}
+.litem .ld{color:var(--muted);font-size:11px}
+.lane-add{border:1.5px dashed var(--line);border-radius:var(--r-full);padding:5px 14px;font-size:12.5px;color:var(--muted);background:none}
+.lane-add:hover{color:var(--ink);border-color:var(--ink)}
+
+/* ═══ Routine hero ═══ */
+.routine{background:var(--metal);box-shadow:var(--sh-metal);color:var(--metal-ink);border-radius:var(--r-lg);padding:18px;margin-bottom:20px}
+.routine h3{margin:0 0 10px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.routine .li{border-bottom-color:rgba(255,255,255,.12)}
+.routine .li .meta{color:var(--metal-mut)}
+.routine .check{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.25)}
+.routine .check[aria-checked="true"]{background:var(--green);border-color:var(--green)}
+
+/* ═══ Schéma éditable (blocs, glisser, relier) ═══ */
+.schema-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.schema-wrap{position:relative;border:1px solid var(--line);border-radius:var(--r-lg);background-color:var(--panel);background-image:radial-gradient(circle,var(--line) 1.2px,transparent 1.2px);background-size:22px 22px;min-height:440px;overflow:hidden;touch-action:none}
+.schema-wrap.linking{cursor:crosshair}
+.schema-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.schema-svg line{stroke:var(--muted);stroke-width:1.6}
+.schema-svg .lienhit{stroke:transparent;stroke-width:14px;pointer-events:auto;cursor:pointer}
+.sblock{position:absolute;width:150px;background:var(--bg);border:1.5px solid var(--line);border-radius:var(--r-md);padding:10px 12px;box-shadow:var(--nm-soft);cursor:grab;user-select:none}
+.sblock:active{cursor:grabbing}
+.sblock.selected{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-bg)}
+.sblock .sb-ic{width:26px;height:26px;border-radius:8px;background:var(--card);display:grid;place-items:center;margin-bottom:7px;color:var(--ink)}
+.sblock .sb-ic svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.sblock b{font-size:12.5px;display:block;line-height:1.25}
+.sblock .sb-due{font-size:10.5px;color:var(--muted);margin-top:5px;display:flex;align-items:center;gap:4px}
+.sblock .sb-del{position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;border:2px solid var(--bg);align-items:center;justify-content:center;font-size:12px;line-height:1;display:none}
+.sblock:hover .sb-del{display:flex}
+.schema-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:20px}
+
+@media (max-width:1180px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:920px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;left:0;top:0;width:min(290px,86vw);transform:translateX(-100%);transition:transform .22s;box-shadow:var(--nm-pop);padding-top:env(safe-area-inset-top,0px)}
+  .side.on{transform:none}
+  .ib.menu-btn{display:grid}
+  .g3,.g2{grid-template-columns:1fr}
+  .searchbtn{width:auto}.searchbtn span,.searchbtn kbd{display:none}
+}
+@media (max-width:540px){.g4{grid-template-columns:1fr}.kv{grid-template-columns:110px 1fr}.form .two{grid-template-columns:1fr}.topbar .btn span{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="loginwrap" id="loginScreen">
+  <div class="logincard">
+    <div class="logo">n</div>
+    <h1>Natty CRM</h1>
+    <p class="sub">Connecte-toi avec ton compte d'équipe (le même que admin.html).</p>
+    <div class="loginerr" id="loginErr"></div>
+    <input class="inp" id="emailInput" type="email" placeholder="email@natty-nutrition.com" autocomplete="username">
+    <input class="inp" id="pwdInput" type="password" placeholder="Mot de passe" autocomplete="current-password">
+    <button class="btn primary" id="loginBtn" style="width:100%;justify-content:center">Se connecter</button>
+  </div>
+</div>
+
+<div class="app hide" id="mainApp">
+  <aside class="side" id="side" aria-label="Navigation">
+    <div class="brand"><div class="logo">n</div><div><b>Natty CRM</b><small>Projets &amp; échéances</small></div></div>
+    <div class="navscroll" id="nav"></div>
+    <div class="side-foot">
+      <div class="av dk" id="meAv">·</div>
+      <div class="who"><b id="meNom">—</b><small id="meRole">—</small></div>
+      <button class="out" id="logoutBtn" aria-label="Se déconnecter"><svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5M4 12h16M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg></button>
+    </div>
+  </aside>
+  <div style="min-width:0">
+    <header class="topbar">
+      <button class="ib menu-btn" id="menuBtn" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="crumb" id="crumb"></div>
+      <div class="spacer"></div>
+      <button class="searchbtn" id="openPal"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Rechercher…</span><kbd>Ctrl K</kbd></button>
+      <button class="btn primary" id="createBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Créer</span></button>
+    </header>
+    <main id="main"></main>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true"></aside>
+<div class="modal" id="modal" role="dialog" aria-modal="true"></div>
+<div class="pal" id="pal" role="dialog" aria-label="Recherche"><input id="palIn" placeholder="Tâche, sous-projet, activité…" autocomplete="off"><div class="res" id="palRes"></div></div>
+<div class="pop" id="pop"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   Natty CRM — accueil (échéances urgentes + grille des activités),
+   une page par activité (tâches de routine, tâches, sous-projets,
+   drive, schéma de blocs éditable et reliable), et pour Logistique
+   un aperçu des bons de commande réels.
+
+   Même auth que admin.html : Supabase Auth + table `staff`
+   (natty_staff.sql), même clé de session localStorage — se
+   connecter une fois sur l'un ouvre l'autre sans redemander.
+   ═══════════════════════════════════════════════════════════ */
+
+const SB_URL='https://hrsvcelmwdlcswwagxfa.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+const STAFF_SESSION_KEY='natty_staff_session';
+let STAFF_SESSION=null,STAFF_ROLE=null,STAFF_NOM='';
+
+function lireStaffSession(){try{const s=JSON.parse(localStorage.getItem(STAFF_SESSION_KEY)||'null');return(s&&s.access_token)?s:null}catch(e){return null}}
+function ecrireStaffSession(s){STAFF_SESSION=s;try{s?localStorage.setItem(STAFF_SESSION_KEY,JSON.stringify(s)):localStorage.removeItem(STAFF_SESSION_KEY)}catch(e){}}
+STAFF_SESSION=lireStaffSession();
+function jetonStaff(){return(STAFF_SESSION&&STAFF_SESSION.access_token)||SB_KEY}
+
+async function sb(path,options={}){
+  const res=await fetch(SB_URL+'/rest/v1/'+path,{...options,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+jetonStaff(),'Content-Type':'application/json','Prefer':'return=representation',...(options.headers||{})}});
+  const text=await res.text();
+  if(!res.ok)throw new Error(text);
+  return text?JSON.parse(text):[];
+}
+/* Une table qui n'existe pas encore (natty_crm.sql pas exécuté) ne doit
+   jamais planter l'écran en silence — elle doit le DIRE (règle du dépôt). */
+let SCHEMA_MANQUANT=false;
+async function sbTry(path,options){
+  try{return{ok:true,data:await sb(path,options)}}
+  catch(e){const msg=(e&&e.message)||String(e);const manque=/PGRST205|42P01|does not exist|relation .* does not exist/i.test(msg);if(manque)SCHEMA_MANQUANT=true;return{ok:false,err:msg,manque}}
+}
+
+/* ============ OUTILS ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ini=n=>String(n||'?').trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const fd=d=>{if(!d)return'—';const x=new Date(d+'T00:00:00');return x.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})};
+const own=o=>o?esc(o):'<span class="muted">À attribuer</span>';
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2300)}
+
+const TODAY=new Date();TODAY.setHours(0,0,0,0);
+function joursInfo(echeance){
+  if(!echeance)return{j:null,label:'sans échéance',cls:''};
+  const x=new Date(echeance+'T00:00:00');const j=Math.round((x-TODAY)/86400000);
+  let label;if(j<0)label=Math.abs(j)+' j de retard';else if(j===0)label="aujourd'hui";else if(j===1)label='demain';else label='dans '+j+' j';
+  const cls=j<0?'bad':j<=3?'warn':'';
+  return{j,label,cls};
+}
+
+const ICON={
+ dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',
+ taches:'<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4M8 14l2 2 4-4"/>',
+ commercial:'<path d="M4 4h4v16H4zM10 4h4v10h-4zM16 4h4v6h-4z"/>',
+ finance:'<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 15h2"/>',
+ partenariat:'<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M17 11a3 3 0 1 0 0-6M22 21c0-3-2-5.5-5-6"/>',
+ developpement:'<path d="M4 20V4M4 5h11l-2 4 2 4H4"/>',
+ logistique:'<path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"/>',
+ projet:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>',
+ schema:'<circle cx="5" cy="6" r="2.2"/><circle cx="19" cy="6" r="2.2"/><circle cx="12" cy="18" r="2.2"/><path d="M7 6h10M6.4 8l4.6 8M17.6 8l-4.6 8"/>',
+ drive:'<path d="M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h6"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ link:'<path d="M9 15l6-6M8 12l-2 2a3 3 0 0 0 4 4l2-2M16 12l2-2a3 3 0 0 0-4-4l-2 2"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+ check:'<path d="M5 13l4 4L19 7"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+ alerte:'<path d="M10.3 3.9 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 16.5h.01"/>'
+};
+const ICONES_BLOC=['auto','schema','projet','calendar','check','drive','alerte','commercial','finance','partenariat','developpement','logistique'];
+const CATEGORIES=[
+ {cle:'reunion',label:'Réunion',icone:'calendar'},
+ {cle:'decision',label:'Décision',icone:'check'},
+ {cle:'livrable',label:'Livrable',icone:'drive'},
+ {cle:'jalon',label:'Jalon',icone:'schema'},
+ {cle:'risque',label:'Risque',icone:'alerte'},
+ {cle:'autre',label:'Autre',icone:'projet'}
+];
+const CAT_BY_CLE={};CATEGORIES.forEach(c=>CAT_BY_CLE[c.cle]=c);
+const ACTIVITES=[
+ {cle:'commercial',nom:'Commercial',icone:'commercial',couleur:'#0a84ff'},
+ {cle:'finance',nom:'Finance',icone:'finance',couleur:'#34c759'},
+ {cle:'partenariat',nom:'Partenariat',icone:'partenariat',couleur:'#8e5cf7'},
+ {cle:'developpement',nom:'Développement',icone:'developpement',couleur:'#101014'},
+ {cle:'logistique',nom:'Logistique',icone:'logistique',couleur:'#ff9f0a'}
+];
+const ACT_BY_CLE={};ACTIVITES.forEach(a=>ACT_BY_CLE[a.cle]=a);
+const ROLES={
+ admin:{l:'Admin',toutes:true},
+ commercial:{l:'Commercial',acces:['commercial']},
+ finance:{l:'Finance',acces:['finance']},
+ partenariat:{l:'Partenariat',acces:['partenariat']},
+ developpement:{l:'Développement',acces:['developpement']},
+ logistique:{l:'Logistique',acces:['logistique']}
+};
+function can(cle){
+ if(cle==='dash'||cle==='taches')return true;
+ if(cle.startsWith('projet:')){const p=S.projets.find(x=>x.id===cle.slice(7));return p?can(p.activite):false}
+ const r=ROLES[STAFF_ROLE];if(!r)return false;return r.toutes||(r.acces&&r.acces.includes(cle));
+}
+
+/* ============ ÉTAT ============ */
+let S={taches:[],projets:[],staff:[]};
+let SCHEMA_CACHE={};   // {portee: {blocs:[...], liens:[...]}} — portee = activité ('commercial') ou 'projet:<id>'
+let DOCS_CACHE={};     // {activite: [...]} — le drive de l'activité entière
+let CUR='dash',SUB={};
+let LINK_MODE=false,LINK_FROM=null,DERNIER_DRAG_TS=0;
+
+async function chargerBase(){
+ const [t,p,st]=await Promise.all([
+  sbTry('crm_taches?select=*&order=echeance.asc.nullslast'),
+  sbTry('crm_projets?select=*&order=echeance.asc.nullslast'),
+  sbTry('staff?select=user_id,nom,role&actif=eq.true')
+ ]);
+ S.taches=t.ok?t.data:[];
+ S.projets=p.ok?p.data:[];
+ S.staff=st.ok?st.data:[];
+}
+async function chargerSchemaPortee(portee,filtreSQL){
+ if(SCHEMA_CACHE[portee])return SCHEMA_CACHE[portee];
+ const [b,l]=await Promise.all([sbTry('crm_schema_blocs?'+filtreSQL+'&select=*'),sbTry('crm_schema_liens?select=*')]);
+ const blocs=b.ok?b.data:[];
+ const ids=new Set(blocs.map(x=>x.id));
+ const liens=l.ok?l.data.filter(x=>ids.has(x.bloc_source)&&ids.has(x.bloc_cible)):[];
+ SCHEMA_CACHE[portee]={blocs,liens};
+ return SCHEMA_CACHE[portee];
+}
+/* Le schéma d'une ACTIVITÉ ne montre que ce qui n'appartient à AUCUN
+   projet précis (projet_id is null) — sinon un bloc de projet s'afficherait
+   deux fois : ici, et sur la page de son projet. */
+function chargerSchema(cle){return chargerSchemaPortee(cle,'activite=eq.'+cle+'&projet_id=is.null')}
+function chargerSchemaProjet(id){return chargerSchemaPortee('projet:'+id,'projet_id=eq.'+id)}
+async function chargerDocs(cle){
+ if(DOCS_CACHE[cle])return DOCS_CACHE[cle];
+ const r=await sbTry('crm_documents?activite=eq.'+cle+'&select=*&order=created_at.desc');
+ DOCS_CACHE[cle]=r.ok?r.data:[];
+ return DOCS_CACHE[cle];
+}
+function peopleOptions(sel){
+ const noms=[...new Set(S.staff.map(s=>s.nom).filter(Boolean))];
+ return `<option value="">À attribuer</option>`+noms.map(n=>`<option ${n===sel?'selected':''}>${esc(n)}</option>`).join('');
+}
+
+/* ============ NAVIGATION ============ */
+function badges(){
+ const b={taches:S.taches.filter(t=>t.statut!=='fait').length};
+ ACTIVITES.forEach(a=>{b[a.cle]=S.taches.filter(t=>t.activite===a.cle&&t.statut!=='fait').length});
+ document.querySelectorAll('.nitem').forEach(n=>{const e=n.querySelector('.b');const v=b[n.dataset.m];if(e){e.textContent=v||'';e.classList.toggle('hide',!v)}});
+}
+function renderNav(){
+ const items=[['dash','Accueil','dash'],['taches','Toutes les tâches','taches']].filter(([id])=>can(id));
+ const acts=ACTIVITES.filter(a=>can(a.cle));
+ $('#nav').innerHTML=
+  `<div class="ngroup"><div>Pilotage</div>${items.map(([id,l,ic])=>navBtn(id,l,ic)).join('')}</div>`+
+  (acts.length?`<div class="ngroup"><div>Activités</div>${acts.map(a=>navBtn(a.cle,a.nom,a.icone)).join('')}</div>`:'');
+ badges();
+}
+function navBtn(id,label,icon){
+ return `<button class="nitem" data-m="${id}" ${id===CUR?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ICON[icon]}</svg><span>${esc(label)}</span><em class="b hide"></em></button>`;
+}
+$('#nav')?.addEventListener('click',e=>{const n=e.target.closest('.nitem');if(n){go(n.dataset.m);$('#side').classList.remove('on')}});
+function go(id){
+ if(!can(id)){toast("Ce rôle n'a pas accès à cette activité");return}
+ LINK_MODE=false;LINK_FROM=null;   // le mode « relier » ne doit pas survivre à un changement de page
+ CUR=id;
+ document.querySelectorAll('.nitem').forEach(n=>n.toggleAttribute('aria-current',n.dataset.m===id));
+ render();
+ window.scrollTo(0,0);
+ try{localStorage.setItem('natty_crm_cur',id)}catch(e){}
+}
+async function render(){
+ $('#crumb').innerHTML=crumbFor(CUR);
+ $('#main').innerHTML=schemaManqueBanner()+await renderView(CUR);
+ afterRender(CUR);
+}
+function crumbFor(cle){
+ if(cle==='dash')return'<b>Accueil</b>';
+ if(cle==='taches')return'Pilotage · <b>Toutes les tâches</b>';
+ if(cle.startsWith('projet:')){
+  const p=S.projets.find(x=>x.id===cle.slice(7));if(!p)return'<b>Projet</b>';
+  const a=ACT_BY_CLE[p.activite];
+  return `${a?esc(a.nom):''} · Projet · <b>${esc(p.nom)}</b>`;
+ }
+ const a=ACT_BY_CLE[cle];return a?`Activité · <b>${esc(a.nom)}</b>`:'<b>—</b>';
+}
+function schemaManqueBanner(){
+ if(!SCHEMA_MANQUANT)return'';
+ return `<div class="exbar"><span class="chip bad">Tables manquantes</span><span>Les tables du CRM (<span class="mono">crm_taches</span>, <span class="mono">crm_projets</span>…) n'existent pas encore — exécuter <span class="mono">natty_crm.sql</span> dans Supabase.</span></div>`;
+}
+async function renderView(cle){
+ if(cle==='dash')return await vDash();
+ if(cle==='taches')return vTachesGlobal();
+ if(cle.startsWith('projet:'))return await vProjetPage(cle.slice(7));
+ return await vActivite(cle);
+}
+const AFTER={};
+function afterRender(cle){(AFTER[cle]||(()=>{}))()}
+
+const ph=(t,p,acts='')=>`<div class="ph"><div><h1>${esc(t)}</h1>${p?`<p>${esc(p)}</p>`:''}</div><div class="acts">${acts}</div></div>`;
+function tabs(id,list,def){const cur=SUB[id]||def||list[0][0];return{cur,html:`<div class="tabs" role="tablist" data-tabs="${id}">${list.map(([k,l,b])=>`<button role="tab" data-sub="${k}" aria-selected="${k===cur}">${esc(l)}${b!=null?` <span class="b">${b}</span>`:''}</button>`).join('')}</div>`}}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-sub]');if(t){const p=t.closest('[data-tabs]');SUB[p.dataset.tabs]=t.dataset.sub;render()}});
+
+/* ============ ACCUEIL — récap de tous les projets ============ */
+async function vDash(){
+ const urgentes=S.taches.filter(t=>can(t.activite)&&t.statut!=='fait'&&t.echeance).sort((a,b)=>a.echeance.localeCompare(b.echeance));
+ const heros=urgentes.slice(0,10);
+ const tb=tabs('dash',[['projets','Projets'],['mapping','Mapping général']]);
+ let body='';
+ if(tb.cur==='projets')body=vAccueilProjets();
+ if(tb.cur==='mapping')body=vMappingGeneral();
+ return ph(`Bonjour ${esc(STAFF_NOM||'')}`,`${TODAY.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · ${urgentes.length} échéance${urgentes.length>1?'s':''} en cours`,`<button class="btn primary" data-new="projet">+ Projet</button>`)+
+ (heros.length?`<div class="hero-carousel">${heros.map(heroCard).join('')}</div>`:`<div class="empty">Aucune échéance en cours. Les tâches avec une date arrivent ici.</div>`)+
+ tb.html+body;
+}
+function heroCard(t){
+ const ji=joursInfo(t.echeance);
+ const a=ACT_BY_CLE[t.activite]||{};
+ return `<div class="hero-card ${ji.j<=1?'urgent':''}" data-open-tache="${t.id}">
+  <div class="hc-top"><span class="hc-act">${esc(a.nom||t.activite)}</span></div>
+  <div class="hc-days">${ji.j<0?'+'+Math.abs(ji.j):ji.j}<small> ${ji.j<0?'j de retard':ji.j===0?"aujourd'hui":ji.j===1?'demain':'j restants'}</small></div>
+  <b>${esc(t.titre)}</b>
+ </div>`;
+}
+function vAccueilProjets(){
+ const projets=S.projets.filter(p=>can(p.activite));
+ return `<div class="sect"><h2>Tous les projets</h2><span>${projets.length}</span></div>
+ <div class="grid g3">${projets.map(projetCard).join('')||'<div class="empty">Aucun projet — « + Projet » pour en créer un.</div>'}</div>
+ <div class="sect"><h2>Tâches à faire maintenant</h2><span>Toutes activités confondues, hors routines</span></div>
+ ${groupesTaches(S.taches.filter(t=>can(t.activite)&&!t.routine))}`;
+}
+function projetCard(p){
+ const a=ACT_BY_CLE[p.activite]||{};
+ const ts=S.taches.filter(t=>t.projet_id===p.id);
+ const fait=ts.filter(t=>t.statut==='fait').length;
+ return `<div class="card lift click" data-go="projet:${p.id}"><h3>${esc(p.nom)} <span class="chip ${p.statut==='termine'?'ok':p.statut==='abandonne'?'bad':p.statut==='en_pause'?'warn':'info'}">${{actif:'actif',en_pause:'en pause',termine:'terminé',abandonne:'abandonné'}[p.statut]}</span></h3>
+ <p class="sub"><span class="dot" style="display:inline-block;background:${a.couleur||'var(--muted)'};margin:0 6px 0 0;vertical-align:middle"></span>${esc(a.nom||p.activite)}${p.responsable?' · '+esc(p.responsable):''}</p>
+ <div class="prog"><div class="bar"><i style="width:${p.avancement}%"></i></div><span class="num">${p.avancement}%</span></div>
+ <div class="muted" style="font-size:12px;margin-top:8px">${ts.length?fait+'/'+ts.length+' tâches faites':'aucune tâche liée'}${p.echeance?' · '+fd(p.echeance):''}</div></div>`;
+}
+/* Le mapping général : TOUS les projets, toutes activités confondues, sur
+   un seul canevas glissable — pour voir d'un coup d'œil où en est chaque
+   initiative. Positionnable comme les blocs de schéma, mais sans liens :
+   ici on situe, le détail des relations vit dans le schéma DE CHAQUE projet. */
+function vMappingGeneral(){
+ const projets=S.projets.filter(p=>can(p.activite));
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 10px">Glissez un projet pour le repositionner. Cliquez pour l'ouvrir.</p>
+ <div class="schema-wrap" id="mapWrap">
+  ${projets.length?'':'<div class="schema-empty">Aucun projet à cartographier.</div>'}
+  ${projets.map((p,i)=>mapNodeHtml(p,i)).join('')}
+ </div>`;
+}
+function mapNodeHtml(p,i){
+ const a=ACT_BY_CLE[p.activite]||{};
+ const x=p.x!=null?p.x:10+(i%4)*22;
+ const y=p.y!=null?p.y:10+Math.floor(i/4)*24;
+ return `<div class="sblock" data-projet-noeud="${p.id}" style="left:${x}%;top:${y}%;border-color:${a.couleur||'var(--line)'}">
+  <div class="sb-ic" style="color:${a.couleur||'var(--ink)'}"><svg viewBox="0 0 24 24">${ICON[a.icone]||ICON.projet}</svg></div>
+  <b>${esc(p.nom)}</b>
+  <div class="sb-due">${esc(a.nom||p.activite)}${p.echeance?' · '+fd(p.echeance):''}</div>
+ </div>`;
+}
+function wireDashIfPresent(){
+ const mapWrap=$('#mapWrap');if(!mapWrap)return;
+ attacherDragPositionnable(mapWrap,'[data-projet-noeud]',(el,x,y)=>sauverPositionProjet(el.dataset.projetNoeud,x,y));
+ mapWrap.addEventListener('click',e=>{
+  const bl=e.target.closest('[data-projet-noeud]');
+  if(bl&&Date.now()-DERNIER_DRAG_TS>150)go('projet:'+bl.dataset.projetNoeud);
+ });
+}
+async function sauverPositionProjet(id,x,y){
+ const p=S.projets.find(pr=>pr.id===id);if(p){p.x=x;p.y=y}
+ await sb('crm_projets?id=eq.'+id,{method:'PATCH',body:JSON.stringify({x,y})});
+}
+
+/* ============ TOUTES LES TÂCHES ============ */
+function vTachesGlobal(){
+ const tb=tabs('taches',[['liste','Liste'],['porteurs','Par porteur']]);
+ const mine=SUB.taches==='porteurs';
+ let b='';
+ if(!mine)b=groupesTaches(S.taches.filter(t=>can(t.activite)));
+ else{
+  const noms=[...new Set(S.staff.map(s=>s.nom).filter(Boolean)),''];
+  b=`<div class="grid g3">${noms.map(p=>{const ts=S.taches.filter(t=>can(t.activite)&&t.porteur===p&&t.statut!=='fait');return `<div class="card lift"><h3><span class="who"><span class="av ${p?'dk':''}">${p?ini(p):'?'}</span>${p||'Sans porteur'}</span><span class="chip ${!p&&ts.length?'warn':''}">${ts.length}</span></h3><div class="list">${ts.map(t=>`<div class="li c" data-open-tache="${t.id}"><div class="grow" style="font-size:13px">${esc(t.titre)}</div></div>`).join('')||'<div class="muted" style="font-size:12.5px">Aucune tâche ouverte</div>'}</div></div>`}).join('')}</div>`;
+ }
+ return ph('Toutes les tâches','Toutes activités confondues, triées par priorité et échéance',`<button class="btn primary" data-new="tache">Nouvelle tâche</button>`)+tb.html+b;
+}
+function groupesTaches(list){
+ const ordreP={haute:0,moyenne:1,basse:2};
+ const todayStr=TODAY.toISOString().slice(0,10);
+ const grp=[
+  ['En retard',t=>t.statut!=='fait'&&t.echeance&&t.echeance<todayStr],
+  ['Cette semaine',t=>t.statut!=='fait'&&t.echeance&&t.echeance>=todayStr&&(new Date(t.echeance)-TODAY)<7*864e5],
+  ['Plus tard',t=>t.statut!=='fait'&&(!t.echeance||(new Date(t.echeance)-TODAY)>=7*864e5)],
+  ['Terminées',t=>t.statut==='fait']
+ ];
+ return grp.map(([l,f])=>{
+  const ts=list.filter(f).sort((a,b)=>(ordreP[a.priorite]??1)-(ordreP[b.priorite]??1)||(a.echeance||'9999').localeCompare(b.echeance||'9999'));
+  return ts.length?`<div class="sect"><h2>${l}</h2><span>${ts.length}</span></div><div class="card lift"><div class="list">${ts.map(taskLi).join('')}</div></div>`:'';
+ }).join('')||'<div class="empty">Aucune tâche</div>';
+}
+function taskLi(t){
+ const a=ACT_BY_CLE[t.activite];
+ return `<div class="li c ${t.statut==='fait'?'done':''}" data-open-tache="${t.id}"><button class="check" role="checkbox" aria-checked="${t.statut==='fait'}" data-tdone="${t.id}" aria-label="Terminer"></button><div class="grow"><b style="font-weight:500">${esc(t.titre)}</b><div class="meta">${own(t.porteur)} · ${t.echeance?fd(t.echeance):'sans échéance'}${a?' · '+esc(a.nom):''}</div></div><span class="chip ${t.priorite==='haute'?'bad':t.priorite==='moyenne'?'warn':''}">${t.priorite}</span></div>`;
+}
+document.addEventListener('click',e=>{
+ const c=e.target.closest('[data-tdone]');
+ if(c){e.stopPropagation();e.preventDefault();basculerTache(c.dataset.tdone);return}
+ const o=e.target.closest('[data-open-tache]');
+ if(o&&!e.target.closest('[data-tdone]'))openTache(o.dataset.openTache);
+});
+async function basculerTache(id){
+ const t=S.taches.find(x=>x.id===id);if(!t)return;
+ const nv=t.statut==='fait'?'a_faire':'fait';
+ await sb('crm_taches?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:nv})});
+ t.statut=nv;badges();render();
+}
+
+/* ============ PAGE D'UNE ACTIVITÉ ============ */
+async function vActivite(cle){
+ const a=ACT_BY_CLE[cle];if(!a)return'<p>Activité inconnue</p>';
+ const [{blocs,liens},docs]=await Promise.all([chargerSchema(cle),chargerDocs(cle)]);
+ const tachesAct=S.taches.filter(t=>t.activite===cle);
+ const routine=tachesAct.filter(t=>t.routine);
+ const projets=S.projets.filter(p=>p.activite===cle);
+ const onglets=[['taches','Tâches',tachesAct.filter(t=>!t.routine&&t.statut!=='fait').length],['projets','Sous-projets',projets.length],['schema','Schéma',blocs.length],['drive','Drive',docs.length]];
+ if(cle==='logistique')onglets.push(['commandes','Commandes']);
+ const tb=tabs('act-'+cle,onglets);
+ let body='';
+ if(tb.cur==='taches')body=groupesTaches(tachesAct.filter(t=>!t.routine));
+ if(tb.cur==='projets')body=vProjets(cle,projets);
+ if(tb.cur==='schema')body=vSchema(cle,blocs,liens);
+ if(tb.cur==='drive')body=vDrive(cle,docs);
+ if(tb.cur==='commandes')body=await vCommandesLogistique();
+ return ph(a.nom,`Tâches, sous-projets, drive et schéma de ${a.nom.toLowerCase()}`,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
+  routineHero(cle,routine)+tb.html+body;
+}
+function routineHero(cle,list){
+ if(!list.length)return'';
+ const restant=list.filter(t=>t.statut!=='fait');
+ return `<div class="routine"><h3>Routine à valider en premier <span class="chip" style="background:rgba(255,255,255,.14);color:#fff">${restant.length}/${list.length}</span></h3><div class="list">${list.map(t=>`<div class="li ${t.statut==='fait'?'done':''}"><button class="check" role="checkbox" aria-checked="${t.statut==='fait'}" data-tdone="${t.id}" aria-label="Terminer"></button><div class="grow"><b style="font-weight:500">${esc(t.titre)}</b></div></div>`).join('')}</div></div>`;
+}
+
+/* Sous-projets (dans une activité) — chaque carte ouvre la page dédiée du
+   projet, exactement comme depuis l'accueil : une seule destination. */
+function vProjets(cle,projets){
+ return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn sm" data-new="projet" data-activite="${cle}">+ Sous-projet</button></div>`+
+ (projets.length?`<div class="grid g3">${projets.map(p=>{
+  const ts=S.taches.filter(t=>t.projet_id===p.id);
+  const fait=ts.filter(t=>t.statut==='fait').length;
+  return `<div class="card lift click" data-go="projet:${p.id}"><h3>${esc(p.nom)} <span class="chip ${p.statut==='termine'?'ok':p.statut==='abandonne'?'bad':p.statut==='en_pause'?'warn':'info'}">${{actif:'actif',en_pause:'en pause',termine:'terminé',abandonne:'abandonné'}[p.statut]}</span></h3>${p.description?`<p class="sub">${esc(p.description)}</p>`:''}<div class="prog"><div class="bar"><i style="width:${p.avancement}%"></i></div><span class="num">${p.avancement}%</span></div><div class="muted" style="font-size:12px;margin-top:8px">${p.responsable?'👤 '+esc(p.responsable)+' · ':''}${ts.length?fait+'/'+ts.length+' tâches faites':'aucune tâche liée'}${p.echeance?' · '+fd(p.echeance):''}</div></div>`;
+ }).join('')}</div>`:'<div class="empty">Aucun sous-projet pour cette activité</div>');
+}
+
+/* ============ PAGE D'UN PROJET ============ */
+async function vProjetPage(id){
+ const p=S.projets.find(x=>x.id===id);
+ if(!p){go('dash');return'';}
+ const a=ACT_BY_CLE[p.activite]||{};
+ const [,docsAll]=await Promise.all([chargerSchemaProjet(id),chargerDocs(p.activite)]);
+ const {blocs,liens}=SCHEMA_CACHE['projet:'+id];
+ const docs=docsAll.filter(d=>d.projet_id===id);
+ const ts=S.taches.filter(t=>t.projet_id===id);
+ const fait=ts.filter(t=>t.statut==='fait').length;
+ return ph(p.nom,a.nom||p.activite,`<button class="btn ghost" data-go="${p.activite}">← ${esc(a.nom||p.activite)}</button>`)+
+ `<div class="grid g2" style="align-items:start">
+  <div class="card lift">
+   <h3>Synthèse</h3>
+   <form class="form" id="projForm">
+    <label>Description<textarea class="inp" id="pDesc">${esc(p.description||'')}</textarea></label>
+    <div class="two"><label>Statut<select id="pStatut">${['actif','en_pause','termine','abandonne'].map(s=>`<option value="${s}" ${s===p.statut?'selected':''}>${{actif:'Actif',en_pause:'En pause',termine:'Terminé',abandonne:'Abandonné'}[s]}</option>`).join('')}</select></label><label>Échéance<input class="inp" id="pEch" type="date" value="${p.echeance||''}"></label></div>
+    <div class="two"><label>Responsable<select id="pResp">${peopleOptions(p.responsable)}</select></label><label>Avancement <b class="num">${p.avancement}%</b><input type="range" id="pAvc" min="0" max="100" value="${p.avancement}"></label></div>
+    <div class="foot"><button type="button" class="btn sm ghost" data-recalc-avc="${id}">Recalculer depuis les tâches</button><button class="btn primary sm" type="submit">Enregistrer</button></div>
+   </form>
+   <div class="muted" style="font-size:12px;margin-top:10px">${ts.length?fait+'/'+ts.length+' tâches faites':'aucune tâche liée'}</div>
+  </div>
+  <div class="card lift">
+   <h3>Drive &amp; liens <button class="btn sm" data-new="document" data-activite="${p.activite}" data-projet="${id}">+ Document</button></h3>
+   <div class="list">${docs.map(docLi).join('')||'<div class="empty">Aucun document lié</div>'}</div>
+  </div>
+ </div>
+ <div class="sect"><h2>Schéma du projet</h2><span>Étapes, jalons et décisions propres à ${esc(p.nom)}</span></div>
+ ${vSchema('projet:'+id,blocs,liens,{activite:p.activite,projet:id})}
+ <div class="sect"><h2>Tâches</h2><span>${ts.length}</span><button class="btn sm" data-new="tache" data-activite="${p.activite}" data-projet="${id}" style="margin-left:auto">+ Tâche</button></div>
+ <div class="card lift"><div class="list">${ts.map(taskLi).join('')||'<div class="empty">Aucune tâche liée</div>'}</div></div>`;
+}
+function wireProjetPage(id){
+ const form=$('#projForm');if(!form)return;
+ const p=S.projets.find(x=>x.id===id);if(!p)return;
+ form.onsubmit=async e=>{
+  e.preventDefault();
+  const patch={description:$('#pDesc').value,statut:$('#pStatut').value,echeance:$('#pEch').value||null,avancement:+$('#pAvc').value,responsable:$('#pResp').value||null};
+  await sb('crm_projets?id=eq.'+id,{method:'PATCH',body:JSON.stringify(patch)});
+  Object.assign(p,patch);toast('Projet mis à jour');render();
+ };
+ $('[data-recalc-avc]')?.addEventListener('click',()=>{
+  const ts=S.taches.filter(t=>t.projet_id===id);
+  if(!ts.length){toast('Aucune tâche à mesurer');return}
+  const pct=Math.round(100*ts.filter(t=>t.statut==='fait').length/ts.length);
+  $('#pAvc').value=pct;
+  const out=form.querySelector('label b');if(out)out.textContent=pct+'%';
+ });
+}
+
+/* Drive */
+function vDrive(cle,docs){
+ const dossiers=[...new Set(docs.map(d=>d.dossier||'Sans dossier'))];
+ return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn sm" data-new="document" data-activite="${cle}">+ Document</button></div>`+
+ (docs.length?dossiers.map(dName=>`<div class="sect"><h2 style="font-size:15px">${esc(dName)}</h2></div><div class="card lift"><div class="list">${docs.filter(d=>(d.dossier||'Sans dossier')===dName).map(docLi).join('')}</div></div>`).join(''):'<div class="empty">Aucun document. Ajoutez un lien (Drive, Notion, PDF…) pour cette activité.</div>');
+}
+function docLi(d){
+ return `<div class="li"><span class="dot"></span><div class="grow"><b style="font-weight:500"><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.nom)}</a></b><div class="meta">${d.type?esc(d.type)+' · ':''}${d.ajoute_par?'ajouté par '+esc(d.ajoute_par):''}</div></div><button class="btn sm ghost" data-del-doc="${d.id}">Retirer</button></div>`;
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-del-doc]');if(b)supprimerDoc(b.dataset.delDoc)});
+async function supprimerDoc(id){
+ await sb('crm_documents?id=eq.'+id,{method:'DELETE'});
+ Object.keys(DOCS_CACHE).forEach(k=>DOCS_CACHE[k]=DOCS_CACHE[k].filter(d=>d.id!==id));
+ toast('Document retiré');render();
+}
+
+/* Commandes (Logistique) — lit les VRAIES tables de production, pas de
+   doublon : on affiche un résumé et on renvoie vers admin.html pour le
+   travail fin (attribution, Gantt cuisine, assemblage), déjà éprouvé là-bas. */
+async function vCommandesLogistique(){
+ const r=await sbTry('bons_commande?select=id,user_id,type,nb_repas,jour_livraison,statut,semaine&order=jour_livraison.asc.nullslast&limit=100');
+ if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">bons_commande</span> — session d'équipe requise, ou table absente.</span></div>`;
+ const bons=r.data;
+ const aTraiter=bons.filter(b=>b.statut==='a_attribuer'||!b.jour_livraison).length;
+ const attribues=bons.filter(b=>b.statut==='attribue'||b.statut==='en_production').length;
+ const livres=bons.filter(b=>b.statut==='livre').length;
+ const lab={a_attribuer:['bad','À attribuer'],attribue:['info','Attribué'],en_production:['warn','En production'],livre:['ok','Livré'],annule:['','Annulé']};
+ return `<div class="grid g4" style="margin-bottom:14px"><div class="card kpi"><div class="lbl">Bons (100 derniers)</div><div class="val num">${bons.length}</div></div><div class="card kpi"><div class="lbl">À traiter</div><div class="val num" style="color:var(--red)">${aTraiter}</div></div><div class="card kpi"><div class="lbl">Attribués / en production</div><div class="val num">${attribues}</div></div><div class="card kpi"><div class="lbl">Livrés</div><div class="val num">${livres}</div></div></div>
+ <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><a class="btn primary sm" href="/admin.html" target="_blank" rel="noopener">Ouvrir la production complète →</a></div>
+ <div class="tbl-wrap"><table><thead><tr><th>Type</th><th>Repas</th><th>Semaine</th><th>Livraison</th><th>Statut</th></tr></thead><tbody>${bons.slice(0,30).map(b=>`<tr><td><span class="chip">${esc(b.type)}</span></td><td class="num">${b.nb_repas}</td><td>${b.semaine?fd(b.semaine):'—'}</td><td>${b.jour_livraison?fd(b.jour_livraison):'<span class="chip bad">sans date</span>'}</td><td><span class="chip ${(lab[b.statut]||['',''])[0]}">${(lab[b.statut]||['',b.statut])[1]}</span></td></tr>`).join('')||'<tr><td colspan="5" class="muted" style="text-align:center;padding:24px">Aucun bon</td></tr>'}</tbody></table></div>`;
+}
+
+/* ============ SCHÉMA ÉDITABLE (drag + liens) ============
+   « portee » identifie le schéma : la clé d'une activité (schéma partagé,
+   pour ce qui ne dépend d'aucun projet précis) ou 'projet:<id>' (schéma
+   propre à CE projet). Un seul schéma est jamais affiché à la fois, donc
+   un identifiant DOM fixe (#schemaWrap) suffit — pas besoin de le rendre
+   dynamique. */
+function vSchema(portee,blocs,liens,ctx){
+ ctx=ctx||{activite:portee};
+ return `<div class="schema-toolbar">
+  <button class="btn sm" data-new="bloc" data-activite="${ctx.activite}" ${ctx.projet?`data-projet="${ctx.projet}"`:''}>+ Bloc</button>
+  <button class="btn sm ${LINK_MODE?'primary':'ghost'}" id="btnLinkMode"><svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2">${ICON.link}</svg> Relier deux blocs</button>
+  <span class="muted" style="font-size:12px;align-self:center">Glisser pour déplacer · cliquer pour modifier${LINK_MODE?' · cliquez deux blocs pour les relier':''}</span>
+ </div>
+ <div class="schema-wrap ${LINK_MODE?'linking':''}" id="schemaWrap" data-portee="${portee}">
+  ${blocs.length?'':'<div class="schema-empty">Aucun bloc. « + Bloc » pour poser la première étape du scénario.</div>'}
+  <svg class="schema-svg" id="schemaSvg"></svg>
+  ${blocs.map(blocHtml).join('')}
+ </div>`;
+}
+function blocHtml(b){
+ const ji=joursInfo(b.echeance);
+ const ic=b.icone&&ICON[b.icone]?b.icone:(CAT_BY_CLE[b.categorie]||{}).icone||'schema';
+ const meta=[b.echeance?fd(b.echeance)+' · '+ji.label:'',b.porteur?'👤 '+esc(b.porteur):''].filter(Boolean).join(' · ');
+ return `<div class="sblock ${b.statut==='fait'?'done':''}" data-bloc="${b.id}" style="left:${b.x}%;top:${b.y}%;${b.statut==='fait'?'opacity:.55':''}">
+  <button class="sb-del" data-del-bloc="${b.id}" aria-label="Supprimer">×</button>
+  <div class="sb-ic"><svg viewBox="0 0 24 24">${ICON[ic]}</svg></div>
+  <b>${esc(b.titre)}</b>
+  ${meta?`<div class="sb-due ${ji.cls}">${meta}</div>`:''}
+ </div>`;
+}
+function wireSchemaIfPresent(){
+ const wrap=$('#schemaWrap');if(!wrap)return;
+ dessinerLiens(wrap);
+ const btnLink=$('#btnLinkMode');if(btnLink)btnLink.onclick=()=>{LINK_MODE=!LINK_MODE;LINK_FROM=null;render()};
+ attacherDragPositionnable(wrap,'.sblock',(bl,x,y)=>sauverPositionBloc(bl.dataset.bloc,x,y));
+ wrap.addEventListener('click',e=>{
+  const del=e.target.closest('[data-del-bloc]');
+  if(del){e.stopPropagation();supprimerBloc(del.dataset.delBloc);return}
+  const bl=e.target.closest('.sblock');
+  if(!bl)return;
+  if(Date.now()-DERNIER_DRAG_TS<150)return;   // c'était un glisser, pas un clic
+  if(LINK_MODE){e.stopPropagation();clicBlocPourLien(bl.dataset.bloc,wrap);return}
+  ouvrirEditionBloc(bl.dataset.bloc);
+ });
+}
+/* Glisser-déposer générique : sert au schéma (blocs) ET au mapping général
+   (projets). Le seuil de 4 px distingue un clic d'un vrai déplacement ; le
+   timestamp posé ici est relu par les gestionnaires de clic pour ignorer
+   le clic fantôme qui suit un relâchement de glissement. */
+function attacherDragPositionnable(wrap,selector,onDrop){
+ wrap.addEventListener('pointerdown',e=>{
+  if(LINK_MODE)return;
+  const bl=e.target.closest(selector);
+  if(!bl||e.target.closest('[data-del-bloc]'))return;
+  const wrapRect=wrap.getBoundingClientRect();
+  const blRect=bl.getBoundingClientRect();
+  const startLeft=blRect.left-wrapRect.left,startTop=blRect.top-wrapRect.top;
+  const startX=e.clientX,startY=e.clientY;
+  let moved=false;
+  function onMove(ev){
+   const dx=ev.clientX-startX,dy=ev.clientY-startY;
+   if(Math.abs(dx)>4||Math.abs(dy)>4)moved=true;
+   const nl=Math.max(0,Math.min(wrapRect.width-40,startLeft+dx));
+   const nt=Math.max(0,Math.min(wrapRect.height-40,startTop+dy));
+   bl.style.left=nl+'px';bl.style.top=nt+'px';
+   if(wrap.id==='schemaWrap')dessinerLiens(wrap);
+  }
+  function onUp(){
+   document.removeEventListener('pointermove',onMove);
+   document.removeEventListener('pointerup',onUp);
+   if(!moved)return;
+   DERNIER_DRAG_TS=Date.now();
+   const rect=bl.getBoundingClientRect();
+   const wr=wrap.getBoundingClientRect();
+   const xPct=Math.max(0,Math.min(92,((rect.left-wr.left)/wr.width)*100));
+   const yPct=Math.max(0,Math.min(92,((rect.top-wr.top)/wr.height)*100));
+   onDrop(bl,xPct,yPct);
+  }
+  document.addEventListener('pointermove',onMove);
+  document.addEventListener('pointerup',onUp);
+ });
+}
+async function sauverPositionBloc(id,x,y){
+ const portee=Object.keys(SCHEMA_CACHE).find(c=>(SCHEMA_CACHE[c].blocs||[]).some(b=>b.id===id));
+ if(portee){const b=SCHEMA_CACHE[portee].blocs.find(b=>b.id===id);if(b){b.x=x;b.y=y}}
+ await sb('crm_schema_blocs?id=eq.'+id,{method:'PATCH',body:JSON.stringify({x,y})});
+}
+function dessinerLiens(wrap){
+ const svg=wrap.querySelector('#schemaSvg')||wrap.querySelector('.schema-svg');if(!svg)return;
+ const portee=wrap.dataset.portee;const liens=(SCHEMA_CACHE[portee]||{}).liens||[];
+ const wr=wrap.getBoundingClientRect();
+ svg.innerHTML=liens.map(l=>{
+  const a=wrap.querySelector(`[data-bloc="${l.bloc_source}"]`),b=wrap.querySelector(`[data-bloc="${l.bloc_cible}"]`);
+  if(!a||!b)return'';
+  const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+  const x1=ra.left-wr.left+ra.width/2,y1=ra.top-wr.top+ra.height/2;
+  const x2=rb.left-wr.left+rb.width/2,y2=rb.top-wr.top+rb.height/2;
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><line class="lienhit" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" data-del-lien="${l.id}"/>`;
+ }).join('');
+ svg.querySelectorAll('[data-del-lien]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();supprimerLien(el.dataset.delLien)}));
+}
+async function clicBlocPourLien(id,wrap){
+ if(!LINK_FROM){LINK_FROM=id;const el=wrap.querySelector(`[data-bloc="${id}"]`);if(el)el.classList.add('selected');return}
+ if(LINK_FROM===id){LINK_FROM=null;render();return}
+ const portee=wrap.dataset.portee;
+ await sb('crm_schema_liens',{method:'POST',headers:{'Prefer':'return=representation,resolution=ignore-duplicates'},body:JSON.stringify({bloc_source:LINK_FROM,bloc_cible:id})});
+ LINK_FROM=null;delete SCHEMA_CACHE[portee];render();
+}
+async function supprimerBloc(id){
+ const portee=Object.keys(SCHEMA_CACHE).find(c=>(SCHEMA_CACHE[c].blocs||[]).some(b=>b.id===id));
+ await sb('crm_schema_blocs?id=eq.'+id,{method:'DELETE'});
+ if(portee)delete SCHEMA_CACHE[portee];
+ toast('Bloc supprimé');closeAll();render();
+}
+async function supprimerLien(id){
+ const portee=Object.keys(SCHEMA_CACHE).find(c=>(SCHEMA_CACHE[c].liens||[]).some(l=>l.id===id));
+ await sb('crm_schema_liens?id=eq.'+id,{method:'DELETE'});
+ if(portee)delete SCHEMA_CACHE[portee];
+ render();
+}
+/* Modifier un bloc après coup — indispensable dès qu'il porte un
+   collaborateur et une catégorie, sinon on ne pourrait plus jamais les
+   corriger sans supprimer/recréer. Le statut du bloc et celui de sa tâche
+   auto-créée restent synchronisés : deux vérités qui divergent, c'est le
+   défaut qui coûte le plus cher à trouver plus tard. */
+function trouverBloc(id){
+ for(const c of Object.keys(SCHEMA_CACHE)){const b=(SCHEMA_CACHE[c].blocs||[]).find(x=>x.id===id);if(b)return b}
+ return null;
+}
+function ouvrirEditionBloc(id){
+ const b=trouverBloc(id);if(!b)return;
+ modal(`<h2>Modifier le bloc</h2><form class="form" id="editBlocForm">
+  <label>Titre<input class="inp" id="eb1" value="${esc(b.titre)}" required></label>
+  <div class="two"><label>Catégorie<select id="eb2">${CATEGORIES.map(c=>`<option value="${c.cle}" ${c.cle===b.categorie?'selected':''}>${c.label}</option>`).join('')}</select></label><label>Échéance<input class="inp" id="eb3" type="date" value="${b.echeance||''}"></label></div>
+  <div class="two"><label>Porteur<select id="eb4">${peopleOptions(b.porteur)}</select></label><label>Statut<select id="eb5">${['a_venir','en_cours','fait','bloque'].map(s=>`<option value="${s}" ${s===b.statut?'selected':''}>${{a_venir:'À venir',en_cours:'En cours',fait:'Fait',bloque:'Bloqué'}[s]}</option>`).join('')}</select></label></div>
+  ${b.tache_id?'<p class="muted" style="font-size:12px">Lié à une tâche — la mettre à jour ajuste aussi la tâche.</p>':''}
+  <div class="foot"><button type="button" class="btn danger sm" data-del-bloc="${b.id}">Supprimer</button><button class="btn primary sm" type="submit">Enregistrer</button></div>
+ </form>`);
+ $('[data-del-bloc]')?.addEventListener('click',()=>supprimerBloc(b.id));
+ $('#editBlocForm').onsubmit=async e=>{
+  e.preventDefault();
+  const patch={titre:$('#eb1').value,categorie:$('#eb2').value,echeance:$('#eb3').value||null,porteur:$('#eb4').value||null,statut:$('#eb5').value};
+  await sb('crm_schema_blocs?id=eq.'+id,{method:'PATCH',body:JSON.stringify(patch)});
+  Object.assign(b,patch);
+  if(b.tache_id){
+   const map={a_venir:'a_faire',en_cours:'en_cours',fait:'fait',bloque:'bloque'};
+   const tPatch={titre:patch.titre,porteur:patch.porteur,echeance:patch.echeance,statut:map[patch.statut]};
+   await sb('crm_taches?id=eq.'+b.tache_id,{method:'PATCH',body:JSON.stringify(tPatch)});
+   const t=S.taches.find(x=>x.id===b.tache_id);if(t)Object.assign(t,tPatch);
+  }
+  closeAll();toast('Bloc mis à jour');badges();render();
+ };
+}
+const _origAfterRender=afterRender;
+afterRender=function(cle){
+ _origAfterRender(cle);
+ wireSchemaIfPresent();
+ if(cle==='dash')wireDashIfPresent();
+ if(cle.startsWith('projet:'))wireProjetPage(cle.slice(7));
+};
+
+/* ============ TÂCHE — DRAWER (historique texte, documents liés) ============ */
+async function openTache(id){
+ const t=S.taches.find(x=>x.id===id);if(!t)return;
+ drawer(`<div class="dh"><div class="av lg dk">${ini(t.titre)}</div><div><span class="chip">${esc((ACT_BY_CLE[t.activite]||{}).nom||t.activite)}</span><h2>${esc(t.titre)}</h2></div><button class="x" data-close aria-label="Fermer">×</button></div><div class="empty">Chargement…</div>`);
+ const [hist,docs]=await Promise.all([sbTry('crm_taches_historique?tache_id=eq.'+id+'&select=*&order=created_at.desc'),sbTry('crm_documents?tache_id=eq.'+id+'&select=*')]);
+ const historique=hist.ok?hist.data:[];
+ const docsTache=docs.ok?docs.data:[];
+ drawer(`<div class="dh"><div class="av lg dk">${ini(t.titre)}</div><div style="min-width:0"><span class="chip">${esc((ACT_BY_CLE[t.activite]||{}).nom||t.activite)}</span><h2>${esc(t.titre)}</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <form class="form" id="tacheForm">
+  <label>Titre<input class="inp" id="tTitre" value="${esc(t.titre)}" required></label>
+  <label>Description<textarea class="inp" id="tDesc">${esc(t.description||'')}</textarea></label>
+  <div class="two"><label>Porteur<select id="tPorteur">${peopleOptions(t.porteur)}</select></label><label>Échéance<input class="inp" id="tEch" type="date" value="${t.echeance||''}"></label></div>
+  <div class="two"><label>Priorité<select id="tPrio">${['haute','moyenne','basse'].map(p=>`<option ${p===t.priorite?'selected':''}>${p}</option>`).join('')}</select></label><label>Statut<select id="tStatut">${['a_faire','en_cours','bloque','fait'].map(s=>`<option value="${s}" ${s===t.statut?'selected':''}>${{a_faire:'À faire',en_cours:'En cours',bloque:'Bloqué',fait:'Fait'}[s]}</option>`).join('')}</select></label></div>
+  <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="tRoutine" ${t.routine?'checked':''} style="width:auto"> Tâche de routine (à valider en priorité sur la page de l'activité)</label>
+  <div class="foot"><button type="button" class="btn danger sm" data-del-tache="${t.id}">Supprimer</button><button class="btn primary sm" type="submit">Enregistrer</button></div>
+ </form>
+ <div class="sect"><h2 style="font-size:15px">Documents liés (${docsTache.length})</h2><button class="btn sm" data-new="document" data-activite="${t.activite}" data-tache="${t.id}">+ Document</button></div>
+ <div class="list">${docsTache.map(docLi).join('')||'<div class="empty">Aucun document</div>'}</div>
+ <div class="sect"><h2 style="font-size:15px">Historique</h2></div>
+ <form class="form" id="noteForm" style="margin-bottom:6px"><textarea class="inp" id="noteTxt" placeholder="Ajouter une note (texte)…" style="min-height:56px"></textarea><div class="foot"><button class="btn sm primary" type="submit">Ajouter au fil</button></div></form>
+ <div class="list">${historique.map(h=>`<div class="li"><span class="dot ${h.type==='statut'?'info':''}"></span><div class="grow"><div style="white-space:pre-wrap">${esc(h.contenu||'')}</div><div class="meta">${h.auteur?esc(h.auteur)+' · ':''}${new Date(h.created_at).toLocaleString('fr-FR')}</div></div></div>`).join('')||'<div class="empty">Rien pour le moment — le fil se remplit avec vos notes et les changements de statut.</div>'}</div>`);
+ $('#tacheForm').onsubmit=async e=>{
+  e.preventDefault();
+  const patch={titre:$('#tTitre').value,description:$('#tDesc').value,porteur:$('#tPorteur').value||null,echeance:$('#tEch').value||null,priorite:$('#tPrio').value,statut:$('#tStatut').value,routine:$('#tRoutine').checked};
+  await sb('crm_taches?id=eq.'+id,{method:'PATCH',body:JSON.stringify(patch)});
+  Object.assign(t,patch);closeAll();toast('Tâche mise à jour');badges();render();
+ };
+ $('#noteForm').onsubmit=async e=>{
+  e.preventDefault();const v=$('#noteTxt').value.trim();if(!v)return;
+  await sb('crm_taches_historique',{method:'POST',body:JSON.stringify({tache_id:id,auteur:STAFF_NOM,type:'texte',contenu:v})});
+  closeAll();openTache(id);
+ };
+ $('[data-del-tache]')?.addEventListener('click',async()=>{
+  if(!confirm('Supprimer cette tâche ?'))return;
+  await sb('crm_taches?id=eq.'+id,{method:'DELETE'});
+  S.taches=S.taches.filter(x=>x.id!==id);closeAll();badges();render();
+ });
+}
+
+/* ============ FORMULAIRES DE CRÉATION ============ */
+const activiteSelectHtml=sel=>ACTIVITES.filter(a=>can(a.cle)).map(a=>`<option value="${a.cle}" ${a.cle===sel?'selected':''}>${esc(a.nom)}</option>`).join('');
+const F={
+ tache:(ctx)=>({t:'Nouvelle tâche',f:`
+  <label>Activité<select id="f1">${activiteSelectHtml(ctx.activite||(can(CUR)&&ACT_BY_CLE[CUR]?CUR:''))}</select></label>
+  <label>Titre<input class="inp" id="f2" required></label>
+  <div class="two"><label>Porteur<select id="f3">${peopleOptions('')}</select></label><label>Échéance<input class="inp" id="f4" type="date"></label></div>
+  <div class="two"><label>Priorité<select id="f5">${['haute','moyenne','basse'].map(p=>`<option ${p==='moyenne'?'selected':''}>${p}</option>`).join('')}</select></label><label>Routine ?<select id="f6"><option value="0">Non</option><option value="1">Oui</option></select></label></div>`,
+  ok:async()=>{
+   const body={activite:$('#f1').value,titre:$('#f2').value,porteur:$('#f3').value||null,echeance:$('#f4').value||null,priorite:$('#f5').value,routine:$('#f6').value==='1',projet_id:ctx.projet||null};
+   const r=await sb('crm_taches',{method:'POST',body:JSON.stringify(body)});
+   S.taches.push(r[0]);toast('Tâche créée');badges();render();
+  }}),
+ projet:(ctx)=>({t:'Nouveau projet',f:`
+  <label>Activité<select id="f1">${activiteSelectHtml(ctx.activite||(can(CUR)&&ACT_BY_CLE[CUR]?CUR:''))}</select></label>
+  <label>Nom<input class="inp" id="f2" required></label>
+  <label>Description<textarea class="inp" id="f3"></textarea></label>
+  <div class="two"><label>Responsable<select id="f4">${peopleOptions('')}</select></label><label>Échéance<input class="inp" id="f5" type="date"></label></div>`,
+  ok:async()=>{
+   const body={activite:$('#f1').value,nom:$('#f2').value,description:$('#f3').value,responsable:$('#f4').value||null,echeance:$('#f5').value||null,x:10+Math.random()*70,y:10+Math.random()*60};
+   const r=await sb('crm_projets',{method:'POST',body:JSON.stringify(body)});
+   S.projets.push(r[0]);toast('Projet créé');go('projet:'+r[0].id);
+  }}),
+ document:(ctx)=>({t:'Ajouter un document',f:`
+  <label>Activité<select id="f1">${activiteSelectHtml(ctx.activite||CUR)}</select></label>
+  <label>Nom<input class="inp" id="f2" required></label>
+  <label>Lien (URL)<input class="inp" id="f3" type="url" required placeholder="https://…"></label>
+  <div class="two"><label>Type<select id="f4">${opt(['lien','pdf','sheet','doc','image','autre'])}</select></label><label>Dossier<input class="inp" id="f5" placeholder="ex. Contrats"></label></div>`,
+  ok:async()=>{
+   const body={activite:$('#f1').value,nom:$('#f2').value,url:$('#f3').value,type:$('#f4').value,dossier:$('#f5').value||null,projet_id:ctx.projet||null,tache_id:ctx.tache||null,ajoute_par:STAFF_NOM};
+   const r=await sb('crm_documents',{method:'POST',body:JSON.stringify(body)});
+   const cle=body.activite;DOCS_CACHE[cle]=[r[0],...(DOCS_CACHE[cle]||[])];
+   toast('Document ajouté');render();
+  }}),
+ bloc:(ctx)=>({t:'Nouveau bloc de schéma',f:`
+  <label>Titre<input class="inp" id="f1" required></label>
+  <div class="two"><label>Catégorie<select id="f2">${CATEGORIES.map(c=>`<option value="${c.cle}">${c.label}</option>`).join('')}</select></label><label>Échéance<input class="inp" id="f3" type="date"></label></div>
+  <div class="two"><label>Porteur<select id="f4">${peopleOptions('')}</select></label><label>Illustration<select id="f5">${opt(ICONES_BLOC,'auto')}</select></label></div>
+  <p class="muted" style="font-size:12px;margin:0">Un porteur assigné crée aussi une tâche dans son tableau.</p>`,
+  ok:async()=>{
+   const portee=ctx.projet?'projet:'+ctx.projet:ctx.activite;
+   const categorie=$('#f2').value;
+   const iconeSel=$('#f5').value;
+   const icone=iconeSel==='auto'?(CAT_BY_CLE[categorie]||{}).icone||'schema':iconeSel;
+   const porteur=$('#f4').value||null;
+   const echeance=$('#f3').value||null;
+   const body={activite:ctx.activite,projet_id:ctx.projet||null,titre:$('#f1').value,categorie,icone,porteur,echeance,x:10+Math.random()*60,y:10+Math.random()*55};
+   const rBloc=await sb('crm_schema_blocs',{method:'POST',body:JSON.stringify(body)});
+   const bloc=rBloc[0];
+   if(porteur){
+    const rTache=await sb('crm_taches',{method:'POST',body:JSON.stringify({activite:ctx.activite,projet_id:ctx.projet||null,titre:body.titre,porteur,echeance,priorite:'moyenne'})});
+    S.taches.push(rTache[0]);
+    await sb('crm_schema_blocs?id=eq.'+bloc.id,{method:'PATCH',body:JSON.stringify({tache_id:rTache[0].id})});
+    bloc.tache_id=rTache[0].id;
+    toast('Bloc ajouté, tâche créée pour '+porteur);
+   } else toast('Bloc ajouté');
+   delete SCHEMA_CACHE[portee];badges();render();
+  }})
+};
+const opt=(a,sel)=>a.map(x=>`<option ${x===sel?'selected':''}>${x}</option>`).join('');
+function openForm(k,ctx){
+ const d=F[k](ctx||{});
+ modal(`<h2>${d.t}</h2><p class="muted" style="margin:0;font-size:13px">Tracé au nom de ${esc(STAFF_NOM)}.</p><form class="form" id="mf">${d.f}<div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Enregistrer</button></div></form>`);
+ $('#mf').onsubmit=async e=>{e.preventDefault();closeAll();await d.ok()};
+}
+document.addEventListener('click',e=>{
+ const n=e.target.closest('[data-new]');
+ if(n){e.preventDefault();closeAll();openForm(n.dataset.new,{activite:n.dataset.activite,projet:n.dataset.projet,tache:n.dataset.tache})}
+ const g=e.target.closest('[data-go]');
+ if(g){e.preventDefault();closeAll();go(g.dataset.go)}
+});
+
+/* ============ DRAWER / MODALE / PALETTE ============ */
+function drawer(h){$('#drawer').innerHTML=h;$('#drawer').classList.add('on');$('#scrim').classList.add('on');$('#drawer').setAttribute('aria-hidden','false')}
+function modal(h){$('#modal').innerHTML=h;$('#modal').classList.add('on');$('#scrim').classList.add('on');const f=$('#modal').querySelector('input,select,textarea');if(f)setTimeout(()=>f.focus(),50)}
+function closeAll(){['#drawer','#modal','#pal','#pop'].forEach(s=>$(s).classList.remove('on'));$('#scrim').classList.remove('on');$('#side').classList.remove('on');$('#drawer').setAttribute('aria-hidden','true')}
+$('#scrim').onclick=closeAll;
+document.addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeAll()});
+function pop(anchor,html){const p=$('#pop');p.innerHTML=html;p.classList.add('on');const r=anchor.getBoundingClientRect();const w=Math.max(200,p.offsetWidth);p.style.top=(r.bottom+8)+'px';p.style.left=Math.max(12,Math.min(window.innerWidth-w-12,r.right-w))+'px'}
+document.addEventListener('click',e=>{if(!e.target.closest('#pop')&&!e.target.closest('#createBtn'))$('#pop').classList.remove('on')});
+$('#createBtn').onclick=e=>{
+ e.stopPropagation();closeAll();
+ const activite=can(CUR)&&ACT_BY_CLE[CUR]?CUR:(CUR.startsWith('projet:')?(S.projets.find(p=>p.id===CUR.slice(7))||{}).activite:null);
+ pop(e.currentTarget,[['projet','Projet'],['tache','Tâche'],['document','Document']].map(([k,l])=>`<button data-new="${k}" ${activite?`data-activite="${activite}"`:''}>+ ${l}</button>`).join(''));
+};
+
+let palSel=0,palItems=[];
+function palRender(q){
+ q=(q||'').toLowerCase();const it=[];
+ [['dash','Accueil'],['taches','Toutes les tâches']].filter(([id])=>can(id)).forEach(([id,l])=>it.push({g:'Pages',l,s:'',fn:()=>go(id)}));
+ ACTIVITES.filter(a=>can(a.cle)).forEach(a=>it.push({g:'Activités',l:a.nom,s:'',fn:()=>go(a.cle)}));
+ S.taches.forEach(t=>it.push({g:'Tâches',l:t.titre,s:own(t.porteur).replace(/<[^>]+>/g,''),fn:()=>openTache(t.id)}));
+ S.projets.forEach(p=>it.push({g:'Projets',l:p.nom,s:(ACT_BY_CLE[p.activite]||{}).nom||'',fn:()=>go('projet:'+p.id)}));
+ palItems=it.filter(i=>!q||(i.l+' '+i.s).toLowerCase().includes(q)).slice(0,30);palSel=0;let last='';
+ $('#palRes').innerHTML=palItems.map((i,k)=>{const h=i.g!==last?`<div class="gh">${i.g}</div>`:'';last=i.g;return h+`<div class="r ${k===0?'sel':''}" data-pi="${k}">${esc(i.l)}<small>${esc(i.s)}</small></div>`}).join('')||'<div class="empty" style="margin:10px">Rien trouvé</div>';
+}
+function openPal(){closeAll();$('#pal').classList.add('on');$('#scrim').classList.add('on');$('#palIn').value='';palRender('');setTimeout(()=>$('#palIn').focus(),30)}
+$('#openPal').onclick=openPal;
+$('#palIn').addEventListener('input',e=>palRender(e.target.value));
+$('#palIn').addEventListener('keydown',e=>{
+ const rs=[...document.querySelectorAll('#palRes .r')];
+ if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();palSel=Math.max(0,Math.min(rs.length-1,palSel+(e.key==='ArrowDown'?1:-1)));rs.forEach((r,i)=>r.classList.toggle('sel',i===palSel));rs[palSel]?.scrollIntoView({block:'nearest'})}
+ if(e.key==='Enter'&&palItems[palSel]){const f=palItems[palSel].fn;closeAll();f()}
+});
+$('#palRes').addEventListener('click',e=>{const r=e.target.closest('[data-pi]');if(r){const f=palItems[+r.dataset.pi].fn;closeAll();f()}});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPal()}if(e.key==='Escape')closeAll()});
+$('#menuBtn').onclick=()=>{$('#side').classList.add('on');$('#scrim').classList.add('on')};
+
+/* ============ AUTH ============ */
+async function connexionSupabase(email,pwd){
+ const res=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});
+ const d=await res.json().catch(()=>null);
+ if(!res.ok||!d||!d.access_token)return null;
+ return{access_token:d.access_token,refresh_token:d.refresh_token||'',user_id:(d.user&&d.user.id)||''};
+}
+window.login=async function(){
+ const pwd=$('#pwdInput').value,email=$('#emailInput').value.trim();
+ const errEl=$('#loginErr');errEl.textContent='';
+ if(!email||!pwd){errEl.textContent='Email et mot de passe requis';return}
+ const session=await connexionSupabase(email,pwd);
+ if(!session){errEl.textContent='Email ou mot de passe incorrect';return}
+ ecrireStaffSession(session);
+ let ligne=null;
+ try{ligne=(await sb('staff?user_id=eq.'+session.user_id+'&select=*&limit=1'))[0]||null}catch(e){}
+ if(!ligne||!ligne.actif){ecrireStaffSession(null);errEl.textContent="Ce compte n'a pas de rôle d'équipe actif (voir natty_staff.sql).";return}
+ STAFF_ROLE=ligne.role;STAFF_NOM=ligne.nom||email.split('@')[0];
+ await demarrerApp();
+};
+function logout(){ecrireStaffSession(null);STAFF_ROLE=null;$('#mainApp').classList.add('hide');$('#loginScreen').style.display='flex';$('#pwdInput').value='';$('#emailInput').value=''}
+document.addEventListener('DOMContentLoaded',()=>{
+ $('#loginBtn').addEventListener('click',window.login);
+ $('#pwdInput').addEventListener('keydown',e=>{if(e.key==='Enter')window.login()});
+ $('#logoutBtn').addEventListener('click',logout);
+ if(STAFF_SESSION&&STAFF_SESSION.user_id){
+  sb('staff?user_id=eq.'+STAFF_SESSION.user_id+'&select=*&limit=1').then(async r=>{
+   const ligne=r&&r[0];
+   if(!ligne||!ligne.actif){ecrireStaffSession(null);return}
+   STAFF_ROLE=ligne.role;STAFF_NOM=ligne.nom||'Équipe';
+   await demarrerApp();
+  }).catch(()=>ecrireStaffSession(null));
+ }
+});
+async function demarrerApp(){
+ $('#loginScreen').style.display='none';
+ $('#mainApp').classList.remove('hide');
+ $('#meAv').textContent=ini(STAFF_NOM);
+ $('#meNom').textContent=STAFF_NOM;
+ $('#meRole').textContent=(ROLES[STAFF_ROLE]||{}).l||STAFF_ROLE;
+ await chargerBase();
+ try{const c=localStorage.getItem('natty_crm_cur');if(c&&can(c))CUR=c;else CUR='dash'}catch(e){CUR='dash'}
+ renderNav();
+ await render();
+}
+</script>
+</body>
+</html>
