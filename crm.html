@@ -510,24 +510,27 @@ function can(cle){
 }
 
 /* ============ ÉTAT ============ */
-let S={taches:[],projets:[],staff:[],sessions:[]};
+let S={taches:[],projets:[],staff:[],sessions:[],profils:[]};
 let SCHEMA_CACHE={};   // {portee: {blocs:[...], liens:[...]}} — portee = activité ('commercial') ou 'projet:<id>'
 let DOCS_CACHE={};     // {activite: [...]} — le drive de l'activité entière
 let CUR='dash',SUB={};
 let LINK_MODE=false,LINK_FROM=null,DERNIER_DRAG_TS=0;
 
 async function chargerBase(){
- const [t,p,st,se]=await Promise.all([
+ const [t,p,st,se,pf]=await Promise.all([
   sbTry('crm_taches?select=*&order=echeance.asc.nullslast'),
   sbTry('crm_projets?select=*&order=echeance.asc.nullslast'),
   sbTry('staff?select=user_id,nom,role,statut&actif=eq.true'),
-  sbTry('crm_sessions?select=id,bloc_id,type,statut_reservation')
+  sbTry('crm_sessions?select=id,bloc_id,type,statut_reservation'),
+  sbTry('crm_profils_types?select=*&order=nom.asc')
  ]);
  S.taches=t.ok?t.data:[];
  S.projets=p.ok?p.data:[];
  S.staff=st.ok?st.data:[];
  S.sessions=se.ok?se.data:[];
+ S.profils=pf.ok?pf.data:[];
 }
+function profilDe(id){return S.profils.find(x=>x.id===id)}
 async function chargerSchemaPortee(portee,filtreSQL){
  if(SCHEMA_CACHE[portee])return SCHEMA_CACHE[portee];
  const [b,l]=await Promise.all([sbTry('crm_schema_blocs?'+filtreSQL+'&select=*'),sbTry('crm_schema_liens?select=*')]);
@@ -1330,12 +1333,21 @@ function ouvrirNouveauBloc(ctx){
    <label>Date de référence (le « J » du modèle — la date de livraison pour Test produit)<input class="inp" id="bmDateRef" type="date" required></label>
    <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Voir l'aperçu →</button></div>
   </form>`);
+  // §4.3 feature 7 : « propose le bloc Test produit pré-rempli avec les
+  // données de la fiche » — ctx.prefill (posé par le pipeline Commercial
+  // au passage à l'étape « Test ») écrase la valeur par défaut du
+  // paramètre quand les deux portent la même clé (lieu, nb_beneficiaires
+  // — celles que le modèle « Test produit » attend, 0004_modele_test_
+  // produit.sql). Sans effet sur un bloc ouvert autrement (ctx.prefill
+  // absent, le comportement d'avant reste identique).
   const rendre=()=>{
    const m=modeles.find(x=>x.id===$('#bm1').value);
    $('#bmDesc').textContent=m.description||'';
+   const prefill=(ctx&&ctx.prefill)||{};
    $('#bmParams').innerHTML=(m.parametres||[]).map(p=>{
-    if(p.type==='choix')return `<label>${esc(p.label)}<select id="bp_${p.cle}">${p.options.map(o=>`<option value="${esc(o)}" ${o===p.defaut?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`;
-    return `<label>${esc(p.label)}<input class="inp" id="bp_${p.cle}" type="${p.type==='nombre'?'number':'text'}" value="${p.defaut??''}" ${p.requis?'required':''}></label>`;
+    const val=(p.cle in prefill&&prefill[p.cle]!=null&&prefill[p.cle]!=='')?prefill[p.cle]:p.defaut;
+    if(p.type==='choix')return `<label>${esc(p.label)}<select id="bp_${p.cle}">${p.options.map(o=>`<option value="${esc(o)}" ${o===val?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`;
+    return `<label>${esc(p.label)}<input class="inp" id="bp_${p.cle}" type="${p.type==='nombre'?'number':'text'}" value="${val??''}" ${p.requis?'required':''}></label>`;
    }).join('');
   };
   $('#bm1').onchange=rendre;rendre();
@@ -2546,7 +2558,7 @@ async function ouvrirBonsDuBloc(blocId){
    regroupe encore les cinq génériques (rien n'est perdu, juste déplacé) —
    « aucun chemin ne doit mener vers admin.html » : chaque vue est native. */
 const VUES={
- commercial:[['pipeline','Pipe des ventes','commercial'],['comptes','Comptes & contacts','rh'],['emailing','Emailing & phoning','mail'],['prospection','Base de prospection','funnel'],['gestion','Gestion','projet']],
+ commercial:[['pipeline','Pipe des ventes','commercial'],['profils','Profils','documents'],['comptes','Comptes & contacts','rh'],['emailing','Emailing & phoning','mail'],['prospection','Base de prospection','funnel'],['gestion','Gestion','projet']],
  production:[['dashboard','Tableau de bord','dash'],['commandes','Commandes','logistique'],['calendrier','Calendrier','calendar'],['stocks','Stocks','stocks'],['production','Production','production'],['livraison','Livraison','livraison'],['gestion','Gestion','projet']],
  logistique:[['tournees','Tournées','logistique'],['commandes','Commandes','livraison'],['gestion','Gestion','projet']]
 };
@@ -2603,6 +2615,7 @@ async function vGestionInterne(cle,tachesAct){
 async function rendreVueSpecifique(cle,vue){
  if(cle==='commercial'){
   if(vue==='pipeline')return vInterfaceCommercial();
+  if(vue==='profils')return vCommercialProfils();
   if(vue==='comptes')return await vCommerciauxContacts();
   if(vue==='emailing')return await vCommercialEmailing();
   if(vue==='prospection')return vCommercialProspection();
@@ -2706,19 +2719,26 @@ function vProjets(cle,projets){
    projet — c'est là « la fonctionnalité de schéma » demandée pour le pipeline,
    réutilisée plutôt que dupliquée (une deuxième version aurait divergé de la
    première à la moindre retouche, cf. CLAUDE.md sur ce piège précis). */
-const PIPELINE_ETAPES=[['prospection','Prospection'],['contact','Contact'],['proposition','Proposition'],['negociation','Négociation'],['client','Client'],['perdu','Perdu']];
+/* §4.3 feature 4 : les 8 étapes par défaut de la spec + « Perdu ». Les
+   profils portent leur PROPRE séquence recommandée (sequence_pipeline,
+   affichée sur leur fiche playbook) mais le kanban partagé reste sur
+   CETTE séquence commune — plusieurs jeux de colonnes selon le deal
+   affiché rendraient le tableau incomparable d'une carte à l'autre.
+   Voir la note de 0013_commercial_fondations.sql §1. */
+const PIPELINE_ETAPES=[['premier_contact','Premier contact'],['decouverte','Découverte'],['degustation','Dégustation'],['proposition','Proposition'],['test','Test'],['negociation','Négociation'],['signature','Signature'],['client_recurrent','Client récurrent'],['perdu','Perdu']];
 function vInterfaceCommercial(){
  const deals=S.projets.filter(p=>p.activite==='commercial');
- return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Glissez une carte pour changer son étape. Cliquez une carte pour l'ouvrir (schéma, tâches, drive).</p>
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Glissez une carte pour changer son étape — un suivi de l'étape actuelle est demandé avant de faire avancer un deal. Cliquez une carte pour l'ouvrir (fiche, playbook, suivi, schéma, tâches).</p>
  <div class="kanban" id="pipelineWrap">${PIPELINE_ETAPES.map(([k,l])=>{
-  const col=deals.filter(d=>(d.etape_pipeline||'prospection')===k);
+  const col=deals.filter(d=>(d.etape_pipeline||'premier_contact')===k);
   return `<div class="kanban-col" data-etape="${k}"><h4>${esc(l)} <span class="chip">${col.length}</span></h4>${col.map(dealCard).join('')||'<div class="empty" style="font-size:11px;padding:10px">—</div>'}</div>`;
  }).join('')}</div>
  <div class="sect"><h2>Ajouter au pipeline</h2></div>
  <button class="btn" data-new="projet" data-activite="commercial">+ Prospect / client</button>`;
 }
 function dealCard(p){
- return `<div class="kanban-card" draggable="true" data-deal="${p.id}"><b style="font-weight:600;font-size:12.5px;display:block;margin-bottom:3px">${esc(p.nom)}</b>${p.responsable?`<div class="muted" style="font-size:11px">👤 ${esc(p.responsable)}</div>`:''}${p.echeance?`<div class="muted" style="font-size:11px">${fd(p.echeance)}</div>`:''}</div>`;
+ const profil=profilDe(p.profil_id);
+ return `<div class="kanban-card" draggable="true" data-deal="${p.id}"><b style="font-weight:600;font-size:12.5px;display:block;margin-bottom:3px">${esc(p.nom)}</b>${profil?`<div class="muted" style="font-size:11px">${esc(profil.nom)}</div>`:''}${p.responsable?`<div class="muted" style="font-size:11px">👤 ${esc(p.responsable)}</div>`:''}${p.echeance?`<div class="muted" style="font-size:11px">${fd(p.echeance)}</div>`:''}</div>`;
 }
 let PIPELINE_DRAG=null;
 function wirePipelineIfPresent(){
@@ -2735,9 +2755,35 @@ function wirePipelineIfPresent(){
    e.preventDefault();col.classList.remove('over');
    if(!PIPELINE_DRAG)return;
    const etape=col.dataset.etape,id=PIPELINE_DRAG;PIPELINE_DRAG=null;
+   const p=S.projets.find(x=>x.id===id);if(!p)return;
+   const etapeActuelle=p.etape_pipeline||'premier_contact';
+   if(etape===etapeActuelle)return;
+   // §4.3 feature 5 : « passage à l'étape suivante bloqué tant que le
+   // minimum n'est pas rempli » — au moins UN suivi loggé à l'étape
+   // ACTUELLE. Ne s'applique qu'en AVANÇANT (index qui grandit) : revenir
+   // en arrière pour corriger une erreur, ou marquer « Perdu », n'a pas à
+   // exiger un suivi qu'on est justement en train de rattraper.
+   const iActuelle=PIPELINE_ETAPES.findIndex(x=>x[0]===etapeActuelle);
+   const iCible=PIPELINE_ETAPES.findIndex(x=>x[0]===etape);
+   if(iCible>iActuelle&&etape!=='perdu'){
+    const su=await sbTry('crm_suivi_etapes?projet_id=eq.'+id+'&etape=eq.'+etapeActuelle+'&select=id&limit=1');
+    if(!su.ok||!su.data.length){
+     toast('Ajoute un suivi de « '+(PIPELINE_ETAPES[iActuelle]||[])[1]+' » avant de faire avancer ce deal');
+     ouvrirNouveauSuivi(id,etapeActuelle);
+     return;
+    }
+   }
    await sb('crm_projets?id=eq.'+id,{method:'PATCH',body:JSON.stringify({etape_pipeline:etape})});
-   const p=S.projets.find(x=>x.id===id);if(p)p.etape_pipeline=etape;
+   p.etape_pipeline=etape;
    render();
+   // §4.3 feature 7 : passage à « Test » → propose le bloc Test produit,
+   // pré-rempli avec la fiche. Suggère, n'enchaîne pas tout seul — même
+   // philosophie que evaluerReglesApresBascule() pour le moteur de
+   // règles générique (§3.3 : « déterministe », pas « automatique sans
+   // validation »).
+   if(etape==='test'&&confirm('Deal passé à « Test » — proposer le bloc Test produit avec le lieu et l’effectif de la fiche ?')){
+    ouvrirNouveauBloc({activite:'commercial',projet:id,prefill:{lieu:p.lieu_livraison,nb_beneficiaires:p.effectif}});
+   }
   });
  });
  wrap.addEventListener('click',e=>{const c=e.target.closest('[data-deal]');if(c)go('projet:'+c.dataset.deal)});
@@ -2753,8 +2799,8 @@ function wirePipelineIfPresent(){
    fil d'interactions (email envoyé, appel passé), consultable par contact
    ou dans un flux unique toutes personnes confondues. */
 function vCommercialProspection(){
- const prospects=S.projets.filter(p=>p.activite==='commercial'&&(p.etape_pipeline||'prospection')==='prospection');
- return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Les deals encore au stade « Prospection » du pipeline. Faites-les avancer depuis <b>Pipe des ventes</b>.</p>
+ const prospects=S.projets.filter(p=>p.activite==='commercial'&&(p.etape_pipeline||'premier_contact')==='premier_contact');
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Les deals encore au stade « Premier contact » du pipeline. Faites-les avancer depuis <b>Pipe des ventes</b>.</p>
  <div class="grid g3">${prospects.map(projetCard).join('')||'<div class="empty">Aucun prospect pour l’instant — « + Prospect / client » dans le pipeline.</div>'}</div>`;
 }
 async function vCommerciauxContacts(){
@@ -2809,6 +2855,121 @@ document.addEventListener('click',e=>{
  if(oc)openContact(oc.dataset.openContact);
 });
 
+/* ============ COMMERCIAL — Profils types, le « système
+   d'apprentissage » (§4.3 feature 2, 6) ============
+   Six profils SEMÉS VIDES par la migration (0013 §7-8, même logique que
+   les deux comptes de la feature 8 — Pablo remplit). Chaque profil porte
+   son portrait/langage/playbook ET son catalogue d'arguments/objections,
+   ces derniers avec des compteurs incrémentés par les suivis (plus bas). */
+function vCommercialProfils(){
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Le portrait, le langage et les arguments de chaque profil — hérités par toute fiche client qui s'en réclame.</p>
+ <div class="grid g3">${S.profils.map(p=>`<div class="card lift click" data-ouvrir-profil="${p.id}"><h3>${esc(p.nom)}</h3><p class="sub">${p.portrait?esc(p.portrait).slice(0,80)+(p.portrait.length>80?'…':''):'Portrait à écrire'}</p></div>`).join('')||'<div class="empty">Aucun profil.</div>'}</div>`;
+}
+document.addEventListener('click',e=>{
+ const op=e.target.closest('[data-ouvrir-profil]');
+ if(op)ouvrirProfilDetail(op.dataset.ouvrirProfil);
+});
+async function ouvrirProfilDetail(id){
+ const p=profilDe(id);if(!p){toast('Profil introuvable');return}
+ const [ar,ob]=await Promise.all([
+  sbTry('crm_profil_arguments?profil_id=eq.'+id+'&select=*&order=created_at.asc'),
+  sbTry('crm_profil_objections?profil_id=eq.'+id+'&select=*&order=created_at.asc')
+ ]);
+ const arguments_=ar.ok?ar.data:[];
+ const objections=ob.ok?ob.data:[];
+ drawer(`<div class="dh"><div class="av lg dk">${ini(p.nom)}</div><div><h2>${esc(p.nom)}</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <form class="form" id="profilForm">
+  <label>Portrait<textarea class="inp" id="pf1">${esc(p.portrait||'')}</textarea></label>
+  <label>Motivations<textarea class="inp" id="pf2">${esc(p.motivations||'')}</textarea></label>
+  <label>Freins<textarea class="inp" id="pf3">${esc(p.freins||'')}</textarea></label>
+  <div class="two"><label>Langage à utiliser<textarea class="inp" id="pf4">${esc(p.langage_utiliser||'')}</textarea></label><label>Langage à éviter<textarea class="inp" id="pf5">${esc(p.langage_eviter||'')}</textarea></label></div>
+  <label>Offre recommandée<textarea class="inp" id="pf6">${esc(p.offre_recommandee||'')}</textarea></label>
+  <label>Preuves (témoignages, chiffres…)<textarea class="inp" id="pf7">${esc(p.preuves||'')}</textarea></label>
+  <div class="foot"><button class="btn primary sm" type="submit">Enregistrer le playbook</button></div>
+ </form>
+ <div class="sect"><h2 style="font-size:15px">Arguments <span class="muted" style="font-weight:400">— « qui convertissent »</span></h2></div>
+ <div class="list" style="margin-bottom:8px">${arguments_.map(argumentLi).join('')||'<div class="empty">Aucun argument enregistré.</div>'}</div>
+ <form class="form" id="argForm" style="margin-bottom:16px"><div class="two"><input class="inp" id="pfArg" placeholder="Nouvel argument…" style="grid-column:1/2"><button class="btn sm" type="submit" style="align-self:end">+ Ajouter</button></div></form>
+ <div class="sect"><h2 style="font-size:15px">Objections &amp; réponses</h2></div>
+ <div class="list" style="margin-bottom:8px">${objections.map(o=>`<div class="li"><div class="grow"><b style="font-weight:500">${esc(o.objection)}</b>${o.reponse?`<div class="meta" style="white-space:pre-wrap">${esc(o.reponse)}</div>`:''}</div><button class="btn sm ghost" data-del-objection="${o.id}">×</button></div>`).join('')||'<div class="empty">Aucune objection enregistrée.</div>'}</div>
+ <form class="form" id="objForm"><input class="inp" id="pfObj1" placeholder="Objection…" style="margin-bottom:6px"><textarea class="inp" id="pfObj2" placeholder="Réponse type…" style="min-height:52px;margin-bottom:6px"></textarea><button class="btn sm" type="submit">+ Ajouter</button></form>`);
+ $('#profilForm').onsubmit=async e=>{
+  e.preventDefault();
+  const patch={portrait:$('#pf1').value||null,motivations:$('#pf2').value||null,freins:$('#pf3').value||null,langage_utiliser:$('#pf4').value||null,langage_eviter:$('#pf5').value||null,offre_recommandee:$('#pf6').value||null,preuves:$('#pf7').value||null,updated_at:new Date().toISOString()};
+  await sb('crm_profils_types?id=eq.'+id,{method:'PATCH',body:JSON.stringify(patch)});
+  Object.assign(p,patch);toast('Playbook enregistré');closeAll();render();
+ };
+ $('#argForm').onsubmit=async e=>{
+  e.preventDefault();
+  const val=$('#pfArg').value.trim();if(!val)return;
+  await sb('crm_profil_arguments',{method:'POST',body:JSON.stringify({profil_id:id,argument:val})});
+  toast('Argument ajouté');ouvrirProfilDetail(id);
+ };
+ $('#objForm').onsubmit=async e=>{
+  e.preventDefault();
+  const val=$('#pfObj1').value.trim();if(!val)return;
+  await sb('crm_profil_objections',{method:'POST',body:JSON.stringify({profil_id:id,objection:val,reponse:$('#pfObj2').value||null})});
+  toast('Objection ajoutée');ouvrirProfilDetail(id);
+ };
+}
+function argumentLi(a){
+ const total=a.porte+a.neutre+a.rejete;
+ return `<div class="li"><div class="grow"><b style="font-weight:500">${esc(a.argument)}</b><div class="meta">${total?`✓ ${a.porte} a porté · ~ ${a.neutre} neutre · ✗ ${a.rejete} rejeté`:'jamais utilisé en suivi'}</div></div><button class="btn sm ghost" data-del-argument="${a.id}">×</button></div>`;
+}
+document.addEventListener('click',async e=>{
+ const da=e.target.closest('[data-del-argument]');
+ if(da){await sb('crm_profil_arguments?id=eq.'+da.dataset.delArgument,{method:'DELETE'});toast('Argument retiré');closeAll();render();return}
+ const dob=e.target.closest('[data-del-objection]');
+ if(dob){await sb('crm_profil_objections?id=eq.'+dob.dataset.delObjection,{method:'DELETE'});toast('Objection retirée');closeAll();render();return}
+});
+
+/* ============ COMMERCIAL — Bloc de suivi par étape (§4.3 feature 5-6)
+   Une interaction commerciale = une ligne crm_suivi_etapes, rattachée à
+   l'étape du pipeline où elle a eu lieu, plus les arguments utilisés
+   avec leur verdict (crm_suivi_arguments) — c'est CE geste qui
+   incrémente les compteurs de crm_profil_arguments (feature 6).
+   ⚠️ Le compteur est écrit en LU-PUIS-ÉCRIT (valeur en cache + 1), pas
+   par un `+1` SQL atomique côté base — PostgREST ne fait pas d'écriture
+   incrémentale sans fonction RPC dédiée, que ce module n'a pas. Deux
+   suivis du MÊME argument, soumis à quelques millisecondes d'écart,
+   perdraient un incrément (l'écriture la plus tardive écraserait la
+   première). Accepté sciemment : improbable dans une équipe de six sur
+   un même deal, pas verrouillé en base pour éviter d'ajouter une
+   fonction juste pour ce cas. */
+async function ouvrirNouveauSuivi(projetId,etapeDefaut){
+ const p=S.projets.find(x=>x.id===projetId);if(!p)return;
+ const profil=profilDe(p.profil_id);
+ const ar=profil?await sbTry('crm_profil_arguments?profil_id=eq.'+profil.id+'&select=*&order=created_at.asc'):{ok:true,data:[]};
+ const arguments_=ar.ok?ar.data:[];
+ const etape=etapeDefaut||p.etape_pipeline||'premier_contact';
+ modal(`<h2>Bloc de suivi — ${esc(p.nom)}</h2>
+ <form class="form" id="suiviForm">
+  <div class="two"><label>Étape<select id="sv1">${PIPELINE_ETAPES.map(([k,l])=>`<option value="${k}" ${k===etape?'selected':''}>${esc(l)}</option>`).join('')}</select></label><label>Date<input class="inp" id="sv2" type="date" value="${isoLocal(new Date())}"></label></div>
+  <div class="two"><label>Canal<select id="sv3">${opt(['email','téléphone','visio','présentiel','autre'])}</select></label><label>Interlocuteur<input class="inp" id="sv4"></label></div>
+  <label>Verbatims<textarea class="inp" id="sv5" placeholder="Ce qui a été dit, mot pour mot si possible"></textarea></label>
+  <label>Besoins exprimés<textarea class="inp" id="sv6"></textarea></label>
+  <label>Objections rencontrées<textarea class="inp" id="sv7"></textarea></label>
+  ${arguments_.length?`<label>Arguments utilisés<div style="display:grid;gap:6px">${arguments_.map(a=>`<div class="two" style="align-items:center"><span style="font-size:13px">${esc(a.argument)}</span><select class="inp sv-verdict" data-arg="${a.id}"><option value="">Non utilisé</option><option value="porte">A porté</option><option value="neutre">Neutre</option><option value="rejete">Rejeté</option></select></div>`).join('')}</div></label>`
+   :`<p class="muted" style="font-size:12px">${profil?'Ce profil n’a aucun argument enregistré — ajoutez-en depuis Profils pour en suivre l’efficacité.':'Ce deal n’a pas de profil — aucun argument à suivre.'}</p>`}
+  <div class="two"><label>Prochaine action<input class="inp" id="sv8"></label><label>Échéance<input class="inp" id="sv9" type="date"></label></div>
+  <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Enregistrer le suivi</button></div>
+ </form>`);
+ $('#suiviForm').onsubmit=async e=>{
+  e.preventDefault();
+  const body={projet_id:projetId,etape:$('#sv1').value,date:$('#sv2').value||isoLocal(new Date()),canal:$('#sv3').value||null,interlocuteur:$('#sv4').value||null,verbatims:$('#sv5').value||null,besoins:$('#sv6').value||null,objections:$('#sv7').value||null,prochaine_action:$('#sv8').value||null,echeance:$('#sv9').value||null,cree_par:STAFF_NOM};
+  const r=await sb('crm_suivi_etapes',{method:'POST',body:JSON.stringify(body)});
+  const suivi=r[0];
+  const verdicts=[...document.querySelectorAll('.sv-verdict')].map(s=>({argId:s.dataset.arg,verdict:s.value})).filter(x=>x.verdict);
+  for(const v of verdicts){
+   await sb('crm_suivi_arguments',{method:'POST',body:JSON.stringify({suivi_id:suivi.id,profil_argument_id:v.argId,verdict:v.verdict})});
+   const arg=arguments_.find(a=>a.id===v.argId);if(!arg)continue;
+   const patch={[v.verdict]:arg[v.verdict]+1};
+   await sb('crm_profil_arguments?id=eq.'+v.argId,{method:'PATCH',body:JSON.stringify(patch)});
+  }
+  closeAll();toast('Suivi enregistré'+(verdicts.length?' — '+verdicts.length+' argument(s) comptabilisé(s)':''));render();
+ };
+}
+
 /* ============ PAGE D'UN PROJET ============ */
 async function vProjetPage(id){
  const p=S.projets.find(x=>x.id===id);
@@ -2836,11 +2997,52 @@ async function vProjetPage(id){
    <div class="list">${docs.map(docLi).join('')||'<div class="empty">Aucun document lié</div>'}</div>
   </div>
  </div>
+ ${p.activite==='commercial'?await vFicheCommerciale(p):''}
  <div class="sect"><h2>Schéma du projet</h2><span>Étapes, jalons et décisions propres à ${esc(p.nom)}</span></div>
  ${vSchema('projet:'+id,blocs,liens,{activite:p.activite,projet:id})}
  <div class="sect"><h2>Tâches</h2><span>${ts.length}</span><button class="btn sm" data-new="tache" data-activite="${p.activite}" data-projet="${id}" style="margin-left:auto">+ Tâche</button></div>
  <div class="card lift"><div class="list">${ts.map(taskLi).join('')||'<div class="empty">Aucune tâche liée</div>'}</div></div>`;
 }
+
+/* ============ Fiche client + playbook + suivi (§4.3 feature 3, 5) —
+   greffée sur la page projet générique plutôt que réécrite à part :
+   toute la mécanique Schéma/Tâches/Drive au-dessus lui est déjà commune,
+   seule la partie « ce qui rend un deal différent d'un projet ordinaire »
+   est spécifique. */
+async function vFicheCommerciale(p){
+ const profil=profilDe(p.profil_id);
+ const su=await sbTry('crm_suivi_etapes?projet_id=eq.'+p.id+'&select=*&order=date.desc,created_at.desc');
+ const suivis=su.ok?su.data:[];
+ const etapeLabel=(PIPELINE_ETAPES.find(x=>x[0]===p.etape_pipeline)||[,p.etape_pipeline])[1];
+ return `<div class="sect"><h2>Fiche client</h2><span>${etapeLabel||'Étape non définie'}</span></div>
+ <div class="grid g2" style="align-items:start;margin-bottom:18px">
+  <div class="card lift">
+   <form class="form" id="ficheForm">
+    <label>Profil<select id="fc1"><option value="">— Profil —</option>${S.profils.map(x=>`<option value="${x.id}" ${x.id===p.profil_id?'selected':''}>${esc(x.nom)}</option>`).join('')}</select></label>
+    <div class="two"><label>Effectif / bénéficiaires<input class="inp" id="fc2" type="number" min="0" value="${p.effectif??''}"></label><label>Budget estimé (€)<input class="inp" id="fc3" type="number" min="0" value="${p.budget??''}"></label></div>
+    <div class="two"><label>Décideur<input class="inp" id="fc4" value="${esc(p.decideur||'')}"></label><label>Fréquence<input class="inp" id="fc5" value="${esc(p.frequence||'')}"></label></div>
+    <label>Lieu de livraison<input class="inp" id="fc6" value="${esc(p.lieu_livraison||'')}"></label>
+    <div class="foot"><button class="btn primary sm" type="submit">Enregistrer la fiche</button></div>
+   </form>
+  </div>
+  <div class="card lift">
+   <h3>Playbook ${profil?'— '+esc(profil.nom):''} ${profil?`<button class="btn sm ghost" data-ouvrir-profil="${profil.id}" style="margin-left:6px">Modifier le profil →</button>`:''}</h3>
+   ${!profil?'<p class="muted" style="font-size:12.5px">Choisissez un profil pour hériter de son portrait, son langage et ses arguments.</p>'
+    :[['Portrait',profil.portrait],['Motivations',profil.motivations],['Freins',profil.freins],['Langage à utiliser',profil.langage_utiliser],['Langage à éviter',profil.langage_eviter],['Offre recommandée',profil.offre_recommandee]]
+      .filter(([,v])=>v).map(([l,v])=>`<div style="margin-bottom:8px"><b style="font-size:12px">${l}</b><div style="font-size:12.5px;color:var(--muted);white-space:pre-wrap">${esc(v)}</div></div>`).join('')||'<p class="muted" style="font-size:12.5px">Playbook pas encore écrit — « Modifier le profil ».</p>'}
+  </div>
+ </div>
+ <div class="sect"><h2>Bloc de suivi</h2><span>${suivis.length}</span><button class="btn sm primary" data-nouveau-suivi="${p.id}" style="margin-left:auto">+ Suivi</button></div>
+ <div class="card lift"><div class="list">${suivis.map(suiviLi).join('')||'<div class="empty">Aucun suivi encore — « + Suivi » pour logger le premier échange.</div>'}</div></div>`;
+}
+function suiviLi(s){
+ const etapeLabel=(PIPELINE_ETAPES.find(x=>x[0]===s.etape)||[,s.etape])[1];
+ return `<div class="li"><div class="grow"><b style="font-weight:500">${fd(s.date)} — ${esc(etapeLabel||s.etape)}</b><div class="meta">${[s.canal,s.interlocuteur].filter(Boolean).map(esc).join(' · ')||'—'}${s.prochaine_action?' · prochaine action : '+esc(s.prochaine_action)+(s.echeance?' ('+fd(s.echeance)+')':''):''}</div>${s.verbatims?`<div style="font-size:12.5px;margin-top:4px;white-space:pre-wrap">${esc(s.verbatims)}</div>`:''}</div></div>`;
+}
+document.addEventListener('click',e=>{
+ const ns=e.target.closest('[data-nouveau-suivi]');
+ if(ns)ouvrirNouveauSuivi(ns.dataset.nouveauSuivi);
+});
 function wireProjetPage(id){
  const form=$('#projForm');if(!form)return;
  const p=S.projets.find(x=>x.id===id);if(!p)return;
@@ -2856,6 +3058,12 @@ function wireProjetPage(id){
   const pct=Math.round(100*ts.filter(t=>t.statut==='fait').length/ts.length);
   $('#pAvc').value=pct;
   const out=form.querySelector('label b');if(out)out.textContent=pct+'%';
+ });
+ $('#ficheForm')?.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const patch={profil_id:$('#fc1').value||null,effectif:$('#fc2').value?+$('#fc2').value:null,budget:$('#fc3').value?+$('#fc3').value:null,decideur:$('#fc4').value||null,frequence:$('#fc5').value||null,lieu_livraison:$('#fc6').value||null};
+  await sb('crm_projets?id=eq.'+id,{method:'PATCH',body:JSON.stringify(patch)});
+  Object.assign(p,patch);toast('Fiche client mise à jour');render();
  });
 }
 
@@ -3436,9 +3644,34 @@ const F={
   <label>Activité<select id="f1">${activiteSelectHtml(ctx.activite||(can(CUR)&&ACT_BY_CLE[CUR]?CUR:''))}</select></label>
   <label>Nom<input class="inp" id="f2" required></label>
   <label>Description<textarea class="inp" id="f3"></textarea></label>
-  <div class="two"><label>Responsable<select id="f4">${peopleOptions('')}</select></label><label>Échéance<input class="inp" id="f5" type="date"></label></div>`,
+  <div class="two"><label>Responsable<select id="f4">${peopleOptions('')}</select></label><label>Échéance<input class="inp" id="f5" type="date"></label></div>
+  <div id="wrapCommercial" class="hide">
+   <p class="muted" style="font-size:12px;margin:8px 0 4px">Fiche client (§4.3) — description et profil obligatoires pour un deal Commercial.</p>
+   <label>Profil<select id="f6"><option value="">— Profil —</option>${S.profils.map(p=>`<option value="${p.id}">${esc(p.nom)}</option>`).join('')}</select></label>
+   <div class="two"><label>Effectif / bénéficiaires<input class="inp" id="f7" type="number" min="0"></label><label>Budget estimé (€)<input class="inp" id="f8" type="number" min="0"></label></div>
+   <div class="two"><label>Décideur<input class="inp" id="f9"></label><label>Fréquence<input class="inp" id="f10" placeholder="ex. hebdomadaire"></label></div>
+   <label>Lieu de livraison<input class="inp" id="f11"></label>
+  </div>`,
   ok:async()=>{
-   const body={activite:$('#f1').value,nom:$('#f2').value,description:$('#f3').value,responsable:$('#f4').value||null,echeance:$('#f5').value||null,x:10+Math.random()*70,y:10+Math.random()*60};
+   const activite=$('#f1').value,description=$('#f3').value.trim();
+   // §4.3 feature 3, critère de réception : impossible de créer un
+   // client Commercial sans description ni profil. `ok()` est appelé
+   // APRÈS que openForm() ait déjà fermé la modale (même contrat que le
+   // formulaire Document, seul autre endroit qui valide ici) — le toast
+   // reste la seule façon de le dire, mais bloquer l'écriture est ce qui
+   // compte vraiment.
+   if(activite==='commercial'&&(!description||!$('#f6').value)){
+    toast('Un deal Commercial demande une description ET un profil');
+    throw new Error('description/profil manquants');
+   }
+   const body={activite,nom:$('#f2').value,description,responsable:$('#f4').value||null,echeance:$('#f5').value||null,x:10+Math.random()*70,y:10+Math.random()*60};
+   if(activite==='commercial'){
+    Object.assign(body,{
+     profil_id:$('#f6').value||null,etape_pipeline:'premier_contact',
+     effectif:$('#f7').value?+$('#f7').value:null,budget:$('#f8').value?+$('#f8').value:null,
+     decideur:$('#f9').value||null,frequence:$('#f10').value||null,lieu_livraison:$('#f11').value||null
+    });
+   }
    const r=await sb('crm_projets',{method:'POST',body:JSON.stringify(body)});
    S.projets.push(r[0]);toast('Projet créé');go('projet:'+r[0].id);
   }}),
@@ -3546,6 +3779,14 @@ function openForm(k,ctx){
  const d=F[k](ctx||{});
  modal(`<h2>${d.t}</h2><p class="muted" style="margin:0;font-size:13px">Tracé au nom de ${esc(STAFF_NOM)}.</p><form class="form" id="mf">${d.f}<div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Enregistrer</button></div></form>`);
  $('#mf').onsubmit=async e=>{e.preventDefault();closeAll();await d.ok()};
+ // F.projet seul porte #wrapCommercial (fiche client §4.3) — générique
+ // plutôt que d'apprendre à openForm() le détail d'un formulaire précis :
+ // no-op pour tout autre appel de F[k] qui n'a pas ce bloc.
+ const wc=$('#wrapCommercial');
+ if(wc){
+  const suivre=()=>wc.classList.toggle('hide',$('#f1').value!=='commercial');
+  $('#f1').addEventListener('change',suivre);suivre();
+ }
 }
 document.addEventListener('click',e=>{
  const n=e.target.closest('[data-new]');

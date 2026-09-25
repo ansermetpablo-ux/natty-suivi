@@ -417,3 +417,103 @@ personne qui réserve reste juge, cohérent avec « annoncé, pas simulé » (§
 Session 09 (Bloc Test produit) est donc désormais complète sur ses trois contrôles de
 capacité annoncés : plafond 350 plats/semaine, disponibilité des rôles, conflit de
 créneau cuisine. 🔄 Toujours non vérifié en conditions réelles.
+
+---
+
+## Session 11 — Commercial : profils, fiche client, pipeline, suivi (26/09/2026)
+
+Enchaînée après la clôture de la session 09. Le socle Commercial existant (5f0f647/
+7a4543e — `crm_projets.etape_pipeline`, `crm_contacts`, `crm_interactions`, un deal EST
+un sous-projet) couvrait les fondations, mais aucun « système d'apprentissage » (§4.3) :
+pas de profils types, pas de bloc de suivi, et un pipeline à 6 étapes ad hoc qui ne
+correspondait pas au défaut de la spec — sans étape « Test », le critère de réception
+n° 3 était structurellement impossible à satisfaire.
+
+### Ce qui a été fait
+
+- **`0013_commercial_fondations.sql`** — `crm_profils_types` (portrait, motivations,
+  freins, langage à utiliser/éviter, offre recommandée, preuves, `sequence_pipeline`
+  CONSULTATIVE — voir décisions), `crm_profil_arguments` (catalogue + compteurs
+  porté/neutre/rejeté sur la ligne), `crm_profil_objections`, `crm_suivi_etapes` (le
+  bloc de suivi, une ligne par interaction, `etape` COPIÉE au moment de la saisie —
+  l'historique ne doit pas se réécrire si le deal avance ensuite), `crm_suivi_arguments`
+  (le détail de chaque verdict). `crm_projets` étendu de `profil_id`/`budget`/
+  `effectif`/`decideur`/`frequence`/`lieu_livraison` (nullable — la table sert aussi
+  Production/Finance/RH, aucune régression). `crm_contacts` étendu de `fonction`/
+  `role_decision`/`reseaux_sociaux`.
+  ⚠️ **Appliquée en deux passes** : la première a échoué à l'insertion des deux comptes
+  de départ, faute d'avoir élargi `crm_projets_etape_pipeline_check` (encore les 6
+  anciennes valeurs). `apply_migration` étant transactionnel, l'échec a tout annulé —
+  vérifié avant de recommencer (aucune des nouvelles tables n'existait). Le fichier local
+  est la version REFAITE et seule appliquée, la correction intégrée directement.
+- **Pipeline passé aux 8 étapes par défaut de la spec** (`premier_contact` → `decouverte`
+  → `degustation` → `proposition` → `test` → `negociation` → `signature` →
+  `client_recurrent`) + `perdu`. Aucun deal n'existait encore (vérifié avant d'élargir la
+  contrainte) — rien à remapper.
+- **Fiche client obligatoire** (critère 1) : `F.projet` (formulaire générique de création
+  de projet) gagne un bloc `#wrapCommercial`, affiché seulement quand l'activité
+  choisie est Commercial, qui refuse la création sans description ET profil.
+- **Bloc de suivi avec verdicts d'arguments** (critère 2) : `ouvrirNouveauSuivi()` —
+  étape, date, canal, interlocuteur, verbatims, besoins, objections, prochaine action +
+  échéance, et un sélecteur de verdict (non utilisé/a porté/neutre/rejeté) par argument
+  du profil du deal. Chaque verdict enregistré incrémente le compteur correspondant sur
+  `crm_profil_arguments` (lu puis écrit — voir dette technique) et journalise la ligne
+  dans `crm_suivi_arguments`.
+- **Passage à l'étape suivante bloqué sans suivi minimum** : le glisser-déposer du
+  pipeline vérifie qu'au moins un suivi existe pour l'étape ACTUELLE avant d'accepter une
+  AVANCÉE (jamais en reculant, ni pour marquer « Perdu » — corriger une erreur ne doit
+  pas exiger le suivi qu'on est justement en train de rattraper). Sinon : le déplacement
+  est refusé, un toast l'explique, et le formulaire de suivi de l'étape s'ouvre direct.
+- **Passage à « Test » → bloc Test produit pré-rempli** (critère 3) : `ouvrirNouveauBloc()`
+  accepte désormais un `ctx.prefill` qui écrase la valeur par défaut d'un paramètre du
+  modèle quand les clés correspondent (`lieu`, `nb_beneficiaires` — celles qu'attend le
+  modèle « Test produit », 0004). Suggéré par confirmation, jamais enchaîné tout seul —
+  même philosophie que `evaluerReglesApresBascule()` du moteur générique (§3.3 :
+  « déterministe », pas « automatique sans validation »). Le bloc est créé avec
+  `ctx.projet` = le deal, donc ses tâches apparaissent directement sur la fiche Fnac.
+- **Nouvel onglet « Profils »** (Commercial) : liste des 6 profils, fiche éditable
+  (playbook complet) + gestion des arguments (ajout, compteurs affichés, retrait) et des
+  objections (avec réponse type).
+- **Fiche client greffée sur la page projet générique** (`vFicheCommerciale`) plutôt que
+  réécrite à part — la page projet porte déjà Schéma/Tâches/Drive pour tout deal, seule
+  la partie spécifique (profil, budget, effectif, décideur, fréquence, lieu, playbook
+  hérité en lecture, historique des suivis) s'ajoute par-dessus, visible seulement si
+  `activite==='commercial'`.
+- **Seed data** (§4.3 feature 8) : les 6 profils et les deux comptes Fnac Darty (grand
+  compte) / Romane Dicko (athlète égérie), tous à l'étape « premier_contact », **champs
+  vides** — Pablo remplit, même logique que le reste de ce chantier (les deux sessions
+  Test-Produit démo l'ont déjà fait pour d'autres données).
+
+### Décisions prises
+
+- **`sequence_pipeline` du profil est CONSULTATIVE, pas câblée au rendu du kanban.** La
+  spec demande des étapes « paramétrables par profil », mais un tableau kanban partagé
+  ne peut montrer qu'un seul jeu de colonnes sans se fragmenter en plusieurs tableaux
+  incomparables entre eux. Le pipeline reste sur UNE séquence commune (les 8 par défaut) ;
+  `sequence_pipeline` est affichée sur la fiche playbook du profil comme recommandation,
+  écart documenté dans la migration et dans le code plutôt que silencieux.
+- Le compteur d'arguments est lu-puis-écrit, pas un `+1` SQL atomique — accepté, PostgREST
+  n'a pas cette écriture sans fonction RPC dédiée, le risque de double-comptage manqué
+  est jugé négligeable pour une équipe de six.
+- Pas de tables `comptes`/`deals` séparées du schéma cible §5 : `crm_projets` reste le
+  compte/deal, cohérent avec la décision déjà prise en 5f0f647.
+
+### Dette technique / points ouverts
+
+- **Lien avec les clients existants de l'app, sans doublon** (§4.3 feature 1, dernière
+  clause) : PAS construit. Rapprocher un contact/compte CRM avec un `user_id` déjà
+  inscrit dans l'app (via `onboarding`) demanderait une recherche croisée et une UI de
+  rapprochement — non fait, à faire si Pablo le juge prioritaire.
+- **Kit documentaire** (`crm_profils_types.kit_documentaire`, jsonb) : colonne posée,
+  vide — son branchement réel est explicitement session 17 (Documents), pas avant.
+- **Événement `deal.etape_changee` générique** : câblé en dur pour le seul cas « Test »
+  (le seul que demande la spec et le critère de réception), pas remonté vers le moteur
+  de règles `crm_regles` comme un événement générique que d'autres règles pourraient
+  écouter. À généraliser si un second cas apparaît.
+- 🔄 **Rien vérifié avec une vraie session d'équipe** : `node --check`, relecture ligne à
+  ligne des fonctions nouvelles (aucun bug trouvé cette fois qui n'ait été corrigé avant
+  écriture — contrairement aux sessions 06/07). **À vérifier par Pablo** : créer un deal
+  sans description (doit être refusé), ajouter 3 arguments à un profil puis un suivi qui
+  en utilise 3 avec des verdicts différents (les compteurs doivent bouger), faire glisser
+  le deal Fnac Darty jusqu'à « Test » (doit demander confirmation puis pré-remplir lieu
+  et effectif dans le bloc Test produit).
