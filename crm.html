@@ -294,6 +294,10 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
 .pcal-bar{display:none}
 .pcal-bar.on{display:flex;position:sticky;bottom:12px;z-index:5;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-radius:var(--r-md);background:var(--bg);box-shadow:var(--nm-pop);border:1px solid var(--line);margin-bottom:14px;font-size:13px}
 .bon-l{display:grid;grid-template-columns:1fr 76px auto;gap:6px;align-items:center}
+.bl-q{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;font-weight:400;color:var(--muted);padding:0 2px 4px}
+.bl-q label{display:flex!important;flex-direction:row;align-items:center;gap:6px;font-weight:500}
+.bl-q .bl-g{width:86px!important}
+.bon-cible{display:grid;gap:8px;padding:10px 12px;border-radius:var(--r-md);background:var(--panel);font-size:13px;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -340,6 +344,8 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
 <div class="pop" id="pop"></div>
 <div class="toast" id="toast" role="status"></div>
 
+<script src="/assets/cibles-jour.js"></script>
+<script src="/assets/admin-production.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════
    Natty CRM — accueil (échéances urgentes + grille des activités),
@@ -1666,15 +1672,16 @@ const PROD_STATUTS={a_attribuer:['bad','À attribuer'],attribue:['info','Attribu
 const chipStatut=s=>{const l=PROD_STATUTS[s]||['',s];return `<span class="chip ${l[0]}">${esc(l[1])}</span>`};
 /* Les bons de commande ne portent pas de nom de client : les commandes
    saisies à la main le rangent en première ligne des notes. */
-const libBon=b=>{const n=(b.notes||'').split('\n')[0].trim();return n||(b.type==='abonnement'?'Abonnement':b.type==='unite'?'Commande à l’unité':'Commande')};
+const libBon=b=>{const n=(b.notes||'').split('\n')[0].trim();return n||clientNatty(b.user_id)||(b.type==='abonnement'?'Abonnement':b.type==='unite'?'Commande à l’unité':'Commande')};
 
 async function vInterfaceProduction(){
  if(!PROD.debut)PROD.debut=lundiLocal(new Date());
  const debut=new Date(PROD.debut),fin=new Date(debut);fin.setDate(fin.getDate()+PROD_SEMAINES*7-1);
  const d0=isoLocal(debut),d1=isoLocal(fin);
- const [r,sd]=await Promise.all([
-  sbTry('bons_commande?jour_livraison=gte.'+d0+'&jour_livraison=lte.'+d1+'&select=id,type,nb_repas,jour_livraison,statut,adresse,notes&order=jour_livraison.asc'),
-  sbTry('bons_commande?jour_livraison=is.null&statut=neq.annule&select=id,type,nb_repas,statut,adresse,notes&order=created_at.asc')
+ const [r,,sd]=await Promise.all([
+  sbTry('bons_commande?jour_livraison=gte.'+d0+'&jour_livraison=lte.'+d1+'&select=id,user_id,type,nb_repas,jour_livraison,statut,adresse,notes&order=jour_livraison.asc'),
+  chargerProd(),
+  sbTry('bons_commande?jour_livraison=is.null&statut=neq.annule&select=id,user_id,type,nb_repas,statut,adresse,notes&order=created_at.asc')
  ]);
  if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">bons_commande</span> — session d'équipe requise, ou table absente.</span></div>`;
  const bons=r.data,sansDate=sd.ok?sd.data:[];
@@ -1769,7 +1776,7 @@ document.addEventListener('click',e=>{
 });
 
 async function ouvrirJourProduction(jour){
- const r=await sbTry('bons_commande?jour_livraison=eq.'+jour+'&select=id,type,nb_repas,statut,adresse,notes&order=created_at.asc');
+ const r=await sbTry('bons_commande?jour_livraison=eq.'+jour+'&select=id,user_id,type,nb_repas,statut,adresse,notes&order=created_at.asc');
  const bons=r.ok?r.data:[];
  const bonIds=bons.map(b=>b.id);
  const attrR=bonIds.length?await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=bon_id,recette_id,nb_portions'):{ok:true,data:[]};
@@ -1790,21 +1797,25 @@ async function ouvrirJourProduction(jour){
  if(lc)lc.onclick=()=>listeCoursesJours([jour]);
 }
 
-/* ---- Saisir / modifier une commande ----
-   Une commande = une ligne `bons_commande` + ses `bons_attributions`
-   (recette × portions). Les attributions sont réécrites à l'enregistrement,
-   en CONSERVANT `facteur` et `kcal_portion` des recettes qui restent : c'est
-   admin.html qui les calcule (grammage par client), les effacer ferait
-   retomber la liste de courses sur la fiche standard sans prévenir. */
-let RECETTES_CACHE=null;
-async function recettesActives(){
- if(RECETTES_CACHE)return RECETTES_CACHE;
- const r=await sbTry('recettes?actif=eq.true&select=id,nom,nb_portions&order=nom.asc');
- RECETTES_CACHE=r.ok?r.data:[];
- return RECETTES_CACHE;
+/* ---- Saisir / modifier une commande ---- */
+/* Les portions, les kcal et les macros viennent de assets/admin-production.js
+   (NattyProd) — le MÊME calcul que la cuisine, jamais une copie : la règle
+   « un repas couvre 45 % du besoin journalier du client » et les grammes par
+   portion ne peuvent donc pas dire deux choses selon l'écran. Chargé une fois
+   par page (il lit recettes, fiches, ingredients_base et onboarding). */
+let PROD_DATA=null;
+function chargerProd(force){
+ if(!window.NattyProd)return Promise.resolve(null);
+ if(!PROD_DATA||force)PROD_DATA=NattyProd.charger().then(()=>NattyProd.etat).catch(e=>{PROD_DATA=null;console.warn(e);return null});
+ return PROD_DATA;
 }
+const clientNatty=uid=>{const E=window.NattyProd&&NattyProd.etat;return E&&E.charge&&E.clients[uid]?NattyProd.nomClient(uid):null};
+const fmtMac=m=>m?Math.round(m.p)+' g P · '+Math.round(m.g)+' g G · '+Math.round(m.l)+' g L':'';
+
 async function ouvrirFormBon(bonId,jourDefaut){
- let bon={type:'manuel',nb_repas:1,statut:'a_attribuer',jour_livraison:jourDefaut||isoLocal(new Date()),adresse:'',notes:''},attrs=[];
+ let bon={type:'manuel',nb_repas:1,statut:'a_attribuer',jour_livraison:jourDefaut||isoLocal(new Date()),adresse:'',notes:'',user_id:''},attrs=[];
+ const E=await chargerProd();
+ if(!E){toast('Calcul des portions indisponible (assets/admin-production.js)');}
  if(bonId){
   const r=await sbTry('bons_commande?id=eq.'+bonId+'&select=*');
   if(!r.ok||!r.data[0]){toast('Commande introuvable');return}
@@ -1812,14 +1823,26 @@ async function ouvrirFormBon(bonId,jourDefaut){
   const a=await sbTry('bons_attributions?bon_id=eq.'+bonId+'&select=recette_id,nb_portions,facteur,kcal_portion');
   attrs=a.ok?a.data:[];
  }
- const recettes=await recettesActives();
- const optRec=sel=>`<option value="">— Recette —</option>`+recettes.map(x=>`<option value="${x.id}"${x.id===sel?' selected':''}>${esc(x.nom)}</option>`).join('');
- const ligne=a=>`<div class="bon-l"><select class="inp bl-rec">${optRec(a&&a.recette_id)}</select><input class="inp bl-n" type="number" min="1" max="40" value="${a?a.nb_portions:1}" aria-label="Portions"><button type="button" class="btn sm ghost bl-x" aria-label="Retirer">×</button></div>`;
+ const recettes=E?E.recettes:[];
+ const recById=id=>recettes.find(x=>x.id===id);
+ const clients=E?Object.keys(E.clients).map(uid=>({uid,nom:NattyProd.nomClient(uid)})).sort((a,b)=>a.nom.localeCompare(b.nom,'fr')):[];
+ const clientInitial=E&&E.clients[bon.user_id]?bon.user_id:'';
+ /* Une ligne = une recette. `fac` n'existe que si la quantité a été fixée à la
+    main ; sinon la quantité suit la cible (45 % du besoin). */
+ const L=attrs.map(a=>{const r=recById(a.recette_id);return{rec:a.recette_id,n:a.nb_portions,
+  // sans le calcul (script absent), on garde le facteur tel quel plutôt que de l'écraser
+  fac:E?(r&&NattyProd.estManuel(r,a)?parseFloat(a.facteur):null):(parseFloat(a.facteur)||null)}});
+ if(!L.length)L.push({rec:'',n:1,fac:null});
+ const cibleStockee=(attrs.find(a=>parseFloat(a.kcal_portion)>0)||{}).kcal_portion||null;
  const notes=bon.notes||'';
  const client=notes.split('\n')[0],reste=notes.split('\n').slice(1).join('\n');
+ const optRec=sel=>`<option value="">— Recette —</option>`+recettes.map(x=>`<option value="${x.id}"${x.id===sel?' selected':''}>${esc(x.nom)}</option>`).join('');
  modal(`<h2>${bonId?'Modifier la commande':'Nouvelle commande'}</h2>
  <form class="form" id="bonForm">
-  <label>Client / référence<input class="inp" id="bfClient" value="${esc(client)}" placeholder="ex. Cabinet Martin, déjeuner d'équipe"></label>
+  <div class="two">
+   <label>Client Natty<select id="bfUid"><option value="">— Aucun (commande libre) —</option>${clients.map(c=>`<option value="${esc(c.uid)}"${c.uid===clientInitial?' selected':''}>${esc(c.nom)}</option>`).join('')}</select></label>
+   <label>Client / référence<input class="inp" id="bfClient" value="${esc(client)}" placeholder="ex. Cabinet Martin"></label>
+  </div>
   <div class="two">
    <label>Jour de livraison<input class="inp" type="date" id="bfJour" value="${esc(bon.jour_livraison||'')}"></label>
    <label>Nombre de repas<input class="inp" type="number" min="1" max="40" id="bfNb" value="${bon.nb_repas||1}" required></label>
@@ -1829,18 +1852,59 @@ async function ouvrirFormBon(bonId,jourDefaut){
    <label>Statut<select id="bfStatut">${Object.entries(PROD_STATUTS).map(([v,l])=>`<option value="${v}"${bon.statut===v?' selected':''}>${l[1]}</option>`).join('')}</select></label>
   </div>
   <label>Adresse de livraison<input class="inp" id="bfAdr" value="${esc(bon.adresse||'')}"></label>
-  <label>Recettes produites<div id="bfLignes" style="display:grid;gap:6px">${(attrs.length?attrs:[null]).map(ligne).join('')}</div>
+  <div class="bon-cible" id="bfCible"></div>
+  <label>Recettes produites<div id="bfLignes" style="display:grid;gap:8px"></div>
    <button type="button" class="btn sm ghost" id="bfAdd" style="justify-self:start">+ Ajouter une recette</button>
    <span class="muted" id="bfSomme" style="font-weight:400"></span></label>
   <label>Notes<textarea class="inp" id="bfNotes" rows="2">${esc(reste)}</textarea></label>
   <div class="foot">${bonId?'<button type="button" class="btn danger" id="bfDel" style="margin-right:auto">Supprimer</button>':''}<button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Enregistrer</button></div>
  </form>`);
  const zone=$('#bfLignes');
- const somme=()=>{const t=[...zone.querySelectorAll('.bon-l')].reduce((s,l)=>s+(l.querySelector('.bl-rec').value?(+l.querySelector('.bl-n').value||0):0),0);const nb=+$('#bfNb').value||0;$('#bfSomme').textContent=t?`${t} portion${t>1?'s':''} attribuée${t>1?'s':''} pour ${nb} repas`+(t!==nb?' — les deux ne correspondent pas':''):''};
- zone.addEventListener('input',somme);zone.addEventListener('change',somme);$('#bfNb').addEventListener('input',somme);somme();
- zone.addEventListener('click',e=>{const x=e.target.closest('.bl-x');if(x){x.closest('.bon-l').remove();if(!zone.children.length)zone.insertAdjacentHTML('beforeend',ligne(null));somme()}});
- $('#bfAdd').onclick=()=>{zone.insertAdjacentHTML('beforeend',ligne(null));somme()};
- if(!recettes.length)$('#bfAdd').insertAdjacentHTML('afterend','<span class="chip warn">Aucune recette active dans <span class="mono">recettes</span></span>');
+ /* La cible d'un repas : 45 % du besoin du jour du client Natty choisi
+    (même calcul qu'admin.html) ; pour une commande libre, 45 % d'un besoin
+    saisi ici ; sans besoin, la portion de la fiche, et c'est dit. */
+ let C={cible:null,mac:null,raison:''},besoinLibre=cibleStockee&&!clientInitial?Math.round(cibleStockee/0.45):'';
+ async function majCible(){
+  const uid=$('#bfUid').value;
+  if(uid&&E){const c=await NattyProd.cibleClient(uid);C={cible:c.besoin?c.cible:null,mac:c.mac,raison:c.raison,besoin:c.besoin}}
+  else{const b=+besoinLibre||0;C={cible:b?Math.round(b*0.45/10)*10:null,mac:null,besoin:b,raison:b?`Besoin saisi ${b} kcal × 45 %`:''}}
+  $('#bfCible').innerHTML=C.cible
+   ?`<div><b class="num">${C.cible} kcal</b> par repas${C.mac?` · ${fmtMac(C.mac)}`:''}<div class="muted" style="font-size:12px">${esc(C.raison)}${uid?'':' — règle Natty : 1 repas = 45 % des besoins journaliers.'}</div></div>`
+   :`<div class="muted" style="font-size:12.5px">${uid?'Ce client n’a pas de dépense (tdee) dans son profil.':'Commande libre.'} Sans besoin journalier, les portions suivent la fiche technique.</div>`;
+  if(!uid)$('#bfCible').insertAdjacentHTML('beforeend',`<label style="max-width:240px">Besoin journalier du client (kcal)<input class="inp" type="number" min="500" max="8000" step="any" id="bfBesoin" value="${esc(besoinLibre)}" placeholder="ex. 2400"></label>`);
+  peindreLignes();
+ }
+ const portion=l=>{const r=recById(l.rec);if(!r)return null;return l.fac?NattyProd.portionFacteur(r,l.fac):NattyProd.portionPour(r,C.cible||0)};
+ function peindreLignes(){
+  zone.innerHTML=L.map((l,i)=>{
+   const p=l.rec&&E?portion(l):null,auto=p&&l.fac?NattyProd.portionPour(recById(l.rec),C.cible||0):null;
+   return `<div class="bon-l" data-i="${i}"><select class="inp bl-rec">${optRec(l.rec)}</select><input class="inp bl-n" type="number" min="1" max="40" value="${l.n}" aria-label="Portions" title="Portions"><button type="button" class="btn sm ghost bl-x" aria-label="Retirer">×</button>
+   ${p?`<div class="bl-q"><label>Quantité / portion <input class="inp bl-g" type="number" min="1" step="any" value="${Math.round(p.gPortion)}"> g</label><span>${p.kcal?`<b>${Math.round(p.kcal)} kcal</b>`:'kcal inconnues'}${p.mac?' · '+fmtMac(p.mac):''}</span>${l.fac?`<span class="chip warn">ajustée à la main</span><button type="button" class="btn sm ghost bl-auto">↺ ${Math.round(auto.gPortion)} g (cible)</button>`:''}</div>`:''}</div>`;
+  }).join('');
+  somme();
+ }
+ function somme(){const t=L.reduce((s,l)=>s+(l.rec?(+l.n||0):0),0);const nb=+$('#bfNb').value||0;$('#bfSomme').textContent=t?`${t} portion${t>1?'s':''} attribuée${t>1?'s':''} pour ${nb} repas`+(t!==nb?' — les deux ne correspondent pas':''):''}
+ const ligneDe=el=>L[+el.closest('.bon-l').dataset.i];
+ zone.addEventListener('change',e=>{
+  const l=ligneDe(e.target);
+  if(e.target.classList.contains('bl-rec')){l.rec=e.target.value;l.fac=null;peindreLignes()}
+  else if(e.target.classList.contains('bl-g')){
+   const r=recById(l.rec),f=r&&NattyProd.fiche(r),base=f&&(f.gPortionFiche||f.gTotal),g=+e.target.value;
+   if(!(base>0)||!(g>0)){toast('Cette fiche n’a aucun grammage : quantité impossible à ajuster');peindreLignes();return}
+   l.fac=g/base;peindreLignes();
+  }
+ });
+ zone.addEventListener('input',e=>{if(e.target.classList.contains('bl-n')){ligneDe(e.target).n=Math.round(+e.target.value)||0;somme()}});
+ zone.addEventListener('click',e=>{
+  if(e.target.closest('.bl-x')){L.splice(+e.target.closest('.bon-l').dataset.i,1);if(!L.length)L.push({rec:'',n:1,fac:null});peindreLignes()}
+  if(e.target.closest('.bl-auto')){ligneDe(e.target).fac=null;peindreLignes()}
+ });
+ $('#bfCible').addEventListener('change',e=>{if(e.target.id==='bfBesoin'){besoinLibre=e.target.value;majCible()}});
+ $('#bfUid').addEventListener('change',majCible);
+ $('#bfNb').addEventListener('input',somme);
+ $('#bfAdd').onclick=()=>{L.push({rec:'',n:1,fac:null});peindreLignes()};
+ if(E&&!recettes.length)$('#bfAdd').insertAdjacentHTML('afterend','<span class="chip warn">Aucune recette active dans <span class="mono">recettes</span></span>');
+ await majCible();
  $('#bfDel')?.addEventListener('click',async()=>{
   if(!confirm('Supprimer cette commande et ses recettes attribuées ?'))return;
   try{await sb('bons_commande?id=eq.'+bonId,{method:'DELETE'});toast('Commande supprimée');closeAll();render()}
@@ -1852,24 +1916,35 @@ async function ouvrirFormBon(bonId,jourDefaut){
   const nb=Math.round(+$('#bfNb').value);
   if(!(nb>=1&&nb<=40)){toast('Le nombre de repas doit être entre 1 et 40');return}
   const lignes={};
-  zone.querySelectorAll('.bon-l').forEach(l=>{const rec=l.querySelector('.bl-rec').value,n=Math.round(+l.querySelector('.bl-n').value);if(rec&&n>0)lignes[rec]=(lignes[rec]||0)+n});
+  L.forEach(l=>{if(!l.rec||!(l.n>0))return;if(lignes[l.rec])lignes[l.rec].n+=l.n;else lignes[l.rec]={n:l.n,fac:l.fac}});
   let statut=$('#bfStatut').value;
   /* Une commande qui reçoit ses recettes n'est plus « à attribuer » — sans
      ce glissement, elle resterait rouge dans le calendrier alors qu'elle est
      prête. Un statut choisi explicitement (en production, livré…) est gardé. */
   if(statut==='a_attribuer'&&Object.keys(lignes).length)statut='attribue';
   const notesTxt=[$('#bfClient').value.trim(),$('#bfNotes').value.trim()].filter((v,i)=>i===0||v).join('\n').trim();
+  const uid=$('#bfUid').value;
   const champs={type:$('#bfType').value,nb_repas:nb,jour_livraison:jour,semaine:jour?isoLocal(lundiLocal(new Date(jour+'T00:00:00'))):null,adresse:$('#bfAdr').value.trim()||null,notes:notesTxt||null,statut,updated_at:new Date().toISOString()};
+  // Le bon appartient au client Natty choisi ; sinon il garde son identifiant
+  // synthétique (ou en reçoit un) — jamais celui d'un client qu'on vient de retirer.
+  if(uid)champs.user_id=uid;
+  else if(!bonId||clientInitial)champs.user_id='crm:'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const btn=e.submitter||$('#bonForm button[type=submit]');btn.disabled=true;
   try{
    let id=bonId;
    if(id)await sb('bons_commande?id=eq.'+id,{method:'PATCH',body:JSON.stringify(champs)});
-   else{const cr=await sb('bons_commande',{method:'POST',body:JSON.stringify({...champs,user_id:'crm:'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)})});id=cr[0].id}
-   const avant={};attrs.forEach(a=>avant[a.recette_id]=a);
+   else{const cr=await sb('bons_commande',{method:'POST',body:JSON.stringify(champs)});id=cr[0].id}
+   /* kcal_portion garde la CIBLE (45 % du besoin) ; facteur porte la quantité
+      réelle. Une quantité ajustée à la main s'y lit comme un écart entre les
+      deux — c'est ce qu'admin.html et la production relisent. */
+   const rows=Object.entries(lignes).map(([rec,l])=>{
+    const r=recById(rec);
+    const fac=l.fac||(r?NattyProd.portionPour(r,C.cible||0).facteur:1);
+    return{bon_id:id,recette_id:rec,nb_portions:l.n,kcal_portion:C.cible||(E?null:cibleStockee),facteur:Math.round(fac*1000)/1000};
+   });
    await sb('bons_attributions?bon_id=eq.'+id,{method:'DELETE'});
-   const rows=Object.entries(lignes).map(([rec,n])=>({bon_id:id,recette_id:rec,nb_portions:n,facteur:avant[rec]?avant[rec].facteur:null,kcal_portion:avant[rec]?avant[rec].kcal_portion:null}));
    if(rows.length)await sb('bons_attributions',{method:'POST',body:JSON.stringify(rows)});
-   toast(bonId?'Commande modifiée':'Commande enregistrée');closeAll();render();
+   toast(bonId?'Commande modifiée':'Commande enregistrée');closeAll();chargerProd(true);render();
   }catch(err){btn.disabled=false;toast('Enregistrement refusé : '+String(err.message||err).slice(0,140))}
  });
 }
@@ -1887,7 +1962,7 @@ async function listeCoursesJours(jours){
  const bons=r.ok?r.data:[];
  const titre=jours.length===1?fd(jours[0]):`${jours.length} jours · ${fd(jours[0])} → ${fd(jours[jours.length-1])}`;
  if(!bons.length){modal(`<h2>Liste de courses</h2><div class="empty">Aucune commande sur ces jours.</div><div class="foot"><button class="btn" type="button" data-close>Fermer</button></div>`);return}
- const at=await sbTry('bons_attributions?bon_id=in.('+bons.map(b=>b.id).join(',')+')&select=bon_id,recette_id,nb_portions,facteur');
+ const [at,EP]=await Promise.all([sbTry('bons_attributions?bon_id=in.('+bons.map(b=>b.id).join(',')+')&select=bon_id,recette_id,nb_portions,facteur,kcal_portion'),chargerProd()]);
  const attrs=at.ok?at.data:[];
  const avecRecette=new Set(attrs.map(a=>a.bon_id));
  const sansRecette=bons.filter(b=>!avecRecette.has(b.id));
@@ -1898,7 +1973,11 @@ async function listeCoursesJours(jours){
  ]):[{ok:true,data:[]},{ok:true,data:[]}];
  const fiche={};(rb.ok?rb.data:[]).forEach(x=>fiche[x.id]=x);
  const portionsEq={},portions={};
- attrs.forEach(a=>{portionsEq[a.recette_id]=(portionsEq[a.recette_id]||0)+a.nb_portions*(+a.facteur||1);portions[a.recette_id]=(portions[a.recette_id]||0)+a.nb_portions});
+ /* Le facteur est celui que la cuisine appliquera (portionAttrib) : la cible
+    de 45 %, ou la quantité ajustée à la main. Repli sur le facteur stocké si
+    le calcul n'est pas chargé ou la recette plus active. */
+ const facDe=a=>{const r=EP&&EP.recettes.find(x=>x.id===a.recette_id);return r?NattyProd.portionAttrib(r,a).facteur:(+a.facteur||1)};
+ attrs.forEach(a=>{portionsEq[a.recette_id]=(portionsEq[a.recette_id]||0)+a.nb_portions*facDe(a);portions[a.recette_id]=(portions[a.recette_id]||0)+a.nb_portions});
  const total={};
  (ing.ok?ing.data:[]).forEach(i=>{
   const base=(fiche[i.recette_id]&&fiche[i.recette_id].nb_portions)||1;

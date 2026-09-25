@@ -4017,14 +4017,29 @@ portion avec les grammes de TOUS les ingrédients sur la balance.
    et liste « qui fait quoi, quand » ; puis **Assemblage** : par recette, chaque portion de
    chaque client avec les grammes de chaque ingrédient, case à cocher (localStorage).
 
-**La cible calorique d'un repas (`cibleClient`)** — `tdee` (onboarding) ÷ repas par jour
-(`questionnaire_alim.nb_repas` : `1_2`→2, `3`→3, `3_collations`→4, `grignotage`→3) donne la
-base. Si le client a **≥ 5 plats notés sur 28 jours** (`meals` + `meal_ingredients.calories`
-écrites), le plat livré couvre ce que les autres repas ne couvrent pas :
-`cible = tdee − (n − 1) × moyenne observée`, bornée à **[0,6 ; 1,6] × base**. C'est
-l'exemple de Pablo : 3 000 kcal, 2 repas, des plats à ~800 → 2 200 kcal (mesuré au banc).
-Sans tdee : 650 kcal, et c'est dit. Le raisonnement s'affiche en toutes lettres avec le mot
-« Estimation ».
+**La cible calorique d'un repas (`cibleClient`) — RÈGLE FIXE : 45 % DU BESOIN JOURNALIER**
+(décision de Pablo, 2026-09-25). `cible = besoin du jour × 0,45`, arrondie à 10 kcal, où le
+besoin est la dépense corrigée par l'objectif et sa durée (`ciblesJour`). Plus de part
+déduite du questionnaire ni des habitudes notées — les deux versions précédentes (« la
+journée moins les autres repas », puis une part bornée à [20 ; 50] %) sont retirées. Sans
+tdee : 650 kcal, et c'est dit. Les macros cibles du plat sont 45 % des macros du jour.
+> ⚠️ `ciblesJour()` vit désormais dans **`assets/cibles-jour.js`**, chargé par admin.html ET
+> crm.html. `scripts/verifier-cibles-admin.mjs` l'extrait de ce fichier.
+
+**La quantité se corrige après attribution** (admin.html → Attribution, et le formulaire de
+commande de crm.html) : un champ « grammes par portion » par recette, kcal et P/G/L
+recalculés en direct. Le stockage ne change pas de schéma :
+- `bons_attributions.kcal_portion` garde la **cible** (45 %) ;
+- `bons_attributions.facteur` porte la **quantité réelle** (× la portion de fiche).
+Une attribution est « ajustée à la main » quand son facteur s'écarte de plus de 2 % de celui
+que donne sa cible (`estManuel`). `portionAttrib()` en tient compte partout — lots de
+production, assemblage, liste de courses du CRM — et `recalculerClient()` **ne touche
+pas** une quantité ajustée à la main quand la fiche client change.
+> ⚠️ Contrepartie : une quantité ajustée à la main ne suit plus les retouches de la fiche
+> technique (elle est en grammes, pas en kcal). « ↺ revenir à la cible » la remet en
+> automatique.
+> ⚠️ crm.html ne recopie aucun calcul : il charge `assets/admin-production.js` et appelle
+> `NattyProd.cibleClient` / `portionPour` / `portionFacteur` / `portionAttrib`.
 
 **La fiche technique, lue comme elle est écrite (`fiche`, `portionPour`)** :
 - `recettes.nb_portions` dit pour combien de portions les grammages sont écrits (⚠️ le

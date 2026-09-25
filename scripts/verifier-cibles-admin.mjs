@@ -33,6 +33,7 @@ function extraire(src, nom, mot = 'function') {
 
 const core = fs.readFileSync('assets/core.js', 'utf8');
 const admin = fs.readFileSync('admin.html', 'utf8');
+const ciblesSrc = fs.readFileSync('assets/cibles-jour.js', 'utf8');
 
 // Les constantes de core.js, lues à la source elles aussi.
 const consts = ['KCAL_PAR_KG', 'DEFICIT_MAX', 'SURPLUS_MAX', 'PROT_BASE', 'PROT_MAX', 'SUP_G', 'SUP_P', 'SUP_L']
@@ -51,7 +52,7 @@ return function (o) {
   return macrosJour(o.poids, base);
 };`)();
 
-const adm = new Function(`${extraire(admin, 'ciblesJour')} return ciblesJour;`)();
+const adm = new Function(`${extraire(ciblesSrc, 'ciblesJour')} return ciblesJour;`)();
 
 /* ── BMR et dépense : admin.html contre suivi.html ─────────────────────────
    `ACT_TYPES` / `ACT_ADMIN` sont extraits eux aussi : c'est le COEFFICIENT

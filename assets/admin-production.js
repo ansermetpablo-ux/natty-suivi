@@ -202,6 +202,10 @@
       '.np-rec .nm{flex:1;font-size:13px;font-weight:700;color:var(--black)}',
       '.np-rec .sm{font-size:11px;color:var(--muted);font-weight:500}',
       '.np-stp{display:flex;align-items:center;gap:6px}',
+      '.np-qte{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;font-size:11.5px;font-weight:500;color:var(--muted)}',
+      '.np-qte label{display:flex;align-items:center;gap:6px}',
+      '.np-manu{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:#c97a001f;color:#c97a00}',
+      '.np-lien{border:0;background:none;padding:0;font:inherit;color:var(--black);text-decoration:underline;cursor:pointer}',
       '.np-stp button{width:28px;height:28px;border-radius:50%;border:none;background:var(--black);color:#fff;font-weight:700;cursor:pointer;font-family:inherit}',
       '.np-stp button:disabled{opacity:.3}',
       '.np-stp span{min-width:22px;text-align:center;font-weight:800;font-size:14px;color:var(--black)}',
@@ -538,6 +542,36 @@
       }) };
   }
 
+  /* La portion quand la QUANTITÉ a été fixée à la main (facteur sur la
+     portion de fiche) : les grammes décident, les kcal et les macros suivent.
+     C'est l'inverse de portionPour, où la cible kcal décide des grammes. */
+  function portionFacteur(r, fac) {
+    var f = fiche(r), base = f.gPortionFiche || f.gTotal, g = base * fac;
+    var mac = f.macPortion ? { p: f.macPortion.p * fac, g: f.macPortion.g * fac, l: f.macPortion.l * fac }
+           : (f.mac100 ? { p: g * f.mac100.p / 100, g: g * f.mac100.g / 100, l: g * f.mac100.l / 100 } : null);
+    return { facteur: fac, gPortion: g, mode: 'quantité ajustée à la main', fiche: f, mac: mac, manuel: true,
+      kcal: f.kcalPortion ? f.kcalPortion * fac : (f.kcal100 ? g * f.kcal100 / 100 : null),
+      ings: f.ings.map(function (i) {
+        return { nom: i.ingredient_nom, g: (parseFloat(i.quantite_g) || 0) / (f.nb || 1) * fac, unite: i.unite || 'g' };
+      }) };
+  }
+  /* Une attribution dont la quantité a été CORRIGÉE à la main se reconnaît à
+     son facteur : il ne correspond plus à celui que donne sa cible kcal
+     (kcal_portion garde la cible, facteur porte la quantité réelle). Au-delà
+     de 2 % d'écart, c'est une décision, pas un arrondi.
+     ⚠️ Sans ce test, la production recalculerait les grammes depuis la cible
+     et jetterait la correction — on ajusterait une quantité que la cuisine ne
+     verrait jamais. */
+  function estManuel(r, a) {
+    var fac = parseFloat(a.facteur);
+    if (!r || !(fac > 0)) return false;
+    var auto = portionPour(r, parseFloat(a.kcal_portion) || 0).facteur || 1;
+    return Math.abs(fac - auto) / auto > 0.02;
+  }
+  function portionAttrib(r, a) {
+    return estManuel(r, a) ? portionFacteur(r, parseFloat(a.facteur)) : portionPour(r, parseFloat(a.kcal_portion) || 0);
+  }
+
   /* Les macros d'une portion, dites comme elles sont connues — et rien du tout
      quand elles ne le sont pas. `titre` dit d'où elles sortent : la balance
      pèse des grammes, elle ne pèse pas des protéines, donc celui qui met la
@@ -571,86 +605,32 @@
   }
 
   /* ── La cible calorique d'un repas LIVRÉ, pour CE client ────────────────
-     ⚠️⚠️ CE N'EST PLUS « LA JOURNÉE MOINS LES AUTRES REPAS » (corrigé le
-     2026-09-20, Pablo : « tu as mis 2090 kcal dans un seul repas »). L'ancienne
-     formule faisait `tdee − (n−1) × moyenne de ses plats notés` : quelqu'un qui
-     dépense 3 000 kcal, prend deux repas par jour et n'en note qu'un à ~900
-     recevait un plat de **2 090 kcal** — 70 % de sa journée dans une barquette.
-     Une moyenne de consommation est un CONSTAT, pas un reste à couvrir : la
-     prendre pour telle fait porter au plat livré tout ce que la personne oublie
-     de noter, et plus elle journalise mal, plus son plat grossit.
-
-     Ce qui la remplace, dans cet ordre :
-       1. SON BESOIN DU JOUR (`besoinJour`) — la dépense corrigée par l'objectif
-          et la durée demandée. C'est là, et nulle part ailleurs, qu'« adhérer à
-          ses objectifs dans la durée » entre dans le chiffre.
-       2. LA PART que ce repas représente dans sa journée — 1/n d'après le
-          questionnaire, remplacée par ses HABITUDES quand il note assez : la
-          part réelle d'un repas dans ses journées notées (moyenne d'un repas ÷
-          moyenne d'une journée notée).
-       3. BORNÉE À [20 % ; 50 %]. Au-delà de la moitié d'une journée, ce n'est
-          plus un repas — et c'est exactement le garde-fou qui manquait.
-     Le raisonnement est affiché en toutes lettres, avec le mot « Estimation ».
-
-     ⚠️ Une journée qui ne porte QU'UN plat noté n'est pas une journée : la
-     compter ferait croire à des journées de 700 kcal, donc à un repas qui vaut
-     100 % de la journée — le défaut d'origine sous une autre forme. Il faut au
-     moins deux plats notés le même jour pour que la journée compte. */
-  var PART_MIN = 0.20, PART_MAX = 0.50;
+     ⚠️ RÈGLE FIXE DEPUIS LE 2026-09-25 (Pablo) : UN REPAS LIVRÉ COUVRE 45 % DU
+     BESOIN JOURNALIER DU CLIENT. Plus de part déduite du questionnaire ni des
+     habitudes notées : la cuisine produit toujours la même fraction d'une
+     journée, et c'est la même règle que le CRM applique à ses commandes.
+     Le besoin, lui, reste SON besoin du jour (`besoinJour`) — la dépense
+     corrigée par l'objectif et la durée demandée : c'est là qu'« adhérer à
+     ses objectifs dans la durée » entre dans le chiffre.
+     Historique : avant le 2026-09-20 la cible était « la journée moins les
+     autres repas », ce qui a donné un plat de 2 090 kcal ; ensuite une part
+     1/n ou observée, bornée à [20 ; 50] %. Les deux sont retirées. */
+  var PART_REPAS = 0.45;
 
   function cibleClient(uid) {
     var c = S.clients[uid] || {};
-    var depuis = new Date(); depuis.setDate(depuis.getDate() - 28);
-    return Promise.all([
-      sbq('questionnaire_alim?user_id=eq.' + encodeURIComponent(uid) + '&select=nb_repas&order=completed_at.desc.nullslast&limit=1').catch(function () { return []; }),
-      sbq('meals?user_id=eq.' + encodeURIComponent(uid) + '&created_at=gte.' + depuis.toISOString() + '&select=id,meal_date,created_at,meal_ingredients(calories)').catch(function () { return []; })
-    ]).then(function (r) {
-      var lib = (r[0] && r[0][0] && r[0][0].nb_repas) || null;
-      var n = NB_REPAS_JOUR[lib] || 3;
-
-      var kcals = [], parJour = {};
-      (r[1] || []).forEach(function (m) {
-        var k = (m.meal_ingredients || []).reduce(function (t, i) { return t + (parseFloat(i.calories) || 0); }, 0);
-        if (!(k > 50)) return;
-        kcals.push(k);
-        var j = String(m.meal_date || m.created_at || '').slice(0, 10);
-        if (j) (parJour[j] = parJour[j] || []).push(k);
-      });
-      var jours = Object.keys(parJour).filter(function (j) { return parJour[j].length >= 2; });
-      var moyRepas = kcals.length ? kcals.reduce(function (a, b) { return a + b; }, 0) / kcals.length : null;
-      var moyJour = jours.length
-        ? jours.reduce(function (t, j) { return t + parJour[j].reduce(function (a, b) { return a + b; }, 0); }, 0) / jours.length
-        : null;
-
-      var B = besoinJour(c), besoin = B.kcal;
-      var part = 1 / n, source = 'questionnaire', brute = part;
-
-      if (moyRepas && moyJour && kcals.length >= 5 && jours.length >= 3) {
-        brute = moyRepas / moyJour; source = 'habitudes';
-      }
-      part = Math.max(PART_MIN, Math.min(PART_MAX, brute));
-      var borne = Math.abs(brute - part) > 0.005;
-
-      var cible = besoin ? besoin * part : 650;
-      var raison;
-      if (!besoin) {
-        raison = 'Aucune dépense (tdee) dans l’onboarding : 650 kcal par défaut. Compléter son profil pour une vraie cible.';
-      } else {
-        raison = 'Besoin du jour ' + Math.round(besoin) + ' kcal'
-          + (B.ecart ? ' (' + (B.ecart > 0 ? '+' : '') + B.ecart + ' kcal/j pour son objectif sur ' + (parseFloat(c.objectif_semaines) || '?') + ' semaines)' : '')
-          + ' × ' + Math.round(part * 100) + ' % pour ce repas'
-          + (source === 'habitudes'
-              ? ' — part observée sur ses ' + kcals.length + ' plats notés (~' + Math.round(moyRepas) + ' kcal) dans ' + jours.length + ' journées notées (~' + Math.round(moyJour) + ' kcal).'
-              : ' — 1 repas sur ' + n + (lib ? ' (questionnaire : « ' + lib + ' »)' : ' (questionnaire absent : 3)') + ', pas assez de journées notées pour affiner.')
-          + (borne ? ' Part ramenée à ' + Math.round(part * 100) + ' % : un plat livré ne porte ni moins de ' + Math.round(PART_MIN * 100) + ' % ni plus de ' + Math.round(PART_MAX * 100) + ' % d’une journée.' : '');
-      }
-      return {
-        cible: Math.round(cible / 10) * 10,
-        besoin: Math.round(besoin), ecart: B.ecart, part: part, source: source, borne: borne,
-        mac: B.mac ? { p: B.mac.p * part, g: B.mac.g * part, l: B.mac.l * part } : null,
-        n: n, moy: moyRepas ? Math.round(moyRepas) : null, moyJour: moyJour ? Math.round(moyJour) : null,
-        tdee: B.tdee, nbNotes: kcals.length, nbJours: jours.length, raison: raison
-      };
+    var B = besoinJour(c), besoin = B.kcal, part = PART_REPAS;
+    var cible = besoin ? besoin * part : 650;
+    var raison = !besoin
+      ? 'Aucune dépense (tdee) dans l’onboarding : 650 kcal par défaut. Compléter son profil pour une vraie cible.'
+      : 'Besoin du jour ' + Math.round(besoin) + ' kcal'
+        + (B.ecart ? ' (' + (B.ecart > 0 ? '+' : '') + B.ecart + ' kcal/j pour son objectif sur ' + (parseFloat(c.objectif_semaines) || '?') + ' semaines)' : '')
+        + ' × 45 % — règle Natty : un repas livré couvre 45 % des besoins journaliers.';
+    return Promise.resolve({
+      cible: Math.round(cible / 10) * 10,
+      besoin: Math.round(besoin), ecart: B.ecart, part: part,
+      mac: B.mac ? { p: B.mac.p * part, g: B.mac.g * part, l: B.mac.l * part } : null,
+      tdee: B.tdee, raison: raison
     });
   }
 
@@ -857,13 +837,17 @@
   }
 
   /* ── 2. Attribution ─────────────────────────────────────────────────────── */
-  var A = { bon: null, cible: null, sel: {} };
+  var A = { bon: null, cible: null, sel: {}, fac: {} };
 
   function vueAttribution(el) {
     var b = S.bons.find(function (x) { return x.id === S.bonOuvert; });
     if (!b) { S.vue = 'bons'; rendre(); return; }
-    A.bon = b; A.sel = {};
-    attribsDe(b.id).forEach(function (a) { A.sel[a.recette_id] = a.nb_portions; });
+    A.bon = b; A.sel = {}; A.fac = {};
+    attribsDe(b.id).forEach(function (a) {
+      A.sel[a.recette_id] = a.nb_portions;
+      // une quantité déjà corrigée à la main se rouvre corrigée
+      if (estManuel(recette(a.recette_id), a)) A.fac[a.recette_id] = parseFloat(a.facteur);
+    });
     el.innerHTML = '<div class="np-vide">Calcul de la cible de ' + h(nomClient(b.user_id)) + '…</div>';
     cibleClient(b.user_id).then(function (c) {
       var existante = attribsDe(b.id)[0];
@@ -881,14 +865,15 @@
     html += '<div class="np-h">Cible calorique par repas</div><div class="np-cible">'
       + '<div><b><input type="number" class="np-in n" id="npCible" value="' + A.cibleRetenue + '" step="10" style="width:90px;font-size:18px"> kcal</b><small>retenue pour ce bon (modifiable)</small></div>'
       + '<div><b>' + (c.besoin || '—') + '</b><small>son besoin du jour' + (c.ecart ? ' (' + (c.ecart > 0 ? '+' : '') + c.ecart + ' kcal/j pour son objectif)' : (c.tdee ? ' = sa dépense, aucun objectif daté' : ' — tdee absent')) + '</small></div>'
-      + '<div><b>' + Math.round(c.part * 100) + ' %</b><small>de sa journée pour ce repas' + (c.source === 'habitudes' ? ' — ses habitudes (' + c.nbJours + ' journées notées)' : ' — 1 repas sur ' + c.n) + (c.borne ? ', ramenée dans [20 ; 50] %' : '') + '</small></div></div>'
+      + '<div><b>45 %</b><small>de sa journée pour ce repas — règle Natty</small></div></div>'
       + (c.mac ? '<div class="np-s" style="margin:-6px 0 8px">Soit environ <b>' + Math.round(c.mac.p) + ' g P · ' + Math.round(c.mac.g) + ' g G · ' + Math.round(c.mac.l) + ' g L</b> dans ce plat — la même part de ses macros du jour.</div>' : '')
       + '<div class="np-note">🧮 ' + h(c.raison) + ' <b>Estimation</b> — le client, lui, ne voit pas ce chiffre.</div>';
     if (b.plats && b.plats.length) html += '<div class="np-note">Le client a choisi à l’unité : ' + h(b.plats.map(function (p) { return platNom(p.id) + ' × ' + p.n; }).join(', ')) + '. Retrouver ces plats dans les recettes ci-dessous.</div>';
     html += '<div class="np-h">Recettes <span id="npCompte" style="text-transform:none;letter-spacing:0"></span></div>';
     if (!S.recettes.length) html += '<div class="np-alerte">Aucune recette active — à créer dans l’onglet Chef.</div>';
     html += S.recettes.map(function (r) {
-      var n = A.sel[r.id] || 0, p = portionPour(r, A.cibleRetenue), f = p.fiche;
+      var n = A.sel[r.id] || 0, auto = portionPour(r, A.cibleRetenue);
+      var p = A.fac[r.id] ? portionFacteur(r, A.fac[r.id]) : auto, f = p.fiche;
       var warn = [];
       if (!f.kcalPortion && !f.kcal100) warn.push('rien de chiffré');
       if (!f.nb) warn.push('portions non renseignées');
@@ -897,7 +882,12 @@
       return '<div class="np-rec ' + (n ? 'on' : '') + '" data-rec="' + h(r.id) + '"><i style="width:10px;height:10px;border-radius:50%;background:' + couleur(r.id) + ';flex-shrink:0"></i>'
         + '<div class="nm">' + h(r.nom) + '<div class="sm">' + (f.kcalPortion ? Math.round(f.kcalPortion) + ' kcal / portion fiche' : (f.kcal100 ? Math.round(f.kcal100) + ' kcal/100 g' : 'non chiffrée'))
         + (f.nb ? ' · fiche pour ' + f.nb + ' portion(s)' : '') + ' · <b>' + Math.round(p.gPortion) + ' g</b> pour ce client (×' + p.facteur.toFixed(2) + ', ' + h(p.mode) + ')'
-        + (warn.length ? ' · <span style="color:#c97a00">⚠ ' + h(warn.join(', ')) + '</span>' : '') + '</div></div>'
+        + (warn.length ? ' · <span style="color:#c97a00">⚠ ' + h(warn.join(', ')) + '</span>' : '') + '</div>'
+        + (n ? '<div class="np-qte"><label>Quantité par portion <input type="number" class="np-in n" data-gram-rec="' + h(r.id) + '" value="' + Math.round(p.gPortion) + '" min="1" step="1"> g</label>'
+          + '<span>' + (p.kcal ? '<b>' + Math.round(p.kcal) + ' kcal</b>' : 'kcal inconnues') + (p.mac ? ' · ' + libMacros(p.mac) : '') + '</span>'
+          + (A.fac[r.id] ? '<span class="np-manu">ajustée à la main</span><button class="np-lien" data-act="gram-auto" data-rec="' + h(r.id) + '">↺ revenir à ' + Math.round(auto.gPortion) + ' g (cible)</button>' : '')
+          + '</div>' : '')
+        + '</div>'
         + '<div class="np-stp"><button data-stp="-1" data-rec="' + h(r.id) + '" ' + (n ? '' : 'disabled') + '>−</button><span id="npN_' + h(r.id) + '">' + n + '</span><button data-stp="1" data-rec="' + h(r.id) + '">+</button></div></div>';
     }).join('');
     html += '<div class="np-row" style="justify-content:flex-end;margin-top:14px"><button class="np-btn" data-act="enregistrer-attrib" id="npSaveAttrib">Enregistrer l’attribution</button></div>';
@@ -916,8 +906,8 @@
   function enregistrerAttribution() {
     var b = A.bon, cible = parseInt(document.getElementById('npCible').value, 10) || A.cibleRetenue;
     var rows = Object.keys(A.sel).filter(function (k) { return A.sel[k] > 0; }).map(function (k) {
-      var p = portionPour(recette(k), cible);
-      return { bon_id: b.id, recette_id: k, nb_portions: A.sel[k], kcal_portion: cible, facteur: Math.round(p.facteur * 1000) / 1000 };
+      var fac = A.fac[k] || portionPour(recette(k), cible).facteur;
+      return { bon_id: b.id, recette_id: k, nb_portions: A.sel[k], kcal_portion: cible, facteur: Math.round(fac * 1000) / 1000 };
     });
     var btn = document.getElementById('npSaveAttrib'); btn.disabled = true;
     sbq('bons_attributions?bon_id=eq.' + b.id, { method: 'DELETE' })
@@ -1244,7 +1234,7 @@
     pj.bons.forEach(function (b) {
       attribsDe(b.id).forEach(function (a) {
         var r = recette(a.recette_id); if (!r) return;
-        var p = portionPour(r, a.kcal_portion || 0);
+        var p = portionAttrib(r, a);
         var l = m[r.id] = m[r.id] || { rec: r, portions: 0, fiches: 0, gTotal: 0, parClient: [], couleur: couleur(r.id),
           etapesProd: (S.etapes[r.id] || []).filter(function (e) { return e.phase !== 'assemblage'; }) };
         l.portions += a.nb_portions;
@@ -2165,9 +2155,12 @@
     if (b.dataset.poste) { prendrePoste(b.dataset.poste, b.dataset.prendre === '1'); return; }
     if (b.dataset.act === 'service') { ouvrirService(); return; }
     if (b.dataset.vue) { S.vue = b.dataset.vue; if (S.vue === 'production' && !S.jour) S.jour = ymd(new Date()); rendre(); return; }
+    if (b.dataset.act === 'gram-auto') { delete A.fac[b.dataset.rec]; document.getElementById('npVue').innerHTML = htmlAttribution(A.bon, A.cible); return; }
     if (b.dataset.stp) {
       var id = b.dataset.rec, n = (A.sel[id] || 0) + parseInt(b.dataset.stp, 10);
+      var avant = !!(A.sel[id]);
       A.sel[id] = Math.max(0, n);
+      if (avant !== !!A.sel[id]) { if (!A.sel[id]) delete A.fac[id]; document.getElementById('npVue').innerHTML = htmlAttribution(A.bon, A.cible); return; }
       document.getElementById('npN_' + id).textContent = A.sel[id];
       b.closest('.np-rec').classList.toggle('on', A.sel[id] > 0);
       b.closest('.np-stp').querySelector('[data-stp="-1"]').disabled = A.sel[id] === 0;
@@ -2198,6 +2191,12 @@
       patchBon(t.dataset.jourBon, { jour_livraison: v, semaine: v ? lundiDe(v) : null }).then(function () { toast('Date de livraison enregistrée', 'ok'); return chargerTout(); })
         .then(function () { if (S.vue !== 'attribution') rendre(); }).catch(function (e) { toast('Erreur : ' + e.message, 'err'); });
       return;
+    }
+    if (t.dataset.gramRec) {
+      var rr = recette(t.dataset.gramRec), ff = rr && fiche(rr), base = ff && (ff.gPortionFiche || ff.gTotal), g = parseFloat(t.value);
+      if (!(base > 0) || !(g > 0)) { toast('Quantité impossible : la fiche n’a aucun grammage', 'err'); return; }
+      A.fac[rr.id] = g / base;
+      document.getElementById('npVue').innerHTML = htmlAttribution(A.bon, A.cible); return;
     }
     if (t.id === 'npCible') {
       A.cibleRetenue = parseInt(t.value, 10) || A.cibleRetenue;
@@ -2550,6 +2549,7 @@
         attribsDe(b.id).forEach(function (a) {
           if (Math.abs((parseFloat(a.kcal_portion) || 0) - c.cible) < 5) return;  // déjà à jour
           var r = recette(a.recette_id);
+          if (estManuel(r, a)) return;   // quantité corrigée à la main : décision humaine, on n'y touche pas
           var f = Math.round((r ? portionPour(r, c.cible).facteur : 1) * 1000) / 1000;
           maj.push(sbq('bons_attributions?id=eq.' + a.id, { method: 'PATCH',
             body: JSON.stringify({ kcal_portion: c.cible, facteur: f }) })
@@ -2573,6 +2573,10 @@
     },
     rafraichir: function () { if (S.charge) chargerTout().then(rendre); },
     // exposés pour le banc
+    // pour crm.html : la même règle (45 %) et les mêmes portions que la cuisine
+    charger: function () { return chargerTout(); }, etat: S, cibleClient: cibleClient, nomClient: nomClient,
+    portionPour: portionPour, portionFacteur: portionFacteur, portionAttrib: portionAttrib, estManuel: estManuel,
+    fiche: fiche, PART_REPAS: PART_REPAS,
     _dispatcher: dispatcher, _portionPour: portionPour, _etat: S,
     _dependances: dependances, _decoupeDe: decoupeDe, _grapheDuJour: grapheDuJour, _illustration: illustration
   };
