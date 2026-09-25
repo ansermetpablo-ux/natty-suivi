@@ -48,7 +48,11 @@ a{color:inherit}
 .brand b{font-size:16px;letter-spacing:-.02em;display:block}.brand small{color:var(--muted);font-size:11.5px}
 .navscroll{flex:1;overflow-y:auto;padding:4px 12px 12px}
 .ngroup{margin-top:10px}
-.ngroup>div{padding:8px 8px 4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.ngroup>div{padding:8px 8px 4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;user-select:none;border-radius:var(--r-sm)}
+.ngroup>div:hover{color:var(--ink)}
+.ngroup>div svg{width:11px;height:11px;flex:none;stroke:currentColor;fill:none;stroke-width:2.6;transition:transform .15s}
+.ngroup.closed>div svg{transform:rotate(-90deg)}
+.ngroup.closed .nitem{display:none}
 .nitem{width:100%;display:flex;align-items:center;gap:10px;border:0;background:none;padding:9px 10px;border-radius:var(--r-sm);text-align:left;font-weight:500;color:var(--muted)}
 .nitem svg{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nitem:hover{background:var(--panel);color:var(--ink)}
@@ -397,7 +401,12 @@ const ICON={
  production:'<path d="M6 13a6 6 0 0 1 12 0z"/><path d="M4 13h16M6 13l1 8h10l1-8M9 4v3M12 3v4M15 4v3"/>',
  documents:'<path d="M9 2h7l5 5v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M16 2v5h5M5 6v14a2 2 0 0 0 2 2h9"/>',
  modele_financier:'<path d="M4 19V6M4 19h16M8 19v-6M12 19V9M16 19v-4"/>',
- financement:'<path d="M12 21v-9M12 12c0-4 3-6 7-6 0 4-2 7-7 7zM12 15c0-3-2-5-6-5 0 3 1 6 6 6z"/>'
+ financement:'<path d="M12 21v-9M12 12c0-4 3-6 7-6 0 4-2 7-7 7zM12 15c0-3-2-5-6-5 0 3 1 6 6 6z"/>',
+ mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+ funnel:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>',
+ stocks:'<rect x="3" y="10" width="8" height="8" rx="1"/><rect x="13" y="10" width="8" height="8" rx="1"/><rect x="8" y="3" width="8" height="6" rx="1"/>',
+ livraison:'<rect x="2" y="8" width="11" height="8" rx="1"/><path d="M13 11h4l3 3v2h-7z"/><circle cx="6" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/>',
+ chevron:'<path d="M6 9l6 6 6-6"/>'
 };
 const ICONES_BLOC=['auto','schema','projet','calendar','check','drive','alerte','commercial','finance','partenariat','developpement','logistique'];
 const CATEGORIES=[
@@ -486,6 +495,18 @@ async function chargerDocs(cle){
  DOCS_CACHE[cle]=r.ok?r.data:[];
  return DOCS_CACHE[cle];
 }
+/* Le Drive de l'activité « Documents » : TOUS les documents, quelle que
+   soit l'activité où ils ont été ajoutés — une tâche, un projet ou une
+   activité quelconque. Un document se range tout seul ici, sans geste de
+   plus : il n'est jamais recopié, c'est la même ligne `crm_documents` lue
+   sans le filtre `activite=eq.…`. */
+let DOCS_TOUS_CACHE=null;
+async function chargerTousDocuments(){
+ if(DOCS_TOUS_CACHE)return DOCS_TOUS_CACHE;
+ const r=await sbTry('crm_documents?select=*&order=created_at.desc&limit=500');
+ DOCS_TOUS_CACHE=r.ok?r.data:[];
+ return DOCS_TOUS_CACHE;
+}
 function peopleOptions(sel){
  const noms=[...new Set(S.staff.map(s=>s.nom).filter(Boolean))];
  return `<option value="">À attribuer</option>`+noms.map(n=>`<option ${n===sel?'selected':''}>${esc(n)}</option>`).join('');
@@ -495,29 +516,72 @@ function peopleOptions(sel){
    pour `porteur` (un texte libre) mais pas pour retrouver un compte. */
 function nomDe(userId){const s=S.staff.find(x=>x.user_id===userId);return s?s.nom:'—'}
 
-/* ============ NAVIGATION ============ */
+/* ============ NAVIGATION ============
+   La barre latérale est un accordéon : chaque section (Pilotage, puis une
+   par activité) se déroule sur son chevron, et pour une activité, cliquer
+   l'EN-TÊTE navigue aussi vers sa vue par défaut — dérouler et arriver sont
+   le même geste, pas deux. Les enfants d'une section sont ses VUES
+   (`vuesDe()`, définie plus bas avec vActivite) : pour Commercial et
+   Production, ses vues propres ; pour les autres, les cinq génériques
+   (Aperçu/Tâches/Sous-projets/Schéma/Drive). */
+let NAV_EXPANDED={pilotage:true};
 function badges(){
  const b={taches:S.taches.filter(t=>t.statut!=='fait').length};
  ACTIVITES.forEach(a=>{b[a.cle]=S.taches.filter(t=>t.activite===a.cle&&t.statut!=='fait').length});
- document.querySelectorAll('.nitem').forEach(n=>{const e=n.querySelector('.b');const v=b[n.dataset.m];if(e){e.textContent=v||'';e.classList.toggle('hide',!v)}});
+ document.querySelectorAll('.nitem').forEach(n=>{
+  const e=n.querySelector('.b');if(!e)return;
+  const cle=n.dataset.m,vue=n.dataset.vue;
+  const montre=!vue||vue===vueParDefaut(cle);
+  const v=montre?b[cle]:0;
+  e.textContent=v||'';e.classList.toggle('hide',!v);
+ });
 }
 function renderNav(){
  const items=[['dash','Accueil','dash'],['taches','Toutes les tâches','taches'],['rh','RH','rh'],['projets','Projets','projet']].filter(([id])=>can(id));
  const acts=ACTIVITES.filter(a=>can(a.cle));
  $('#nav').innerHTML=
-  `<div class="ngroup"><div>Pilotage</div>${items.map(([id,l,ic])=>navBtn(id,l,ic)).join('')}</div>`+
-  (acts.length?`<div class="ngroup"><div>Activités</div>${acts.map(a=>navBtn(a.cle,a.nom,a.icone)).join('')}</div>`:'');
+  groupeHtml('pilotage','Pilotage',items.map(([id,l,ic])=>navBtn(id,l,ic)).join('')) +
+  acts.map(a=>groupeHtml(a.cle,a.nom,vuesDe(a.cle).map(([vid,l,ic])=>navBtn(a.cle,l,ic,vid)).join(''))).join('');
  badges();
 }
-function navBtn(id,label,icon){
- return `<button class="nitem" data-m="${id}" ${id===CUR?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ICON[icon]}</svg><span>${esc(label)}</span><em class="b hide"></em></button>`;
+function groupeHtml(cle,label,inner){
+ const ouvert=NAV_EXPANDED[cle]!=null?NAV_EXPANDED[cle]:CUR===cle;
+ return `<div class="ngroup ${ouvert?'':'closed'}"><div data-ghead="${cle}">${esc(label)}<svg viewBox="0 0 24 24">${ICON.chevron}</svg></div>${inner}</div>`;
 }
-$('#nav')?.addEventListener('click',e=>{const n=e.target.closest('.nitem');if(n){go(n.dataset.m);$('#side').classList.remove('on')}});
+function navBtn(id,label,icon,vue){
+ const actif=vue?(CUR===id&&(SUB['vue-'+id]||vueParDefaut(id))===vue):(CUR===id);
+ return `<button class="nitem" data-m="${id}" ${vue?`data-vue="${esc(vue)}"`:''} ${actif?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ICON[icon]}</svg><span>${esc(label)}</span><em class="b hide"></em></button>`;
+}
+$('#nav')?.addEventListener('click',e=>{
+ const gh=e.target.closest('[data-ghead]');
+ if(gh){
+  const cle=gh.dataset.ghead;
+  if(cle==='pilotage'||cle===CUR){
+   // Déjà sur cette page (ou Pilotage, jamais une page en soi) : une
+   // simple bascule, pas une navigation — sinon go() reposerait aussitôt
+   // NAV_EXPANDED à `true` et la section ne pourrait jamais se refermer.
+   const ouvertAvant=NAV_EXPANDED[cle]!=null?NAV_EXPANDED[cle]:(cle==='pilotage');
+   NAV_EXPANDED[cle]=!ouvertAvant;
+   renderNav();
+  }else{
+   SUB['vue-'+cle]=vueParDefaut(cle);
+   go(cle);   // go() déplie la section qu'on rejoint
+  }
+  return;
+ }
+ const n=e.target.closest('.nitem');
+ if(n){
+  if(n.dataset.vue)SUB['vue-'+n.dataset.m]=n.dataset.vue;
+  go(n.dataset.m);
+  $('#side').classList.remove('on');
+ }
+});
 function go(id){
  if(!can(id)){toast("Ce rôle n'a pas accès à cette activité");return}
  LINK_MODE=false;LINK_FROM=null;   // le mode « relier » ne doit pas survivre à un changement de page
  CUR=id;
- document.querySelectorAll('.nitem').forEach(n=>n.toggleAttribute('aria-current',n.dataset.m===id));
+ NAV_EXPANDED[id]=true;   // la section qu'on ouvre reste dépliée
+ renderNav();
  render();
  window.scrollTo(0,0);
  try{localStorage.setItem('natty_crm_cur',id)}catch(e){}
@@ -1537,23 +1601,45 @@ async function vSessionsProduction(){
  return `<div class="tbl-wrap"><table><thead><tr><th>Jour</th><th>Type</th><th>Créneau</th><th>Réservation</th></tr></thead><tbody>${list.map(s=>`<tr><td>${fd(s.jour)}</td><td>${s.type==='mise_en_place'?'Mise en place':'Production'}</td><td>${s.creneau_debut?s.creneau_debut.slice(0,5)+'–'+(s.creneau_fin||'').slice(0,5):'—'}</td><td><span class="chip ${s.statut_reservation==='confirmee'?'ok':s.statut_reservation==='envoyee'?'warn':''}">${s.statut_reservation}</span></td></tr>`).join('')||'<tr><td colspan="4" class="muted" style="text-align:center;padding:16px">Aucune session</td></tr>'}</tbody></table></div>`;
 }
 
-/* ============ INTERFACE PRODUCTION — bons, calendrier, sessions ============
-   Ce que la « refonte » exige : un vrai pilotage, pas un lien vers admin.html.
-   Ce qu'elle NE refait PAS : l'algorithme de répartition des postes entre
-   cuisiniers et le PERT minute par minute d'admin-production.js — des
-   centaines de lignes documentées à part dans CLAUDE.md §3, hors de portée
-   raisonnable d'une passe unique. Ce qui est ici couvre le pilotage
-   quotidien réel : ce qu'il reste à attribuer, ce qui part chaque jour, les
-   sessions réservées — et dit honnêtement, dans la page, où trouver le reste
-   plutôt que de prétendre l'avoir reconstruit. */
-async function vInterfaceProduction(){
- const r=await sbTry('bons_commande?select=id,type,nb_repas,jour_livraison,statut,semaine,adresse&order=jour_livraison.asc.nullslast&limit=200');
+/* ============ INTERFACE PRODUCTION — dashboard, commandes, calendrier,
+   stocks, production, livraison ============
+   Six vues natives, rien qui renvoie vers admin.html. Ce qu'elles NE
+   refont PAS : l'algorithme de répartition des postes entre cuisiniers et
+   le PERT minute par minute d'admin-production.js — des centaines de
+   lignes documentées à part dans CLAUDE.md §3, hors de portée raisonnable
+   d'une passe unique. Ce qui est ici est un pilotage réel et complet du
+   quotidien : attribuer une recette à un bon, gérer le stock, marquer une
+   livraison faite — chaque action écrit réellement en base, aucune n'est
+   un simulacre en attendant mieux. */
+async function vProdDashboard(){
+ const r=await sbTry('bons_commande?select=id,statut,jour_livraison&limit=500');
  if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">bons_commande</span> — session d'équipe requise, ou table absente.</span></div>`;
  const bons=r.data;
- const sansDate=bons.filter(b=>!b.jour_livraison);
+ const sansDate=bons.filter(b=>!b.jour_livraison).length;
  const aTraiter=bons.filter(b=>b.statut==='a_attribuer'||!b.jour_livraison).length;
  const attribues=bons.filter(b=>b.statut==='attribue'||b.statut==='en_production').length;
  const livres=bons.filter(b=>b.statut==='livre').length;
+ return `<div class="grid g4" style="margin-bottom:14px">
+ <div class="card kpi"><div class="lbl">Bons (500 derniers)</div><div class="val num">${bons.length}</div></div>
+ <div class="card kpi"><div class="lbl">À traiter</div><div class="val num" style="color:var(--red)">${aTraiter}</div></div>
+ <div class="card kpi"><div class="lbl">Attribués / en production</div><div class="val num">${attribues}</div></div>
+ <div class="card kpi"><div class="lbl">Livrés</div><div class="val num">${livres}</div></div>
+ </div>
+ ${sansDate?`<div class="exbar"><span class="chip bad">${sansDate}</span><span>bon${sansDate>1?'s':''} sans date de livraison — priorité, aucun jour ne peut les planifier.</span></div>`:''}
+ <p class="muted" style="font-size:12.5px">Le détail par jour est dans <b>Calendrier</b>, l'attribution des recettes dans <b>Commandes</b>, le stock dans <b>Stocks</b>, les menus et sessions dans <b>Production</b>, le suivi des livraisons dans <b>Livraison</b>.</p>`;
+}
+async function vProdCommandes(){
+ const r=await sbTry('bons_commande?select=id,type,nb_repas,jour_livraison,statut,adresse&order=jour_livraison.asc.nullslast&limit=200');
+ if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">bons_commande</span> — session d'équipe requise, ou table absente.</span></div>`;
+ const bons=r.data;
+ const lab={a_attribuer:['bad','À attribuer'],attribue:['info','Attribué'],en_production:['warn','En production'],livre:['ok','Livré'],annule:['','Annulé']};
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 12px">Cliquez un bon pour lui attribuer des recettes, changer son statut ou sa date.</p>
+ <div class="tbl-wrap"><table><thead><tr><th>Type</th><th>Repas</th><th>Livraison</th><th>Adresse</th><th>Statut</th></tr></thead><tbody>${bons.map(b=>`<tr class="rowc" data-ouvrir-attribution="${b.id}"><td><span class="chip">${esc(b.type)}</span></td><td class="num">${b.nb_repas}</td><td>${b.jour_livraison?fd(b.jour_livraison):'<span class="chip bad">sans date</span>'}</td><td>${esc(b.adresse||'—')}</td><td><span class="chip ${(lab[b.statut]||['',''])[0]}">${(lab[b.statut]||['',b.statut])[1]}</span></td></tr>`).join('')||'<tr><td colspan="5" class="muted" style="text-align:center;padding:24px">Aucun bon</td></tr>'}</tbody></table></div>`;
+}
+async function vProdCalendrier(){
+ const r=await sbTry('bons_commande?select=id,jour_livraison,statut&order=jour_livraison.asc.nullslast&limit=200');
+ if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">bons_commande</span>.</span></div>`;
+ const bons=r.data;
  const bonIds=bons.map(b=>b.id);
  const attrR=bonIds.length?await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=bon_id,recette_id,nb_portions'):{ok:true,data:[]};
  const attrs=attrR.ok?attrR.data:[];
@@ -1567,21 +1653,112 @@ async function vInterfaceProduction(){
   const total={};jb.forEach(b=>(parBon[b.id]||[]).forEach(a=>{total[a.recette_id]=(total[a.recette_id]||0)+a.nb_portions}));
   return Object.entries(total).sort((x,y)=>y[1]-x[1]).map(([id,n])=>(recNom[id]||'Recette')+' × '+n);
  };
- return `<div class="grid g4" style="margin-bottom:14px">
- <div class="card kpi"><div class="lbl">Bons (200 derniers)</div><div class="val num">${bons.length}</div></div>
- <div class="card kpi"><div class="lbl">À traiter</div><div class="val num" style="color:var(--red)">${aTraiter}</div></div>
- <div class="card kpi"><div class="lbl">Attribués / en production</div><div class="val num">${attribues}</div></div>
- <div class="card kpi"><div class="lbl">Livrés</div><div class="val num">${livres}</div></div>
- </div>
- ${sansDate.length?`<div class="exbar"><span class="chip bad">${sansDate.length}</span><span>bon${sansDate.length>1?'s':''} sans date de livraison — priorité, aucun jour ne peut les planifier.</span></div>`:''}
- <div class="sect"><h2>Calendrier de production</h2><span>Ce qui part chaque jour, toutes commandes confondues</span></div>
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 12px">Ce qui part chaque jour, toutes commandes confondues. Cliquez un jour pour voir ses bons.</p>
  <div class="tbl-wrap"><table><thead><tr><th>Jour</th><th>Bons</th><th>Recettes × portions</th></tr></thead><tbody>${jours.map(j=>{
   const jb=parJour[j],rouge=jb.some(b=>b.statut==='a_attribuer');
   return `<tr class="rowc" data-ouvrir-jour-prod="${j}"><td>${fd(j)}${rouge?' <span class="chip bad">à attribuer</span>':''}</td><td class="num">${jb.length}</td><td>${esc(recetteXn(jb).join(' · ')||'—')}</td></tr>`;
- }).join('')||'<tr><td colspan="3" class="muted" style="text-align:center;padding:20px">Aucun bon avec une date de livraison</td></tr>'}</tbody></table></div>
- <div class="sect"><h2>Sessions à venir</h2></div>
- ${await vSessionsProduction()}
- <p class="muted" style="font-size:12px;margin-top:14px">Le détail fin — répartition des postes entre cuisiniers, minute par minute — reste dans <a href="/admin.html" target="_blank" rel="noopener">l'outil de production</a>. Ce qui est ici couvre le pilotage quotidien : ce qu'il reste à attribuer, ce qui part chaque jour.</p>`;
+ }).join('')||'<tr><td colspan="3" class="muted" style="text-align:center;padding:20px">Aucun bon avec une date de livraison</td></tr>'}</tbody></table></div>`;
+}
+async function vProdLivraison(){
+ const r=await sbTry("bons_commande?jour_livraison=not.is.null&statut=neq.annule&select=id,type,nb_repas,jour_livraison,statut,adresse&order=jour_livraison.asc&limit=200");
+ if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">bons_commande</span>.</span></div>`;
+ const bons=r.data;
+ const aLivrer=bons.filter(b=>b.statut!=='livre');
+ const livres=bons.filter(b=>b.statut==='livre');
+ return `<div class="sect"><h2>À livrer</h2><span>${aLivrer.length}</span></div>
+ <div class="card lift"><div class="list">${aLivrer.map(b=>`<div class="li"><span class="dot ${b.statut==='a_attribuer'?'bad':'info'}"></span><div class="grow"><b style="font-weight:500">${fd(b.jour_livraison)} · ${b.nb_repas} repas</b><div class="meta">${esc(b.adresse||'sans adresse')} · ${esc(b.type)}</div></div><button class="btn sm" data-marquer-livre="${b.id}">Marquer livré</button></div>`).join('')||'<div class="empty">Rien à livrer.</div>'}</div></div>
+ <div class="sect"><h2>Livrés récemment</h2><span>${livres.length}</span></div>
+ <div class="card lift"><div class="list">${livres.slice(0,20).map(b=>`<div class="li"><span class="dot ok"></span><div class="grow"><b style="font-weight:500">${fd(b.jour_livraison)} · ${b.nb_repas} repas</b><div class="meta">${esc(b.adresse||'sans adresse')}</div></div></div>`).join('')||'<div class="empty">Aucune livraison récente.</div>'}</div></div>`;
+}
+document.addEventListener('click',async e=>{
+ const ml=e.target.closest('[data-marquer-livre]');
+ if(ml){await sb('bons_commande?id=eq.'+ml.dataset.marquerLivre,{method:'PATCH',body:JSON.stringify({statut:'livre'})});toast('Marqué livré');render()}
+});
+/* Stock — CRUD natif sur `stocks_mp`. N'essaie pas de recalculer les
+   besoins depuis plans_repas/recettes comme admin.html (ce calcul est un
+   chantier à part, documenté longuement dans CLAUDE.md) : ici on saisit et
+   on corrige ce qui est physiquement en réserve, honnêtement plus simple. */
+let INGREDIENTS_CACHE=null;
+async function chargerIngredients(){
+ if(INGREDIENTS_CACHE)return INGREDIENTS_CACHE;
+ const r=await sbTry('ingredients_base?select=nom&order=nom.asc&limit=500');
+ INGREDIENTS_CACHE=r.ok?r.data.map(x=>x.nom):[];
+ return INGREDIENTS_CACHE;
+}
+async function vProdStocks(){
+ await chargerIngredients();
+ const r=await sbTry('stocks_mp?select=*&order=date_peremption.asc.nullslast');
+ if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">stocks_mp</span> — session d'équipe requise, ou table absente.</span></div>`;
+ const stocks=r.data;
+ const todayStr=TODAY.toISOString().slice(0,10);
+ return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn sm primary" data-new="stock">+ Entrée stock</button></div>
+ <div class="tbl-wrap"><table><thead><tr><th>Ingrédient</th><th>Quantité</th><th>Péremption</th><th>Stockage</th><th>Statut</th><th>Lot</th></tr></thead><tbody>${stocks.map(s=>{
+  const perime=s.date_peremption&&s.date_peremption<todayStr;
+  return `<tr class="rowc" data-edit-stock="${s.id}"><td>${esc(s.ingredient_nom)}</td><td class="num">${s.quantite_kg} kg</td><td>${s.date_peremption?fd(s.date_peremption):'—'}${perime?' <span class="chip bad">périmé</span>':''}</td><td>${esc(s.temperature_stockage||'—')}</td><td><span class="chip ${s.statut==='disponible'?'ok':s.statut==='perime'?'bad':''}">${esc(s.statut)}</span></td><td>${esc(s.lot||'—')}</td></tr>`;
+ }).join('')||'<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">Aucun stock enregistré</td></tr>'}</tbody></table></div>`;
+}
+document.addEventListener('click',e=>{
+ const es=e.target.closest('[data-edit-stock]');
+ if(es)ouvrirEditionStock(es.dataset.editStock);
+});
+async function ouvrirEditionStock(id){
+ const r=await sbTry('stocks_mp?id=eq.'+id+'&select=*');
+ const s=(r.ok?r.data:[])[0];if(!s){toast('Stock introuvable');return}
+ modal(`<h2>Modifier le stock</h2><form class="form" id="editStockForm">
+  <label>Ingrédient<input class="inp" id="es1" value="${esc(s.ingredient_nom)}" required list="ingListe"></label>
+  <datalist id="ingListe">${(INGREDIENTS_CACHE||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+  <div class="two"><label>Quantité (kg)<input class="inp" id="es2" type="number" step="0.1" value="${s.quantite_kg}"></label><label>Péremption<input class="inp" id="es3" type="date" value="${s.date_peremption||''}"></label></div>
+  <div class="two"><label>Stockage<select id="es4">${opt(['frais','ambiant','surgele'],s.temperature_stockage)}</select></label><label>Statut<select id="es5">${opt(['disponible','epuise','perime'],s.statut)}</select></label></div>
+  <label>Lot<input class="inp" id="es6" value="${esc(s.lot||'')}"></label>
+  <div class="foot"><button type="button" class="btn danger sm" data-del-stock="${s.id}">Supprimer</button><button class="btn primary sm" type="submit">Enregistrer</button></div>
+ </form>`);
+ $('[data-del-stock]')?.addEventListener('click',async()=>{await sb('stocks_mp?id=eq.'+id,{method:'DELETE'});closeAll();toast('Retiré');render()});
+ $('#editStockForm').onsubmit=async e=>{
+  e.preventDefault();
+  await sb('stocks_mp?id=eq.'+id,{method:'PATCH',body:JSON.stringify({ingredient_nom:$('#es1').value,quantite_kg:+$('#es2').value||0,date_peremption:$('#es3').value||null,temperature_stockage:$('#es4').value,statut:$('#es5').value,lot:$('#es6').value||null})});
+  closeAll();toast('Stock mis à jour');render();
+ };
+}
+/* Attribution native d'un bon — remplace le renvoi vers admin.html.
+   Changer le statut/la date ET attribuer des recettes se font au même
+   endroit : c'est le geste complet qu'admin.html demandait de finir
+   ailleurs. */
+async function ouvrirAttributionBon(bonId){
+ const br=await sbTry('bons_commande?id=eq.'+bonId+'&select=*');
+ const bon=(br.ok?br.data:[])[0];
+ if(!bon){toast('Bon introuvable');return}
+ const ar=await sbTry('bons_attributions?bon_id=eq.'+bonId+'&select=*');
+ const attrs=ar.ok?ar.data:[];
+ const recR=await sbTry('recettes?actif=eq.true&select=id,nom&order=nom.asc');
+ const toutesRecettes=recR.ok?recR.data:[];
+ const nomRec={};toutesRecettes.forEach(r=>nomRec[r.id]=r.nom);
+ drawer(`<div class="dh"><div><h2>${bon.nb_repas} repas · ${esc(bon.type)}</h2><span class="chip ${bon.statut==='a_attribuer'?'bad':bon.statut==='livre'?'ok':'info'}">${esc(bon.statut)}</span></div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <form class="form" id="bonMetaForm">
+  <div class="two"><label>Statut<select id="bmStatut">${opt(['a_attribuer','attribue','en_production','livre','annule'],bon.statut)}</select></label><label>Jour de livraison<input class="inp" id="bmJour" type="date" value="${bon.jour_livraison||''}"></label></div>
+  <label>Adresse<input class="inp" id="bmAdresse" value="${esc(bon.adresse||'')}"></label>
+  <div class="foot"><button class="btn primary sm" type="submit">Enregistrer</button></div>
+ </form>
+ <div class="sect"><h2 style="font-size:15px">Recettes attribuées</h2></div>
+ <div class="list" id="attrList">${attrs.map(a=>`<div class="li"><div class="grow">${esc(nomRec[a.recette_id]||'Recette')}</div><span class="num">${a.nb_portions} portions</span><button class="btn sm ghost" data-del-attr="${a.id}">Retirer</button></div>`).join('')||'<div class="empty">Aucune recette attribuée.</div>'}</div>
+ <form class="form" id="attrForm" style="margin-top:10px">
+  <div class="two"><label>Recette<select id="afRec">${toutesRecettes.map(r=>`<option value="${r.id}">${esc(r.nom)}</option>`).join('')||'<option value="">Aucune recette</option>'}</select></label><label>Portions<input class="inp" id="afPortions" type="number" min="1" value="${bon.nb_repas||1}"></label></div>
+  <div class="foot"><button class="btn sm primary" type="submit">+ Attribuer</button></div>
+ </form>`);
+ $('#attrList').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-del-attr]');
+  if(b){await sb('bons_attributions?id=eq.'+b.dataset.delAttr,{method:'DELETE'});ouvrirAttributionBon(bonId)}
+ });
+ $('#bonMetaForm').onsubmit=async e=>{
+  e.preventDefault();
+  await sb('bons_commande?id=eq.'+bonId,{method:'PATCH',body:JSON.stringify({statut:$('#bmStatut').value,jour_livraison:$('#bmJour').value||null,adresse:$('#bmAdresse').value||null})});
+  toast('Bon mis à jour');closeAll();render();
+ };
+ $('#attrForm').onsubmit=async e=>{
+  e.preventDefault();
+  const recId=$('#afRec').value;if(!recId)return;
+  await sb('bons_attributions',{method:'POST',body:JSON.stringify({bon_id:bonId,recette_id:recId,nb_portions:+$('#afPortions').value||1})});
+  toast('Recette attribuée');ouvrirAttributionBon(bonId);
+ };
 }
 async function ouvrirJourProduction(jour){
  const r=await sbTry('bons_commande?jour_livraison=eq.'+jour+'&select=id,type,nb_repas,statut,adresse&order=statut.asc');
@@ -1595,13 +1772,15 @@ async function ouvrirJourProduction(jour){
  drawer(`<div class="dh"><div><h2>${fd(jour)}</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
  <div class="list">${bons.map(b=>{
   const mine=attrs.filter(a=>a.bon_id===b.id);
-  return `<div class="li"><span class="dot ${b.statut==='a_attribuer'?'bad':b.statut==='livre'?'ok':'info'}"></span><div class="grow"><b style="font-weight:500">${b.nb_repas} repas · ${esc(b.type)}</b><div class="meta">${esc(b.adresse||'sans adresse')}${mine.length?' · '+mine.map(a=>esc(recNom[a.recette_id]||'?')+' × '+a.nb_portions).join(', '):' · non attribué'}</div></div><span class="chip ${b.statut==='a_attribuer'?'bad':b.statut==='livre'?'ok':''}">${b.statut}</span></div>`;
+  return `<div class="li c" data-ouvrir-attribution="${b.id}"><span class="dot ${b.statut==='a_attribuer'?'bad':b.statut==='livre'?'ok':'info'}"></span><div class="grow"><b style="font-weight:500">${b.nb_repas} repas · ${esc(b.type)}</b><div class="meta">${esc(b.adresse||'sans adresse')}${mine.length?' · '+mine.map(a=>esc(recNom[a.recette_id]||'?')+' × '+a.nb_portions).join(', '):' · non attribué'}</div></div><span class="chip ${b.statut==='a_attribuer'?'bad':b.statut==='livre'?'ok':''}">${b.statut}</span></div>`;
  }).join('')||'<div class="empty">Aucun bon ce jour.</div>'}</div>
- <p class="muted" style="font-size:12px;margin-top:14px">Attribution fine des recettes : <a href="/admin.html" target="_blank" rel="noopener">admin.html</a>.</p>`);
+ <p class="muted" style="font-size:12px;margin-top:14px">Cliquez un bon pour lui attribuer des recettes.</p>`);
 }
 document.addEventListener('click',e=>{
  const oj=e.target.closest('[data-ouvrir-jour-prod]');
  if(oj)ouvrirJourProduction(oj.dataset.ouvrirJourProd);
+ const oa=e.target.closest('[data-ouvrir-attribution]');
+ if(oa)ouvrirAttributionBon(oa.dataset.ouvrirAttribution);
 });
 async function ouvrirMenu(id){
  const r=await sbTry('crm_menus?id=eq.'+id+'&select=*');
@@ -1642,8 +1821,8 @@ async function ouvrirBonsDuBloc(blocId){
  const r=await sbTry('bons_commande?bloc_id=eq.'+blocId+'&select=*&order=created_at.asc');
  const bons=r.ok?r.data:[];
  drawer(`<div class="dh"><div class="av lg dk">${ini(bloc?bloc.titre:'?')}</div><div><h2>Bons de commande</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
- <div class="list">${bons.map(b=>`<div class="li"><div class="grow"><b style="font-weight:500">${b.nb_repas} repas</b><div class="meta">${esc(b.adresse||'sans adresse')} · <span class="chip">${b.statut}</span></div></div></div>`).join('')||'<div class="empty">Aucun bon pour ce bloc.</div>'}</div>
- <p class="muted" style="font-size:12.5px;margin:14px 0 0">Génère un bon par bénéficiaire (mode automatique) selon les paramètres du bloc, ou un bon libre — puis attribuez les recettes depuis <a href="/admin.html" target="_blank" rel="noopener">admin.html</a>.</p>
+ <div class="list">${bons.map(b=>`<div class="li c" data-ouvrir-attribution="${b.id}"><div class="grow"><b style="font-weight:500">${b.nb_repas} repas</b><div class="meta">${esc(b.adresse||'sans adresse')} · <span class="chip">${b.statut}</span></div></div></div>`).join('')||'<div class="empty">Aucun bon pour ce bloc.</div>'}</div>
+ <p class="muted" style="font-size:12.5px;margin:14px 0 0">Génère un bon par bénéficiaire (mode automatique) selon les paramètres du bloc, ou un bon libre — cliquez un bon pour lui attribuer des recettes.</p>
  <div class="foot"><button type="button" class="btn sm" id="btnGenAuto">Générer automatiquement</button><button type="button" class="btn sm ghost" id="btnGenManuel">+ Bon manuel</button></div>`);
  $('#btnGenAuto').onclick=async()=>{
   if(!bloc||!bloc.parametres){toast('Paramètres du bloc introuvables');return}
@@ -1664,41 +1843,60 @@ async function ouvrirBonsDuBloc(blocId){
 }
 
 /* ============ PAGE D'UNE ACTIVITÉ ============
-   Une activité qui a une INTERFACE dédiée (commercial : pipeline ; production :
-   calendrier de production) s'ouvre dessus par défaut — c'est ELLE, « l'interface
-   de l'activité », qu'on voit en cliquant le menu à gauche. L'ancien système
-   générique (Aperçu/Tâches/Sous-projets/Schéma/Drive) ne disparaît pas : il
-   devient l'onglet « Gestion », toujours là, jamais perdu. Une activité SANS
-   interface dédiée (Finance, Partenariat, Développement…) continue de s'ouvrir
-   directement sur ce système générique, comme avant — aucune régression pour
-   elles tant que leur interface propre n'est pas construite. */
-const INTERFACES={
- commercial:{label:'Pipeline',sous:'Le pipeline commercial — glissez une carte pour changer son étape',html:vInterfaceCommercial},
- production:{label:'Production',sous:'Bons de commande, calendrier de production, sessions',html:vInterfaceProduction}
+   Chaque activité a une liste de VUES, dans l'ordre où elles apparaissent
+   dans son sous-menu (barre latérale). Une activité SANS entrée dans VUES
+   reçoit les cinq vues génériques (Aperçu/Tâches/Sous-projets/Schéma/Drive)
+   — c'est ce que `vuesDe()` rend automatiquement, donc AUCUNE régression
+   pour Finance/Partenariat/Développement tant qu'elles n'ont pas leur
+   propre liste : elles restent exactement ce qu'elles étaient. Commercial
+   et Production ont leurs vues propres + une dernière vue « Gestion » qui
+   regroupe encore les cinq génériques (rien n'est perdu, juste déplacé) —
+   « aucun chemin ne doit mener vers admin.html » : chaque vue est native. */
+const VUES={
+ commercial:[['pipeline','Pipe des ventes','commercial'],['comptes','Comptes & contacts','rh'],['emailing','Emailing & phoning','mail'],['prospection','Base de prospection','funnel'],['gestion','Gestion','projet']],
+ production:[['dashboard','Tableau de bord','dash'],['commandes','Commandes','logistique'],['calendrier','Calendrier','calendar'],['stocks','Stocks','stocks'],['production','Production','production'],['livraison','Livraison','livraison'],['gestion','Gestion','projet']]
 };
+function vuesGeneriques(cle){
+ const base=[['apercu','Aperçu','dash'],['taches','Tâches','taches'],['projets','Sous-projets','projet'],['schema','Schéma','schema'],['drive','Drive','drive']];
+ if(cle==='logistique')base.push(['commandes','Commandes','logistique']);
+ return base;
+}
+function vuesDe(cle){return VUES[cle]||vuesGeneriques(cle)}
+function vueParDefaut(cle){return vuesDe(cle)[0][0]}
 async function vActivite(cle){
  const a=ACT_BY_CLE[cle];if(!a)return'<p>Activité inconnue</p>';
- const [{blocs,liens},docs]=await Promise.all([chargerSchema(cle),chargerDocs(cle)]);
  const tachesAct=S.taches.filter(t=>t.activite===cle);
  const routine=tachesAct.filter(t=>t.routine);
- const projets=S.projets.filter(p=>p.activite===cle);
- const inter=INTERFACES[cle];
- if(!inter){
-  return ph(a.nom,`Tâches, sous-projets, drive et schéma de ${a.nom.toLowerCase()}`,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
-   routineHero(cle,routine)+await vGestionActivite(cle,tachesAct,projets,blocs,liens,docs);
- }
- const outer=tabs('outer-'+cle,[[cle,inter.label],['gestion','Gestion']],cle);
- const body=outer.cur==='gestion'?await vGestionActivite(cle,tachesAct,projets,blocs,liens,docs):await inter.html(cle);
- return ph(a.nom,outer.cur==='gestion'?`Tâches, sous-projets, drive et schéma de ${a.nom.toLowerCase()}`:inter.sous,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
-  routineHero(cle,routine)+outer.html+body;
+ const vues=vuesDe(cle);
+ const vueId=SUB['vue-'+cle]||vues[0][0];
+ const vueDef=vues.find(v=>v[0]===vueId)||vues[0];
+ const body=(!VUES[cle])?await vGenerique(cle,vueId,tachesAct)
+  :vueId==='gestion'?await vGestionInterne(cle,tachesAct)
+  :await rendreVueSpecifique(cle,vueId);
+ return ph(a.nom,`${vueDef[1]} — ${a.nom}`,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
+  routineHero(cle,routine)+body;
 }
-/* L'ancien « système de projet » — désormais un onglet, jamais la page entière
-   pour une activité qui a sa propre interface. Signature inchangée dans son
-   corps : c'est exactement ce que faisait vActivite() avant ce chantier. */
-async function vGestionActivite(cle,tachesAct,projets,blocs,liens,docs){
+/* Une activité sans vues dédiées : chaque vue générique est directement une
+   entrée de la barre latérale (plus de tabs internes — c'est la barre
+   latérale qui navigue désormais). Ne charge que ce dont la vue demandée a
+   besoin : passer par Schéma ne va pas chercher le Drive pour rien. */
+async function vGenerique(cle,vue,tachesAct){
+ const projets=S.projets.filter(p=>p.activite===cle);
+ if(vue==='taches')return groupesTaches(tachesAct.filter(t=>!t.routine));
+ if(vue==='projets')return vProjets(cle,projets);
+ if(vue==='schema'){const {blocs,liens}=await chargerSchema(cle);return vSchema(cle,blocs,liens);}
+ if(vue==='drive'){const docs=cle==='documents'?await chargerTousDocuments():await chargerDocs(cle);return vDrive(cle,docs);}
+ if(vue==='commandes')return await vCommandesLogistique();
+ return vApercuActivite(cle,tachesAct,projets);
+}
+/* La vue « Gestion » de Commercial/Production : les cinq génériques,
+   toujours là, avec leur propre petite barre d'onglets interne — c'est
+   EXACTEMENT ce que rendait vActivite() avant ce chantier, juste rangé
+   derrière un seul sous-menu au lieu d'être la page entière. */
+async function vGestionInterne(cle,tachesAct){
+ const projets=S.projets.filter(p=>p.activite===cle);
+ const [{blocs,liens},docs]=await Promise.all([chargerSchema(cle),chargerDocs(cle)]);
  const onglets=[['apercu','Aperçu'],['taches','Tâches',tachesAct.filter(t=>!t.routine&&t.statut!=='fait').length],['projets','Sous-projets',projets.length],['schema','Schéma',blocs.length],['drive','Drive',docs.length]];
- if(cle==='logistique')onglets.push(['commandes','Commandes']);
- if(cle==='production')onglets.push(['menus','Menus & sessions']);
  const tb=tabs('act-'+cle,onglets,'apercu');
  let body='';
  if(tb.cur==='apercu')body=vApercuActivite(cle,tachesAct,projets);
@@ -1706,15 +1904,33 @@ async function vGestionActivite(cle,tachesAct,projets,blocs,liens,docs){
  if(tb.cur==='projets')body=vProjets(cle,projets);
  if(tb.cur==='schema')body=vSchema(cle,blocs,liens);
  if(tb.cur==='drive')body=vDrive(cle,docs);
- if(tb.cur==='commandes')body=await vCommandesLogistique();
- if(tb.cur==='menus')body=await vProductionMenus();
  return tb.html+body;
+}
+async function rendreVueSpecifique(cle,vue){
+ if(cle==='commercial'){
+  if(vue==='pipeline')return vInterfaceCommercial();
+  if(vue==='comptes')return await vCommerciauxContacts();
+  if(vue==='emailing')return await vCommercialEmailing();
+  if(vue==='prospection')return vCommercialProspection();
+ }
+ if(cle==='production'){
+  if(vue==='dashboard')return await vProdDashboard();
+  if(vue==='commandes')return await vProdCommandes();
+  if(vue==='calendrier')return await vProdCalendrier();
+  if(vue==='stocks')return await vProdStocks();
+  if(vue==='production')return await vProductionMenus();
+  if(vue==='livraison')return await vProdLivraison();
+ }
+ return '<div class="empty">Vue inconnue.</div>';
 }
 
 /* Le mini-dashboard d'une activité : où on atterrit en l'ouvrant. Le
    récap des projets, ses 5 tâches les plus urgentes (même tri que la
    liste complète, juste tronqué), et des raccourcis vers les actions
-   qu'on y refait chaque semaine — pas génériques, propres à l'activité. */
+   qu'on y refait chaque semaine — pas génériques, propres à l'activité.
+   Aucun raccourci ne pointe plus vers admin.html : quand rien de natif
+   n'existe encore pour une activité (Finance), la liste est vide plutôt
+   que de proposer un chemin qui n'a plus le droit d'exister. */
 const ORDRE_PRIORITE={haute:0,moyenne:1,basse:2};
 function top5Taches(list){
  return list.filter(t=>t.statut!=='fait')
@@ -1723,16 +1939,16 @@ function top5Taches(list){
 }
 const ACTIONS_RAPIDES={
  logistique:[
-  {label:'Commandes à attribuer',onglet:'commandes'},
-  {label:'Calendrier de production',href:'/admin.html'},
-  {label:'Démarrer une session de production',href:'/admin.html'}
+  {label:'Commandes à attribuer',vue:'commandes'},
+  {label:'Calendrier de production',gotoActivite:'production',gotoVue:'calendrier'},
+  {label:'Démarrer une session de production',gotoActivite:'production',gotoVue:'production'}
  ],
  commercial:[
   {label:'Voir mes campagnes',bientot:true},
-  {label:'Voir mes fiches clients',bientot:true},
-  {label:'Voir les réponses',bientot:true}
+  {label:'Voir mes fiches clients',gotoActivite:'commercial',gotoVue:'comptes'},
+  {label:'Voir les réponses',gotoActivite:'commercial',gotoVue:'emailing'}
  ],
- finance:[{label:'Trésorerie & charges',href:'/admin.html'}],
+ finance:[],
  partenariat:[],
  developpement:[]
 };
@@ -1747,17 +1963,19 @@ function vApercuActivite(cle,tachesAct,projets){
 }
 function actionRapideHtml(a,cle,i){
  if(a.bientot)return `<button class="card click" style="text-align:left;opacity:.55;cursor:default" data-bientot="${esc(a.label)}"><b>${esc(a.label)}</b><div class="muted" style="font-size:12px;margin-top:4px">Bientôt</div></button>`;
- if(a.href)return `<a class="plain" href="${a.href}" target="_blank" rel="noopener"><div class="card click"><b>${esc(a.label)}</b><div class="muted" style="font-size:12px;margin-top:4px">Back-office →</div></div></a>`;
+ if(a.gotoActivite)return `<button class="card click" style="text-align:left" data-goto-activite="${a.gotoActivite}" data-goto-vue="${a.gotoVue||''}"><b>${esc(a.label)}</b><div class="muted" style="font-size:12px;margin-top:4px">Ouvrir →</div></button>`;
  return `<button class="card click" style="text-align:left" data-action-rapide="${cle}:${i}"><b>${esc(a.label)}</b></button>`;
 }
 document.addEventListener('click',e=>{
  const b=e.target.closest('[data-bientot]');
- if(b){toast('« '+b.dataset.bientot+' » arrive avec le module Commercial');return}
+ if(b){toast('« '+b.dataset.bientot+' » arrive bientôt');return}
+ const ga=e.target.closest('[data-goto-activite]');
+ if(ga){const c=ga.dataset.gotoActivite;SUB['vue-'+c]=ga.dataset.gotoVue||vueParDefaut(c);go(c);return}
  const ar=e.target.closest('[data-action-rapide]');
  if(ar){
   const [cle,i]=ar.dataset.actionRapide.split(':');
   const a=(ACTIONS_RAPIDES[cle]||[])[+i];
-  if(a&&a.onglet){SUB['act-'+cle]=a.onglet;render()}
+  if(a&&a.vue){SUB['vue-'+cle]=a.vue;render()}
  }
 });
 function routineHero(cle,list){
@@ -1824,6 +2042,72 @@ function wirePipelineIfPresent(){
  wrap.addEventListener('click',e=>{const c=e.target.closest('[data-deal]');if(c)go('projet:'+c.dataset.deal)});
 }
 
+/* ============ COMMERCIAL — Base de prospection, Comptes & contacts,
+   Emailing & phoning ============
+   Base de prospection ne recrée aucune donnée : c'est le pipeline filtré
+   sur son premier stade — avancer un deal se fait toujours depuis Pipe des
+   ventes, il n'y a qu'un seul endroit qui décide de l'étape. Comptes &
+   contacts et Emailing & phoning sont natifs (crm_contacts/crm_interactions,
+   migration 0008) — un contact optionnellement rattaché à un deal, et son
+   fil d'interactions (email envoyé, appel passé), consultable par contact
+   ou dans un flux unique toutes personnes confondues. */
+function vCommercialProspection(){
+ const prospects=S.projets.filter(p=>p.activite==='commercial'&&(p.etape_pipeline||'prospection')==='prospection');
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Les deals encore au stade « Prospection » du pipeline. Faites-les avancer depuis <b>Pipe des ventes</b>.</p>
+ <div class="grid g3">${prospects.map(projetCard).join('')||'<div class="empty">Aucun prospect pour l’instant — « + Prospect / client » dans le pipeline.</div>'}</div>`;
+}
+async function vCommerciauxContacts(){
+ const r=await sbTry('crm_contacts?select=*,crm_projets(nom)&order=created_at.desc');
+ if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">crm_contacts</span> — session d'équipe requise, ou table absente.</span></div>`;
+ const contacts=r.data;
+ return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn sm primary" data-new="contact">+ Contact</button></div>
+ <div class="grid g3">${contacts.map(c=>`<div class="card lift click" data-open-contact="${c.id}"><h3>${esc(c.nom)}</h3>${c.entreprise?`<p class="sub">${esc(c.entreprise)}</p>`:''}<div class="muted" style="font-size:12px">${[c.email,c.telephone].filter(Boolean).map(esc).join(' · ')||'—'}</div>${c.crm_projets?`<div class="chip info" style="margin-top:8px">${esc(c.crm_projets.nom)}</div>`:''}</div>`).join('')||'<div class="empty">Aucun contact — « + Contact » pour en ajouter un.</div>'}</div>`;
+}
+async function vCommercialEmailing(){
+ const r=await sbTry('crm_interactions?select=*,crm_contacts(nom,entreprise)&order=created_at.desc&limit=100');
+ if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">crm_interactions</span> — session d'équipe requise, ou table absente.</span></div>`;
+ const list=r.data;
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Le fil de tous les emails et appels, enregistrés depuis la fiche d'un contact.</p>
+ <div class="card lift"><div class="list">${list.map(i=>`<div class="li c" data-open-contact="${i.contact_id}"><span class="dot ${i.type==='email'?'info':i.type==='appel'?'ok':''}"></span><div class="grow"><b style="font-weight:500">${esc((i.crm_contacts||{}).nom||'Contact supprimé')}${i.resultat?' — '+esc(i.resultat):''}</b><div class="meta">${i.type==='email'?'✉️ Email':i.type==='appel'?'📞 Appel':'Autre'} · ${new Date(i.created_at).toLocaleString('fr-FR')}${i.auteur?' · '+esc(i.auteur):''}</div></div></div>`).join('')||'<div class="empty">Aucune interaction — ajoutez-en une depuis la fiche d’un contact.</div>'}</div>`;
+}
+async function openContact(id){
+ const cr=await sbTry('crm_contacts?id=eq.'+id+'&select=*');
+ const c=(cr.ok?cr.data:[])[0];if(!c){toast('Contact introuvable');return}
+ const ir=await sbTry('crm_interactions?contact_id=eq.'+id+'&select=*&order=created_at.desc');
+ const interactions=ir.ok?ir.data:[];
+ drawer(`<div class="dh"><div class="av lg dk">${ini(c.nom)}</div><div><h2>${esc(c.nom)}</h2>${c.entreprise?`<p class="sub" style="margin:2px 0 0">${esc(c.entreprise)}</p>`:''}</div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <form class="form" id="contactForm">
+  <div class="two"><label>Email<input class="inp" id="cEmail" type="email" value="${esc(c.email||'')}"></label><label>Téléphone<input class="inp" id="cTel" value="${esc(c.telephone||'')}"></label></div>
+  <label>Entreprise<input class="inp" id="cEnt" value="${esc(c.entreprise||'')}"></label>
+  <label>Notes<textarea class="inp" id="cNotes">${esc(c.notes||'')}</textarea></label>
+  <div class="foot"><button type="button" class="btn danger sm" data-del-contact="${c.id}">Supprimer</button><button class="btn primary sm" type="submit">Enregistrer</button></div>
+ </form>
+ <div class="sect"><h2 style="font-size:15px">Emailing &amp; phoning</h2></div>
+ <form class="form" id="interForm" style="margin-bottom:10px">
+  <div class="two"><label>Type<select id="iType">${opt(['email','appel','autre'])}</select></label><label>Résultat<input class="inp" id="iResultat" placeholder="ex. Intéressé, pas de réponse…"></label></div>
+  <label>Note<textarea class="inp" id="iNote" style="min-height:52px"></textarea></label>
+  <div class="foot"><button class="btn sm primary" type="submit">Ajouter au fil</button></div>
+ </form>
+ <div class="list">${interactions.map(i=>`<div class="li"><span class="dot ${i.type==='email'?'info':i.type==='appel'?'ok':''}"></span><div class="grow"><b style="font-weight:500">${i.type==='email'?'✉️ Email':i.type==='appel'?'📞 Appel':'Autre'}${i.resultat?' — '+esc(i.resultat):''}</b>${i.note?`<div style="white-space:pre-wrap;font-size:12.5px;margin-top:2px">${esc(i.note)}</div>`:''}<div class="meta">${i.auteur?esc(i.auteur)+' · ':''}${new Date(i.created_at).toLocaleString('fr-FR')}</div></div></div>`).join('')||'<div class="empty">Aucune interaction encore.</div>'}</div>`);
+ $('#contactForm').onsubmit=async e=>{
+  e.preventDefault();
+  await sb('crm_contacts?id=eq.'+id,{method:'PATCH',body:JSON.stringify({email:$('#cEmail').value||null,telephone:$('#cTel').value||null,entreprise:$('#cEnt').value||null,notes:$('#cNotes').value||null,updated_at:new Date().toISOString()})});
+  closeAll();toast('Contact mis à jour');render();
+ };
+ $('[data-del-contact]')?.addEventListener('click',async()=>{
+  await sb('crm_contacts?id=eq.'+id,{method:'DELETE'});closeAll();toast('Contact supprimé');render();
+ });
+ $('#interForm').onsubmit=async e=>{
+  e.preventDefault();
+  await sb('crm_interactions',{method:'POST',body:JSON.stringify({contact_id:id,projet_id:c.projet_id,type:$('#iType').value,resultat:$('#iResultat').value||null,note:$('#iNote').value||null,auteur:STAFF_NOM})});
+  openContact(id);
+ };
+}
+document.addEventListener('click',e=>{
+ const oc=e.target.closest('[data-open-contact]');
+ if(oc)openContact(oc.dataset.openContact);
+});
+
 /* ============ PAGE D'UN PROJET ============ */
 async function vProjetPage(id){
  const p=S.projets.find(x=>x.id===id);
@@ -1881,18 +2165,20 @@ function vDrive(cle,docs){
  (docs.length?dossiers.map(dName=>`<div class="sect"><h2 style="font-size:15px">${esc(dName)}</h2></div><div class="card lift"><div class="list">${docs.filter(d=>(d.dossier||'Sans dossier')===dName).map(docLi).join('')}</div></div>`).join(''):'<div class="empty">Aucun document. Ajoutez un lien (Drive, Notion, PDF…) pour cette activité.</div>');
 }
 function docLi(d){
- return `<div class="li"><span class="dot"></span><div class="grow"><b style="font-weight:500"><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.nom)}</a></b><div class="meta">${d.type?esc(d.type)+' · ':''}${d.ajoute_par?'ajouté par '+esc(d.ajoute_par):''}</div></div><button class="btn sm ghost" data-del-doc="${d.id}">Retirer</button></div>`;
+ const act=d.activite&&ACT_BY_CLE[d.activite];
+ return `<div class="li"><span class="dot"></span><div class="grow"><b style="font-weight:500"><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.nom)}</a></b><div class="meta">${act?esc(act.nom)+' · ':''}${d.type?esc(d.type)+' · ':''}${d.ajoute_par?'ajouté par '+esc(d.ajoute_par):''}</div></div><button class="btn sm ghost" data-del-doc="${d.id}">Retirer</button></div>`;
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-del-doc]');if(b)supprimerDoc(b.dataset.delDoc)});
 async function supprimerDoc(id){
  await sb('crm_documents?id=eq.'+id,{method:'DELETE'});
  Object.keys(DOCS_CACHE).forEach(k=>DOCS_CACHE[k]=DOCS_CACHE[k].filter(d=>d.id!==id));
+ if(DOCS_TOUS_CACHE)DOCS_TOUS_CACHE=DOCS_TOUS_CACHE.filter(d=>d.id!==id);
  toast('Document retiré');render();
 }
 
 /* Commandes (Logistique) — lit les VRAIES tables de production, pas de
-   doublon : on affiche un résumé et on renvoie vers admin.html pour le
-   travail fin (attribution, Gantt cuisine, assemblage), déjà éprouvé là-bas. */
+   doublon. Chaque ligne ouvre l'attribution native (partagée avec
+   Production → Commandes) : pas de renvoi vers admin.html. */
 async function vCommandesLogistique(){
  const r=await sbTry('bons_commande?select=id,user_id,type,nb_repas,jour_livraison,statut,semaine&order=jour_livraison.asc.nullslast&limit=100');
  if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">bons_commande</span> — session d'équipe requise, ou table absente.</span></div>`;
@@ -1902,8 +2188,7 @@ async function vCommandesLogistique(){
  const livres=bons.filter(b=>b.statut==='livre').length;
  const lab={a_attribuer:['bad','À attribuer'],attribue:['info','Attribué'],en_production:['warn','En production'],livre:['ok','Livré'],annule:['','Annulé']};
  return `<div class="grid g4" style="margin-bottom:14px"><div class="card kpi"><div class="lbl">Bons (100 derniers)</div><div class="val num">${bons.length}</div></div><div class="card kpi"><div class="lbl">À traiter</div><div class="val num" style="color:var(--red)">${aTraiter}</div></div><div class="card kpi"><div class="lbl">Attribués / en production</div><div class="val num">${attribues}</div></div><div class="card kpi"><div class="lbl">Livrés</div><div class="val num">${livres}</div></div></div>
- <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><a class="btn primary sm" href="/admin.html" target="_blank" rel="noopener">Ouvrir la production complète →</a></div>
- <div class="tbl-wrap"><table><thead><tr><th>Type</th><th>Repas</th><th>Semaine</th><th>Livraison</th><th>Statut</th></tr></thead><tbody>${bons.slice(0,30).map(b=>`<tr><td><span class="chip">${esc(b.type)}</span></td><td class="num">${b.nb_repas}</td><td>${b.semaine?fd(b.semaine):'—'}</td><td>${b.jour_livraison?fd(b.jour_livraison):'<span class="chip bad">sans date</span>'}</td><td><span class="chip ${(lab[b.statut]||['',''])[0]}">${(lab[b.statut]||['',b.statut])[1]}</span></td></tr>`).join('')||'<tr><td colspan="5" class="muted" style="text-align:center;padding:24px">Aucun bon</td></tr>'}</tbody></table></div>`;
+ <div class="tbl-wrap"><table><thead><tr><th>Type</th><th>Repas</th><th>Semaine</th><th>Livraison</th><th>Statut</th></tr></thead><tbody>${bons.slice(0,30).map(b=>`<tr class="rowc" data-ouvrir-attribution="${b.id}"><td><span class="chip">${esc(b.type)}</span></td><td class="num">${b.nb_repas}</td><td>${b.semaine?fd(b.semaine):'—'}</td><td>${b.jour_livraison?fd(b.jour_livraison):'<span class="chip bad">sans date</span>'}</td><td><span class="chip ${(lab[b.statut]||['',''])[0]}">${(lab[b.statut]||['',b.statut])[1]}</span></td></tr>`).join('')||'<tr><td colspan="5" class="muted" style="text-align:center;padding:24px">Aucun bon</td></tr>'}</tbody></table></div>`;
 }
 
 /* ============ SCHÉMA ÉDITABLE (drag + liens) ============
@@ -2159,7 +2444,8 @@ const F={
    const body={activite:$('#f1').value,nom:$('#f2').value,url,type:$('#f4').value,dossier:$('#f5').value||null,projet_id:ctx.projet||null,tache_id:ctx.tache||null,ajoute_par:STAFF_NOM};
    const r=await sb('crm_documents',{method:'POST',body:JSON.stringify(body)});
    const cle=body.activite;DOCS_CACHE[cle]=[r[0],...(DOCS_CACHE[cle]||[])];
-   toast('Livrable ajouté — visible ici et dans le drive du projet');render();
+   DOCS_TOUS_CACHE=null;   // se range tout seul dans Documents — prochaine visite, liste à jour
+   toast('Livrable ajouté — visible ici, dans le drive du projet, et dans Documents');render();
   }}),
  bloc:(ctx)=>({t:'Nouveau bloc de schéma',f:`
   <label>Titre<input class="inp" id="f1" required></label>
@@ -2211,6 +2497,27 @@ const F={
    }
    const r=await sb('indisponibilites',{method:'POST',body:JSON.stringify(body)});
    RH_CACHE.dispos.unshift(r[0]);toast('Indisponibilité ajoutée');render();
+  }}),
+ contact:()=>({t:'Nouveau contact',f:`
+  <label>Nom<input class="inp" id="f1" required></label>
+  <div class="two"><label>Email<input class="inp" id="f2" type="email"></label><label>Téléphone<input class="inp" id="f3"></label></div>
+  <label>Entreprise<input class="inp" id="f4"></label>
+  <label>Lié à un deal (optionnel)<select id="f5"><option value="">—</option>${S.projets.filter(p=>p.activite==='commercial').map(p=>`<option value="${p.id}">${esc(p.nom)}</option>`).join('')}</select></label>`,
+  ok:async()=>{
+   const body={nom:$('#f1').value,email:$('#f2').value||null,telephone:$('#f3').value||null,entreprise:$('#f4').value||null,projet_id:$('#f5').value||null,cree_par:STAFF_NOM};
+   await sb('crm_contacts',{method:'POST',body:JSON.stringify(body)});
+   toast('Contact créé');render();
+  }}),
+ stock:()=>({t:'Nouvelle entrée de stock',f:`
+  <label>Ingrédient<input class="inp" id="f1" required list="ingListe"></label>
+  <datalist id="ingListe">${(INGREDIENTS_CACHE||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+  <div class="two"><label>Quantité (kg)<input class="inp" id="f2" type="number" step="0.1" required></label><label>Péremption<input class="inp" id="f3" type="date"></label></div>
+  <div class="two"><label>Stockage<select id="f4">${opt(['frais','ambiant','surgele'])}</select></label><label>Statut<select id="f5">${opt(['disponible','epuise','perime'],'disponible')}</select></label></div>
+  <label>Lot<input class="inp" id="f6"></label>`,
+  ok:async()=>{
+   const body={ingredient_nom:$('#f1').value,quantite_kg:+$('#f2').value||0,date_peremption:$('#f3').value||null,temperature_stockage:$('#f4').value,statut:$('#f5').value||'disponible',lot:$('#f6').value||null};
+   await sb('stocks_mp',{method:'POST',body:JSON.stringify(body)});
+   toast('Stock ajouté');render();
   }})
 };
 const opt=(a,sel)=>a.map(x=>`<option ${x===sel?'selected':''}>${x}</option>`).join('');
