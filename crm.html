@@ -228,6 +228,35 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
 .sblock:hover .sb-del{display:flex}
 .schema-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;text-align:center;padding:20px}
 
+/* ═══ RH : calendrier hebdomadaire (heures + réunions + tâches) ═══ */
+.rhcal-nav{display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:13px;flex-wrap:wrap}
+.rhcal-nav b{font-weight:600}
+.rhcal{display:flex;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--bg)}
+.rhcal-hcol{width:40px;flex:none;padding-top:56px}
+.rhcal-hourrow{height:44px;font-size:9.5px;color:var(--muted);padding:2px 4px;box-sizing:border-box;border-top:1px solid var(--line)}
+.rhcal-days{display:flex;flex:1;min-width:0}
+.rhcal-day{flex:1;min-width:96px}
+.rhcal-day+.rhcal-day{border-left:1px solid var(--line)}
+.rhcal-daylabel{padding:8px 6px;font-size:11.5px;font-weight:700;text-align:center;border-bottom:1px solid var(--line)}
+.rhcal-daylabel span{color:var(--muted);font-weight:500;margin-left:3px}
+.rhcal-daylabel.today{color:var(--blue)}
+.rhcal-allday{min-height:24px;padding:4px 4px 6px;display:flex;flex-wrap:wrap;gap:3px;border-bottom:1px solid var(--line)}
+.rhcal-chip{font-size:9.5px;padding:2px 5px;border-radius:5px;background:var(--card);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rhcal-track{position:relative;background-image:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px 44px)}
+.rhcal-evt{position:absolute;border-radius:7px;padding:3px 6px;color:#fff;font-size:10.5px;overflow:hidden;cursor:pointer;box-sizing:border-box}
+.rhcal-evt b{display:block;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px}
+.rhcal-evt small{display:block;font-size:9px;opacity:.85}
+@media (max-width:900px){.rhcal{overflow-x:auto}.rhcal-days{min-width:760px}}
+
+/* ═══ Interface d'activité : onglet « vue » (custom) + onglet « Gestion » (ancien système) ═══ */
+.kanban{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;align-items:flex-start}
+.kanban-col{flex:0 0 236px;background:var(--panel);border-radius:var(--r-lg);padding:12px;min-height:120px}
+.kanban-col.over{outline:2px dashed var(--blue);outline-offset:-2px}
+.kanban-col h4{margin:0 0 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.kanban-card{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;cursor:grab;box-shadow:var(--nm-soft)}
+.kanban-card:active{cursor:grabbing}
+.kanban-card.dragging{opacity:.35}
+
 @media (max-width:1180px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:920px){
   .app{grid-template-columns:1fr}
@@ -410,7 +439,7 @@ const ROLES={
  livreur:{l:'Livreur',acces:['logistique']}
 };
 function can(cle){
- if(cle==='dash'||cle==='taches'||cle==='rh')return true;
+ if(cle==='dash'||cle==='taches'||cle==='rh'||cle==='projets')return true;
  if(cle.startsWith('projet:')){const p=S.projets.find(x=>x.id===cle.slice(7));return p?can(p.activite):false}
  const r=ROLES[STAFF_ROLE];if(!r)return false;
  if(r.toutes)return true;
@@ -473,7 +502,7 @@ function badges(){
  document.querySelectorAll('.nitem').forEach(n=>{const e=n.querySelector('.b');const v=b[n.dataset.m];if(e){e.textContent=v||'';e.classList.toggle('hide',!v)}});
 }
 function renderNav(){
- const items=[['dash','Accueil','dash'],['taches','Toutes les tâches','taches'],['rh','RH','rh']].filter(([id])=>can(id));
+ const items=[['dash','Accueil','dash'],['taches','Toutes les tâches','taches'],['rh','RH','rh'],['projets','Projets','projet']].filter(([id])=>can(id));
  const acts=ACTIVITES.filter(a=>can(a.cle));
  $('#nav').innerHTML=
   `<div class="ngroup"><div>Pilotage</div>${items.map(([id,l,ic])=>navBtn(id,l,ic)).join('')}</div>`+
@@ -502,6 +531,7 @@ function crumbFor(cle){
  if(cle==='dash')return'<b>Accueil</b>';
  if(cle==='taches')return'Pilotage · <b>Toutes les tâches</b>';
  if(cle==='rh')return'Pilotage · <b>RH</b>';
+ if(cle==='projets')return'Pilotage · <b>Projets</b>';
  if(cle.startsWith('projet:')){
   const p=S.projets.find(x=>x.id===cle.slice(7));if(!p)return'<b>Projet</b>';
   const a=ACT_BY_CLE[p.activite];
@@ -517,6 +547,7 @@ async function renderView(cle){
  if(cle==='dash')return await vDash();
  if(cle==='taches')return vTachesGlobal();
  if(cle==='rh')return await vRH();
+ if(cle==='projets')return vProjetsHub();
  if(cle.startsWith('projet:'))return await vProjetPage(cle.slice(7));
  return await vActivite(cle);
 }
@@ -538,7 +569,39 @@ async function vDash(){
  return ph(`Bonjour ${esc(STAFF_NOM||'')}`,`${TODAY.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · ${urgentes.length} échéance${urgentes.length>1?'s':''} en cours`,`<button class="btn primary" data-new="projet">+ Projet</button>`)+
  `<div id="notifsAccueil"></div>`+
  (heros.length?`<div class="hero-carousel">${heros.map(heroCard).join('')}</div>`:`<div class="empty">Aucune échéance en cours. Les tâches avec une date arrivent ici.</div>`)+
+ vGrilleActivites()+
  tb.html+body;
+}
+
+/* Le « cadrillage héro » : un bloc par activité, cliquable — clique →
+   l'activité (ses sous-projets), clique sur un sous-projet → ses tâches.
+   `.acttile`/`.actgrid` existaient déjà dans la feuille de style, jamais
+   branchés à rien : c'est ce chantier qui leur donne leur rendu. */
+function vGrilleActivites(){
+ const acts=ACTIVITES.filter(a=>can(a.cle));
+ if(!acts.length)return'';
+ return `<div class="sect"><h2>Toutes les activités</h2><span>Cliquez un bloc pour voir ses projets, puis ses tâches</span></div>
+ <div class="actgrid">${acts.map(activiteTile).join('')}</div>`;
+}
+function activiteTile(a){
+ const nb=S.taches.filter(t=>t.activite===a.cle&&t.statut!=='fait').length;
+ const np=S.projets.filter(p=>p.activite===a.cle).length;
+ return `<button class="acttile" data-go="${a.cle}">
+  <div class="ic" style="background:${a.couleur||'var(--muted)'}"><svg viewBox="0 0 24 24">${ICON[a.icone]||ICON.projet}</svg></div>
+  <b>${esc(a.nom)}</b>
+  <div class="cnt">${np} projet${np>1?'s':''} · <b>${nb}</b> tâche${nb>1?'s':''} ouverte${nb>1?'s':''}</div>
+ </button>`;
+}
+
+/* ============ PROJETS — tous les projets en vrac, sous RH ============ */
+function vProjetsHub(){
+ const projets=S.projets.filter(p=>can(p.activite));
+ const mesTaches=top5Taches(S.taches.filter(t=>can(t.activite)&&t.porteur===STAFF_NOM));
+ return ph('Projets','Tous les projets, toutes activités confondues',`<button class="btn primary" data-new="projet">+ Projet</button>`)+
+ `<div class="sect"><h2>Vos 5 tâches les plus urgentes</h2><span>D'après ce qui vous est attribué</span></div>
+ <div class="card lift"><div class="list">${mesTaches.map(taskLi).join('')||'<div class="empty">Rien qui vous est attribué pour l’instant.</div>'}</div></div>
+ <div class="sect"><h2>Tous les projets, en vrac</h2><span>${projets.length}</span></div>
+ <div class="grid g3">${projets.map(projetCard).join('')||'<div class="empty">Aucun projet — « + Projet » pour en créer un.</div>'}</div>`;
 }
 
 /* ============ NOTIFICATIONS — assigné à une tâche, un bloc ou un projet :
@@ -736,21 +799,84 @@ async function vRH(){
  await chargerRH();
  const moi=STAFF_SESSION.user_id;
  const tb=tabs('rh',[
+  ['calendrier','Calendrier'],
   ['dispos','Disponibilités'],
   ['reunions','Réunions',RH_CACHE.reunions.filter(r=>r.statut!=='annulee'&&new Date(r.date_debut)>=TODAY).length],
   ['manquements','Manquements',manquementsAMoi().length+manquementsADecider().length]
- ],'dispos');
+ ],'calendrier');
  let acts='';
+ if(tb.cur==='calendrier'||tb.cur==='reunions')acts='<button class="btn primary" id="btnNouvelleReunion">+ Réunion</button>';
  if(tb.cur==='dispos')acts='<button class="btn primary" data-new="indispo">+ Indisponibilité</button>';
- if(tb.cur==='reunions')acts='<button class="btn primary" id="btnNouvelleReunion">+ Réunion</button>';
  let body='';
+ if(tb.cur==='calendrier')body=vRHCalendrier();
  if(tb.cur==='dispos')body=vRHDispos();
  if(tb.cur==='reunions')body=vRHReunions();
  if(tb.cur==='manquements')body=vRHManquements();
  return ph('RH',"Disponibilités, réunions et présence de l'équipe",acts)+tb.html+body;
 }
+
+/* Calendrier hebdomadaire : heures détaillées pour les réunions (elles ont
+   un horaire réel), bande « toute la journée » pour les tâches (elles n'ont
+   qu'une date — leur inventer une heure serait mentir). Semaine glissante,
+   comme `vRHDispos()` juste en dessous, mais avec sa propre navigation. */
+let RH_CAL_OFFSET=0;
+const RHCAL_H0=7,RHCAL_H1=20,RHCAL_ROWH=44;
+function vRHCalendrier(){
+ const lundi=lundiSemaine(RH_CAL_OFFSET);
+ const jours=[...Array(7)].map((_,i)=>{const d=new Date(lundi);d.setDate(d.getDate()+i);return d});
+ const noms=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+ const heures=[...Array(RHCAL_H1-RHCAL_H0)].map((_,i)=>RHCAL_H0+i);
+ return `<div class="rhcal-nav"><button class="btn sm ghost" id="rhcalPrev">← Semaine précédente</button><b>${fd(jours[0].toISOString().slice(0,10))} → ${fd(jours[6].toISOString().slice(0,10))}</b><button class="btn sm ghost" id="rhcalNext">Semaine suivante →</button>${RH_CAL_OFFSET!==0?`<button class="btn sm" id="rhcalToday">Aujourd’hui</button>`:''}</div>
+ <div class="rhcal">
+  <div class="rhcal-hcol">${heures.map(h=>`<div class="rhcal-hourrow">${h}h</div>`).join('')}</div>
+  <div class="rhcal-days">${jours.map(d=>rhcalDayCol(d,noms)).join('')}</div>
+ </div>
+ <p class="muted" style="font-size:12px;margin-top:10px">Les blocs colorés sont les réunions, à leur horaire réel. Les puces en haut de chaque jour sont les tâches à échéance ce jour-là — elles n'ont pas d'heure précise.</p>`;
+}
+function rhcalDayCol(d,noms){
+ const dStr=d.toISOString().slice(0,10);
+ const estAujourdhui=dStr===TODAY.toISOString().slice(0,10);
+ const reunions=RH_CACHE.reunions.filter(r=>r.statut!=='annulee'&&r.date_debut.slice(0,10)===dStr);
+ const taches=S.taches.filter(t=>can(t.activite)&&t.statut!=='fait'&&t.echeance===dStr);
+ const colH=(RHCAL_H1-RHCAL_H0)*RHCAL_ROWH;
+ return `<div class="rhcal-day">
+  <div class="rhcal-daylabel ${estAujourdhui?'today':''}">${noms[(d.getDay()+6)%7]} <span>${d.getDate()}</span></div>
+  <div class="rhcal-allday">${taches.map(t=>`<span class="rhcal-chip" data-open-tache="${t.id}" title="${esc(t.titre)}">${esc(t.titre)}</span>`).join('')}</div>
+  <div class="rhcal-track" style="height:${colH}px">${empilerCreneaux(reunions).map(([r,lane,n])=>rhcalEvt(r,lane,n)).join('')}</div>
+ </div>`;
+}
+/* Range en « lanes » les réunions qui se chevauchent (algo glouton par
+   intervalles), pour que deux réunions à la même heure ne se recouvrent
+   pas à l'écran au lieu de se partager la largeur de la colonne. */
+function empilerCreneaux(list){
+ const items=list.map(r=>({r,s:new Date(r.date_debut),e:new Date(r.date_fin||(new Date(r.date_debut).getTime()+30*60000))})).sort((a,b)=>a.s-b.s);
+ const finLane=[];
+ items.forEach(it=>{
+  let lane=finLane.findIndex(fin=>fin<=it.s);
+  if(lane===-1){lane=finLane.length;finLane.push(it.e)}else finLane[lane]=it.e;
+  it.lane=lane;
+ });
+ const total=Math.max(1,finLane.length);
+ return items.map(it=>[it.r,it.lane,total]);
+}
+function rhcalEvt(r,lane,nLanes){
+ const s=new Date(r.date_debut),e=new Date(r.date_fin||(s.getTime()+30*60000));
+ const startMin=Math.max(0,(s.getHours()-RHCAL_H0)*60+s.getMinutes());
+ const endMin=Math.min((RHCAL_H1-RHCAL_H0)*60,(e.getHours()-RHCAL_H0)*60+e.getMinutes());
+ const top=startMin/60*RHCAL_ROWH;
+ const height=Math.max(20,(endMin-startMin)/60*RHCAL_ROWH);
+ const w=100/nLanes,left=lane*w;
+ return `<div class="rhcal-evt" data-open-reunion="${r.id}" style="top:${top}px;height:${height}px;left:calc(${left}% + 2px);width:calc(${w}% - 4px);background:${r.organisateur===STAFF_SESSION.user_id?'var(--blue)':'var(--violet)'}"><b>${esc(r.titre)}</b><small>${s.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</small></div>`;
+}
+document.addEventListener('click',e=>{
+ const or=e.target.closest('[data-open-reunion]');
+ if(or){SUB.rh='reunions';render();}
+});
 function wireRHIfPresent(){
  $('#btnNouvelleReunion')?.addEventListener('click',ouvrirCreationReunion);
+ $('#rhcalPrev')?.addEventListener('click',()=>{RH_CAL_OFFSET--;render()});
+ $('#rhcalNext')?.addEventListener('click',()=>{RH_CAL_OFFSET++;render()});
+ $('#rhcalToday')?.addEventListener('click',()=>{RH_CAL_OFFSET=0;render()});
 }
 
 /* ---- Disponibilités ---- */
@@ -1410,6 +1536,73 @@ async function vSessionsProduction(){
  const list=r.ok?r.data:[];
  return `<div class="tbl-wrap"><table><thead><tr><th>Jour</th><th>Type</th><th>Créneau</th><th>Réservation</th></tr></thead><tbody>${list.map(s=>`<tr><td>${fd(s.jour)}</td><td>${s.type==='mise_en_place'?'Mise en place':'Production'}</td><td>${s.creneau_debut?s.creneau_debut.slice(0,5)+'–'+(s.creneau_fin||'').slice(0,5):'—'}</td><td><span class="chip ${s.statut_reservation==='confirmee'?'ok':s.statut_reservation==='envoyee'?'warn':''}">${s.statut_reservation}</span></td></tr>`).join('')||'<tr><td colspan="4" class="muted" style="text-align:center;padding:16px">Aucune session</td></tr>'}</tbody></table></div>`;
 }
+
+/* ============ INTERFACE PRODUCTION — bons, calendrier, sessions ============
+   Ce que la « refonte » exige : un vrai pilotage, pas un lien vers admin.html.
+   Ce qu'elle NE refait PAS : l'algorithme de répartition des postes entre
+   cuisiniers et le PERT minute par minute d'admin-production.js — des
+   centaines de lignes documentées à part dans CLAUDE.md §3, hors de portée
+   raisonnable d'une passe unique. Ce qui est ici couvre le pilotage
+   quotidien réel : ce qu'il reste à attribuer, ce qui part chaque jour, les
+   sessions réservées — et dit honnêtement, dans la page, où trouver le reste
+   plutôt que de prétendre l'avoir reconstruit. */
+async function vInterfaceProduction(){
+ const r=await sbTry('bons_commande?select=id,type,nb_repas,jour_livraison,statut,semaine,adresse&order=jour_livraison.asc.nullslast&limit=200');
+ if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">bons_commande</span> — session d'équipe requise, ou table absente.</span></div>`;
+ const bons=r.data;
+ const sansDate=bons.filter(b=>!b.jour_livraison);
+ const aTraiter=bons.filter(b=>b.statut==='a_attribuer'||!b.jour_livraison).length;
+ const attribues=bons.filter(b=>b.statut==='attribue'||b.statut==='en_production').length;
+ const livres=bons.filter(b=>b.statut==='livre').length;
+ const bonIds=bons.map(b=>b.id);
+ const attrR=bonIds.length?await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=bon_id,recette_id,nb_portions'):{ok:true,data:[]};
+ const attrs=attrR.ok?attrR.data:[];
+ const recIds=[...new Set(attrs.map(a=>a.recette_id))];
+ const recR=recIds.length?await sbTry('recettes?id=in.('+recIds.join(',')+')&select=id,nom'):{ok:true,data:[]};
+ const recNom={};(recR.ok?recR.data:[]).forEach(x=>recNom[x.id]=x.nom);
+ const parBon={};attrs.forEach(a=>(parBon[a.bon_id]=parBon[a.bon_id]||[]).push(a));
+ const parJour={};bons.forEach(b=>{if(!b.jour_livraison)return;(parJour[b.jour_livraison]=parJour[b.jour_livraison]||[]).push(b)});
+ const jours=Object.keys(parJour).sort();
+ const recetteXn=jb=>{
+  const total={};jb.forEach(b=>(parBon[b.id]||[]).forEach(a=>{total[a.recette_id]=(total[a.recette_id]||0)+a.nb_portions}));
+  return Object.entries(total).sort((x,y)=>y[1]-x[1]).map(([id,n])=>(recNom[id]||'Recette')+' × '+n);
+ };
+ return `<div class="grid g4" style="margin-bottom:14px">
+ <div class="card kpi"><div class="lbl">Bons (200 derniers)</div><div class="val num">${bons.length}</div></div>
+ <div class="card kpi"><div class="lbl">À traiter</div><div class="val num" style="color:var(--red)">${aTraiter}</div></div>
+ <div class="card kpi"><div class="lbl">Attribués / en production</div><div class="val num">${attribues}</div></div>
+ <div class="card kpi"><div class="lbl">Livrés</div><div class="val num">${livres}</div></div>
+ </div>
+ ${sansDate.length?`<div class="exbar"><span class="chip bad">${sansDate.length}</span><span>bon${sansDate.length>1?'s':''} sans date de livraison — priorité, aucun jour ne peut les planifier.</span></div>`:''}
+ <div class="sect"><h2>Calendrier de production</h2><span>Ce qui part chaque jour, toutes commandes confondues</span></div>
+ <div class="tbl-wrap"><table><thead><tr><th>Jour</th><th>Bons</th><th>Recettes × portions</th></tr></thead><tbody>${jours.map(j=>{
+  const jb=parJour[j],rouge=jb.some(b=>b.statut==='a_attribuer');
+  return `<tr class="rowc" data-ouvrir-jour-prod="${j}"><td>${fd(j)}${rouge?' <span class="chip bad">à attribuer</span>':''}</td><td class="num">${jb.length}</td><td>${esc(recetteXn(jb).join(' · ')||'—')}</td></tr>`;
+ }).join('')||'<tr><td colspan="3" class="muted" style="text-align:center;padding:20px">Aucun bon avec une date de livraison</td></tr>'}</tbody></table></div>
+ <div class="sect"><h2>Sessions à venir</h2></div>
+ ${await vSessionsProduction()}
+ <p class="muted" style="font-size:12px;margin-top:14px">Le détail fin — répartition des postes entre cuisiniers, minute par minute — reste dans <a href="/admin.html" target="_blank" rel="noopener">l'outil de production</a>. Ce qui est ici couvre le pilotage quotidien : ce qu'il reste à attribuer, ce qui part chaque jour.</p>`;
+}
+async function ouvrirJourProduction(jour){
+ const r=await sbTry('bons_commande?jour_livraison=eq.'+jour+'&select=id,type,nb_repas,statut,adresse&order=statut.asc');
+ const bons=r.ok?r.data:[];
+ const bonIds=bons.map(b=>b.id);
+ const attrR=bonIds.length?await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=bon_id,recette_id,nb_portions'):{ok:true,data:[]};
+ const attrs=attrR.ok?attrR.data:[];
+ const recIds=[...new Set(attrs.map(a=>a.recette_id))];
+ const recR=recIds.length?await sbTry('recettes?id=in.('+recIds.join(',')+')&select=id,nom'):{ok:true,data:[]};
+ const recNom={};(recR.ok?recR.data:[]).forEach(x=>recNom[x.id]=x.nom);
+ drawer(`<div class="dh"><div><h2>${fd(jour)}</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <div class="list">${bons.map(b=>{
+  const mine=attrs.filter(a=>a.bon_id===b.id);
+  return `<div class="li"><span class="dot ${b.statut==='a_attribuer'?'bad':b.statut==='livre'?'ok':'info'}"></span><div class="grow"><b style="font-weight:500">${b.nb_repas} repas · ${esc(b.type)}</b><div class="meta">${esc(b.adresse||'sans adresse')}${mine.length?' · '+mine.map(a=>esc(recNom[a.recette_id]||'?')+' × '+a.nb_portions).join(', '):' · non attribué'}</div></div><span class="chip ${b.statut==='a_attribuer'?'bad':b.statut==='livre'?'ok':''}">${b.statut}</span></div>`;
+ }).join('')||'<div class="empty">Aucun bon ce jour.</div>'}</div>
+ <p class="muted" style="font-size:12px;margin-top:14px">Attribution fine des recettes : <a href="/admin.html" target="_blank" rel="noopener">admin.html</a>.</p>`);
+}
+document.addEventListener('click',e=>{
+ const oj=e.target.closest('[data-ouvrir-jour-prod]');
+ if(oj)ouvrirJourProduction(oj.dataset.ouvrirJourProd);
+});
 async function ouvrirMenu(id){
  const r=await sbTry('crm_menus?id=eq.'+id+'&select=*');
  const m=(r.ok?r.data:[])[0];
@@ -1470,13 +1663,39 @@ async function ouvrirBonsDuBloc(blocId){
  };
 }
 
-/* ============ PAGE D'UNE ACTIVITÉ ============ */
+/* ============ PAGE D'UNE ACTIVITÉ ============
+   Une activité qui a une INTERFACE dédiée (commercial : pipeline ; production :
+   calendrier de production) s'ouvre dessus par défaut — c'est ELLE, « l'interface
+   de l'activité », qu'on voit en cliquant le menu à gauche. L'ancien système
+   générique (Aperçu/Tâches/Sous-projets/Schéma/Drive) ne disparaît pas : il
+   devient l'onglet « Gestion », toujours là, jamais perdu. Une activité SANS
+   interface dédiée (Finance, Partenariat, Développement…) continue de s'ouvrir
+   directement sur ce système générique, comme avant — aucune régression pour
+   elles tant que leur interface propre n'est pas construite. */
+const INTERFACES={
+ commercial:{label:'Pipeline',sous:'Le pipeline commercial — glissez une carte pour changer son étape',html:vInterfaceCommercial},
+ production:{label:'Production',sous:'Bons de commande, calendrier de production, sessions',html:vInterfaceProduction}
+};
 async function vActivite(cle){
  const a=ACT_BY_CLE[cle];if(!a)return'<p>Activité inconnue</p>';
  const [{blocs,liens},docs]=await Promise.all([chargerSchema(cle),chargerDocs(cle)]);
  const tachesAct=S.taches.filter(t=>t.activite===cle);
  const routine=tachesAct.filter(t=>t.routine);
  const projets=S.projets.filter(p=>p.activite===cle);
+ const inter=INTERFACES[cle];
+ if(!inter){
+  return ph(a.nom,`Tâches, sous-projets, drive et schéma de ${a.nom.toLowerCase()}`,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
+   routineHero(cle,routine)+await vGestionActivite(cle,tachesAct,projets,blocs,liens,docs);
+ }
+ const outer=tabs('outer-'+cle,[[cle,inter.label],['gestion','Gestion']],cle);
+ const body=outer.cur==='gestion'?await vGestionActivite(cle,tachesAct,projets,blocs,liens,docs):await inter.html(cle);
+ return ph(a.nom,outer.cur==='gestion'?`Tâches, sous-projets, drive et schéma de ${a.nom.toLowerCase()}`:inter.sous,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
+  routineHero(cle,routine)+outer.html+body;
+}
+/* L'ancien « système de projet » — désormais un onglet, jamais la page entière
+   pour une activité qui a sa propre interface. Signature inchangée dans son
+   corps : c'est exactement ce que faisait vActivite() avant ce chantier. */
+async function vGestionActivite(cle,tachesAct,projets,blocs,liens,docs){
  const onglets=[['apercu','Aperçu'],['taches','Tâches',tachesAct.filter(t=>!t.routine&&t.statut!=='fait').length],['projets','Sous-projets',projets.length],['schema','Schéma',blocs.length],['drive','Drive',docs.length]];
  if(cle==='logistique')onglets.push(['commandes','Commandes']);
  if(cle==='production')onglets.push(['menus','Menus & sessions']);
@@ -1489,8 +1708,7 @@ async function vActivite(cle){
  if(tb.cur==='drive')body=vDrive(cle,docs);
  if(tb.cur==='commandes')body=await vCommandesLogistique();
  if(tb.cur==='menus')body=await vProductionMenus();
- return ph(a.nom,`Tâches, sous-projets, drive et schéma de ${a.nom.toLowerCase()}`,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
-  routineHero(cle,routine)+tb.html+body;
+ return tb.html+body;
 }
 
 /* Le mini-dashboard d'une activité : où on atterrit en l'ouvrant. Le
@@ -1557,6 +1775,53 @@ function vProjets(cle,projets){
   const fait=ts.filter(t=>t.statut==='fait').length;
   return `<div class="card lift click" data-go="projet:${p.id}"><h3>${esc(p.nom)} <span class="chip ${p.statut==='termine'?'ok':p.statut==='abandonne'?'bad':p.statut==='en_pause'?'warn':'info'}">${{actif:'actif',en_pause:'en pause',termine:'terminé',abandonne:'abandonné'}[p.statut]}</span></h3>${p.description?`<p class="sub">${esc(p.description)}</p>`:''}<div class="prog"><div class="bar"><i style="width:${p.avancement}%"></i></div><span class="num">${p.avancement}%</span></div><div class="muted" style="font-size:12px;margin-top:8px">${p.responsable?'👤 '+esc(p.responsable)+' · ':''}${ts.length?fait+'/'+ts.length+' tâches faites':'aucune tâche liée'}${p.echeance?' · '+fd(p.echeance):''}</div></div>`;
  }).join('')}</div>`:'<div class="empty">Aucun sous-projet pour cette activité</div>');
+}
+
+/* ============ INTERFACE COMMERCIALE — pipeline (schéma en colonnes) ============
+   Un « deal » EST un `crm_projets` de l'activité commercial — pas une seconde
+   table de contacts/deals inventée sans spécification : c'est le même objet
+   que « Sous-projets », donc il porte déjà responsable, échéance, description,
+   ET son propre schéma de blocs (`vSchema('projet:'+id,…)`, sur sa page dédiée).
+   Faire glisser une carte ne fait QUE changer son étape ; l'ouvrir (clic) mène
+   à cette même page, où le schéma du deal est éditable comme n'importe quel
+   projet — c'est là « la fonctionnalité de schéma » demandée pour le pipeline,
+   réutilisée plutôt que dupliquée (une deuxième version aurait divergé de la
+   première à la moindre retouche, cf. CLAUDE.md sur ce piège précis). */
+const PIPELINE_ETAPES=[['prospection','Prospection'],['contact','Contact'],['proposition','Proposition'],['negociation','Négociation'],['client','Client'],['perdu','Perdu']];
+function vInterfaceCommercial(){
+ const deals=S.projets.filter(p=>p.activite==='commercial');
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Glissez une carte pour changer son étape. Cliquez une carte pour l'ouvrir (schéma, tâches, drive).</p>
+ <div class="kanban" id="pipelineWrap">${PIPELINE_ETAPES.map(([k,l])=>{
+  const col=deals.filter(d=>(d.etape_pipeline||'prospection')===k);
+  return `<div class="kanban-col" data-etape="${k}"><h4>${esc(l)} <span class="chip">${col.length}</span></h4>${col.map(dealCard).join('')||'<div class="empty" style="font-size:11px;padding:10px">—</div>'}</div>`;
+ }).join('')}</div>
+ <div class="sect"><h2>Ajouter au pipeline</h2></div>
+ <button class="btn" data-new="projet" data-activite="commercial">+ Prospect / client</button>`;
+}
+function dealCard(p){
+ return `<div class="kanban-card" draggable="true" data-deal="${p.id}"><b style="font-weight:600;font-size:12.5px;display:block;margin-bottom:3px">${esc(p.nom)}</b>${p.responsable?`<div class="muted" style="font-size:11px">👤 ${esc(p.responsable)}</div>`:''}${p.echeance?`<div class="muted" style="font-size:11px">${fd(p.echeance)}</div>`:''}</div>`;
+}
+let PIPELINE_DRAG=null;
+function wirePipelineIfPresent(){
+ const wrap=$('#pipelineWrap');if(!wrap)return;
+ wrap.addEventListener('dragstart',e=>{
+  const c=e.target.closest('[data-deal]');if(!c)return;
+  PIPELINE_DRAG=c.dataset.deal;c.classList.add('dragging');e.dataTransfer.effectAllowed='move';
+ });
+ wrap.addEventListener('dragend',e=>{const c=e.target.closest('[data-deal]');if(c)c.classList.remove('dragging')});
+ wrap.querySelectorAll('.kanban-col').forEach(col=>{
+  col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('over')});
+  col.addEventListener('dragleave',()=>col.classList.remove('over'));
+  col.addEventListener('drop',async e=>{
+   e.preventDefault();col.classList.remove('over');
+   if(!PIPELINE_DRAG)return;
+   const etape=col.dataset.etape,id=PIPELINE_DRAG;PIPELINE_DRAG=null;
+   await sb('crm_projets?id=eq.'+id,{method:'PATCH',body:JSON.stringify({etape_pipeline:etape})});
+   const p=S.projets.find(x=>x.id===id);if(p)p.etape_pipeline=etape;
+   render();
+  });
+ });
+ wrap.addEventListener('click',e=>{const c=e.target.closest('[data-deal]');if(c)go('projet:'+c.dataset.deal)});
 }
 
 /* ============ PAGE D'UN PROJET ============ */
@@ -1802,6 +2067,7 @@ const _origAfterRender=afterRender;
 afterRender=function(cle){
  _origAfterRender(cle);
  wireSchemaIfPresent();
+ wirePipelineIfPresent();
  if(cle==='dash'){wireDashIfPresent();rafraichirNotifs()}
  if(cle==='rh')wireRHIfPresent();
  if(cle.startsWith('projet:'))wireProjetPage(cle.slice(7));
