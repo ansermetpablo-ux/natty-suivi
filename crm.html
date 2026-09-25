@@ -171,6 +171,34 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
 .pop button:hover{background:var(--panel)}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--on-ink);padding:10px 18px;border-radius:var(--r-full);font-weight:600;font-size:13px;opacity:0;transition:.2s;z-index:40;pointer-events:none;max-width:calc(100% - 32px)}
 .toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ── Vue tablette (session 06) — grosse typographie, fort contraste,
+   pilotable au doigt mains occupées. z-index 38 : au-dessus du drawer/
+   modal (31/32), en dessous du toast (40) pour que les confirmations
+   restent lisibles par-dessus. */
+.tablette{position:fixed;inset:0;z-index:38;background:var(--bg);display:none;flex-direction:column;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.tablette.on{display:flex}
+.tab-head{display:flex;align-items:center;gap:16px;padding:18px 24px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tab-head h1{font-size:22px;margin:0;flex:1 1 auto;min-width:0}
+.tab-chrono{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;font-family:ui-monospace,monospace}
+.tab-chrono.warn{color:var(--amber)}
+.tab-chrono.bad{color:var(--red)}
+.tab-close{width:52px;height:52px;border-radius:50%;border:0;background:var(--card);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tab-phases{display:flex;gap:10px;padding:14px 24px}
+.tab-phases button{flex:1;padding:16px;border-radius:var(--r-lg);border:2px solid var(--line);background:var(--card);font-size:17px;font-weight:600;cursor:pointer}
+.tab-phases button.on{border-color:var(--ink);background:var(--ink);color:var(--on-ink)}
+.tab-list{flex:1;overflow-y:auto;padding:8px 24px 32px;display:flex;flex-direction:column;gap:12px}
+.tab-card{display:flex;align-items:center;gap:16px;padding:20px;border-radius:var(--r-lg);background:var(--card);box-shadow:var(--nm-soft,none)}
+.tab-card.fait{opacity:.5}
+.tab-card.encours{outline:3px solid var(--amber)}
+.tab-card .grow{min-width:0}
+.tab-card .titre{font-size:19px;font-weight:600;line-height:1.3}
+.tab-card .sub{font-size:14px;color:var(--muted);margin-top:4px}
+.tab-card .duree{font-size:15px;font-weight:600;color:var(--muted);white-space:nowrap}
+.tab-btn{flex:0 0 auto;padding:14px 22px;border-radius:var(--r-md);border:0;font-size:16px;font-weight:700;cursor:pointer;white-space:nowrap}
+.tab-btn.go{background:var(--ink);color:var(--on-ink)}
+.tab-btn.done{background:var(--green);color:#fff}
+.tab-btn.wait{background:var(--panel);color:var(--muted)}
 .hide{display:none!important}
 
 /* ═══ Accueil : carrousel des échéances ═══ */
@@ -339,6 +367,7 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
 <div class="pal" id="pal" role="dialog" aria-label="Recherche"><input id="palIn" placeholder="Tâche, sous-projet, activité…" autocomplete="off"><div class="res" id="palRes"></div></div>
 <div class="pop" id="pop"></div>
 <div class="toast" id="toast" role="status"></div>
+<div class="tablette" id="tablette"></div>
 
 <script>
 /* ═══════════════════════════════════════════════════════════
@@ -481,21 +510,23 @@ function can(cle){
 }
 
 /* ============ ÉTAT ============ */
-let S={taches:[],projets:[],staff:[]};
+let S={taches:[],projets:[],staff:[],sessions:[]};
 let SCHEMA_CACHE={};   // {portee: {blocs:[...], liens:[...]}} — portee = activité ('commercial') ou 'projet:<id>'
 let DOCS_CACHE={};     // {activite: [...]} — le drive de l'activité entière
 let CUR='dash',SUB={};
 let LINK_MODE=false,LINK_FROM=null,DERNIER_DRAG_TS=0;
 
 async function chargerBase(){
- const [t,p,st]=await Promise.all([
+ const [t,p,st,se]=await Promise.all([
   sbTry('crm_taches?select=*&order=echeance.asc.nullslast'),
   sbTry('crm_projets?select=*&order=echeance.asc.nullslast'),
-  sbTry('staff?select=user_id,nom,role,statut&actif=eq.true')
+  sbTry('staff?select=user_id,nom,role,statut&actif=eq.true'),
+  sbTry('crm_sessions?select=id,bloc_id,type,statut_reservation')
  ]);
  S.taches=t.ok?t.data:[];
  S.projets=p.ok?p.data:[];
  S.staff=st.ok?st.data:[];
+ S.sessions=se.ok?se.data:[];
 }
 async function chargerSchemaPortee(portee,filtreSQL){
  if(SCHEMA_CACHE[portee])return SCHEMA_CACHE[portee];
@@ -1430,8 +1461,14 @@ async function annulerBlocModele(blocId){
 function tacheBlocLi(t,depsList,ts){
  const mesDeps=depsList.filter(d=>d.tache_id===t.id).map(d=>ts.find(x=>x.id===d.depend_de_id)).filter(Boolean);
  const enAttenteDe=mesDeps.filter(d=>d.statut!=='fait');
+ // §4.2 : « tant que la cuisine n'est pas confirmée, les missions
+ // dépendantes s'affichent en alerte » — distinct de enAttenteDe : la
+ // demande peut être envoyée (dépendance cochée « fait ») sans que la
+ // cuisine ait pour autant répondu oui, et l'alerte doit tenir jusque-là.
+ const cuisineDep=mesDeps.find(d=>d.action_cle==='reserver_cuisine'&&d.objet_type==='session');
+ const cuisineNonConfirmee=cuisineDep&&(S.sessions.find(x=>x.id===cuisineDep.objet_id)||{}).statut_reservation!=='confirmee';
  return `<div class="li ${t.statut==='fait'?'done':''}"><button class="check" role="checkbox" aria-checked="${t.statut==='fait'}" data-tdone="${t.id}" aria-label="Terminer"></button>
- <div class="grow"><b style="font-weight:500">${esc(t.titre)}</b><div class="meta">${fd(t.echeance)} · ${own(t.porteur)}${enAttenteDe.length?' · <span style="color:var(--amber)">en attente : '+enAttenteDe.map(d=>esc(d.titre)).join(', ')+'</span>':''}${t.necessite_revision?' · <span style="color:var(--red)">à revoir</span>':''}</div></div>
+ <div class="grow"><b style="font-weight:500">${esc(t.titre)}</b><div class="meta">${fd(t.echeance)} · ${own(t.porteur)}${enAttenteDe.length?' · <span style="color:var(--amber)">en attente : '+enAttenteDe.map(d=>esc(d.titre)).join(', ')+'</span>':''}${cuisineNonConfirmee?' · <span style="color:var(--amber)">cuisine pas encore confirmée</span>':''}${t.necessite_revision?' · <span style="color:var(--red)">à revoir</span>':''}</div></div>
  ${t.action_cle&&ACTIONS_MISSION[t.action_cle]?`<button class="btn sm ${t.action_faite?'ghost':''}" data-action-mission="${t.id}:${t.action_cle}">${ACTIONS_MISSION[t.action_cle].label}</button>`:''}
  </div>`;
 }
@@ -1480,38 +1517,62 @@ async function marquerActionFaite(tacheId){
  await sb('crm_taches?id=eq.'+tacheId,{method:'PATCH',body:JSON.stringify({action_faite:true,necessite_revision:false})});
  const t=S.taches.find(x=>x.id===tacheId);if(t){t.action_faite=true;t.necessite_revision=false}
 }
-/* Le créneau se calcule depuis le MENU du bloc — la fiche technique
-   (recettes.temps_prep_min/temps_cuisson_min) EST le temps de la
-   session, la production se faisant « en masse par recette » (mode
-   traiteur, pas à la portion) : on ne multiplie donc PAS par le nombre de
-   plats, ce serait inventer un facteur d'échelle que rien ne documente.
-   §4.1 : durée + marge de sécurité, arrondie à l'heure pleine. */
+/* Le créneau se calcule EN PRIORITÉ depuis le mapping minuté réel de la
+   session (session 06, `crm_session_etapes` — le max par poste, voir
+   dureeMappingSession) : c'est la vraie durée de travail, poste par
+   poste, pas une simple somme des temps de fiche. Si le mapping n'a pas
+   encore été généré, repli sur l'ancien calcul (somme prep+cuisson du
+   menu) — la fiche technique EST le temps de la session en mode
+   traiteur (production « en masse par recette », pas à la portion) : on
+   ne multiplie donc PAS par le nombre de plats, ce serait inventer un
+   facteur d'échelle que rien ne documente. §4.1 : durée + marge de
+   sécurité, arrondie à l'heure pleine. */
 async function actionReserverCuisine(tacheId){
  const t=S.taches.find(x=>x.id===tacheId);if(!t)return;
  const sessions=await sbTry('crm_sessions?bloc_id=eq.'+t.bloc_id+'&type=eq.production&select=*');
  const session=(sessions.ok?sessions.data:[])[0];
  if(!session){toast('Aucune session de production liée à ce bloc');return}
- const menusR=await sbTry('crm_menus?bloc_id=eq.'+t.bloc_id+'&select=*');
- const menu=(menusR.ok?menusR.data:[])[0];
- let minutes=90,manqueMenu=true;
- if(menu){
-  const mr=await sbTry('crm_menu_recettes?menu_id=eq.'+menu.id+'&select=recette_id');
-  const ids=(mr.ok?mr.data:[]).map(x=>x.recette_id);
-  if(ids.length){
-   const rec=await sbTry('recettes?id=in.('+ids.join(',')+')&select=temps_prep_min,temps_cuisson_min');
-   if(rec.ok&&rec.data.length){minutes=rec.data.reduce((s,r)=>s+(r.temps_prep_min||0)+(r.temps_cuisson_min||0),0);manqueMenu=false}
+ const dureeMapping=await dureeMappingSession(session.id);
+ let minutes,manqueMenu=false,source;
+ if(dureeMapping!=null){minutes=dureeMapping;source='mapping'}
+ else{
+  const menusR=await sbTry('crm_menus?bloc_id=eq.'+t.bloc_id+'&select=*');
+  const menu=(menusR.ok?menusR.data:[])[0];
+  minutes=90;manqueMenu=true;
+  if(menu){
+   const mr=await sbTry('crm_menu_recettes?menu_id=eq.'+menu.id+'&select=recette_id');
+   const ids=(mr.ok?mr.data:[]).map(x=>x.recette_id);
+   if(ids.length){
+    const rec=await sbTry('recettes?id=in.('+ids.join(',')+')&select=temps_prep_min,temps_cuisson_min');
+    if(rec.ok&&rec.data.length){minutes=rec.data.reduce((s,r)=>s+(r.temps_prep_min||0)+(r.temps_cuisson_min||0),0);manqueMenu=false}
+   }
   }
+  source='menu';
  }
  const marge=30,heures=Math.max(1,Math.ceil((minutes+marge)/60));
  const heureFin=String(9+heures).padStart(2,'0')+':00';
+ const explication=source==='mapping'
+  ?`Estimé depuis le mapping minuté de la session (le poste le plus chargé) + ${marge} min de marge, arrondi à l'heure pleine. Génère/régénère le mapping si les volumes ont changé.`
+  :manqueMenu?"Le menu n'est pas encore composé — créneau par défaut, à ajuster."
+  :`Estimé depuis ${minutes} min de préparation/cuisson du menu + ${marge} min de marge (mapping pas encore généré, calcul moins précis).`;
  modal(`<h2>Réserver la cuisine</h2>
-  <p class="muted" style="font-size:13px">${manqueMenu?"Le menu n'est pas encore composé — créneau par défaut, à ajuster.":`Estimé depuis ${minutes} min de préparation/cuisson du menu + ${marge} min de marge, arrondi à l'heure pleine.`}</p>
+  <p class="muted" style="font-size:13px">${explication}</p>
   <form class="form" id="cuisineForm">
    <div class="two"><label>Date<input class="inp" id="cf1" type="date" value="${session.jour}" required></label><label>Nombre de personnes<input class="inp" id="cf2" type="number" value="4" required></label></div>
    <div class="two"><label>Arrivée<input class="inp" id="cf3" type="time" value="09:00" required></label><label>Fin<input class="inp" id="cf4" type="time" value="${heureFin}" required></label></div>
    <label>Note (optionnel)<textarea class="inp" id="cf5"></textarea></label>
-   <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Envoyer la demande</button></div>
+   <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button type="button" class="btn" id="cfSms">Ouvrir un SMS</button><button class="btn primary" type="submit">Envoyer par email</button></div>
   </form>`);
+ const texteSms=()=>`Réservation cuisine — ${fd($('#cf1').value)}, ${$('#cf3').value}–${$('#cf4').value}, ${$('#cf2').value} personnes.`;
+ // §4.2 : le lien sms: est une option à part entière, pas seulement un
+ // repli sur l'échec de l'email — « Email… SMS : lien sms:… » sont deux
+ // canaux offerts, l'un n'attend pas que l'autre échoue.
+ $('#cfSms').onclick=async()=>{
+  window.open('sms:?body='+encodeURIComponent(texteSms()));
+  await sb('crm_sessions?id=eq.'+session.id,{method:'PATCH',body:JSON.stringify({creneau_debut:$('#cf3').value,creneau_fin:$('#cf4').value,nb_personnes:+$('#cf2').value,statut_reservation:'envoyee',message_envoye_le:new Date().toISOString()})});
+  await marquerActionFaite(tacheId);
+  closeAll();toast('SMS ouvert');render();
+ };
  $('#cuisineForm').onsubmit=async e=>{
   e.preventDefault();
   const body={action:'reserver_cuisine',date:$('#cf1').value,heure_debut:$('#cf3').value,heure_fin:$('#cf4').value,nb_personnes:+$('#cf2').value,note:$('#cf5').value||undefined};
@@ -1532,11 +1593,11 @@ async function actionReserverCuisine(tacheId){
     await sb('crm_schema_blocs?id=eq.'+t.bloc_id,{method:'PATCH',body:JSON.stringify({cout_previsionnel:nouveauCp})});
     bloc.cout_previsionnel=nouveauCp;
    }
-   toast('Demande envoyée par email');
+   toast('Demande envoyée par email — reste à confirmer une fois la réponse reçue');
   }else if(data.degrade){
    // §4.2 : la config email manque → repli SMS, composé côté client.
-   const texte=`Réservation cuisine — ${fd(body.date)}, ${body.heure_debut}–${body.heure_fin}, ${body.nb_personnes} personnes.`;
-   window.open('sms:?body='+encodeURIComponent(texte));
+   window.open('sms:?body='+encodeURIComponent(texteSms()));
+   await sb('crm_sessions?id=eq.'+session.id,{method:'PATCH',body:JSON.stringify({creneau_debut:body.heure_debut,creneau_fin:body.heure_fin,nb_personnes:body.nb_personnes,statut_reservation:'envoyee',message_envoye_le:new Date().toISOString()})});
    await marquerActionFaite(tacheId);
    toast('Configuration email manquante — SMS ouvert à la place');
   }else{
@@ -1613,15 +1674,393 @@ async function evaluerReglesApresBascule(tacheId){
 async function vProductionMenus(){
  const menusR=await sbTry('crm_menus?select=*,crm_schema_blocs(titre)');
  const list=menusR.ok?menusR.data:[];
- return `<div class="sect"><h2>Menus</h2><span>${list.length}</span></div>
+ return `${await vAPlanifier()}
+ <div class="sect"><h2>Menus</h2><span>${list.length}</span></div>
  <div class="card lift"><div class="list">${list.map(m=>`<div class="li c" data-ouvrir-menu="${m.id}"><div class="grow"><b style="font-weight:500">${esc(m.nom)}</b><div class="meta">${m.crm_schema_blocs?esc(m.crm_schema_blocs.titre):''}</div></div><span class="chip ${m.statut==='verrouille'?'ok':''}">${m.statut}</span></div>`).join('')||'<div class="empty">Aucun menu — un menu se crée automatiquement avec un bloc « Test produit ».</div>'}</div></div>
  <div class="sect"><h2>Sessions</h2></div>
  ${await vSessionsProduction()}`;
 }
+
+/* ============ À PLANIFIER — les commandes attribuées, pas encore
+   rattachées à une session (demande de Pablo en cours de session,
+   25/09/2026) ============
+   Le flux « bloc Test produit » (instancierBloc) crée sa session en même
+   temps que le bloc. Mais la VRAIE vie quotidienne de Natty n'a pas de
+   bloc du tout : ce sont les commandes hebdomadaires (abonnements +
+   unité), attribuées à des recettes dans « Commandes » (session 05), qui
+   doivent pouvoir être sélectionnées et lancées en session — exactement
+   ce que fait admin-production.js au quotidien (CLAUDE.md §3), mais côté
+   sélection seulement : la profondeur du mapping reste la version simple
+   tranchée plus haut, pas le PERT. */
+async function vAPlanifier(){
+ const r=await sbTry('bons_commande?statut=neq.annule&session_id=is.null&select=id,jour_livraison,nb_repas,notes,type');
+ const bons=r.ok?r.data:[];
+ if(!bons.length)return'';
+ const bonIds=bons.map(b=>b.id);
+ const at=await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=bon_id,recette_id,nb_portions');
+ const attrs=at.ok?at.data:[];
+ const attribues=new Set(attrs.map(a=>a.bon_id));
+ const bonsAttribues=bons.filter(b=>attribues.has(b.id)&&b.jour_livraison);
+ if(!bonsAttribues.length)return'';
+ const recIds=[...new Set(attrs.map(a=>a.recette_id))];
+ const recR=await sbTry('recettes?id=in.('+recIds.join(',')+')&select=id,nom');
+ const nomRecette={};(recR.ok?recR.data:[]).forEach(x=>nomRecette[x.id]=x.nom);
+ const parJour={};
+ bonsAttribues.forEach(b=>{
+  (parJour[b.jour_livraison]=parJour[b.jour_livraison]||{bons:[],parRecette:{}}).bons.push(b);
+ });
+ attrs.forEach(a=>{
+  const b=bons.find(x=>x.id===a.bon_id);if(!b||!parJour[b.jour_livraison])return;
+  const pr=parJour[b.jour_livraison].parRecette;
+  pr[a.recette_id]=(pr[a.recette_id]||0)+a.nb_portions;
+ });
+ const jours=Object.keys(parJour).sort();
+ return `<div class="sect"><h2>À planifier</h2><span>${bonsAttribues.length} commande${bonsAttribues.length>1?'s':''} attribuée${bonsAttribues.length>1?'s':''}, pas encore en session</span></div>
+ <div class="card lift" style="margin-bottom:18px"><div class="list">${jours.map(j=>{
+  const d=parJour[j];
+  const recap=Object.entries(d.parRecette).map(([id,n])=>esc(nomRecette[id]||'?')+' × '+n).join(', ');
+  return `<div class="li"><input type="checkbox" class="ap-jour" data-jour="${j}" style="width:18px;height:18px;flex:0 0 auto">
+  <div class="grow"><b style="font-weight:500">${fd(j)} · ${d.bons.length} commande${d.bons.length>1?'s':''}</b><div class="meta">${recap}</div></div></div>`;
+ }).join('')}</div>
+ <div class="foot" style="justify-content:flex-end;margin-top:12px"><button class="btn sm primary" data-planifier-session>Planifier la session de production →</button></div></div>`;
+}
+document.addEventListener('click',e=>{
+ if(e.target.closest('[data-planifier-session]'))planifierSessionDepuisSelection();
+});
+async function planifierSessionDepuisSelection(){
+ const cases=[...document.querySelectorAll('.ap-jour:checked')];
+ if(!cases.length){toast('Coche au moins un jour');return}
+ const jours=cases.map(c=>c.dataset.jour).sort();
+ const jourSession=jours[0]; // la session se date sur le premier jour choisi ; « ajustable à la main » ensuite (créneau, jour) comme le reste du module.
+ const r=await sbTry('bons_commande?statut=neq.annule&session_id=is.null&jour_livraison=in.('+jours.join(',')+')&select=id');
+ const candidats=(r.ok?r.data:[]).map(b=>b.id);
+ if(!candidats.length){toast('Rien à planifier');return}
+ // Seuls les bons ATTRIBUÉS entrent dans la session — la liste ne
+ // proposait que ceux-là (§ vAPlanifier), un bon sans recette qui
+ // partagerait le même jour ne doit pas être happé en silence : il
+ // resterait sans mapping et disparaîtrait pourtant de « À planifier »
+ // (filtrée sur session_id is null), donc invisible jusqu'à ce que
+ // quelqu'un pense à regarder cette session précisément.
+ const at=await sbTry('bons_attributions?bon_id=in.('+candidats.join(',')+')&select=bon_id');
+ const bonIds=[...new Set((at.ok?at.data:[]).map(a=>a.bon_id))];
+ if(!bonIds.length){toast('Rien à planifier');return}
+ const sr=await sb('crm_sessions',{method:'POST',body:JSON.stringify({type:'production',jour:jourSession,statut:'a_venir',statut_reservation:'a_reserver'})});
+ const session=sr[0];
+ await sb('bons_commande?id=in.('+bonIds.join(',')+')',{method:'PATCH',body:JSON.stringify({session_id:session.id})});
+ S.sessions.push({id:session.id,bloc_id:null,type:'production',statut_reservation:'a_reserver'});
+ toast(bonIds.length+' commande(s) planifiée(s) — génération du mapping…');
+ await genererMapping(session.id);
+ render(); // la liste « À planifier » et la table des sessions, sous le tiroir qui vient de s'ouvrir, doivent refléter le changement tout de suite
+}
 async function vSessionsProduction(){
  const r=await sbTry('crm_sessions?select=*&order=jour.asc');
  const list=r.ok?r.data:[];
- return `<div class="tbl-wrap"><table><thead><tr><th>Jour</th><th>Type</th><th>Créneau</th><th>Réservation</th></tr></thead><tbody>${list.map(s=>`<tr><td>${fd(s.jour)}</td><td>${s.type==='mise_en_place'?'Mise en place':'Production'}</td><td>${s.creneau_debut?s.creneau_debut.slice(0,5)+'–'+(s.creneau_fin||'').slice(0,5):'—'}</td><td><span class="chip ${s.statut_reservation==='confirmee'?'ok':s.statut_reservation==='envoyee'?'warn':''}">${s.statut_reservation}</span></td></tr>`).join('')||'<tr><td colspan="4" class="muted" style="text-align:center;padding:16px">Aucune session</td></tr>'}</tbody></table></div>`;
+ return `<div class="tbl-wrap"><table><thead><tr><th>Jour</th><th>Type</th><th>Créneau</th><th>Réservation</th><th>Session</th></tr></thead><tbody>${list.map(s=>`<tr class="rowc" data-ouvrir-session="${s.id}" style="cursor:pointer"><td>${fd(s.jour)}</td><td>${s.type==='mise_en_place'?'Mise en place':'Production'}</td><td>${s.creneau_debut?s.creneau_debut.slice(0,5)+'–'+(s.creneau_fin||'').slice(0,5):'—'}</td><td><span class="chip ${s.statut_reservation==='confirmee'?'ok':s.statut_reservation==='envoyee'?'warn':''}">${s.statut_reservation}</span></td><td><span class="chip ${s.statut==='terminee'?'ok':s.statut==='en_cours'?'warn':''}">${s.statut==='a_venir'?'à venir':s.statut==='en_cours'?'en cours':'terminée'}</span></td></tr>`).join('')||'<tr><td colspan="5" class="muted" style="text-align:center;padding:16px">Aucune session</td></tr>'}</tbody></table></div>`;
+}
+document.addEventListener('click',e=>{
+ const os=e.target.closest('[data-ouvrir-session]');
+ if(os)ouvrirSessionDetail(os.dataset.ouvrirSession);
+});
+
+/* ============ SESSION 06 — MAPPING MINUTÉ, CHRONO, STOCKS ============
+   Profondeur tranchée avec Pablo (25/09/2026, voir 0009_session_mapping_
+   stocks.sql) : un mapping SIMPLE natif au CRM — étapes des fiches mises
+   bout à bout par poste, assignables à la main, avec durée réelle
+   capturée — PAS un portage de assets/admin-production.js (PERT, ateliers
+   partagés entre recettes, répartition optimale entre cuisiniers), qui
+   reste dans admin.html. « Ajustable à la main » (spec §4.1) est pris au
+   pied de la lettre : pas de résolution de dépendances façon PERT, juste
+   un ordre par poste que le chef peut réordonner lui-même. */
+
+async function ouvrirSessionDetail(id){
+ const r=await sbTry('crm_sessions?id=eq.'+id+'&select=*');
+ const s=(r.ok?r.data:[])[0];if(!s)return;
+ const er=await sbTry('crm_session_etapes?session_id=eq.'+id+'&select=*&order=ordre.asc');
+ const etapes=er.ok?er.data:[];
+ const fait=etapes.filter(x=>x.statut==='fait').length;
+ const bloc=trouverBloc(s.bloc_id);
+ drawer(`<div class="dh"><div class="av lg dk">${s.type==='mise_en_place'?'MP':'PR'}</div><div style="min-width:0"><span class="chip info">${s.type==='mise_en_place'?'Mise en place':'Production'}</span><h2>${fd(s.jour)}</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <div class="kv" style="margin-bottom:14px">
+  <dt>Bloc</dt><dd>${bloc?esc(bloc.titre):'—'}</dd>
+  <dt>Créneau réservé</dt><dd>${s.creneau_debut?s.creneau_debut.slice(0,5)+'–'+(s.creneau_fin||'').slice(0,5)+' · '+(s.nb_personnes||'?')+' pers.':'pas encore réservé'}</dd>
+  <dt>Réservation</dt><dd><span class="chip ${s.statut_reservation==='confirmee'?'ok':s.statut_reservation==='envoyee'?'warn':''}">${s.statut_reservation}</span>${s.statut_reservation==='envoyee'?' <button class="btn sm" data-confirmer-session="'+id+'" style="margin-left:6px">Confirmer</button>':''}</dd>
+  <dt>Mapping</dt><dd>${etapes.length?fait+' / '+etapes.length+' étape(s) faites':'pas encore généré'}</dd>
+ </div>
+ <div class="foot" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+  <button class="btn sm ${etapes.length?'ghost':'primary'}" data-generer-mapping="${id}">${etapes.length?'↻ Régénérer le mapping':'Générer le mapping'}</button>
+  ${etapes.length?`<button class="btn sm primary" data-ouvrir-tablette="${id}">📱 Mode tablette</button>`:''}
+  ${s.statut==='a_venir'&&etapes.length?`<button class="btn sm" data-demarrer-session="${id}">▶ Démarrer la session</button>`:''}
+  ${s.statut==='en_cours'?`<button class="btn sm" data-terminer-session="${id}">⏹ Terminer la session</button>`:''}
+  ${s.type==='production'?`<button class="btn sm ghost" data-nouveau-lot="${id}">+ Lot de stock</button>`:''}
+ </div>
+ ${etapes.length?`<div class="sect"><h2 style="font-size:15px">Étapes (${etapes.length})</h2></div><div class="list">${etapes.map(etapeLi).join('')}</div>`:'<div class="empty">Aucune étape — génère le mapping depuis les commandes attribuées à cette session.</div>'}`);
+}
+/* Le duplicata de la dépendance (nom au lieu d'id) est volontaire : la
+   liste affichée est déjà filtrée sur CETTE session, retrouver le titre
+   d'un id coûte un aller-retour de plus pour rien. */
+function etapeLi(e){
+ const badgePhase=e.phase==='assemblage'?'<span class="chip info" style="margin-left:6px">assemblage</span>':'';
+ let action='';
+ if(e.statut==='fait')action=`<span class="tab-btn done" style="padding:6px 12px;font-size:12px">✓ ${e.duree_reelle_min||'?'} min</span>`;
+ else if(e.statut==='en_cours')action=`<button class="btn sm primary" data-fin-etape="${e.id}">Terminer</button>`;
+ else action=`<button class="btn sm ghost" data-debut-etape="${e.id}">Commencer</button>`;
+ return `<div class="li"><span class="dot ${e.statut==='fait'?'ok':e.statut==='en_cours'?'warn':''}"></span>
+ <div class="grow"><b style="font-weight:500">${esc(e.titre)}</b>${badgePhase}<div class="meta">${esc(e.poste||'poste ?')} · ${e.duree_prevue_min||'?'} min${e.assigne?' · '+esc(nomDe(e.assigne)):''}</div></div>
+ ${action}</div>`;
+}
+document.addEventListener('click',e=>{
+ const gm=e.target.closest('[data-generer-mapping]');
+ if(gm){genererMapping(gm.dataset.genererMapping);return}
+ const ot=e.target.closest('[data-ouvrir-tablette]');
+ if(ot){closeAll();ouvrirTablette(ot.dataset.ouvrirTablette);return}
+ const ds=e.target.closest('[data-demarrer-session]');
+ if(ds){demarrerSession(ds.dataset.demarrerSession);return}
+ const ts=e.target.closest('[data-terminer-session]');
+ if(ts){terminerSession(ts.dataset.terminerSession);return}
+ const cs=e.target.closest('[data-confirmer-session]');
+ if(cs){confirmerReservation(cs.dataset.confirmerSession);return}
+ const nl=e.target.closest('[data-nouveau-lot]');
+ if(nl){ouvrirCreationLot(nl.dataset.nouveauLot);return}
+ const de=e.target.closest('[data-debut-etape]');
+ if(de){demarrerEtape(de.dataset.debutEtape);return}
+ const fe=e.target.closest('[data-fin-etape]');
+ if(fe){terminerEtape(fe.dataset.finEtape);return}
+});
+
+/* Génère (ou régénère) le mapping d'une session depuis les recettes du
+   bloc : une ligne par étape de fiche technique (phase='production'),
+   plus une ligne par (bon, recette) pour l'assemblage à la portion. Les
+   étapes déjà FAITES sont conservées telles quelles — un régénérer ne
+   doit pas effacer un travail déjà accompli, seulement recalculer ce qui
+   reste (spec §4.1 : « recalculé à chaque changement de volumes »). */
+async function genererMapping(sessionId){
+ const s=(await sbTry('crm_sessions?id=eq.'+sessionId+'&select=*')).data?.[0];
+ if(!s){toast('Session introuvable');return}
+ const existantes=await sbTry('crm_session_etapes?session_id=eq.'+sessionId+'&select=id,statut');
+ const aGarder=(existantes.ok?existantes.data:[]).filter(x=>x.statut==='fait').length;
+ if(existantes.ok&&existantes.data.length&&!confirm('Regénérer le mapping ? '+(aGarder?aGarder+' étape(s) déjà faite(s) seront conservées, ':'')+'le reste est recalculé.'))return;
+ if(existantes.ok)for(const x of existantes.data)if(x.statut!=='fait')await sb('crm_session_etapes?id=eq.'+x.id,{method:'DELETE'});
+
+ // Deux flux mènent à une session : « Test produit » (bloc_id) ou la
+ // planification normale depuis les commandes attribuées de la semaine
+ // (session_id, § plus bas). Une session n'a jamais les deux à la fois.
+ const filtreBons=s.bloc_id?'bloc_id=eq.'+s.bloc_id:'session_id=eq.'+sessionId;
+ const bons=await sbTry('bons_commande?'+filtreBons+'&statut=neq.annule&select=id');
+ const bonIds=(bons.ok?bons.data:[]).map(b=>b.id);
+ if(!bonIds.length){toast('Aucun bon de commande pour cette session — attribue des recettes d’abord.');return}
+ await precacheLibBons(bonIds);
+ const attrs=await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=bon_id,recette_id,nb_portions');
+ const lignes=attrs.ok?attrs.data:[];
+ const recIds=[...new Set(lignes.map(l=>l.recette_id))];
+ if(!recIds.length){toast('Aucune recette attribuée à ces commandes.');return}
+
+ const [etapesR,recR]=await Promise.all([
+  sbTry('recettes_etapes?recette_id=in.('+recIds.join(',')+')&phase=eq.production&select=*&order=numero.asc'),
+  sbTry('recettes?id=in.('+recIds.join(',')+')&select=id,nom')
+ ]);
+ const etapesFiche=etapesR.ok?etapesR.data:[];
+ const nomRecette={};(recR.ok?recR.data:[]).forEach(r=>nomRecette[r.id]=r.nom);
+
+ let ordre=0,nCrees=0;
+ for(const recId of recIds){
+  const etapesDeCetteRecette=etapesFiche.filter(x=>x.recette_id===recId);
+  if(!etapesDeCetteRecette.length)continue;
+  // Durée réelle moyenne des sessions passées sur CETTE étape — filtrée
+  // sur `etape_source_id` (référence exacte à la ligne de la fiche), pas
+  // sur le texte du titre : celui stocké ici porte le nom de la recette
+  // en préfixe (`titre` plus bas), différent de `et.titre` seul — un
+  // filtre par titre ne matcherait donc jamais. C'est toute
+  // « l'amélioration des estimations » (§4.1).
+  const numeroVersId={};
+  for(const et of etapesDeCetteRecette){
+   const hist=await sbTry('crm_session_etapes?etape_source_id=eq.'+et.id+'&statut=eq.fait&select=duree_reelle_min&limit=5&order=created_at.desc');
+   const mesures=(hist.ok?hist.data:[]).map(x=>x.duree_reelle_min).filter(Boolean);
+   const duree=mesures.length?Math.round(mesures.reduce((a,b)=>a+b,0)/mesures.length):(et.duree_min||10);
+   const r=await sb('crm_session_etapes',{method:'POST',body:JSON.stringify({
+    session_id:sessionId,recette_id:recId,etape_source_id:et.id,phase:'production',
+    titre:(nomRecette[recId]||'')+' — '+et.titre,poste:et.poste||et.geste||'—',
+    ordre:ordre++,duree_prevue_min:duree
+   })});
+   numeroVersId[et.numero]=r[0].id;nCrees++;
+  }
+  // Dépendances traduites : `recettes_etapes.depend_de` porte des
+  // `numero` DANS la fiche, cette table porte des uuid propres à CETTE
+  // session — traduction après coup, une fois tous les numéros connus.
+  for(const et of etapesDeCetteRecette){
+   const deps=(et.depend_de||[]).map(n=>numeroVersId[n]).filter(Boolean);
+   if(deps.length)await sb('crm_session_etapes?id=eq.'+numeroVersId[et.numero],{method:'PATCH',body:JSON.stringify({depend_de:deps})});
+  }
+ }
+ // Assemblage : une ligne par (bon, recette) — peser la portion de CE
+ // client. Les instructions générales de dressage restent dans la fiche
+ // (phase='assemblage' de recettes_etapes), lues à l'affichage plutôt que
+ // dupliquées ici, cf. la note sur la profondeur du mapping.
+ for(const l of lignes){
+  await sb('crm_session_etapes',{method:'POST',body:JSON.stringify({
+   session_id:sessionId,recette_id:l.recette_id,bon_id:l.bon_id,phase:'assemblage',
+   titre:(nomRecette[l.recette_id]||'Recette')+' — '+libBonId(l.bon_id),
+   poste:'assemblage',ordre:ordre++,duree_prevue_min:3
+  })});
+  nCrees++;
+ }
+ toast(nCrees+' étape(s) générée(s)');
+ ouvrirSessionDetail(sessionId);
+}
+/* libBon() attend un objet bon déjà chargé — ici on n'a que son id
+   (bons_attributions ne renvoie pas les notes). Un aller simple suffit,
+   la génération n'est pas un chemin critique en latence. */
+const _libBonCache={};
+function libBonId(bonId){return _libBonCache[bonId]||'ce bon'}
+async function precacheLibBons(bonIds){
+ if(!bonIds.length)return;
+ const r=await sbTry('bons_commande?id=in.('+bonIds.join(',')+')&select=id,notes,type');
+ (r.ok?r.data:[]).forEach(b=>_libBonCache[b.id]=libBon(b));
+}
+
+async function demarrerEtape(id){
+ await sb('crm_session_etapes?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:'en_cours',debut_reel:new Date().toISOString()})});
+ rafraichirVueCourante();
+}
+async function terminerEtape(id){
+ const r=await sbTry('crm_session_etapes?id=eq.'+id+'&select=debut_reel');
+ const debut=(r.ok?r.data:[])[0]?.debut_reel;
+ const dureeReelle=debut?Math.max(1,Math.round((Date.now()-new Date(debut).getTime())/60000)):null;
+ await sb('crm_session_etapes?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:'fait',duree_reelle_min:dureeReelle})});
+ rafraichirVueCourante();
+}
+function rafraichirVueCourante(){
+ if($('#tablette').classList.contains('on')){rendreTablette();return}
+ // Le tiroir de détail (ouvrirSessionDetail) ne se repeint pas tout
+ // seul avec render() — il vit hors de #main, comme tous les tiroirs de
+ // ce fichier. Cocher une étape depuis là (plutôt que depuis la
+ // tablette) doit quand même refléter l'état tout de suite.
+ const boutonMapping=$('[data-generer-mapping]');
+ if(boutonMapping&&$('#drawer').classList.contains('on')){ouvrirSessionDetail(boutonMapping.dataset.genererMapping);return}
+ render();
+}
+
+async function demarrerSession(id){
+ await sb('crm_sessions?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:'en_cours',demarree_le:new Date().toISOString()})});
+ toast('Session démarrée');ouvrirSessionDetail(id);
+}
+async function terminerSession(id){
+ await sb('crm_sessions?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:'terminee',terminee_le:new Date().toISOString()})});
+ toast('Session terminée');
+ fermerTablette();
+ ouvrirSessionDetail(id);
+}
+/* §4.2 : « la mission passe en attente de confirmation jusqu'au clic
+   Confirmée ». L'envoi de la demande (actionReserverCuisine) marque déjà
+   la TÂCHE faite — « la demande a été envoyée » — cette fonction-ci
+   ferme la boucle sur la SESSION : « la cuisine a répondu oui ». Les deux
+   sont volontairement distincts : marquer la tâche « à revoir » quand la
+   session n'est pas confirmée redirait la même chose deux fois. */
+function majSessionLocale(id,patch){const s=S.sessions.find(x=>x.id===id);if(s)Object.assign(s,patch)}
+async function confirmerReservation(sessionId){
+ await sb('crm_sessions?id=eq.'+sessionId,{method:'PATCH',body:JSON.stringify({statut_reservation:'confirmee'})});
+ majSessionLocale(sessionId,{statut_reservation:'confirmee'});
+ toast('Cuisine confirmée');
+ ouvrirSessionDetail(sessionId);
+ render();
+}
+
+/* Durée totale estimée d'un mapping, pour le créneau de
+   actionReserverCuisine : max sur les postes (ils travaillent en
+   parallèle), somme des étapes DANS un même poste (elles s'enchaînent).
+   Approximation assumée, pas un chemin critique façon PERT — voir la
+   note de profondeur en tête de cette section. `null` si pas encore
+   généré : actionReserverCuisine retombe alors sur son ancien calcul
+   (somme des temps de fiche), pour rester utilisable avant génération. */
+async function dureeMappingSession(sessionId){
+ const r=await sbTry('crm_session_etapes?session_id=eq.'+sessionId+'&phase=eq.production&select=poste,duree_prevue_min,duree_reelle_min');
+ if(!r.ok||!r.data.length)return null;
+ const parPoste={};
+ r.data.forEach(e=>{const p=e.poste||'—';parPoste[p]=(parPoste[p]||0)+(e.duree_reelle_min||e.duree_prevue_min||0)});
+ return Math.max(0,...Object.values(parPoste));
+}
+
+/* ---- Vue tablette plein écran ---- */
+let TAB_SESSION=null,TAB_PHASE='production';
+async function ouvrirTablette(sessionId){
+ TAB_SESSION=sessionId;TAB_PHASE='production';
+ $('#tablette').classList.add('on');
+ await rendreTablette();
+}
+function fermerTablette(){$('#tablette').classList.remove('on');TAB_SESSION=null}
+async function rendreTablette(){
+ if(!TAB_SESSION)return;
+ const [sR,eR]=await Promise.all([
+  sbTry('crm_sessions?id=eq.'+TAB_SESSION+'&select=*'),
+  sbTry('crm_session_etapes?session_id=eq.'+TAB_SESSION+'&select=*&order=ordre.asc')
+ ]);
+ const s=(sR.ok?sR.data:[])[0];const etapes=eR.ok?eR.data:[];
+ if(!s){fermerTablette();return}
+ const dansPhase=etapes.filter(e=>e.phase===TAB_PHASE);
+ const chrono=s.demarree_le?chronoTexte(s):'—';
+ const restant=s.demarree_le&&s.creneau_fin?tempsRestantTexte(s):null;
+ $('#tablette').innerHTML=`
+ <div class="tab-head">
+  <button class="tab-close" data-tab-fermer aria-label="Fermer">×</button>
+  <h1>${fd(s.jour)} — ${s.type==='mise_en_place'?'Mise en place':'Production'}</h1>
+  <div class="tab-chrono ${restant&&restant.classe||''}">${restant?restant.texte:chrono}</div>
+ </div>
+ <div class="tab-phases">
+  <button class="${TAB_PHASE==='production'?'on':''}" data-tab-phase="production">Par recette (${etapes.filter(e=>e.phase==='production').length})</button>
+  <button class="${TAB_PHASE==='assemblage'?'on':''}" data-tab-phase="assemblage">Par bon — assemblage (${etapes.filter(e=>e.phase==='assemblage').length})</button>
+ </div>
+ <div class="tab-list">${dansPhase.map(tabCard).join('')||'<div class="empty">Rien dans cette phase.</div>'}</div>`;
+ if(TAB_TIMER)clearInterval(TAB_TIMER);
+ TAB_TIMER=setInterval(()=>{
+  if(!$('#tablette').classList.contains('on')){clearInterval(TAB_TIMER);return}
+  const el=$('.tab-chrono');if(!el||!s.demarree_le)return;
+  const rr=s.creneau_fin?tempsRestantTexte(s):null;
+  el.textContent=rr?rr.texte:chronoTexte(s);
+  el.className='tab-chrono '+(rr&&rr.classe||'');
+ },1000);
+}
+let TAB_TIMER=null;
+function chronoTexte(s){
+ const sec=Math.max(0,Math.floor((Date.now()-new Date(s.demarree_le).getTime())/1000));
+ return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
+}
+function tempsRestantTexte(s){
+ const [h,m]=s.creneau_fin.split(':').map(Number);
+ const fin=new Date(s.jour+'T'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':00');
+ const secRestant=Math.floor((fin.getTime()-Date.now())/1000);
+ const neg=secRestant<0,abs=Math.abs(secRestant);
+ const texte=(neg?'-':'')+String(Math.floor(abs/60)).padStart(2,'0')+':'+String(abs%60).padStart(2,'0');
+ return{texte,classe:neg?'bad':abs<600?'warn':''};
+}
+function tabCard(e){
+ let btn;
+ if(e.statut==='fait')btn=`<span class="tab-btn done">✓ ${e.duree_reelle_min||'?'} min</span>`;
+ else if(e.statut==='en_cours')btn=`<button class="tab-btn done" data-fin-etape="${e.id}">Terminer</button>`;
+ else btn=`<button class="tab-btn go" data-debut-etape="${e.id}">Commencer</button>`;
+ return `<div class="tab-card ${e.statut==='fait'?'fait':e.statut==='en_cours'?'encours':''}"><div class="grow"><div class="titre">${esc(e.titre)}</div><div class="sub">${esc(e.poste||'')}${e.assigne?' · '+esc(nomDe(e.assigne)):''}</div></div><div class="duree">${e.duree_prevue_min||'?'} min</div>${btn}</div>`;
+}
+document.addEventListener('click',e=>{
+ if(e.target.closest('[data-tab-fermer]')){fermerTablette();return}
+ const tp=e.target.closest('[data-tab-phase]');
+ if(tp){TAB_PHASE=tp.dataset.tabPhase;rendreTablette();return}
+});
+
+/* ---- Stocks : lot créé en fin de session, alerte avant péremption ---- */
+async function ouvrirCreationLot(sessionId){
+ modal(`<h2>Nouveau lot de stock</h2><form class="form" id="lotForm">
+  <label>Préparation<input class="inp" id="lo1" required placeholder="ex. sauce bolognaise"></label>
+  <div class="two"><label>Quantité (kg)<input class="inp" id="lo2" type="number" step="0.1" required></label><label>Mode<select id="lo3"><option value="congele">Congelé</option><option value="frais">Frais</option></select></label></div>
+  <label>Date limite<input class="inp" id="lo4" type="date" required></label>
+  <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Créer le lot</button></div>
+ </form>`);
+ $('#lotForm').onsubmit=async e=>{
+  e.preventDefault();
+  await sb('stocks_mp',{method:'POST',body:JSON.stringify({
+   ingredient_nom:$('#lo1').value,quantite_kg:+$('#lo2').value||0,
+   temperature_stockage:$('#lo3').value,date_peremption:$('#lo4').value,
+   statut:'disponible',lot:'session-'+sessionId.slice(0,8)
+  })});
+  closeAll();toast('Lot créé');render();
+ };
 }
 
 /* ============ INTERFACE PRODUCTION — dashboard, commandes, calendrier,
@@ -1908,7 +2347,31 @@ async function listeCoursesJours(jours){
   if(!total[cle])total[cle]={nom:String(i.ingredient_nom||'').trim(),unite,q:0,rec:new Set()};
   total[cle].q+=q;total[cle].rec.add(i.recette_id);
  });
+ // §4.1 : « le stock disponible est déduit de la liste de courses ».
+ // Rapprochement par NOM EXACT (insensible à la casse) seulement — pas de
+ // correspondance floue, sur le même principe que `contient()` d'
+ // assets/garde-manger.js dans l'app : une correspondance approximative
+ // ferait disparaître un ingrédient de la liste à tort, ce qui coûte
+ // plus cher qu'une redondance visible. Uniquement pour g/kg — stocks_mp
+ // n'a qu'une colonne `quantite_kg`, comparer à des ml ou des pièces
+ // n'aurait pas de sens.
+ const stockR=await sbTry('stocks_mp?statut=eq.disponible&select=ingredient_nom,quantite_kg');
+ const stockKg={};
+ (stockR.ok?stockR.data:[]).forEach(s=>{
+  const cle=String(s.ingredient_nom||'').trim().toLowerCase();
+  stockKg[cle]=(stockKg[cle]||0)+(+s.quantite_kg||0);
+ });
  const lignes=Object.values(total).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
+ lignes.forEach(l=>{
+  const u=l.unite.toLowerCase();
+  if(u!=='g'&&u!=='kg')return;
+  const dispo=stockKg[l.nom.toLowerCase()];
+  if(!dispo)return;
+  const qKg=u==='kg'?l.q:l.q/1000;
+  const dejaKg=Math.min(dispo,qKg);
+  l.dejaEnStockKg=dejaKg;
+  l.q=Math.max(0,qKg-dejaKg)*(u==='kg'?1:1000);
+ });
  const fmt=l=>{const u=l.unite.toLowerCase();if((u==='g'||u==='ml')&&l.q>=1000)return(Math.round(l.q/100)/10).toLocaleString('fr-FR')+' '+(u==='g'?'kg':'L');return(l.q<10?Math.round(l.q*10)/10:Math.round(l.q)).toLocaleString('fr-FR')+' '+l.unite};
  const sansFiche=recIds.filter(id=>!(ing.ok?ing.data:[]).some(i=>i.recette_id===id));
  const texte=`Liste de courses — ${titre}\n`+lignes.map(l=>`- ${l.nom} : ${fmt(l)}`).join('\n');
@@ -1916,7 +2379,7 @@ async function listeCoursesJours(jours){
  <p class="muted" style="margin:-4px 0 10px;font-size:12.5px">${esc(titre)} · ${bons.length} commande${bons.length>1?'s':''} · ${recIds.map(id=>esc((fiche[id]||{}).nom||'?')+' × '+portions[id]).join(', ')||'aucune recette'}</p>
  ${sansRecette.length?`<div class="exbar"><span class="chip bad">${sansRecette.length}</span><span>commande${sansRecette.length>1?'s':''} sans recette attribuée (${sansRecette.reduce((s,b)=>s+b.nb_repas,0)} repas) — non comptée${sansRecette.length>1?'s':''} dans cette liste.</span></div>`:''}
  ${sansFiche.length?`<div class="exbar"><span class="chip warn">${sansFiche.length}</span><span>recette${sansFiche.length>1?'s':''} sans ingrédients saisis : ${sansFiche.map(id=>esc((fiche[id]||{}).nom||'?')).join(', ')}.</span></div>`:''}
- <div class="list" style="max-height:50vh;overflow:auto">${lignes.map(l=>`<div class="li"><div class="grow">${esc(l.nom)}${l.rec.size>1?` <span class="muted" style="font-size:11.5px">· ${l.rec.size} recettes</span>`:''}</div><span class="num">${esc(fmt(l))}</span></div>`).join('')||'<div class="empty">Rien à calculer.</div>'}</div>
+ <div class="list" style="max-height:50vh;overflow:auto">${lignes.map(l=>`<div class="li"><div class="grow">${esc(l.nom)}${l.rec.size>1?` <span class="muted" style="font-size:11.5px">· ${l.rec.size} recettes</span>`:''}${l.dejaEnStockKg?` <span class="muted" style="font-size:11.5px">· ${(Math.round(l.dejaEnStockKg*10)/10).toLocaleString('fr-FR')} kg déjà en stock déduits</span>`:''}</div><span class="num">${l.q<=0?'<span class="chip ok">en stock</span>':esc(fmt(l))}</span></div>`).join('')||'<div class="empty">Rien à calculer.</div>'}</div>
  <div class="foot" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" type="button" data-close>Fermer</button>${lignes.length?'<button class="btn" type="button" id="lcPrint">Imprimer</button><button class="btn primary" type="button" id="lcCopy">Copier</button>':''}</div>`);
  $('#lcCopy')?.addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(texte);toast('Liste copiée')}
@@ -1960,10 +2423,15 @@ async function vProdStocks(){
  if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">stocks_mp</span> — session d'équipe requise, ou table absente.</span></div>`;
  const stocks=r.data;
  const todayStr=TODAY.toISOString().slice(0,10);
+ // §4.1 : « alerte avant expiration » — un lot périmé se voit déjà
+ // (chip rouge existant) ; celui qui va l'être dans les 3 jours ne se
+ // voyait pas du tout, alors que c'est LUI qu'on peut encore utiliser.
+ const dans3j=new Date(TODAY.getTime()+3*864e5).toISOString().slice(0,10);
  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn sm primary" data-new="stock">+ Entrée stock</button></div>
  <div class="tbl-wrap"><table><thead><tr><th>Ingrédient</th><th>Quantité</th><th>Péremption</th><th>Stockage</th><th>Statut</th><th>Lot</th></tr></thead><tbody>${stocks.map(s=>{
   const perime=s.date_peremption&&s.date_peremption<todayStr;
-  return `<tr class="rowc" data-edit-stock="${s.id}"><td>${esc(s.ingredient_nom)}</td><td class="num">${s.quantite_kg} kg</td><td>${s.date_peremption?fd(s.date_peremption):'—'}${perime?' <span class="chip bad">périmé</span>':''}</td><td>${esc(s.temperature_stockage||'—')}</td><td><span class="chip ${s.statut==='disponible'?'ok':s.statut==='perime'?'bad':''}">${esc(s.statut)}</span></td><td>${esc(s.lot||'—')}</td></tr>`;
+  const bientot=!perime&&s.date_peremption&&s.date_peremption<=dans3j&&s.statut==='disponible';
+  return `<tr class="rowc" data-edit-stock="${s.id}"><td>${esc(s.ingredient_nom)}</td><td class="num">${s.quantite_kg} kg</td><td>${s.date_peremption?fd(s.date_peremption):'—'}${perime?' <span class="chip bad">périmé</span>':bientot?' <span class="chip warn">bientôt périmé</span>':''}</td><td>${esc(s.temperature_stockage||'—')}</td><td><span class="chip ${s.statut==='disponible'?'ok':s.statut==='perime'?'bad':''}">${esc(s.statut)}</span></td><td>${esc(s.lot||'—')}</td></tr>`;
  }).join('')||'<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">Aucun stock enregistré</td></tr>'}</tbody></table></div>`;
 }
 document.addEventListener('click',e=>{

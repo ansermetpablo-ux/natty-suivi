@@ -187,3 +187,129 @@ prudence ; à purger si personne n'y revient.
    contrôle de capacité et son action réserver-cuisine gagneraient à être rebranchés sur
    de vraies disponibilités RH une fois 06/07 avancés. Aucun choix n'a été fait à la
    place de Pablo — voir sa réponse en fin de conversation.
+
+---
+
+## Session 06 — En cuisine (25/09/2026, soir) — mapping, chrono, réservation, stocks
+
+Pablo a choisi la session 06. Avant de coder : profondeur du mapping tranchée avec lui
+(question posée explicitement) — **mapping simple natif au CRM, PAS un portage de
+`assets/admin-production.js`** (PERT, ateliers partagés, répartition optimale entre
+cuisiniers), qui reste l'outil de référence pour le détail fin, documenté à part dans
+`CLAUDE.md` §3. Reconstruire cette sophistication ici aurait créé deux systèmes voués à
+diverger — exactement le défaut déjà payé par `api/_nutrition.js` contre `assets/core.js`
+(macros fausses envoyées en notification, des semaines durant, avant d'être vu).
+
+### Ce qui a été fait
+
+- **`supabase/migrations/0009_session_mapping_stocks.sql`** : `crm_session_etapes`
+  (une ligne = une étape, `phase` production/assemblage, `poste`, `assigne`, `ordre`,
+  `duree_prevue_min`/`duree_reelle_min`, `debut_reel`, `statut`, `depend_de[]`) + deux
+  colonnes sur `crm_sessions` (`demarree_le`, `terminee_le`). **Une seule nouvelle table**
+  plutôt que les trois du schéma cible de la spec (`session_recettes`, `session_postes`,
+  `session_taches`) — `session_recettes` est inutile (les volumes se lisent déjà depuis
+  `bons_attributions`), `session_postes` fusionné dans `assigne` sur chaque étape. Écart
+  documenté dans le fichier de migration lui-même.
+- **`genererMapping(sessionId)`** : lit les commandes de la session (`bloc_id` pour le
+  flux « Test produit », `session_id` pour le flux normal — voir plus bas), agrège leurs
+  attributions, et génère une ligne `crm_session_etapes` par étape de `recettes_etapes`
+  (phase='production', déjà en base avec poste/geste/`depend_de` — CLAUDE.md §3) pour
+  chaque recette, plus une ligne par (bon, recette) pour l'assemblage à la portion. Les
+  dépendances (`numero` dans la fiche) sont traduites en uuid propres à la session. Les
+  étapes déjà `fait` sont conservées à la régénération ; leur durée réelle nourrit la
+  moyenne utilisée pour estimer les prochaines (§4.1 « améliore les estimations »),
+  filtrée par `etape_source_id` — **un vrai bug trouvé en l'écrivant** : le titre stocké
+  porte le nom de la recette en préfixe, un filtre par texte de titre n'aurait jamais
+  matché. Corrigé avant de committer, plus un index de correction
+  (`0011_session_etapes_index_correction.sql`, l'index posé dans 0009 restant, inoffensif
+  mais inutilisé).
+- **Vue tablette plein écran** (`ouvrirTablette`/`rendreTablette`) : grosse typographie,
+  fort contraste, deux phases (par recette / par bon-assemblage), chrono de session,
+  temps restant sur le créneau réservé, bouton Commencer/Terminer par étape qui capture
+  la durée réelle.
+- **Chrono de session** : `demarrerSession`/`terminerSession` posent `demarree_le`/
+  `terminee_le` ; la tablette affiche le temps écoulé, ou le temps restant sur le
+  créneau une fois celui-ci réservé (rouge si dépassé, ambre sous 10 min).
+- **Créneau calculé depuis le VRAI mapping** : `dureeMappingSession()` prend le max par
+  poste (ils travaillent en parallèle, pas de résolution PERT des dépendances — «
+  ajustable à la main » pris au pied de la lettre). `actionReserverCuisine` l'utilise en
+  priorité, avec repli sur l'ancien calcul (somme prep+cuisson du menu) si le mapping
+  n'a pas encore été généré.
+- **Email ET SMS comme deux canaux à part entière** (§4.2 : « pas de service payant à ce
+  stade ») — avant, le lien `sms:` n'était qu'un repli si la config email manquait ;
+  un bouton « Ouvrir un SMS » est maintenant toujours proposé à côté d'« Envoyer par
+  email », les deux marquant la session `statut_reservation:'envoyee'`.
+- **Confirmation de la cuisine, distincte de l'envoi de la demande**
+  (`confirmerReservation`) : §4.2 « la mission passe en attente de confirmation jusqu'au
+  clic Confirmée ». Les tâches qui dépendent de « Réserver la cuisine » affichent
+  désormais « cuisine pas encore confirmée » (ambre) tant que la session liée n'est pas
+  à `statut_reservation:'confirmee'` — distinct de la case à cocher de la dépendance
+  elle-même, qui ne dit que « la demande a été envoyée ».
+- **Stocks** : badge « bientôt périmé » (3 jours, disponible uniquement — un lot déjà
+  marqué périmé ou épuisé n'a pas besoin d'un second badge) en plus du « périmé »
+  existant ; bouton « + Lot de stock » sur une session de production ; **le stock
+  disponible est déduit de la liste de courses** (`listeCoursesJours`) par nom exact
+  insensible à la casse, g/kg seulement — une correspondance approximative ferait
+  disparaître un ingrédient à tort, ce qui coûte plus cher qu'une redondance visible.
+
+### Écart signalé par Pablo en cours de session, et corrigé
+
+Pablo, en regardant la vue Production en direct : « je dois pouvoir voir les blocs des
+prochaines commandes à produire — celles qui sont attribuées — et les sélectionner pour
+planifier la session, exactement comme admin.html ». La vue Production ne montrait QUE
+les sessions nées d'un bloc « Test produit » (`instancierBloc`) : aucun moyen d'y
+sélectionner les commandes attribuées de la semaine, le flux RÉCURRENT et quotidien que
+gère `admin.html`. Ce n'était pas dans le périmètre écrit de la session 06 — c'est un
+manque de la session 05 (Commandes → courses) révélé seulement à l'usage.
+
+Corrigé : **`bons_commande.session_id`** (`0010_bons_session_link.sql`), distinct de
+`bloc_id` — deux flux, une seule table `crm_session_etapes` en aval. Nouvelle section
+« À planifier » en tête de la vue Production (`vAPlanifier`) : les commandes attribuées
+mais sans session, groupées par jour de livraison avec le récapitulatif recette × n
+(même lecture que le calendrier d'`admin.html`), une case à cocher par jour, et
+« Planifier la session de production → » qui crée la session, y rattache SEULEMENT les
+bons réellement attribués de ce jour (pas tous les bons du jour — un bon non attribué
+qui partagerait la date ne doit pas être happé en silence, il resterait sans mapping et
+invisible), puis lance `genererMapping` dessus. C'est la partie « sélection » qui
+rejoint `admin.html` ; la profondeur du mapping affiché reste la version simple
+tranchée plus haut — la demande de Pablo portait sur ce que les deux ont en commun, pas
+sur une régression de la décision de profondeur déjà actée dans la même session.
+
+### Décisions prises
+
+- Mapping simple natif, jamais un portage de `admin-production.js` (voir plus haut).
+- Un poste travaille en parallèle des autres, en série avec lui-même — pas de chemin
+  critique façon PERT. Assumé, § mapping.
+- `bons_commande.session_id` et `bloc_id` sont mutuellement exclusifs en pratique (deux
+  flux distincts) mais pas contraints en base à l'être — un bon Test produit *pourrait*
+  en théorie porter les deux sans que rien ne le refuse. Pas de contrainte ajoutée : le
+  code ne les mélange jamais, et une contrainte `check` sur deux colonnes nullables
+  indépendantes coûterait plus qu'elle ne protège à ce stade.
+- La session se date sur le PREMIER jour coché quand plusieurs jours sont sélectionnés
+  d'un coup — « ajustable à la main » ensuite, comme le reste du module (le jour et le
+  créneau d'une session restent modifiables après coup, aucune UI d'édition dédiée
+  n'a été ajoutée pour l'instant : à faire si le besoin se confirme).
+
+### Dette technique / points ouverts
+
+- L'assemblage montre « combien de temps peser CE bon » (3 min forfaitaires) mais pas
+  les grammes par ingrédient à peser pour la portion du client — cette précision-là vit
+  dans `admin-production.js` (`portionPour()`), volontairement pas reconstruite ici.
+- Aucune UI pour réassigner une étape à une personne différente après génération
+  (`assigne` existe en base, rien ne l'écrit encore côté CRM) ni pour réordonner les
+  étapes à la main malgré « ajustable à la main » promis par la spec — la table le
+  permet (`ordre`, `PATCH` direct), l'écran ne l'offre pas encore.
+- Le lot de stock créé en fin de session est manuel (bouton), pas automatique à la
+  fermeture — la spec ne précise pas la correspondance exacte étape→lot, un
+  automatisme aurait dû inventer cette correspondance.
+- La déduction du stock dans la liste de courses ne gère que g/kg par nom exact ; ml et
+  pièce ne sont pas couverts (stocks_mp n'a qu'une colonne `quantite_kg`).
+- 🔄 **Rien vérifié avec une vraie session d'équipe** : `crm.html` exige une
+  authentification Supabase que cette session n'a pas ; vérifié uniquement par lecture,
+  `node --check` sur le script extrait, une relecture ligne à ligne des nouvelles
+  fonctions (qui a trouvé et corrigé deux bugs avant commit : le filtre par titre déjà
+  cité, et la sélection qui aurait pu happer des bons non attribués), et un chargement
+  de la page dans le navigateur (écran de connexion, aucune erreur console). **À
+  vérifier par Pablo en conditions réelles avant de considérer la session close** :
+  générer un mapping sur une vraie session, cocher une étape dans la vue tablette,
+  envoyer une vraie réservation (email et SMS), confirmer, créer un lot de stock.
