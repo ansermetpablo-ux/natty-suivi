@@ -3372,10 +3372,7 @@ préfixés `_`) :
 - Un `410 Unregistered` / `400 BadDeviceToken` **désactive le jeton en base** — sinon on le
   repaie à chaque envoi.
 
-**Trois endpoints**, tous derrière `CRON_SECRET` (même garde qu'`api/conseils-hebdo`) :
-- **`api/push-test.js`** — le premier endroit où regarder. Sans paramètre il rend compte de la
-  configuration ; avec `user_id` ou `token` il envoie et **remonte la réponse brute d'APNs**.
-  Son en-tête liste ce que veut dire chaque `reason`.
+**Deux endpoints**, tous derrière `CRON_SECRET` (même garde qu'`api/conseils-hebdo`) :
 - **`api/rappel-macros.js`** — le rappel du soir. `?dry=1` calcule sans envoyer.
 - **`api/push-amis.js`** — **déclenché par la base** (choix de Pablo, 2026-08-03) : un
   `after insert` sur `meals` appelle l'endpoint via `pg_net` avec l'id du repas, donc la
@@ -3385,6 +3382,16 @@ préfixés `_`) :
   exactement ce qu'il est censé rattraper. **Respecte `membre_prefs.fil_public` et
   `meals.partage`** : un membre sorti du fil ne déclenche pas plus de notification qu'il
   n'apparaît dans le fil, sinon le réglage mentirait. Un abonné reçoit **une** notification par
+  passage, même si trois personnes qu'il suit ont publié.
+  > ⚠️ **`api/push-test.js` a été fusionné ICI le 2026-09-25** (derrière
+  > `?diag=1`) : `api/` comptait 14 fonctions serverless, au-dessus de la
+  > limite Vercel, et push-test n'était qu'un outil de diagnostic manuel —
+  > jamais appelé par la base ni par un cron — donc le candidat naturel à
+  > absorber. Le premier endroit où regarder quand « les push ne marchent
+  > pas » reste donc accessible, juste à une autre adresse :
+  > `GET /api/push-amis?secret=…&diag=1` (config), `&diag=1&user_id=…`
+  > (tous les appareils), `&diag=1&token=…` (un jeton précis). Comportement
+  > identique, rien perdu — voir l'en-tête du fichier.
   passage, même si trois personnes qu'il suit ont publié.
 
 > ⚠️ **Le secret d'un cron Vercel ne voyage pas là où on croit.** Une entrée `crons` de
@@ -6616,8 +6623,9 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
 - ✅ **Push serveur — code écrit et testé aussi loin que possible sans un iPhone signé.**
   (La clé Apple est donnée pour posée depuis le 2026-08-15 ; ce qui bloque maintenant est
   le jeton, pas la clé — voir le point 1 ci-dessous.)
-  `assets/push.js`, `api/_apns.js`, `api/_nutrition.js`, `api/push-test.js`,
-  `api/rappel-macros.js`, `api/push-amis.js`, `natty_push.sql`, plugin installé,
+  `assets/push.js`, `api/_apns.js`, `api/_nutrition.js`,
+  `api/rappel-macros.js`, `api/push-amis.js` (le diagnostic ex-`push-test.js`
+  y est fusionné depuis le 2026-09-25, §3), `natty_push.sql`, plugin installé,
   capability + entitlement iOS en place, `AppDelegate` complété. Détail en §3.
   **Vérifié** : signature ES256 (64 octets, r|s), calcul des macros identique à l'app sur
   10 repas réels, les deux endpoints en dry-run sur les vraies données (rappel du soir avec
@@ -6637,10 +6645,13 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      > 401 `Unauthorized`**. C'est la bonne nouvelle sur le fail-closed (cf. l'encadré des
      > crons), et c'est précisément ce qui empêche de distinguer « clé posée » de « clé
      > absente » sans le secret. Ne pas conclure d'un 401 : il ne dit rien de la clé.
+     > ⚠️ `api/push-test` a depuis été fusionné dans `api/push-amis` (§3, 2026-09-25) —
+     > la mesure ci-dessus, datée, reste vraie pour l'endpoint qui existait ce jour-là ;
+     > la commande à lancer AUJOURD'HUI est celle qui suit.
      > **La commande qui tranche**, à lancer avec le `CRON_SECRET` lu dans Vercel →
      > Settings → Environment Variables :
      > ```
-     > curl "https://natty-suivi.vercel.app/api/push-test?secret=<CRON_SECRET>"
+     > curl "https://natty-suivi.vercel.app/api/push-amis?diag=1&secret=<CRON_SECRET>"
      > ```
      > Elle rend `cle_apns`, `equipe`, `topic`, `environnement`, `cle_supabase` et le nombre
      > d'appareils. ⚠️ **`equipe` et `topic` ont un DÉFAUT dans le code** (`DJLW82GU5A` et
@@ -6670,7 +6681,7 @@ Ce document listait par erreur les éléments suivants comme "à faire" alors qu
      `APNS_TEAM_ID`, `APNS_TOPIC` = **`com.nattynutrition.app`** (le bundle id, **le même partout**
      depuis le 2026-08-10 — voir §11), `APNS_ENV` = `sandbox` pour un build
      Xcode, `production` pour TestFlight/App Store. Plus `CRON_SECRET` et
-     `SUPABASE_SERVICE_KEY` s'ils manquent. Vérification : `GET /api/push-test?secret=…`.
+     `SUPABASE_SERVICE_KEY` s'ils manquent. Vérification : `GET /api/push-amis?diag=1&secret=…`.
   2. ✅ **`natty_push.sql` — EXÉCUTÉ.** Relevé le 2026-08-12 : `appareils`, `push_etat` et
      `push_config` existent toutes les trois, **RLS activée et aucune policy** sur les deux
      dernières — exactement l'état voulu (illisibles à la clé anon, lues par la seule fonction
@@ -7568,7 +7579,8 @@ cuisinent, la refonte du bilan et celle de l'ajout d'un plat.
 >   -exportOptionsPlist ExportOptions.plist -exportPath ~/Desktop/Natty-export \
 >   -allowProvisioningUpdates
 > ```
-> `ExportOptions.plist` : `method` = `app-store-connect`, `teamID` = `DJLW82GU5A`,
+> `ExportOptions.plist` **est dans le dépôt, à la racine, depuis le 2026-09-25** — plus à
+> recomposer à la main sur le Mac : `method` = `app-store-connect`, `teamID` = `DJLW82GU5A`,
 > `signingStyle` = `automatic`, `uploadSymbols` = vrai, `destination` = `export`.
 
 > ⚠️ **L'ENVOI VERS APP STORE CONNECT N'A PAS ÉTÉ FAIT, et pas par oubli.** Il demande soit une

@@ -2,8 +2,10 @@
 // Natty — Envoi de notifications push à APNs
 // ───────────────────────────────────────────────────────────
 // Module partagé, PAS une route : Vercel ignore les fichiers d'`api/` dont le
-// nom commence par `_`. Les endpoints (push-test, rappel-macros, push-amis)
-// passent tous par ici.
+// nom commence par `_`. Les endpoints (rappel-macros, push-amis — qui porte
+// aussi le diagnostic depuis la fusion du 2026-09-25 avec l'ancien
+// push-test.js, pour repasser sous la limite de fonctions Vercel) passent
+// tous par ici.
 //
 // POURQUOI `http2` ET NON `fetch` : l'API provider d'Apple n'accepte que
 // HTTP/2. `fetch` (undici) parle HTTP/1.1 par défaut et se ferait fermer la
