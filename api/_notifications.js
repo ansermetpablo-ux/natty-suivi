@@ -86,17 +86,23 @@ function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-/* Un événement JOURNÉE ENTIÈRE par défaut (les missions de la spec n'ont
-   qu'une échéance, pas d'heure) — VALUE=DATE plutôt qu'un DTSTART/DTEND
-   horaire inventé. `sequence` doit augmenter à chaque ré-envoi pour le
-   MÊME `uid` : c'est ce qui fait qu'un calendrier met à jour l'événement
-   déjà accepté au lieu d'en créer un second (§ 4.4 de la spec : « .ics
-   mise à jour en cas de changement »). */
-function construireICS({ uid, sequence, titre, description, dateDebut, dateFin, organisateurEmail, organisateurNom, inviteEmail, inviteNom, annule }) {
+/* Deux formes d'événement, selon ce qu'on nous donne :
+   - JOURNÉE ENTIÈRE (VALUE=DATE) — le cas des missions/tâches de la spec,
+     qui n'ont qu'une échéance, pas d'heure ;
+   - HORAIRE (DTSTART/DTEND en UTC) — le cas d'une réunion, qui a un vrai
+     créneau. `heure` (bool) choisit la forme ; `dateDebut`/`dateFin` sont
+     alors des `Date` complètes, pas seulement des jours.
+   `sequence` doit augmenter à chaque ré-envoi pour le MÊME `uid` : c'est ce
+   qui fait qu'un calendrier met à jour l'événement déjà accepté au lieu
+   d'en créer un second (§ 4.4 de la spec : « .ics mise à jour en cas de
+   changement »). Le caller garde donc le même `uid` d'un envoi à l'autre
+   et incrémente `sequence` — voir `reunions.ics_sequence` (0003_rh.sql). */
+function construireICS({ uid, sequence, titre, description, dateDebut, dateFin, heure, organisateurEmail, organisateurNom, inviteEmail, inviteNom, annule }) {
   const maintenant = new Date();
   const dtstamp = dateICS(maintenant) + 'T' + pad(maintenant.getUTCHours()) + pad(maintenant.getUTCMinutes()) + pad(maintenant.getUTCSeconds()) + 'Z';
-  const debut = dateICS(dateDebut);
-  const fin = dateICS(dateFin || dateDebut);
+  function stampHoraire(d) { return dateICS(d) + 'T' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z'; }
+  const dtStart = heure ? 'DTSTART:' + stampHoraire(dateDebut) : 'DTSTART;VALUE=DATE:' + dateICS(dateDebut);
+  const dtEnd = heure ? 'DTEND:' + stampHoraire(dateFin || dateDebut) : 'DTEND;VALUE=DATE:' + dateICS(dateFin || dateDebut);
   const lignes = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Natty//CRM//FR',
     'METHOD:' + (annule ? 'CANCEL' : 'REQUEST'),
@@ -104,8 +110,8 @@ function construireICS({ uid, sequence, titre, description, dateDebut, dateFin, 
     'UID:' + uid,
     'SEQUENCE:' + (sequence || 0),
     'DTSTAMP:' + dtstamp,
-    'DTSTART;VALUE=DATE:' + debut,
-    'DTEND;VALUE=DATE:' + fin,
+    dtStart,
+    dtEnd,
     'SUMMARY:' + escapeICS(titre),
     description ? 'DESCRIPTION:' + escapeICS(description) : null,
     'STATUS:' + (annule ? 'CANCELLED' : 'CONFIRMED'),
@@ -116,12 +122,12 @@ function construireICS({ uid, sequence, titre, description, dateDebut, dateFin, 
   return lignes.join('\r\n');
 }
 
-async function envoyerEmailInvitation({ inviteEmail, inviteNom, titre, description, dateDebut, dateFin, uid, sequence, annule }) {
+async function envoyerEmailInvitation({ inviteEmail, inviteNom, titre, description, dateDebut, dateFin, heure, uid, sequence, annule }) {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) return { ok: false, err: 'RESEND_API_KEY absente' };
   const FROM = process.env.RESEND_FROM || 'Natty <onboarding@resend.dev>';
   const organisateurEmail = (FROM.match(/<(.+)>/) || [])[1] || FROM;
-  const ics = construireICS({ uid, sequence, titre, description, dateDebut, dateFin, organisateurEmail, organisateurNom: 'Natty', inviteEmail, inviteNom, annule });
+  const ics = construireICS({ uid, sequence, titre, description, dateDebut, dateFin, heure, organisateurEmail, organisateurNom: 'Natty', inviteEmail, inviteNom, annule });
   const html = '<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto">'
     + '<h2 style="margin:0 0 8px">' + escapeHtml(titre) + '</h2>'
     + (description ? '<p style="color:#555;white-space:pre-wrap">' + escapeHtml(description) + '</p>' : '')
