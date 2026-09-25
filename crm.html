@@ -1301,11 +1301,11 @@ async function actionReserverCuisine(tacheId){
   </form>`);
  $('#cuisineForm').onsubmit=async e=>{
   e.preventDefault();
-  const body={date:$('#cf1').value,heure_debut:$('#cf3').value,heure_fin:$('#cf4').value,nb_personnes:+$('#cf2').value,note:$('#cf5').value||undefined};
+  const body={action:'reserver_cuisine',date:$('#cf1').value,heure_debut:$('#cf3').value,heure_fin:$('#cf4').value,nb_personnes:+$('#cf2').value,note:$('#cf5').value||undefined};
   closeAll();
   let data={},ok=false;
   try{
-   const res=await fetch('/api/reserver-cuisine',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+jetonStaff()},body:JSON.stringify(body)});
+   const res=await fetch('/api/notifications',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+jetonStaff()},body:JSON.stringify(body)});
    data=await res.json().catch(()=>({}));ok=res.ok;
   }catch(err){}
   if(ok&&data.ok){

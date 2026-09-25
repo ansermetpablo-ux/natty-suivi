@@ -3392,6 +3392,15 @@ préfixés `_`) :
   > `GET /api/push-amis?secret=…&diag=1` (config), `&diag=1&user_id=…`
   > (tous les appareils), `&diag=1&token=…` (un jeton précis). Comportement
   > identique, rien perdu — voir l'en-tête du fichier.
+  > ⚠️⚠️ **CETTE FUSION SEULE NE SUFFISAIT PAS.** Le message d'erreur réel
+  > de Vercel (vu dans le tableau de bord, pas deviné) : **« No more than 12
+  > Serverless Functions can be added to a Deployment on the Hobby plan »**
+  > — 12, pas 13. Un second doublon a suivi le jour même :
+  > `api/reserver-cuisine.js` (le CRM, action « Réserver la cuisine »,
+  > §4.2 de `docs/crm-spec.md`) fusionné dans `api/notifications.js`
+  > derrière `{action:'reserver_cuisine'}` dans le corps de la requête.
+  > `api/` compte **12 fonctions** depuis — vérifié en comptant les fichiers
+  > non préfixés `_`, jamais en supposant qu'une seule fusion suffirait.
   passage, même si trois personnes qu'il suit ont publié.
 
 > ⚠️ **Le secret d'un cron Vercel ne voyage pas là où on croit.** Une entrée `crons` de
