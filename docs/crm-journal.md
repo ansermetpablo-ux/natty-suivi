@@ -788,3 +788,142 @@ Vérifié : `node --check` sur le script unique de `crm.html`, aucune fonction d
 passent `node --check --input-type=module` / `node --check`.
 🔄 **Toujours pas de vraie session d'équipe** : les deux ajouts n'ont été vus qu'en
 lisant le code, pas cliqués dans le navigateur.
+
+---
+
+## Finance — Opérationnel : prévisionnel de coûts/revenus par session (26/09/2026)
+
+Demande de Pablo, en un message : un volet « Opérationnel » sous Finance, avec le
+prévisionnel des coûts matière (prix Metro × quantités de la session sélectionnée) et
+cuisine (heures × tarif), le prévisionnel de vente (9 €/10,50 € modifiable), un héros
+gain/perte qui s'actualise en direct, des facteurs ajustables (heures, quantité moyenne
+par recette, répartition des prix) qui écrivent en production une fois validés, un
+bouton de réinitialisation, deux graphiques (répartition par poste, détail par matière
+première), et le rapprochement avec la facture Metro réelle (écarts de prix, portions
+bonus depuis un surplus d'achat).
+
+**Ce n'est ni une session numérotée de `docs/crm-sessions/`, ni entièrement dans
+`docs/crm-spec.md`** — la spec (§3.4, §4 module 6, §5) décrit un « modèle financier
+unique » avec Qonto et Stripe (sessions 14/15, jamais commencées) ; ce chantier en est
+une **tranche verticale, sans Qonto ni Stripe**, scopée à UNE session de production à la
+fois. Documenté ici parce que rien d'autre ne le documente encore.
+
+### Ce qui a été investigué avant d'écrire une ligne
+Un audit complet du terrain (Finance actuellement une activité NUE dans `VUES`, le
+concept de session de production de la session 06, où vivent les prix Metro, les
+tables recettes/portions, `bons_commande`, et un mécanisme de facture) a précédé le
+code — trois risques bloquants identifiés et traités explicitement plutôt qu'ignorés :
+- **`recettes_etapes.poste` est NULL sur les 317 lignes** : `dureeMappingSession()`
+  retombe sur `geste` (14 valeurs) et fait un MAX dessus, donc une hypothèse de 14
+  cuisiniers en parallèle — largement optimiste. Plutôt que de prétendre ce chiffre
+  fiable, les heures de cuisine sont **éditables** dans le panneau, avec la note
+  explicite affichée à l'écran quand la source est « mapping ».
+- **`recettes_ingredients.ingredient_id` est NULL sur les 345 lignes** (deux
+  nomenclatures coexistent, Metro vs génériques) : le rapprochement recette → prix se
+  fait donc par **nom exact insensible à la casse**, la même règle que
+  `listeCoursesJours()` (§06) — jamais de correspondance approximative, un ingrédient
+  sans correspondance est **annoncé « non chiffré »**, jamais compté à zéro en silence.
+- **`ingredients_base.prix_kg_moyen` est vide partout** (0/40) ; seul `prix_achat_ht`
+  (18/40, au COLIS) existe. Prix au kg = `prix_achat_ht ÷ poids_colis_kg` ; sans les
+  deux, prix inconnu et dit comme tel.
+
+### Schéma — `supabase/migrations/0016_finance_operationnel.sql`
+- **`crm_tarifs`** (clé/valeur, RLS staff) — les trois tarifs de la spec (§1 : 9 € abo,
+  10,50 € unité) et le tarif horaire de la cuisine (30 €/h), qui vivait EN DUR à deux
+  endroits de `crm.html` (`actionReserverCuisine` et `cout_previsionnel`). Plus jamais
+  en dur : spec §3.3, « tous les seuils dans une table de règles ».
+- **`crm_sessions.heures_cuisine_override` / `.nb_repas_unite_override`** — deux
+  réglages éditables par session, NULL = calcul automatique.
+- **`factures_fournisseur.session_id`** — deux tables (`factures_fournisseur`,
+  `lignes_facture`) existaient déjà en base, créées hors de toute migration versionnée,
+  jamais référencées nulle part dans le dépôt (`grep` : 0 résultat). Elles couvrent
+  presque exactement le besoin « facture Metro réelle » — **adoptées** plutôt que
+  recréées à côté, avec le seul manque comblé (`session_id`).
+
+### Refactor fait au passage — le tarif cuisine n'est plus dupliqué
+`actionReserverCuisine()` (§4.2, la réservation réelle de la cuisine) calculait les
+heures et le coût avec `const marge=30,heures=Math.max(1,Math.ceil((minutes+marge)/60))`
+et `heures*30` **en dur**, à l'endroit exact où le panneau Finance a besoin du MÊME
+calcul. Extrait en `MARGE_CUISINE_MIN`/`heuresDepuisMinutes()` (près de
+`dureeMappingSession`) et `tarif('tarif_cuisine_h',30)`, réutilisés aux deux endroits —
+sans ce refactor, Finance aurait recopié le calcul et les deux auraient divergé à la
+première retouche (le défaut déjà payé par `api/_nutrition.js` vs `core.js` dans l'app
+principale, cité en exemple dans CLAUDE.md).
+
+### Architecture du panneau — trois temps, pour un recalcul instantané
+1. **`donneesSessionFinance(sessionId)`** — LA seule requête réseau par session choisie
+   (bons de la session via le même ternaire bloc_id/session_id que `genererMapping()`,
+   leurs attributions, les ingrédients des recettes concernées, la table de prix, le
+   mapping minuté).
+2. **`calculerFinance(raw, edit)`** — fonction PURE, aucun accès réseau, rappelée à
+   CHAQUE frappe dans le formulaire. Un seul `<div id="finLive">` est réécrit à chaque
+   recalcul (pattern déjà en place dans le fichier, cf. `somme()` du formulaire de bon de
+   commande) — les champs de saisie eux-mêmes restent hors de ce conteneur, jamais
+   réécrits, donc jamais de perte de focus pendant la frappe.
+3. **`rapprochementFacture(calc, lignesFacture)`** — pure aussi, ne s'active que si une
+   facture a été ajoutée à la session.
+
+**La « quantité moyenne par repas » éditable est un facteur, pas une nouvelle table** —
+elle se lit et s'écrit sur `bons_attributions.facteur`, la colonne que le système utilise
+déjà pour scaler les portions au client (§ production, `natty_production.sql`). Éditer
+cette moyenne dans Finance et cliquer « Valider » réécrit `facteur` pour TOUTES les
+attributions de cette recette dans la session — c'est très exactement « ça change la
+production » demandé, sans inventer un second mécanisme de scaling.
+
+**Portions bonus (rapprochement facture)** : goulot d'étranglement PAR RECETTE parmi ses
+ingrédients — un ingrédient de la recette sans donnée d'achat suffit à annuler tout bonus
+pour cette recette (`connu=false`), plutôt qu'une estimation à moitié fondée. Vérifié au
+banc : une recette dont un seul ingrédient (avocat, à la pièce, prix inconnu) manque de
+données reste à 0 bonus même si tous ses autres ingrédients ont un surplus large.
+
+**« Réinitialiser » ne touche JAMAIS `bons_attributions.facteur`** — seulement les édits
+locaux non validés et les deux colonnes `*_override` de `crm_sessions` (remises à NULL).
+Une fois validée, une quantité de production n'a pas de « valeur d'origine » sûre à
+restaurer automatiquement (elle a pu être ajustée ailleurs, avant même ce panneau) —
+revenir dessus sans le demander explicitement serait la même classe d'erreur qu'un
+« reset » qui écraserait une donnée client réelle.
+
+### Vérifié
+**Banc Node** (`calculerFinance`/`rapprochementFacture`/`tarif`/`heuresDepuisMinutes`
+extraits du fichier — jamais une copie à la main, une copie ne prouverait que la copie) :
+43 contrôles sur une fixture à 2 recettes/4 bons/2 ingrédients chiffrés — agrégation de
+coût, filtrage strict g/kg, priorité édition locale > override session > mapping,
+répartition du CA avec bornes (jamais négative, jamais au-delà du total), bons sans
+recette attribuée signalés, moyenne pondérée des facteurs, sens de l'écart de prix, sens
+de l'effet sur la marge (un coût réel plus bas AUGMENTE la marge), goulot d'étranglement
+multi-ingrédients pour les portions bonus, repli du tarif si `crm_tarifs` est vide,
+arrondi à l'heure pleine avec marge de 30 min. **43/43 bons du premier coup après une
+seule correction — d'un chiffre attendu dans MON banc de test**, pas dans le code : le
+calcul du coût matière réel utilise le besoin de la session au prix réel (pas tout
+l'achat facturé), pour ne pas mélanger le coût de cette session avec un surplus qui
+profite à une session future — vérifié que c'est la bonne sémantique avant de corriger
+le test plutôt que le code.
+**Rejoué dans le navigateur contre les VRAIES fonctions de la page** (pas ma copie
+extraite) — mêmes 15 valeurs, résultat identique au chiffre près. Rendu HTML des
+fonctions d'affichage (`heroHtml`, `panneauxPrevisionnelHtml`, `facteursFormHtml`,
+`graphiquesHtml`, `panneauRapprochementHtml`) : aucun `undefined`/`NaN`, parse sans
+erreur. `wireFinanceIfPresent()` ne plante pas hors du panneau (garde `#finRoot`).
+Routage vérifié : `VUES.finance` enregistré, `vueParDefaut('finance')` = `'operationnel'`,
+`ACT_BY_CLE.finance` toujours présent.
+**Bug de style trouvé et corrigé avant tout ça** : le formulaire des facteurs utilisait
+`.two`/`.form label`/`.form .inp`, des classes scopées `.form .xxx` en CSS — sans
+wrapper `.form` autour, les champs auraient perdu leur mise en page (labels non
+empilés, largeur non pleine). Corrigé en enveloppant dans `<div class="form">`.
+
+### Dette technique / points ouverts
+- 🔄 **Aucune vraie session d'équipe, aucune vraie session de production avec des
+  données réelles** : la base ne compte qu'1 session de production et 0 facture à ce
+  jour (CLAUDE.md). Tout a été vérifié au banc et contre les fonctions réelles de la
+  page, jamais cliqué avec un compte staff sur des données de production réelles.
+- **Pas d'import automatique de la facture (OCR)** : la saisie est manuelle
+  (désignation + datalist des noms `ingredients_base`, quantité, unité, prix unitaire) —
+  délibérément, pour garder la qualité du reste du chantier plutôt que de caser une
+  extraction IA en plus (le pattern existe déjà dans `admin.html`, réutilisable plus
+  tard si demandé).
+- **`recettes_etapes.poste` reste NULL** — chantier à part, hors du périmètre
+  d'aujourd'hui, qui rendrait les heures de cuisine fiables PAR DÉFAUT au lieu de
+  dépendre de la correction manuelle dans le panneau.
+- **Pas de synchronisation Qonto/Stripe** — hors périmètre, spec §3.4/§5, sessions
+  14/15 jamais commencées.
+- **La marge cible et les seuils d'alerte** (session 15, feature 6) ne sont pas dans ce
+  chantier — celui-ci montre la marge, il ne la compare pas à un objectif.

@@ -518,25 +518,35 @@ function can(cle){
 }
 
 /* ============ ÉTAT ============ */
-let S={taches:[],projets:[],staff:[],sessions:[],profils:[]};
+let S={taches:[],projets:[],staff:[],sessions:[],profils:[],tarifs:[]};
 let SCHEMA_CACHE={};   // {portee: {blocs:[...], liens:[...]}} — portee = activité ('commercial') ou 'projet:<id>'
 let DOCS_CACHE={};     // {activite: [...]} — le drive de l'activité entière
 let CUR='dash',SUB={};
 let LINK_MODE=false,LINK_FROM=null,DERNIER_DRAG_TS=0;
 
 async function chargerBase(){
- const [t,p,st,se,pf]=await Promise.all([
+ const [t,p,st,se,pf,ta]=await Promise.all([
   sbTry('crm_taches?select=*&order=echeance.asc.nullslast'),
   sbTry('crm_projets?select=*&order=echeance.asc.nullslast'),
   sbTry('staff?select=user_id,nom,role,statut&actif=eq.true'),
   sbTry('crm_sessions?select=id,bloc_id,type,statut_reservation'),
-  sbTry('crm_profils_types?select=*&order=nom.asc')
+  sbTry('crm_profils_types?select=*&order=nom.asc'),
+  sbTry('crm_tarifs?select=*')
  ]);
  S.taches=t.ok?t.data:[];
  S.projets=p.ok?p.data:[];
  S.staff=st.ok?st.data:[];
  S.sessions=se.ok?se.data:[];
  S.profils=pf.ok?pf.data:[];
+ S.tarifs=ta.ok?ta.data:[];
+}
+/* Un tarif métier lu depuis crm_tarifs (§ Finance, 0016_finance_operationnel.sql)
+   — jamais en dur, la spec l'exige (§3.3). `defaut` ne sert que si la table
+   est vide ou la clé absente (avant exécution de la migration), pour ne pas
+   planter un calcul qui tournait déjà. */
+function tarif(cle,defaut){
+ const t=S.tarifs.find(x=>x.cle===cle);
+ return t?+t.valeur:defaut;
 }
 function profilDe(id){return S.profils.find(x=>x.id===id)}
 async function chargerSchemaPortee(portee,filtreSQL){
@@ -1569,12 +1579,12 @@ async function actionReserverCuisine(tacheId){
   }
   source='menu';
  }
- const marge=30,heures=Math.max(1,Math.ceil((minutes+marge)/60));
+ const heures=heuresDepuisMinutes(minutes);
  const heureFin=String(9+heures).padStart(2,'0')+':00';
  const explication=source==='mapping'
-  ?`Estimé depuis le mapping minuté de la session (le poste le plus chargé) + ${marge} min de marge, arrondi à l'heure pleine. Génère/régénère le mapping si les volumes ont changé.`
+  ?`Estimé depuis le mapping minuté de la session (le poste le plus chargé) + ${MARGE_CUISINE_MIN} min de marge, arrondi à l'heure pleine. Génère/régénère le mapping si les volumes ont changé.`
   :manqueMenu?"Le menu n'est pas encore composé — créneau par défaut, à ajuster."
-  :`Estimé depuis ${minutes} min de préparation/cuisson du menu + ${marge} min de marge (mapping pas encore généré, calcul moins précis).`;
+  :`Estimé depuis ${minutes} min de préparation/cuisson du menu + ${MARGE_CUISINE_MIN} min de marge (mapping pas encore généré, calcul moins précis).`;
  // §9 session « bloc Test produit » feature 3 : conflit de créneau
  // cuisine avec une AUTRE session déjà réservée (envoyée ou confirmée)
  // le même jour. Vérifié sur le créneau PROPOSÉ par défaut — si la
@@ -1615,7 +1625,7 @@ async function actionReserverCuisine(tacheId){
   if(ok&&data.ok){
    await sb('crm_sessions?id=eq.'+session.id,{method:'PATCH',body:JSON.stringify({creneau_debut:body.heure_debut,creneau_fin:body.heure_fin,nb_personnes:body.nb_personnes,statut_reservation:'envoyee',message_envoye_le:new Date().toISOString()})});
    await marquerActionFaite(tacheId);
-   const cout=heures*30;   // 30 €/h, tarif documenté de la cuisine louée
+   const cout=heures*tarif('tarif_cuisine_h',30);   // § Finance : tarif éditable dans crm_tarifs, plus 30 en dur
    const bloc=trouverBloc(t.bloc_id);
    if(bloc){
     const cp=bloc.cout_previsionnel||{};
@@ -2008,6 +2018,14 @@ async function dureeMappingSession(sessionId){
  r.data.forEach(e=>{const p=e.poste||'—';parPoste[p]=(parPoste[p]||0)+(e.duree_reelle_min||e.duree_prevue_min||0)});
  return Math.max(0,...Object.values(parPoste));
 }
+/* Extrait d'actionReserverCuisine (§4.2) pour que le panneau Finance
+   (§ Opérationnel) parte du MÊME calcul que la réservation réelle, plutôt
+   que d'en recopier une variante — c'est exactement le défaut qui a fait
+   diverger api/_nutrition.js de core.js dans l'app principale (CLAUDE.md).
+   30 min de marge, arrondi à l'heure pleine (« toute heure entamée due »,
+   spec §1). */
+const MARGE_CUISINE_MIN=30;
+function heuresDepuisMinutes(minutes){return Math.max(1,Math.ceil((minutes+MARGE_CUISINE_MIN)/60))}
 
 /* ---- Vue tablette plein écran ---- */
 let TAB_SESSION=null,TAB_PHASE='production';
@@ -2801,7 +2819,8 @@ async function ouvrirBonsDuBloc(blocId){
 const VUES={
  commercial:[['pipeline','Pipe des ventes','commercial'],['profils','Profils','documents'],['comptes','Comptes & contacts','rh'],['emailing','Emailing & phoning','mail'],['prospection','Base de prospection','funnel'],['gestion','Gestion','projet']],
  production:[['dashboard','Tableau de bord','dash'],['commandes','Commandes','logistique'],['calendrier','Calendrier','calendar'],['stocks','Stocks','stocks'],['production','Production','production'],['livraison','Livraison','livraison'],['gestion','Gestion','projet']],
- logistique:[['tournees','Tournées','logistique'],['commandes','Commandes','livraison'],['gestion','Gestion','projet']]
+ logistique:[['tournees','Tournées','logistique'],['commandes','Commandes','livraison'],['gestion','Gestion','projet']],
+ finance:[['operationnel','Opérationnel','finance'],['gestion','Gestion','projet']]
 };
 function vuesGeneriques(cle){
  const base=[['apercu','Aperçu','dash'],['taches','Tâches','taches'],['projets','Sous-projets','projet'],['schema','Schéma','schema'],['drive','Drive','drive']];
@@ -2875,6 +2894,9 @@ async function rendreVueSpecifique(cle,vue){
  if(cle==='logistique'){
   if(vue==='tournees')return await vLogistiqueTournees();
   if(vue==='commandes')return await vCommandesLogistique();
+ }
+ if(cle==='finance'){
+  if(vue==='operationnel')return await vFinanceOperationnel();
  }
  return '<div class="empty">Vue inconnue.</div>';
 }
@@ -4240,6 +4262,7 @@ afterRender=function(cle){
  _origAfterRender(cle);
  wireSchemaIfPresent();
  wirePipelineIfPresent();
+ wireFinanceIfPresent();
  if(cle==='dash'){wireDashIfPresent();rafraichirNotifs()}
  if(cle==='rh')wireRHIfPresent();
  if(cle.startsWith('projet:'))wireProjetPage(cle.slice(7));
@@ -4505,6 +4528,464 @@ $('#palIn').addEventListener('keydown',e=>{
 $('#palRes').addEventListener('click',e=>{const r=e.target.closest('[data-pi]');if(r){const f=palItems[+r.dataset.pi].fn;closeAll();f()}});
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPal()}if(e.key==='Escape')closeAll()});
 $('#menuBtn').onclick=()=>{$('#side').classList.add('on');$('#scrim').classList.add('on')};
+
+/* ============ FINANCE — Opérationnel (26/09/2026) ============
+   Prévisionnel de coûts/revenus pour UNE session de production
+   sélectionnée (crm_sessions, §06/07), et son rapprochement avec la
+   facture Metro réelle. Détail et raisonnement dans docs/crm-journal.md.
+
+   Trois temps :
+   1. `donneesSessionFinance()` charge ce que DIT la base aujourd'hui
+      (bons_attributions.facteur, mapping minuté, ingredients_base,
+      crm_tarifs) — UNE seule requête réseau par session choisie.
+   2. `calculerFinance()` est une fonction PURE (aucun accès réseau) qui
+      applique les FACTEURS ajustables (heures, répartition 9€/10,50€,
+      quantité moyenne par recette) et recalcule tout — appelée à chaque
+      frappe dans le formulaire, sans requête, donc sans latence. Seul
+      le bouton « Valider » écrit en base.
+   3. `rapprochementFacture()` — si une facture Metro a été ajoutée à
+      cette session — compare achat réel et prévisionnel, et cherche les
+      portions bonus qu'un surplus d'achat rend possibles.
+
+   Aucun chiffre n'est inventé : un ingrédient sans prix dans
+   ingredients_base, une session sans mapping, un bon sans recette
+   attribuée sont chacun annoncés à l'écran plutôt que silencieusement
+   comptés à zéro — même règle que partout ailleurs dans ce dépôt. */
+let FIN_SESSION=null, FIN_DONNEES=null, FIN_FACTURES=[], FIN_LIGNES_FACTURE=[];
+let FIN_EDIT={heures:null,nbUnite:null,facteurs:{}};
+
+function fmtEur(n){return(Math.round((n||0)*100)/100).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}
+
+/* ---- 1. Chargement réseau, une fois par session choisie ---- */
+async function donneesSessionFinance(sessionId){
+ const sr=await sbTry('crm_sessions?id=eq.'+sessionId+'&select=*');
+ const session=(sr.ok?sr.data:[])[0];
+ if(!session)return null;
+ // Même ternaire que genererMapping()/listeCoursesJours (§06) : une
+ // session n'a jamais bloc_id ET session_id à la fois.
+ const filtreBons=session.bloc_id?'bloc_id=eq.'+session.bloc_id:'session_id=eq.'+sessionId;
+ const bonsR=await sbTry('bons_commande?'+filtreBons+'&statut=neq.annule&select=id,type,nb_repas');
+ const bons=bonsR.ok?bonsR.data:[];
+ const bonIds=bons.map(b=>b.id);
+ const attrsR=bonIds.length?await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=bon_id,recette_id,nb_portions,facteur,kcal_portion'):{ok:true,data:[]};
+ const attrs=attrsR.ok?attrsR.data:[];
+ const recIds=[...new Set(attrs.map(a=>a.recette_id))];
+ const [ingR,recR,ingBaseR,minutesMapping]=await Promise.all([
+  recIds.length?sbTry('recettes_ingredients?recette_id=in.('+recIds.join(',')+')&select=recette_id,ingredient_nom,quantite_g,unite'):Promise.resolve({ok:true,data:[]}),
+  recIds.length?sbTry('recettes?id=in.('+recIds.join(',')+')&select=id,nom,nb_portions,calories_portion'):Promise.resolve({ok:true,data:[]}),
+  sbTry('ingredients_base?select=nom,prix_kg_moyen,prix_achat_ht,poids_colis_kg'),
+  dureeMappingSession(sessionId)
+ ]);
+ const recettesById={};(recR.ok?recR.data:[]).forEach(r=>recettesById[r.id]=r);
+ // Prix au kg : prix_kg_moyen s'il existe, sinon prix_achat_ht (au COLIS,
+ // voir CLAUDE.md) ÷ poids_colis_kg. Sans les deux, prix inconnu — jamais
+ // une valeur devinée.
+ const ingredientsIndex={};
+ (ingBaseR.ok?ingBaseR.data:[]).forEach(x=>{
+  const cle=String(x.nom||'').trim().toLowerCase();
+  const prixKg=x.prix_kg_moyen!=null?+x.prix_kg_moyen:(x.prix_achat_ht!=null&&x.poids_colis_kg?+x.prix_achat_ht/+x.poids_colis_kg:null);
+  ingredientsIndex[cle]=prixKg;
+ });
+ return {session, bons, attrs, recettesById, recIngredients:ingR.ok?ingR.data:[], ingredientsIndex, minutesMapping};
+}
+
+/* ---- 2. Calcul pur — aucun accès réseau, appelé à chaque frappe ---- */
+function calculerFinance(raw,edit){
+ if(!raw)return null;
+ const {session:s,bons,attrs,recettesById,recIngredients,ingredientsIndex,minutesMapping}=raw;
+ // Portions équivalentes par recette = Σ(nb_portions × facteur), le
+ // facteur ÉDITÉ localement l'emportant sur celui réellement en base —
+ // exactement le calcul de listeCoursesJours (§06), avec l'override en plus.
+ const portionsEq={},nbPortionsTotal={},facteurBasePondere={},kcalPondere={};
+ attrs.forEach(a=>{
+  const nb=a.nb_portions||0,facteurBase=+a.facteur||1;
+  const facteurUtilise=edit.facteurs[a.recette_id]!=null?edit.facteurs[a.recette_id]:facteurBase;
+  portionsEq[a.recette_id]=(portionsEq[a.recette_id]||0)+nb*facteurUtilise;
+  nbPortionsTotal[a.recette_id]=(nbPortionsTotal[a.recette_id]||0)+nb;
+  facteurBasePondere[a.recette_id]=(facteurBasePondere[a.recette_id]||0)+nb*facteurBase;
+  kcalPondere[a.recette_id]=(kcalPondere[a.recette_id]||0)+nb*(+a.kcal_portion||0);
+ });
+ const parRecette=Object.keys(nbPortionsTotal).map(id=>{
+  const nb=nbPortionsTotal[id];
+  const facteurBaseMoyen=nb?facteurBasePondere[id]/nb:1;
+  return {
+   id,nom:(recettesById[id]||{}).nom||'Recette supprimée',nbPortions:nb,
+   facteurBaseMoyen,facteurUtilise:edit.facteurs[id]!=null?edit.facteurs[id]:facteurBaseMoyen,
+   kcalPortionRecette:(recettesById[id]||{}).calories_portion??null,
+   kcalMoyenAttribue:nb&&kcalPondere[id]?kcalPondere[id]/nb:null
+  };
+ }).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
+ // Ingrédients agrégés pour TOUTE la session, et le détail par recette
+ // (nécessaire au rapprochement facture, pour repérer quel ingrédient
+ // limite combien de portions bonus par recette).
+ const total={},ingredientsParRecette={};
+ recIngredients.forEach(i=>{
+  const rec=recettesById[i.recette_id];if(!rec)return;
+  const base=rec.nb_portions||1;
+  const unite=(i.unite||'g').trim().toLowerCase();
+  const nom=String(i.ingredient_nom||'').trim();
+  const q=(+i.quantite_g||0)*(portionsEq[i.recette_id]||0)/base;
+  const cle=nom.toLowerCase();
+  if(!total[cle])total[cle]={nom,unite,q:0};
+  total[cle].q+=q;
+  (ingredientsParRecette[i.recette_id]||(ingredientsParRecette[i.recette_id]=[])).push({nom,unite,gPerPortion:(+i.quantite_g||0)/base});
+ });
+ // Coût matière : seulement g/kg convertis en kg — même restriction que
+ // listeCoursesJours (§06), un ml ou une pièce ne se compare pas à un
+ // prix au kg sans inventer une conversion.
+ let coutMatiere=0,ingConnus=0,ingInconnus=0;
+ const lignesIngredients=Object.values(total).map(l=>{
+  const u=l.unite;
+  let qKg=null;
+  if(u==='kg')qKg=l.q;else if(u==='g')qKg=l.q/1000;
+  const prixKg=qKg!=null?ingredientsIndex[l.nom.toLowerCase()]:null;
+  const cout=(qKg!=null&&prixKg!=null)?qKg*prixKg:null;
+  if(cout!=null){coutMatiere+=cout;ingConnus++}else ingInconnus++;
+  return {...l,qKg,prixKg,cout};
+ }).sort((a,b)=>(b.cout||0)-(a.cout||0));
+ // Heures de cuisine : édition locale > override enregistré en session >
+ // calcul depuis le mapping (voir MARGE_CUISINE_MIN/heuresDepuisMinutes,
+ // le MÊME calcul qu'actionReserverCuisine).
+ const tarifCuisineH=tarif('tarif_cuisine_h',30);
+ let heures=null,sourceHeures='override';
+ if(edit.heures!=null)heures=edit.heures;
+ else if(s.heures_cuisine_override!=null)heures=+s.heures_cuisine_override;
+ else if(minutesMapping!=null){heures=heuresDepuisMinutes(minutesMapping);sourceHeures='mapping'}
+ else sourceHeures='inconnu';
+ const coutCuisine=heures!=null?heures*tarifCuisineH:0;
+ // Revenu : nb de repas commandés × répartition éditable entre les deux
+ // tarifs — par défaut, les bons hors abonnement comptent à l'unité.
+ const totalRepas=bons.reduce((sum,b)=>sum+(b.nb_repas||0),0);
+ let nbUnite;
+ if(edit.nbUnite!=null)nbUnite=edit.nbUnite;
+ else if(s.nb_repas_unite_override!=null)nbUnite=s.nb_repas_unite_override;
+ else nbUnite=bons.filter(b=>b.type!=='abonnement').reduce((sum,b)=>sum+(b.nb_repas||0),0);
+ nbUnite=Math.max(0,Math.min(totalRepas,nbUnite));
+ const nbAbo=totalRepas-nbUnite;
+ const prixAbo=tarif('prix_repas_abo',9),prixUnite=tarif('prix_repas_unite',10.5);
+ const ca=nbAbo*prixAbo+nbUnite*prixUnite;
+ const coutTotal=coutMatiere+coutCuisine;
+ const bonsNonAttribues=bons.filter(b=>!attrs.some(a=>a.bon_id===b.id));
+ return {
+  session:s,totalRepas,nbAbo,nbUnite,prixAbo,prixUnite,ca,
+  coutMatiere,lignesIngredients,ingConnus,ingInconnus,ingredientsParRecette,
+  heures,sourceHeures,tarifCuisineH,coutCuisine,coutTotal,gain:ca-coutTotal,
+  parRecette,bonsNonAttribues
+ };
+}
+
+/* ---- 3. Rapprochement avec la facture Metro réelle (pure aussi) ---- */
+function rapprochementFacture(calc,lignesFacture){
+ if(!lignesFacture.length)return null;
+ // Regroupe les lignes de facture par nom exact insensible à la casse —
+ // même règle que listeCoursesJours : pas de correspondance approximative,
+ // elle ferait disparaître un écart à tort.
+ const achatParIngredient={};
+ lignesFacture.forEach(l=>{
+  const nom=(l.ingredient_match||l.designation||'').trim();if(!nom)return;
+  const cle=nom.toLowerCase();
+  if(!achatParIngredient[cle])achatParIngredient[cle]={nom,qKg:0,prixTotal:0};
+  const u=(l.unite||'').trim().toLowerCase();
+  const qte=+l.quantite||0;
+  const prixTot=l.prix_total!=null?+l.prix_total:(l.prix_unitaire!=null?+l.prix_unitaire*qte:0);
+  achatParIngredient[cle].prixTotal+=prixTot;
+  if(u==='kg')achatParIngredient[cle].qKg+=qte;
+  else if(u==='g')achatParIngredient[cle].qKg+=qte/1000;
+ });
+ // Écarts de prix : seulement là où on a un prix prévisionnel ET un achat
+ // réel en kg — sinon un « écart » ne comparerait rien de comparable.
+ const ecarts=calc.lignesIngredients.filter(l=>l.qKg!=null&&l.prixKg!=null).map(l=>{
+  const achat=achatParIngredient[l.nom.toLowerCase()];
+  if(!achat||!achat.qKg)return null;
+  const prixKgReel=achat.prixTotal/achat.qKg;
+  return {nom:l.nom,prixKgPrevu:l.prixKg,prixKgReel,ecart:prixKgReel-l.prixKg,ecartPct:l.prixKg?(prixKgReel-l.prixKg)/l.prixKg*100:null};
+ }).filter(Boolean).sort((a,b)=>Math.abs(b.ecart)-Math.abs(a.ecart));
+ // Coût matière RÉEL : prix facturé là où on l'a, prévisionnel en repli
+ // (annoncé comme tel) — jamais silencieusement compté 0.
+ let coutMatiereReel=0;
+ calc.lignesIngredients.forEach(l=>{
+  const achat=achatParIngredient[l.nom.toLowerCase()];
+  if(achat&&achat.qKg>0&&l.qKg!=null)coutMatiereReel+=l.qKg*(achat.prixTotal/achat.qKg);
+  else if(l.cout!=null)coutMatiereReel+=l.cout;
+ });
+ // Surplus acheté au-delà du besoin de la session, en grammes.
+ const surplusG={};
+ Object.entries(achatParIngredient).forEach(([cle,achat])=>{
+  const requis=calc.lignesIngredients.find(l=>l.nom.toLowerCase()===cle);
+  const requisKg=(requis&&requis.qKg)||0;
+  const s=achat.qKg-requisKg;
+  if(s>0.001)surplusG[cle]=s*1000;
+ });
+ // Portions bonus par recette : le goulot d'étranglement parmi SES
+ // ingrédients. Un seul ingrédient sans donnée d'achat suffit à annuler
+ // le bonus — une estimation à moitié fondée n'est pas une estimation.
+ const recettesBonus=Object.entries(calc.ingredientsParRecette).map(([recId,ings])=>{
+  const rec=calc.parRecette.find(r=>r.id===recId);
+  let bonus=Infinity,limitant=null,connu=ings.length>0;
+  ings.forEach(ing=>{
+   if(ing.unite!=='g'||ing.gPerPortion<=0){connu=false;return}
+   const surplus=surplusG[ing.nom.toLowerCase()];
+   if(surplus==null){connu=false;return}
+   const possible=Math.floor(surplus/ing.gPerPortion);
+   if(possible<bonus){bonus=possible;limitant=ing.nom}
+  });
+  if(!connu||!isFinite(bonus))bonus=0;
+  return {recId,nom:rec?rec.nom:'?',bonus,limitant};
+ }).filter(r=>r.bonus>0).sort((a,b)=>b.bonus-a.bonus);
+ return {ecarts,coutMatiereReel,ecartMargeMatiere:coutMatiereReel-calc.coutMatiere,recettesBonus};
+}
+
+/* ---- Rendu ---- */
+function selecteurSessionHtml(sessions){
+ return `<div class="card" style="margin-bottom:16px">
+ <label>Session de production<select class="inp" id="finSessSel">${sessions.map(s=>`<option value="${s.id}"${s.id===FIN_SESSION?' selected':''}>${fd(s.jour)} · ${s.type==='mise_en_place'?'Mise en place':'Production'} · ${s.statut==='terminee'?'terminée':s.statut==='en_cours'?'en cours':'à venir'}</option>`).join('')}</select></label>
+ </div>`;
+}
+function facteursFormHtml(calc){
+ return `<div class="card" style="margin-bottom:16px">
+ <h3 style="margin:0 0 4px">Facteurs ajustables</h3>
+ <p class="muted" style="font-size:12px;margin:0 0 12px">Recalcule en direct ci-dessous. Rien n'est écrit en base tant que « Valider » n'est pas cliqué.</p>
+ <div class="form" style="margin-top:0">
+ <div class="two">
+  <label>Heures de cuisine${calc.sourceHeures==='mapping'?` <span class="muted" style="font-weight:400">(calculé depuis le mapping : ${calc.heures} h)</span>`:calc.sourceHeures==='inconnu'?' <span class="muted" style="font-weight:400">(aucun mapping — saisis une valeur)</span>':''}
+   <input class="inp" id="finHeuresInput" type="number" min="0" step="0.5" value="${calc.heures??''}" placeholder="ex. 4">
+  </label>
+  <label>Repas facturés à ${fmtEur(calc.prixUnite)} (le reste à ${fmtEur(calc.prixAbo)})
+   <input class="inp" id="finNbUniteInput" type="number" min="0" max="${calc.totalRepas}" step="1" value="${calc.nbUnite}">
+  </label>
+ </div>
+ ${calc.parRecette.length?`<div class="sect" style="margin:0"><h2 style="font-size:13px">Quantité moyenne par repas (facteur portion × recette)</h2></div>
+ <div class="list">${calc.parRecette.map(r=>`<div class="li"><div class="grow">${esc(r.nom)}<div class="meta">${r.nbPortions} portions attribuées · facteur en base ${r.facteurBaseMoyen.toFixed(2)}${r.kcalPortionRecette?` · fiche : ${r.kcalPortionRecette} kcal/portion`:''}${r.kcalMoyenAttribue?` · commandes : ${Math.round(r.kcalMoyenAttribue)} kcal/portion en moyenne`:''}</div></div><input class="inp fin-facteur" data-recette="${r.id}" type="number" min="0" step="0.05" style="width:90px" value="${r.facteurUtilise.toFixed(2)}"></div>`).join('')}</div>`:''}
+ <div class="foot" style="justify-content:flex-start;gap:8px;margin:0">
+  <button class="btn sm ghost" type="button" id="finReset">↺ Réinitialiser</button>
+  <button class="btn sm primary" type="button" id="finValider">Valider — met aussi à jour la production</button>
+ </div>
+ </div>
+ </div>`;
+}
+function heroHtml(calc){
+ const positif=calc.gain>=0;
+ return `<div class="card lift" style="text-align:center;padding:26px 18px;margin-bottom:16px;border:1px solid ${positif?'var(--green)':'var(--red)'}">
+ <div class="muted" style="font-size:12.5px">${positif?'Gain estimé':'Perte estimée'} — session du ${fd(calc.session.jour)}</div>
+ <div style="font-size:40px;font-weight:700;letter-spacing:-.02em;color:${positif?'var(--green)':'var(--red)'};margin:4px 0">${positif?'+':'−'}${fmtEur(Math.abs(calc.gain))}</div>
+ <div class="muted" style="font-size:12px">${fmtEur(calc.ca)} de chiffre d'affaires prévisionnel − ${fmtEur(calc.coutTotal)} de coûts (matière ${fmtEur(calc.coutMatiere)} + cuisine ${fmtEur(calc.coutCuisine)})</div>
+ </div>`;
+}
+function panneauxPrevisionnelHtml(calc){
+ return `<div class="grid g2" style="margin-bottom:16px">
+ <div class="card kpi">
+  <div class="lbl">Coût matière prévisionnel<span class="chip ${calc.ingInconnus?'warn':'ok'}">${calc.ingConnus}/${calc.ingConnus+calc.ingInconnus} chiffrés</span></div>
+  <div class="val">${fmtEur(calc.coutMatiere)}</div>
+  <div class="foot">${calc.totalRepas} repas × prix Metro (<span class="mono">ingredients_base</span>)${calc.ingInconnus?` — ${calc.ingInconnus} ingrédient(s) sans prix connu, total minoré`:''}</div>
+ </div>
+ <div class="card kpi">
+  <div class="lbl">Coût cuisine prévisionnel</div>
+  <div class="val">${calc.heures!=null?fmtEur(calc.coutCuisine):'—'}</div>
+  <div class="foot">${calc.heures!=null?`${calc.heures} h × ${fmtEur(calc.tarifCuisineH)}/h`:'Aucun mapping ni heures saisies pour cette session'}</div>
+ </div>
+ <div class="card kpi">
+  <div class="lbl">Chiffre d'affaires prévisionnel</div>
+  <div class="val">${fmtEur(calc.ca)}</div>
+  <div class="foot">${calc.nbAbo} repas à ${fmtEur(calc.prixAbo)} + ${calc.nbUnite} à ${fmtEur(calc.prixUnite)} (${calc.totalRepas} repas commandés)</div>
+ </div>
+ <div class="card kpi">
+  <div class="lbl">Marge prévisionnelle</div>
+  <div class="val" style="color:${calc.gain>=0?'var(--green)':'var(--red)'}">${calc.ca?Math.round(calc.gain/calc.ca*100):0}%</div>
+  <div class="foot">${fmtEur(calc.gain)} sur ${fmtEur(calc.ca)} de CA</div>
+ </div>
+ </div>
+ ${calc.bonsNonAttribues.length?`<div class="exbar"><span class="chip warn">${calc.bonsNonAttribues.length}</span><span>commande(s) sans recette attribuée (${calc.bonsNonAttribues.reduce((s,b)=>s+(b.nb_repas||0),0)} repas) — comptée${calc.bonsNonAttribues.length>1?'s':''} dans le CA mais PAS dans le coût matière : la marge affichée est surestimée pour ces repas.</span></div>`:''}
+ ${calc.sourceHeures==='mapping'?`<div class="exbar" style="border-style:dashed;color:var(--muted);background:transparent"><span class="chip warn">⚠</span><span>Les heures de cuisine sont déduites du mapping minuté, qui suppose autant de cuisiniers que de postes distincts dans les fiches (voir la note de 0016_finance_operationnel.sql) — souvent optimiste. Corrige la valeur dans « Facteurs ajustables » si besoin.</span></div>`:''}`;
+}
+function graphiquesHtml(calc){
+ const totalCa=calc.ca||1;
+ const postes=[
+  {label:'Matière première',val:calc.coutMatiere,couleur:'var(--amber)'},
+  {label:'Cuisine',val:calc.coutCuisine,couleur:'var(--blue)'},
+  {label:calc.gain>=0?'Marge':'Perte',val:Math.max(0,Math.abs(calc.gain)),couleur:calc.gain>=0?'var(--green)':'var(--red)'}
+ ];
+ const topIngr=calc.lignesIngredients.filter(l=>l.cout!=null).slice(0,10);
+ const maxCout=Math.max(1,...topIngr.map(l=>l.cout));
+ const sansPrix=calc.lignesIngredients.filter(l=>l.cout==null);
+ return `<div class="card" style="margin-bottom:16px">
+ <h3 style="margin:0 0 10px">Répartition du chiffre d'affaires, par poste</h3>
+ <div style="display:grid;gap:9px">${postes.map(p=>`<div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px"><span>${p.label}</span><span class="mono">${fmtEur(p.val)} · ${Math.round(p.val/totalCa*100)}%</span></div><div class="bar"><i style="width:${Math.min(100,p.val/totalCa*100)}%;background:${p.couleur}"></i></div></div>`).join('')}</div>
+ </div>
+ <div class="card" style="margin-bottom:16px">
+ <h3 style="margin:0 0 10px">Détail par produit — matières premières</h3>
+ ${topIngr.length?`<div style="display:grid;gap:7px">${topIngr.map(l=>`<div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px"><span>${esc(l.nom)}</span><span class="mono">${fmtEur(l.cout)}</span></div><div class="bar"><i style="width:${l.cout/maxCout*100}%"></i></div></div>`).join('')}</div>`:'<div class="empty">Aucun ingrédient chiffré.</div>'}
+ ${sansPrix.length?`<p class="muted" style="font-size:12px;margin:10px 0 0">Non chiffrés (prix inconnu dans <span class="mono">ingredients_base</span>) : ${sansPrix.map(l=>esc(l.nom)).join(', ')}.</p>`:''}
+ </div>`;
+}
+function panneauRapprochementHtml(calc,rappro){
+ if(!rappro)return `<div class="card" style="margin-bottom:16px"><h3 style="margin:0 0 6px">Réel vs prévisionnel</h3><p class="muted" style="margin:0;font-size:12.5px">Aucune facture Metro ajoutée pour cette session — le prévisionnel ci-dessus reste la seule estimation disponible.</p></div>`;
+ const {ecarts,recettesBonus,coutMatiereReel,ecartMargeMatiere}=rappro;
+ return `<div class="card" style="margin-bottom:16px">
+ <h3 style="margin:0 0 10px">Réel vs prévisionnel — depuis la facture Metro</h3>
+ <div class="grid g2" style="margin-bottom:12px">
+  <div class="card kpi"><div class="lbl">Coût matière réel (facture connue)</div><div class="val">${fmtEur(coutMatiereReel)}</div><div class="foot">vs ${fmtEur(calc.coutMatiere)} prévu</div></div>
+  <div class="card kpi"><div class="lbl">Effet sur la marge</div><div class="val" style="color:${ecartMargeMatiere<=0?'var(--green)':'var(--red)'}">${ecartMargeMatiere<=0?'+':'−'}${fmtEur(Math.abs(ecartMargeMatiere))}</div><div class="foot">${ecartMargeMatiere<=0?'marge dégagée par rapport au prévisionnel':'marge rongée par rapport au prévisionnel'}</div></div>
+ </div>
+ ${ecarts.length?`<div class="sect"><h2 style="font-size:13px">Écarts de prix d'achat — prévisionnel vs facturé (€/kg)</h2></div>
+ <div class="tbl-wrap"><table><thead><tr><th>Ingrédient</th><th>Prévu</th><th>Facturé</th><th>Écart</th></tr></thead><tbody>${ecarts.map(e=>`<tr><td>${esc(e.nom)}</td><td>${fmtEur(e.prixKgPrevu)}/kg</td><td>${fmtEur(e.prixKgReel)}/kg</td><td style="color:${e.ecart<=0?'var(--green)':'var(--red)'}">${e.ecart<=0?'':'+'}${fmtEur(e.ecart)}/kg${e.ecartPct!=null?` (${e.ecart<=0?'':'+'}${Math.round(e.ecartPct)}%)`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted" style="font-size:12.5px">Aucun ingrédient facturé ne correspond, par nom exact, à un ingrédient nécessaire de la session.</p>'}
+ ${recettesBonus.length?`<div class="sect" style="margin-top:14px"><h2 style="font-size:13px">Surplus acheté — portions bonus possibles</h2></div>
+ <div class="list">${recettesBonus.map(r=>`<div class="li"><div class="grow">${esc(r.nom)}<div class="meta">limité par ${esc(r.limitant)}</div></div><span class="chip ok">+${r.bonus} portion${r.bonus>1?'s':''}</span></div>`).join('')}</div>`:''}
+ </div>`;
+}
+function renderFinanceLive(calc){
+ const rappro=rapprochementFacture(calc,FIN_LIGNES_FACTURE);
+ return heroHtml(calc)+panneauxPrevisionnelHtml(calc)+graphiquesHtml(calc)+panneauRapprochementHtml(calc,rappro);
+}
+function factureListHtml(factures){
+ return `<div class="card">
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="margin:0">Factures Metro de cette session</h3><button class="btn sm primary" type="button" id="finAjouterFacture">+ Ajouter une facture</button></div>
+ <div class="list">${factures.map(f=>`<div class="li c" data-ouvrir-facture="${f.id}"><div class="grow">${fd(f.date_facture)}${f.numero_facture?' · '+esc(f.numero_facture):''}<div class="meta">${f.lignes_importees||0} ligne(s)${f.montant_total!=null?' · '+fmtEur(f.montant_total):''}</div></div><span class="chip ${f.statut==='traite'?'ok':''}">${esc(f.statut||'à traiter')}</span></div>`).join('')||'<div class="empty">Aucune facture ajoutée pour cette session.</div>'}</div>
+ </div>`;
+}
+
+async function vFinanceOperationnel(){
+ const sessR=await sbTry('crm_sessions?select=id,jour,type,statut&order=jour.desc');
+ const sessions=sessR.ok?sessR.data:[];
+ if(!sessions.length)return '<div class="empty">Aucune session de production — crée-en une depuis Production → Production, puis reviens ici.</div>';
+ if(!FIN_SESSION||!sessions.some(s=>s.id===FIN_SESSION)){FIN_SESSION=sessions[0].id;FIN_EDIT={heures:null,nbUnite:null,facteurs:{}}}
+ FIN_DONNEES=await donneesSessionFinance(FIN_SESSION);
+ if(!FIN_DONNEES)return selecteurSessionHtml(sessions)+'<div class="empty">Session introuvable.</div>';
+ const factR=await sbTry('factures_fournisseur?session_id=eq.'+FIN_SESSION+'&select=*&order=date_facture.desc');
+ FIN_FACTURES=factR.ok?factR.data:[];
+ const factureIds=FIN_FACTURES.map(f=>f.id);
+ const lignesR=factureIds.length?await sbTry('lignes_facture?facture_id=in.('+factureIds.join(',')+')&select=*'):{ok:true,data:[]};
+ FIN_LIGNES_FACTURE=lignesR.ok?lignesR.data:[];
+ const calc=calculerFinance(FIN_DONNEES,FIN_EDIT);
+ return `<div id="finRoot">
+ ${selecteurSessionHtml(sessions)}
+ ${facteursFormHtml(calc)}
+ <div id="finLive">${renderFinanceLive(calc)}</div>
+ ${factureListHtml(FIN_FACTURES)}
+ </div>`;
+}
+
+/* ---- Édition en direct (aucune requête), et les deux écritures ---- */
+function recalculerFinanceLive(){
+ if(!FIN_DONNEES)return;
+ const hEl=$('#finHeuresInput'),nEl=$('#finNbUniteInput');
+ FIN_EDIT.heures=hEl&&hEl.value!==''?Math.max(0,+hEl.value):null;
+ FIN_EDIT.nbUnite=nEl&&nEl.value!==''?Math.max(0,+nEl.value):null;
+ document.querySelectorAll('.fin-facteur').forEach(inp=>{
+  const id=inp.dataset.recette;
+  if(inp.value==='')delete FIN_EDIT.facteurs[id];
+  else FIN_EDIT.facteurs[id]=Math.max(0,+inp.value);
+ });
+ const calc=calculerFinance(FIN_DONNEES,FIN_EDIT);
+ $('#finLive').innerHTML=renderFinanceLive(calc);
+}
+async function changerSessionFinance(id){
+ FIN_SESSION=id;FIN_EDIT={heures:null,nbUnite:null,facteurs:{}};
+ render();
+}
+/* « Réinitialiser » efface les édits NON validés et remet à null les deux
+   réglages de session déjà validés (crm_sessions.*_override) — ça revient
+   au calcul automatique. Ça ne touche JAMAIS bons_attributions.facteur :
+   une fois validé, cette quantité est une donnée de production réelle
+   (elle a pu être ajustée par ailleurs, avant même ce panneau), il n'y a
+   pas de « valeur d'origine » sûre à y restaurer automatiquement. */
+async function reinitialiserFacteursFinance(){
+ FIN_EDIT={heures:null,nbUnite:null,facteurs:{}};
+ if(FIN_DONNEES&&(FIN_DONNEES.session.heures_cuisine_override!=null||FIN_DONNEES.session.nb_repas_unite_override!=null)){
+  await sb('crm_sessions?id=eq.'+FIN_SESSION,{method:'PATCH',body:JSON.stringify({heures_cuisine_override:null,nb_repas_unite_override:null})});
+  toast('Réglages de session réinitialisés au calcul automatique');
+ }else toast('Édits non enregistrés annulés');
+ render();
+}
+async function validerFacteursFinance(){
+ if(!FIN_DONNEES)return;
+ const patchSession={};
+ if(FIN_EDIT.heures!=null)patchSession.heures_cuisine_override=FIN_EDIT.heures;
+ if(FIN_EDIT.nbUnite!=null)patchSession.nb_repas_unite_override=FIN_EDIT.nbUnite;
+ const recettesTouchees=Object.entries(FIN_EDIT.facteurs).filter(([,v])=>v!=null);
+ if(!Object.keys(patchSession).length&&!recettesTouchees.length){toast('Rien à valider — modifie un facteur d’abord');return}
+ if(recettesTouchees.length){
+  const noms=recettesTouchees.map(([id])=>(FIN_DONNEES.recettesById[id]||{}).nom||id).join(', ');
+  if(!confirm('Valider va aussi RÉÉCRIRE les quantités attribuées en production pour : '+noms+' (toutes les commandes de cette session). Continuer ?'))return;
+ }
+ if(Object.keys(patchSession).length)await sb('crm_sessions?id=eq.'+FIN_SESSION,{method:'PATCH',body:JSON.stringify(patchSession)});
+ const bonIds=FIN_DONNEES.bons.map(b=>b.id);
+ for(const [recId,facteur] of recettesTouchees){
+  if(!bonIds.length)continue;
+  await sb('bons_attributions?bon_id=in.('+bonIds.join(',')+')&recette_id=eq.'+recId,{method:'PATCH',body:JSON.stringify({facteur})});
+ }
+ toast('Modifications validées — production mise à jour');
+ FIN_EDIT={heures:null,nbUnite:null,facteurs:{}};
+ render();
+}
+
+/* ---- Facture Metro : création, lignes, suppression ---- */
+function ouvrirNouvelleFacture(sessionId){
+ modal(`<h2>Nouvelle facture Metro</h2><form class="form" id="factForm">
+  <div class="two"><label>Date<input class="inp" id="ff1" type="date" value="${new Date().toISOString().slice(0,10)}" required></label><label>N° de facture<input class="inp" id="ff2" placeholder="optionnel"></label></div>
+  <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Créer</button></div>
+ </form>`);
+ $('#factForm').onsubmit=async e=>{
+  e.preventDefault();
+  const r=await sb('factures_fournisseur',{method:'POST',body:JSON.stringify({session_id:sessionId,date_facture:$('#ff1').value,numero_facture:$('#ff2').value||null,statut:'a_traiter'})});
+  closeAll();
+  if(r&&r[0])ouvrirFactureDetail(r[0].id);
+  render();
+ };
+}
+async function recalculerTotauxFacture(factureId){
+ const lr=await sbTry('lignes_facture?facture_id=eq.'+factureId+'&select=prix_total');
+ const lignes=lr.ok?lr.data:[];
+ const total=lignes.reduce((s,l)=>s+(+l.prix_total||0),0);
+ await sb('factures_fournisseur?id=eq.'+factureId,{method:'PATCH',body:JSON.stringify({montant_total:Math.round(total*100)/100,lignes_importees:lignes.length,statut:'traite'})});
+}
+async function ouvrirFactureDetail(factureId){
+ await chargerIngredients();
+ const fr=await sbTry('factures_fournisseur?id=eq.'+factureId+'&select=*');
+ const f=(fr.ok?fr.data:[])[0];if(!f){toast('Facture introuvable');return}
+ const lr=await sbTry('lignes_facture?facture_id=eq.'+factureId+'&select=*&order=created_at.asc');
+ const lignes=lr.ok?lr.data:[];
+ drawer(`<div class="dh"><div class="av lg dk">🧾</div><div><h2>${fd(f.date_facture)}${f.numero_facture?' · '+esc(f.numero_facture):''}</h2><p class="sub" style="margin:2px 0 0">Facture Metro</p></div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <div class="list" style="margin-bottom:14px">${lignes.map(l=>`<div class="li"><div class="grow">${esc(l.ingredient_match||l.designation)}<div class="meta">${l.quantite??'?'} ${esc(l.unite||'')} × ${l.prix_unitaire!=null?fmtEur(l.prix_unitaire):'?'}</div></div><span class="num">${l.prix_total!=null?fmtEur(l.prix_total):''}</span><button class="btn sm ghost" type="button" data-del-ligne-facture="${l.id}" style="margin-left:6px">×</button></div>`).join('')||'<div class="empty">Aucune ligne — ajoute-en une ci-dessous.</div>'}</div>
+ <form class="form" id="ligneForm">
+  <label>Produit<input class="inp" id="lf1" list="ingListe" placeholder="ex. Filet de Poulet 1.5kg FR" required></label>
+  <datalist id="ingListe">${(INGREDIENTS_CACHE||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+  <div class="two"><label>Quantité<input class="inp" id="lf2" type="number" step="0.001" min="0" required></label><label>Unité<select id="lf3">${opt(['kg','g','L','ml','pièce','colis'],'kg')}</select></label></div>
+  <label>Prix unitaire HT (par unité ci-dessus)<input class="inp" id="lf4" type="number" step="0.01" min="0" required></label>
+  <div class="foot"><button class="btn sm primary" type="submit">+ Ajouter la ligne</button></div>
+ </form>
+ <div class="foot" style="margin-top:14px"><button type="button" class="btn danger sm" data-del-facture="${f.id}">Supprimer la facture</button></div>`);
+ $('#ligneForm').onsubmit=async e=>{
+  e.preventDefault();
+  const qte=+$('#lf2').value,prixU=+$('#lf4').value;
+  await sb('lignes_facture',{method:'POST',body:JSON.stringify({facture_id:factureId,designation:$('#lf1').value,ingredient_match:$('#lf1').value,quantite:qte,unite:$('#lf3').value,prix_unitaire:prixU,prix_total:Math.round(qte*prixU*100)/100})});
+  await recalculerTotauxFacture(factureId);
+  ouvrirFactureDetail(factureId);
+  render();
+ };
+ $('#drawer').querySelectorAll('[data-del-ligne-facture]').forEach(btn=>btn.onclick=async()=>{
+  await sb('lignes_facture?id=eq.'+btn.dataset.delLigneFacture,{method:'DELETE'});
+  await recalculerTotauxFacture(factureId);
+  ouvrirFactureDetail(factureId);
+  render();
+ });
+ const delFacture=$('[data-del-facture]');
+ if(delFacture)delFacture.onclick=async()=>{
+  if(!confirm('Supprimer cette facture et ses lignes ?'))return;
+  await sb('lignes_facture?facture_id=eq.'+factureId,{method:'DELETE'});
+  await sb('factures_fournisseur?id=eq.'+factureId,{method:'DELETE'});
+  closeAll();toast('Facture supprimée');render();
+ };
+}
+
+function wireFinanceIfPresent(){
+ const root=$('#finRoot');if(!root)return;
+ const sel=$('#finSessSel');if(sel)sel.onchange=e=>changerSessionFinance(e.target.value);
+ root.addEventListener('input',e=>{if(e.target.matches('#finHeuresInput,#finNbUniteInput,.fin-facteur'))recalculerFinanceLive()});
+ const reset=$('#finReset');if(reset)reset.onclick=reinitialiserFacteursFinance;
+ const valider=$('#finValider');if(valider)valider.onclick=validerFacteursFinance;
+ const ajouter=$('#finAjouterFacture');if(ajouter)ajouter.onclick=()=>ouvrirNouvelleFacture(FIN_SESSION);
+ root.querySelectorAll('[data-ouvrir-facture]').forEach(el=>el.onclick=()=>ouvrirFactureDetail(el.dataset.ouvrirFacture));
+}
 
 /* ============ AUTH ============ */
 async function connexionSupabase(email,pwd){
