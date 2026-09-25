@@ -2,6 +2,10 @@
 **/.DS_Store
 node_modules/
 
+# Réglages Claude Code personnels à cette session (permissions auto) —
+# jamais partagés avec l'équipe via le dépôt.
+.claude/settings.local.json
+
 # Doublures de test servies depuis la racine (ex. _test-macros-cal.html).
 # Tout .html à la racine est publiquement accessible une fois déployé : un
 # `git add -A` malheureux — celui-là même qui a emporté deux sessions dans
