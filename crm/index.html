@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM Natty</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══ Mêmes jetons que admin.html — la spec demande explicitement de
+   reprendre cette identité (néomorphisme clair, docs/crm-spec.md § 2/7).
+   Ne pas dupliquer ces valeurs sans les garder synchronisées : c'est le
+   même design system, pas un autre. ═══ */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #f0f0f3; --so: 6px 6px 16px rgba(174,174,192,0.42), -6px -6px 16px rgba(255,255,255,0.88);
+  --si: inset 3px 3px 8px rgba(174,174,192,0.35), inset -3px -3px 8px rgba(255,255,255,0.85);
+  --sm: 4px 4px 10px rgba(174,174,192,0.38), -4px -4px 10px rgba(255,255,255,0.85);
+  --green: #5a9e6f; --gl: #eaf4ee; --text: #3a3a4a; --muted: #aaa;
+  --red: #c77b7b; --rl: #fde8e8; --amber: #ba7517; --al: #faeeda; --black: #1a1a2e;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; color: var(--text); }
+.bg-pattern { position: fixed; inset: 0; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, rgba(180,180,200,0.16) 1px, transparent 0); background-size: 26px 26px; z-index: 0; }
+.app { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 0 16px 60px; }
+
+.login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-card { background: var(--bg); border-radius: 24px; padding: 36px 28px; box-shadow: var(--so); width: 100%; max-width: 360px; text-align: center; }
+.login-logo { font-size: 40px; margin-bottom: 16px; display: block; }
+.login-title { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+.login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.login-input { width: 100%; background: var(--bg); border: none; border-radius: 14px; padding: 14px 16px; font-size: 15px; font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; box-shadow: var(--si); margin-bottom: 12px; }
+.login-input::placeholder { color: #ccc; }
+.login-btn { width: 100%; padding: 15px; background: var(--bg); border: none; border-radius: 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: var(--so); }
+.login-err { font-size: 12px; color: var(--red); margin-top: 10px; min-height: 16px; }
+
+.main-app { display: none; }
+.main-app.visible { display: block; }
+.top-bar { padding: 22px 4px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.top-title { font-size: 10px; letter-spacing: 1.4px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+.top-heading { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+.top-right { display: flex; align-items: center; gap: 10px; }
+.icon-btn { position: relative; width: 42px; height: 42px; border-radius: 14px; background: var(--bg); border: none; box-shadow: var(--sm); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.icon-btn .dot { position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--red); display: none; }
+.icon-btn .dot.on { display: block; }
+.logout-btn { background: var(--bg); border: none; cursor: pointer; padding: 9px 14px; border-radius: 12px; box-shadow: var(--sm); font-size: 12px; color: var(--muted); font-family: 'DM Sans', sans-serif; }
+
+.card { background: var(--bg); border-radius: 20px; padding: 20px; box-shadow: var(--so); margin-bottom: 16px; }
+.card h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.card p.sub { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+.card.click { cursor: pointer; }
+.card.click:active { box-shadow: var(--si); }
+
+.notif-item { display: flex; gap: 10px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid rgba(154,154,170,0.18); }
+.notif-item:last-child { border-bottom: none; }
+.notif-item .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); margin-top: 6px; flex: none; }
+.notif-item .grow { flex: 1; min-width: 0; }
+.notif-item b { font-weight: 600; font-size: 13.5px; display: block; }
+.notif-item .meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.notif-item button { border: none; background: var(--bg); box-shadow: var(--sm); border-radius: 10px; padding: 6px 10px; font-size: 11.5px; color: var(--muted); cursor: pointer; flex: none; }
+.empty { text-align: center; color: var(--muted); font-size: 12.5px; padding: 18px 0; }
+
+.badge { display: inline-flex; align-items: center; gap: 6px; background: var(--al); color: var(--amber); border-radius: 99px; padding: 4px 10px; font-size: 11px; font-weight: 600; }
+.badge.ok { background: var(--gl); color: var(--green); }
+
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: var(--black); color: #fff; padding: 12px 20px; border-radius: 14px; font-size: 13px; font-weight: 500; opacity: 0; transition: .25s; z-index: 50; pointer-events: none; max-width: calc(100% - 32px); box-shadow: var(--so); }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+.who { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.who b { color: var(--text); }
+a.plain { color: var(--text); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="bg-pattern"></div>
+<div class="app">
+
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <span class="login-logo">🧭</span>
+      <div class="login-title">CRM Natty</div>
+      <div class="login-sub">Le même compte que le back-office.</div>
+      <div class="login-err" id="loginErr"></div>
+      <input class="login-input" id="emailInput" type="email" placeholder="email@natty-nutrition.com" autocomplete="username">
+      <input class="login-input" id="pwdInput" type="password" placeholder="Mot de passe" autocomplete="current-password">
+      <button class="login-btn" id="loginBtn">Se connecter</button>
+    </div>
+  </div>
+
+  <div class="main-app" id="mainApp">
+    <div class="top-bar">
+      <div>
+        <div class="top-title">CRM Natty</div>
+        <div class="top-heading">Accueil</div>
+      </div>
+      <div class="top-right">
+        <button class="icon-btn" id="bellBtn" aria-label="Notifications">🔔<span class="dot" id="bellDot"></span></button>
+        <button class="logout-btn" id="logoutBtn">Déconnexion</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 id="salut">Bonjour</h2>
+      <p class="sub who" id="quiSuisJe"></p>
+    </div>
+
+    <div class="card">
+      <h2>Notifications</h2>
+      <p class="sub">Tâches, blocs et projets qui vous sont assignés</p>
+      <div id="notifList"><div class="empty">Rien pour l'instant.</div></div>
+    </div>
+
+    <a class="plain" href="/admin.html">
+      <div class="card click">
+        <h2>Back-office actuel →</h2>
+        <p class="sub" style="margin-bottom:0">Clients, Menu, Commandes, Production, Stocks, Équipe — inchangé pendant la construction du CRM.</p>
+      </div>
+    </a>
+
+    <div class="card">
+      <h2>À venir</h2>
+      <p class="sub" style="margin-bottom:0">Production, Commercial, Finances, Financement et RH arrivent module par module (voir <code>docs/crm-spec.md</code>). Ce qui existe déjà ici : la connexion d'équipe et les notifications d'assignation.</p>
+    </div>
+
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/crm/crm-auth.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+let tt;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 3200);
+}
+function fd(iso) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+async function afficherNotifs() {
+  let liste = [];
+  try { liste = await NattyCRM.notifications.nonLues(); } catch (e) { return; }
+  $('#bellDot').classList.toggle('on', liste.length > 0);
+  $('#notifList').innerHTML = liste.length
+    ? liste.map(n => `<div class="notif-item"><span class="dot"></span><div class="grow"><b>${esc(n.titre)}</b>${n.message ? `<div class="meta">${esc(n.message)}</div>` : ''}<div class="meta">${fd(n.created_at)}${n.email_statut === 'envoye' ? ' · invitation envoyée' : ''}</div></div><button data-marquer="${n.id}">Vu</button></div>`).join('')
+    : '<div class="empty">Rien pour l’instant.</div>';
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-marquer]');
+  if (b) { await NattyCRM.notifications.marquerLue(b.dataset.marquer); afficherNotifs(); }
+});
+
+async function demarrerApp() {
+  $('#loginScreen').style.display = 'none';
+  $('#mainApp').classList.add('visible');
+  const moi = NattyCRM.moi;
+  $('#salut').textContent = 'Bonjour ' + (moi.nom || '');
+  $('#quiSuisJe').innerHTML = `<b>${esc(moi.role)}</b>${moi.domaines && moi.domaines.length ? ' · ' + moi.domaines.map(esc).join(', ') : ''}`;
+  NattyCRM.notifications.demarrerSondage(
+    n => toast('🔔 ' + n.titre),
+    () => afficherNotifs()
+  );
+}
+
+$('#loginBtn').addEventListener('click', async () => {
+  const email = $('#emailInput').value.trim(), pwd = $('#pwdInput').value;
+  const err = $('#loginErr'); err.textContent = '';
+  if (!email || !pwd) { err.textContent = 'Email et mot de passe requis'; return; }
+  const r = await NattyCRM.connecter(email, pwd);
+  if (!r.ok) { err.textContent = r.err; return; }
+  demarrerApp();
+});
+$('#pwdInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#loginBtn').click(); });
+$('#logoutBtn').addEventListener('click', () => {
+  NattyCRM.notifications.arreterSondage();
+  NattyCRM.deconnecter();
+  $('#mainApp').classList.remove('visible');
+  $('#loginScreen').style.display = 'flex';
+  $('#pwdInput').value = ''; $('#emailInput').value = '';
+});
+
+(async function init() {
+  if (NattyCRM.connecte) {
+    const r = await NattyCRM.reprendreSession();
+    if (r.ok) { demarrerApp(); return; }
+  }
+})();
+</script>
+</body>
+</html>
