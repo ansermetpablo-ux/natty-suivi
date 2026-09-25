@@ -204,6 +204,8 @@
       '.np-stp{display:flex;align-items:center;gap:6px}',
       '.np-qte{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;font-size:11.5px;font-weight:500;color:var(--muted)}',
       '.np-qte label{display:flex;align-items:center;gap:6px}',
+      /* ⚠️ .np-pill est déclarée DEUX fois : le badge de statut, puis plus bas le bloc positionné du PERT. La seconde gagnait partout et posait le badge par-dessus les champs de la carte. */
+      '.np-card .np-pill,#npCompte .np-pill{position:static;border:0;box-shadow:none;cursor:default;display:inline-flex;padding:4px 10px;font-size:11px;font-weight:700;z-index:auto}',
       '.np-manu{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:#c97a001f;color:#c97a00}',
       '.np-pdfz{font-size:11px;margin-top:4px;line-height:1.6}',
       '.np-lien{border:0;background:none;padding:0;font:inherit;color:var(--black);text-decoration:underline;cursor:pointer}',
@@ -774,7 +776,7 @@
       + (att ? '<div class="np-s" style="margin-top:4px;color:var(--black)">🍽 ' + h(att) + (pa < b.nb_repas ? ' <b style="color:#c0392b">(' + pa + '/' + b.nb_repas + ')</b>' : '') + '</div>' : '')
       + (b.plats && b.plats.length ? '<div class="np-s" style="margin-top:4px">Choix du client : ' + h(b.plats.map(function (p) { return (platNom(p.id)) + ' × ' + p.n; }).join(', ')) + '</div>' : '')
       + '</div>'
-      + '<div class="np-row"><input type="date" class="np-in" data-jour-bon="' + h(b.id) + '" value="' + h(b.jour_livraison || '') + '">'
+      + '<div class="np-row">' + '<label class="np-s" title="Nombre de repas du bon — modifiable à tout moment, même une fois attribué">Repas <input type="number" class="np-in n" data-nb-bon="' + h(b.id) + '" value="' + b.nb_repas + '" min="1" max="40" step="1"></label>' + '<input type="date" class="np-in" data-jour-bon="' + h(b.id) + '" value="' + h(b.jour_livraison || '') + '">'
       + '<span class="np-pill ' + pill + '">' + h(LIB_STATUT[st] || st) + '</span>'
       + '<button class="np-btn" data-act="attribuer" data-id="' + h(b.id) + '">' + (att ? 'Modifier' : 'Attribuer') + ' →</button>'
       + (st === 'attribue' ? '<button class="np-btn sec" data-act="livre" data-id="' + h(b.id) + '">Livré ✓</button>' : '')
@@ -837,6 +839,34 @@
     return sbq('bons_commande?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(Object.assign({ updated_at: new Date().toISOString() }, body)) });
   }
 
+  /* Le nombre de repas d'un bon se corrige À TOUT MOMENT, attribué ou non
+     (Pablo, 2026-09-25) : un client qui passe de 3 à 5 repas après validation
+     ne doit pas obliger à annuler et recréer le bon.
+     Le statut suit ce qui est réellement couvert, mais SEULEMENT entre
+     « à attribuer » et « attribué » : un bon en production ou livré garde son
+     statut — ses boîtes existent, les rebasculer ferait croire qu'elles sont
+     à refaire. Au-dessus des portions déjà attribuées, le bon repasse « à
+     attribuer » et l'écran le dit ; en dessous, l'attribution est à réduire
+     (le bouton d'enregistrement le bloque, comme avant). */
+  function changerNbRepas(t) {
+    var id = t.dataset.nbBon, b = S.bons.find(function (x) { return x.id === id; });
+    var n = parseInt(t.value, 10);
+    if (!b) return;
+    if (!(n >= 1 && n <= 40)) { toast('Entre 1 et 40 repas par bon', 'err'); t.value = b.nb_repas; return; }
+    if (n === b.nb_repas) return;
+    var pa = portionsAttribuees(b), corps = { nb_repas: n };
+    if (b.statut === 'a_attribuer' || b.statut === 'attribue') corps.statut = pa >= n && pa > 0 ? 'attribue' : 'a_attribuer';
+    t.disabled = true;
+    patchBon(id, corps).then(function () {
+      b.nb_repas = n; if (corps.statut) b.statut = corps.statut;
+      if (A.bon && A.bon.id === id) {
+        A.bon.nb_repas = n; var tt = document.getElementById('npNbTitre'); if (tt) tt.textContent = n; majCompte();
+      } else if (S.vue !== 'attribution') rendre();
+      toast(n + ' repas enregistrés' + (pa > n ? ' — ' + pa + ' portions attribuées : à réduire' : (pa < n ? ' — ' + (n - pa) + ' portion(s) à attribuer' : '')), pa === n ? 'ok' : '');
+    }).catch(function (e) { toast('Erreur : ' + e.message, 'err'); t.value = b.nb_repas; })
+      .then(function () { t.disabled = false; });
+  }
+
   /* ── 2. Attribution ─────────────────────────────────────────────────────── */
   var A = { bon: null, cible: null, sel: {}, fac: {} };
 
@@ -860,9 +890,9 @@
   function htmlAttribution(b, c) {
     var html = '<div class="np-row" style="justify-content:space-between;margin-bottom:12px">'
       + '<div><button class="np-btn sec" data-act="retour-bons">‹ Bons</button></div>'
-      + '<div style="flex:1"><div class="np-t">' + h(nomClient(b.user_id)) + ' — ' + b.nb_repas + ' repas</div>'
+      + '<div style="flex:1"><div class="np-t">' + h(nomClient(b.user_id)) + ' — <span id="npNbTitre">' + b.nb_repas + '</span> repas</div>'
       + '<div class="np-s">' + (b.jour_livraison ? 'Livraison ' + fmtJ(b.jour_livraison, true) : '<b style="color:#c0392b">Sans date</b>') + ' · ' + h(LIB_TYPE[b.type] || b.type) + '</div></div>'
-      + '<input type="date" class="np-in" data-jour-bon="' + h(b.id) + '" value="' + h(b.jour_livraison || '') + '"></div>';
+      + '<div class="np-row">' + '<label class="np-s" title="Nombre de repas du bon — modifiable à tout moment, même une fois attribué">Repas <input type="number" class="np-in n" data-nb-bon="' + h(b.id) + '" value="' + b.nb_repas + '" min="1" max="40" step="1"></label>' + '<input type="date" class="np-in" data-jour-bon="' + h(b.id) + '" value="' + h(b.jour_livraison || '') + '"></div></div>';
     html += '<div class="np-h">Cible calorique par repas</div><div class="np-cible">'
       + '<div><b><input type="number" class="np-in n" id="npCible" value="' + A.cibleRetenue + '" step="10" style="width:90px;font-size:18px"> kcal</b><small>retenue pour ce bon (modifiable)</small></div>'
       + '<div><b>' + (c.besoin || '—') + '</b><small>son besoin du jour' + (c.ecart ? ' (' + (c.ecart > 0 ? '+' : '') + c.ecart + ' kcal/j pour son objectif)' : (c.tdee ? ' = sa dépense, aucun objectif daté' : ' — tdee absent')) + '</small></div>'
@@ -2205,6 +2235,7 @@
         .then(function () { if (S.vue !== 'attribution') rendre(); }).catch(function (e) { toast('Erreur : ' + e.message, 'err'); });
       return;
     }
+    if (t.dataset.nbBon) { changerNbRepas(t); return; }
     if (t.dataset.gramRec) {
       var rr = recette(t.dataset.gramRec), ff = rr && fiche(rr), base = ff && (ff.gPortionFiche || ff.gTotal), g = parseFloat(t.value);
       if (!(base > 0) || !(g > 0)) { toast('Quantité impossible : la fiche n’a aucun grammage', 'err'); return; }
