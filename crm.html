@@ -308,7 +308,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const CLOUDINARY_CLOUD='dujji1s6g';
 const CLOUDINARY_PRESET='meal_photos';
 const STAFF_SESSION_KEY='natty_staff_session';
-let STAFF_SESSION=null,STAFF_ROLE=null,STAFF_NOM='';
+let STAFF_SESSION=null,STAFF_ROLE=null,STAFF_NOM='',STAFF_DOMAINES=[];
 
 function lireStaffSession(){try{const s=JSON.parse(localStorage.getItem(STAFF_SESSION_KEY)||'null');return(s&&s.access_token)?s:null}catch(e){return null}}
 function ecrireStaffSession(s){STAFF_SESSION=s;try{s?localStorage.setItem(STAFF_SESSION_KEY,JSON.stringify(s)):localStorage.removeItem(STAFF_SESSION_KEY)}catch(e){}}
@@ -364,7 +364,8 @@ const ICON={
  check:'<path d="M5 13l4 4L19 7"/>',
  search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
  alerte:'<path d="M10.3 3.9 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 16.5h.01"/>',
- rh:'<circle cx="9" cy="7" r="3.4"/><path d="M2.5 21c0-3.5 2.9-6.3 6.5-6.3s6.5 2.8 6.5 6.3M16 11a3 3 0 1 0 0-6M21.5 21c0-2.8-1.7-5.1-4-6"/>'
+ rh:'<circle cx="9" cy="7" r="3.4"/><path d="M2.5 21c0-3.5 2.9-6.3 6.5-6.3s6.5 2.8 6.5 6.3M16 11a3 3 0 1 0 0-6M21.5 21c0-2.8-1.7-5.1-4-6"/>',
+ production:'<path d="M6 13a6 6 0 0 1 12 0z"/><path d="M4 13h16M6 13l1 8h10l1-8M9 4v3M12 3v4M15 4v3"/>'
 };
 const ICONES_BLOC=['auto','schema','projet','calendar','check','drive','alerte','commercial','finance','partenariat','developpement','logistique'];
 const CATEGORIES=[
@@ -381,7 +382,8 @@ const ACTIVITES=[
  {cle:'finance',nom:'Finance',icone:'finance',couleur:'#34c759'},
  {cle:'partenariat',nom:'Partenariat',icone:'partenariat',couleur:'#8e5cf7'},
  {cle:'developpement',nom:'Développement',icone:'developpement',couleur:'#101014'},
- {cle:'logistique',nom:'Logistique',icone:'logistique',couleur:'#ff9f0a'}
+ {cle:'logistique',nom:'Logistique',icone:'logistique',couleur:'#ff9f0a'},
+ {cle:'production',nom:'Production',icone:'production',couleur:'#ff6b35'}
 ];
 const ACT_BY_CLE={};ACTIVITES.forEach(a=>ACT_BY_CLE[a.cle]=a);
 const ROLES={
@@ -390,12 +392,20 @@ const ROLES={
  finance:{l:'Finance',acces:['finance']},
  partenariat:{l:'Partenariat',acces:['partenariat']},
  developpement:{l:'Développement',acces:['developpement']},
- logistique:{l:'Logistique',acces:['logistique']}
+ logistique:{l:'Logistique',acces:['logistique']},
+ chef:{l:'Chef',acces:['production']},
+ associe:{l:'Associé',acces:[]},   // un associé n'a d'accès que par SES domaines — voir can()
+ livreur:{l:'Livreur',acces:['logistique']}
 };
 function can(cle){
  if(cle==='dash'||cle==='taches'||cle==='rh')return true;
  if(cle.startsWith('projet:')){const p=S.projets.find(x=>x.id===cle.slice(7));return p?can(p.activite):false}
- const r=ROLES[STAFF_ROLE];if(!r)return false;return r.toutes||(r.acces&&r.acces.includes(cle));
+ const r=ROLES[STAFF_ROLE];if(!r)return false;
+ if(r.toutes)return true;
+ if(r.acces&&r.acces.includes(cle))return true;
+ // Un associé cumule un ou plusieurs domaines (spec §3.2) — son rôle seul
+ // ('associe') ne donne accès à rien, c'est staff.domaines qui décide.
+ return(STAFF_DOMAINES||[]).includes(cle);
 }
 
 /* ============ ÉTAT ============ */
@@ -642,7 +652,7 @@ function groupesTaches(list){
 }
 function taskLi(t){
  const a=ACT_BY_CLE[t.activite];
- return `<div class="li c ${t.statut==='fait'?'done':''}" data-open-tache="${t.id}"><button class="check" role="checkbox" aria-checked="${t.statut==='fait'}" data-tdone="${t.id}" aria-label="Terminer"></button><div class="grow"><b style="font-weight:500">${esc(t.titre)}</b><div class="meta">${own(t.porteur)} · ${t.echeance?fd(t.echeance):'sans échéance'}${a?' · '+esc(a.nom):''}</div></div><span class="chip ${t.priorite==='haute'?'bad':t.priorite==='moyenne'?'warn':''}">${t.priorite}</span></div>`;
+ return `<div class="li c ${t.statut==='fait'?'done':''}" data-open-tache="${t.id}"><button class="check" role="checkbox" aria-checked="${t.statut==='fait'}" data-tdone="${t.id}" aria-label="Terminer"></button><div class="grow"><b style="font-weight:500">${esc(t.titre)}</b><div class="meta">${own(t.porteur)} · ${t.echeance?fd(t.echeance):'sans échéance'}${a?' · '+esc(a.nom):''}</div></div>${t.necessite_revision?'<span class="chip bad">À revoir</span>':''}<span class="chip ${t.priorite==='haute'?'bad':t.priorite==='moyenne'?'warn':''}">${t.priorite}</span></div>`;
 }
 document.addEventListener('click',e=>{
  const c=e.target.closest('[data-tdone]');
@@ -655,6 +665,7 @@ async function basculerTache(id){
  const nv=t.statut==='fait'?'a_faire':'fait';
  await sb('crm_taches?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:nv})});
  t.statut=nv;badges();render();
+ if(nv==='fait'&&t.bloc_id)evaluerReglesApresBascule(id);
 }
 
 /* ============ RH — disponibilités, réunions, manquements (§4.4 de la
@@ -993,6 +1004,460 @@ document.addEventListener('submit',e=>{
  }
 });
 
+/* ============ MOTEUR MISSIONS / BLOCS / RÈGLES (§3.3, §5, §6) ============
+   Un bloc AD HOC reste 1 bloc = 1 tâche (crm_schema_blocs.tache_id, déjà
+   là). Un bloc INSTANCIÉ DEPUIS UN MODÈLE est le nouveau cas : 1 bloc,
+   N tâches (crm_taches.bloc_id), générées à des dates = date de référence
+   + décalage du modèle, avec de vraies dépendances. */
+let MODELES_CACHE=null;
+async function chargerModeles(){
+ if(MODELES_CACHE)return MODELES_CACHE;
+ const [m,t]=await Promise.all([sbTry('crm_modeles_blocs?select=*'),sbTry('crm_modeles_bloc_taches?select=*&order=ordre.asc')]);
+ const modeles=m.ok?m.data:[];const taches=t.ok?t.data:[];
+ MODELES_CACHE=modeles.map(md=>({...md,taches:taches.filter(x=>x.modele_id===md.id)}));
+ return MODELES_CACHE;
+}
+function lundiDe(dateStr){
+ const d=new Date(dateStr+'T00:00:00');
+ d.setDate(d.getDate()-(d.getDay()+6)%7);
+ return d.toISOString().slice(0,10);
+}
+/* Best-effort : une seule personne porte ce rôle ou ce domaine → on la
+   propose ; sinon (personne, ou plusieurs) « à attribuer » — l'aperçu
+   laisse corriger avant de confirmer (règle 1, §3.3). Deviner entre deux
+   porteurs possibles serait pire qu'un champ vide. */
+function resoudrePorteur(role){
+ if(!role)return null;
+ const m=S.staff.filter(s=>s.role===role||(s.domaines||[]).includes(role));
+ return m.length===1?m[0].nom:null;
+}
+function calculerApercu(modele,dateReference,parametres){
+ const base=new Date(dateReference+'T00:00:00');
+ return modele.taches.map(mt=>{
+  const d=new Date(base);d.setDate(d.getDate()+mt.decalage_jours);
+  return{cle:mt.cle,titre:mt.titre,activite:mt.activite,echeance:d.toISOString().slice(0,10),role:mt.role,porteur:resoudrePorteur(mt.role),depend_de_cle:mt.depend_de_cle||[],action_cle:mt.action_cle};
+ });
+}
+/* Règle 2, §3.3 : plafond de production (350 plats/semaine), disponibilité
+   RH (réutilise assets déjà posés par le module RH). Trésorerie et
+   créneau cuisine ne sont pas vérifiables ICI — annoncé, pas simulé
+   (§7 : « ne pas inventer »). Le créneau se calcule à la réservation
+   (voir actionReserverCuisine), une fois le menu choisi. */
+async function controlerCapacite(parametres,apercu){
+ const alertes=[];
+ const nbPlats=Math.round((+parametres.nb_beneficiaires||0)*(+parametres.plats_par_personne||1));
+ const derniere=apercu[apercu.length-1];
+ if(nbPlats&&derniere){
+  const lundiSem=lundiDe(derniere.echeance);
+  const r=await sbTry('bons_commande?semaine=eq.'+lundiSem+'&statut=neq.annule&select=nb_repas');
+  const dejaPrevus=(r.ok?r.data:[]).reduce((s,b)=>s+(b.nb_repas||0),0);
+  if(dejaPrevus+nbPlats>350)alertes.push({type:'bad',texte:`Plafond de production : ${dejaPrevus} plat(s) déjà prévu(s) la semaine du ${fd(lundiSem)} + ${nbPlats} de ce bloc = ${dejaPrevus+nbPlats}, au-dessus de 350.`});
+ }
+ await chargerRH();
+ apercu.forEach(m=>{
+  if(!m.porteur)return;
+  const row=S.staff.find(s=>s.nom===m.porteur);
+  if(row&&estIndisponible(row.user_id,new Date(m.echeance+'T00:00:00')))
+   alertes.push({type:'warn',texte:`${m.porteur} est déclaré·e indisponible le ${fd(m.echeance)} (${m.titre}).`});
+ });
+ alertes.push({type:'info',texte:"Trésorerie et créneau cuisine : pas encore vérifiés automatiquement ici — le créneau se calcule à la réservation une fois le menu choisi, la trésorerie dépend du chantier Finances (hors périmètre aujourd'hui)."});
+ return alertes;
+}
+
+function ouvrirNouveauBloc(ctx){
+ chargerModeles().then(modeles=>{
+  if(!modeles.length){toast('Aucun modèle de bloc en base');return}
+  modal(`<h2>Nouveau bloc depuis un modèle</h2><form class="form" id="blocModeleForm">
+   <label>Modèle<select id="bm1">${modeles.map(m=>`<option value="${m.id}">${esc(m.nom)}</option>`).join('')}</select></label>
+   <p class="muted" id="bmDesc" style="font-size:12.5px;margin:-4px 0 0"></p>
+   <div id="bmParams"></div>
+   <label>Date de référence (le « J » du modèle — la date de livraison pour Test produit)<input class="inp" id="bmDateRef" type="date" required></label>
+   <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Voir l'aperçu →</button></div>
+  </form>`);
+  const rendre=()=>{
+   const m=modeles.find(x=>x.id===$('#bm1').value);
+   $('#bmDesc').textContent=m.description||'';
+   $('#bmParams').innerHTML=(m.parametres||[]).map(p=>{
+    if(p.type==='choix')return `<label>${esc(p.label)}<select id="bp_${p.cle}">${p.options.map(o=>`<option value="${esc(o)}" ${o===p.defaut?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`;
+    return `<label>${esc(p.label)}<input class="inp" id="bp_${p.cle}" type="${p.type==='nombre'?'number':'text'}" value="${p.defaut??''}" ${p.requis?'required':''}></label>`;
+   }).join('');
+  };
+  $('#bm1').onchange=rendre;rendre();
+  $('#blocModeleForm').onsubmit=async e=>{
+   e.preventDefault();
+   const m=modeles.find(x=>x.id===$('#bm1').value);
+   const parametres={};
+   for(const p of(m.parametres||[])){
+    const el=$('#bp_'+p.cle);
+    if(p.requis&&!el.value){toast(p.label+' est requis');return}
+    parametres[p.cle]=p.type==='nombre'?+el.value:el.value;
+   }
+   const dateRef=$('#bmDateRef').value;
+   if(!dateRef){toast('La date de référence est requise');return}
+   closeAll();
+   await ouvrirApercuBloc(m,dateRef,parametres,ctx);
+  };
+ });
+}
+async function ouvrirApercuBloc(modele,dateRef,parametres,ctx){
+ let apercu=calculerApercu(modele,dateRef,parametres);
+ const alertes=await controlerCapacite(parametres,apercu);
+ const couleur=t=>t==='bad'?['var(--red)','var(--red-bg)']:t==='warn'?['var(--amber)','var(--amber-bg)']:['var(--blue)','var(--blue-bg)'];
+ const rendre=()=>{
+  modal(`<h2>Aperçu — ${esc(modele.nom)}</h2>
+   <p class="muted" style="font-size:13px;margin:0 0 10px">${apercu.length} tâche${apercu.length>1?'s':''} seront créées, datées et — quand un seul membre porte ce rôle — attribuées. Retirez une ligne avant de confirmer si besoin.</p>
+   ${alertes.map(a=>{const[c,bg]=couleur(a.type);return `<div class="exbar" style="border-color:${c};color:${c};background:${bg}">${esc(a.texte)}</div>`}).join('')}
+   <div class="list">${apercu.map((m,i)=>`<div class="li"><div class="grow"><b style="font-weight:500">${esc(m.titre)}</b><div class="meta">${fd(m.echeance)} · ${esc((ACT_BY_CLE[m.activite]||{}).nom||m.activite)} · ${own(m.porteur)}</div></div><button class="btn sm ghost" type="button" data-retirer-apercu="${i}">Retirer</button></div>`).join('')||'<div class="empty">Plus aucune tâche à créer.</div>'}</div>
+   <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" id="btnConfirmerBloc" type="button" ${apercu.length?'':'disabled'}>Créer le bloc et ${apercu.length} tâche${apercu.length>1?'s':''}</button></div>`);
+ };
+ rendre();
+ $('#modal').onclick=e=>{
+  const r=e.target.closest('[data-retirer-apercu]');
+  if(r){apercu.splice(+r.dataset.retirerApercu,1);rendre();return}
+  const c=e.target.closest('#btnConfirmerBloc');
+  if(c){closeAll();instancierBloc(modele,dateRef,parametres,apercu,ctx)}
+ };
+}
+async function instancierBloc(modele,dateRef,parametres,apercu,ctx){
+ const rBloc=await sb('crm_schema_blocs',{method:'POST',body:JSON.stringify({
+  activite:modele.activite_defaut,projet_id:ctx.projet||null,titre:modele.nom+' — '+fd(dateRef),
+  categorie:'jalon',echeance:dateRef,statut:'a_venir',modele_id:modele.id,parametres,date_reference:dateRef,
+  cout_previsionnel:{matiere:null,cuisine:null,livraison:null,total:null},
+  x:10+Math.random()*60,y:10+Math.random()*55
+ })});
+ const bloc=rBloc[0];
+ const idParCle={};
+ for(const m of apercu){
+  const r=await sb('crm_taches',{method:'POST',body:JSON.stringify({
+   activite:m.activite,projet_id:ctx.projet||null,titre:m.titre,porteur:m.porteur||null,
+   echeance:m.echeance,priorite:'moyenne',bloc_id:bloc.id,action_cle:m.action_cle||null
+  })});
+  idParCle[m.cle]=r[0].id;S.taches.push(r[0]);
+ }
+ for(const m of apercu){
+  for(const dep of m.depend_de_cle){
+   if(!idParCle[dep])continue;   // dépendance retirée de l'aperçu : pas recréée
+   await sb('crm_taches_dependances',{method:'POST',headers:{Prefer:'return=minimal,resolution=ignore-duplicates'},body:JSON.stringify({tache_id:idParCle[m.cle],depend_de_id:idParCle[dep]})});
+  }
+ }
+ const mep=apercu.find(x=>x.cle==='mise_en_place'),prod=apercu.find(x=>x.cle==='session_production');
+ if(mep&&idParCle.mise_en_place){
+  const s=await sb('crm_sessions',{method:'POST',body:JSON.stringify({bloc_id:bloc.id,type:'mise_en_place',jour:mep.echeance})});
+  await sb('crm_taches?id=eq.'+idParCle.mise_en_place,{method:'PATCH',body:JSON.stringify({objet_type:'session',objet_id:s[0].id})});
+ }
+ if(prod&&idParCle.session_production){
+  const s=await sb('crm_sessions',{method:'POST',body:JSON.stringify({bloc_id:bloc.id,type:'production',jour:prod.echeance})});
+  for(const c of['session_production','reserver_cuisine'])
+   if(idParCle[c])await sb('crm_taches?id=eq.'+idParCle[c],{method:'PATCH',body:JSON.stringify({objet_type:'session',objet_id:s[0].id})});
+ }
+ if(modele.taches.some(t=>t.cle==='menu'))
+  await sb('crm_menus',{method:'POST',body:JSON.stringify({bloc_id:bloc.id,nom:'Menu — '+modele.nom})});
+ const portee=ctx.projet?'projet:'+ctx.projet:modele.activite_defaut;
+ delete SCHEMA_CACHE[portee];
+ toast('Bloc « '+modele.nom+' » créé, '+apercu.length+' tâche'+(apercu.length>1?'s':'')+'.');
+ badges();render();
+}
+
+function tachesDuBloc(blocId){return S.taches.filter(t=>t.bloc_id===blocId).sort((a,b)=>(a.echeance||'').localeCompare(b.echeance||''))}
+async function ouvrirDetailBlocModele(id){
+ const b=trouverBloc(id);if(!b)return;
+ const modeles=await chargerModeles();
+ const modele=modeles.find(m=>m.id===b.modele_id);
+ const ts=tachesDuBloc(id);
+ const deps=await sbTry('crm_taches_dependances?select=*');
+ const depsList=deps.ok?deps.data:[];
+ const menusR=await sbTry('crm_menus?bloc_id=eq.'+id+'&select=*');
+ const menu=(menusR.ok?menusR.data:[])[0];
+ const cp=b.cout_previsionnel||{};
+ drawer(`<div class="dh"><div class="av lg dk">${ini(b.titre)}</div><div style="min-width:0"><span class="chip info">${modele?esc(modele.nom):'Modèle'}</span><h2>${esc(b.titre)}</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <div class="kv" style="margin-bottom:14px">
+  <dt>Référence (J)</dt><dd class="num">${fd(b.date_reference)}</dd>
+  <dt>Coût prévisionnel</dt><dd>${cp.total!=null?cp.total+' €':'pas encore connu'}${cp.cuisine!=null?` · cuisine ${cp.cuisine} €`:''}${cp.matiere!=null?` · matière ${cp.matiere} €`:''}</dd>
+ </div>
+ <form class="form" id="decalerForm" style="margin-bottom:16px"><label>Décaler toutes les tâches à partir d'une nouvelle référence<input class="inp" id="ddNouvelleDate" type="date" value="${b.date_reference||''}"></label><div class="foot"><button class="btn sm primary" type="submit">Recalculer les échéances</button></div></form>
+ <div class="sect"><h2 style="font-size:15px">Tâches (${ts.length})</h2></div>
+ <div class="list">${ts.map(t=>tacheBlocLi(t,depsList,ts)).join('')||'<div class="empty">Aucune tâche.</div>'}</div>
+ ${menu?`<div class="sect"><h2 style="font-size:15px">Menu</h2><span class="chip ${menu.statut==='verrouille'?'ok':''}">${menu.statut}</span></div><button class="btn sm ghost" data-ouvrir-menu="${menu.id}">Composer le menu →</button>`:''}
+ <div class="sect"><h2 style="font-size:15px">Bons de commande de ce bloc</h2></div>
+ <button class="btn sm ghost" data-bons-bloc="${id}">Gérer les bons →</button>
+ <div class="sect"><h2 style="font-size:15px">Annuler</h2></div>
+ <button class="btn sm danger" data-annuler-bloc="${id}">Annuler ce bloc et ses tâches</button>`);
+ $('#decalerForm').onsubmit=async e=>{e.preventDefault();await decalerBloc(id,$('#ddNouvelleDate').value)};
+}
+/* Annulation d'un bloc instancié : supprime ses tâches (et leurs
+   dépendances, en cascade côté base) et le bloc lui-même — ce qui
+   supprime aussi en cascade ses sessions et son menu. Les bons de
+   commande, eux, ne sont pas en cascade (`on delete set null`) : on les
+   retire explicitement, ce sont des bons synthétiques créés pour CE
+   bloc, pas des commandes réelles d'un client. */
+async function annulerBlocModele(blocId){
+ const b=trouverBloc(blocId);if(!b)return;
+ if(!confirm('Annuler « '+b.titre+' » ? Ses tâches, sessions, menu et bons de commande seront supprimés.'))return;
+ const ts=tachesDuBloc(blocId);
+ for(const t of ts)await sb('crm_taches?id=eq.'+t.id,{method:'DELETE'});
+ await sb('bons_commande?bloc_id=eq.'+blocId,{method:'DELETE'});
+ await sb('crm_schema_blocs?id=eq.'+blocId,{method:'DELETE'});
+ S.taches=S.taches.filter(t=>t.bloc_id!==blocId);
+ const portee=Object.keys(SCHEMA_CACHE).find(c=>(SCHEMA_CACHE[c].blocs||[]).some(x=>x.id===blocId));
+ if(portee)delete SCHEMA_CACHE[portee];
+ toast('Bloc annulé');closeAll();badges();render();
+}
+function tacheBlocLi(t,depsList,ts){
+ const mesDeps=depsList.filter(d=>d.tache_id===t.id).map(d=>ts.find(x=>x.id===d.depend_de_id)).filter(Boolean);
+ const enAttenteDe=mesDeps.filter(d=>d.statut!=='fait');
+ return `<div class="li ${t.statut==='fait'?'done':''}"><button class="check" role="checkbox" aria-checked="${t.statut==='fait'}" data-tdone="${t.id}" aria-label="Terminer"></button>
+ <div class="grow"><b style="font-weight:500">${esc(t.titre)}</b><div class="meta">${fd(t.echeance)} · ${own(t.porteur)}${enAttenteDe.length?' · <span style="color:var(--amber)">en attente : '+enAttenteDe.map(d=>esc(d.titre)).join(', ')+'</span>':''}${t.necessite_revision?' · <span style="color:var(--red)">à revoir</span>':''}</div></div>
+ ${t.action_cle&&ACTIONS_MISSION[t.action_cle]?`<button class="btn sm ${t.action_faite?'ghost':''}" data-action-mission="${t.id}:${t.action_cle}">${ACTIONS_MISSION[t.action_cle].label}</button>`:''}
+ </div>`;
+}
+/* Règle 3, §3.3 : décaler un bloc recale TOUTES ses tâches (et ses
+   sessions) du même delta — les décalages du modèle sont relatifs à la
+   date de référence, pas les uns aux autres, donc un simple delta global
+   suffit à tout recaler d'un coup. Une tâche dont l'action a déjà été
+   exécutée passe en « à revoir » plutôt que d'être silencieusement
+   redatée comme si de rien n'était. */
+async function decalerBloc(blocId,nouvelleDate){
+ const b=trouverBloc(blocId);if(!b||!nouvelleDate||!b.date_reference)return;
+ if(b.date_reference===nouvelleDate){toast('Même date — rien à recalculer');return}
+ const deltaJours=Math.round((new Date(nouvelleDate)-new Date(b.date_reference))/864e5);
+ const ts=tachesDuBloc(blocId);
+ for(const t of ts){
+  if(!t.echeance)continue;
+  const d=new Date(t.echeance+'T00:00:00');d.setDate(d.getDate()+deltaJours);
+  const patch={echeance:d.toISOString().slice(0,10)};
+  if(t.action_faite)patch.necessite_revision=true;
+  await sb('crm_taches?id=eq.'+t.id,{method:'PATCH',body:JSON.stringify(patch)});
+  Object.assign(t,patch);
+ }
+ await sb('crm_schema_blocs?id=eq.'+blocId,{method:'PATCH',body:JSON.stringify({date_reference:nouvelleDate,echeance:nouvelleDate})});
+ b.date_reference=nouvelleDate;b.echeance=nouvelleDate;
+ const sess=await sbTry('crm_sessions?bloc_id=eq.'+blocId+'&select=*');
+ for(const s of(sess.ok?sess.data:[])){
+  const d=new Date(s.jour+'T00:00:00');d.setDate(d.getDate()+deltaJours);
+  await sb('crm_sessions?id=eq.'+s.id,{method:'PATCH',body:JSON.stringify({jour:d.toISOString().slice(0,10)})});
+ }
+ toast('Bloc décalé de '+(deltaJours>0?'+':'')+deltaJours+' jour(s) — toutes les tâches recalculées');
+ closeAll();badges();render();
+}
+
+/* ---- Actions en un clic (§3.3 : « éventuellement une action en un
+   clic ») — une seule est une vraie intégration externe (reserver_cuisine,
+   §4.2) ; les autres composent un message ou affichent un calcul déjà
+   fait ailleurs dans l'app, plutôt que de simuler un module qui n'existe
+   pas encore (Commercial, Finances). ---- */
+const ACTIONS_MISSION={
+ reserver_cuisine:{label:'Réserver la cuisine',run:id=>actionReserverCuisine(id)},
+ envoyer_kit_com:{label:'Composer le message',run:id=>actionMessageSimple(id)},
+ diffuser_lien_commande:{label:'Composer le message',run:id=>actionMessageSimple(id)},
+ generer_liste_courses:{label:'Voir la liste de courses',run:id=>actionListeCourses(id)}
+};
+async function marquerActionFaite(tacheId){
+ await sb('crm_taches?id=eq.'+tacheId,{method:'PATCH',body:JSON.stringify({action_faite:true,necessite_revision:false})});
+ const t=S.taches.find(x=>x.id===tacheId);if(t){t.action_faite=true;t.necessite_revision=false}
+}
+/* Le créneau se calcule depuis le MENU du bloc — la fiche technique
+   (recettes.temps_prep_min/temps_cuisson_min) EST le temps de la
+   session, la production se faisant « en masse par recette » (mode
+   traiteur, pas à la portion) : on ne multiplie donc PAS par le nombre de
+   plats, ce serait inventer un facteur d'échelle que rien ne documente.
+   §4.1 : durée + marge de sécurité, arrondie à l'heure pleine. */
+async function actionReserverCuisine(tacheId){
+ const t=S.taches.find(x=>x.id===tacheId);if(!t)return;
+ const sessions=await sbTry('crm_sessions?bloc_id=eq.'+t.bloc_id+'&type=eq.production&select=*');
+ const session=(sessions.ok?sessions.data:[])[0];
+ if(!session){toast('Aucune session de production liée à ce bloc');return}
+ const menusR=await sbTry('crm_menus?bloc_id=eq.'+t.bloc_id+'&select=*');
+ const menu=(menusR.ok?menusR.data:[])[0];
+ let minutes=90,manqueMenu=true;
+ if(menu){
+  const mr=await sbTry('crm_menu_recettes?menu_id=eq.'+menu.id+'&select=recette_id');
+  const ids=(mr.ok?mr.data:[]).map(x=>x.recette_id);
+  if(ids.length){
+   const rec=await sbTry('recettes?id=in.('+ids.join(',')+')&select=temps_prep_min,temps_cuisson_min');
+   if(rec.ok&&rec.data.length){minutes=rec.data.reduce((s,r)=>s+(r.temps_prep_min||0)+(r.temps_cuisson_min||0),0);manqueMenu=false}
+  }
+ }
+ const marge=30,heures=Math.max(1,Math.ceil((minutes+marge)/60));
+ const heureFin=String(9+heures).padStart(2,'0')+':00';
+ modal(`<h2>Réserver la cuisine</h2>
+  <p class="muted" style="font-size:13px">${manqueMenu?"Le menu n'est pas encore composé — créneau par défaut, à ajuster.":`Estimé depuis ${minutes} min de préparation/cuisson du menu + ${marge} min de marge, arrondi à l'heure pleine.`}</p>
+  <form class="form" id="cuisineForm">
+   <div class="two"><label>Date<input class="inp" id="cf1" type="date" value="${session.jour}" required></label><label>Nombre de personnes<input class="inp" id="cf2" type="number" value="4" required></label></div>
+   <div class="two"><label>Arrivée<input class="inp" id="cf3" type="time" value="09:00" required></label><label>Fin<input class="inp" id="cf4" type="time" value="${heureFin}" required></label></div>
+   <label>Note (optionnel)<textarea class="inp" id="cf5"></textarea></label>
+   <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Envoyer la demande</button></div>
+  </form>`);
+ $('#cuisineForm').onsubmit=async e=>{
+  e.preventDefault();
+  const body={date:$('#cf1').value,heure_debut:$('#cf3').value,heure_fin:$('#cf4').value,nb_personnes:+$('#cf2').value,note:$('#cf5').value||undefined};
+  closeAll();
+  let data={},ok=false;
+  try{
+   const res=await fetch('/api/reserver-cuisine',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+jetonStaff()},body:JSON.stringify(body)});
+   data=await res.json().catch(()=>({}));ok=res.ok;
+  }catch(err){}
+  if(ok&&data.ok){
+   await sb('crm_sessions?id=eq.'+session.id,{method:'PATCH',body:JSON.stringify({creneau_debut:body.heure_debut,creneau_fin:body.heure_fin,nb_personnes:body.nb_personnes,statut_reservation:'envoyee',message_envoye_le:new Date().toISOString()})});
+   await marquerActionFaite(tacheId);
+   const cout=heures*30;   // 30 €/h, tarif documenté de la cuisine louée
+   const bloc=trouverBloc(t.bloc_id);
+   if(bloc){
+    const cp=bloc.cout_previsionnel||{};
+    const nouveauCp={...cp,cuisine:cout,total:(cp.matiere||0)+cout+(cp.livraison||0)};
+    await sb('crm_schema_blocs?id=eq.'+t.bloc_id,{method:'PATCH',body:JSON.stringify({cout_previsionnel:nouveauCp})});
+    bloc.cout_previsionnel=nouveauCp;
+   }
+   toast('Demande envoyée par email');
+  }else if(data.degrade){
+   // §4.2 : la config email manque → repli SMS, composé côté client.
+   const texte=`Réservation cuisine — ${fd(body.date)}, ${body.heure_debut}–${body.heure_fin}, ${body.nb_personnes} personnes.`;
+   window.open('sms:?body='+encodeURIComponent(texte));
+   await marquerActionFaite(tacheId);
+   toast('Configuration email manquante — SMS ouvert à la place');
+  }else{
+   toast('Échec de l’envoi : '+(data.error||'erreur inconnue'));
+  }
+  render();
+ };
+}
+async function actionMessageSimple(tacheId){
+ const t=S.taches.find(x=>x.id===tacheId);if(!t)return;
+ window.open('mailto:?subject='+encodeURIComponent(t.titre));
+ await marquerActionFaite(tacheId);
+ toast('Message composé — marqué fait');render();
+}
+/* La liste dérive des BONS DE CE BLOC (bons_attributions), pas de
+   plans_repas comme admin.html : deux sources différentes pour deux
+   circuits différents, ce n'est pas dupliquer un calcul existant. */
+async function actionListeCourses(tacheId){
+ const t=S.taches.find(x=>x.id===tacheId);if(!t)return;
+ const bons=await sbTry('bons_commande?bloc_id=eq.'+t.bloc_id+'&select=id');
+ const bonIds=(bons.ok?bons.data:[]).map(b=>b.id);
+ if(!bonIds.length){modal(`<h2>Liste de courses</h2><div class="empty">Aucun bon de commande pour ce bloc — attribuez d'abord les recettes.</div><div class="foot"><button class="btn" type="button" data-close>Fermer</button></div>`);return}
+ const attrs=await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=recette_id,nb_portions');
+ const parRecette={};(attrs.ok?attrs.data:[]).forEach(a=>{parRecette[a.recette_id]=(parRecette[a.recette_id]||0)+a.nb_portions});
+ const recIds=Object.keys(parRecette);
+ if(!recIds.length){modal(`<h2>Liste de courses</h2><div class="empty">Aucune attribution encore faite (voir « Gérer les bons »).</div><div class="foot"><button class="btn" type="button" data-close>Fermer</button></div>`);return}
+ const ing=await sbTry('recettes_ingredients?recette_id=in.('+recIds.join(',')+')&select=recette_id,ingredient_nom,quantite_g,unite');
+ const recBase=await sbTry('recettes?id=in.('+recIds.join(',')+')&select=id,nb_portions');
+ const nbPortionsBase={};(recBase.ok?recBase.data:[]).forEach(r=>nbPortionsBase[r.id]=r.nb_portions||1);
+ const total={};
+ (ing.ok?ing.data:[]).forEach(i=>{
+  const facteur=(parRecette[i.recette_id]||0)/(nbPortionsBase[i.recette_id]||1);
+  const cle=i.ingredient_nom+' ('+(i.unite||'g')+')';
+  total[cle]=(total[cle]||0)+i.quantite_g*facteur;
+ });
+ const lignes=Object.entries(total).sort((a,b)=>b[1]-a[1]);
+ modal(`<h2>Liste de courses — ${esc(t.titre)}</h2>
+  <div class="list">${lignes.map(([nom,qte])=>`<div class="li"><div class="grow">${esc(nom)}</div><span class="num">${Math.round(qte)}</span></div>`).join('')||'<div class="empty">Rien à calculer.</div>'}</div>
+  <div class="foot"><button class="btn" type="button" data-close>Fermer</button><button class="btn primary" type="button" id="btnValiderCourses">Marquer fait</button></div>`);
+ $('#btnValiderCourses').onclick=async()=>{closeAll();await marquerActionFaite(tacheId);toast('Marqué fait');render()};
+}
+document.addEventListener('click',e=>{
+ const am=e.target.closest('[data-action-mission]');
+ if(am){const[id,cle]=am.dataset.actionMission.split(':');const a=ACTIONS_MISSION[cle];if(a)a.run(id);}
+ const om=e.target.closest('[data-ouvrir-menu]');
+ if(om)ouvrirMenu(om.dataset.ouvrirMenu);
+ const bb=e.target.closest('[data-bons-bloc]');
+ if(bb)ouvrirBonsDuBloc(bb.dataset.bonsBloc);
+ const dm=e.target.closest('[data-del-menu-rec]');
+ if(dm)supprimerMenuRecette(dm.dataset.delMenuRec);
+ const ab=e.target.closest('[data-annuler-bloc]');
+ if(ab)annulerBlocModele(ab.dataset.annulerBloc);
+});
+
+/* ---- Règles (§3.3) — un seul déclencheur existe réellement dans ce
+   chantier : toutes les tâches d'un bloc sont faites. Suggère, n'agit
+   pas toute seule — la spec dit « déterministe », pas « automatique sans
+   validation ». ---- */
+async function evaluerReglesApresBascule(tacheId){
+ const t=S.taches.find(x=>x.id===tacheId);
+ if(!t||!t.bloc_id)return;
+ const ts=tachesDuBloc(t.bloc_id);
+ if(!ts.length||!ts.every(x=>x.statut==='fait'))return;
+ const r=await sbTry("crm_regles?actif=eq.true&select=*");
+ const applicable=(r.ok?r.data:[]).some(x=>x.declencheur&&x.declencheur.type==='bloc_toutes_taches_faites');
+ if(!applicable)return;
+ const bloc=trouverBloc(t.bloc_id);
+ toast('Toutes les tâches de « '+(bloc?bloc.titre:'ce bloc')+' » sont faites — le clôturer ?');
+}
+
+/* ---- Production : menus verrouillables, sessions, bons du bloc ----
+   `recettes`/`recettes_ingredients` existent déjà (natty_production.sql) —
+   un menu s'y accroche, il ne les redéfinit pas. */
+async function vProductionMenus(){
+ const menusR=await sbTry('crm_menus?select=*,crm_schema_blocs(titre)');
+ const list=menusR.ok?menusR.data:[];
+ return `<div class="sect"><h2>Menus</h2><span>${list.length}</span></div>
+ <div class="card lift"><div class="list">${list.map(m=>`<div class="li c" data-ouvrir-menu="${m.id}"><div class="grow"><b style="font-weight:500">${esc(m.nom)}</b><div class="meta">${m.crm_schema_blocs?esc(m.crm_schema_blocs.titre):''}</div></div><span class="chip ${m.statut==='verrouille'?'ok':''}">${m.statut}</span></div>`).join('')||'<div class="empty">Aucun menu — un menu se crée automatiquement avec un bloc « Test produit ».</div>'}</div></div>
+ <div class="sect"><h2>Sessions</h2></div>
+ ${await vSessionsProduction()}`;
+}
+async function vSessionsProduction(){
+ const r=await sbTry('crm_sessions?select=*&order=jour.asc');
+ const list=r.ok?r.data:[];
+ return `<div class="tbl-wrap"><table><thead><tr><th>Jour</th><th>Type</th><th>Créneau</th><th>Réservation</th></tr></thead><tbody>${list.map(s=>`<tr><td>${fd(s.jour)}</td><td>${s.type==='mise_en_place'?'Mise en place':'Production'}</td><td>${s.creneau_debut?s.creneau_debut.slice(0,5)+'–'+(s.creneau_fin||'').slice(0,5):'—'}</td><td><span class="chip ${s.statut_reservation==='confirmee'?'ok':s.statut_reservation==='envoyee'?'warn':''}">${s.statut_reservation}</span></td></tr>`).join('')||'<tr><td colspan="4" class="muted" style="text-align:center;padding:16px">Aucune session</td></tr>'}</tbody></table></div>`;
+}
+async function ouvrirMenu(id){
+ const r=await sbTry('crm_menus?id=eq.'+id+'&select=*');
+ const m=(r.ok?r.data:[])[0];
+ if(!m){toast('Menu introuvable');return}
+ const mr=await sbTry('crm_menu_recettes?menu_id=eq.'+id+'&select=*,recettes(nom)');
+ const liees=mr.ok?mr.data:[];
+ const toutes=await sbTry('recettes?actif=eq.true&select=id,nom&order=nom.asc');
+ const dispo=(toutes.ok?toutes.data:[]).filter(x=>!liees.some(l=>l.recette_id===x.id));
+ drawer(`<div class="dh"><div class="av lg dk">${ini(m.nom)}</div><div><span class="chip ${m.statut==='verrouille'?'ok':''}">${m.statut}</span><h2>${esc(m.nom)}</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <div class="list">${liees.map(l=>`<div class="li"><div class="grow">${esc((l.recettes||{}).nom||'—')}</div>${m.statut!=='verrouille'?`<button class="btn sm ghost" data-del-menu-rec="${l.id}">Retirer</button>`:''}</div>`).join('')||'<div class="empty">Aucune recette.</div>'}</div>
+ ${m.statut!=='verrouille'?`<form class="form" id="addRecForm" style="margin-top:10px"><label>Ajouter une recette<select id="arSel">${dispo.map(x=>`<option value="${x.id}">${esc(x.nom)}</option>`).join('')||'<option value="">Aucune recette disponible</option>'}</select></label><div class="foot"><button class="btn sm primary" type="submit">Ajouter</button></div></form>
+  <div class="foot" style="margin-top:16px"><button class="btn primary sm" id="btnVerrouillerMenu">Verrouiller le menu</button></div>`:'<div class="foot" style="margin-top:16px"><span class="chip ok">Verrouillé — ne se modifie plus</span></div>'}`);
+ $('#addRecForm')?.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const recId=$('#arSel').value;if(!recId)return;
+  await sb('crm_menu_recettes',{method:'POST',body:JSON.stringify({menu_id:id,recette_id:recId})});
+  ouvrirMenu(id);
+ });
+ $('#btnVerrouillerMenu')?.addEventListener('click',async()=>{
+  await sb('crm_menus?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:'verrouille',updated_at:new Date().toISOString()})});
+  toast('Menu verrouillé');closeAll();render();
+ });
+}
+async function supprimerMenuRecette(id){
+ const r=await sb('crm_menu_recettes?id=eq.'+id,{method:'DELETE',headers:{Prefer:'return=representation'}});
+ const menuId=r&&r[0]&&r[0].menu_id;
+ if(menuId)ouvrirMenu(menuId);
+}
+/* Mode automatique : un bon par bénéficiaire, statut « à attribuer » —
+   admin.html (natty_production.sql) sait déjà répartir les recettes du
+   menu dessus (règles d'attribution existantes). `user_id` est un
+   identifiant synthétique : ces bénéficiaires ne sont pas des comptes de
+   l'app (Commercial, qui porterait de vrais contacts, est hors périmètre
+   aujourd'hui) — voir le point ouvert §9 de la spec. */
+async function ouvrirBonsDuBloc(blocId){
+ const bloc=trouverBloc(blocId);
+ const r=await sbTry('bons_commande?bloc_id=eq.'+blocId+'&select=*&order=created_at.asc');
+ const bons=r.ok?r.data:[];
+ drawer(`<div class="dh"><div class="av lg dk">${ini(bloc?bloc.titre:'?')}</div><div><h2>Bons de commande</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <div class="list">${bons.map(b=>`<div class="li"><div class="grow"><b style="font-weight:500">${b.nb_repas} repas</b><div class="meta">${esc(b.adresse||'sans adresse')} · <span class="chip">${b.statut}</span></div></div></div>`).join('')||'<div class="empty">Aucun bon pour ce bloc.</div>'}</div>
+ <p class="muted" style="font-size:12.5px;margin:14px 0 0">Génère un bon par bénéficiaire (mode automatique) selon les paramètres du bloc, ou un bon libre — puis attribuez les recettes depuis <a href="/admin.html" target="_blank" rel="noopener">admin.html</a>.</p>
+ <div class="foot"><button type="button" class="btn sm" id="btnGenAuto">Générer automatiquement</button><button type="button" class="btn sm ghost" id="btnGenManuel">+ Bon manuel</button></div>`);
+ $('#btnGenAuto').onclick=async()=>{
+  if(!bloc||!bloc.parametres){toast('Paramètres du bloc introuvables');return}
+  const n=Math.round(+bloc.parametres.nb_beneficiaires||0);
+  const parPersonne=Math.round(+bloc.parametres.plats_par_personne||1);
+  if(!n){toast('Nombre de bénéficiaires manquant');return}
+  for(let i=0;i<n;i++){
+   await sb('bons_commande',{method:'POST',body:JSON.stringify({user_id:'bloc:'+blocId+':'+i,type:'manuel',nb_repas:parPersonne,semaine:lundiDe(bloc.date_reference),jour_livraison:bloc.date_reference,adresse:bloc.parametres.lieu||null,statut:'a_attribuer',bloc_id:blocId})});
+  }
+  toast(n+' bons créés');closeAll();ouvrirBonsDuBloc(blocId);
+ };
+ $('#btnGenManuel').onclick=async()=>{
+  const nb=prompt('Nombre de repas pour ce bon ?','1');
+  if(!nb)return;
+  await sb('bons_commande',{method:'POST',body:JSON.stringify({user_id:'bloc:'+blocId+':manuel:'+Date.now(),type:'manuel',nb_repas:+nb,semaine:lundiDe(bloc.date_reference),jour_livraison:bloc.date_reference,adresse:(bloc&&bloc.parametres&&bloc.parametres.lieu)||null,statut:'a_attribuer',bloc_id:blocId})});
+  toast('Bon créé');closeAll();ouvrirBonsDuBloc(blocId);
+ };
+}
+
 /* ============ PAGE D'UNE ACTIVITÉ ============ */
 async function vActivite(cle){
  const a=ACT_BY_CLE[cle];if(!a)return'<p>Activité inconnue</p>';
@@ -1002,6 +1467,7 @@ async function vActivite(cle){
  const projets=S.projets.filter(p=>p.activite===cle);
  const onglets=[['apercu','Aperçu'],['taches','Tâches',tachesAct.filter(t=>!t.routine&&t.statut!=='fait').length],['projets','Sous-projets',projets.length],['schema','Schéma',blocs.length],['drive','Drive',docs.length]];
  if(cle==='logistique')onglets.push(['commandes','Commandes']);
+ if(cle==='production')onglets.push(['menus','Menus & sessions']);
  const tb=tabs('act-'+cle,onglets,'apercu');
  let body='';
  if(tb.cur==='apercu')body=vApercuActivite(cle,tachesAct,projets);
@@ -1010,6 +1476,7 @@ async function vActivite(cle){
  if(tb.cur==='schema')body=vSchema(cle,blocs,liens);
  if(tb.cur==='drive')body=vDrive(cle,docs);
  if(tb.cur==='commandes')body=await vCommandesLogistique();
+ if(tb.cur==='menus')body=await vProductionMenus();
  return ph(a.nom,`Tâches, sous-projets, drive et schéma de ${a.nom.toLowerCase()}`,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
   routineHero(cle,routine)+tb.html+body;
 }
@@ -1172,23 +1639,25 @@ function vSchema(portee,blocs,liens,ctx){
  ctx=ctx||{activite:portee};
  return `<div class="schema-toolbar">
   <button class="btn sm" data-new="bloc" data-activite="${ctx.activite}" ${ctx.projet?`data-projet="${ctx.projet}"`:''}>+ Bloc</button>
+  <button class="btn sm ghost" data-modele-bloc="1" data-activite="${ctx.activite}" ${ctx.projet?`data-projet="${ctx.projet}"`:''}>+ Bloc depuis un modèle</button>
   <button class="btn sm ${LINK_MODE?'primary':'ghost'}" id="btnLinkMode"><svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:2">${ICON.link}</svg> Relier deux blocs</button>
   <span class="muted" style="font-size:12px;align-self:center">Glisser pour déplacer · cliquer pour modifier${LINK_MODE?' · cliquez deux blocs pour les relier':''}</span>
  </div>
  <div class="schema-wrap ${LINK_MODE?'linking':''}" id="schemaWrap" data-portee="${portee}">
-  ${blocs.length?'':'<div class="schema-empty">Aucun bloc. « + Bloc » pour poser la première étape du scénario.</div>'}
+  ${blocs.length?'':'<div class="schema-empty">Aucun bloc. « + Bloc » pour poser la première étape du scénario, ou « + Bloc depuis un modèle » pour en instancier un (ex. Test produit).</div>'}
   <svg class="schema-svg" id="schemaSvg"></svg>
   ${blocs.map(blocHtml).join('')}
  </div>`;
 }
 function blocHtml(b){
- const ji=joursInfo(b.echeance);
+ const ji=joursInfo(b.date_reference||b.echeance);
  const ic=b.icone&&ICON[b.icone]?b.icone:(CAT_BY_CLE[b.categorie]||{}).icone||'schema';
- const meta=[b.echeance?fd(b.echeance)+' · '+ji.label:'',b.porteur?'👤 '+esc(b.porteur):''].filter(Boolean).join(' · ');
- return `<div class="sblock ${b.statut==='fait'?'done':''}" data-bloc="${b.id}" style="left:${b.x}%;top:${b.y}%;${b.statut==='fait'?'opacity:.55':''}">
+ const meta=[b.date_reference?fd(b.date_reference)+' · '+ji.label:(b.echeance?fd(b.echeance)+' · '+ji.label:''),b.porteur?'👤 '+esc(b.porteur):''].filter(Boolean).join(' · ');
+ return `<div class="sblock ${b.statut==='fait'?'done':''}" data-bloc="${b.id}" style="left:${b.x}%;top:${b.y}%;${b.statut==='fait'?'opacity:.55':''}${b.modele_id?';border-color:var(--blue)':''}">
   <button class="sb-del" data-del-bloc="${b.id}" aria-label="Supprimer">×</button>
   <div class="sb-ic"><svg viewBox="0 0 24 24">${ICON[ic]}</svg></div>
   <b>${esc(b.titre)}</b>
+  ${b.modele_id?'<span class="chip info" style="margin-top:4px">Modèle</span>':''}
   ${meta?`<div class="sb-due ${ji.cls}">${meta}</div>`:''}
  </div>`;
 }
@@ -1204,7 +1673,9 @@ function wireSchemaIfPresent(){
   if(!bl)return;
   if(Date.now()-DERNIER_DRAG_TS<150)return;   // c'était un glisser, pas un clic
   if(LINK_MODE){e.stopPropagation();clicBlocPourLien(bl.dataset.bloc,wrap);return}
-  ouvrirEditionBloc(bl.dataset.bloc);
+  const b=trouverBloc(bl.dataset.bloc);
+  if(b&&b.modele_id)ouvrirDetailBlocModele(bl.dataset.bloc);
+  else ouvrirEditionBloc(bl.dataset.bloc);
  });
 }
 /* Glisser-déposer générique : sert au schéma (blocs) ET au mapping général
@@ -1475,6 +1946,8 @@ document.addEventListener('click',e=>{
  if(n){e.preventDefault();closeAll();openForm(n.dataset.new,{activite:n.dataset.activite,projet:n.dataset.projet,tache:n.dataset.tache})}
  const g=e.target.closest('[data-go]');
  if(g){e.preventDefault();closeAll();go(g.dataset.go)}
+ const mb=e.target.closest('[data-modele-bloc]');
+ if(mb){e.preventDefault();closeAll();ouvrirNouveauBloc({activite:mb.dataset.activite,projet:mb.dataset.projet||null})}
  // Bascule Lien / Fichier du formulaire « Livrable »
  const m=e.target.closest('#modeDoc button');
  if(m){
@@ -1544,7 +2017,7 @@ window.login=async function(){
  let ligne=null;
  try{ligne=(await sb('staff?user_id=eq.'+session.user_id+'&select=*&limit=1'))[0]||null}catch(e){}
  if(!ligne||!ligne.actif){ecrireStaffSession(null);errEl.textContent="Ce compte n'a pas de rôle d'équipe actif (voir natty_staff.sql).";return}
- STAFF_ROLE=ligne.role;STAFF_NOM=ligne.nom||email.split('@')[0];
+ STAFF_ROLE=ligne.role;STAFF_NOM=ligne.nom||email.split('@')[0];STAFF_DOMAINES=ligne.domaines||[];
  await demarrerApp();
 };
 function logout(){clearInterval(notifsTimer);ecrireStaffSession(null);STAFF_ROLE=null;$('#mainApp').classList.add('hide');$('#loginScreen').style.display='flex';$('#pwdInput').value='';$('#emailInput').value=''}
@@ -1556,7 +2029,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   sb('staff?user_id=eq.'+STAFF_SESSION.user_id+'&select=*&limit=1').then(async r=>{
    const ligne=r&&r[0];
    if(!ligne||!ligne.actif){ecrireStaffSession(null);return}
-   STAFF_ROLE=ligne.role;STAFF_NOM=ligne.nom||'Équipe';
+   STAFF_ROLE=ligne.role;STAFF_NOM=ligne.nom||'Équipe';STAFF_DOMAINES=ligne.domaines||[];
    await demarrerApp();
   }).catch(()=>ecrireStaffSession(null));
  }
