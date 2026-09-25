@@ -313,3 +313,84 @@ sur une régression de la décision de profondeur déjà actée dans la même se
   vérifier par Pablo en conditions réelles avant de considérer la session close** :
   générer un mapping sur une vraie session, cocher une étape dans la vue tablette,
   envoyer une vraie réservation (email et SMS), confirmer, créer un lot de stock.
+
+---
+
+## Session 07 — Logistique (25/09/2026, nuit) — étiquettes, tournées, rangement, vue livreur
+
+Enchaînée directement après la session 06 (« continue les chantiers suivants »). Pas de
+fork architectural à trancher cette fois — la profondeur reste la même logique que la
+session précédente : natif au CRM, aucun service payant (géocodage, itinéraire) sans
+l'accord de Pablo, conformément à la spec §4.3 à la lettre.
+
+### Ce qui a été fait
+
+- **`supabase/migrations/0012_logistique_tournees.sql`** : `crm_tournees` (jour, créneau
+  11h-13h par défaut, livreur, statut) et `crm_tournee_arrets` (une ligne par ADRESSE
+  distincte de la tournée — le regroupement B2B se fait par adresse identique, il
+  n'existe pas de colonne « B2B » à part sur `bons_commande`). `bons_commande` étendue
+  de `arret_id` + `contact_nom`/`contact_tel`/`instructions_acces` (portés PAR BON, pas
+  par arrêt — un même lieu B2B peut avoir des contacts différents selon la commande).
+- **`vLogistiqueTournees()` / nouvel onglet « Tournées »** de l'activité Logistique
+  (`VUES.logistique`, jusque-là réduite aux cinq vues génériques) : liste des tournées,
+  « + Tournée » qui propose les jours ayant des commandes prêtes et pas encore en
+  tournée (même garde-fou que « À planifier » côté Production, session 06 — ne jamais
+  happer une commande en silence), regroupe automatiquement par adresse à la création.
+- **Réordonnancement manuel** (▲▼, échange de `ordre` avec le voisin) et **« Trier par
+  proximité (simple) »** — un tri alphabétique sur l'adresse, explicitement présenté
+  comme un heuristique et non un calcul d'itinéraire (§4.3 : accord de Pablo requis
+  avant tout service payant, jamais demandé).
+- **Étiquettes** : une par bon, imprimées par lot (même mécanique `window.print()` que
+  la liste de courses de la session 05). Contact, plats attribués, numéro d'arrêt.
+  ⚠️ Format proposé, pas figé — voir dette technique.
+- **Plan de rangement** : l'ordre de tournée INVERSÉ, calculé à l'affichage plutôt que
+  stocké séparément (déjà la même donnée que l'ordre des arrêts — la stocker deux fois
+  aurait fini par diverger, la leçon d'`api/_nutrition.js` documentée dans `CLAUDE.md`).
+- **Vue livreur plein écran** : réutilise le `#tablette`/`.tab-*` de la session 06 (même
+  besoin — grosse typographie, fort contraste, un seul plein écran à la fois, jamais les
+  deux en même temps en pratique) plutôt qu'un second jeu de règles CSS. Par arrêt :
+  lien Itinéraire (Google Maps, ouvre l'app native sur iPhone), Appeler (`tel:`), Livré
+  (avec heure), Signaler un problème. Marquer un arrêt livré marque aussi tous ses bons
+  `statut='livre'` — la même vérité que lit déjà `vProdLivraison()` (préexistant), pas un
+  second statut qui la contredirait.
+- **Deux trous fermés avant de committer, trouvés en relisant plutôt que par
+  `node --check`** : les champs contact/instructions d'accès étaient consommés par
+  l'affichage (arrêts, étiquettes, vue livreur) mais n'avaient AUCUN moyen d'être saisis
+  — ajoutés au formulaire de commande (`ouvrirFormBon`, session 05) ; et
+  `ouvrirVueLivreur()`/`ouvrirTablette()` se disputaient le même `#tablette` sans
+  s'exclure mutuellement — un minuteur de cuisine resté actif aurait réécrit la vue
+  livreur par-dessus à son prochain battement. Les deux se ferment maintenant l'une
+  l'autre à l'ouverture.
+
+### Décisions prises
+
+- Regroupement d'arrêt par adresse EXACTE (recadrée, insensible à la casse) — pas de
+  correspondance floue, même principe que la déduction de stock de la session 06.
+- Le format des étiquettes est une proposition, explicitement documentée comme telle
+  dans le code (la spec elle-même invite à proposer, § feature 1).
+- `bons_commande.contact_*`/`instructions_acces` vivent SUR LE BON, pas sur l'arrêt —
+  un arrêt B2B qui regroupe cinq bons peut avoir cinq contacts différents.
+
+### Dette technique / points ouverts
+
+- **Date limite de consommation** : placeholder « 3 jours » écrit en dur sur l'étiquette,
+  marqué « à confirmer ». Aucune règle métier n'existe ailleurs dans ce dépôt pour la
+  calculer — **à trancher avec Francis** avant de considérer les étiquettes fiables.
+- **Aucun allergène affiché** : rien dans le schéma actuel (`recettes`,
+  `recettes_ingredients`) ne les porte au niveau d'une recette. Absence assumée plutôt
+  qu'une case cochée à tort — mais c'est un vrai manque si Natty livre déjà des
+  allergènes déclarés quelque part (à vérifier avec Francis/Anatole).
+- **Proximité = alphabétique sur l'adresse**, pas un vrai calcul de trajet. Un vrai tri
+  par proximité demanderait un service de géocodage payant — accord de Pablo requis
+  avant de le brancher (spec §9, point ouvert).
+- **Missions/actions du bloc Test produit non retouchées** : les tâches « Confirmer la
+  tournée » et « Livrer » du modèle §6 n'ont toujours pas d'`action_cle` vers ce nouveau
+  module (elles n'en avaient pas avant non plus). Le flux réel et quotidien (créer une
+  tournée depuis les commandes prêtes, indépendamment d'un bloc) fonctionne pleinement ;
+  le raccordement au bloc de démonstration reste à faire si Pablo le juge utile.
+- 🔄 **Rien vérifié avec une vraie session d'équipe**, même limite que la session 06 :
+  `node --check`, relecture ligne à ligne (qui a trouvé et corrigé les deux trous
+  ci-dessus), aucun test interactif authentifié. **À vérifier par Pablo** : créer une
+  tournée sur un vrai jour avec plusieurs adresses (dont une partagée par 2 commandes,
+  pour confirmer le regroupement en un seul arrêt), réordonner, imprimer les étiquettes,
+  ouvrir la vue livreur sur un iPhone et marquer un arrêt livré.

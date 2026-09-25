@@ -75,7 +75,7 @@ a{color:inherit}
 .ib{width:36px;height:36px;border-radius:50%;border:0;background:var(--card);display:grid;place-items:center;flex:none;position:relative}
 .ib .dotn{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--card)}
 .ib svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.btn{border:0;border-radius:var(--r-full);padding:9px 16px;font-weight:600;background:var(--card);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn{border:0;border-radius:var(--r-full);padding:9px 16px;font-weight:600;background:var(--card);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none}
 .btn:hover{filter:brightness(.97)}
 .btn.primary{background:var(--ink);color:var(--on-ink)}
 .btn.ghost{background:none;border:1px solid var(--line)}
@@ -1982,6 +1982,10 @@ async function dureeMappingSession(sessionId){
 /* ---- Vue tablette plein écran ---- */
 let TAB_SESSION=null,TAB_PHASE='production';
 async function ouvrirTablette(sessionId){
+ // #tablette est partagé avec la vue livreur (session 07) : fermer
+ // l'autre avant d'ouvrir celle-ci, sinon son minuteur réécrirait ce
+ // plein écran par-dessus à son prochain battement.
+ fermerVueLivreur();
  TAB_SESSION=sessionId;TAB_PHASE='production';
  $('#tablette').classList.add('on');
  await rendreTablette();
@@ -2268,6 +2272,11 @@ async function ouvrirFormBon(bonId,jourDefaut){
    <label>Statut<select id="bfStatut">${Object.entries(PROD_STATUTS).map(([v,l])=>`<option value="${v}"${bon.statut===v?' selected':''}>${l[1]}</option>`).join('')}</select></label>
   </div>
   <label>Adresse de livraison<input class="inp" id="bfAdr" value="${esc(bon.adresse||'')}"></label>
+  <div class="two">
+   <label>Contact sur place<input class="inp" id="bfContactNom" value="${esc(bon.contact_nom||'')}" placeholder="ex. Julie, accueil"></label>
+   <label>Téléphone<input class="inp" id="bfContactTel" type="tel" value="${esc(bon.contact_tel||'')}"></label>
+  </div>
+  <label>Instructions d'accès<input class="inp" id="bfAcces" value="${esc(bon.instructions_acces||'')}" placeholder="ex. digicode 1234, 3e étage"></label>
   <label>Recettes produites<div id="bfLignes" style="display:grid;gap:6px">${(attrs.length?attrs:[null]).map(ligne).join('')}</div>
    <button type="button" class="btn sm ghost" id="bfAdd" style="justify-self:start">+ Ajouter une recette</button>
    <span class="muted" id="bfSomme" style="font-weight:400"></span></label>
@@ -2298,7 +2307,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
      prête. Un statut choisi explicitement (en production, livré…) est gardé. */
   if(statut==='a_attribuer'&&Object.keys(lignes).length)statut='attribue';
   const notesTxt=[$('#bfClient').value.trim(),$('#bfNotes').value.trim()].filter((v,i)=>i===0||v).join('\n').trim();
-  const champs={type:$('#bfType').value,nb_repas:nb,jour_livraison:jour,semaine:jour?isoLocal(lundiLocal(new Date(jour+'T00:00:00'))):null,adresse:$('#bfAdr').value.trim()||null,notes:notesTxt||null,statut,updated_at:new Date().toISOString()};
+  const champs={type:$('#bfType').value,nb_repas:nb,jour_livraison:jour,semaine:jour?isoLocal(lundiLocal(new Date(jour+'T00:00:00'))):null,adresse:$('#bfAdr').value.trim()||null,contact_nom:$('#bfContactNom').value.trim()||null,contact_tel:$('#bfContactTel').value.trim()||null,instructions_acces:$('#bfAcces').value.trim()||null,notes:notesTxt||null,statut,updated_at:new Date().toISOString()};
   const btn=e.submitter||$('#bonForm button[type=submit]');btn.disabled=true;
   try{
    let id=bonId;
@@ -2528,7 +2537,8 @@ async function ouvrirBonsDuBloc(blocId){
    « aucun chemin ne doit mener vers admin.html » : chaque vue est native. */
 const VUES={
  commercial:[['pipeline','Pipe des ventes','commercial'],['comptes','Comptes & contacts','rh'],['emailing','Emailing & phoning','mail'],['prospection','Base de prospection','funnel'],['gestion','Gestion','projet']],
- production:[['dashboard','Tableau de bord','dash'],['commandes','Commandes','logistique'],['calendrier','Calendrier','calendar'],['stocks','Stocks','stocks'],['production','Production','production'],['livraison','Livraison','livraison'],['gestion','Gestion','projet']]
+ production:[['dashboard','Tableau de bord','dash'],['commandes','Commandes','logistique'],['calendrier','Calendrier','calendar'],['stocks','Stocks','stocks'],['production','Production','production'],['livraison','Livraison','livraison'],['gestion','Gestion','projet']],
+ logistique:[['tournees','Tournées','logistique'],['commandes','Commandes','livraison'],['gestion','Gestion','projet']]
 };
 function vuesGeneriques(cle){
  const base=[['apercu','Aperçu','dash'],['taches','Tâches','taches'],['projets','Sous-projets','projet'],['schema','Schéma','schema'],['drive','Drive','drive']];
@@ -2597,6 +2607,10 @@ async function rendreVueSpecifique(cle,vue){
   if(vue==='stocks')return await vProdStocks();
   if(vue==='production')return await vProductionMenus();
   if(vue==='livraison')return await vProdLivraison();
+ }
+ if(cle==='logistique'){
+  if(vue==='tournees')return await vLogistiqueTournees();
+  if(vue==='commandes')return await vCommandesLogistique();
  }
  return '<div class="empty">Vue inconnue.</div>';
 }
@@ -2866,6 +2880,326 @@ async function vCommandesLogistique(){
  const lab={a_attribuer:['bad','À attribuer'],attribue:['info','Attribué'],en_production:['warn','En production'],livre:['ok','Livré'],annule:['','Annulé']};
  return `<div class="grid g4" style="margin-bottom:14px"><div class="card kpi"><div class="lbl">Bons (100 derniers)</div><div class="val num">${bons.length}</div></div><div class="card kpi"><div class="lbl">À traiter</div><div class="val num" style="color:var(--red)">${aTraiter}</div></div><div class="card kpi"><div class="lbl">Attribués / en production</div><div class="val num">${attribues}</div></div><div class="card kpi"><div class="lbl">Livrés</div><div class="val num">${livres}</div></div></div>
  <div class="tbl-wrap"><table><thead><tr><th>Type</th><th>Repas</th><th>Semaine</th><th>Livraison</th><th>Statut</th></tr></thead><tbody>${bons.slice(0,30).map(b=>`<tr class="rowc" data-edit-bon="${b.id}"><td><span class="chip">${esc(b.type)}</span></td><td class="num">${b.nb_repas}</td><td>${b.semaine?fd(b.semaine):'—'}</td><td>${b.jour_livraison?fd(b.jour_livraison):'<span class="chip bad">sans date</span>'}</td><td><span class="chip ${(lab[b.statut]||['',''])[0]}">${(lab[b.statut]||['',b.statut])[1]}</span></td></tr>`).join('')||'<tr><td colspan="5" class="muted" style="text-align:center;padding:24px">Aucun bon</td></tr>'}</tbody></table></div>`;
+}
+
+/* ============ SESSION 07 — LOGISTIQUE : ÉTIQUETTES, TOURNÉES, RANGEMENT
+   (docs/crm-sessions/07-logistique.md, docs/crm-spec.md §4 feature 2-5) ============
+   Étiquette, rangement et tournée se suivent : un bon devient un colis
+   étiqueté, les colis se rangent dans l'ordre de la tournée, la tournée
+   les livre. Une tournée par jour, ses arrêts groupés par ADRESSE
+   identique (§4.2 : « un lieu B2B regroupe tous ses bons en un seul
+   arrêt » — bons_commande n'a pas de colonne B2B à part, le
+   regroupement par adresse le couvre sans en inventer une).
+
+   La vue livreur RÉUTILISE le plein écran de la tablette cuisine
+   (#tablette, .tab-*, session 06) : même besoin — grosse typographie,
+   fort contraste, pilotable au doigt, une seule chose affichée à la
+   fois — donc le même CSS plutôt qu'un second jeu de règles qui
+   diverge à la première retouche (règle 44 du dépôt Natty). Un état
+   dédié (LIVR_TOURNEE, pas TAB_SESSION) évite toute confusion entre
+   les deux plein écran, qu'on ne peut de toute façon jamais avoir
+   ouverts en même temps. */
+
+async function vLogistiqueTournees(){
+ const r=await sbTry('crm_tournees?select=*&order=jour.desc&limit=60');
+ const tournees=r.ok?r.data:[];
+ return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn sm primary" data-nouvelle-tournee>+ Tournée</button></div>
+ <div class="grid g3">${tournees.map(tourneeCard).join('')||'<div class="empty">Aucune tournée. Les commandes prêtes à livrer se planifient depuis « + Tournée ».</div>'}</div>`;
+}
+function tourneeCard(t){
+ const lab={a_preparer:['','à préparer'],confirmee:['ok','confirmée'],en_cours:['warn','en cours'],terminee:['ok','terminée']}[t.statut]||['',t.statut];
+ return `<div class="card lift click" data-ouvrir-tournee="${t.id}"><h3>${fd(t.jour)} <span class="chip ${lab[0]}">${lab[1]}</span></h3>
+ <p class="sub">${t.creneau_debut.slice(0,5)}–${t.creneau_fin.slice(0,5)}${t.livreur?' · '+esc(nomDe(t.livreur)):' · livreur à assigner'}</p></div>`;
+}
+document.addEventListener('click',e=>{
+ if(e.target.closest('[data-nouvelle-tournee]')){ouvrirNouvelleTournee();return}
+ const ot=e.target.closest('[data-ouvrir-tournee]');
+ if(ot){ouvrirTourneeDetail(ot.dataset.ouvrirTournee);return}
+});
+
+/* Les jours proposés sont ceux qui ont des commandes prêtes à livrer et
+   PAS ENCORE dans une tournée (arret_id is null) — même filtre que « À
+   planifier » côté Production, même raison : ne rien happer en silence.
+   « Prêtes » = attribuées et pas annulées, peu importe le statut exact
+   (a_attribuer inclus : une commande peut être livrable sans que
+   l'attribution soit le sujet ici, contrairement à la session de
+   production). */
+async function ouvrirNouvelleTournee(){
+ const r=await sbTry('bons_commande?statut=neq.annule&arret_id=is.null&jour_livraison=not.is.null&select=jour_livraison');
+ const bons=r.ok?r.data:[];
+ const parJour={};bons.forEach(b=>parJour[b.jour_livraison]=(parJour[b.jour_livraison]||0)+1);
+ const jours=Object.keys(parJour).sort();
+ if(!jours.length){toast('Aucune commande avec une date de livraison, pas encore en tournée.');return}
+ modal(`<h2>Nouvelle tournée</h2><form class="form" id="tourneeForm">
+  <label>Jour<select id="tj1">${jours.map(j=>`<option value="${j}">${fd(j)} · ${parJour[j]} commande(s)</option>`).join('')}</select></label>
+  <div class="two"><label>Créneau — arrivée<input class="inp" id="tj2" type="time" value="11:00"></label><label>Fin<input class="inp" id="tj3" type="time" value="13:00"></label></div>
+  <label>Livreur<select id="tj4"><option value="">À assigner</option>${S.staff.map(s=>`<option value="${s.user_id}">${esc(s.nom)}</option>`).join('')}</select></label>
+  <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Créer la tournée</button></div>
+ </form>`);
+ $('#tourneeForm').onsubmit=async e=>{
+  e.preventDefault();
+  closeAll();
+  await creerTourneeDepuisJour($('#tj1').value,$('#tj2').value,$('#tj3').value,$('#tj4').value||null);
+ };
+}
+async function creerTourneeDepuisJour(jour,debut,fin,livreur){
+ const r=await sbTry('bons_commande?statut=neq.annule&arret_id=is.null&jour_livraison=eq.'+jour+'&select=id,adresse,contact_nom,contact_tel');
+ const bons=r.ok?r.data:[];
+ if(!bons.length){toast('Rien à livrer ce jour-là');return}
+ const tr=await sb('crm_tournees',{method:'POST',body:JSON.stringify({jour,creneau_debut:debut,creneau_fin:fin,livreur})});
+ const tournee=tr[0];
+ // Regroupement par adresse exacte (recadrée, insensible à la casse) —
+ // c'est le seul signal dont on dispose pour « même lieu ».
+ const parAdresse={};
+ bons.forEach(b=>{
+  const cle=String(b.adresse||'').trim().toLowerCase()||'(sans adresse)';
+  (parAdresse[cle]=parAdresse[cle]||{adresse:b.adresse||'Sans adresse',bonIds:[]}).bonIds.push(b.id);
+ });
+ const adresses=Object.values(parAdresse);
+ let ordre=0;
+ for(const a of adresses){
+  const ar=await sb('crm_tournee_arrets',{method:'POST',body:JSON.stringify({tournee_id:tournee.id,ordre:ordre++,adresse:a.adresse})});
+  await sb('bons_commande?id=in.('+a.bonIds.join(',')+')',{method:'PATCH',body:JSON.stringify({arret_id:ar[0].id})});
+ }
+ toast('Tournée créée — '+adresses.length+' arrêt(s), '+bons.length+' commande(s)');
+ render();
+ ouvrirTourneeDetail(tournee.id);
+}
+
+async function ouvrirTourneeDetail(id){
+ const [tr,ar]=await Promise.all([
+  sbTry('crm_tournees?id=eq.'+id+'&select=*'),
+  sbTry('crm_tournee_arrets?tournee_id=eq.'+id+'&select=*&order=ordre.asc')
+ ]);
+ const t=(tr.ok?tr.data:[])[0];if(!t)return;
+ const arrets=ar.ok?ar.data:[];
+ const arretIds=arrets.map(a=>a.id);
+ const br=arretIds.length?await sbTry('bons_commande?arret_id=in.('+arretIds.join(',')+')&select=id,arret_id,nb_repas,notes,type,contact_nom,contact_tel,instructions_acces'):{ok:true,data:[]};
+ const bonsParArret={};(br.ok?br.data:[]).forEach(b=>(bonsParArret[b.arret_id]=bonsParArret[b.arret_id]||[]).push(b));
+ drawer(`<div class="dh"><div class="av lg dk">${fd(t.jour).slice(0,2)}</div><div style="min-width:0"><span class="chip info">${t.creneau_debut.slice(0,5)}–${t.creneau_fin.slice(0,5)}</span><h2>${fd(t.jour)}</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
+ <div class="kv" style="margin-bottom:14px">
+  <dt>Livreur</dt><dd>${t.livreur?esc(nomDe(t.livreur)):'à assigner'}</dd>
+  <dt>Statut</dt><dd><span class="chip ${t.statut==='confirmee'||t.statut==='terminee'?'ok':t.statut==='en_cours'?'warn':''}">${t.statut}</span></dd>
+  <dt>Arrêts</dt><dd>${arrets.length} · ${arretIds.length?(br.ok?br.data.length:0):0} commande(s)</dd>
+ </div>
+ <div class="foot" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+  ${t.statut==='a_preparer'?`<button class="btn sm" data-trier-proximite="${id}">Trier par proximité (simple)</button><button class="btn sm primary" data-confirmer-tournee="${id}">Confirmer la tournée</button>`:''}
+  <button class="btn sm ghost" data-etiquettes="${id}">🏷️ Étiquettes</button>
+  <button class="btn sm ghost" data-plan-rangement="${id}">📦 Plan de rangement</button>
+  <button class="btn sm primary" data-ouvrir-vue-livreur="${id}">📱 Vue livreur</button>
+ </div>
+ <div class="sect"><h2 style="font-size:15px">Arrêts, dans l'ordre de tournée</h2></div>
+ <div class="list">${arrets.map((a,i)=>arretLi(a,i,arrets.length,bonsParArret[a.id]||[])).join('')||'<div class="empty">Aucun arrêt.</div>'}</div>`);
+}
+function arretLi(a,i,total,bons){
+ const contacts=[...new Set(bons.map(b=>b.contact_nom).filter(Boolean))];
+ const nbColis=bons.reduce((s,b)=>s+(b.nb_repas||1),0);
+ const lab={a_livrer:['','à livrer'],livre:['ok','livré'],probleme:['bad','problème']}[a.statut]||['',a.statut];
+ return `<div class="li"><span class="chip" style="flex:0 0 auto">${i+1}</span>
+ <div class="grow"><b style="font-weight:500">${esc(a.adresse)}</b><div class="meta">${bons.length} commande(s) · ${nbColis} colis${contacts.length?' · '+contacts.map(esc).join(', '):''}</div></div>
+ <span class="chip ${lab[0]}">${lab[1]}</span>
+ <div style="display:flex;flex-direction:column;gap:2px">${i>0?`<button class="btn sm ghost" data-arret-up="${a.id}" aria-label="Monter" style="padding:2px 8px">▲</button>`:''}${i<total-1?`<button class="btn sm ghost" data-arret-down="${a.id}" aria-label="Descendre" style="padding:2px 8px">▼</button>`:''}</div>
+ </div>`;
+}
+document.addEventListener('click',e=>{
+ const au=e.target.closest('[data-arret-up]');
+ if(au){deplacerArret(au.dataset.arretUp,-1);return}
+ const ad=e.target.closest('[data-arret-down]');
+ if(ad){deplacerArret(ad.dataset.arretDown,1);return}
+ const tp=e.target.closest('[data-trier-proximite]');
+ if(tp){trierParProximite(tp.dataset.trierProximite);return}
+ const ct=e.target.closest('[data-confirmer-tournee]');
+ if(ct){confirmerTournee(ct.dataset.confirmerTournee);return}
+ const et=e.target.closest('[data-etiquettes]');
+ if(et){ouvrirEtiquettes(et.dataset.etiquettes);return}
+ const pr=e.target.closest('[data-plan-rangement]');
+ if(pr){ouvrirPlanRangement(pr.dataset.planRangement);return}
+ const vl=e.target.closest('[data-ouvrir-vue-livreur]');
+ if(vl){closeAll();ouvrirVueLivreur(vl.dataset.ouvrirVueLivreur);return}
+});
+/* Réordonnancement MANUEL (§4.3 : « manuel au départ ») — échange le
+   `ordre` avec le voisin, pas de renumérotation globale : deux PATCH
+   suffisent, et l'ordre relatif de tous les autres arrêts est intact. */
+async function deplacerArret(id,sens){
+ const r=await sbTry('crm_tournee_arrets?id=eq.'+id+'&select=tournee_id,ordre');
+ const a=(r.ok?r.data:[])[0];if(!a)return;
+ const tous=await sbTry('crm_tournee_arrets?tournee_id=eq.'+a.tournee_id+'&select=id,ordre&order=ordre.asc');
+ const liste=tous.ok?tous.data:[];
+ const idx=liste.findIndex(x=>x.id===id);
+ const voisinIdx=idx+sens;
+ if(voisinIdx<0||voisinIdx>=liste.length)return;
+ const voisin=liste[voisinIdx];
+ await Promise.all([
+  sb('crm_tournee_arrets?id=eq.'+id,{method:'PATCH',body:JSON.stringify({ordre:voisin.ordre})}),
+  sb('crm_tournee_arrets?id=eq.'+voisin.id,{method:'PATCH',body:JSON.stringify({ordre:a.ordre})})
+ ]);
+ ouvrirTourneeDetail(a.tournee_id);
+}
+/* « Proposition simple par proximité » (§4.3) — tri alphabétique sur
+   l'adresse, RIEN d'autre : aucun service de géocodage/itinéraire n'est
+   branché sans l'accord explicite de Pablo (spec, à la lettre). Deux
+   adresses de la même rue se retrouvent souvent voisines dans un tri
+   alphabétique parce que les noms de rue se répètent dans le texte —
+   un heuristique honnête, pas un calcul d'itinéraire. */
+async function trierParProximite(tourneeId){
+ const r=await sbTry('crm_tournee_arrets?tournee_id=eq.'+tourneeId+'&select=id,adresse');
+ const arrets=(r.ok?r.data:[]).sort((a,b)=>a.adresse.localeCompare(b.adresse,'fr'));
+ for(let i=0;i<arrets.length;i++)await sb('crm_tournee_arrets?id=eq.'+arrets[i].id,{method:'PATCH',body:JSON.stringify({ordre:i})});
+ toast('Trié par ordre alphabétique d’adresse — à ajuster à la main si besoin');
+ ouvrirTourneeDetail(tourneeId);
+}
+async function confirmerTournee(id){
+ await sb('crm_tournees?id=eq.'+id,{method:'PATCH',body:JSON.stringify({statut:'confirmee'})});
+ toast('Tournée confirmée');
+ ouvrirTourneeDetail(id);render();
+}
+
+/* ---- Étiquettes (§4.1) — une par bon, imprimable par lot. Le format
+   même popup+window.print() que la liste de courses (session 05) : déjà
+   éprouvé, pas de nouvelle mécanique d'impression à inventer.
+   ⚠️ La date limite et les consignes sont un FORMAT PROPOSÉ (la spec
+   l'invite explicitement : « format à me proposer ») — la durée de
+   conservation en toutes lettres (3 jours) est un placeholder à
+   confirmer avec Francis, pas une règle métier vérifiée ailleurs dans
+   ce dépôt. Aucun allergène n'est affiché : rien dans le schéma actuel
+   ne les porte au niveau d'une recette, mieux vaut l'absence visible
+   qu'une case cochée à tort. */
+async function ouvrirEtiquettes(tourneeId){
+ const [tr,ar]=await Promise.all([
+  sbTry('crm_tournees?id=eq.'+tourneeId+'&select=*'),
+  sbTry('crm_tournee_arrets?tournee_id=eq.'+tourneeId+'&select=id,ordre,adresse&order=ordre.asc')
+ ]);
+ const t=(tr.ok?tr.data:[])[0];if(!t)return;
+ const arrets=ar.ok?ar.data:[];
+ const arretIds=arrets.map(a=>a.id);
+ if(!arretIds.length){toast('Aucun arrêt à étiqueter');return}
+ const br=await sbTry('bons_commande?arret_id=in.('+arretIds.join(',')+')&select=id,arret_id,nb_repas,notes,type,contact_nom');
+ const bons=br.ok?br.data:[];
+ const bonIds=bons.map(b=>b.id);
+ const at=bonIds.length?await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=bon_id,recette_id,nb_portions'):{ok:true,data:[]};
+ const recIds=[...new Set((at.ok?at.data:[]).map(a=>a.recette_id))];
+ const rc=recIds.length?await sbTry('recettes?id=in.('+recIds.join(',')+')&select=id,nom'):{ok:true,data:[]};
+ const nomRecette={};(rc.ok?rc.data:[]).forEach(r=>nomRecette[r.id]=r.nom);
+ const platsDe=bonId=>(at.ok?at.data:[]).filter(a=>a.bon_id===bonId).map(a=>esc(nomRecette[a.recette_id]||'?')+' × '+a.nb_portions).join(', ')||'—';
+ const ordreArret={};arrets.forEach((a,i)=>ordreArret[a.id]=i+1);
+ const w=window.open('','_blank');if(!w){toast('Fenêtre bloquée par le navigateur');return}
+ w.document.write(`<!doctype html><meta charset="utf-8"><title>Étiquettes — ${esc(fd(t.jour))}</title>
+ <style>body{font:12px system-ui,sans-serif;margin:0}
+ .etq{width:9.5cm;min-height:5.5cm;box-sizing:border-box;border:1px dashed #999;padding:10px 12px;page-break-inside:avoid;display:inline-block;margin:4px;vertical-align:top}
+ .etq b{font-size:14px}
+ .etq .plat{margin:4px 0;font-size:13px}
+ .etq .info{color:#555;font-size:11px;line-height:1.5}
+ .etq .ordre{float:right;background:#111;color:#fff;border-radius:4px;padding:1px 7px;font-size:11px}</style>
+ ${bons.map(b=>`<div class="etq"><span class="ordre">Arrêt ${ordreArret[b.arret_id]}</span><b>${esc(b.contact_nom||libBon(b))}</b>
+ <div class="plat">${platsDe(b.id)}</div>
+ <div class="info">Livraison : ${esc(fd(t.jour))}<br>Produit le : voir session de production<br>À conserver au réfrigérateur — à consommer sous 3 jours (à confirmer)</div></div>`).join('')}`);
+ w.document.close();w.focus();w.print();
+}
+
+/* ---- Plan de rangement (§4.4) — le premier livré doit être chargé en
+   DERNIER : c'est l'ordre de tournée INVERSÉ, calculé à l'affichage, pas
+   stocké séparément (la même donnée à tenir à jour deux fois finit par
+   diverger — la leçon d'api/_nutrition.js dans CLAUDE.md). */
+async function ouvrirPlanRangement(tourneeId){
+ const [tr,ar]=await Promise.all([
+  sbTry('crm_tournees?id=eq.'+tourneeId+'&select=*'),
+  sbTry('crm_tournee_arrets?tournee_id=eq.'+tourneeId+'&select=*&order=ordre.asc')
+ ]);
+ const t=(tr.ok?tr.data:[])[0];if(!t)return;
+ const arrets=ar.ok?ar.data:[];
+ const arretIds=arrets.map(a=>a.id);
+ const br=arretIds.length?await sbTry('bons_commande?arret_id=in.('+arretIds.join(',')+')&select=arret_id,nb_repas'):{ok:true,data:[]};
+ const colisParArret={};(br.ok?br.data:[]).forEach(b=>colisParArret[b.arret_id]=(colisParArret[b.arret_id]||0)+(b.nb_repas||1));
+ const chargement=[...arrets].reverse();
+ modal(`<h2>Plan de rangement — ${esc(fd(t.jour))}</h2>
+ <p class="muted" style="font-size:13px;margin:-4px 0 10px">Chargez dans cet ordre : le premier de la liste va au fond du véhicule (livré en dernier), le dernier reste accessible (livré en premier).</p>
+ <div class="list">${chargement.map((a,i)=>{
+  const rangDeLivraison=arrets.findIndex(x=>x.id===a.id)+1;
+  return `<div class="li"><span class="chip" style="flex:0 0 auto">${i+1}</span><div class="grow"><b style="font-weight:500">${esc(a.adresse)}</b><div class="meta">${colisParArret[a.id]||0} colis · livré ${rangDeLivraison}${rangDeLivraison===1?'ᵉʳ':'ᵉ'} de la tournée</div></div></div>`;
+ }).join('')||'<div class="empty">Aucun arrêt.</div>'}</div>
+ <div class="foot"><button type="button" class="btn" data-close>Fermer</button></div>`);
+}
+
+/* ---- Vue livreur plein écran (§4.5) — réutilise #tablette/.tab-* de la
+   session 06 (voir la note en tête de section). Pas de chrono ici : rien
+   dans la spec ne demande un compte à rebours de tournée, contrairement
+   au créneau cuisine réservé. */
+let LIVR_TOURNEE=null;
+async function ouvrirVueLivreur(tourneeId){
+ // Symétrique de fermerVueLivreur() appelé par ouvrirTablette() : sans
+ // couper aussi le minuteur de la tablette cuisine, son prochain
+ // battement (rendreTablette, toutes les secondes) trouverait #tablette
+ // encore « .on » — rouvert par CETTE fonction — et tenterait d'y
+ // réécrire le chrono cuisine par-dessus la vue livreur qui vient de
+ // s'afficher.
+ if(TAB_TIMER){clearInterval(TAB_TIMER);TAB_TIMER=null}
+ TAB_SESSION=null;
+ LIVR_TOURNEE=tourneeId;
+ $('#tablette').classList.add('on');
+ await rendreVueLivreur();
+}
+function fermerVueLivreur(){$('#tablette').classList.remove('on');LIVR_TOURNEE=null}
+async function rendreVueLivreur(){
+ if(!LIVR_TOURNEE)return;
+ const [tr,ar]=await Promise.all([
+  sbTry('crm_tournees?id=eq.'+LIVR_TOURNEE+'&select=*'),
+  sbTry('crm_tournee_arrets?tournee_id=eq.'+LIVR_TOURNEE+'&select=*&order=ordre.asc')
+ ]);
+ const t=(tr.ok?tr.data:[])[0];const arrets=ar.ok?ar.data:[];
+ if(!t){fermerVueLivreur();return}
+ const arretIds=arrets.map(a=>a.id);
+ const br=arretIds.length?await sbTry('bons_commande?arret_id=in.('+arretIds.join(',')+')&select=arret_id,nb_repas,contact_nom,contact_tel,instructions_acces'):{ok:true,data:[]};
+ const bonsParArret={};(br.ok?br.data:[]).forEach(b=>(bonsParArret[b.arret_id]=bonsParArret[b.arret_id]||[]).push(b));
+ const restants=arrets.filter(a=>a.statut==='a_livrer').length;
+ $('#tablette').innerHTML=`
+ <div class="tab-head">
+  <button class="tab-close" data-livr-fermer aria-label="Fermer">×</button>
+  <h1>${fd(t.jour)} — ${restants} arrêt(s) restant(s)</h1>
+ </div>
+ <div class="tab-list">${arrets.map(a=>arretCardLivreur(a,bonsParArret[a.id]||[])).join('')||'<div class="empty">Aucun arrêt.</div>'}</div>`;
+}
+function arretCardLivreur(a,bons){
+ const nbColis=bons.reduce((s,b)=>s+(b.nb_repas||1),0);
+ const contact=bons.find(b=>b.contact_tel);
+ const instructions=bons.map(b=>b.instructions_acces).filter(Boolean).join(' · ');
+ const dest=encodeURIComponent(a.adresse);
+ let action;
+ if(a.statut==='livre')action=`<span class="tab-btn done">✓ Livré</span>`;
+ else if(a.statut==='probleme')action=`<span class="tab-btn" style="background:var(--red);color:#fff">⚠ Problème signalé</span>`;
+ else action=`<button class="tab-btn go" data-marquer-livre="${a.id}">Livré</button>`;
+ return `<div class="tab-card ${a.statut==='livre'?'fait':''}">
+ <div class="grow">
+  <div class="titre">${esc(a.adresse)}</div>
+  <div class="sub">${nbColis} colis${instructions?' · '+esc(instructions):''}</div>
+  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+   <a class="btn sm ghost" href="https://www.google.com/maps/dir/?api=1&destination=${dest}" target="_blank" rel="noopener">🧭 Itinéraire</a>
+   ${contact?`<a class="btn sm ghost" href="tel:${esc(contact.contact_tel)}">📞 Appeler</a>`:''}
+   ${a.statut==='a_livrer'?`<button class="btn sm ghost" data-signaler-probleme="${a.id}">⚠ Problème</button>`:''}
+  </div>
+ </div>${action}</div>`;
+}
+document.addEventListener('click',e=>{
+ if(e.target.closest('[data-livr-fermer]')){fermerVueLivreur();return}
+ const ml=e.target.closest('[data-marquer-livre]');
+ if(ml){marquerArretLivre(ml.dataset.marquerLivre);return}
+ const sp=e.target.closest('[data-signaler-probleme]');
+ if(sp){signalerProbleme(sp.dataset.signalerProbleme);return}
+});
+/* Marquer un arrêt livré marque AUSSI tous ses bons — c'est le même
+   `statut='livre'` que lit déjà vProdLivraison() (§3, existant avant ce
+   chantier) : une seule vérité, deux écrans qui la lisent, plutôt qu'un
+   statut de tournée qui contredirait celui du bon. */
+async function marquerArretLivre(arretId){
+ await sb('crm_tournee_arrets?id=eq.'+arretId,{method:'PATCH',body:JSON.stringify({statut:'livre',livre_le:new Date().toISOString()})});
+ await sb('bons_commande?arret_id=eq.'+arretId,{method:'PATCH',body:JSON.stringify({statut:'livre'})});
+ rendreVueLivreur();
+}
+async function signalerProbleme(arretId){
+ const note=prompt('Décris le problème (absent, adresse introuvable, colis endommagé…)');
+ if(note==null)return;
+ await sb('crm_tournee_arrets?id=eq.'+arretId,{method:'PATCH',body:JSON.stringify({statut:'probleme',probleme_note:note})});
+ toast('Problème signalé');
+ rendreVueLivreur();
 }
 
 /* ============ SCHÉMA ÉDITABLE (drag + liens) ============
