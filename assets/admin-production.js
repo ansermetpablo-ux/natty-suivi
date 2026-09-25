@@ -1751,10 +1751,13 @@
   /* Les lots du jour : par recette, toutes les portions de tous les bons, le
      nombre de fiches à produire (Σ portions × facteur ÷ portions de la fiche)
      et la répartition par client pour l'assemblage. */
-  function lotsDuJour(pj) {
+  // `recettes` (facultatif) : ne garder que ces recettes — une session du CRM
+  // ne produit pas forcément tout ce que les bons de ces jours contiennent
+  function lotsDuJour(pj, recettes) {
     var m = {};
     pj.bons.forEach(function (b) {
       attribsDe(b.id).forEach(function (a) {
+        if (recettes && recettes.indexOf(a.recette_id) < 0) return;
         var r = recette(a.recette_id); if (!r) return;
         var p = portionAttrib(r, a);
         var l = m[r.id] = m[r.id] || { rec: r, portions: 0, fiches: 0, gTotal: 0, parClient: [], ingTot: {}, couleur: couleur(r.id),
@@ -3492,7 +3495,26 @@
     // pour crm.html : la même règle (45 %) et les mêmes portions que la cuisine
     charger: function () { return chargerTout(); }, etat: S, cibleClient: cibleClient, nomClient: nomClient,
     portionPour: portionPour, portionFacteur: portionFacteur, portionAttrib: portionAttrib, estManuel: estManuel,
-    fiche: fiche, PART_REPAS: PART_REPAS, cibleMacros: cibleMacros, portionOptimale: portionOptimale, baseRecette: baseRecette, ratiosDe: ratiosDe, tagDe: tagDe, baseNatty: chargerBaseNatty, grammesDe: grammesDe, portionOrigine: portionOrigine, portionAvecGrammes: portionAvecGrammes,
+    fiche: fiche, PART_REPAS: PART_REPAS,
+    /* ── Pour la production NATIVE du CRM (session de production) ──────────
+       Le CRM dessine ses propres écrans ; le calcul reste ici, unique :
+       les lots (grammes réels de chaque client), le plan minuté par
+       cuisinier, les postes et les PDF sont ceux d'admin. */
+    planSession: function (o) {
+      var ids = (o.bons || []).map(function (b) { return b.id; });
+      var bons = S.bons.filter(function (b) { return ids.indexOf(b.id) >= 0; });
+      var lots = lotsDuJour({ bons: bons }, o.recettes && o.recettes.length ? o.recettes : null);
+      var n = Math.max(1, parseInt(o.nbCuis, 10) || 1);
+      var noms = (o.noms || []).slice(0, n);
+      while (noms.length < n) noms.push('Cuisinier ' + (noms.length + 1));
+      var plan = dispatcher(lots, noms.map(function (nom) { return { nom: nom, postes: null }; }), minDe(o.debut || '08:00'));
+      return { lots: lots, plan: plan, postes: postesDuJour(lots, n), bons: bons };
+    },
+    pdfSession: function (ctx, cle, bouton, jour) {
+      S.plan = ctx.plan; S.lots = ctx.lots; S.postesJour = ctx.postes; S.jour = jour; S.cuisiniers = ctx.postes.length;
+      pdfPoste(cle, bouton);
+    },
+    libGeste: libGeste, hm: hm, libMacros: libMacros, nutri100: nutri100, cibleMacros: cibleMacros, portionOptimale: portionOptimale, baseRecette: baseRecette, ratiosDe: ratiosDe, tagDe: tagDe, baseNatty: chargerBaseNatty, grammesDe: grammesDe, portionOrigine: portionOrigine, portionAvecGrammes: portionAvecGrammes,
     _dispatcher: dispatcher, _portionPour: portionPour, _etat: S,
     _dependances: dependances, _decoupeDe: decoupeDe, _grapheDuJour: grapheDuJour, _illustration: illustration
   };

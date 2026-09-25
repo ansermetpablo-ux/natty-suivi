@@ -4060,6 +4060,43 @@ par macro ; ils sont le POINT DE DÉPART, les macros du client ajustent ensuite 
 - ⚠️ Les ratios saisis sont gardés BRUTS (`ratiosBruts`) : les renormaliser à chaque frappe
   déformait les deux autres champs (50/25/25 saisi → 48/26/26 enregistré, attrapé au banc).
 
+**LA PRODUCTION DU CRM EST NATIVE** (2026-09-25, Pablo : « tu as juste intégré admin, je veux que tu
+reprennes nativement les fonctionnalités »). `assets/crm-production.js`, chargé après le script de
+crm.html : les ÉCRANS dans le style du CRM ; le CALCUL reste `NattyProd` (admin-production.js :
+`planSession`, `pdfSession`, portions, base de recette) — jamais recopié.
+- **Commandes** (`vCommandesNatif`) : filtres En cours / À traiter / Attribués / Livrés avec compteurs,
+  recherche, nombre de repas et date modifiables sur la carte, Livré ✓, annuler, « Générer depuis les
+  abonnements actifs », « + Nouvelle commande ». Le formulaire (`ouvrirFormBon`) gagne « ▸ par
+  ingrédient » (grammes modifiables, tag, P/G/L/kcal, base) et « ⚙ base de la recette » (ratios + tags,
+  `ouvrirBaseRecette`).
+- **Calendrier** : jours cochés → « Planifier une session de production » : choix des recettes parmi
+  celles des commandes de ces jours, jour de production (J-2 par défaut), arrivée, nb de cuisiniers.
+- **Production** (`vProdSessionsNatif`) : les sessions ; une session = jour, arrivée, cuisiniers
+  (modifiables à tout moment), recettes (ajout / retrait en un tap), et sept onglets : Planning (Gantt
+  par cuisinier, voies pour les étapes simultanées), Postes & PDF, Assemblage, Équipe & RH, Réservation
+  cuisine, Liste de courses, Itinéraire de livraison.
+- **Lien RH** : l'équipe cochée remplace « Cuisinier N » dans le plan et les PDF ; disponibilité
+  (`estIndisponible`) et réunions en conflit affichées ; « Mettre au calendrier RH » crée une RÉUNION
+  « Session de production » + invitations (même mécanique de confirmation et de manquements, §4.4),
+  mise à jour avec `ics_sequence + 1`.
+- **Cuisine** (§4.1-4.2) : créneau = durée du plan + 30 min, arrondi à l'heure pleine, × 30 €/h ;
+  message éditable → email (`/api/notifications`, `reserver_cuisine`), SMS (`sms:`), copier ;
+  statuts à réserver / envoyée / confirmée. Changer l'horaire d'une session confirmée la repasse à
+  réserver.
+- **Courses** : les totaux réels des lots (`l.ingTot`) — ce que la cuisine pèsera.
+- **Tournée** : arrêts = commandes des jours de livraison ; « Calculer l'ordre » géocode via la Base
+  Adresse Nationale (api-adresse.data.gouv.fr, AU CLIC seulement — ce sont des adresses de clients) puis
+  plus proche voisin + 2-opt à vol d'oiseau depuis la cuisine ; ↑↓ pour corriger ; Google Maps par
+  tronçons de 9 étapes ; PDF de tournée.
+- Stockage : `crm_sessions` + 🔄 **`supabase/migrations/0011_sessions_production.sql` à exécuter**
+  (recettes, jours_livraison, equipe, reunion_id, itineraire, adresse_depart). Sans elle, ces champs
+  restent sur l'appareil (`natty_session_<id>`) et un bandeau le dit.
+- Vérifié au banc : création depuis le calendrier, 2 → 3 cuisiniers, équipe → noms dans le plan,
+  réunion + 2 invitations, réservation confirmée, courses, tournée ordonnée (géocodage réel), PDF de
+  tournée et de production. 🔄 Non vérifié avec une vraie session ni l'envoi email réel.
+
+> ⚠️ Remplace ce qui suit (le module d'admin monté dans un îlot clair) pour Commandes et Production.
+
 **LE CRM MONTE LE MODULE DE PRODUCTION D'ADMIN** (2026-09-25, Pablo : « la page commande doit être
 comme le deuxième écran d'admin et avoir les mêmes fonctions, pareil pour la page production »).
 - crm.html → Production → **Commandes** = la vue « Bons de commande » d'`assets/admin-production.js`,

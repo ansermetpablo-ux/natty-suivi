@@ -302,6 +302,39 @@ button.exbar{font:inherit;width:100%;text-align:left;cursor:pointer}
  --si:inset 3px 3px 8px rgba(174,174,192,.35),inset -3px -3px 8px rgba(255,255,255,.85);
  --sm:4px 4px 10px rgba(174,174,192,.38),-4px -4px 10px rgba(255,255,255,.85);
  color-scheme:light;background:#f0f0f3;color:#3a3a4a;border-radius:var(--r-lg);padding:18px;min-height:200px}
+.bl-ings{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin:2px 0 4px}
+.bl-ings label{display:grid!important;gap:3px;background:var(--panel);border-radius:var(--r-sm);padding:7px 9px;font-weight:400;font-size:12px;color:var(--ink)}
+.bl-ings label.mod{outline:1px solid var(--amber)}
+.bl-ings em{font-style:normal;font-size:10.5px;font-weight:700}
+.bl-ings .inp{width:84px!important;display:inline-block}
+.bl-ings small{color:var(--muted);font-size:11px}
+.cp-recs{display:grid;gap:6px}
+.cp-rec{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;background:var(--panel);border-radius:var(--r-sm);padding:8px 10px;font-weight:400!important;color:var(--ink)!important}
+.cp-rec span{flex:1}.cp-rec input{width:auto}
+.cp-sess{display:block}
+.cp-reglages{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+.cp-reglages label{display:grid;gap:4px;font-size:12px;color:var(--muted);font-weight:600}
+.cp-reglages .inp{width:auto}
+.cp-recettes{flex:1 1 320px;display:grid;gap:4px}.cp-recettes>div{display:flex;flex-wrap:wrap;gap:6px}
+.cp-recettes .chip{cursor:pointer}
+.cp-gantt{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);padding:10px;background:var(--bg)}
+.cp-g-axe,.cp-g-l{display:grid;grid-template-columns:130px 1fr;gap:8px;min-width:760px}
+.cp-g-axe>div,.cp-g-l>div{position:relative;height:26px}
+.cp-g-axe i{position:absolute;font-style:normal;font-size:11px;color:var(--muted);transform:translateX(-50%)}
+.cp-g-l{margin-top:4px}.cp-g-l>span{font-size:12.5px;font-weight:600;align-self:center}
+.cp-g-l>div{background:var(--panel);border-radius:8px}
+.cp-g-l b{position:absolute;background:var(--c);color:#fff;font-size:10.5px;font-weight:600;border-radius:6px;padding:2px 5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cp-g-l b.pass{background:repeating-linear-gradient(45deg,var(--c) 0 4px,transparent 4px 8px);color:var(--ink);border:1px dashed var(--c)}
+.cp-leg{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:8px}.cp-leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.cp-ings{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-top:8px}
+.cp-ings span{background:var(--panel);border-radius:var(--r-sm);padding:6px 8px;font-size:12px}.cp-ings b{display:block;font-size:14px}
+.cp-membre{display:flex!important;gap:10px;align-items:flex-start;cursor:pointer}.cp-membre input{margin-top:3px}
+.list-cmd{display:grid;gap:8px}
+.cmd{display:flex;flex-wrap:wrap;gap:10px;align-items:center;border-left:3px solid transparent}
+.cmd.rouge{border-left-color:var(--red)}.cmd.vert{border-left-color:var(--green)}
+.cmd-g{flex:1 1 300px;min-width:0}
+.cmd-d{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cmd-d .inp{width:auto}.cmd-d input[type=number]{width:64px}
 .bon-l{display:grid;grid-template-columns:1fr 76px auto;gap:6px;align-items:center}
 .bl-q{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;font-weight:400;color:var(--muted);padding:0 2px 4px}
 .bl-q label{display:flex!important;flex-direction:row;align-items:center;gap:6px;font-weight:500}
@@ -1668,7 +1701,8 @@ function monterProdModule(){
 /* Un indicateur mène à sa liste : la vue Commandes, déjà filtrée. */
 document.addEventListener('click',e=>{
  const k=e.target.closest('[data-kpi-vue]');if(!k)return;
- PROD_OPTS=k.dataset.kpiFiltre?{filtre:k.dataset.kpiFiltre}:{};
+ if(k.dataset.kpiFiltre&&typeof CMD!=='undefined')CMD.filtre=k.dataset.kpiFiltre;
+ if(typeof CP!=='undefined'&&k.dataset.kpiVue!=='production')CP.id=null;
  SUB['vue-production']=k.dataset.kpiVue;go('production');
 });
 async function vProdDashboard(){
@@ -1776,7 +1810,7 @@ async function vInterfaceProduction(){
  <div class="sect"><h2>Sessions à venir</h2></div>
  ${await vSessionsProduction()}
  <p class="muted" style="font-size:12px;margin-top:14px">La répartition des postes entre cuisiniers, minute par minute, reste un chantier à part (voir CLAUDE.md §3) — non construite ici.</p>`;}
-AFTER.production=()=>{majBarreProd();monterProdModule()};
+AFTER.production=()=>majBarreProd();
 function majBarreProd(){
  const bar=$('#prodBar');if(!bar)return;
  const jours=[...PROD.sel].sort();
@@ -1786,7 +1820,7 @@ function majBarreProd(){
  const hors=jours.length-connus.length;
  bar.classList.add('on');
  bar.innerHTML=`<span><b>${jours.length} jour${jours.length>1?'s':''}</b> sélectionné${jours.length>1?'s':''}${nb?` · ${nb} commande${nb>1?'s':''}`:''}${hors?` <span class="muted">(dont ${hors} hors de la période affichée)</span>`:''}</span>
-  <span style="margin-left:auto;display:flex;gap:6px"><button class="btn sm ghost" data-prod-clear>Tout décocher</button><button class="btn sm primary" data-prod-courses>Générer la liste de courses</button></span>`;
+  <span style="margin-left:auto;display:flex;gap:6px"><button class="btn sm ghost" data-prod-clear>Tout décocher</button><button class="btn sm ghost" data-prod-courses>Liste de courses</button><button class="btn sm primary" data-prod-session>Planifier une session de production</button></span>`;
 }
 function basculerJoursProd(jours,etat){
  jours.forEach(j=>{etat?PROD.sel.add(j):PROD.sel.delete(j);
@@ -1806,6 +1840,7 @@ document.addEventListener('click',e=>{
  if(sw){const jours=sw.dataset.prodSem.split(',').filter(j=>PROD.bonsParJour[j]);const etat=!jours.every(j=>PROD.sel.has(j));basculerJoursProd(jours,etat);sw.textContent=(etat?'✓ ':'')+sw.textContent.replace(/^✓ /,'');return}
  if(e.target.closest('[data-prod-clear]')){basculerJoursProd([...PROD.sel],false);document.querySelectorAll('[data-prod-sem]').forEach(b=>b.textContent=b.textContent.replace(/^✓ /,''));return}
  if(e.target.closest('[data-prod-courses]')){listeCoursesJours([...PROD.sel].sort());return}
+ if(e.target.closest('[data-prod-session]')){cpPlanifierDepuisJours([...PROD.sel].sort());return}
  const nb=e.target.closest('[data-new-bon]');
  if(nb){ouvrirFormBon(null,nb.dataset.newBon||null);return}
  const eb=e.target.closest('[data-edit-bon]');
@@ -1919,15 +1954,25 @@ async function ouvrirFormBon(bonId,jourDefaut){
   zone.innerHTML=L.map((l,i)=>{
    const p=l.rec&&E?portion(l):null,auto=p&&l.fac?NattyProd.portionPour(recById(l.rec),C.cible||0,C.T):null;
    return `<div class="bon-l" data-i="${i}"><select class="inp bl-rec">${optRec(l.rec)}</select><input class="inp bl-n" type="number" min="1" max="40" value="${l.n}" aria-label="Portions" title="Portions"><button type="button" class="btn sm ghost bl-x" aria-label="Retirer">×</button>
-   ${p?`<div class="bl-q"><label>Quantité / portion <input class="inp bl-g" type="number" min="1" step="any" value="${Math.round(p.gPortion)}"${l.gr?' disabled':''}> g</label><span>${p.kcal?`<b>${p.approx?'≈ ':''}${Math.round(p.kcal)} kcal</b>`:'kcal inconnues'}${p.mac?' · '+fmtMac(p.mac):''}</span>${l.gr?`<span class="chip warn" title="${esc(Object.entries(l.gr).map(([k,v])=>k+' '+Math.round(v)+' g').join(', '))}">grammage par ingrédient (${Object.keys(l.gr).length})</span><button type="button" class="btn sm ghost bl-gr0">↺ retirer</button>`:''}${l.fac?`<span class="chip warn">ajustée à la main</span><button type="button" class="btn sm ghost bl-auto">↺ ${Math.round(auto.gPortion)} g (cible)</button>`:''}</div>`:''}</div>`;
+   ${p?`<div class="bl-q"><label>Quantité / portion <input class="inp bl-g" type="number" min="1" step="any" value="${Math.round(p.gPortion)}"${l.gr?' disabled':''}> g</label><span>${p.kcal?`<b>${p.approx?'≈ ':''}${Math.round(p.kcal)} kcal</b>`:'kcal inconnues'}${p.mac?' · '+fmtMac(p.mac):''}</span>${l.gr?`<span class="chip warn" title="${esc(Object.entries(l.gr).map(([k,v])=>k+' '+Math.round(v)+' g').join(', '))}">grammage par ingrédient (${Object.keys(l.gr).length})</span><button type="button" class="btn sm ghost bl-gr0">↺ retirer</button>`:''}${l.fac?`<span class="chip warn">ajustée à la main</span><button type="button" class="btn sm ghost bl-auto">↺ ${Math.round(auto.gPortion)} g (cible)</button>`:''}<button type="button" class="btn sm ghost bl-det">${l.ouvert?'▾':'▸'} par ingrédient</button><button type="button" class="btn sm ghost bl-base">⚙ base de la recette</button></div>${l.ouvert?blIngredients(p):''}`:''}</div>`;
   }).join('');
   somme();
+ }
+ /* Le détail d'une portion : chaque ingrédient, son tag, ses macros, ses
+    grammes (modifiables) et ceux de la base de la recette. */
+ function blIngredients(p){
+  const TG={proteine:['Protéine','#ff6b6b'],feculent:['Féculent','#ffb340'],lipide:['Lipide','#c77dff'],legume:['Légume','#32d74b'],aromate:['Aromate','#9a9aaa']};
+  return `<div class="bl-ings">${p.ings.map(i=>{const t=TG[i.tag];return `<label class="${i.corrige?'mod':''}"><span>${esc(i.nom)}${t?` <em style="color:${t[1]}">${t[0]}</em>`:''}</span><span><input class="inp bl-ing" type="number" min="0" step="any" data-nom="${esc(i.nom)}" value="${i.g>=10?Math.round(i.g):Math.round(i.g*10)/10}"> ${esc(i.unite||'g')}</span><small>${i.mac?Math.round(i.mac.p)+' P · '+Math.round(i.mac.g)+' G · '+Math.round(i.mac.l)+' L · '+Math.round(i.mac.c)+' kcal':''}${i.corrige?' · au lieu de '+Math.round(i.gAuto)+' '+(i.unite||'g'):(i.gEchelle?' · base '+Math.round(i.gEchelle)+' '+(i.unite||'g'):'')}</small></label>`}).join('')}</div>${p.ecart?`<div class="muted" style="font-size:11.5px">écart à la cible : ${['p','g','l'].map(m=>(p.ecart[m]>0?'+':'')+Math.round(p.ecart[m])+' g '+m.toUpperCase()).join(' · ')} · ${(p.ecart.c>0?'+':'')+Math.round(p.ecart.c)} kcal</div>`:''}`;
  }
  function somme(){const t=L.reduce((s,l)=>s+(l.rec?(+l.n||0):0),0);const nb=+$('#bfNb').value||0;$('#bfSomme').textContent=t?`${t} portion${t>1?'s':''} attribuée${t>1?'s':''} pour ${nb} repas`+(t!==nb?' — les deux ne correspondent pas':''):''}
  const ligneDe=el=>L[+el.closest('.bon-l').dataset.i];
  zone.addEventListener('change',e=>{
   const l=ligneDe(e.target);
   if(e.target.classList.contains('bl-rec')){l.rec=e.target.value;l.fac=null;l.gr=null;peindreLignes()}
+  else if(e.target.classList.contains('bl-ing')){
+   const v=parseFloat(e.target.value);if(!(v>=0)){toast('Grammage invalide');peindreLignes();return}
+   l.gr=Object.assign({},l.gr||{});l.gr[e.target.dataset.nom]=v;peindreLignes();
+  }
   else if(e.target.classList.contains('bl-g')){
    const r=recById(l.rec),f=r&&NattyProd.fiche(r),base=f&&(f.gPortionFiche||f.gTotal),g=+e.target.value;
    if(!(base>0)||!(g>0)){toast('Cette fiche n’a aucun grammage : quantité impossible à ajuster');peindreLignes();return}
@@ -1939,6 +1984,8 @@ async function ouvrirFormBon(bonId,jourDefaut){
   if(e.target.closest('.bl-x')){L.splice(+e.target.closest('.bon-l').dataset.i,1);if(!L.length)L.push({rec:'',n:1,fac:null});peindreLignes()}
   if(e.target.closest('.bl-auto')){ligneDe(e.target).fac=null;peindreLignes()}
   if(e.target.closest('.bl-gr0')){ligneDe(e.target).gr=null;peindreLignes()}
+  if(e.target.closest('.bl-det')){const l=ligneDe(e.target);l.ouvert=!l.ouvert;peindreLignes()}
+  if(e.target.closest('.bl-base')){const l=ligneDe(e.target);if(l.rec)ouvrirBaseRecette(l.rec,()=>{chargerProd().then(()=>{})})}
  });
  $('#bfCible').addEventListener('change',e=>{if(e.target.id==='bfBesoin'){besoinLibre=e.target.value;majCible()}});
  $('#bfUid').addEventListener('change',majCible);
@@ -2252,15 +2299,13 @@ async function rendreVueSpecifique(cle,vue){
   // commande se fait en la situant sur le calendrier) — deux entrées de
   // sous-menu, une seule vue, plutôt qu'une liste plate qui aurait divergé
   // de la vraie interface à la première retouche de l'une des deux.
-  /* Commandes et Production = les écrans d'admin.html, MONTÉS ici (le même
-     module, assets/admin-production.js) et non refaits : mêmes fonctions —
-     bons, attribution, cible 45 %, grammages par aliment, nombre de repas
-     modifiable, postes, planning, PERT, PDF, assemblage. Le Calendrier garde
-     la grille du CRM (commandes sur 4 semaines, liste de courses par jours). */
-  if(vue==='commandes')return vProdModule('bons');
+  /* Commandes et Production sont NATIFS (assets/crm-production.js) : les
+     écrans du CRM, le calcul d'admin (NattyProd). Le Calendrier sert aussi à
+     choisir ce qu'une session produit. */
+  if(vue==='commandes')return await vCommandesNatif();
   if(vue==='calendrier')return await vInterfaceProduction();
   if(vue==='stocks')return await vProdStocks();
-  if(vue==='production')return vProdModule('production')+'<div class="sect" style="margin-top:22px"><h2>Menus & sessions</h2></div>'+await vProductionMenus();
+  if(vue==='production')return await vProdSessionsNatif()+(CP.id?'':'<div class="sect" style="margin-top:22px"><h2>Menus des blocs</h2></div>'+await vProductionMenus());
   if(vue==='livraison')return await vProdLivraison();
  }
  return '<div class="empty">Vue inconnue.</div>';
@@ -2974,5 +3019,6 @@ async function demarrerApp(){
  demarrerSondageNotifs();
 }
 </script>
+<script src="/assets/crm-production.js"></script>
 </body>
 </html>
