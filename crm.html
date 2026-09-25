@@ -293,6 +293,15 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
 .pcal-b:hover .pcal-plus{opacity:1}
 .pcal-bar{display:none}
 .pcal-bar.on{display:flex;position:sticky;bottom:12px;z-index:5;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-radius:var(--r-md);background:var(--bg);box-shadow:var(--nm-pop);border:1px solid var(--line);margin-bottom:14px;font-size:13px}
+button.card{font:inherit;color:inherit;text-align:left;border:0;width:100%}
+button.exbar{font:inherit;width:100%;text-align:left;cursor:pointer}
+.kpi-go{font-size:11.5px;color:var(--muted);margin-top:6px}
+.card.kpi.click:hover .kpi-go{color:var(--ink)}
+.np-hote{--bg:#f0f0f3;--black:#1a1a2e;--text:#3a3a4a;--muted:#8a8a9a;--green:#5a9e6f;
+ --so:6px 6px 16px rgba(174,174,192,.42),-6px -6px 16px rgba(255,255,255,.88);
+ --si:inset 3px 3px 8px rgba(174,174,192,.35),inset -3px -3px 8px rgba(255,255,255,.85);
+ --sm:4px 4px 10px rgba(174,174,192,.38),-4px -4px 10px rgba(255,255,255,.85);
+ color-scheme:light;background:#f0f0f3;color:#3a3a4a;border-radius:var(--r-lg);padding:18px;min-height:200px}
 .bon-l{display:grid;grid-template-columns:1fr 76px auto;gap:6px;align-items:center}
 .bl-q{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;font-weight:400;color:var(--muted);padding:0 2px 4px}
 .bl-q label{display:flex!important;flex-direction:row;align-items:center;gap:6px;font-weight:500}
@@ -1640,6 +1649,28 @@ async function vSessionsProduction(){
    quotidien : saisir/attribuer une commande, générer sa liste de courses,
    gérer le stock, marquer une livraison faite — chaque action écrit
    réellement en base, aucune n'est un simulacre en attendant mieux. */
+/* Le module de production s'affiche dans un « îlot » clair : il a été
+   dessiné pour admin.html (neumorphisme, texte blanc sur --black) et ses
+   couleurs écrites en dur ne basculeraient pas en sombre. Les jetons qu'il
+   attend sont posés sur l'îlot, pas sur la page. */
+let PROD_OPTS={};
+function vProdModule(vue){
+ if(!window.NattyProd)return '<div class="exbar"><span class="chip bad">Module absent</span><span><span class="mono">assets/admin-production.js</span> n’est pas chargé.</span></div>';
+ return '<div class="np-hote" id="npHote" data-vue="'+vue+'"></div>';
+}
+function monterProdModule(){
+ const h=document.getElementById('npHote');
+ if(!h||!window.NattyProd||h.dataset.monte)return;
+ h.dataset.monte='1';
+ NattyProd.monter(h,Object.assign({vue:h.dataset.vue,onglets:false},PROD_OPTS));
+ PROD_OPTS={};
+}
+/* Un indicateur mène à sa liste : la vue Commandes, déjà filtrée. */
+document.addEventListener('click',e=>{
+ const k=e.target.closest('[data-kpi-vue]');if(!k)return;
+ PROD_OPTS=k.dataset.kpiFiltre?{filtre:k.dataset.kpiFiltre}:{};
+ SUB['vue-production']=k.dataset.kpiVue;go('production');
+});
 async function vProdDashboard(){
  const r=await sbTry('bons_commande?select=id,statut,jour_livraison&limit=500');
  if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">bons_commande</span> — session d'équipe requise, ou table absente.</span></div>`;
@@ -1649,13 +1680,19 @@ async function vProdDashboard(){
  const attribues=bons.filter(b=>b.statut==='attribue'||b.statut==='en_production').length;
  const livres=bons.filter(b=>b.statut==='livre').length;
  return `<div class="grid g4" style="margin-bottom:14px">
- <div class="card kpi"><div class="lbl">Bons (500 derniers)</div><div class="val num">${bons.length}</div></div>
- <div class="card kpi"><div class="lbl">À traiter</div><div class="val num" style="color:var(--red)">${aTraiter}</div></div>
- <div class="card kpi"><div class="lbl">Attribués / en production</div><div class="val num">${attribues}</div></div>
- <div class="card kpi"><div class="lbl">Livrés</div><div class="val num">${livres}</div></div>
+ <button class="card kpi click" data-kpi-vue="commandes" data-kpi-filtre="tous"><div class="lbl">Bons (500 derniers)</div><div class="val num">${bons.length}</div><div class="kpi-go">Voir les commandes →</div></button>
+ <button class="card kpi click" data-kpi-vue="commandes" data-kpi-filtre="rouge"><div class="lbl">À traiter</div><div class="val num" style="color:var(--red)">${aTraiter}</div><div class="kpi-go">Les attribuer →</div></button>
+ <button class="card kpi click" data-kpi-vue="commandes" data-kpi-filtre="attribue"><div class="lbl">Attribués / en production</div><div class="val num">${attribues}</div><div class="kpi-go">Voir →</div></button>
+ <button class="card kpi click" data-kpi-vue="commandes" data-kpi-filtre="livre"><div class="lbl">Livrés</div><div class="val num">${livres}</div><div class="kpi-go">Voir →</div></button>
  </div>
- ${sansDate?`<div class="exbar"><span class="chip bad">${sansDate}</span><span>bon${sansDate>1?'s':''} sans date de livraison — priorité, aucun jour ne peut les planifier.</span></div>`:''}
- <p class="muted" style="font-size:12.5px">Saisir, attribuer et planifier une commande se fait dans <b>Commandes</b> et <b>Calendrier</b> (le même écran) ; le stock est dans <b>Stocks</b>, les menus et sessions dans <b>Production</b>, le suivi des livraisons dans <b>Livraison</b>.</p>`;
+ ${sansDate?`<button class="exbar click" data-kpi-vue="commandes" data-kpi-filtre="rouge"><span class="chip bad">${sansDate}</span><span>bon${sansDate>1?'s':''} sans date de livraison — priorité, aucun jour ne peut les planifier.</span><span style="margin-left:auto;font-weight:600">Poser les dates →</span></button>`:''}
+ <div class="grid g4" style="margin-bottom:14px">
+ <button class="card click" data-kpi-vue="calendrier" style="text-align:left"><b>Calendrier</b><div class="muted" style="font-size:12px;margin-top:4px">4 semaines, liste de courses →</div></button>
+ <button class="card click" data-kpi-vue="production" style="text-align:left"><b>Production du jour</b><div class="muted" style="font-size:12px;margin-top:4px">Postes, PERT, PDF, assemblage →</div></button>
+ <button class="card click" data-kpi-vue="stocks" style="text-align:left"><b>Stocks</b><div class="muted" style="font-size:12px;margin-top:4px">Matières premières →</div></button>
+ <button class="card click" data-kpi-vue="livraison" style="text-align:left"><b>Livraison</b><div class="muted" style="font-size:12px;margin-top:4px">Marquer livré →</div></button>
+ </div>
+ <p class="muted" style="font-size:12.5px">Chaque indicateur mène à sa liste. <b>Commandes</b> : bons, attribution des recettes, grammages par client ; <b>Calendrier</b> : les 4 semaines et la liste de courses ; <b>Production</b> : postes, planning, PERT, PDF des fiches, assemblage.</p>`;
 }
 /* État de l'interface Production : la fenêtre affichée (4 semaines à partir
    d'un lundi) et les jours cochés pour la liste de courses. La sélection
@@ -1720,9 +1757,9 @@ async function vInterfaceProduction(){
   });
  }
  return `<div class="grid g4" style="margin-bottom:14px">
- <div class="card kpi"><div class="lbl">Commandes sur la période</div><div class="val num">${actifs.length}</div></div>
+ <button class="card kpi click" data-kpi-vue="commandes" data-kpi-filtre="tous"><div class="lbl">Commandes sur la période</div><div class="val num">${actifs.length}</div></button>
  <div class="card kpi"><div class="lbl">Repas à produire</div><div class="val num">${repas}</div></div>
- <div class="card kpi"><div class="lbl">À traiter</div><div class="val num" style="color:var(--red)">${aTraiter}</div></div>
+ <button class="card kpi click" data-kpi-vue="commandes" data-kpi-filtre="rouge"><div class="lbl">À traiter</div><div class="val num" style="color:var(--red)">${aTraiter}</div></button>
  <div class="card kpi"><div class="lbl">Livrées</div><div class="val num">${actifs.filter(b=>b.statut==='livre').length}</div></div>
  </div>
  ${sansDate.length?`<div class="exbar"><span class="chip bad">${sansDate.length}</span><span>commande${sansDate.length>1?'s':''} sans date de livraison — aucun jour ne peut les planifier.</span><span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">${sansDate.slice(0,6).map(b=>`<button class="btn sm ghost" data-edit-bon="${b.id}">${esc(libBon(b))} · ${b.nb_repas}</button>`).join('')}</span></div>`:''}
@@ -1739,7 +1776,7 @@ async function vInterfaceProduction(){
  <div class="sect"><h2>Sessions à venir</h2></div>
  ${await vSessionsProduction()}
  <p class="muted" style="font-size:12px;margin-top:14px">La répartition des postes entre cuisiniers, minute par minute, reste un chantier à part (voir CLAUDE.md §3) — non construite ici.</p>`;}
-AFTER.production=()=>majBarreProd();
+AFTER.production=()=>{majBarreProd();monterProdModule()};
 function majBarreProd(){
  const bar=$('#prodBar');if(!bar)return;
  const jours=[...PROD.sel].sort();
@@ -2215,9 +2252,15 @@ async function rendreVueSpecifique(cle,vue){
   // commande se fait en la situant sur le calendrier) — deux entrées de
   // sous-menu, une seule vue, plutôt qu'une liste plate qui aurait divergé
   // de la vraie interface à la première retouche de l'une des deux.
-  if(vue==='commandes'||vue==='calendrier')return await vInterfaceProduction();
+  /* Commandes et Production = les écrans d'admin.html, MONTÉS ici (le même
+     module, assets/admin-production.js) et non refaits : mêmes fonctions —
+     bons, attribution, cible 45 %, grammages par aliment, nombre de repas
+     modifiable, postes, planning, PERT, PDF, assemblage. Le Calendrier garde
+     la grille du CRM (commandes sur 4 semaines, liste de courses par jours). */
+  if(vue==='commandes')return vProdModule('bons');
+  if(vue==='calendrier')return await vInterfaceProduction();
   if(vue==='stocks')return await vProdStocks();
-  if(vue==='production')return await vProductionMenus();
+  if(vue==='production')return vProdModule('production')+'<div class="sect" style="margin-top:22px"><h2>Menus & sessions</h2></div>'+await vProductionMenus();
   if(vue==='livraison')return await vProdLivraison();
  }
  return '<div class="empty">Vue inconnue.</div>';

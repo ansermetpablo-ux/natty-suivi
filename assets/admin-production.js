@@ -859,12 +859,19 @@
   }
 
   /* ── Coquille ───────────────────────────────────────────────────────────── */
-  function monter(host) {
+  /* `opts` (crm.html) : `vue` ouvre directement une vue, `filtre` pose le
+     filtre des bons, `onglets: false` retire la barre interne — dans le CRM
+     c'est la barre latérale qui choisit la vue. */
+  function monter(host, opts) {
+    opts = opts || {};
     css();
+    if (opts.vue) S.vue = opts.vue;
+    if (opts.filtre) S.filtre = opts.filtre;
+    var onglets = opts.onglets !== false;
     host.innerHTML = '<div class="np-sub" id="npSub">'
-      + '<button data-vue="bons">🧾 Bons de commande</button>'
+      + (onglets ? '<button data-vue="bons">🧾 Bons de commande</button>'
       + '<button data-vue="calendrier">📅 Calendrier</button>'
-      + '<button data-vue="production">👨‍🍳 Production</button>'
+      + '<button data-vue="production">👨‍🍳 Production</button>' : '')
       + '<span class="sp"></span><button data-act="recharger" class="np-btn sec">↻</button></div>'
       + '<div id="npVue"><div class="np-vide">Chargement…</div></div>';
     host.addEventListener('click', clic);
@@ -894,7 +901,14 @@
     else {
       // Les postes pris et les étapes faites vivent en base (partagés entre les
       // téléphones de la cuisine) : on les relit à chaque affichage du jour.
-      var jour = S.jour || ymd(new Date());
+      /* Sans jour choisi : le prochain jour qui a des livraisons (aujourd'hui compris),
+         plutôt qu'un « rien à livrer » qui oblige à chercher la date à la main. */
+      if (!S.jour) {
+        var auj = ymd(new Date()), prochains = S.bons.filter(function (b) { return b.jour_livraison && b.jour_livraison >= auj && b.statut !== 'livre'; })
+          .map(function (b) { return b.jour_livraison; }).sort();
+        S.jour = prochains[0] || auj;
+      }
+      var jour = S.jour;
       el.innerHTML = '<div class="np-vide">Chargement de la journée…</div>';
       chargerJourProd(jour).then(function () { el.innerHTML = vueProduction(); })
         .catch(function (e) { el.innerHTML = '<div class="np-alerte">' + h(e.message) + '<br>Si le message parle de <code>production_postes</code>, le SQL du 2026-09-16 (fin de natty_production.sql) n’a pas été exécuté.</div>'; });
@@ -903,8 +917,10 @@
 
   /* ── Qui je suis, et ce que j'ai pris ───────────────────────────────────── */
   function moi() {
-    var n = (typeof currentNutri !== 'undefined' && currentNutri && currentNutri.nom) || 'Cuisinier';
-    var id = (typeof STAFF_SESSION !== 'undefined' && STAFF_SESSION && STAFF_SESSION.user && STAFF_SESSION.user.id) || ('nom:' + n);
+    // admin.html : currentNutri + STAFF_SESSION.user.id ; crm.html : STAFF_NOM + STAFF_SESSION.user_id
+    var n = (typeof currentNutri !== 'undefined' && currentNutri && currentNutri.nom) || (typeof STAFF_NOM !== 'undefined' && STAFF_NOM) || 'Cuisinier';
+    var ss = typeof STAFF_SESSION !== 'undefined' ? STAFF_SESSION : null;
+    var id = (ss && ((ss.user && ss.user.id) || ss.user_id)) || ('nom:' + n);
     return { id: String(id), nom: n };
   }
   function chargerJourProd(jour) {
@@ -3268,9 +3284,9 @@
 
   window.NattyProd = {
     recalculerClient: recalculerClient,
-    monter: function (host) {
+    monter: function (host, opts) {
       sbq('plats_menu?select=id,nom').then(function (p) { PLATS_MENU = p; }).catch(function () {});
-      monter(host);
+      monter(host, opts);
     },
     rafraichir: function () { if (S.charge) chargerTout().then(rendre); },
     // exposés pour le banc

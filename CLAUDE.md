@@ -4041,6 +4041,24 @@ pas** une quantité ajustée à la main quand la fiche client change.
 > ⚠️ crm.html ne recopie aucun calcul : il charge `assets/admin-production.js` et appelle
 > `NattyProd.cibleClient` / `portionPour` / `portionFacteur` / `portionAttrib`.
 
+**LE CRM MONTE LE MODULE DE PRODUCTION D'ADMIN** (2026-09-25, Pablo : « la page commande doit être
+comme le deuxième écran d'admin et avoir les mêmes fonctions, pareil pour la page production »).
+- crm.html → Production → **Commandes** = la vue « Bons de commande » d'`assets/admin-production.js`,
+  **Production** = sa vue Production (postes, planning, PERT, par geste, assemblage, PDF), suivie des
+  Menus & sessions du CRM. **Calendrier** garde la grille 4 semaines du CRM (liste de courses, formulaire).
+  C'est le MÊME module qu'admin.html, jamais une copie : `NattyProd.monter(hôte, { vue, filtre,
+  onglets: false })` — la barre latérale du CRM remplace ses onglets internes.
+- ⚠️ Il s'affiche dans un **îlot clair** (`.np-hote`) : dessiné pour admin (neumorphisme, texte blanc
+  sur `--black`, couleurs en dur), il ne basculerait pas en sombre. Les jetons qu'il attend sont posés
+  sur l'îlot, pas sur la page.
+- ⚠️ `moi()` lit l'identité des deux pages : `currentNutri` + `STAFF_SESSION.user.id` (admin),
+  `STAFF_NOM` + `STAFF_SESSION.user_id` (CRM) — sans ça, « Je prends » un poste n'aurait pas reconnu
+  le cuisinier connecté.
+- **Les indicateurs sont cliquables** (tableau de bord et calendrier) : chacun ouvre Commandes déjà
+  filtrée (En cours / À traiter / Attribués / Livrés) ; le bandeau « sans date » aussi. Quatre tuiles
+  de plus mènent au Calendrier, à la Production, aux Stocks et à la Livraison.
+- Sans jour choisi, la Production s'ouvre sur le **prochain jour qui a des livraisons**.
+
 **LES PORTIONS SE CALCULENT ALIMENT PAR ALIMENT, SUR LES MACROS DU CLIENT** (2026-09-25, Pablo :
 « les quantités ne doivent pas se baser sur les fiches, mais sur l'équilibre des macros par aliment
 de notre base ; les coefficients entre les aliments doivent changer pour chaque personne »).
