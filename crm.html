@@ -1820,7 +1820,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
   const r=await sbTry('bons_commande?id=eq.'+bonId+'&select=*');
   if(!r.ok||!r.data[0]){toast('Commande introuvable');return}
   bon=r.data[0];
-  const a=await sbTry('bons_attributions?bon_id=eq.'+bonId+'&select=recette_id,nb_portions,facteur,kcal_portion');
+  const a=await sbTry('bons_attributions?bon_id=eq.'+bonId+'&select=*');
   attrs=a.ok?a.data:[];
  }
  const recettes=E?E.recettes:[];
@@ -1831,7 +1831,9 @@ async function ouvrirFormBon(bonId,jourDefaut){
     main ; sinon la quantité suit la cible (45 % du besoin). */
  const L=attrs.map(a=>{const r=recById(a.recette_id);return{rec:a.recette_id,n:a.nb_portions,
   // sans le calcul (script absent), on garde le facteur tel quel plutôt que de l'écraser
-  fac:E?(r&&NattyProd.estManuel(r,a)?parseFloat(a.facteur):null):(parseFloat(a.facteur)||null)}});
+  fac:E?(r&&!NattyProd.grammesDe(a)&&NattyProd.estManuel(r,a)?parseFloat(a.facteur):null):(parseFloat(a.facteur)||null),
+  // grammages par ingrédient posés dans l'outil de production : conservés tels quels
+  gr:E?NattyProd.grammesDe(a):(a.grammes||null),facBrut:parseFloat(a.facteur)||null}});
  if(!L.length)L.push({rec:'',n:1,fac:null});
  const cibleStockee=(attrs.find(a=>parseFloat(a.kcal_portion)>0)||{}).kcal_portion||null;
  const notes=bon.notes||'';
@@ -1874,12 +1876,12 @@ async function ouvrirFormBon(bonId,jourDefaut){
   if(!uid)$('#bfCible').insertAdjacentHTML('beforeend',`<label style="max-width:240px">Besoin journalier du client (kcal)<input class="inp" type="number" min="500" max="8000" step="any" id="bfBesoin" value="${esc(besoinLibre)}" placeholder="ex. 2400"></label>`);
   peindreLignes();
  }
- const portion=l=>{const r=recById(l.rec);if(!r)return null;return l.fac?NattyProd.portionFacteur(r,l.fac):NattyProd.portionPour(r,C.cible||0)};
+ const portion=l=>{const r=recById(l.rec);if(!r)return null;const p0=l.fac?NattyProd.portionFacteur(r,l.fac):NattyProd.portionPour(r,C.cible||0);return l.gr?NattyProd.portionAvecGrammes(r,l.gr,p0):p0};
  function peindreLignes(){
   zone.innerHTML=L.map((l,i)=>{
    const p=l.rec&&E?portion(l):null,auto=p&&l.fac?NattyProd.portionPour(recById(l.rec),C.cible||0):null;
    return `<div class="bon-l" data-i="${i}"><select class="inp bl-rec">${optRec(l.rec)}</select><input class="inp bl-n" type="number" min="1" max="40" value="${l.n}" aria-label="Portions" title="Portions"><button type="button" class="btn sm ghost bl-x" aria-label="Retirer">×</button>
-   ${p?`<div class="bl-q"><label>Quantité / portion <input class="inp bl-g" type="number" min="1" step="any" value="${Math.round(p.gPortion)}"> g</label><span>${p.kcal?`<b>${Math.round(p.kcal)} kcal</b>`:'kcal inconnues'}${p.mac?' · '+fmtMac(p.mac):''}</span>${l.fac?`<span class="chip warn">ajustée à la main</span><button type="button" class="btn sm ghost bl-auto">↺ ${Math.round(auto.gPortion)} g (cible)</button>`:''}</div>`:''}</div>`;
+   ${p?`<div class="bl-q"><label>Quantité / portion <input class="inp bl-g" type="number" min="1" step="any" value="${Math.round(p.gPortion)}"${l.gr?' disabled':''}> g</label><span>${p.kcal?`<b>${p.approx?'≈ ':''}${Math.round(p.kcal)} kcal</b>`:'kcal inconnues'}${p.mac?' · '+fmtMac(p.mac):''}</span>${l.gr?`<span class="chip warn" title="${esc(Object.entries(l.gr).map(([k,v])=>k+' '+Math.round(v)+' g').join(', '))}">grammage par ingrédient (${Object.keys(l.gr).length})</span><button type="button" class="btn sm ghost bl-gr0">↺ retirer</button>`:''}${l.fac?`<span class="chip warn">ajustée à la main</span><button type="button" class="btn sm ghost bl-auto">↺ ${Math.round(auto.gPortion)} g (cible)</button>`:''}</div>`:''}</div>`;
   }).join('');
   somme();
  }
@@ -1887,7 +1889,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
  const ligneDe=el=>L[+el.closest('.bon-l').dataset.i];
  zone.addEventListener('change',e=>{
   const l=ligneDe(e.target);
-  if(e.target.classList.contains('bl-rec')){l.rec=e.target.value;l.fac=null;peindreLignes()}
+  if(e.target.classList.contains('bl-rec')){l.rec=e.target.value;l.fac=null;l.gr=null;peindreLignes()}
   else if(e.target.classList.contains('bl-g')){
    const r=recById(l.rec),f=r&&NattyProd.fiche(r),base=f&&(f.gPortionFiche||f.gTotal),g=+e.target.value;
    if(!(base>0)||!(g>0)){toast('Cette fiche n’a aucun grammage : quantité impossible à ajuster');peindreLignes();return}
@@ -1898,6 +1900,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
  zone.addEventListener('click',e=>{
   if(e.target.closest('.bl-x')){L.splice(+e.target.closest('.bon-l').dataset.i,1);if(!L.length)L.push({rec:'',n:1,fac:null});peindreLignes()}
   if(e.target.closest('.bl-auto')){ligneDe(e.target).fac=null;peindreLignes()}
+  if(e.target.closest('.bl-gr0')){ligneDe(e.target).gr=null;peindreLignes()}
  });
  $('#bfCible').addEventListener('change',e=>{if(e.target.id==='bfBesoin'){besoinLibre=e.target.value;majCible()}});
  $('#bfUid').addEventListener('change',majCible);
@@ -1916,7 +1919,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
   const nb=Math.round(+$('#bfNb').value);
   if(!(nb>=1&&nb<=40)){toast('Le nombre de repas doit être entre 1 et 40');return}
   const lignes={};
-  L.forEach(l=>{if(!l.rec||!(l.n>0))return;if(lignes[l.rec])lignes[l.rec].n+=l.n;else lignes[l.rec]={n:l.n,fac:l.fac}});
+  L.forEach(l=>{if(!l.rec||!(l.n>0))return;if(lignes[l.rec])lignes[l.rec].n+=l.n;else lignes[l.rec]={n:l.n,fac:l.fac,gr:l.gr}});
   let statut=$('#bfStatut').value;
   /* Une commande qui reçoit ses recettes n'est plus « à attribuer » — sans
      ce glissement, elle resterait rouge dans le calendrier alors qu'elle est
@@ -1939,8 +1942,11 @@ async function ouvrirFormBon(bonId,jourDefaut){
       deux — c'est ce qu'admin.html et la production relisent. */
    const rows=Object.entries(lignes).map(([rec,l])=>{
     const r=recById(rec);
-    const fac=l.fac||(r?NattyProd.portionPour(r,C.cible||0).facteur:1);
-    return{bon_id:id,recette_id:rec,nb_portions:l.n,kcal_portion:C.cible||(E?null:cibleStockee),facteur:Math.round(fac*1000)/1000};
+    const p0=r?(l.fac?NattyProd.portionFacteur(r,l.fac):NattyProd.portionPour(r,C.cible||0)):null;
+    const fac=l.gr&&p0?NattyProd.portionAvecGrammes(r,l.gr,p0).facteur:(l.fac||(p0?p0.facteur:1));
+    const row={bon_id:id,recette_id:rec,nb_portions:l.n,kcal_portion:C.cible||(E?null:cibleStockee),facteur:Math.round(fac*1000)/1000};
+    if(l.gr)row.grammes=l.gr;
+    return row;
    });
    await sb('bons_attributions?bon_id=eq.'+id,{method:'DELETE'});
    if(rows.length)await sb('bons_attributions',{method:'POST',body:JSON.stringify(rows)});
@@ -1962,7 +1968,7 @@ async function listeCoursesJours(jours){
  const bons=r.ok?r.data:[];
  const titre=jours.length===1?fd(jours[0]):`${jours.length} jours · ${fd(jours[0])} → ${fd(jours[jours.length-1])}`;
  if(!bons.length){modal(`<h2>Liste de courses</h2><div class="empty">Aucune commande sur ces jours.</div><div class="foot"><button class="btn" type="button" data-close>Fermer</button></div>`);return}
- const [at,EP]=await Promise.all([sbTry('bons_attributions?bon_id=in.('+bons.map(b=>b.id).join(',')+')&select=bon_id,recette_id,nb_portions,facteur,kcal_portion'),chargerProd()]);
+ const [at,EP]=await Promise.all([sbTry('bons_attributions?bon_id=in.('+bons.map(b=>b.id).join(',')+')&select=*'),chargerProd()]);
  const attrs=at.ok?at.data:[];
  const avecRecette=new Set(attrs.map(a=>a.bon_id));
  const sansRecette=bons.filter(b=>!avecRecette.has(b.id));
@@ -1978,10 +1984,14 @@ async function listeCoursesJours(jours){
     le calcul n'est pas chargé ou la recette plus active. */
  const facDe=a=>{const r=EP&&EP.recettes.find(x=>x.id===a.recette_id);return r?NattyProd.portionAttrib(r,a).facteur:(+a.facteur||1)};
  attrs.forEach(a=>{portionsEq[a.recette_id]=(portionsEq[a.recette_id]||0)+a.nb_portions*facDe(a);portions[a.recette_id]=(portions[a.recette_id]||0)+a.nb_portions});
+ /* Les grammes que la cuisine posera, ingrédient par ingrédient — grammages
+    corrigés à l'attribution ou à l'assemblage compris. */
+ const reels={};
+ attrs.forEach(a=>{const r=EP&&EP.recettes.find(x=>x.id===a.recette_id);if(!r)return;const m=reels[a.recette_id]=reels[a.recette_id]||{};NattyProd.portionAttrib(r,a).ings.forEach(x=>{m[x.nom]=(m[x.nom]||0)+x.g*a.nb_portions})});
  const total={};
  (ing.ok?ing.data:[]).forEach(i=>{
   const base=(fiche[i.recette_id]&&fiche[i.recette_id].nb_portions)||1;
-  const q=(+i.quantite_g||0)*(portionsEq[i.recette_id]||0)/base;
+  const q=reels[i.recette_id]&&reels[i.recette_id][i.ingredient_nom]!=null?reels[i.recette_id][i.ingredient_nom]:(+i.quantite_g||0)*(portionsEq[i.recette_id]||0)/base;
   const unite=(i.unite||'g').trim();
   const cle=String(i.ingredient_nom||'').trim().toLowerCase()+'|'+unite;
   if(!total[cle])total[cle]={nom:String(i.ingredient_nom||'').trim(),unite,q:0,rec:new Set()};

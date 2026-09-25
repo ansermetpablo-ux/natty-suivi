@@ -1,0 +1,14 @@
+-- 0009_attributions_grammes.sql — le grammage de chaque ingrédient, par client
+--
+-- Demande de Pablo (2026-09-25) : à l'attribution des recettes comme à
+-- l'assemblage, pouvoir fixer le grammage de CHAQUE ingrédient d'une portion,
+-- et voir les macros suivre.
+--
+-- `grammes` : { "<nom de l'ingrédient tel qu'écrit dans recettes_ingredients>" :
+-- grammes par portion }. Seuls les ingrédients corrigés y figurent ; les
+-- autres suivent la portion (cible 45 % ou quantité ajustée via `facteur`).
+-- Null = aucune correction, le comportement d'avant à l'identique.
+--
+-- Aucune policy à toucher : la colonne vit sur une table déjà protégée
+-- (staff en écriture, le client en lecture sur ses propres bons).
+alter table public.bons_attributions add column if not exists grammes jsonb;

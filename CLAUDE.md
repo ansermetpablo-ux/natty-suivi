@@ -4041,6 +4041,24 @@ pas** une quantité ajustée à la main quand la fiche client change.
 > ⚠️ crm.html ne recopie aucun calcul : il charge `assets/admin-production.js` et appelle
 > `NattyProd.cibleClient` / `portionPour` / `portionFacteur` / `portionAttrib`.
 
+**Le grammage de chaque ingrédient, par client** (2026-09-25, demande de Pablo). À l'attribution
+(« ▸ grammage par ingrédient » sous la quantité d'une recette) ET à l'assemblage (chaque portion a
+un champ par ingrédient), les kcal et P/G/L se recalculent aussitôt.
+- Stocké dans `bons_attributions.grammes` (jsonb `{ nom ingrédient : g par portion }`, seuls les
+  ingrédients corrigés) — 🔄 **`supabase/migrations/0009_attributions_grammes.sql` à exécuter**.
+  Sans la colonne, l'attribution s'enregistre quand même, sans les grammages, et l'écran le dit.
+- Calcul (`portionAvecGrammes`) : on part de la portion d'origine (cible 45 % ou quantité ajustée)
+  et on ajoute l'écart de chaque ingrédient changé, chiffré par `ingredients_base`. Un ingrédient
+  absent de la base prend la densité moyenne de la portion, et le total s'affiche « ≈ ».
+- `portionAttrib()` l'applique partout : lots, étapes de production (`ingredientsEtape` reçoit les
+  totaux réels du lot, `l.ingTot`), assemblage, PDF, liste de courses du CRM. `recalculerClient()`
+  ne touche pas une ligne qui a des grammages.
+- À l'assemblage, corriger un ingrédient change **toutes les portions de ce client pour cette
+  recette** (c'est une attribution), enregistré tout de suite ; « ↺ grammages de la portion » annule.
+- Le formulaire de commande du CRM **conserve** ces grammages quand il réécrit les attributions
+  (il lit en `select=*` : une colonne nommée absente ferait échouer la lecture, et un formulaire qui
+  croit la commande vide la réécrirait à vide). Changer la recette ou la quantité totale les retire.
+
 **Les PDF d'un poste — fiche technique + PERT** (2026-09-25, demande de Pablo). Section Postes
 de la Production : un bouton « 📄 PDF » sur chaque carte de poste, et « 📄 PDF de mon poste » à côté de
 « ▶ Mon service, écran par écran ». Un clic télécharge :
