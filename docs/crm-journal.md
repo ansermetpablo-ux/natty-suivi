@@ -394,3 +394,26 @@ l'accord de Pablo, conformément à la spec §4.3 à la lettre.
   tournée sur un vrai jour avec plusieurs adresses (dont une partagée par 2 commandes,
   pour confirmer le regroupement en un seul arrêt), réordonner, imprimer les étiquettes,
   ouvrir la vue livreur sur un iPhone et marquer un arrêt livré.
+
+---
+
+## Petit chantier — conflit de créneau cuisine (25/09/2026, nuit, suite immédiate)
+
+En reprenant la dette de la session 09 (« rebranchement du contrôle de capacité sur les
+vraies disponibilités »), vérification faite avant de coder : **c'était déjà fait**.
+`controlerCapacite()` (aperçu d'un bloc) appelle déjà `chargerRH()`/`estIndisponible()`
+et lit les vraies indisponibilités RH — construit par la session RH (`98f9d24`), pas par
+moi. La note de la session 06 le donnait à tort comme encore à faire ; corrigé ici plutôt
+que laissée fausse dans ce journal.
+
+Ce qui manquait réellement (§09 feature 3) : le **conflit de créneau cuisine entre deux
+sessions**. Ajouté à `actionReserverCuisine()` — avant d'ouvrir le formulaire, cherche une
+AUTRE session du même jour déjà réservée (`envoyee`/`confirmee`) dont le créneau
+chevauche le créneau par défaut proposé, et l'affiche en alerte rouge explicite (« la
+cuisine ne peut recevoir deux sessions en même temps »). Vérifié sur le créneau par
+défaut, pas recalculé à chaque frappe si l'utilisateur ajuste les heures à la main — la
+personne qui réserve reste juge, cohérent avec « annoncé, pas simulé » (§7 de la spec).
+
+Session 09 (Bloc Test produit) est donc désormais complète sur ses trois contrôles de
+capacité annoncés : plafond 350 plats/semaine, disponibilité des rôles, conflit de
+créneau cuisine. 🔄 Toujours non vérifié en conditions réelles.

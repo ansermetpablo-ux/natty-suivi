@@ -1555,7 +1555,17 @@ async function actionReserverCuisine(tacheId){
   ?`Estimé depuis le mapping minuté de la session (le poste le plus chargé) + ${marge} min de marge, arrondi à l'heure pleine. Génère/régénère le mapping si les volumes ont changé.`
   :manqueMenu?"Le menu n'est pas encore composé — créneau par défaut, à ajuster."
   :`Estimé depuis ${minutes} min de préparation/cuisson du menu + ${marge} min de marge (mapping pas encore généré, calcul moins précis).`;
+ // §9 session « bloc Test produit » feature 3 : conflit de créneau
+ // cuisine avec une AUTRE session déjà réservée (envoyée ou confirmée)
+ // le même jour. Vérifié sur le créneau PROPOSÉ par défaut — si la
+ // personne change les heures dans le formulaire, elle ajuge elle-même
+ // (§7 : « ne pas inventer » — on annonce un conflit connu, on ne le
+ // recalcule pas en direct à chaque frappe pour un module aussi simple).
+ const autres=await sbTry('crm_sessions?jour=eq.'+session.jour+'&id=neq.'+session.id+'&statut_reservation=in.(envoyee,confirmee)&select=id,type,creneau_debut,creneau_fin');
+ const conflit=(autres.ok?autres.data:[]).find(s=>s.creneau_debut&&s.creneau_fin&&s.creneau_debut<heureFin&&'09:00'<s.creneau_fin);
+ const alerteConflit=conflit?`<div class="exbar" style="margin:-4px 0 10px"><span class="chip bad">Conflit</span><span>Une autre session (${conflit.type==='mise_en_place'?'mise en place':'production'}) est déjà réservée ce jour-là, ${conflit.creneau_debut.slice(0,5)}–${conflit.creneau_fin.slice(0,5)} — la cuisine ne peut recevoir deux sessions en même temps.</span></div>`:'';
  modal(`<h2>Réserver la cuisine</h2>
+  ${alerteConflit}
   <p class="muted" style="font-size:13px">${explication}</p>
   <form class="form" id="cuisineForm">
    <div class="two"><label>Date<input class="inp" id="cf1" type="date" value="${session.jour}" required></label><label>Nombre de personnes<input class="inp" id="cf2" type="number" value="4" required></label></div>
