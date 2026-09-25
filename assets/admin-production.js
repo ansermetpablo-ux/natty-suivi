@@ -211,6 +211,8 @@
       '.np-gr label span{flex:1 1 100%;font-weight:600}',
       '.np-gr label input{width:72px}',
       '.np-gr label.mod{background:#c97a0014;outline:1px solid #c97a0055}',
+      '.np-gr label small.k{color:var(--muted)}',
+      '.np-ecart{font-size:11px;color:var(--muted)}',
       '.np-gr label small{flex:1 1 100%;font-size:10.5px;color:#c97a00}',
       '.np-gr-pied{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:11.5px}',
       '.np-manu{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:#c97a001f;color:#c97a00}',
@@ -437,6 +439,7 @@
   /* ── Chargement ─────────────────────────────────────────────────────────── */
   function chargerTout() {
     return Promise.all([
+      chargerBaseNatty(),
       sbq('bons_commande?statut=neq.annule&select=*&order=jour_livraison.asc.nullsfirst,created_at.desc'),
       sbq('bons_attributions?select=*'),
       sbq('recettes?actif=eq.true&select=*&order=nom.asc'),
@@ -445,6 +448,7 @@
       sbq('onboarding?select=user_id,prenom,nom,email,poids,tdee,objectif_type,objectif_valeur,objectif_semaines,created_at&order=created_at.desc'),
       sbq('ingredients_base?select=nom,nom_normalise,cal_per_100g,prot_per_100g,gluc_per_100g,lip_per_100g')
     ]).then(function (r) {
+      r = r.slice(1);
       S.bons = r[0] || []; S.attribs = r[1] || []; S.recettes = r[2] || [];
       S.ings = {}; (r[3] || []).forEach(function (i) { (S.ings[i.recette_id] = S.ings[i.recette_id] || []).push(i); });
       S.etapes = {}; (r[4] || []).forEach(function (e) { (S.etapes[e.recette_id] = S.etapes[e.recette_id] || []).push(e); });
@@ -470,7 +474,50 @@
   }
 
   /* ── La fiche technique, lue comme elle est écrite ──────────────────────── */
+  /* ── La base nutritionnelle : CELLE DE L'APP (assets/core.js) ─────────────
+     Décision de Pablo (2026-09-25) : les grammages ne suivent plus la fiche
+     multipliée d'un bloc, ils se calculent sur l'équilibre des macros de
+     chaque aliment dans NOTRE base — la table de ~230 aliments d'assets/core.js,
+     celle qui compte les repas des membres et qui a servi à chiffrer les fiches
+     importées (scripts/importer-fiches.mjs). `ingredients_base` (les produits
+     Metro) ne sert plus que de repli pour ce que la table ne connaît pas.
+     ⚠️ ON EXÉCUTE core.js, ON NE LE RECOPIE PAS. Une copie de cette table a
+     déjà divergé une fois (api/_nutrition.js, §3 de CLAUDE.md) et s'est payée
+     en macros fausses. core.js ne peut pas être chargé tel quel ici (il pose un
+     intercepteur de clics sur tout le document) : on le lit en texte et on
+     l'exécute dans un bac à sable — faux `window`/`document` — pour n'en garder
+     que `getNutri`. Même technique que scripts/importer-fiches.mjs. */
+  var NUTRI = null, nutriPret = null;
+  function chargerBaseNatty() {
+    if (NUTRI) return Promise.resolve(NUTRI);
+    if (!nutriPret) nutriPret = fetch('/assets/core.js', { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) throw new Error('core.js ' + r.status);
+      return r.text();
+    }).then(function (src) {
+      var noop = function () {};
+      var el = function () { return { style: {}, setAttribute: noop, addEventListener: noop, appendChild: noop, removeChild: noop, classList: { add: noop, remove: noop, toggle: noop } }; };
+      var doc = { addEventListener: noop, removeEventListener: noop, createElement: el, getElementById: function () { return null; },
+        querySelector: function () { return null; }, querySelectorAll: function () { return []; }, head: el(), body: el(), documentElement: el(), readyState: 'complete' };
+      var ls = { getItem: function () { return null; }, setItem: noop, removeItem: noop };
+      var loc = { hostname: location.hostname, protocol: location.protocol, search: '', hash: '', href: '', pathname: '/' };
+      var win = { addEventListener: noop, removeEventListener: noop, location: loc, localStorage: ls, sessionStorage: ls, document: doc,
+        matchMedia: function () { return { matches: false, addEventListener: noop, addListener: noop }; }, setTimeout: setTimeout, clearTimeout: clearTimeout };
+      var N = new Function('window', 'document', 'localStorage', 'sessionStorage', 'location', 'navigator',
+        src + '\n;return typeof Natty !== "undefined" ? Natty : window.Natty;')(win, doc, ls, ls, loc, { userAgent: '' });
+      if (!N || typeof N.getNutri !== 'function') throw new Error('getNutri absent de core.js');
+      NUTRI = N.getNutri; OPT_CACHE = {};
+      return NUTRI;
+    }).catch(function (e) { nutriPret = null; console.warn('Base nutritionnelle Natty indisponible :', e); return null; });
+    return nutriPret;
+  }
+
+  /* Les valeurs pour 100 g d'un ingrédient, dans la forme d'ingredients_base.
+     La table de l'app d'abord ; ingredients_base pour ce qu'elle ignore. */
   function nutri100(nom) {
+    if (NUTRI) {
+      var v = NUTRI(nom, 100);
+      if (v) return { cal_per_100g: v.c, prot_per_100g: v.p, gluc_per_100g: v.g, lip_per_100g: v.l, src: 'natty' };
+    }
     var k = norm(nom);
     if (S.ingBase[k]) return S.ingBase[k];
     // plus long libellé contenu dans le nom, mot à mot (jamais en sous-chaîne)
@@ -480,6 +527,7 @@
     });
     return best ? S.ingBase[best] : null;
   }
+
 
   /* Ce qu'on sait de la fiche : pour combien de portions elle est écrite, ce
      que pèse et vaut une de ses portions. Chaque champ dit s'il est LU ou
@@ -527,9 +575,121 @@
       mac100: mac100, macPortion: macPortion, macSrc: macSrc };
   }
 
-  /* La portion d'UN client sur cette fiche : le facteur par rapport à la
-     portion de la fiche, et les grammes par ingrédient. */
-  function portionPour(r, cibleKcal) {
+  /* ── LA PORTION D'UN CLIENT : OPTIMISÉE SUR SES MACROS ──────────────────
+     Pablo (2026-09-25) : « les quantités et coefficients entre les aliments
+     doivent changer pour chaque personne ». Une portion n'est plus la fiche × un
+     facteur unique : chaque ingrédient reçoit SON coefficient, choisi pour que
+     la portion tombe au plus près des macros du client pour ce repas (45 % de
+     ses protéines, glucides, lipides et calories du jour).
+     Le calcul (`portionOptimale`) :
+       · point de départ : la fiche mise à l'échelle des calories visées (le
+         calcul d'avant) — coefficient k0 identique pour tous ;
+       · on minimise l'écart relatif aux quatre cibles (protéines pesées ×3 :
+         c'est la macro qu'on sert d'abord), plus un rappel doux vers k0 pour
+         chaque ingrédient — sans lui, l'optimum serait « 400 g de poulet et
+         plus de légumes », ce n'est plus le plat ;
+       · chaque coefficient reste dans [0,3 ; 3] × k0 : le plat se reconnaît ;
+       · les ingrédients que la base ne chiffre pas, et ceux de moins de 3 g
+         par portion (sel, épices), restent à k0.
+     Descente de gradient projetée (le problème est quadratique et petit : une
+     quinzaine d'ingrédients), résultat mis en cache par recette et cible.
+     Ce qui en sort est une ESTIMATION, et l'écran le dit : l'écart restant à
+     chaque cible est affiché. */
+  var OPT_CACHE = {};
+  var POIDS_MAC = { p: 3, g: 2, l: 2, c: 2 }, RAPPEL = 0.08, S_MIN = 0.3, S_MAX = 3;
+
+  /* La cible d'un repas pour un client, en kcal ET en macros. Les macros du
+     jour (`besoinJour`) sont ramenées aux kcal retenues pour ce bon — si
+     quelqu'un a corrigé la cible à la main, les macros suivent dans la même
+     proportion. Sans profil exploitable (commande libre), une répartition par
+     défaut 25 / 45 / 30 % des kcal, signalée comme telle. */
+  function cibleMacros(uid, kcal) {
+    kcal = parseFloat(kcal) || 0;
+    if (!kcal) return null;
+    var c = uid && S.clients[uid], B = c ? besoinJour(c) : null;
+    if (B && B.mac && B.kcal > 0) {
+      var f = kcal / B.kcal;
+      return { c: kcal, p: B.mac.p * f, g: B.mac.g * f, l: B.mac.l * f, src: 'client' };
+    }
+    return { c: kcal, p: kcal * 0.25 / 4, g: kcal * 0.45 / 4, l: kcal * 0.30 / 9, src: 'defaut' };
+  }
+  function cibleAttrib(a) {
+    var b = S.bons.find(function (x) { return x.id === a.bon_id; });
+    return cibleMacros(b && b.user_id, a.kcal_portion);
+  }
+
+  function portionOptimale(r, T) {
+    var f = fiche(r), nb = f.nb || 1;
+    var cle = r.id + '|' + Math.round(T.c) + '|' + Math.round(T.p) + '|' + Math.round(T.g) + '|' + Math.round(T.l) + '|' + (NUTRI ? 1 : 0);
+    if (OPT_CACHE[cle]) return OPT_CACHE[cle];
+    var ings = f.ings.map(function (i) {
+      var x0 = (parseFloat(i.quantite_g) || 0) / nb, n = nutri100(i.ingredient_nom);
+      var m = n && n.cal_per_100g != null ? { c: +n.cal_per_100g || 0, p: +n.prot_per_100g || 0, g: +n.gluc_per_100g || 0, l: +n.lip_per_100g || 0 } : null;
+      return { nom: i.ingredient_nom, unite: i.unite || 'g', x0: x0, m: m, libre: !!m && x0 >= 3 };
+    });
+    // kcal d'une portion de fiche, comptées sur NOTRE base
+    var kFiche = ings.reduce(function (t, i) { return t + (i.m ? i.x0 * i.m.c / 100 : 0); }, 0);
+    var k0 = kFiche > 0 ? T.c / kFiche : 1;
+    var s = ings.map(function () { return k0; });
+    var MACS = ['p', 'g', 'l', 'c'];
+    function totaux(sv) {
+      var t = { p: 0, g: 0, l: 0, c: 0 };
+      ings.forEach(function (i, k) { if (i.m) MACS.forEach(function (m) { t[m] += i.x0 * sv[k] * i.m[m] / 100; }); });
+      return t;
+    }
+    var libres = ings.map(function (i, k) { return i.libre ? k : -1; }).filter(function (k) { return k >= 0; });
+    if (libres.length && kFiche > 0) {
+      // pas de descente : 1 / constante de Lipschitz du gradient
+      var L = 0;
+      MACS.forEach(function (m) {
+        if (!(T[m] > 0)) return;
+        var n2 = libres.reduce(function (t, k) { var a = ings[k].x0 * ings[k].m[m] / 100 / T[m]; return t + a * a; }, 0);
+        L += 2 * POIDS_MAC[m] * n2;
+      });
+      L += 2 * RAPPEL / (k0 * k0);
+      var pas = 1 / (L || 1);
+      for (var it = 0; it < 3000; it++) {
+        var t = totaux(s), e = {};
+        MACS.forEach(function (m) { e[m] = T[m] > 0 ? (t[m] / T[m] - 1) : 0; });
+        var bouge = 0;
+        libres.forEach(function (k) {
+          var i = ings[k], g = 2 * RAPPEL * (s[k] / k0 - 1) / k0;
+          MACS.forEach(function (m) { if (T[m] > 0) g += 2 * POIDS_MAC[m] * e[m] * (i.x0 * i.m[m] / 100 / T[m]); });
+          var v = Math.min(S_MAX * k0, Math.max(S_MIN * k0, s[k] - pas * g));
+          bouge = Math.max(bouge, Math.abs(v - s[k]) / k0); s[k] = v;
+        });
+        if (bouge < 1e-6) break;
+      }
+    }
+    var tot = totaux(s), basePortion = f.gPortionFiche || f.gTotal || 1;
+    var connus = ings.some(function (i) { return i.m; });
+    // coef : la part de CET aliment par rapport à la fiche mise à l'échelle des kcal (1 = la proportion de la fiche)
+    var sortie = ings.map(function (i, k) { return { nom: i.nom, g: i.x0 * s[k], unite: i.unite, coef: s[k] / k0, gEchelle: i.x0 * k0, gFiche: i.x0 }; });
+    var gP = sortie.reduce(function (a, i) { return a + i.g; }, 0);
+    var res = {
+      facteur: gP / basePortion, gPortion: gP, fiche: f, optim: true, cible: T,
+      mode: libres.length ? 'coefficients par aliment, optimisés sur ses macros' : 'fiche mise à l’échelle (aucun aliment chiffrable)',
+      kcal: connus ? tot.c : null, mac: connus ? { p: tot.p, g: tot.g, l: tot.l } : null,
+      ecart: connus ? { c: tot.c - T.c, p: tot.p - T.p, g: tot.g - T.g, l: tot.l - T.l } : null,
+      approx: ings.some(function (i) { return !i.m && i.x0 > 0; }),
+      ings: sortie
+    };
+    OPT_CACHE[cle] = res;
+    return res;
+  }
+  // une portion mise à l'échelle d'un bloc (quantité totale imposée à la main)
+  function echelle(p, k, mode) {
+    return { facteur: p.facteur * k, gPortion: p.gPortion * k, fiche: p.fiche, optim: p.optim, cible: p.cible, mode: mode, manuel: true,
+      kcal: p.kcal != null ? p.kcal * k : null, mac: p.mac ? { p: p.mac.p * k, g: p.mac.g * k, l: p.mac.l * k } : null,
+      ecart: p.cible && p.kcal != null && p.mac ? { c: p.kcal * k - p.cible.c, p: p.mac.p * k - p.cible.p, g: p.mac.g * k - p.cible.g, l: p.mac.l * k - p.cible.l } : null,
+      approx: p.approx, ings: p.ings.map(function (i) { return Object.assign({}, i, { g: i.g * k }); }) };
+  }
+
+  /* La portion d'UN client sur cette fiche. Avec une cible de macros (T), les
+     coefficients par aliment ; sans (aucun profil, aucune kcal), l'ancien
+     calcul — la fiche × un facteur unique. */
+  function portionPour(r, cibleKcal, T) {
+    if (T && T.c > 0) return portionOptimale(r, T);
     var f = fiche(r), facteur = 1, gPortion, mode;
     if (f.kcalPortion && cibleKcal) {
       facteur = cibleKcal / f.kcalPortion;
@@ -552,10 +712,14 @@
       }) };
   }
 
-  /* La portion quand la QUANTITÉ a été fixée à la main (facteur sur la
-     portion de fiche) : les grammes décident, les kcal et les macros suivent.
-     C'est l'inverse de portionPour, où la cible kcal décide des grammes. */
-  function portionFacteur(r, fac) {
+  /* La portion quand la QUANTITÉ TOTALE a été fixée à la main : la portion
+     optimisée du client, agrandie ou réduite d'un bloc (ses proportions entre
+     aliments restent les siennes). Sans cible, la fiche × ce facteur. */
+  function portionFacteur(r, fac, T) {
+    if (T && T.c > 0) {
+      var o = portionOptimale(r, T);
+      return echelle(o, o.facteur > 0 ? fac / o.facteur : 1, 'quantité ajustée à la main');
+    }
     var f = fiche(r), base = f.gPortionFiche || f.gTotal, g = base * fac;
     var mac = f.macPortion ? { p: f.macPortion.p * fac, g: f.macPortion.g * fac, l: f.macPortion.l * fac }
            : (f.mac100 ? { p: g * f.mac100.p / 100, g: g * f.mac100.g / 100, l: g * f.mac100.l / 100 } : null);
@@ -565,18 +729,21 @@
         return { nom: i.ingredient_nom, g: (parseFloat(i.quantite_g) || 0) / (f.nb || 1) * fac, unite: i.unite || 'g' };
       }) };
   }
-  /* Une attribution dont la quantité a été CORRIGÉE à la main se reconnaît à
-     son facteur : il ne correspond plus à celui que donne sa cible kcal
-     (kcal_portion garde la cible, facteur porte la quantité réelle). Au-delà
-     de 2 % d'écart, c'est une décision, pas un arrondi.
-     ⚠️ Sans ce test, la production recalculerait les grammes depuis la cible
-     et jetterait la correction — on ajusterait une quantité que la cuisine ne
-     verrait jamais. */
-  function estManuel(r, a) {
+  /* Une attribution dont la quantité totale a été CORRIGÉE à la main se
+     reconnaît à son facteur : il ne correspond plus à celui de sa portion
+     calculée (kcal_portion garde la cible, facteur porte la quantité réelle).
+     Au-delà de 2 % d'écart, c'est une décision, pas un arrondi. */
+  function estManuel(r, a, T) {
     var fac = parseFloat(a.facteur);
     if (!r || !(fac > 0)) return false;
-    var auto = portionPour(r, parseFloat(a.kcal_portion) || 0).facteur || 1;
-    return Math.abs(fac - auto) / auto > 0.02;
+    if (T === undefined) T = cibleAttrib(a);
+    var auto = portionPour(r, parseFloat(a.kcal_portion) || 0, T).facteur || 1;
+    /* ⚠️ Les attributions écrites AVANT les coefficients par aliment portent le
+       facteur de l'ancien calcul (la fiche × un facteur unique). Sans ce second
+       test, toutes passeraient pour « ajustées à la main » et garderaient les
+       vieux grammages uniformes au lieu d'être optimisées. */
+    var ancien = portionPour(r, parseFloat(a.kcal_portion) || 0, null).facteur || 1;
+    return Math.abs(fac - auto) / auto > 0.02 && Math.abs(fac - ancien) / ancien > 0.02;
   }
   /* ── Les grammages PAR INGRÉDIENT (2026-09-25, Pablo) ───────────────────
      À l'attribution comme à l'assemblage, chaque ingrédient d'une portion peut
@@ -621,7 +788,8 @@
      d'une ligne à grammages est dérivé de ses grammes : il ne dit rien de la
      portion d'origine, on repart donc de la cible. */
   function portionOrigine(r, a) {
-    return !grammesDe(a) && estManuel(r, a) ? portionFacteur(r, parseFloat(a.facteur)) : portionPour(r, parseFloat(a.kcal_portion) || 0);
+    var T = cibleAttrib(a);
+    return !grammesDe(a) && estManuel(r, a, T) ? portionFacteur(r, parseFloat(a.facteur), T) : portionPour(r, parseFloat(a.kcal_portion) || 0, T);
   }
   function portionAttrib(r, a) {
     var gr = grammesDe(a), base = portionOrigine(r, a);
@@ -937,6 +1105,7 @@
     cibleClient(b.user_id).then(function (c) {
       var existante = attribsDe(b.id)[0];
       A.cible = c; A.cibleRetenue = existante && existante.kcal_portion ? existante.kcal_portion : c.cible;
+      A.T = cibleMacros(b.user_id, A.cibleRetenue);
       el.innerHTML = htmlAttribution(b, c);
     });
   }
@@ -957,8 +1126,8 @@
     html += '<div class="np-h">Recettes <span id="npCompte" style="text-transform:none;letter-spacing:0"></span></div>';
     if (!S.recettes.length) html += '<div class="np-alerte">Aucune recette active — à créer dans l’onglet Chef.</div>';
     html += S.recettes.map(function (r) {
-      var n = A.sel[r.id] || 0, auto = portionPour(r, A.cibleRetenue);
-      var p0 = A.fac[r.id] ? portionFacteur(r, A.fac[r.id]) : auto, gr = A.gr[r.id] && Object.keys(A.gr[r.id]).length ? A.gr[r.id] : null;
+      var n = A.sel[r.id] || 0, auto = portionPour(r, A.cibleRetenue, A.T);
+      var p0 = A.fac[r.id] ? portionFacteur(r, A.fac[r.id], A.T) : auto, gr = A.gr[r.id] && Object.keys(A.gr[r.id]).length ? A.gr[r.id] : null;
       var p = gr ? portionAvecGrammes(r, gr, p0) : p0, f = p.fiche;
       var warn = [];
       if (!f.kcalPortion && !f.kcal100) warn.push('rien de chiffré');
@@ -971,6 +1140,7 @@
         + (warn.length ? ' · <span style="color:#c97a00">⚠ ' + h(warn.join(', ')) + '</span>' : '') + '</div>'
         + (n ? '<div class="np-qte"><label>Quantité par portion <input type="number" class="np-in n" data-gram-rec="' + h(r.id) + '" value="' + Math.round(p.gPortion) + '" min="1" step="1"' + (gr ? ' disabled title="Somme des grammages par ingrédient ci-dessous"' : '') + '> g</label>'
           + '<span>' + (p.kcal ? '<b>' + (p.approx ? '≈ ' : '') + Math.round(p.kcal) + ' kcal</b>' : 'kcal inconnues') + (p.mac ? ' · ' + libMacros(p.mac) : '') + '</span>'
+          + (p.ecart ? '<span class="np-ecart" title="écart à la cible de ce repas (45 % de ses besoins' + (p.cible && p.cible.src === 'defaut' ? ', répartition par défaut faute de profil' : '') + ')">écart cible ' + libEcart(p.ecart) + '</span>' : '')
           + '<button class="np-lien" data-act="ing-ouvrir" data-rec="' + h(r.id) + '">' + (A.ouvert[r.id] ? '▾' : '▸') + ' grammage par ingrédient</button>'
           + (A.fac[r.id] ? '<span class="np-manu">ajustée à la main</span><button class="np-lien" data-act="gram-auto" data-rec="' + h(r.id) + '">↺ revenir à ' + Math.round(auto.gPortion) + ' g (cible)</button>' : '')
           + '</div>'
@@ -987,10 +1157,15 @@
   /* Les champs d'ingrédients d'une portion : un par ingrédient, en g par
      portion, orange quand il est corrigé. `attr` porte la cible du changement
      (une recette dans l'attribution, une attribution dans l'assemblage). */
+  function libEcart(e) {
+    function x(v, u) { v = Math.round(v); return (v > 0 ? '+' : '') + v + u; }
+    return x(e.p, ' g P') + ' · ' + x(e.g, ' g G') + ' · ' + x(e.l, ' g L') + ' · ' + x(e.c, ' kcal');
+  }
   function htmlGrammes(p, attr, pied) {
     return '<div class="np-gr">' + p.ings.map(function (i) {
       return '<label class="' + (i.corrige ? 'mod' : '') + '"><span>' + h(i.nom) + '</span><input type="number" class="np-in n" ' + attr + ' data-ing-nom="' + h(i.nom) + '" value="' + (i.g >= 10 ? Math.round(i.g) : Math.round(i.g * 10) / 10) + '" min="0" step="any"> ' + h(i.unite)
-        + (i.corrige ? '<small>au lieu de ' + (i.gAuto >= 10 ? Math.round(i.gAuto) : Math.round(i.gAuto * 10) / 10) + '</small>' : '') + '</label>';
+        + (i.corrige ? '<small>au lieu de ' + (i.gAuto >= 10 ? Math.round(i.gAuto) : Math.round(i.gAuto * 10) / 10) + '</small>'
+          : (i.coef != null && i.gEchelle > 0 ? '<small class="k">' + (Math.abs(i.coef - 1) < 0.03 ? 'proportion de la fiche' : 'fiche : ' + Math.round(i.gEchelle) + ' g (×' + (Math.round(i.coef * 100) / 100).toString().replace('.', ',') + ')') + '</small>' : '')) + '</label>';
     }).join('') + (pied ? '<div class="np-gr-pied">' + pied + (p.approx ? ' <span class="np-s">≈ : un ingrédient corrigé n’est pas dans ingredients_base, son énergie est estimée.</span>' : '') + '</div>' : (p.approx ? '<div class="np-gr-pied np-s">≈ : un ingrédient corrigé n’est pas dans ingredients_base, son énergie est estimée.</div>' : '')) + '</div>';
   }
 
@@ -1019,7 +1194,8 @@
     var b = A.bon, cible = parseInt(document.getElementById('npCible').value, 10) || A.cibleRetenue;
     var rows = Object.keys(A.sel).filter(function (k) { return A.sel[k] > 0; }).map(function (k) {
       var r = recette(k), gr = A.gr[k] && Object.keys(A.gr[k]).length ? A.gr[k] : null;
-      var p0 = A.fac[k] ? portionFacteur(r, A.fac[k]) : portionPour(r, cible);
+      var T = cibleMacros(b.user_id, cible);
+      var p0 = A.fac[k] ? portionFacteur(r, A.fac[k], T) : portionPour(r, cible, T);
       var fac = gr ? portionAvecGrammes(r, gr, p0).facteur : p0.facteur;
       var row = { bon_id: b.id, recette_id: k, nb_portions: A.sel[k], kcal_portion: cible, facteur: Math.round(fac * 1000) / 1000 };
       if (gr) row.grammes = gr;
@@ -1206,7 +1382,7 @@
 
   function sectionAssemblage(lots, jour) {
     var html = '<div class="np-h">Assemblage — portion par portion, sur la balance</div>';
-    html += '<div class="np-note">On quitte la masse. Pour chaque recette, toutes les portions de tous les clients, avec les grammes de <b>chaque</b> ingrédient : ils découlent de la cible calorique du client (×facteur sur la fiche). Cocher une portion quand elle est en boîte.</div>';
+    html += '<div class="np-note">On quitte la masse. Pour chaque recette, toutes les portions de tous les clients, avec les grammes de <b>chaque</b> ingrédient : chaque aliment a son propre coefficient, calculé sur les macros du client (45 % de ses besoins du jour) avec la base nutritionnelle de l’app. Cocher une portion quand elle est en boîte.</div>';
     lots.forEach(function (l) {
       var ass = (S.etapes[l.rec.id] || []).filter(function (e) { return e.phase === 'assemblage'; });
       html += '<div class="np-h" style="color:' + l.couleur + '">' + h(l.rec.nom) + ' — ' + l.portions + ' portion(s)</div>';
@@ -1220,6 +1396,7 @@
           html += '<div class="np-port ' + (fait ? 'ok' : '') + '"><div class="hd"><input type="checkbox" data-coche="' + h(cle) + '" ' + (fait ? 'checked' : '') + '><b>' + idx + '/' + l.portions + ' · ' + h(nomClient(pc.bon.user_id)) + '</b>'
             + '<span class="np-s"' + (pc.p.mac ? ' title="' + h(srcMacros(pc.p.fiche)) + '"' : '') + '>' + (pc.p.kcal ? Math.round(pc.p.kcal) + ' kcal · ' : '')
             + (pc.p.mac ? libMacros(pc.p.mac) + ' · ' : '') + Math.round(pc.p.gPortion) + ' g · ×' + pc.p.facteur.toFixed(2) + '</span></div><div class="np-ing">'
+            + (pc.p.ecart ? '<div class="np-ecart" style="margin:-4px 0 4px">écart à sa cible : ' + libEcart(pc.p.ecart) + '</div>' : '')
             + '</div>' + htmlGrammes(pc.p, 'data-ing-attr="' + h(pc.a.id) + '"',
                 (pc.n > 1 ? '<span class="np-s">S’applique aux ' + pc.n + ' portions de ce client.</span> ' : '')
                 + (pc.p.grammes ? '<button class="np-lien" data-act="ass-auto" data-attr="' + h(pc.a.id) + '">↺ grammages de la portion</button>' : ''))
@@ -2371,6 +2548,7 @@
     }
     if (t.id === 'npCible') {
       A.cibleRetenue = parseInt(t.value, 10) || A.cibleRetenue;
+      A.T = cibleMacros(A.bon.user_id, A.cibleRetenue);
       var el = document.getElementById('npVue'); el.innerHTML = htmlAttribution(A.bon, A.cible); return;
     }
     if (t.id === 'npJourProd') { S.jour = t.value; rendre(); return; }
@@ -3073,7 +3251,7 @@
           if (Math.abs((parseFloat(a.kcal_portion) || 0) - c.cible) < 5) return;  // déjà à jour
           var r = recette(a.recette_id);
           if (estManuel(r, a) || grammesDe(a)) return;   // quantité corrigée à la main : décision humaine, on n'y touche pas
-          var f = Math.round((r ? portionPour(r, c.cible).facteur : 1) * 1000) / 1000;
+          var f = Math.round((r ? portionPour(r, c.cible, cibleMacros(uid, c.cible)).facteur : 1) * 1000) / 1000;
           maj.push(sbq('bons_attributions?id=eq.' + a.id, { method: 'PATCH',
             body: JSON.stringify({ kcal_portion: c.cible, facteur: f }) })
             // ⚠️ La copie en mémoire prend la valeur ARRONDIE, celle qui part en
@@ -3099,7 +3277,7 @@
     // pour crm.html : la même règle (45 %) et les mêmes portions que la cuisine
     charger: function () { return chargerTout(); }, etat: S, cibleClient: cibleClient, nomClient: nomClient,
     portionPour: portionPour, portionFacteur: portionFacteur, portionAttrib: portionAttrib, estManuel: estManuel,
-    fiche: fiche, PART_REPAS: PART_REPAS, grammesDe: grammesDe, portionOrigine: portionOrigine, portionAvecGrammes: portionAvecGrammes,
+    fiche: fiche, PART_REPAS: PART_REPAS, cibleMacros: cibleMacros, portionOptimale: portionOptimale, baseNatty: chargerBaseNatty, grammesDe: grammesDe, portionOrigine: portionOrigine, portionAvecGrammes: portionAvecGrammes,
     _dispatcher: dispatcher, _portionPour: portionPour, _etat: S,
     _dependances: dependances, _decoupeDe: decoupeDe, _grapheDuJour: grapheDuJour, _illustration: illustration
   };

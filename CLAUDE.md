@@ -4041,6 +4041,29 @@ pas** une quantité ajustée à la main quand la fiche client change.
 > ⚠️ crm.html ne recopie aucun calcul : il charge `assets/admin-production.js` et appelle
 > `NattyProd.cibleClient` / `portionPour` / `portionFacteur` / `portionAttrib`.
 
+**LES PORTIONS SE CALCULENT ALIMENT PAR ALIMENT, SUR LES MACROS DU CLIENT** (2026-09-25, Pablo :
+« les quantités ne doivent pas se baser sur les fiches, mais sur l'équilibre des macros par aliment
+de notre base ; les coefficients entre les aliments doivent changer pour chaque personne »).
+- **La base, c'est celle de l'app** : la table `NT` d'`assets/core.js` (~230 aliments). Elle n'est
+  PAS recopiée : `chargerBaseNatty()` lit `/assets/core.js` en texte et l'exécute dans un bac à
+  sable (faux `window`/`document`) pour n'en garder que `getNutri` — core.js ne peut pas être chargé
+  tel quel (intercepteur de clics). `ingredients_base` ne sert plus que de repli.
+- **La cible** (`cibleMacros(uid, kcal)`) : les macros du jour du client (`besoinJour`) ramenées aux
+  kcal retenues (45 %). Sans profil (commande libre du CRM) : 25 / 45 / 30 % des kcal, signalé.
+- **Le calcul** (`portionOptimale`) : départ = la fiche mise à l'échelle des kcal (k0, l'ancien
+  calcul) ; on minimise l'écart relatif aux 4 cibles (P ×3, G ×2, L ×2, kcal ×2) + un rappel doux
+  vers k0 par aliment (sinon on quitte le plat), chaque coefficient borné à [0,3 ; 3] × k0. Sel,
+  épices (< 3 g/portion) et aliments inconnus restent à k0. Descente de gradient projetée, en cache.
+- Mesuré au banc, même recette : Hugo (85 kg, 2 800 kcal) → poulet ×0,54 / riz ×1,84 de la fiche à
+  l'échelle, écart P +1 g ; Léa (55 kg, 1 800 kcal) → autres grammes, écart P +1 g. L'ancien calcul
+  donnait à tous les mêmes proportions (et 105 g de protéines à Hugo pour une cible de 77).
+- **Écart à la cible affiché** à l'attribution et à l'assemblage : c'est une estimation.
+- Le champ « quantité par portion » agrandit / réduit la portion optimisée d'un bloc (ses
+  proportions restent celles du client) ; les grammages par ingrédient se posent par-dessus.
+- ⚠️ `estManuel()` reconnaît aussi l'ANCIEN facteur uniforme : sans ça, toutes les attributions
+  écrites avant ce changement seraient passées pour « ajustées à la main » et auraient gardé leurs
+  vieux grammages.
+
 **Le grammage de chaque ingrédient, par client** (2026-09-25, demande de Pablo). À l'attribution
 (« ▸ grammage par ingrédient » sous la quantité d'une recette) ET à l'assemblage (chaque portion a
 un champ par ingrédient), les kcal et P/G/L se recalculent aussitôt.

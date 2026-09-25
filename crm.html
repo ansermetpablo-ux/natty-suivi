@@ -1869,17 +1869,18 @@ async function ouvrirFormBon(bonId,jourDefaut){
  async function majCible(){
   const uid=$('#bfUid').value;
   if(uid&&E){const c=await NattyProd.cibleClient(uid);C={cible:c.besoin?c.cible:null,mac:c.mac,raison:c.raison,besoin:c.besoin}}
-  else{const b=+besoinLibre||0;C={cible:b?Math.round(b*0.45/10)*10:null,mac:null,besoin:b,raison:b?`Besoin saisi ${b} kcal × 45 %`:''}}
+  else{const b=+besoinLibre||0;C={cible:b?Math.round(b*0.45/10)*10:null,mac:null,besoin:b,raison:b?`Besoin saisi ${b} kcal × 45 % (répartition des macros par défaut, faute de profil)`:''}}
+  C.T=E&&C.cible?NattyProd.cibleMacros(uid||null,C.cible):null;
   $('#bfCible').innerHTML=C.cible
    ?`<div><b class="num">${C.cible} kcal</b> par repas${C.mac?` · ${fmtMac(C.mac)}`:''}<div class="muted" style="font-size:12px">${esc(C.raison)}${uid?'':' — règle Natty : 1 repas = 45 % des besoins journaliers.'}</div></div>`
    :`<div class="muted" style="font-size:12.5px">${uid?'Ce client n’a pas de dépense (tdee) dans son profil.':'Commande libre.'} Sans besoin journalier, les portions suivent la fiche technique.</div>`;
   if(!uid)$('#bfCible').insertAdjacentHTML('beforeend',`<label style="max-width:240px">Besoin journalier du client (kcal)<input class="inp" type="number" min="500" max="8000" step="any" id="bfBesoin" value="${esc(besoinLibre)}" placeholder="ex. 2400"></label>`);
   peindreLignes();
  }
- const portion=l=>{const r=recById(l.rec);if(!r)return null;const p0=l.fac?NattyProd.portionFacteur(r,l.fac):NattyProd.portionPour(r,C.cible||0);return l.gr?NattyProd.portionAvecGrammes(r,l.gr,p0):p0};
+ const portion=l=>{const r=recById(l.rec);if(!r)return null;const p0=l.fac?NattyProd.portionFacteur(r,l.fac,C.T):NattyProd.portionPour(r,C.cible||0,C.T);return l.gr?NattyProd.portionAvecGrammes(r,l.gr,p0):p0};
  function peindreLignes(){
   zone.innerHTML=L.map((l,i)=>{
-   const p=l.rec&&E?portion(l):null,auto=p&&l.fac?NattyProd.portionPour(recById(l.rec),C.cible||0):null;
+   const p=l.rec&&E?portion(l):null,auto=p&&l.fac?NattyProd.portionPour(recById(l.rec),C.cible||0,C.T):null;
    return `<div class="bon-l" data-i="${i}"><select class="inp bl-rec">${optRec(l.rec)}</select><input class="inp bl-n" type="number" min="1" max="40" value="${l.n}" aria-label="Portions" title="Portions"><button type="button" class="btn sm ghost bl-x" aria-label="Retirer">×</button>
    ${p?`<div class="bl-q"><label>Quantité / portion <input class="inp bl-g" type="number" min="1" step="any" value="${Math.round(p.gPortion)}"${l.gr?' disabled':''}> g</label><span>${p.kcal?`<b>${p.approx?'≈ ':''}${Math.round(p.kcal)} kcal</b>`:'kcal inconnues'}${p.mac?' · '+fmtMac(p.mac):''}</span>${l.gr?`<span class="chip warn" title="${esc(Object.entries(l.gr).map(([k,v])=>k+' '+Math.round(v)+' g').join(', '))}">grammage par ingrédient (${Object.keys(l.gr).length})</span><button type="button" class="btn sm ghost bl-gr0">↺ retirer</button>`:''}${l.fac?`<span class="chip warn">ajustée à la main</span><button type="button" class="btn sm ghost bl-auto">↺ ${Math.round(auto.gPortion)} g (cible)</button>`:''}</div>`:''}</div>`;
   }).join('');
@@ -1942,7 +1943,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
       deux — c'est ce qu'admin.html et la production relisent. */
    const rows=Object.entries(lignes).map(([rec,l])=>{
     const r=recById(rec);
-    const p0=r?(l.fac?NattyProd.portionFacteur(r,l.fac):NattyProd.portionPour(r,C.cible||0)):null;
+    const p0=r?(l.fac?NattyProd.portionFacteur(r,l.fac,C.T):NattyProd.portionPour(r,C.cible||0,C.T)):null;
     const fac=l.gr&&p0?NattyProd.portionAvecGrammes(r,l.gr,p0).facteur:(l.fac||(p0?p0.facteur:1));
     const row={bon_id:id,recette_id:rec,nb_portions:l.n,kcal_portion:C.cible||(E?null:cibleStockee),facteur:Math.round(fac*1000)/1000};
     if(l.gr)row.grammes=l.gr;
