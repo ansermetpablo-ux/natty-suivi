@@ -68,7 +68,8 @@ a{color:inherit}
 .spacer{flex:1}
 .searchbtn{display:flex;align-items:center;gap:8px;white-space:nowrap;border:0;background:var(--card);border-radius:var(--r-full);padding:8px 14px;color:var(--muted);width:260px;max-width:100%}
 .searchbtn kbd{margin-left:auto;font-family:var(--mono);font-size:11px;background:var(--bg);padding:1px 6px;border-radius:6px}
-.ib{width:36px;height:36px;border-radius:50%;border:0;background:var(--card);display:grid;place-items:center;flex:none}
+.ib{width:36px;height:36px;border-radius:50%;border:0;background:var(--card);display:grid;place-items:center;flex:none;position:relative}
+.ib .dotn{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--card)}
 .ib svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .btn{border:0;border-radius:var(--r-full);padding:9px 16px;font-weight:600;background:var(--card);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{filter:brightness(.97)}
@@ -270,6 +271,7 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
       <div class="crumb" id="crumb"></div>
       <div class="spacer"></div>
       <button class="searchbtn" id="openPal"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Rechercher…</span><kbd>Ctrl K</kbd></button>
+      <button class="ib" id="bellBtn" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/></svg><span class="dotn hide" id="bellDot"></span></button>
       <button class="btn primary" id="createBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Créer</span></button>
     </header>
     <main id="main"></main>
@@ -297,6 +299,14 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
 
 const SB_URL='https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+/* Même compte Cloudinary que le reste de l'app (admin.html). Le preset
+   `meal_photos` n'est pas pensé pour des livrables (PDF, tableurs) —
+   fonctionne en pratique via `/auto/upload` (Cloudinary détecte le type),
+   mais un preset dédié `crm_documents` serait plus propre : à créer dans
+   Cloudinary → Settings → Upload → Add upload preset (Unsigned, Resource
+   type: Auto) si celui-ci s'avère trop restrictif à l'usage. */
+const CLOUDINARY_CLOUD='dujji1s6g';
+const CLOUDINARY_PRESET='meal_photos';
 const STAFF_SESSION_KEY='natty_staff_session';
 let STAFF_SESSION=null,STAFF_ROLE=null,STAFF_NOM='';
 
@@ -497,9 +507,46 @@ async function vDash(){
  if(tb.cur==='projets')body=vAccueilProjets();
  if(tb.cur==='mapping')body=vMappingGeneral();
  return ph(`Bonjour ${esc(STAFF_NOM||'')}`,`${TODAY.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · ${urgentes.length} échéance${urgentes.length>1?'s':''} en cours`,`<button class="btn primary" data-new="projet">+ Projet</button>`)+
+ `<div id="notifsAccueil"></div>`+
  (heros.length?`<div class="hero-carousel">${heros.map(heroCard).join('')}</div>`:`<div class="empty">Aucune échéance en cours. Les tâches avec une date arrivent ici.</div>`)+
  tb.html+body;
 }
+
+/* ============ NOTIFICATIONS — assigné à une tâche, un bloc ou un projet :
+   pop-up dans l'interface (sondage 18 s, pas de WebSocket — voir
+   docs/crm-spec.md, étape 0) + email calendrier côté serveur
+   (api/notifications.js). ============ */
+async function notifsNonLues(){
+ if(!STAFF_SESSION)return[];
+ const r=await sbTry('notifications?destinataire=eq.'+STAFF_SESSION.user_id+'&lu=eq.false&select=*&order=created_at.desc');
+ return r.ok?r.data:[];
+}
+async function marquerNotifLue(id){
+ await sb('notifications?id=eq.'+id,{method:'PATCH',body:JSON.stringify({lu:true,lu_le:new Date().toISOString()})});
+}
+let notifsVues=new Set(),notifsTimer=null;
+function rendreNotifsUI(liste){
+ $('#bellDot')?.classList.toggle('hide',!liste.length);
+ const zone=$('#notifsAccueil');
+ if(zone)zone.innerHTML=liste.length?`<div class="card lift" style="margin-bottom:14px"><h3>Notifications <span class="chip bad">${liste.length}</span></h3><div class="list">${liste.map(n=>`<div class="li"><span class="dot ${n.email_statut==='envoye'?'ok':''}"></span><div class="grow"><b style="font-weight:500">${esc(n.titre)}</b><div class="meta">${n.message?esc(n.message)+' · ':''}${new Date(n.created_at).toLocaleString('fr-FR')}${n.email_statut==='envoye'?' · invitation envoyée':''}</div></div><button class="btn sm ghost" data-marquer-notif="${n.id}">Vu</button></div>`).join('')}</div></div>`:'';
+}
+async function rafraichirNotifs(){
+ const liste=await notifsNonLues();
+ rendreNotifsUI(liste);
+ liste.forEach(n=>{if(!notifsVues.has(n.id)){notifsVues.add(n.id);toast('🔔 '+n.titre)}});
+ return liste;
+}
+function demarrerSondageNotifs(){
+ clearInterval(notifsTimer);
+ rafraichirNotifs();
+ notifsTimer=setInterval(()=>{if(!document.hidden)rafraichirNotifs()},18000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)rafraichirNotifs()});
+}
+document.addEventListener('click',async e=>{
+ const b=e.target.closest('[data-marquer-notif]');
+ if(b){await marquerNotifLue(b.dataset.marquerNotif);notifsVues.delete(b.dataset.marquerNotif);rafraichirNotifs()}
+});
+$('#bellBtn')?.addEventListener('click',()=>{if(CUR!=='dash')go('dash');else{const el=$('#notifsAccueil');el?.scrollIntoView({behavior:'smooth',block:'center'})}});
 function heroCard(t){
  const ji=joursInfo(t.echeance);
  const a=ACT_BY_CLE[t.activite]||{};
@@ -610,10 +657,11 @@ async function vActivite(cle){
  const tachesAct=S.taches.filter(t=>t.activite===cle);
  const routine=tachesAct.filter(t=>t.routine);
  const projets=S.projets.filter(p=>p.activite===cle);
- const onglets=[['taches','Tâches',tachesAct.filter(t=>!t.routine&&t.statut!=='fait').length],['projets','Sous-projets',projets.length],['schema','Schéma',blocs.length],['drive','Drive',docs.length]];
+ const onglets=[['apercu','Aperçu'],['taches','Tâches',tachesAct.filter(t=>!t.routine&&t.statut!=='fait').length],['projets','Sous-projets',projets.length],['schema','Schéma',blocs.length],['drive','Drive',docs.length]];
  if(cle==='logistique')onglets.push(['commandes','Commandes']);
- const tb=tabs('act-'+cle,onglets);
+ const tb=tabs('act-'+cle,onglets,'apercu');
  let body='';
+ if(tb.cur==='apercu')body=vApercuActivite(cle,tachesAct,projets);
  if(tb.cur==='taches')body=groupesTaches(tachesAct.filter(t=>!t.routine));
  if(tb.cur==='projets')body=vProjets(cle,projets);
  if(tb.cur==='schema')body=vSchema(cle,blocs,liens);
@@ -622,6 +670,56 @@ async function vActivite(cle){
  return ph(a.nom,`Tâches, sous-projets, drive et schéma de ${a.nom.toLowerCase()}`,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
   routineHero(cle,routine)+tb.html+body;
 }
+
+/* Le mini-dashboard d'une activité : où on atterrit en l'ouvrant. Le
+   récap des projets, ses 5 tâches les plus urgentes (même tri que la
+   liste complète, juste tronqué), et des raccourcis vers les actions
+   qu'on y refait chaque semaine — pas génériques, propres à l'activité. */
+const ORDRE_PRIORITE={haute:0,moyenne:1,basse:2};
+function top5Taches(list){
+ return list.filter(t=>t.statut!=='fait')
+  .sort((a,b)=>(ORDRE_PRIORITE[a.priorite]??1)-(ORDRE_PRIORITE[b.priorite]??1)||(a.echeance||'9999').localeCompare(b.echeance||'9999'))
+  .slice(0,5);
+}
+const ACTIONS_RAPIDES={
+ logistique:[
+  {label:'Commandes à attribuer',onglet:'commandes'},
+  {label:'Calendrier de production',href:'/admin.html'},
+  {label:'Démarrer une session de production',href:'/admin.html'}
+ ],
+ commercial:[
+  {label:'Voir mes campagnes',bientot:true},
+  {label:'Voir mes fiches clients',bientot:true},
+  {label:'Voir les réponses',bientot:true}
+ ],
+ finance:[{label:'Trésorerie & charges',href:'/admin.html'}],
+ partenariat:[],
+ developpement:[]
+};
+function vApercuActivite(cle,tachesAct,projets){
+ const top5=top5Taches(tachesAct.filter(t=>!t.routine));
+ const actions=ACTIONS_RAPIDES[cle]||[];
+ return `<div class="sect"><h2>Projets</h2><span>${projets.length}</span></div>
+ <div class="grid g3">${projets.slice(0,6).map(projetCard).join('')||'<div class="empty">Aucun projet pour cette activité</div>'}</div>
+ <div class="sect"><h2>5 tâches à faire</h2><span>Triées par priorité puis échéance</span></div>
+ <div class="card lift"><div class="list">${top5.map(taskLi).join('')||'<div class="empty">Rien à faire — tout est traité</div>'}</div></div>
+ ${actions.length?`<div class="sect"><h2>Actions rapides</h2></div><div class="grid g3">${actions.map((a,i)=>actionRapideHtml(a,cle,i)).join('')}</div>`:''}`;
+}
+function actionRapideHtml(a,cle,i){
+ if(a.bientot)return `<button class="card click" style="text-align:left;opacity:.55;cursor:default" data-bientot="${esc(a.label)}"><b>${esc(a.label)}</b><div class="muted" style="font-size:12px;margin-top:4px">Bientôt</div></button>`;
+ if(a.href)return `<a class="plain" href="${a.href}" target="_blank" rel="noopener"><div class="card click"><b>${esc(a.label)}</b><div class="muted" style="font-size:12px;margin-top:4px">Back-office →</div></div></a>`;
+ return `<button class="card click" style="text-align:left" data-action-rapide="${cle}:${i}"><b>${esc(a.label)}</b></button>`;
+}
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-bientot]');
+ if(b){toast('« '+b.dataset.bientot+' » arrive avec le module Commercial');return}
+ const ar=e.target.closest('[data-action-rapide]');
+ if(ar){
+  const [cle,i]=ar.dataset.actionRapide.split(':');
+  const a=(ACTIONS_RAPIDES[cle]||[])[+i];
+  if(a&&a.onglet){SUB['act-'+cle]=a.onglet;render()}
+ }
+});
 function routineHero(cle,list){
  if(!list.length)return'';
  const restant=list.filter(t=>t.statut!=='fait');
@@ -878,7 +976,7 @@ const _origAfterRender=afterRender;
 afterRender=function(cle){
  _origAfterRender(cle);
  wireSchemaIfPresent();
- if(cle==='dash')wireDashIfPresent();
+ if(cle==='dash'){wireDashIfPresent();rafraichirNotifs()}
  if(cle.startsWith('projet:'))wireProjetPage(cle.slice(7));
 };
 
@@ -898,7 +996,8 @@ async function openTache(id){
   <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="tRoutine" ${t.routine?'checked':''} style="width:auto"> Tâche de routine (à valider en priorité sur la page de l'activité)</label>
   <div class="foot"><button type="button" class="btn danger sm" data-del-tache="${t.id}">Supprimer</button><button class="btn primary sm" type="submit">Enregistrer</button></div>
  </form>
- <div class="sect"><h2 style="font-size:15px">Documents liés (${docsTache.length})</h2><button class="btn sm" data-new="document" data-activite="${t.activite}" data-tache="${t.id}">+ Document</button></div>
+ <div class="sect"><h2 style="font-size:15px">Livrable &amp; documents (${docsTache.length})</h2><button class="btn sm" data-new="document" data-activite="${t.activite}" data-projet="${t.projet_id||''}" data-tache="${t.id}">+ Livrable</button></div>
+ <p class="muted" style="font-size:12px;margin-top:-6px">Un lien ou un fichier joint ici apparaît aussi dans le drive du projet.</p>
  <div class="list">${docsTache.map(docLi).join('')||'<div class="empty">Aucun document</div>'}</div>
  <div class="sect"><h2 style="font-size:15px">Historique</h2></div>
  <form class="form" id="noteForm" style="margin-bottom:6px"><textarea class="inp" id="noteTxt" placeholder="Ajouter une note (texte)…" style="min-height:56px"></textarea><div class="foot"><button class="btn sm primary" type="submit">Ajouter au fil</button></div></form>
@@ -944,22 +1043,36 @@ const F={
    const r=await sb('crm_projets',{method:'POST',body:JSON.stringify(body)});
    S.projets.push(r[0]);toast('Projet créé');go('projet:'+r[0].id);
   }}),
- document:(ctx)=>({t:'Ajouter un document',f:`
+ document:(ctx)=>({t:'Ajouter un livrable',f:`
   <label>Activité<select id="f1">${activiteSelectHtml(ctx.activite||CUR)}</select></label>
   <label>Nom<input class="inp" id="f2" required></label>
-  <label>Lien (URL)<input class="inp" id="f3" type="url" required placeholder="https://…"></label>
+  <div class="seg" id="modeDoc" style="margin-bottom:2px"><button type="button" data-mode="lien" aria-pressed="true">Lien</button><button type="button" data-mode="fichier" aria-pressed="false">Fichier</button></div>
+  <label id="wrapLien">Lien (URL)<input class="inp" id="f3" type="url" placeholder="https://…"></label>
+  <label id="wrapFichier" class="hide">Fichier (PDF, image, tableur…)<input class="inp" id="f3f" type="file"></label>
   <div class="two"><label>Type<select id="f4">${opt(['lien','pdf','sheet','doc','image','autre'])}</select></label><label>Dossier<input class="inp" id="f5" placeholder="ex. Contrats"></label></div>`,
   ok:async()=>{
-   const body={activite:$('#f1').value,nom:$('#f2').value,url:$('#f3').value,type:$('#f4').value,dossier:$('#f5').value||null,projet_id:ctx.projet||null,tache_id:ctx.tache||null,ajoute_par:STAFF_NOM};
+   const mode=$('#modeDoc [aria-pressed="true"]').dataset.mode;
+   let url=$('#f3').value;
+   if(mode==='fichier'){
+    const file=$('#f3f').files[0];
+    if(!file){toast('Choisissez un fichier');throw new Error('fichier manquant');}
+    const fd=new FormData();fd.append('file',file);fd.append('upload_preset',CLOUDINARY_PRESET);
+    const up=await fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_CLOUD+'/auto/upload',{method:'POST',body:fd});
+    const upJson=await up.json();
+    if(!up.ok||!upJson.secure_url){toast('Échec de l’envoi du fichier');throw new Error(JSON.stringify(upJson));}
+    url=upJson.secure_url;
+   }
+   if(!url){toast('Un lien ou un fichier est requis');throw new Error('rien à enregistrer');}
+   const body={activite:$('#f1').value,nom:$('#f2').value,url,type:$('#f4').value,dossier:$('#f5').value||null,projet_id:ctx.projet||null,tache_id:ctx.tache||null,ajoute_par:STAFF_NOM};
    const r=await sb('crm_documents',{method:'POST',body:JSON.stringify(body)});
    const cle=body.activite;DOCS_CACHE[cle]=[r[0],...(DOCS_CACHE[cle]||[])];
-   toast('Document ajouté');render();
+   toast('Livrable ajouté — visible ici et dans le drive du projet');render();
   }}),
  bloc:(ctx)=>({t:'Nouveau bloc de schéma',f:`
   <label>Titre<input class="inp" id="f1" required></label>
   <div class="two"><label>Catégorie<select id="f2">${CATEGORIES.map(c=>`<option value="${c.cle}">${c.label}</option>`).join('')}</select></label><label>Échéance<input class="inp" id="f3" type="date"></label></div>
   <div class="two"><label>Porteur<select id="f4">${peopleOptions('')}</select></label><label>Illustration<select id="f5">${opt(ICONES_BLOC,'auto')}</select></label></div>
-  <p class="muted" style="font-size:12px;margin:0">Un porteur assigné crée aussi une tâche dans son tableau.</p>`,
+  <p class="muted" style="font-size:12px;margin:0">Ajouter un bloc, c'est ajouter une tâche à faire — elle apparaît dans les tâches du projet et sur l'accueil, assignée ou « à attribuer ».</p>`,
   ok:async()=>{
    const portee=ctx.projet?'projet:'+ctx.projet:ctx.activite;
    const categorie=$('#f2').value;
@@ -970,13 +1083,14 @@ const F={
    const body={activite:ctx.activite,projet_id:ctx.projet||null,titre:$('#f1').value,categorie,icone,porteur,echeance,x:10+Math.random()*60,y:10+Math.random()*55};
    const rBloc=await sb('crm_schema_blocs',{method:'POST',body:JSON.stringify(body)});
    const bloc=rBloc[0];
-   if(porteur){
-    const rTache=await sb('crm_taches',{method:'POST',body:JSON.stringify({activite:ctx.activite,projet_id:ctx.projet||null,titre:body.titre,porteur,echeance,priorite:'moyenne'})});
-    S.taches.push(rTache[0]);
-    await sb('crm_schema_blocs?id=eq.'+bloc.id,{method:'PATCH',body:JSON.stringify({tache_id:rTache[0].id})});
-    bloc.tache_id=rTache[0].id;
-    toast('Bloc ajouté, tâche créée pour '+porteur);
-   } else toast('Bloc ajouté');
+   // Un bloc EST une tâche à faire — toujours créée, avec ou sans porteur
+   // ("à attribuer" sinon), pour qu'elle apparaisse dans les tâches du
+   // projet ET dans celles de l'accueil, pas seulement dans le schéma.
+   const rTache=await sb('crm_taches',{method:'POST',body:JSON.stringify({activite:ctx.activite,projet_id:ctx.projet||null,titre:body.titre,porteur,echeance,priorite:'moyenne'})});
+   S.taches.push(rTache[0]);
+   await sb('crm_schema_blocs?id=eq.'+bloc.id,{method:'PATCH',body:JSON.stringify({tache_id:rTache[0].id})});
+   bloc.tache_id=rTache[0].id;
+   toast(porteur?'Bloc ajouté, tâche créée pour '+porteur:'Bloc ajouté, tâche créée (à attribuer)');
    delete SCHEMA_CACHE[portee];badges();render();
   }})
 };
@@ -991,6 +1105,13 @@ document.addEventListener('click',e=>{
  if(n){e.preventDefault();closeAll();openForm(n.dataset.new,{activite:n.dataset.activite,projet:n.dataset.projet,tache:n.dataset.tache})}
  const g=e.target.closest('[data-go]');
  if(g){e.preventDefault();closeAll();go(g.dataset.go)}
+ // Bascule Lien / Fichier du formulaire « Livrable »
+ const m=e.target.closest('#modeDoc button');
+ if(m){
+  [...m.parentElement.children].forEach(b=>b.setAttribute('aria-pressed',b===m));
+  $('#wrapLien').classList.toggle('hide',m.dataset.mode!=='lien');
+  $('#wrapFichier').classList.toggle('hide',m.dataset.mode!=='fichier');
+ }
 });
 
 /* ============ DRAWER / MODALE / PALETTE ============ */
@@ -1049,7 +1170,7 @@ window.login=async function(){
  STAFF_ROLE=ligne.role;STAFF_NOM=ligne.nom||email.split('@')[0];
  await demarrerApp();
 };
-function logout(){ecrireStaffSession(null);STAFF_ROLE=null;$('#mainApp').classList.add('hide');$('#loginScreen').style.display='flex';$('#pwdInput').value='';$('#emailInput').value=''}
+function logout(){clearInterval(notifsTimer);ecrireStaffSession(null);STAFF_ROLE=null;$('#mainApp').classList.add('hide');$('#loginScreen').style.display='flex';$('#pwdInput').value='';$('#emailInput').value=''}
 document.addEventListener('DOMContentLoaded',()=>{
  $('#loginBtn').addEventListener('click',window.login);
  $('#pwdInput').addEventListener('keydown',e=>{if(e.key==='Enter')window.login()});
@@ -1073,6 +1194,7 @@ async function demarrerApp(){
  try{const c=localStorage.getItem('natty_crm_cur');if(c&&can(c))CUR=c;else CUR='dash'}catch(e){CUR='dash'}
  renderNav();
  await render();
+ demarrerSondageNotifs();
 }
 </script>
 </body>
