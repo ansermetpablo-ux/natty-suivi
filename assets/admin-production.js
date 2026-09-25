@@ -205,6 +205,7 @@
       '.np-qte{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;font-size:11.5px;font-weight:500;color:var(--muted)}',
       '.np-qte label{display:flex;align-items:center;gap:6px}',
       '.np-manu{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:#c97a001f;color:#c97a00}',
+      '.np-pdfz{font-size:11px;margin-top:4px;line-height:1.6}',
       '.np-lien{border:0;background:none;padding:0;font:inherit;color:var(--black);text-decoration:underline;cursor:pointer}',
       '.np-stp button{width:28px;height:28px;border-radius:50%;border:none;background:var(--black);color:#fff;font-weight:700;cursor:pointer;font-family:inherit}',
       '.np-stp button:disabled{opacity:.3}',
@@ -1141,6 +1142,8 @@
         + (p.lots.length
             ? (tenu ? '<button class="np-btn sec" data-poste="' + p.cle + '" data-prendre="0">' + (aMoi ? 'Je libère' : 'Libérer') + '</button>'
                     : '<button class="np-btn" data-poste="' + p.cle + '" data-prendre="1">Je prends</button>')
+              + '<button class="np-btn sec" data-act="pdf-poste" data-pdf-poste="' + p.cle + '" title="Fiche technique + PERT de chaque recette' + (p.lots.length > 1 ? ', et le document mélangé' : '') + '">📄 PDF</button>'
+              + '<div class="np-pdfz" id="npPdf_' + p.cle + '"></div>'
             : '')
         + '</div>';
     });
@@ -1153,7 +1156,7 @@
     if (mesRec.length) {
       var mes = mesTaches(plan, lots), nb = mes.filter(estFait).length;
       html += '<div class="np-row" style="justify-content:space-between;margin:10px 0 4px"><div class="np-s">Vous tenez <b>' + h(mesRec.map(function (c) { return infoPoste(c).nom; }).join(' + ')) + '</b> — ' + mes.length + ' écran(s), ' + nb + ' fait(s).</div>'
-        + '<button class="np-btn" data-act="service">▶ Mon service, écran par écran</button></div>';
+        + '<div class="np-row"><button class="np-btn sec" data-act="pdf-mes-postes">📄 PDF de mon poste</button><button class="np-btn" data-act="service">▶ Mon service, écran par écran</button></div></div>';
     } else html += '<div class="np-s" style="margin:6px 0 4px">Prenez un poste pour ouvrir votre service écran par écran.</div>';
     return html;
   }
@@ -2152,6 +2155,16 @@
       if (ev.target.closest('.np-specform')) return;
       ouvrirDetail(b.dataset.node); return;
     }
+    if (b.dataset.act === 'pdf-poste') { pdfPoste(b.dataset.pdfPoste, b); return; }
+    if (b.dataset.act === 'pdf-un') { var dd = (PDF_CACHE[b.dataset.pdfPoste] || [])[+b.dataset.i]; if (dd) dd.doc.save(dd.nom); return; }
+    if (b.dataset.act === 'pdf-mes-postes') {
+      // le poste que je tiens : celui dont une recette est prise par moi
+      var mm = moi(), PP = S.postesJour || postesDuJour(S.lots || [], S.cuisiniers);
+      var mien = PP.filter(function (x) { return (S.postes || []).some(function (y) { return y.cuisinier_id === mm.id && x.recs.indexOf(y.poste) >= 0; }); });
+      if (!mien.length) { toast('Prenez d’abord un poste', 'err'); return; }
+      mien.forEach(function (x) { pdfPoste(x.cle, b); });
+      return;
+    }
     if (b.dataset.poste) { prendrePoste(b.dataset.poste, b.dataset.prendre === '1'); return; }
     if (b.dataset.act === 'service') { ouvrirService(); return; }
     if (b.dataset.vue) { S.vue = b.dataset.vue; if (S.vue === 'production' && !S.jour) S.jour = ymd(new Date()); rendre(); return; }
@@ -2215,6 +2228,358 @@
       try { localStorage.setItem(t.dataset.coche, t.checked ? '1' : '0'); } catch (e) {}
       t.closest('.np-port').classList.toggle('ok', t.checked); return;
     }
+  }
+
+  /* ── Les PDF d'un poste : fiche technique + PERT ─────────────────────────
+     Demande de Pablo (2026-09-25) : depuis son poste, à côté du service écran
+     par écran, obtenir en UN bouton :
+       · pour CHAQUE recette du poste : sa fiche technique du jour + son PERT ;
+       · dès qu'il y a deux recettes (ou plus) : un document de plus, les fiches
+         techniques MÉLANGÉES (ingrédients cumulés, étapes dans l'ordre du plan)
+         et le PERT MÉLANGÉ (les recettes côte à côte, ateliers partagés reliés).
+     Tout vient du plan déjà calculé à l'écran (S.plan, S.lots) : les PDF disent
+     exactement ce que dit la production — mêmes grammes, mêmes horaires, mêmes
+     dépendances. Rien n'est recalculé à part.
+     ⚠️ jsPDF est chargé à la demande depuis cdnjs, au premier clic : le
+     back-office ne paie pas 360 Ko à chaque ouverture pour un bouton de temps
+     en temps. Ses polices standard ne connaissent que le Latin-1 : `pt()`
+     remplace ce qui en sort (flèches, guillemets courbes, emojis), sans quoi
+     jsPDF écrit des caractères illisibles au lieu de lever une erreur. */
+  var JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  var jspdfPret = null;
+  function chargerJsPDF() {
+    if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+    if (!jspdfPret) jspdfPret = new Promise(function (ok, ko) {
+      var s = document.createElement('script'); s.src = JSPDF_URL; s.async = true;
+      s.onload = function () { window.jspdf && window.jspdf.jsPDF ? ok(window.jspdf.jsPDF) : ko(new Error('jsPDF absent')); };
+      s.onerror = function () { jspdfPret = null; ko(new Error('Impossible de charger jsPDF (réseau ?)')); };
+      document.head.appendChild(s);
+    });
+    return jspdfPret;
+  }
+  function pt(s) {
+    return String(s == null ? '' : s)
+      .replace(/[’‘]/g, "'").replace(/[“”«»]/g, '"').replace(/[—–]/g, '-').replace(/…/g, '...')
+      .replace(/œ/g, 'oe').replace(/Œ/g, 'OE').replace(/→/g, '->').replace(/•/g, '-').replace(/←/g, '<-').replace(/·/g, '·')
+      .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '').replace(/\s+/g, ' ').trim();
+  }
+  function rgb(hex) { var x = String(hex || '#1a1a2e').replace('#', ''); return [parseInt(x.slice(0, 2), 16), parseInt(x.slice(2, 4), 16), parseInt(x.slice(4, 6), 16)]; }
+  function fmtQ(g, unite) {
+    var u = (unite || 'g').toLowerCase();
+    if ((u === 'g' || u === 'ml') && g >= 1000) return (Math.round(g / 100) / 10).toLocaleString('fr-FR') + ' ' + (u === 'g' ? 'kg' : 'L');
+    return (g >= 10 ? Math.round(g) : Math.round(g * 10) / 10).toLocaleString('fr-FR') + ' ' + (unite || 'g');
+  }
+  function nomCourtRec(n) { n = String(n || ''); return n.length > 16 ? n.slice(0, 15) + '.' : n; }
+  function nomFichier(s) { return norm(s).replace(/\s+/g, '-').slice(0, 60) || 'recette'; }
+
+  /* Ce que produit UN lot : chaque ingrédient, pour toutes ses portions, à la
+     portion réelle de chaque client (cible 45 % ou quantité ajustée à la main). */
+  function quantitesLot(l) {
+    var m = {}, ordre = [];
+    l.parClient.forEach(function (pc) {
+      pc.p.ings.forEach(function (i) {
+        var k = cleIng(i.nom) + '|' + i.unite;
+        if (!m[k]) { m[k] = { nom: i.nom, unite: i.unite, g: 0 }; ordre.push(k); }
+        m[k].g += i.g * pc.n;
+      });
+    });
+    return ordre.map(function (k) { return m[k]; });
+  }
+  function tachesDe(recIds) {
+    return (S.plan ? S.plan.taches : []).filter(function (t) { return recIds.indexOf(t.recId) >= 0; });
+  }
+
+  /* Une page jsPDF avec un curseur vertical : `ligne()` écrit, coupe au mot,
+     et saute de page quand il faut — l'en-tête de page suit. */
+  function Doc(JsPDF, titre, sousTitre) {
+    var d = new JsPDF({ unit: 'mm', format: 'a4' });
+    var D = { d: d, y: 0, W: 210, H: 297, M: 14, titre: titre, sous: sousTitre };
+    D.entete = function () {
+      d.setFillColor(16, 16, 20); d.rect(0, 0, D.W, 24, 'F');
+      d.setTextColor(255, 255, 255); d.setFont('helvetica', 'bold'); d.setFontSize(8.5);
+      d.text('NATTY · PRODUCTION', D.M, 8);
+      d.setFontSize(15); d.text(pt(D.titre), D.M, 16);
+      d.setFont('helvetica', 'normal'); d.setFontSize(8.5); d.text(pt(D.sous), D.M, 21.3);
+      d.setTextColor(20, 20, 26); D.y = 32;
+    };
+    D.place = function (h) { if (D.y + h > D.H - 14) { d.addPage('a4', 'portrait'); D.entete(); } };
+    D.section = function (t, coul) {
+      D.place(14); D.y += 2;
+      if (coul) { var c = rgb(coul); d.setFillColor(c[0], c[1], c[2]); d.rect(D.M, D.y - 3.6, 2.2, 4.6, 'F'); }
+      d.setFont('helvetica', 'bold'); d.setFontSize(11); d.text(pt(t), D.M + (coul ? 4 : 0), D.y);
+      d.setDrawColor(220, 220, 228); d.line(D.M, D.y + 2, D.W - D.M, D.y + 2); D.y += 7;
+    };
+    D.ligne = function (t, o) {
+      o = o || {};
+      d.setFont('helvetica', o.gras ? 'bold' : (o.ital ? 'italic' : 'normal')); d.setFontSize(o.taille || 9.5);
+      if (o.gris) d.setTextColor(120, 120, 132); else d.setTextColor(20, 20, 26);
+      var x = D.M + (o.x || 0), lignes = d.splitTextToSize(pt(t), D.W - D.M - x - (o.marge || 0));
+      var hL = (o.taille || 9.5) * 0.42;
+      lignes.forEach(function (l) { D.place(hL + 1); d.text(l, x, D.y); D.y += hL + 0.6; });
+      d.setTextColor(20, 20, 26); D.y += (o.apres || 0);
+    };
+    /* Un tableau simple : colonnes en mm, première colonne à gauche, les
+       autres calées à droite (des quantités). Lignes zébrées. */
+    D.tableau = function (cols, lignes, o) {
+      o = o || {};
+      var x0 = D.M, larg = D.W - 2 * D.M, hL = 6;
+      D.y += 2.5;
+      function rangee(vals, entete, zebre) {
+        D.place(hL + 1);
+        if (entete) { d.setFillColor(16, 16, 20); d.rect(x0, D.y - 4.3, larg, hL, 'F'); d.setTextColor(255, 255, 255); d.setFont('helvetica', 'bold'); }
+        else { if (zebre) { d.setFillColor(245, 245, 248); d.rect(x0, D.y - 4.3, larg, hL, 'F'); } d.setTextColor(20, 20, 26); d.setFont('helvetica', 'normal'); }
+        d.setFontSize(8.8);
+        var x = x0 + 2;
+        cols.forEach(function (c, i) {
+          var v = pt(vals[i]);
+          if (i === 0) { var lim = d.splitTextToSize(v, c.w - 3)[0] || ''; d.text(lim, x, D.y); }
+          else d.text(v, x + c.w - 3, D.y, { align: 'right' });
+          if (c.couleur && !entete && vals.couleurs && vals.couleurs[i]) { /* réservé */ }
+          x += c.w;
+        });
+        D.y += hL;
+      }
+      rangee(cols.map(function (c) { return c.t; }), true);
+      lignes.forEach(function (l, i) { rangee(l, false, i % 2 === 1); });
+      d.setTextColor(20, 20, 26); D.y += 3 + (o.apres || 0);
+    };
+    D.pieds = function () {
+      var n = d.getNumberOfPages();
+      for (var i = 1; i <= n; i++) {
+        d.setPage(i); d.setFont('helvetica', 'normal'); d.setFontSize(7.5); d.setTextColor(140, 140, 150);
+        var H = d.internal.pageSize.getHeight(), W = d.internal.pageSize.getWidth();
+        d.text(pt('Généré le ' + new Date().toLocaleString('fr-FR') + ' · grammages calculés depuis les fiches et les portions attribuées (1 repas = 45 % des besoins du jour)'), 14, H - 7);
+        d.text(i + ' / ' + n, W - 14, H - 7, { align: 'right' });
+      }
+    };
+    D.entete();
+    return D;
+  }
+
+  /* Le créneau d'une étape de fiche dans le plan : du premier début au
+     dernier fin de ses morceaux, et qui la tient. */
+  function creneauEtape(etapeId, ts) {
+    var mine = ts.filter(function (t) { return t.etapeId === etapeId; });
+    if (!mine.length) return '';
+    var d0 = Math.min.apply(null, mine.map(function (t) { return t.debut; })), d1 = Math.max.apply(null, mine.map(function (t) { return t.fin; }));
+    var qui = mine.filter(function (t) { return t.cuisinier >= 0; }).map(function (t) { return t.qui; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+    return hm(d0) + '-' + hm(d1) + (qui.length ? ' · ' + qui.join(', ') : (mine[0].passif ? ' · attente' : ''));
+  }
+
+  function ficheRecette(D, l, ts, avecEntetePortions) {
+    var d = D.d, r = l.rec, f = fiche(r);
+    D.section('Production du jour', l.couleur);
+    var kcal = 0, n = 0; l.parClient.forEach(function (pc) { if (pc.p.kcal) { kcal += pc.p.kcal * pc.n; n += pc.n; } });
+    D.ligne(l.portions + ' portion(s) · ×' + l.fiches.toFixed(2).replace('.', ',') + ' de la fiche' + (f.nb ? ' (écrite pour ' + f.nb + ' portion(s))' : '')
+      + ' · ' + fmtQ(l.gTotal, 'g') + ' au total' + (n ? ' · ~' + Math.round(kcal / n) + ' kcal par portion en moyenne' : ''), { apres: 1 });
+    if (r.description) D.ligne(r.description, { gris: true, ital: true, apres: 1 });
+    if (r.temps_prep_min || r.temps_cuisson_min) D.ligne('Préparation ' + (r.temps_prep_min || '?') + ' min · cuisson ' + (r.temps_cuisson_min || '?') + ' min (fiche)', { gris: true, apres: 1 });
+
+    D.section('Ingrédients');
+    var q = quantitesLot(l), parNomFiche = {};
+    (S.ings[r.id] || []).forEach(function (i) { parNomFiche[cleIng(i.ingredient_nom) + '|' + (i.unite || 'g')] = parseFloat(i.quantite_g) || 0; });
+    D.tableau([{ t: 'Ingrédient', w: 100 }, { t: 'Fiche' + (f.nb ? ' (' + f.nb + ' p.)' : ''), w: 38 }, { t: 'À produire', w: 44 }],
+      q.map(function (i) { var k = cleIng(i.nom) + '|' + i.unite; return [i.nom, parNomFiche[k] != null ? fmtQ(parNomFiche[k], i.unite) : '-', fmtQ(i.g, i.unite)]; }));
+
+    var prod = l.etapesProd, ass = (S.etapes[r.id] || []).filter(function (e) { return e.phase === 'assemblage'; });
+    D.section('Étapes de production');
+    if (!prod.length) D.ligne('Aucune étape de production dans la fiche.', { gris: true });
+    prod.forEach(function (e, i) {
+      var meta = [e.geste ? libGeste(e.geste).replace(/^\S+\s/, '') : null,
+        (e.duree_min > 0 ? e.duree_min + ' min' : DUREE_DEFAUT + ' min (par défaut)'),
+        e.temperature_c ? e.temperature_c + ' °C' : null, e.passif ? 'attente (cuisinier libre)' : null, decoupeDe(e) ? 'découpe : ' + decoupeDe(e) : null]
+        .filter(Boolean).join(' · ');
+      D.ligne((e.numero || i + 1) + '. ' + (e.titre || 'Étape'), { gras: true, taille: 10 });
+      D.ligne(meta + (creneauEtape(e.id, ts) ? '   |   plan : ' + creneauEtape(e.id, ts) : ''), { x: 5, gris: true, taille: 8.5 });
+      if (e.description) D.ligne(e.description, { x: 5, taille: 9 });
+      var ing = ingredientsEtape(e, r.id, l.fiches);
+      var uniteDe = {}; (S.ings[r.id] || []).forEach(function (i) { uniteDe[i.ingredient_nom] = i.unite || 'g'; });
+      if (ing.length) D.ligne('Quantités : ' + ing.map(function (x) { return x.nom + ' ' + fmtQ(x.g, uniteDe[x.nom] || 'g'); }).join(' · '), { x: 5, taille: 8.8 });
+      D.y += 1.5;
+    });
+
+    D.section('Assemblage');
+    ass.forEach(function (e) { D.ligne('• ' + (e.titre || 'Assemblage') + (e.description ? ' - ' + e.description : ''), { taille: 9 }); });
+    D.tableau([{ t: 'Client', w: 70 }, { t: 'Portions', w: 20 }, { t: 'g / portion', w: 26 }, { t: 'kcal', w: 22 }, { t: 'P / G / L (g)', w: 44 }],
+      l.parClient.map(function (pc) {
+        return [nomClient(pc.bon.user_id) + (pc.p.manuel ? ' (ajustée)' : ''), String(pc.n), Math.round(pc.p.gPortion) + ' g',
+          pc.p.kcal ? String(Math.round(pc.p.kcal)) : '-', pc.p.mac ? Math.round(pc.p.mac.p) + ' / ' + Math.round(pc.p.mac.g) + ' / ' + Math.round(pc.p.mac.l) : '-'];
+      }));
+  }
+
+  /* Le PERT, tracé en vecteurs sur une page paysage. Colonnes = profondeur
+     dans le graphe (une étape est à droite de tout ce qu'elle attend), une
+     boîte par tâche du plan avec son horaire. Le chemin critique est en trait
+     épais. Dans le PERT mélangé, les tâches d'un même atelier (même geste,
+     même aliment, deux recettes) sont reliées en pointillé. */
+  function pagePert(D, ts, lotsCouleur, titre) {
+    var d = D.d;
+    d.addPage('a4', 'landscape');
+    var W = 297, H = 210, M = 12;
+    d.setFillColor(16, 16, 20); d.rect(0, 0, W, 18, 'F');
+    d.setTextColor(255, 255, 255); d.setFont('helvetica', 'bold'); d.setFontSize(13); d.text(pt(titre), M, 11.5);
+    d.setFont('helvetica', 'normal'); d.setFontSize(8.5); d.text(pt(D.sous), W - M, 11.5, { align: 'right' });
+    d.setTextColor(20, 20, 26);
+    if (!ts.length) { d.setFontSize(11); d.text(pt('Aucune étape de production planifiée pour ce poste.'), M, 34); return; }
+    var ids = {}; ts.forEach(function (t) { ids[t.id] = t; });
+    var niv = {};
+    function nv(t) {
+      if (niv[t.id] != null) return niv[t.id];
+      niv[t.id] = 0;
+      niv[t.id] = t.preds.reduce(function (m, id) { return ids[id] ? Math.max(m, nv(ids[id]) + 1) : m; }, 0);
+      return niv[t.id];
+    }
+    ts.forEach(nv);
+    var cols = [];
+    ts.slice().sort(function (a, b) { return a.debut - b.debut; }).forEach(function (t) { (cols[niv[t.id]] = cols[niv[t.id]] || []).push(t); });
+    cols = cols.filter(Boolean);
+    // chemin critique : plus long chemin en durée, sur ce sous-graphe
+    var EF = {};
+    function ef(t) { if (EF[t.id] != null) return EF[t.id]; EF[t.id] = t.duree; EF[t.id] = t.duree + t.preds.reduce(function (m, id) { return ids[id] ? Math.max(m, ef(ids[id])) : m; }, 0); return EF[t.id]; }
+    ts.forEach(ef);
+    var crit = {}, bout = ts.reduce(function (a, t) { return !a || EF[t.id] > EF[a.id] ? t : a; }, null);
+    (function remonter(t) { if (!t) return; crit[t.id] = 1; var p = t.preds.map(function (id) { return ids[id]; }).filter(Boolean).sort(function (a, b) { return EF[b.id] - EF[a.id]; })[0]; remonter(p); })(bout);
+
+    var bw = 44, bh = 17, gx = 13, gy = 5;
+    var haut = Math.max.apply(null, cols.map(function (c) { return c.length; }));
+    var besoinW = cols.length * bw + (cols.length - 1) * gx, besoinH = haut * bh + (haut - 1) * gy;
+    var dispoW = W - 2 * M, dispoH = H - 30 - 16;
+    var k = Math.min(1.4, dispoW / besoinW, dispoH / besoinH);
+    var BW = bw * k, BH = bh * k, GX = gx * k, GY = gy * k, x0 = M, y0 = 26;
+    var pos = {};
+    cols.forEach(function (c, ci) {
+      var hc = c.length * BH + (c.length - 1) * GY, dy = y0 + (Math.min(besoinH * k, dispoH) - hc) / 2;
+      c.forEach(function (t, ri) { pos[t.id] = { x: x0 + ci * (BW + GX), y: Math.max(y0, dy) + ri * (BH + GY) }; });
+    });
+    // les flèches d'abord, sous les boîtes
+    ts.forEach(function (t) {
+      t.preds.forEach(function (id) {
+        var a = pos[id], b = pos[t.id]; if (!a || !b) return;
+        var x1 = a.x + BW, y1 = a.y + BH / 2, x2 = b.x, y2 = b.y + BH / 2, cr = crit[t.id] && crit[id];
+        d.setDrawColor(cr ? 16 : 150, cr ? 16 : 150, cr ? 20 : 160); d.setLineWidth(cr ? 0.7 : 0.3);
+        var xm = (x1 + x2) / 2;
+        d.line(x1, y1, xm, y1); d.line(xm, y1, xm, y2); d.line(xm, y2, x2 - 1.2, y2);
+        d.setFillColor(cr ? 16 : 150, cr ? 16 : 150, cr ? 20 : 160);
+        d.triangle(x2, y2, x2 - 1.8, y2 - 1, x2 - 1.8, y2 + 1, 'F');
+      });
+    });
+    // les ateliers partagés entre recettes, en pointillé
+    if (lotsCouleur.length > 1) {
+      var vus = {};
+      ts.forEach(function (t) {
+        if (t.ensemble !== 'atelier' || !t.cumulAvec) return;
+        t.cumulAvec.forEach(function (id) {
+          var cle = [t.id, id].sort().join('~'); if (vus[cle] || !pos[id]) return; vus[cle] = 1;
+          var a = pos[t.id], b = pos[id];
+          d.setDrawColor(201, 122, 0); d.setLineWidth(0.5); d.setLineDashPattern([1.2, 1], 0);
+          d.line(a.x + BW / 2, a.y + (a.y < b.y ? BH : 0), b.x + BW / 2, b.y + (a.y < b.y ? 0 : BH));
+          d.setLineDashPattern([], 0);
+        });
+      });
+    }
+    var fs = Math.max(4.6, 7.6 * k), fs2 = Math.max(4.2, 6.4 * k);
+    ts.forEach(function (t) {
+      var p = pos[t.id], c = rgb(t.couleur);
+      d.setFillColor(255, 255, 255); d.setDrawColor(crit[t.id] ? 16 : 190, crit[t.id] ? 16 : 190, crit[t.id] ? 20 : 200);
+      d.setLineWidth(crit[t.id] ? 0.7 : 0.3);
+      if (t.passif) d.setLineDashPattern([1, 0.8], 0);
+      d.roundedRect(p.x, p.y, BW, BH, 1.6 * k, 1.6 * k, 'FD');
+      d.setLineDashPattern([], 0);
+      d.setFillColor(c[0], c[1], c[2]); d.rect(p.x, p.y, 1.6 * k + 0.4, BH, 'F');
+      d.setTextColor(20, 20, 26); d.setFont('helvetica', 'bold'); d.setFontSize(fs);
+      var lab = d.splitTextToSize(pt((t.sousTotal > 1 ? t.titre + ' : ' : '') + t.etiquette), BW - 4);
+      d.text(lab.slice(0, 2), p.x + 2.6, p.y + 1.2 + fs * 0.42);
+      d.setFont('helvetica', 'normal'); d.setFontSize(fs2); d.setTextColor(100, 100, 112);
+      d.text(pt(hm(t.debut) + ' · ' + t.duree + ' min' + (t.passif ? ' · attente' : (t.cuisinier >= 0 ? ' · ' + t.qui : (t.bloque ? ' · poste non pris' : '')))), p.x + 2.6, p.y + BH - 2.2 * k - 0.6);
+      if (t.ensemble === 'atelier') { d.setTextColor(201, 122, 0); d.text('atelier', p.x + BW - 1.5, p.y + BH - 2.2 * k - 0.6, { align: 'right' }); }
+    });
+    // légende
+    d.setFontSize(7.5); d.setTextColor(90, 90, 100);
+    var lx = M, ly = H - 14;
+    lotsCouleur.forEach(function (l) { var c = rgb(l.couleur); d.setFillColor(c[0], c[1], c[2]); d.rect(lx, ly - 2.4, 3, 3, 'F'); d.text(pt(l.rec.nom), lx + 4.2, ly); lx += 8 + d.getTextWidth(pt(l.rec.nom)); });
+    d.text(pt('Trait épais : chemin critique · pointillé : attente (four, repos)' + (lotsCouleur.length > 1 ? ' · orange pointillé : atelier partagé' : '') + ' · fin estimée ' + hm(Math.max.apply(null, ts.map(function (t) { return t.fin; })))), lx + 4, ly);
+  }
+
+  function docsDuPoste(JsPDF, p) {
+    var jour = S.jour || ymd(new Date()), sous = 'Production du ' + fmtJ(jour, true) + ' · Poste ' + (p.i + 1);
+    var docs = [];
+    p.lots.forEach(function (l) {
+      var ts = tachesDe([l.rec.id]);
+      var D = Doc(JsPDF, 'Fiche technique - ' + l.rec.nom, sous);
+      ficheRecette(D, l, ts);
+      pagePert(D, ts, [l], 'PERT - ' + l.rec.nom);
+      D.pieds();
+      docs.push({ nom: 'Fiche+PERT_' + nomFichier(l.rec.nom) + '_' + jour + '.pdf', titre: l.rec.nom, doc: D.d });
+    });
+    if (p.lots.length > 1) {
+      var noms = p.lots.map(function (l) { return l.rec.nom; });
+      var ts = tachesDe(p.recs);
+      var D = Doc(JsPDF, 'Fiches techniques mélangées', sous + ' · ' + noms.join(' + '));
+      var d = D.d;
+      D.section('Recettes du poste');
+      p.lots.forEach(function (l) { D.ligne(l.rec.nom + ' - ' + l.portions + ' portion(s), ' + fmtQ(l.gTotal, 'g'), { gras: true }); });
+      if (p.partage && p.partage.length) D.ligne('Fait ensemble : ' + p.partage.map(function (k2) { var x = k2.split('|'); return libGeste(x[0]).replace(/^\S+\s/, '') + ' ' + x[1]; }).join(' · ') + (p.eco ? ' (~' + p.eco + ' min gagnées)' : ''), { gris: true, apres: 1 });
+
+      D.section('Ingrédients cumulés');
+      var tout = {}, ordre = [];
+      p.lots.forEach(function (l, li) {
+        quantitesLot(l).forEach(function (i) {
+          var k2 = cleIng(i.nom) + '|' + i.unite;
+          if (!tout[k2]) { tout[k2] = { nom: i.nom, unite: i.unite, par: {} }; ordre.push(k2); }
+          tout[k2].par[li] = (tout[k2].par[li] || 0) + i.g;
+        });
+      });
+      var wR = Math.max(24, Math.min(40, 96 / p.lots.length));
+      var cols = [{ t: 'Ingrédient', w: 182 - wR * p.lots.length - 30 }].concat(p.lots.map(function (l) { return { t: nomCourtRec(l.rec.nom), w: wR }; })).concat([{ t: 'Total', w: 30 }]);
+      D.tableau(cols, ordre.map(function (k2) {
+        var x = tout[k2], tot = 0;
+        var ligne = [x.nom].concat(p.lots.map(function (_, li) { var g = x.par[li] || 0; tot += g; return g ? fmtQ(g, x.unite) : '-'; }));
+        return ligne.concat([fmtQ(tot, x.unite)]);
+      }));
+
+      D.section('Étapes dans l’ordre du plan');
+      ts.slice().sort(function (a, b) { return a.debut - b.debut || a.numero - b.numero; }).forEach(function (t) {
+        var c = rgb(t.couleur);
+        D.place(9);
+        d.setFillColor(c[0], c[1], c[2]); d.circle(D.M + 1.3, D.y - 1.2, 1.1, 'F');
+        var avec = (t.cumulAvec || []).map(function (id) { var x = S.plan.parId[id]; return x && x.recId !== t.recId ? nomCourtRec(x.rec) : null; }).filter(Boolean);
+        D.ligne(hm(t.debut) + '-' + hm(t.fin) + '   ' + nomCourtRec(t.rec) + ' · ' + t.numero + '. ' + (t.sousTotal > 1 ? t.titre + ' : ' + t.etiquette : t.titre), { x: 4, gras: true, taille: 9.3 });
+        D.ligne([t.duree + ' min', t.passif ? 'attente' : (t.cuisinier >= 0 ? t.qui : (t.bloque ? 'poste non pris' : null)),
+          (t.ingrs || []).map(function (x) { var u = (S.ings[t.recId] || []).find(function (i) { return i.ingredient_nom === x.nom; }); return x.nom + ' ' + fmtQ(x.g, (u && u.unite) || 'g'); }).join(', ') || null,
+          avec.length ? 'ensemble avec ' + avec.join(', ') : null].filter(Boolean).join(' · '), { x: 4, gris: true, taille: 8.4, apres: 1 });
+      });
+
+      p.lots.forEach(function (l) {
+        var ass = (S.etapes[l.rec.id] || []).filter(function (e) { return e.phase === 'assemblage'; });
+        D.section('Assemblage - ' + l.rec.nom, l.couleur);
+        ass.forEach(function (e) { D.ligne('• ' + (e.titre || 'Assemblage') + (e.description ? ' - ' + e.description : ''), { taille: 9 }); });
+        D.tableau([{ t: 'Client', w: 90 }, { t: 'Portions', w: 24 }, { t: 'g / portion', w: 32 }, { t: 'kcal', w: 36 }],
+          l.parClient.map(function (pc) { return [nomClient(pc.bon.user_id), String(pc.n), Math.round(pc.p.gPortion) + ' g', pc.p.kcal ? String(Math.round(pc.p.kcal)) : '-']; }));
+      });
+      pagePert(D, ts, p.lots, 'PERT mélangé - ' + noms.join(' + '));
+      D.pieds();
+      docs.push({ nom: 'Fiches+PERT-melanges_' + p.lots.map(function (l) { return nomFichier(l.rec.nom); }).join('+').slice(0, 80) + '_' + jour + '.pdf', titre: 'Mélangé : ' + noms.join(' + '), doc: D.d });
+    }
+    return docs;
+  }
+
+  var PDF_CACHE = {};
+  function pdfPoste(cle, bouton) {
+    var P = S.postesJour || postesDuJour(S.lots || [], S.cuisiniers);
+    var p = P.find(function (x) { return x.cle === cle; });
+    if (!p || !p.lots.length) { toast('Ce poste n’a aucune recette', 'err'); return; }
+    if (bouton) { bouton.disabled = true; bouton.dataset.lib = bouton.textContent; bouton.textContent = 'Génération…'; }
+    chargerJsPDF().then(function (JsPDF) {
+      var docs = docsDuPoste(JsPDF, p);
+      PDF_CACHE[cle] = docs;
+      // un téléchargement à la fois : les navigateurs regroupent mal les
+      // enregistrements lancés dans la même milliseconde
+      docs.forEach(function (x, i) { setTimeout(function () { x.doc.save(x.nom); }, i * 450); });
+      var z = document.getElementById('npPdf_' + cle);
+      if (z) z.innerHTML = docs.map(function (x, i) { return '<button class="np-lien" data-act="pdf-un" data-pdf-poste="' + h(cle) + '" data-i="' + i + '">📄 ' + h(x.titre) + '</button>'; }).join(' · ');
+      toast(docs.length + ' PDF générés', 'ok');
+    }).catch(function (e) { toast('PDF impossibles : ' + e.message, 'err'); })
+      .then(function () { if (bouton) { bouton.disabled = false; bouton.textContent = bouton.dataset.lib || '📄 PDF du poste'; } });
   }
 
   /* ── Le service, écran par écran ────────────────────────────────────────

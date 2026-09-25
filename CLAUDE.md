@@ -4041,6 +4041,23 @@ pas** une quantité ajustée à la main quand la fiche client change.
 > ⚠️ crm.html ne recopie aucun calcul : il charge `assets/admin-production.js` et appelle
 > `NattyProd.cibleClient` / `portionPour` / `portionFacteur` / `portionAttrib`.
 
+**Les PDF d'un poste — fiche technique + PERT** (2026-09-25, demande de Pablo). Section Postes
+de la Production : un bouton « 📄 PDF » sur chaque carte de poste, et « 📄 PDF de mon poste » à côté de
+« ▶ Mon service, écran par écran ». Un clic télécharge :
+- pour **chaque recette** du poste : sa fiche technique du jour (ingrédients fiche / à produire,
+  étapes avec geste, durée, °C, découpe, créneau du plan, quantités ; assemblage client par client
+  avec g/portion, kcal, P/G/L) **puis son PERT** (page paysage) ;
+- **si le poste a 2 recettes ou plus** : un 3ᵉ document, fiches **mélangées** (ingrédients cumulés
+  par recette + total, étapes dans l'ordre du plan avec « ensemble avec… ») et **PERT mélangé**
+  (couleur par recette, ateliers partagés reliés en pointillé orange).
+Tout vient du plan affiché (, ) : mêmes grammes, mêmes horaires, mêmes dépendances.
+Chemin critique en trait épais, étapes passives en pointillé.
+> ⚠️ jsPDF est chargé **à la demande** depuis cdnjs au premier clic. Ses polices standard ne
+> connaissent que le Latin-1 :  remplace flèches, guillemets courbes, puces et emojis —
+> sinon jsPDF écrit des caractères illisibles sans lever d'erreur.
+> ⚠️ Ces postes n'existent que dans l'onglet Production d'**admin.html** () :
+> crm.html charge le script mais ne monte pas cette vue.
+
 **La fiche technique, lue comme elle est écrite (`fiche`, `portionPour`)** :
 - `recettes.nb_portions` dit pour combien de portions les grammages sont écrits (⚠️ le
   libellé de l'onglet Chef disait « pour 1 portion » — corrigé, il affiche le champ Portions,
