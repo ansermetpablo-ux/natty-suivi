@@ -517,3 +517,274 @@ n° 3 était structurellement impossible à satisfaire.
   en utilise 3 avec des verdicts différents (les compteurs doivent bouger), faire glisser
   le deal Fnac Darty jusqu'à « Test » (doit demander confirmation puis pré-remplir lieu
   et effectif dans le bloc Test produit).
+
+---
+
+## Petit chantier — fiche technique de production (PDF) depuis une commande (25/09/2026)
+
+Demande de Pablo : depuis une commande, pouvoir choisir les recettes à produire et
+générer leur fiche technique ; deux recettes cochées veut dire fiche mélangée ; ajouter
+un filtre par poste ; la fiche doit être aussi précise que l'écran-par-écran d'admin.html.
+Puis, en cours de session : les quantités de la liste de courses en grammes ET en unités
+(pièces), et à la fin de la fiche technique le détail par commande de la répartition des
+matières premières, « comme dans assemblage ».
+
+**Emplacement, tranché avec Pablo** : le bouton **« 📄 Fiche technique »** vit dans la
+fiche d'édition d'une commande (`ouvrirFormBon`), à côté de « Supprimer » — visible
+seulement pour une commande existante qui porte au moins une recette attribuée. Format :
+une page HTML imprimable (`window.print()`), même mécanique que « Étiquettes » et
+« Liste de courses » — pas de librairie PDF de plus.
+
+**`ouvrirFicheTechnique(bonId)`** propose les recettes attribuées à CETTE commande
+(cochées par défaut) et un menu **Poste** (« Tous les postes » ou un poste précis, tiré
+des étapes `phase=production` de ces recettes). **`genererFicheTechnique()`** ne s'arrête
+pas à la commande de départ : elle couvre TOUTES les commandes du même jour de livraison
+qui demandent la ou les recettes cochées — on produit un lot une fois, pas une fois par
+client, exactement le principe déjà en place dans `genererMapping()` (session 06). Sans
+jour de livraison, la fiche ne couvre que la commande seule.
+
+**Fusion de deux recettes = regroupées par poste, dans l'ordre** (tranché avec Pablo) :
+mêmes clés de tri que `genererMapping()` (`poste||geste||'—'`, puis l'ordre des recettes
+cochées, puis `numero`), mais **sans écrire en base** — imprimer n'a pas d'effet de bord,
+inutile de créer des `crm_session_etapes` pour ça.
+
+**Précision de chaque étape** — numéro, titre, geste, poste ; la **quantité calculée sur
+le total du lot** (`quantitesEtape`, mot à mot contre `recettes_ingredients`, jamais en
+sous-chaîne : vérifié que « ail » ne matche pas « volaille », voir le banc plus bas) ;
+consigne complète ; durée/température/découpe quand la fiche les donne ; « attente » si
+l'étape est passive ; et le **savoir général du geste** — le même contenu que « Détails »
+dans l'écran-par-écran d'admin.html, via `NattySavoir.html()` (`assets/admin-savoir.js`,
+933 lignes déjà écrites pour cet écran, chargées ici plutôt que récrites — règle 44 du
+dépôt Natty : un rendu partagé vit dans UN module).
+
+**Répartition par commande, à la fin** (ajout demandé en cours de session, « comme dans
+assemblage ») : une section par (commande, recette) — client, portions, facteur s'il
+existe, et le détail ingrédient par ingrédient EN GRAMMES pour la portion de CE client —
+même calcul que la phase `assemblage` de `genererMapping()` (`quantite_g × nb_portions ×
+facteur ÷ nb_portions de la fiche`), simplement rendu en HTML imprimable plutôt qu'écrit
+en base.
+
+**Liste de courses : grammes ET pièces** — `pieceCompte()`/`pieceHtml()`/`pieceTxt()`
+(nouveaux, à côté de `libBon`) s'appuient sur `NattyUnites.estPiece()`/`.quantite()`
+(`assets/unites.js`, déjà écrit pour le `+` de l'app cliente) pour afficher « 2,4 kg
+(≈ 12 œufs) » à côté du poids — sur l'écran, dans l'impression et dans le texte copié.
+Zéro table de poids-par-pièce de plus à tenir à jour : c'est la même que celle du client.
+
+**Deux modules chargés en plus dans `crm.html`** : `<script src="/assets/unites.js">` et
+`<script src="/assets/admin-savoir.js">`, avant le script unique du CRM. Aucune
+dépendance, aucun effet de bord au chargement (IIFE qui ne font que poser
+`window.NattyUnites`/`window.NattySavoir`) — le reste du fichier reste un script unique.
+
+**Ce qui n'a PAS été reconstruit, volontairement** : ni le PERT, ni les ateliers partagés
+entre recettes, ni la répartition optimale des postes entre cuisiniers d'admin.html — la
+profondeur du mapping reste celle tranchée en session 06 (« ajustable à la main », pas une
+résolution de dépendances). Ce chantier ajoute un DOCUMENT imprimable, pas un second
+moteur de planification.
+
+**Vérifié au banc** (Node, en chargeant réellement `assets/unites.js` et
+`assets/admin-savoir.js`, pas des copies) : `motsCorrespondent('ail','Volaille')` → faux,
+`motsCorrespondent('ail','Gousse d’ail')` → vrai ; `quantitesEtape` sur une recette à deux
+ingrédients, mise à l'échelle ×3 (18 portions-équivalent pour une fiche à 6) → le bon
+grammage ; `pieceCompte('oeuf',660)` → 12 œufs (accord pluriel automatique) ;
+`pieceCompte('poulet',900)` → aucune pièce (le poulet nu n'est pas dans la table, donc pas
+de chiffre inventé) ; `NattySavoir` sur « mijoter le chili » (le piège classique de la
+famille « plat ») et « dresser bourguignon + pommes de terre » (l'aiguillage sauce/bol) →
+les deux bons cours. `node --check` sur le script unique du fichier : syntaxe valide.
+
+🔄 **Non vérifié avec une vraie session d'équipe ni contre les vraies fiches en base** :
+`admin.html`/`crm.html` exigent une session staff, absente ici. Tout a tourné contre des
+données fabriquées à la main.
+
+---
+
+## Session 12 — Commercial : échanges, relances, IA (25/09/2026)
+
+Reprise d'un chantier déjà largement engagé, **non commité, trouvé tel quel dans l'arbre
+de travail** au début de cette session : messagerie (`crm_messages`), boîte unifiée
+(fusion `crm_interactions`/`crm_messages`), envoi d'email via Resend
+(`api/notifications.js`, action `envoyer_message_commercial`), import de contacts
+Excel/CSV, colonnes LinkedIn/Instagram, et la configuration des règles de relance sur
+chaque profil (`crm_relance_regles`, formulaire dans `ouvrirProfilDetail`). Cette partie
+n'est pas de moi — cette entrée la documente parce qu'aucune ne l'avait encore fait, en
+même temps que ce qui suit, qui l'est.
+
+### 🔴 Bug bloquant trouvé et corrigé : `verifierRelances` n'existait pas
+
+`vInterfaceCommercial()` (l'écran Pipeline) appelait `await verifierRelances()` dès sa
+première ligne — **la fonction n'était définie nulle part**. Ouvrir l'onglet Commercial
+aurait levé une `ReferenceError` et affiché un écran vide, sans qu'aucun message
+n'explique pourquoi. Le formulaire de configuration de la règle (délai, plafond,
+gabarit) était donc écrit, mais rien ne la faisait vivre.
+
+**Le moteur, maintenant écrit** (`verifierRelances()`, juste avant `PIPELINE_ETAPES`) —
+fondé sur `crm_messages` (canal email) seulement, pas sur `crm_suivi_etapes` : une
+« relance » attend une réponse à un EMAIL, un appel loggé n'attend pas de réponse de la
+même façon.
+- Le dernier email **sortant** du deal donne le point de départ ; un email **entrant**
+  plus récent que lui vaut réponse — **arrêt automatique**, exactement le mot de la spec.
+- Une relance déjà **en attente** (`action_cle='relance_commerciale'`, statut ≠ fait)
+  n'est jamais recréée : la fonction est rappelée à CHAQUE ouverture de l'écran
+  (`vInterfaceCommercial` la relance sans mémoire de si elle vient de tourner), c'est ce
+  contrôle qui rend ça idempotent plutôt qu'un verrou temporel.
+- Une relance en attente dont le contact a répondu ENTRE-TEMPS est **annulée
+  automatiquement** (`annulerRelance`, statut → `fait`, description qui dit pourquoi) —
+  ce n'était pas juste « ne pas en créer une nouvelle », c'est aussi rattraper celle
+  déjà posée.
+- Le plafond (`nb_max`) compte TOUTES les relances de ce deal, faites ou non — sans quoi
+  une règle « 3 relances maximum » en aurait laissé passer indéfiniment une fois les
+  précédentes cochées.
+- `action_cle:'relance_commerciale'` réutilise le champ déjà posé par le moteur de
+  missions générique (`crm_taches.action_cle`, session 03) plutôt que d'ajouter une
+  colonne ou de filtrer sur le texte du titre — un filtre par titre aurait été fragile
+  au moindre nom de deal contenant des caractères spéciaux.
+
+**Vérifié au banc** (Node, les fonctions extraites du fichier, `sbTry`/`sb`/`S` doublés) :
+6 deals couvrant les 6 cas — jamais contacté (rien), délai dépassé sans réponse (**créée**),
+délai dépassé mais contact ayant répondu avec une relance déjà pendante (**annulée**),
+plafond déjà atteint (rien), relance déjà en attente (pas de doublon), étape « perdu »
+(exclu d'office). Les 6 rendent exactement ce qui était attendu.
+
+### Feature 3 (email entrant) — le code est écrit, il ne reçoit encore rien
+
+La migration `0014_commercial_echanges.sql` annonçait « le code du webhook est prêt » —
+**c'était faux au moment où c'était écrit** : `api/webhook.js` n'avait ni Svix ni
+`email.received`, vérifié par grep sur tout le dépôt avant de commencer. Corrigé, dans le
+commentaire de la migration et dans le code.
+
+**Recherché avant d'écrire une ligne** (Resend n'était pas dans mes connaissances à jour) :
+la doc officielle confirme `email.received` en webhook, signé Svix, payload MÉTADONNÉES
+SEULEMENT (`email_id`, `from`, `to`, `subject`, `message_id`) — le corps texte/html et
+`in_reply_to` demandent un second appel, `GET /emails/receiving/{email_id}`. La
+vérification Svix : en-têtes `svix-id`/`svix-timestamp`/`svix-signature`, HMAC-SHA256 sur
+`{id}.{timestamp}.{corps brut}`, secret `whsec_<base64>`, signature(s) `v1,<base64>`
+séparées par des espaces (rotation de secret possible).
+
+**Fusionné dans `api/webhook.js`** (déjà le webhook Stripe) plutôt qu'une route à part :
+`api/` est exactement à 12 fonctions, le plafond Vercel Hobby — même raison qui a déjà
+fait fusionner `push-test`→`push-amis` et `reserver-cuisine`→`notifications` (CLAUDE.md).
+Le discriminant est le header lui-même : `svix-signature` pour Resend, `stripe-signature`
+pour Stripe, jamais les deux à la fois.
+- Rattachement automatique par adresse : `crm_contacts.email` cherché en `ilike` (pas de
+  correspondance floue), pose `contact_id`/`projet_id` s'il trouve, laisse les deux à
+  `null` sinon — un expéditeur inconnu arrive quand même, rattachable à la main.
+- Idempotent : `?on_conflict=message_id_email`, qui a demandé de passer l'index existant
+  en **UNIQUE** dans la migration (une valeur NULL n'entre jamais en conflit avec une
+  autre NULL — comportement standard, pas un cas à gérer à part).
+- Fail-closed sur `RESEND_WEBHOOK_SECRET` absente (500, même garde que
+  `STRIPE_WEBHOOK_SECRET`) — jamais un webhook qui accepterait un appel non signé faute
+  de configuration.
+
+**Vérifié au banc** (Node, `crypto.subtle` — le même Web Crypto que l'edge runtime) : une
+signature Svix calculée indépendamment avec `node:crypto` est acceptée ; un corps modifié,
+un mauvais secret, un timestamp de plus de 300 s sont tous les trois rejetés ; une liste de
+deux signatures dont une seule valide (rotation) est acceptée. 5 cas, 5 corrects.
+
+🔴 **Ne reçoit RIEN tant que Pablo n'a pas, côté Resend** : choisi un domaine de réception
+(sous-domaine `<id>.resend.app` sans DNS, ou le domaine de Natty avec un enregistrement MX
+— **risque de conflit avec une vraie boîte mail d'entreprise**, donc sa décision et non la
+mienne), créé le webhook `email.received` pointé sur
+`https://natty-suivi.vercel.app/api/webhook`, et posé son secret de signature dans la
+variable Vercel `RESEND_WEBHOOK_SECRET`.
+
+### Feature 6 (campagnes Hunter) — toujours non commencée, et ça reste juste
+
+Vérifié à nouveau que rien n'a changé : aucune clé Hunter dans ce projet, aucune dans les
+secrets connus. La spec elle-même le dit — « à la décision de Pablo » —, et rien n'est
+écrit contre une API dont on n'a pas la clé. **Pas un oubli, un blocage réel** : il faut un
+compte Hunter (Sequences/Campaigns), une clé API, et l'accord sur le coût, avant la
+moindre ligne.
+
+### Feature 8 (détection de bloc depuis un compte-rendu)
+
+Ajoutée à la MÊME analyse que la feature 7 (« remplir depuis des notes ») plutôt qu'un
+second appel IA : le prompt demande en plus un `bloc_propose:{proposer,raison,lieu,
+nb_beneficiaires}`, et le modèle n'y répond `proposer:true` que si les notes évoquent
+clairement un test produit ou une dégustation à venir — jamais pour un rendez-vous
+ordinaire (consigne explicite dans le prompt).
+
+« Soumis à l'aperçu du moteur » est tenu au pied de la lettre : le bouton qui apparaît
+(« 📦 Proposer le bloc → ») n'ouvre que `ouvrirNouveauBloc({projet, prefill})`, DÉJÀ
+écrit pour le passage manuel « Test » du kanban (critère 3 de la session 11) — qui passe
+de toute façon par `ouvrirApercuBloc` et son propre contrôle de capacité avant la moindre
+écriture. Rien n'est créé par l'IA elle-même, exactement le même principe que la feature 7
+(« jamais d'envoi automatique »).
+⚠️ Cliquer le bouton ferme le formulaire de suivi en cours SANS l'enregistrer — accepté :
+proposer un bloc est un geste plus lourd qu'un suivi, et les deux n'ont pas à cohabiter
+dans le même clic.
+
+### Décisions prises
+
+- **Les relances ne regardent que le canal EMAIL**, jamais les suivis loggés à la main :
+  une règle qui compterait un appel comme une « réponse » confondrait deux choses
+  différentes (on répond à un email, on rapporte un appel).
+- **Le plafond `nb_max` compte tout l'historique**, pas seulement les relances en cours —
+  sinon un plafond de 3 ne freinerait jamais rien une fois les trois premières cochées.
+- **`api/webhook.js` reste le seul webhook**, Stripe et Resend confondus, discriminés par
+  le header de signature — pas de 13ᵉ fonction sur le plan Hobby.
+- **Aucune ligne écrite contre l'API Hunter sans clé** — cohérent avec la décision déjà
+  prise dans la migration, reconduite ici après re-vérification.
+
+### Dette technique / points ouverts
+
+- **Feature 6 (Hunter) entièrement à faire**, bloquée sur un compte/une clé — décision de
+  Pablo.
+- **Feature 3 codée mais inerte** tant que le domaine de réception, le webhook Resend et
+  `RESEND_WEBHOOK_SECRET` ne sont pas posés côté Pablo (voir ci-dessus, trois actions
+  précises).
+- **Aucun envoi d'email n'a été fait en conditions réelles** (ni sortant ni entrant) :
+  `RESEND_API_KEY`/`RESEND_FROM` supposées déjà posées (elles servent déjà au récap de
+  commande de `api/webhook.js`), mais le chemin `envoyer_message_commercial` n'a jamais
+  été appelé pour de vrai.
+- 🔄 **Rien vérifié avec une vraie session d'équipe** : `crm.html` exige un compte staff,
+  absent ici. Le moteur de relances est vérifié au banc (fonctions réelles, doublures de
+  Supabase), pas contre la base réelle.
+- **À faire par Pablo avant que la feature 3 serve à quelque chose** : choisir le domaine
+  de réception dans Resend (Dashboard → Receiving), créer le webhook `email.received` →
+  `https://natty-suivi.vercel.app/api/webhook`, poser `RESEND_WEBHOOK_SECRET` sur Vercel.
+- **Critères de réception de la session, à revérifier avec Pablo une fois testés en
+  réel** : un email envoyé et sa réponse dans le même fil (dépend du point ci-dessus) ;
+  une relance proposée au bon délai et qui disparaît si le contact répond (vérifié au
+  banc, pas en réel) ; des notes de RDV qui produisent un bloc de suivi exploitable
+  (feature 7, déjà en place avant cette session).
+
+### 🔴 Bug trouvé en reprenant ce chantier : l'index de `message_id_email` n'était pas UNIQUE
+
+En vérifiant l'état réel de la base (pas seulement le texte de la migration) avant de
+continuer : `0014_commercial_echanges.sql` déclare `create unique index if not exists
+crm_messages_message_id_idx …`, mais **l'index réellement posé en base, sous ce nom,
+n'était PAS unique** — un simple btree (`pg_indexes` le confirme). `if not exists`
+compare sur le NOM, pas sur les propriétés : une fois un index non-unique créé sous ce
+nom, réexécuter la même instruction avec `unique` en plus ne change rien, Postgres voit
+un objet homonyme et saute la création. Sans correction, `api/webhook.js` aurait échoué
+en **`42P10`** (« no unique constraint matching the ON CONFLICT specification ») au tout
+premier email reçu — exactement le piège déjà documenté pour `meal_likes`/`membre_amis`
+dans CLAUDE.md, ici sur une table neuve de cette même session.
+
+**Corrigé par `supabase/migrations/0015_crm_messages_message_id_unique.sql`** (`drop
+index` + `create unique index`, appliqué — la table était vide, aucun doublon à purger).
+Vérifié après coup, à la clé service : `pg_indexes` confirme `CREATE UNIQUE INDEX`, et
+**deux lignes avec `message_id_email` à NULL s'insèrent sans conflit** (comportement
+standard d'un index unique sur NULL, mais vérifié plutôt que supposé) — donc un email
+entrant sans Message-ID connu n'empêchera jamais un second email d'être enregistré.
+
+### La règle de relance et « réponse reçue », côté écran (session 12, suite)
+
+Deux pièces manquaient encore pour que le critère 2 soit *vérifiable*, pas seulement
+codé : le formulaire de configuration d'une règle par profil, et un moyen d'obtenir une
+ligne `crm_messages` en sens `entrant` avant que le webhook Resend existe.
+- **Formulaire de règle** (délai, plafond, gabarit, actif) ajouté dans
+  `ouvrirProfilDetail()`, sous « Arguments »/« Objections » — une ligne par profil,
+  PATCH si elle existe déjà, POST sinon (même schéma que le reste du drawer).
+- **« 📥 Réponse reçue »** (`ouvrirEnregistrerReponse`), à côté de « ✉️ Envoyer un email »
+  dans la fiche contact : consigne à la main une ligne `crm_messages` en `sens='entrant'`
+  sur le deal du contact. Tant que le webhook Resend n'est pas branché côté Pablo (voir
+  ci-dessus), c'est le SEUL chemin par lequel une réponse peut exister dans la base — donc
+  le seul moyen de vérifier, avec de vraies données, que `verifierRelances()` ferme bien
+  une relance quand le contact répond. Une fois branché, ce bouton reste utile (réponse
+  reçue par un autre canal, appel rapportant une réponse orale).
+
+Vérifié : `node --check` sur le script unique de `crm.html`, aucune fonction dupliquée
+(`grep` sur les déclarations top-level), et `api/webhook.js`/`api/notifications.js`
+passent `node --check --input-type=module` / `node --check`.
+🔄 **Toujours pas de vraie session d'équipe** : les deux ajouts n'ont été vus qu'en
+lisant le code, pas cliqués dans le navigateur.

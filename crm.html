@@ -369,6 +369,14 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
 <div class="toast" id="toast" role="status"></div>
 <div class="tablette" id="tablette"></div>
 
+<!-- Réutilisés tels quels (règle 44 du dépôt : un rendu partagé vit dans UN
+     module, jamais recopié) : le poids d'une pièce pour la liste de courses
+     (NattyUnites), le savoir général d'un geste pour la fiche technique de
+     production (NattySavoir, déjà écrit pour l'écran-par-écran d'admin.html).
+     Deux IIFE sans dépendance, chargées ici pour être disponibles au premier
+     clic — le reste du fichier reste un script unique. -->
+<script src="/assets/unites.js"></script>
+<script src="/assets/admin-savoir.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════
    Natty CRM — accueil (échéances urgentes + grille des activités),
@@ -2133,6 +2141,22 @@ const chipStatut=s=>{const l=PROD_STATUTS[s]||['',s];return `<span class="chip $
    saisies à la main le rangent en première ligne des notes. */
 const libBon=b=>{const n=(b.notes||'').split('\n')[0].trim();return n||(b.type==='abonnement'?'Abonnement':b.type==='unite'?'Commande à l’unité':'Commande')};
 
+/* ---- Grammes ⇄ pièces, pour la liste de courses ET la fiche technique ----
+   On achète des œufs, pas des grammes d'œuf : à côté du poids, on veut savoir
+   combien de pièces ça fait. `NattyUnites` (assets/unites.js) porte déjà le
+   poids d'une pièce pour ~70 aliments courants — pas une seconde table à
+   tenir à jour, la même que celle qui sert au client dans le `+`. */
+function pieceCompte(nom,g){
+ if(!window.NattyUnites||!(g>0))return null;
+ try{
+  if(!NattyUnites.estPiece(nom))return null;
+  const n=NattyUnites.quantite(g,'u',nom);
+  return n?{n,lib:NattyUnites.libelle('u',nom,n)}:null;
+ }catch(e){return null}
+}
+function pieceTxt(nom,g){const p=pieceCompte(nom,g);return p?' (≈ '+p.n.toLocaleString('fr-FR')+' '+p.lib+')':''}
+function pieceHtml(nom,g){const p=pieceCompte(nom,g);return p?' <span style="color:#8e8e99;font-weight:400">(≈ '+p.n.toLocaleString('fr-FR')+' '+esc(p.lib)+')</span>':''}
+
 async function vInterfaceProduction(){
  if(!PROD.debut)PROD.debut=lundiLocal(new Date());
  const debut=new Date(PROD.debut),fin=new Date(debut);fin.setDate(fin.getDate()+PROD_SEMAINES*7-1);
@@ -2303,7 +2327,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
    <button type="button" class="btn sm ghost" id="bfAdd" style="justify-self:start">+ Ajouter une recette</button>
    <span class="muted" id="bfSomme" style="font-weight:400"></span></label>
   <label>Notes<textarea class="inp" id="bfNotes" rows="2">${esc(reste)}</textarea></label>
-  <div class="foot">${bonId?'<button type="button" class="btn danger" id="bfDel" style="margin-right:auto">Supprimer</button>':''}<button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Enregistrer</button></div>
+  <div class="foot">${bonId?'<button type="button" class="btn danger" id="bfDel" style="margin-right:auto">Supprimer</button>':''}${bonId&&attrs.length?'<button type="button" class="btn ghost" id="bfFiche">📄 Fiche technique</button>':''}<button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Enregistrer</button></div>
  </form>`);
  const zone=$('#bfLignes');
  const somme=()=>{const t=[...zone.querySelectorAll('.bon-l')].reduce((s,l)=>s+(l.querySelector('.bl-rec').value?(+l.querySelector('.bl-n').value||0):0),0);const nb=+$('#bfNb').value||0;$('#bfSomme').textContent=t?`${t} portion${t>1?'s':''} attribuée${t>1?'s':''} pour ${nb} repas`+(t!==nb?' — les deux ne correspondent pas':''):''};
@@ -2311,6 +2335,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
  zone.addEventListener('click',e=>{const x=e.target.closest('.bl-x');if(x){x.closest('.bon-l').remove();if(!zone.children.length)zone.insertAdjacentHTML('beforeend',ligne(null));somme()}});
  $('#bfAdd').onclick=()=>{zone.insertAdjacentHTML('beforeend',ligne(null));somme()};
  if(!recettes.length)$('#bfAdd').insertAdjacentHTML('afterend','<span class="chip warn">Aucune recette active dans <span class="mono">recettes</span></span>');
+ $('#bfFiche')?.addEventListener('click',()=>ouvrirFicheTechnique(bonId));
  $('#bfDel')?.addEventListener('click',async()=>{
   if(!confirm('Supprimer cette commande et ses recettes attribuées ?'))return;
   try{await sb('bons_commande?id=eq.'+bonId,{method:'DELETE'});toast('Commande supprimée');closeAll();render()}
@@ -2342,6 +2367,219 @@ async function ouvrirFormBon(bonId,jourDefaut){
    toast(bonId?'Commande modifiée':'Commande enregistrée');closeAll();render();
   }catch(err){btn.disabled=false;toast('Enregistrement refusé : '+String(err.message||err).slice(0,140))}
  });
+}
+
+/* ============ Fiche technique de production (PDF imprimable) ============
+   Ouverte depuis une commande (bon_commande) : on choisit LES RECETTES de
+   cette commande à produire, et un poste pour filtrer la fiche à une seule
+   station. Deux recettes cochées → leurs étapes se mélangent, regroupées par
+   poste puis dans l'ordre — même principe que `genererMapping()` plus haut
+   (crm_session_etapes), sans écriture en base : imprimer n'a pas d'effet de
+   bord, donc pas de ligne de session à créer pour ça.
+
+   La fiche ne s'arrête pas à la commande de départ : elle couvre TOUTES les
+   commandes du même jour de livraison qui demandent la ou les recettes
+   choisies (la cuisine produit un lot une fois, pas une fois par client), et
+   se termine par la répartition — même logique que la phase `assemblage` de
+   `genererMapping()` : une ligne par (bon, recette), les grammes de CE
+   client. Sans jour de livraison, la fiche ne couvre que la commande seule.
+
+   Précision : chaque étape porte son geste, sa quantité (calculée sur le
+   TOTAL du lot, mot à mot contre `recettes_ingredients` — jamais en
+   sous-chaîne, sinon « ail » se retrouverait dans « volaille »), sa
+   consigne complète, durée/température/découpe quand la fiche les donne, et
+   le savoir général du geste (NattySavoir, assets/admin-savoir.js — le même
+   contenu que « Détails » dans l'écran-par-écran d'admin.html, chargé ici
+   pour ne pas le récrire). */
+const GESTES_TITRE_DABORD=['melanger','assaisonner','mixer','dresser'];
+function savoirPourEtape(e){
+ if(!window.NattySavoir)return'';
+ const cands=(GESTES_TITRE_DABORD.indexOf(e.geste)>-1?[e.titre,e.aliment]:[e.aliment,e.titre]).filter(Boolean);
+ if(!cands.length)return'';
+ try{return NattySavoir.html(e.geste,cands)||''}catch(err){return''}
+}
+function normFt(s){return ' '+String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim()+' '}
+/* Mot à mot, jamais en sous-chaîne — la même règle que `core.js` et
+   `assets/unites.js` : un ingrédient de la fiche compte s'il porte TOUS les
+   mots d'un des groupes séparés par virgule de `aliment` (« carottes,
+   oignons »), en mots ENTIERS. */
+function motsCorrespondent(aliment,ingredientNom){
+ const n=normFt(ingredientNom);
+ return String(aliment||'').split(',').map(s=>s.trim()).filter(Boolean).some(m=>{
+  const mots=normFt(m).trim().split(' ').filter(Boolean);
+  return mots.length&&mots.every(w=>n.indexOf(' '+w+' ')>-1);
+ });
+}
+function quantitesEtape(etape,ingredientsRecette,totalEq,baseNbPortions){
+ if(!etape.aliment||!totalEq)return[];
+ const base=baseNbPortions||1;
+ return ingredientsRecette.filter(i=>i.recette_id===etape.recette_id&&motsCorrespondent(etape.aliment,i.ingredient_nom))
+  .map(i=>({nom:i.ingredient_nom,g:(+i.quantite_g||0)*totalEq/base}));
+}
+const fmtG=g=>esc((g<10?Math.round(g*10)/10:Math.round(g)).toLocaleString('fr-FR'))+' g';
+
+async function ouvrirFicheTechnique(bonId){
+ const bonR=await sbTry('bons_commande?id=eq.'+bonId+'&select=*');
+ const bon=(bonR.ok?bonR.data:[])[0];
+ if(!bon){toast('Commande introuvable');return}
+ const attrR=await sbTry('bons_attributions?bon_id=eq.'+bonId+'&select=recette_id,nb_portions,facteur,kcal_portion');
+ const attrs=attrR.ok?attrR.data:[];
+ if(!attrs.length){toast('Aucune recette attribuée à cette commande');return}
+ const recIds=[...new Set(attrs.map(a=>a.recette_id))];
+ const recR=await sbTry('recettes?id=in.('+recIds.join(',')+')&select=id,nom,nb_portions');
+ const nomRec={};(recR.ok?recR.data:[]).forEach(r=>nomRec[r.id]=r.nom);
+ const etR=await sbTry('recettes_etapes?recette_id=in.('+recIds.join(',')+')&phase=eq.production&select=poste,geste');
+ const postes=[...new Set((etR.ok?etR.data:[]).map(e=>(e.poste||e.geste||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr'));
+ modal(`<h2>Fiche technique de production</h2>
+ <p class="muted" style="margin:-4px 0 10px;font-size:12.5px">${esc(libBon(bon))}${bon.jour_livraison?' · livraison '+esc(fd(bon.jour_livraison)):' · sans date de livraison'}</p>
+ <div class="form">
+  <label>Recette(s) à produire
+   <div style="display:grid;gap:6px;margin-top:4px">${recIds.map(id=>{
+    const a=attrs.find(x=>x.recette_id===id);
+    return `<label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" class="ft-rec" value="${id}" checked style="width:16px;height:16px;flex:0 0 auto"> <span>${esc(nomRec[id]||'?')} <span class="muted">· ${a?a.nb_portions:0} portion(s) pour cette commande</span></span></label>`;
+   }).join('')}</div>
+   ${recIds.length>1?'<p class="muted" style="font-size:11.5px;margin:6px 0 0">Deux recettes cochées → la fiche mélange leurs étapes, regroupées par poste.</p>':''}
+  </label>
+  <label>Poste<select id="ftPoste"><option value="">Tous les postes</option>${postes.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select></label>
+  <p class="muted" style="font-size:11.5px;margin:4px 0 0">${bon.jour_livraison?`La fiche couvre aussi les autres commandes du ${esc(fd(bon.jour_livraison))} qui demandent ces recettes — le lot se produit une fois, la répartition par commande est à la fin.`:`Cette commande n'a pas de date de livraison : la fiche ne couvrira qu'elle.`}</p>
+ </div>
+ <div class="foot" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn" type="button" data-close>Annuler</button><button class="btn primary" type="button" id="ftGo">Générer la fiche →</button></div>`);
+ $('#ftGo').onclick=()=>{
+  const sel=[...document.querySelectorAll('.ft-rec:checked')].map(c=>c.value);
+  if(!sel.length){toast('Coche au moins une recette');return}
+  const poste=$('#ftPoste').value||null;
+  genererFicheTechnique(bon,sel,nomRec,poste);
+ };
+}
+
+async function genererFicheTechnique(bon,recIdsSel,nomRec,posteFiltre){
+ closeAll();toast('Préparation de la fiche…');
+ const jour=bon.jour_livraison;
+ const bonsR=jour
+  ?await sbTry('bons_commande?jour_livraison=eq.'+jour+'&statut=neq.annule&select=id,notes,type,nb_repas,adresse')
+  :{ok:true,data:[bon]};
+ const bonsScope=(bonsR.ok&&bonsR.data.length)?bonsR.data:[bon];
+ const bonIds=bonsScope.map(b=>b.id);
+ const attR=await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&recette_id=in.('+recIdsSel.join(',')+')&select=bon_id,recette_id,nb_portions,facteur,kcal_portion');
+ const attrsScope=attR.ok?attR.data:[];
+ if(!attrsScope.length){toast('Aucune attribution trouvée pour ces recettes');return}
+ const recR=await sbTry('recettes?id=in.('+recIdsSel.join(',')+')&select=id,nom,nb_portions,temps_prep_min,temps_cuisson_min');
+ const fiches={};(recR.ok?recR.data:[]).forEach(r=>fiches[r.id]=r);
+ const [ingR,etR,asmR]=await Promise.all([
+  sbTry('recettes_ingredients?recette_id=in.('+recIdsSel.join(',')+')&select=*'),
+  sbTry('recettes_etapes?recette_id=in.('+recIdsSel.join(',')+')&phase=eq.production&select=*&order=numero.asc'),
+  sbTry('recettes_etapes?recette_id=in.('+recIdsSel.join(',')+')&phase=eq.assemblage&select=*&order=numero.asc')
+ ]);
+ const ingredients=ingR.ok?ingR.data:[];
+ let etapes=etR.ok?etR.data:[];
+ const etapesAssemblage=asmR.ok?asmR.data:[];
+ if(posteFiltre)etapes=etapes.filter(e=>(e.poste||e.geste||'').trim()===posteFiltre);
+ if(!etapes.length){toast(posteFiltre?'Aucune étape sur ce poste pour ces recettes':'Aucune étape de production dans ces fiches');return}
+ const totalPortionsEq={};
+ attrsScope.forEach(a=>{totalPortionsEq[a.recette_id]=(totalPortionsEq[a.recette_id]||0)+a.nb_portions*(+a.facteur||1)});
+ const ordreRec={};recIdsSel.forEach((id,i)=>ordreRec[id]=i);
+ etapes.sort((a,b)=>{
+  const pa=(a.poste||a.geste||'—').trim()||'—',pb=(b.poste||b.geste||'—').trim()||'—';
+  return pa.localeCompare(pb,'fr')||(ordreRec[a.recette_id]-ordreRec[b.recette_id])||((a.numero||0)-(b.numero||0));
+ });
+ const bonsConcernes=bonsScope.filter(b=>attrsScope.some(a=>a.bon_id===b.id));
+ imprimerFicheTechnique({bon,bonsConcernes,recIdsSel,fiches,nomRec,ingredients,etapes,etapesAssemblage,attrsScope,totalPortionsEq,posteFiltre,jour});
+}
+
+function imprimerFicheTechnique(ctx){
+ const {bonsConcernes,recIdsSel,fiches,nomRec,ingredients,etapes,etapesAssemblage,attrsScope,totalPortionsEq,posteFiltre,jour}=ctx;
+ const w=window.open('','_blank');
+ if(!w){toast('Fenêtre bloquée par le navigateur');return}
+ const plusieurs=recIdsSel.length>1;
+ const specs=e=>{
+  const out=[];
+  if(e.duree_min)out.push('⏱ '+e.duree_min+' min');
+  if(e.temperature_c)out.push('🌡 '+e.temperature_c+' °C');
+  if(e.decoupe)out.push('🔪 '+esc(e.decoupe));
+  if(e.passif)out.push('⏳ Attente — le cuisinier peut enchaîner ailleurs');
+  if(e.depend_de&&e.depend_de.length)out.push('↳ après l’étape n°'+e.depend_de.join(', n°'));
+  return out.join(' · ');
+ };
+ const blocEtape=e=>{
+  const qtes=quantitesEtape(e,ingredients,totalPortionsEq[e.recette_id]||0,(fiches[e.recette_id]||{}).nb_portions);
+  const specsTxt=specs(e);
+  return `<div class="etape">
+   <div class="etape-head"><span class="num">N°${e.numero||'?'}</span><b>${esc(e.titre||'')}</b>${plusieurs?`<span class="tag">${esc(nomRec[e.recette_id]||'?')}</span>`:''}${e.geste?`<span class="tag">${esc(e.geste)}</span>`:''}</div>
+   ${qtes.length?`<div class="qte">${qtes.map(q=>fmtG(q.g)+' '+esc(q.nom)+pieceHtml(q.nom,q.g)).join(' + ')}</div>`:''}
+   ${e.description?`<p class="desc">${esc(e.description)}</p>`:''}
+   ${specsTxt?`<div class="specs">${specsTxt}</div>`:''}
+   ${savoirPourEtape(e)}
+  </div>`;
+ };
+ let corps='',dernierPoste=null;
+ etapes.forEach(e=>{
+  const poste=(e.poste||e.geste||'—').trim()||'—';
+  if(poste!==dernierPoste){corps+=`<h3>${esc(poste)}</h3>`;dernierPoste=poste}
+  corps+=blocEtape(e);
+ });
+ const dressage=recIdsSel.filter(id=>etapesAssemblage.some(e=>e.recette_id===id)).map(id=>
+  `<h4>${esc(nomRec[id]||'?')}</h4><ol>${etapesAssemblage.filter(e=>e.recette_id===id).map(e=>`<li>${esc(e.titre||'')}${e.description?' — '+esc(e.description):''}</li>`).join('')}</ol>`
+ ).join('');
+ const rep=attrsScope.slice().sort((a,b)=>{
+  const ba=bonsConcernes.find(x=>x.id===a.bon_id),bb=bonsConcernes.find(x=>x.id===b.bon_id);
+  return (ba?libBon(ba):'').localeCompare(bb?libBon(bb):'','fr')||(nomRec[a.recette_id]||'').localeCompare(nomRec[b.recette_id]||'','fr');
+ }).map(a=>{
+  const b=bonsConcernes.find(x=>x.id===a.bon_id);
+  const fiche=fiches[a.recette_id]||{};
+  const base=fiche.nb_portions||1;
+  const eq=a.nb_portions*(+a.facteur||1);
+  const lignesIng=ingredients.filter(i=>i.recette_id===a.recette_id).map(i=>{
+   const g=(+i.quantite_g||0)*eq/base;
+   return `<tr><td>${esc(i.ingredient_nom)}</td><td>${fmtG(g)}${pieceHtml(i.ingredient_nom,g)}</td></tr>`;
+  }).join('');
+  return `<div class="commande-bloc"><h4>${b?esc(libBon(b)):'Commande'} — ${esc(nomRec[a.recette_id]||'?')}</h4>
+  <p class="muted-p">${a.nb_portions} portion${a.nb_portions>1?'s':''}${a.facteur&&+a.facteur!==1?' · facteur ×'+(+a.facteur).toFixed(2):''}${b&&b.adresse?' · '+esc(b.adresse):''}</p>
+  ${lignesIng?`<table>${lignesIng}</table>`:'<p class="muted-p">Ingrédients non saisis pour cette recette.</p>'}
+  </div>`;
+ }).join('');
+ const titreRecettes=recIdsSel.map(id=>esc(nomRec[id]||'?')).join(' + ');
+ w.document.write(`<!doctype html><meta charset="utf-8"><title>Fiche technique — ${titreRecettes}</title>
+ <style>
+  body{font:14px/1.5 system-ui,-apple-system,sans-serif;margin:26px;color:#101014}
+  h1{font-size:19px;margin:0 0 4px}
+  h2{font-size:15px;margin:22px 0 8px;padding-top:14px;border-top:1px solid #ddd}
+  h3{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#666;margin:16px 0 8px}
+  h4{font-size:13.5px;margin:0 0 2px}
+  .meta,.muted-p{color:#666;font-size:12.5px;margin:0 0 4px}
+  .etape{border:1px solid #e2e2e6;border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .etape-head{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+  .etape-head .num{font:600 11px/1 ui-monospace,monospace;color:#888;background:#f2f2f4;border-radius:4px;padding:3px 6px}
+  .etape-head b{font-size:14px}
+  .tag{font-size:11px;color:#555;background:#eee;border-radius:999px;padding:2px 8px}
+  .qte{font-weight:600;margin:5px 0 2px}
+  .desc{margin:4px 0}
+  .specs{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:#444;margin-top:4px}
+  .sec{font-size:10.5px;color:#999;margin-top:10px}
+  .sec small{color:#bbb}
+  .cours{background:#f7f7f9;border-radius:8px;padding:9px 11px;margin-top:6px}
+  .cours .titre{font-weight:700;font-size:13px;margin-bottom:5px}
+  .cours .bloc{margin-top:6px}
+  .cours .bloc b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#777;margin-bottom:3px}
+  .cours p,.cours li{margin:0;font-size:12.5px;line-height:1.5}
+  .cours ol,.cours ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+  .cours .bloc.ok b{color:#1a7f37}
+  .cours .bloc.err b{color:#b42318}
+  table{border-collapse:collapse;width:100%;margin:4px 0 2px}
+  td{padding:3px 8px;border-bottom:1px solid #eee;font-size:13px}
+  td:last-child{text-align:right;white-space:nowrap}
+  .commande-bloc{margin-bottom:14px}
+  .foot-print{margin-top:26px;font-size:11px;color:#999}
+  @media print{.etape,.commande-bloc{break-inside:avoid}}
+ </style>
+ <h1>Fiche technique de production — ${titreRecettes}</h1>
+ <p class="meta">${jour?'Production du '+esc(fd(jour)):'Commande sans date de livraison'}${posteFiltre?' · Poste : '+esc(posteFiltre):' · Tous les postes'} · ${bonsConcernes.length} commande${bonsConcernes.length>1?'s':''} concernée${bonsConcernes.length>1?'s':''}</p>
+ <h2>Étapes de production</h2>
+ ${corps}
+ ${dressage?`<h2>Consignes de dressage</h2>${dressage}`:''}
+ <h2>Répartition par commande</h2>
+ ${rep||'<p class="muted-p">Rien à répartir.</p>'}
+ <p class="foot-print">Imprimé le ${esc(new Date().toLocaleString('fr-FR'))}</p>`);
+ w.document.close();w.focus();w.print();
 }
 
 /* ---- Liste de courses des jours sélectionnés ----
@@ -2404,13 +2642,16 @@ async function listeCoursesJours(jours){
   l.q=Math.max(0,qKg-dejaKg)*(u==='kg'?1:1000);
  });
  const fmt=l=>{const u=l.unite.toLowerCase();if((u==='g'||u==='ml')&&l.q>=1000)return(Math.round(l.q/100)/10).toLocaleString('fr-FR')+' '+(u==='g'?'kg':'L');return(l.q<10?Math.round(l.q*10)/10:Math.round(l.q)).toLocaleString('fr-FR')+' '+l.unite};
+ /* Le poids ne dit pas combien acheter : on achète des œufs, pas 660 g d'œuf.
+    Seulement pour g/kg — un litre de lait ne se compte pas à la pièce. */
+ const gEq=l=>{const u=l.unite.toLowerCase();return u==='kg'?l.q*1000:u==='g'?l.q:0};
  const sansFiche=recIds.filter(id=>!(ing.ok?ing.data:[]).some(i=>i.recette_id===id));
- const texte=`Liste de courses — ${titre}\n`+lignes.map(l=>`- ${l.nom} : ${fmt(l)}`).join('\n');
+ const texte=`Liste de courses — ${titre}\n`+lignes.map(l=>`- ${l.nom} : ${fmt(l)}${pieceTxt(l.nom,gEq(l))}`).join('\n');
  modal(`<h2>Liste de courses</h2>
  <p class="muted" style="margin:-4px 0 10px;font-size:12.5px">${esc(titre)} · ${bons.length} commande${bons.length>1?'s':''} · ${recIds.map(id=>esc((fiche[id]||{}).nom||'?')+' × '+portions[id]).join(', ')||'aucune recette'}</p>
  ${sansRecette.length?`<div class="exbar"><span class="chip bad">${sansRecette.length}</span><span>commande${sansRecette.length>1?'s':''} sans recette attribuée (${sansRecette.reduce((s,b)=>s+b.nb_repas,0)} repas) — non comptée${sansRecette.length>1?'s':''} dans cette liste.</span></div>`:''}
  ${sansFiche.length?`<div class="exbar"><span class="chip warn">${sansFiche.length}</span><span>recette${sansFiche.length>1?'s':''} sans ingrédients saisis : ${sansFiche.map(id=>esc((fiche[id]||{}).nom||'?')).join(', ')}.</span></div>`:''}
- <div class="list" style="max-height:50vh;overflow:auto">${lignes.map(l=>`<div class="li"><div class="grow">${esc(l.nom)}${l.rec.size>1?` <span class="muted" style="font-size:11.5px">· ${l.rec.size} recettes</span>`:''}${l.dejaEnStockKg?` <span class="muted" style="font-size:11.5px">· ${(Math.round(l.dejaEnStockKg*10)/10).toLocaleString('fr-FR')} kg déjà en stock déduits</span>`:''}</div><span class="num">${l.q<=0?'<span class="chip ok">en stock</span>':esc(fmt(l))}</span></div>`).join('')||'<div class="empty">Rien à calculer.</div>'}</div>
+ <div class="list" style="max-height:50vh;overflow:auto">${lignes.map(l=>`<div class="li"><div class="grow">${esc(l.nom)}${l.rec.size>1?` <span class="muted" style="font-size:11.5px">· ${l.rec.size} recettes</span>`:''}${l.dejaEnStockKg?` <span class="muted" style="font-size:11.5px">· ${(Math.round(l.dejaEnStockKg*10)/10).toLocaleString('fr-FR')} kg déjà en stock déduits</span>`:''}</div><span class="num">${l.q<=0?'<span class="chip ok">en stock</span>':esc(fmt(l))+pieceHtml(l.nom,gEq(l))}</span></div>`).join('')||'<div class="empty">Rien à calculer.</div>'}</div>
  <div class="foot" style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" type="button" data-close>Fermer</button>${lignes.length?'<button class="btn" type="button" id="lcPrint">Imprimer</button><button class="btn primary" type="button" id="lcCopy">Copier</button>':''}</div>`);
  $('#lcCopy')?.addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(texte);toast('Liste copiée')}
@@ -2418,7 +2659,7 @@ async function listeCoursesJours(jours){
  });
  $('#lcPrint')?.addEventListener('click',()=>{
   const w=window.open('','_blank');if(!w){toast('Fenêtre bloquée par le navigateur');return}
-  w.document.write(`<!doctype html><meta charset="utf-8"><title>Liste de courses</title><style>body{font:14px system-ui,sans-serif;margin:28px}h1{font-size:18px}td{padding:5px 10px;border-bottom:1px solid #ddd}td:last-child{text-align:right;white-space:nowrap}</style><h1>Liste de courses — ${esc(titre)}</h1><table>${lignes.map(l=>`<tr><td>☐ ${esc(l.nom)}</td><td>${esc(fmt(l))}</td></tr>`).join('')}</table>`);
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>Liste de courses</title><style>body{font:14px system-ui,sans-serif;margin:28px}h1{font-size:18px}td{padding:5px 10px;border-bottom:1px solid #ddd}td:last-child{text-align:right;white-space:nowrap}</style><h1>Liste de courses — ${esc(titre)}</h1><table>${lignes.map(l=>`<tr><td>☐ ${esc(l.nom)}</td><td>${esc(fmt(l))}${pieceHtml(l.nom,gEq(l))}</td></tr>`).join('')}</table>`);
   w.document.close();w.focus();w.print();
  });
 }
@@ -2725,10 +2966,82 @@ function vProjets(cle,projets){
    CETTE séquence commune — plusieurs jeux de colonnes selon le deal
    affiché rendraient le tableau incomparable d'une carte à l'autre.
    Voir la note de 0013_commercial_fondations.sql §1. */
+/* ============ Relances (§4.3 feature 5) ============
+   « Règle par profil (délai sans réponse, nombre maximum, message type) ;
+   la file des relances à faire crée des missions ; arrêt automatique si
+   le contact répond. » La règle se configure sur le profil
+   (`ouvrirProfilDetail`, déjà écrit) — ce qui manquait, et qui faisait
+   planter tout l'écran Pipeline (`verifierRelances` était appelée sans
+   jamais avoir été définie), c'est le moteur qui la fait vivre.
+
+   Basé sur `crm_messages` (canal email) uniquement : une « relance » est
+   un rappel qu'on attend une réponse à un EMAIL, pas à n'importe quelle
+   ligne de suivi (un appel loggé n'attend pas de réponse de la même
+   façon). Le dernier email SORTANT du deal donne le point de départ ; un
+   email ENTRANT plus récent que lui vaut réponse — arrêt immédiat.
+
+   Idempotent par construction, pas par verrou : une relance déjà EN
+   ATTENTE (`action_cle='relance_commerciale'`, statut ≠ fait) n'est
+   jamais recréée, donc rappeler cette fonction à chaque ouverture de
+   l'écran (c'est ce que fait `vInterfaceCommercial`) ne double rien. */
+async function verifierRelances(){
+ const deals=S.projets.filter(p=>p.activite==='commercial'&&p.profil_id&&p.etape_pipeline!=='perdu'&&p.etape_pipeline!=='client_recurrent');
+ if(!deals.length)return 0;
+ const profilIds=[...new Set(deals.map(d=>d.profil_id))];
+ const reglesR=await sbTry('crm_relance_regles?profil_id=in.('+profilIds.join(',')+')&actif=eq.true&select=*');
+ const regleParProfil={};
+ (reglesR.ok?reglesR.data:[]).forEach(r=>{if(!regleParProfil[r.profil_id])regleParProfil[r.profil_id]=r});
+ const dealsAvecRegle=deals.filter(d=>regleParProfil[d.profil_id]);
+ if(!dealsAvecRegle.length)return 0;
+ const dealIds=dealsAvecRegle.map(d=>d.id);
+ const [msgR,tachesR]=await Promise.all([
+  sbTry('crm_messages?projet_id=in.('+dealIds.join(',')+')&canal=eq.email&select=projet_id,sens,created_at&order=created_at.asc'),
+  sbTry('crm_taches?projet_id=in.('+dealIds.join(',')+')&action_cle=eq.relance_commerciale&select=id,projet_id,statut,created_at')
+ ]);
+ const messages=msgR.ok?msgR.data:[];
+ const toutesRelances=tachesR.ok?tachesR.data:[];
+ let cree=0;
+ for(const deal of dealsAvecRegle){
+  const regle=regleParProfil[deal.profil_id];
+  const msgsDeal=messages.filter(m=>m.projet_id===deal.id);
+  const relancesDeal=toutesRelances.filter(t=>t.projet_id===deal.id);
+  const pendante=relancesDeal.find(t=>t.statut!=='fait');
+  const dernierSortant=msgsDeal.filter(m=>m.sens==='sortant').slice(-1)[0];
+  if(!dernierSortant){
+   // aucun email sortant retrouvé (deal jamais contacté, ou fil supprimé) :
+   // une relance encore en attente n'a plus de raison d'être.
+   if(pendante)await annulerRelance(pendante,'aucun email sortant retrouvé pour ce deal');
+   continue;
+  }
+  const aRepondu=msgsDeal.some(m=>m.sens==='entrant'&&new Date(m.created_at)>new Date(dernierSortant.created_at));
+  if(aRepondu){
+   if(pendante)await annulerRelance(pendante,'le contact a répondu');
+   continue;
+  }
+  if(pendante)continue; // déjà proposée, pas la peine d'en créer une seconde
+  if(relancesDeal.length>=regle.nb_max)continue; // plafond de la règle atteint
+  const joursDepuis=(Date.now()-new Date(dernierSortant.created_at).getTime())/86400000;
+  if(joursDepuis<regle.delai_jours)continue; // pas encore l'heure
+  const r=await sb('crm_taches',{method:'POST',body:JSON.stringify({
+   activite:'commercial',projet_id:deal.id,titre:'Relance — '+deal.nom,
+   description:regle.gabarit||('Aucune réponse depuis '+Math.floor(joursDepuis)+' jour(s) — relancer le contact.'),
+   priorite:'moyenne',statut:'a_faire',action_cle:'relance_commerciale',cree_par:'Automatique'
+  })});
+  if(r&&r[0])S.taches.push(r[0]);
+  cree++;
+ }
+ return cree;
+}
+async function annulerRelance(tache,raison){
+ await sb('crm_taches?id=eq.'+tache.id,{method:'PATCH',body:JSON.stringify({statut:'fait',description:'Annulée automatiquement — '+raison})});
+ const t=S.taches.find(x=>x.id===tache.id);if(t){t.statut='fait';t.description='Annulée automatiquement — '+raison}
+}
+
 const PIPELINE_ETAPES=[['premier_contact','Premier contact'],['decouverte','Découverte'],['degustation','Dégustation'],['proposition','Proposition'],['test','Test'],['negociation','Négociation'],['signature','Signature'],['client_recurrent','Client récurrent'],['perdu','Perdu']];
-function vInterfaceCommercial(){
+async function vInterfaceCommercial(){
+ const nRelances=await verifierRelances();
  const deals=S.projets.filter(p=>p.activite==='commercial');
- return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Glissez une carte pour changer son étape — un suivi de l'étape actuelle est demandé avant de faire avancer un deal. Cliquez une carte pour l'ouvrir (fiche, playbook, suivi, schéma, tâches).</p>
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Glissez une carte pour changer son étape — un suivi de l'étape actuelle est demandé avant de faire avancer un deal. Cliquez une carte pour l'ouvrir (fiche, playbook, suivi, schéma, tâches).${nRelances?` <b>${nRelances} relance(s)</b> créée(s) dans les tâches — voir « Toutes les tâches ».`:''}</p>
  <div class="kanban" id="pipelineWrap">${PIPELINE_ETAPES.map(([k,l])=>{
   const col=deals.filter(d=>(d.etape_pipeline||'premier_contact')===k);
   return `<div class="kanban-col" data-etape="${k}"><h4>${esc(l)} <span class="chip">${col.length}</span></h4>${col.map(dealCard).join('')||'<div class="empty" style="font-size:11px;padding:10px">—</div>'}</div>`;
@@ -2807,38 +3120,220 @@ async function vCommerciauxContacts(){
  const r=await sbTry('crm_contacts?select=*,crm_projets(nom)&order=created_at.desc');
  if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">crm_contacts</span> — session d'équipe requise, ou table absente.</span></div>`;
  const contacts=r.data;
- return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn sm primary" data-new="contact">+ Contact</button></div>
- <div class="grid g3">${contacts.map(c=>`<div class="card lift click" data-open-contact="${c.id}"><h3>${esc(c.nom)}</h3>${c.entreprise?`<p class="sub">${esc(c.entreprise)}</p>`:''}<div class="muted" style="font-size:12px">${[c.email,c.telephone].filter(Boolean).map(esc).join(' · ')||'—'}</div>${c.crm_projets?`<div class="chip info" style="margin-top:8px">${esc(c.crm_projets.nom)}</div>`:''}</div>`).join('')||'<div class="empty">Aucun contact — « + Contact » pour en ajouter un.</div>'}</div>`;
+ return `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px"><button class="btn sm ghost" data-importer-contacts>⇧ Importer (Excel/CSV)</button><button class="btn sm primary" data-new="contact">+ Contact</button></div>
+ <div class="grid g3">${contacts.map(c=>`<div class="card lift click" data-open-contact="${c.id}"><h3>${esc(c.nom)}</h3>${c.entreprise?`<p class="sub">${esc(c.entreprise)}</p>`:''}<div class="muted" style="font-size:12px">${[c.email,c.telephone].filter(Boolean).map(esc).join(' · ')||'—'}</div>${c.crm_projets?`<div class="chip info" style="margin-top:8px">${esc(c.crm_projets.nom)}</div>`:''}</div>`).join('')||'<div class="empty">Aucun contact — « + Contact » pour en ajouter un, ou « Importer » depuis un fichier.</div>'}</div>`;
+}
+
+/* ============ IMPORT DE CONTACTS (Excel/CSV) — demandé par Pablo en
+   cours de session 12 ============
+   Colonnes reconnues, dans n'importe quel ordre, par en-tête (insensible
+   aux accents/casse) : nom (ou prénom+nom séparés), entreprise, email,
+   téléphone, linkedin, instagram. Tout le reste de la ligne est ignoré
+   plutôt que de faire échouer l'import — un fichier fourni par quelqu'un
+   d'autre a rarement exactement les colonnes attendues.
+   SheetJS est chargé à la demande (~1 Mo) : aucune autre page du CRM
+   n'a besoin de lire un .xlsx, l'imposer à chaque chargement coûterait
+   à tout le monde pour une fonctionnalité utilisée occasionnellement. */
+let SHEETJS_PROMESSE=null;
+function chargerSheetJS(){
+ if(window.XLSX)return Promise.resolve();
+ if(SHEETJS_PROMESSE)return SHEETJS_PROMESSE;
+ SHEETJS_PROMESSE=new Promise((resolve,reject)=>{
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload=resolve;s.onerror=()=>reject(new Error('Échec du chargement de la bibliothèque de lecture Excel'));
+  document.head.appendChild(s);
+ });
+ return SHEETJS_PROMESSE;
+}
+/* Parseur CSV minimal mais correct sur les guillemets (un champ peut
+   contenir une virgule ou un retour à la ligne s'il est entre "…", avec
+   "" pour un guillemet littéral — RFC 4180). Suffisant pour un export de
+   tableur ; pas un parseur généraliste. */
+function parserCSV(texte){
+ const lignes=[];let ligne=[],champ='',dansGuillemets=false;
+ for(let i=0;i<texte.length;i++){
+  const c=texte[i];
+  if(dansGuillemets){
+   if(c==='"'){if(texte[i+1]==='"'){champ+='"';i++}else dansGuillemets=false}
+   else champ+=c;
+  }else if(c==='"')dansGuillemets=true;
+  else if(c===','){ligne.push(champ);champ=''}
+  else if(c==='\n'||c==='\r'){
+   if(c==='\r'&&texte[i+1]==='\n')i++;
+   ligne.push(champ);champ='';lignes.push(ligne);ligne=[];
+  }else champ+=c;
+ }
+ if(champ||ligne.length){ligne.push(champ);lignes.push(ligne)}
+ return lignes.filter(l=>l.some(c=>c.trim()));
+}
+const normaliserEntete=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+const ALIAS_COLONNES={
+ nom:['nom','name','nom complet','full name'],
+ prenom:['prenom','prénom','first name','firstname'],
+ nomFamille:['nom de famille','last name','lastname','surname'],
+ entreprise:['entreprise','societe','société','company','organisation'],
+ email:['email','e-mail','mail','courriel','adresse email','adresse mail'],
+ telephone:['telephone','téléphone','tel','tél','phone','numero de telephone'],
+ linkedin:['linkedin','lien linkedin','linkedin url','profil linkedin'],
+ instagram:['instagram','insta','compte insta','compte instagram']
+};
+function mapperEntetes(entetes){
+ const idx={};
+ entetes.forEach((e,i)=>{
+  const n=normaliserEntete(e);
+  for(const[cle,alias]of Object.entries(ALIAS_COLONNES))if(alias.includes(n)&&!(cle in idx))idx[cle]=i;
+ });
+ return idx;
+}
+function ouvrirImportContacts(){
+ modal(`<h2>Importer des contacts</h2>
+ <p class="muted" style="font-size:12.5px;margin:0 0 10px">Fichier Excel (.xlsx) ou CSV avec, dans n'importe quel ordre : nom (ou prénom + nom), entreprise, email, téléphone, lien LinkedIn, compte Instagram.</p>
+ <input class="inp" id="impFile" type="file" accept=".xlsx,.xls,.csv">
+ <div id="impApercu" style="margin-top:12px"></div>
+ <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" id="impValider" type="button" disabled>Importer</button></div>`);
+ let lignesImport=[];
+ $('#impFile').onchange=async e=>{
+  const file=e.target.files[0];if(!file)return;
+  $('#impApercu').innerHTML='<p class="muted" style="font-size:12.5px">Lecture…</p>';
+  try{
+   let tableau;
+   if(/\.csv$/i.test(file.name)){
+    tableau=parserCSV(await file.text());
+   }else{
+    await chargerSheetJS();
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const feuille=wb.Sheets[wb.SheetNames[0]];
+    tableau=XLSX.utils.sheet_to_json(feuille,{header:1,raw:false,defval:''});
+   }
+   if(!tableau.length){$('#impApercu').innerHTML='<div class="exbar"><span class="chip bad">Vide</span><span>Aucune ligne lue dans ce fichier.</span></div>';return}
+   const entetes=tableau[0];
+   const idx=mapperEntetes(entetes);
+   if(!('nom' in idx)&&!('prenom' in idx)&&!('nomFamille' in idx)&&!('email' in idx)){
+    $('#impApercu').innerHTML='<div class="exbar"><span class="chip bad">Colonnes non reconnues</span><span>Aucune colonne « nom » ni « email » trouvée dans l’en-tête : '+esc(entetes.join(', '))+'.</span></div>';
+    return;
+   }
+   const dejaR=await sbTry('crm_contacts?select=email');
+   const dejaEmails=new Set((dejaR.ok?dejaR.data:[]).map(c=>(c.email||'').toLowerCase()).filter(Boolean));
+   const vus=new Set();
+   lignesImport=tableau.slice(1).map(row=>{
+    const val=cle=>(cle in idx?String(row[idx[cle]]||'').trim():'');
+    // Une colonne « Prénom » ET une colonne « Nom » désignent le prénom et
+    // le NOM DE FAMILLE, pas un nom complet — même si l'en-tête « Nom »
+    // seul matche l'alias `nom` (défaut : nom complet en une colonne).
+    // Sans ce test, un fichier à deux colonnes perdait le prénom : `val('nom')`
+    // rendait déjà la valeur (le nom de famille), donc le `||` ne
+    // regardait jamais `prenom`.
+    const nom=('prenom' in idx)?[val('prenom'),val('nom')||val('nomFamille')].filter(Boolean).join(' '):(val('nom')||val('nomFamille'));
+    const email=val('email');
+    const emailNorm=email.toLowerCase();
+    let statut='ok';
+    if(!nom&&!email)statut='vide';
+    else if(emailNorm&&(dejaEmails.has(emailNorm)||vus.has(emailNorm)))statut='doublon';
+    if(emailNorm)vus.add(emailNorm);
+    return{nom:nom||email||'(sans nom)',entreprise:val('entreprise')||null,email:email||null,telephone:val('telephone')||null,linkedin_url:val('linkedin')||null,instagram_handle:val('instagram')||null,statut};
+   });
+   const aImporter=lignesImport.filter(l=>l.statut==='ok').length;
+   const doublons=lignesImport.filter(l=>l.statut==='doublon').length;
+   const vides=lignesImport.filter(l=>l.statut==='vide').length;
+   $('#impApercu').innerHTML=`<p style="font-size:13px;margin:0 0 8px"><b>${aImporter}</b> à importer${doublons?` · ${doublons} déjà existant(s) (email en double, ignorés)`:''}${vides?` · ${vides} ligne(s) vide(s) ignorée(s)`:''}</p>
+   <div class="tbl-wrap" style="max-height:260px;overflow:auto"><table><thead><tr><th>Nom</th><th>Entreprise</th><th>Email</th><th>Statut</th></tr></thead><tbody>${lignesImport.slice(0,200).map(l=>`<tr><td>${esc(l.nom)}</td><td>${esc(l.entreprise||'—')}</td><td>${esc(l.email||'—')}</td><td>${l.statut==='ok'?'<span class="chip ok">à importer</span>':l.statut==='doublon'?'<span class="chip warn">doublon</span>':'<span class="chip bad">vide</span>'}</td></tr>`).join('')}</tbody></table></div>`;
+   $('#impValider').disabled=!aImporter;
+  }catch(err){
+   $('#impApercu').innerHTML='<div class="exbar"><span class="chip bad">Erreur</span><span>'+esc(String(err.message||err))+'</span></div>';
+  }
+ };
+ $('#impValider').onclick=async()=>{
+  const aEnvoyer=lignesImport.filter(l=>l.statut==='ok').map(({statut,...c})=>({...c,cree_par:STAFF_NOM}));
+  if(!aEnvoyer.length)return;
+  $('#impValider').disabled=true;$('#impValider').textContent='Import en cours…';
+  // Par lots de 50 : un POST unique sur plusieurs centaines de lignes
+  // dépasserait vite ce qui est raisonnable sur une seule requête.
+  let importes=0;
+  try{
+   for(let i=0;i<aEnvoyer.length;i+=50){
+    const lot=aEnvoyer.slice(i,i+50);
+    await sb('crm_contacts',{method:'POST',body:JSON.stringify(lot)});
+    importes+=lot.length;
+   }
+   closeAll();toast(importes+' contact(s) importé(s)');render();
+  }catch(err){
+   toast(importes+' importé(s) avant l’échec : '+String(err.message||err).slice(0,120));render();
+  }
+ };
+}
+document.addEventListener('click',e=>{
+ if(e.target.closest('[data-importer-contacts]'))ouvrirImportContacts();
+});
+/* Fusionne crm_interactions (log rapide d'appel/autre — 5f0f647) et
+   crm_messages (le contenu réel d'un échange email, threadé — session
+   12) en UN SEUL fil trié par date : c'est « la boîte unifiée » (§4.3
+   feature 4), les deux tables continuant de répondre chacune à leur
+   usage propre (voir 0014_commercial_echanges.sql § pourquoi). */
+function fusionnerFil(interactions,messages){
+ const a=interactions.map(i=>({date:i.created_at,type:'interaction',data:i}));
+ const b=messages.map(m=>({date:m.created_at,type:'message',data:m}));
+ return[...a,...b].sort((x,y)=>new Date(y.date)-new Date(x.date));
+}
+function filItemHtml(item,{avecContact}={}){
+ if(item.type==='interaction'){
+  const i=item.data;
+  const nomContact=avecContact?esc((i.crm_contacts||{}).nom||'Contact supprimé')+(i.resultat?' — '+esc(i.resultat):''):(i.type==='email'?'✉️ Email':i.type==='appel'?'📞 Appel':'Autre')+(i.resultat?' — '+esc(i.resultat):'');
+  return `<div class="li ${avecContact?'c':''}" ${avecContact?`data-open-contact="${i.contact_id}"`:''}><span class="dot ${i.type==='email'?'info':i.type==='appel'?'ok':''}"></span><div class="grow"><b style="font-weight:500">${nomContact}</b>${i.note?`<div style="white-space:pre-wrap;font-size:12.5px;margin-top:2px">${esc(i.note)}</div>`:''}<div class="meta">${i.type==='email'?'✉️ Email':i.type==='appel'?'📞 Appel':'Autre'} · ${new Date(i.created_at).toLocaleString('fr-FR')}${i.auteur?' · '+esc(i.auteur):''}</div></div></div>`;
+ }
+ const m=item.data;
+ const titre=avecContact?esc((m.crm_contacts||{}).nom||m.destinataire_email||m.expediteur_email||'Contact inconnu'):esc(m.sujet||(m.sens==='sortant'?'Email envoyé':'Email reçu'));
+ // data-open-contact seulement si on a un contact à ouvrir : un message
+ // pas encore rattaché (email entrant d'une adresse inconnue, feature 3)
+ // ne doit pas paraître cliquable pour ne rien faire.
+ const clic=avecContact&&m.contact_id?`data-open-contact="${m.contact_id}"`:'';
+ return `<div class="li ${clic?'c':''}" ${clic}><span class="dot ${m.sens==='entrant'?'info':'ok'}">${m.sens==='entrant'&&!m.lu?'●':''}</span><div class="grow"><b style="font-weight:500">${m.sens==='sortant'?'↗ ':'↙ '}${titre}</b>${m.sujet&&avecContact?`<div style="font-size:12px;color:var(--muted)">${esc(m.sujet)}</div>`:''}${m.contenu?`<div style="white-space:pre-wrap;font-size:12.5px;margin-top:2px;max-height:60px;overflow:hidden">${esc(m.contenu.slice(0,220))}${m.contenu.length>220?'…':''}</div>`:''}<div class="meta">✉️ Email · ${new Date(m.created_at).toLocaleString('fr-FR')}${m.auteur?' · '+esc(m.auteur):''}${!m.lu&&m.sens==='entrant'?' · <span style="color:var(--blue)">non lu</span>':''}</div></div></div>`;
 }
 async function vCommercialEmailing(){
- const r=await sbTry('crm_interactions?select=*,crm_contacts(nom,entreprise)&order=created_at.desc&limit=100');
- if(!r.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">crm_interactions</span> — session d'équipe requise, ou table absente.</span></div>`;
- const list=r.data;
- return `<p class="muted" style="font-size:12.5px;margin:0 0 14px">Le fil de tous les emails et appels, enregistrés depuis la fiche d'un contact.</p>
- <div class="card lift"><div class="list">${list.map(i=>`<div class="li c" data-open-contact="${i.contact_id}"><span class="dot ${i.type==='email'?'info':i.type==='appel'?'ok':''}"></span><div class="grow"><b style="font-weight:500">${esc((i.crm_contacts||{}).nom||'Contact supprimé')}${i.resultat?' — '+esc(i.resultat):''}</b><div class="meta">${i.type==='email'?'✉️ Email':i.type==='appel'?'📞 Appel':'Autre'} · ${new Date(i.created_at).toLocaleString('fr-FR')}${i.auteur?' · '+esc(i.auteur):''}</div></div></div>`).join('')||'<div class="empty">Aucune interaction — ajoutez-en une depuis la fiche d’un contact.</div>'}</div>`;
+ const [ir,mr]=await Promise.all([
+  sbTry('crm_interactions?select=*,crm_contacts(nom,entreprise)&order=created_at.desc&limit=100'),
+  sbTry('crm_messages?select=*,crm_contacts(nom,entreprise)&order=created_at.desc&limit=100')
+ ]);
+ if(!ir.ok&&!mr.ok)return `<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire <span class="mono">crm_interactions</span>/<span class="mono">crm_messages</span> — session d'équipe requise, ou tables absentes.</span></div>`;
+ const fil=fusionnerFil(ir.ok?ir.data:[],mr.ok?mr.data:[]);
+ const nonLus=fil.filter(x=>x.type==='message'&&x.data.sens==='entrant'&&!x.data.lu).length;
+ return `<p class="muted" style="font-size:12.5px;margin:0 0 10px">Le fil de tous les emails et appels, enregistrés depuis la fiche d'un contact.${nonLus?` <b>${nonLus} non lu(s)</b>.`:''}</p>
+ <div class="card lift"><div class="list">${fil.map(i=>filItemHtml(i,{avecContact:true})).join('')||'<div class="empty">Aucun échange — ajoutez-en un depuis la fiche d’un contact.</div>'}</div></div>`;
 }
 async function openContact(id){
  const cr=await sbTry('crm_contacts?id=eq.'+id+'&select=*');
  const c=(cr.ok?cr.data:[])[0];if(!c){toast('Contact introuvable');return}
- const ir=await sbTry('crm_interactions?contact_id=eq.'+id+'&select=*&order=created_at.desc');
+ const [ir,mr]=await Promise.all([
+  sbTry('crm_interactions?contact_id=eq.'+id+'&select=*&order=created_at.desc'),
+  sbTry('crm_messages?contact_id=eq.'+id+'&select=*&order=created_at.desc')
+ ]);
  const interactions=ir.ok?ir.data:[];
+ const messages=mr.ok?mr.data:[];
+ // Ouvrir la fiche, c'est « avoir vu » ses messages entrants — marqué
+ // tout de suite, pas seulement affiché : sans ça, « non lu » ne
+ // disparaîtrait jamais de la boîte unifiée.
+ const aMarquer=messages.filter(m=>m.sens==='entrant'&&!m.lu);
+ if(aMarquer.length){await sb('crm_messages?id=in.('+aMarquer.map(m=>m.id).join(',')+')',{method:'PATCH',body:JSON.stringify({lu:true})});aMarquer.forEach(m=>m.lu=true)}
+ const fil=fusionnerFil(interactions,messages);
  drawer(`<div class="dh"><div class="av lg dk">${ini(c.nom)}</div><div><h2>${esc(c.nom)}</h2>${c.entreprise?`<p class="sub" style="margin:2px 0 0">${esc(c.entreprise)}</p>`:''}</div><button class="x" data-close aria-label="Fermer">×</button></div>
  <form class="form" id="contactForm">
   <div class="two"><label>Email<input class="inp" id="cEmail" type="email" value="${esc(c.email||'')}"></label><label>Téléphone<input class="inp" id="cTel" value="${esc(c.telephone||'')}"></label></div>
   <label>Entreprise<input class="inp" id="cEnt" value="${esc(c.entreprise||'')}"></label>
+  <div class="two"><label>LinkedIn${c.linkedin_url?` <a href="${esc(c.linkedin_url)}" target="_blank" rel="noopener" style="font-weight:400">(ouvrir ↗)</a>`:''}<input class="inp" id="cLinkedin" type="url" value="${esc(c.linkedin_url||'')}" placeholder="https://linkedin.com/in/…"></label><label>Instagram<input class="inp" id="cInsta" value="${esc(c.instagram_handle||'')}" placeholder="@compte"></label></div>
   <label>Notes<textarea class="inp" id="cNotes">${esc(c.notes||'')}</textarea></label>
   <div class="foot"><button type="button" class="btn danger sm" data-del-contact="${c.id}">Supprimer</button><button class="btn primary sm" type="submit">Enregistrer</button></div>
  </form>
- <div class="sect"><h2 style="font-size:15px">Emailing &amp; phoning</h2></div>
+ <div class="sect"><h2 style="font-size:15px">Emailing &amp; phoning</h2><div style="margin-left:auto;display:flex;gap:6px">${c.email?`<button class="btn sm primary" data-composer-email="${c.id}">✉️ Envoyer un email</button>`:''}<button class="btn sm ghost" data-enregistrer-reponse="${c.id}">📥 Réponse reçue</button></div></div>
  <form class="form" id="interForm" style="margin-bottom:10px">
-  <div class="two"><label>Type<select id="iType">${opt(['email','appel','autre'])}</select></label><label>Résultat<input class="inp" id="iResultat" placeholder="ex. Intéressé, pas de réponse…"></label></div>
+  <div class="two"><label>Type<select id="iType">${opt(['appel','autre'])}</select></label><label>Résultat<input class="inp" id="iResultat" placeholder="ex. Intéressé, pas de réponse…"></label></div>
   <label>Note<textarea class="inp" id="iNote" style="min-height:52px"></textarea></label>
   <div class="foot"><button class="btn sm primary" type="submit">Ajouter au fil</button></div>
  </form>
- <div class="list">${interactions.map(i=>`<div class="li"><span class="dot ${i.type==='email'?'info':i.type==='appel'?'ok':''}"></span><div class="grow"><b style="font-weight:500">${i.type==='email'?'✉️ Email':i.type==='appel'?'📞 Appel':'Autre'}${i.resultat?' — '+esc(i.resultat):''}</b>${i.note?`<div style="white-space:pre-wrap;font-size:12.5px;margin-top:2px">${esc(i.note)}</div>`:''}<div class="meta">${i.auteur?esc(i.auteur)+' · ':''}${new Date(i.created_at).toLocaleString('fr-FR')}</div></div></div>`).join('')||'<div class="empty">Aucune interaction encore.</div>'}</div>`);
+ <div class="list">${fil.map(i=>filItemHtml(i,{avecContact:false})).join('')||'<div class="empty">Aucun échange encore.</div>'}</div>`);
  $('#contactForm').onsubmit=async e=>{
   e.preventDefault();
-  await sb('crm_contacts?id=eq.'+id,{method:'PATCH',body:JSON.stringify({email:$('#cEmail').value||null,telephone:$('#cTel').value||null,entreprise:$('#cEnt').value||null,notes:$('#cNotes').value||null,updated_at:new Date().toISOString()})});
+  await sb('crm_contacts?id=eq.'+id,{method:'PATCH',body:JSON.stringify({email:$('#cEmail').value||null,telephone:$('#cTel').value||null,entreprise:$('#cEnt').value||null,linkedin_url:$('#cLinkedin').value||null,instagram_handle:$('#cInsta').value||null,notes:$('#cNotes').value||null,updated_at:new Date().toISOString()})});
   closeAll();toast('Contact mis à jour');render();
  };
  $('[data-del-contact]')?.addEventListener('click',async()=>{
@@ -2853,6 +3348,79 @@ async function openContact(id){
 document.addEventListener('click',e=>{
  const oc=e.target.closest('[data-open-contact]');
  if(oc)openContact(oc.dataset.openContact);
+});
+
+/* ============ COMMERCIAL — envoyer un email (§4.3 feature 2) ============
+   Un seul composeur, appelé depuis la fiche contact (à préremplir) ou
+   depuis une réponse dans le fil (ctx.inReplyTo posé). L'envoi passe par
+   api/notifications.js (la clé Resend reste côté serveur) ; la ligne
+   crm_messages, elle, est écrite directement d'ici — sa RLS est déjà
+   `est_staff()`, aucun besoin d'un aller-retour serveur de plus pour
+   une écriture qu'un JWT de staff peut déjà faire. */
+function ouvrirComposerEmail(ctx){
+ modal(`<h2>${ctx.inReplyTo?'Répondre':'Envoyer un email'}</h2><form class="form" id="emailForm">
+  <label>À<input class="inp" id="em1" type="email" value="${esc(ctx.to||'')}" required></label>
+  <label>Objet<input class="inp" id="em2" value="${esc(ctx.sujetDefaut||'')}" required></label>
+  <label>Message<textarea class="inp" id="em3" style="min-height:160px">${esc(ctx.corpsDefaut||'')}</textarea></label>
+  <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Envoyer</button></div>
+ </form>`);
+ $('#emailForm').onsubmit=async e=>{
+  e.preventDefault();
+  const to=$('#em1').value,sujet=$('#em2').value,texte=$('#em3').value;
+  const btn=e.submitter||$('#emailForm button[type=submit]');btn.disabled=true;btn.textContent='Envoi…';
+  try{
+   const res=await fetch('/api/notifications',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+jetonStaff()},body:JSON.stringify({action:'envoyer_message_commercial',to,subject:sujet,text:texte,in_reply_to:ctx.inReplyTo||undefined})});
+   const data=await res.json().catch(()=>({}));
+   if(!res.ok||!data.ok){toast('Échec de l’envoi : '+(data.error||'erreur inconnue'));btn.disabled=false;btn.textContent='Envoyer';return}
+   await sb('crm_messages',{method:'POST',body:JSON.stringify({contact_id:ctx.contactId||null,projet_id:ctx.projetId||null,canal:'email',sens:'sortant',sujet,contenu:texte,statut:'envoye',destinataire_email:to,message_id_email:data.resend_id||null,in_reply_to:ctx.inReplyTo||null,auteur:STAFF_NOM,lu:true})});
+   closeAll();toast('Email envoyé');
+   if(ctx.contactId)openContact(ctx.contactId);else render();
+  }catch(err){toast('Échec : '+String(err.message||err));btn.disabled=false;btn.textContent='Envoyer'}
+ };
+}
+document.addEventListener('click',e=>{
+ const ce=e.target.closest('[data-composer-email]');
+ if(!ce)return;
+ (async()=>{
+  const r=await sbTry('crm_contacts?id=eq.'+ce.dataset.composerEmail+'&select=id,email,projet_id,nom');
+  const c=(r.ok?r.data:[])[0];if(!c){toast('Contact introuvable');return}
+  if(!c.email){toast('Ce contact n’a pas d’adresse email');return}
+  ouvrirComposerEmail({contactId:c.id,to:c.email,projetId:c.projet_id});
+ })();
+});
+
+/* ============ COMMERCIAL — enregistrer une réponse reçue (§4.3 feature 5,
+   critère 2 : « une relance disparaît si le contact répond ») ============
+   L'email entrant (webhook Resend) n'est pas branché — voir l'en-tête de
+   0014_commercial_echanges.sql, ça dépend d'un choix de domaine qui revient
+   à Pablo. En attendant, ce bouton est le SEUL chemin par lequel une ligne
+   crm_messages en sens='entrant' peut exister pour un deal — donc le seul
+   moyen de VÉRIFIER que verifierRelances() ferme bien une relance quand le
+   contact répond, plutôt qu'une promesse invérifiable tant que rien ne reçoit
+   d'email. Le jour où le webhook est branché, ce bouton reste utile pour un
+   appel entrant relaté par téléphone, une réponse reçue ailleurs, etc. */
+function ouvrirEnregistrerReponse(ctx){
+ modal(`<h2>Enregistrer une réponse reçue</h2>
+ <p class="muted" style="font-size:12.5px;margin:0 0 10px">L'email entrant n'arrive pas encore automatiquement dans le CRM — ce bouton consigne à la main qu'une réponse est arrivée, ce qui ferme les relances en attente sur ce deal.</p>
+ <form class="form" id="repForm">
+  <label>Contenu de la réponse (optionnel)<textarea class="inp" id="rp1" style="min-height:100px" placeholder="Coller le texte reçu…"></textarea></label>
+  <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Enregistrer la réponse</button></div>
+ </form>`);
+ $('#repForm').onsubmit=async e=>{
+  e.preventDefault();
+  await sb('crm_messages',{method:'POST',body:JSON.stringify({contact_id:ctx.contactId||null,projet_id:ctx.projetId||null,canal:'email',sens:'entrant',statut:'recu',contenu:$('#rp1').value||null,expediteur_email:ctx.from||null,auteur:STAFF_NOM,lu:true})});
+  closeAll();toast('Réponse enregistrée — les relances en attente vont se fermer à la prochaine ouverture du pipeline');
+  if(ctx.contactId)openContact(ctx.contactId);else render();
+ };
+}
+document.addEventListener('click',e=>{
+ const rc=e.target.closest('[data-enregistrer-reponse]');
+ if(!rc)return;
+ (async()=>{
+  const r=await sbTry('crm_contacts?id=eq.'+rc.dataset.enregistrerReponse+'&select=id,email,projet_id');
+  const c=(r.ok?r.data:[])[0];if(!c){toast('Contact introuvable');return}
+  ouvrirEnregistrerReponse({contactId:c.id,projetId:c.projet_id,from:c.email});
+ })();
 });
 
 /* ============ COMMERCIAL — Profils types, le « système
@@ -2871,12 +3439,14 @@ document.addEventListener('click',e=>{
 });
 async function ouvrirProfilDetail(id){
  const p=profilDe(id);if(!p){toast('Profil introuvable');return}
- const [ar,ob]=await Promise.all([
+ const [ar,ob,rr]=await Promise.all([
   sbTry('crm_profil_arguments?profil_id=eq.'+id+'&select=*&order=created_at.asc'),
-  sbTry('crm_profil_objections?profil_id=eq.'+id+'&select=*&order=created_at.asc')
+  sbTry('crm_profil_objections?profil_id=eq.'+id+'&select=*&order=created_at.asc'),
+  sbTry('crm_relance_regles?profil_id=eq.'+id+'&select=*&limit=1')
  ]);
  const arguments_=ar.ok?ar.data:[];
  const objections=ob.ok?ob.data:[];
+ const regle=(rr.ok?rr.data:[])[0]||null;
  drawer(`<div class="dh"><div class="av lg dk">${ini(p.nom)}</div><div><h2>${esc(p.nom)}</h2></div><button class="x" data-close aria-label="Fermer">×</button></div>
  <form class="form" id="profilForm">
   <label>Portrait<textarea class="inp" id="pf1">${esc(p.portrait||'')}</textarea></label>
@@ -2892,7 +3462,14 @@ async function ouvrirProfilDetail(id){
  <form class="form" id="argForm" style="margin-bottom:16px"><div class="two"><input class="inp" id="pfArg" placeholder="Nouvel argument…" style="grid-column:1/2"><button class="btn sm" type="submit" style="align-self:end">+ Ajouter</button></div></form>
  <div class="sect"><h2 style="font-size:15px">Objections &amp; réponses</h2></div>
  <div class="list" style="margin-bottom:8px">${objections.map(o=>`<div class="li"><div class="grow"><b style="font-weight:500">${esc(o.objection)}</b>${o.reponse?`<div class="meta" style="white-space:pre-wrap">${esc(o.reponse)}</div>`:''}</div><button class="btn sm ghost" data-del-objection="${o.id}">×</button></div>`).join('')||'<div class="empty">Aucune objection enregistrée.</div>'}</div>
- <form class="form" id="objForm"><input class="inp" id="pfObj1" placeholder="Objection…" style="margin-bottom:6px"><textarea class="inp" id="pfObj2" placeholder="Réponse type…" style="min-height:52px;margin-bottom:6px"></textarea><button class="btn sm" type="submit">+ Ajouter</button></form>`);
+ <form class="form" id="objForm" style="margin-bottom:16px"><input class="inp" id="pfObj1" placeholder="Objection…" style="margin-bottom:6px"><textarea class="inp" id="pfObj2" placeholder="Réponse type…" style="min-height:52px;margin-bottom:6px"></textarea><button class="btn sm" type="submit">+ Ajouter</button></form>
+ <div class="sect"><h2 style="font-size:15px">Règle de relance <span class="muted" style="font-weight:400">— §4.3 feature 5</span></h2></div>
+ <form class="form" id="relanceForm">
+  <div class="two"><label>Délai sans réponse (jours)<input class="inp" id="rl1" type="number" min="1" value="${regle?regle.delai_jours:3}"></label><label>Nombre maximum<input class="inp" id="rl2" type="number" min="1" value="${regle?regle.nb_max:3}"></label></div>
+  <label>Message type (gabarit)<textarea class="inp" id="rl3" placeholder="ex. Bonjour {prenom}, je me permets de revenir vers vous…">${esc((regle&&regle.gabarit)||'')}</textarea></label>
+  <label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="rl4" style="width:auto" ${!regle||regle.actif?'checked':''}> Règle active</label>
+  <div class="foot"><button class="btn primary sm" type="submit">${regle?'Mettre à jour la règle':'Créer la règle'}</button></div>
+ </form>`);
  $('#profilForm').onsubmit=async e=>{
   e.preventDefault();
   const patch={portrait:$('#pf1').value||null,motivations:$('#pf2').value||null,freins:$('#pf3').value||null,langage_utiliser:$('#pf4').value||null,langage_eviter:$('#pf5').value||null,offre_recommandee:$('#pf6').value||null,preuves:$('#pf7').value||null,updated_at:new Date().toISOString()};
@@ -2910,6 +3487,13 @@ async function ouvrirProfilDetail(id){
   const val=$('#pfObj1').value.trim();if(!val)return;
   await sb('crm_profil_objections',{method:'POST',body:JSON.stringify({profil_id:id,objection:val,reponse:$('#pfObj2').value||null})});
   toast('Objection ajoutée');ouvrirProfilDetail(id);
+ };
+ $('#relanceForm').onsubmit=async e=>{
+  e.preventDefault();
+  const champs={profil_id:id,delai_jours:+$('#rl1').value||3,nb_max:+$('#rl2').value||3,gabarit:$('#rl3').value||null,actif:$('#rl4').checked};
+  if(regle)await sb('crm_relance_regles?id=eq.'+regle.id,{method:'PATCH',body:JSON.stringify(champs)});
+  else await sb('crm_relance_regles',{method:'POST',body:JSON.stringify(champs)});
+  toast('Règle de relance enregistrée');closeAll();render();
  };
 }
 function argumentLi(a){
@@ -2943,17 +3527,91 @@ async function ouvrirNouveauSuivi(projetId,etapeDefaut){
  const arguments_=ar.ok?ar.data:[];
  const etape=etapeDefaut||p.etape_pipeline||'premier_contact';
  modal(`<h2>Bloc de suivi — ${esc(p.nom)}</h2>
+ <div style="margin-bottom:10px"><button type="button" class="btn sm ghost" id="btnDepuisNotes">🤖 Remplir depuis des notes (IA)</button>
+  <div id="zoneNotes" class="hide" style="margin-top:8px">
+   <textarea class="inp" id="notesIA" placeholder="Colle ici tes notes de RDV ou l'email reçu — l'IA propose un remplissage, à corriger avant d'enregistrer." style="min-height:110px"></textarea>
+   <div style="display:flex;justify-content:flex-end;margin-top:6px"><button type="button" class="btn sm primary" id="btnAnalyserNotes">Analyser</button></div>
+  </div>
+  <div id="blocPropose" class="hide" style="margin-top:8px;display:flex;gap:10px;align-items:center;padding:9px 14px;border-radius:var(--r-md);border:1px dashed var(--blue);color:var(--blue);font-size:12.5px;background:var(--blue-bg)"></div>
+ </div>
  <form class="form" id="suiviForm">
   <div class="two"><label>Étape<select id="sv1">${PIPELINE_ETAPES.map(([k,l])=>`<option value="${k}" ${k===etape?'selected':''}>${esc(l)}</option>`).join('')}</select></label><label>Date<input class="inp" id="sv2" type="date" value="${isoLocal(new Date())}"></label></div>
   <div class="two"><label>Canal<select id="sv3">${opt(['email','téléphone','visio','présentiel','autre'])}</select></label><label>Interlocuteur<input class="inp" id="sv4"></label></div>
   <label>Verbatims<textarea class="inp" id="sv5" placeholder="Ce qui a été dit, mot pour mot si possible"></textarea></label>
   <label>Besoins exprimés<textarea class="inp" id="sv6"></textarea></label>
   <label>Objections rencontrées<textarea class="inp" id="sv7"></textarea></label>
-  ${arguments_.length?`<label>Arguments utilisés<div style="display:grid;gap:6px">${arguments_.map(a=>`<div class="two" style="align-items:center"><span style="font-size:13px">${esc(a.argument)}</span><select class="inp sv-verdict" data-arg="${a.id}"><option value="">Non utilisé</option><option value="porte">A porté</option><option value="neutre">Neutre</option><option value="rejete">Rejeté</option></select></div>`).join('')}</div></label>`
+  ${arguments_.length?`<label>Arguments utilisés<div style="display:grid;gap:6px">${arguments_.map(a=>`<div class="two" style="align-items:center"><span style="font-size:13px">${esc(a.argument)}</span><select class="inp sv-verdict" data-arg="${a.id}" data-arg-nom="${esc(a.argument)}"><option value="">Non utilisé</option><option value="porte">A porté</option><option value="neutre">Neutre</option><option value="rejete">Rejeté</option></select></div>`).join('')}</div></label>`
    :`<p class="muted" style="font-size:12px">${profil?'Ce profil n’a aucun argument enregistré — ajoutez-en depuis Profils pour en suivre l’efficacité.':'Ce deal n’a pas de profil — aucun argument à suivre.'}</p>`}
   <div class="two"><label>Prochaine action<input class="inp" id="sv8"></label><label>Échéance<input class="inp" id="sv9" type="date"></label></div>
   <div class="foot"><button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Enregistrer le suivi</button></div>
  </form>`);
+ $('#btnDepuisNotes').onclick=()=>$('#zoneNotes').classList.toggle('hide');
+ /* §4.3 feature 7 : « proposition de bloc de suivi… validée ou corrigée
+    avant enregistrement. Jamais d'envoi automatique. » — l'IA REMPLIT le
+    formulaire déjà ouvert, elle n'enregistre rien elle-même : le bouton
+    « Enregistrer le suivi » reste le seul geste qui écrit en base, et
+    reste celui qu'on vient d'utiliser ailleurs dans ce fichier. Les
+    arguments proposés sont bornés au catalogue RÉEL du profil (passé
+    dans le prompt) — jamais un argument inventé par le modèle. */
+ $('#btnAnalyserNotes').onclick=async()=>{
+  const notes=$('#notesIA').value.trim();
+  if(!notes){toast('Colle d’abord des notes');return}
+  const btn=$('#btnAnalyserNotes');btn.disabled=true;btn.textContent='Analyse…';
+  try{
+   const catalogue=arguments_.map(a=>a.argument);
+   /* §4.3 feature 8, ajoutée à la MÊME analyse plutôt qu'un second appel :
+      « dans un compte rendu, l'IA peut proposer un bloc (par exemple Test
+      produit) avec paramètres pré-remplis, soumis à l'aperçu du moteur. »
+      Le modèle ne propose QUE s'il repère un vrai signal (dégustation,
+      test produit, date et lieu évoqués) — `proposer:false` par défaut,
+      jamais forcé à vrai pour un rendez-vous ordinaire. Et « soumis à
+      l'aperçu du moteur » est tenu au pied de la lettre : le clic n'ouvre
+      que le formulaire `ouvrirNouveauBloc`, qui passe de toute façon par
+      `ouvrirApercuBloc` avant la moindre écriture — rien n'est créé ici. */
+   const prompt=`Tu aides un commercial à résumer des notes de rendez-vous en un bloc de suivi CRM structuré.
+Notes brutes :
+"""
+${notes}
+"""
+Catalogue d'arguments connus pour ce profil (utilise UNIQUEMENT ces libellés exacts, n'en invente aucun) :
+${catalogue.length?catalogue.map(a=>'- '+a).join('\n'):'(aucun argument connu)'}
+
+Réponds UNIQUEMENT avec un objet JSON, sans texte autour, de cette forme exacte :
+{"canal":"email|téléphone|visio|présentiel|autre|null","interlocuteur":"string|null","verbatims":"string|null","besoins":"string|null","objections":"string|null","prochaine_action":"string|null","echeance":"YYYY-MM-DD|null","arguments":[{"argument":"libellé EXACT du catalogue","verdict":"porte|neutre|rejete"}],"bloc_propose":{"proposer":true|false,"raison":"string|null","lieu":"string|null","nb_beneficiaires":"number|null"}}
+Ne mets "bloc_propose.proposer" à true QUE si les notes évoquent clairement l'organisation d'un test produit ou d'une dégustation à venir (pas un simple rendez-vous de suivi).`;
+   const res=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+jetonStaff()},body:JSON.stringify({prompt,max_tokens:900})});
+   const data=await res.json().catch(()=>({}));
+   if(!res.ok||!data.text)throw new Error(data.error||'réponse vide');
+   const m=data.text.match(/\{[\s\S]*\}/);
+   if(!m)throw new Error('réponse IA illisible');
+   const prop=JSON.parse(m[0]);
+   if(prop.canal&&[...$('#sv3').options].some(o=>o.value===prop.canal))$('#sv3').value=prop.canal;
+   if(prop.interlocuteur)$('#sv4').value=prop.interlocuteur;
+   if(prop.verbatims)$('#sv5').value=prop.verbatims;
+   if(prop.besoins)$('#sv6').value=prop.besoins;
+   if(prop.objections)$('#sv7').value=prop.objections;
+   if(prop.prochaine_action)$('#sv8').value=prop.prochaine_action;
+   if(prop.echeance&&/^\d{4}-\d{2}-\d{2}$/.test(prop.echeance))$('#sv9').value=prop.echeance;
+   (prop.arguments||[]).forEach(a=>{
+    const sel=[...document.querySelectorAll('.sv-verdict')].find(s=>s.dataset.argNom===a.argument);
+    if(sel&&['porte','neutre','rejete'].includes(a.verdict))sel.value=a.verdict;
+   });
+   const bp=prop.bloc_propose;
+   if(bp&&bp.proposer){
+    $('#blocPropose').classList.remove('hide');
+    $('#blocPropose').innerHTML=`<span>📦 Ces notes évoquent un test produit${bp.raison?' — '+esc(bp.raison):''}.</span><button type="button" class="btn sm" id="btnProposerBloc" style="margin-left:auto;flex:0 0 auto">Proposer le bloc →</button>`;
+    $('#btnProposerBloc').onclick=()=>{
+     closeAll();
+     ouvrirNouveauBloc({projet:projetId,prefill:{lieu:bp.lieu||null,nb_beneficiaires:bp.nb_beneficiaires||null}});
+    };
+   }else{
+    $('#blocPropose').classList.add('hide');
+   }
+   $('#zoneNotes').classList.add('hide');
+   toast('Formulaire pré-rempli — à relire avant d’enregistrer');
+  }catch(err){toast('Échec de l’analyse : '+String(err.message||err).slice(0,120))}
+  btn.disabled=false;btn.textContent='Analyser';
+ };
  $('#suiviForm').onsubmit=async e=>{
   e.preventDefault();
   const body={projet_id:projetId,etape:$('#sv1').value,date:$('#sv2').value||isoLocal(new Date()),canal:$('#sv3').value||null,interlocuteur:$('#sv4').value||null,verbatims:$('#sv5').value||null,besoins:$('#sv6').value||null,objections:$('#sv7').value||null,prochaine_action:$('#sv8').value||null,echeance:$('#sv9').value||null,cree_par:STAFF_NOM};
@@ -3756,9 +4414,10 @@ const F={
   <label>Nom<input class="inp" id="f1" required></label>
   <div class="two"><label>Email<input class="inp" id="f2" type="email"></label><label>Téléphone<input class="inp" id="f3"></label></div>
   <label>Entreprise<input class="inp" id="f4"></label>
+  <div class="two"><label>LinkedIn<input class="inp" id="f6" type="url" placeholder="https://linkedin.com/in/…"></label><label>Instagram<input class="inp" id="f7" placeholder="@compte"></label></div>
   <label>Lié à un deal (optionnel)<select id="f5"><option value="">—</option>${S.projets.filter(p=>p.activite==='commercial').map(p=>`<option value="${p.id}">${esc(p.nom)}</option>`).join('')}</select></label>`,
   ok:async()=>{
-   const body={nom:$('#f1').value,email:$('#f2').value||null,telephone:$('#f3').value||null,entreprise:$('#f4').value||null,projet_id:$('#f5').value||null,cree_par:STAFF_NOM};
+   const body={nom:$('#f1').value,email:$('#f2').value||null,telephone:$('#f3').value||null,entreprise:$('#f4').value||null,linkedin_url:$('#f6').value||null,instagram_handle:$('#f7').value||null,projet_id:$('#f5').value||null,cree_par:STAFF_NOM};
    await sb('crm_contacts',{method:'POST',body:JSON.stringify(body)});
    toast('Contact créé');render();
   }}),

@@ -29,13 +29,140 @@ async function verifyStripeSignature(rawBody, sigHeader, secret) {
   return mismatch === 0;
 }
 
+/* ── CRM session 12, §4.3 feature 3 — email entrant (Resend Receiving) ───
+   Fusionné ICI plutôt que dans une route à part : `api/` est exactement à
+   12 fonctions serverless, le plafond du plan Hobby (voir CLAUDE.md,
+   « api/ ramené à 12 fonctions pile ») — même raison qui a déjà fait
+   fusionner push-test dans push-amis et reserver-cuisine dans
+   notifications. Le discriminant est le header lui-même : Stripe signe
+   avec `stripe-signature`, Resend Receiving avec `svix-id`/`svix-timestamp`/
+   `svix-signature` (Resend signe SES webhooks via Svix, vérifié dans leur
+   doc avant d'écrire une ligne — https://docs.svix.com/receiving/verifying-payloads/how-manual).
+
+   Décision de Pablo, non prise ici : QUEL domaine reçoit les emails —
+   sous-domaine géré `<id>.resend.app` (zéro DNS) ou le domaine de Natty
+   avec un enregistrement MX (risque de conflit avec une vraie boîte mail
+   d'entreprise déjà en place). Ce code ne reçoit RIEN tant que ce choix
+   n'est pas fait dans Resend (Dashboard → Receiving) ET le webhook
+   `email.received` pointé vers cette URL. */
+async function verifySvixSignature(rawBody, svixId, svixTimestamp, svixSigHeader, secret) {
+  if (!svixId || !svixTimestamp || !svixSigHeader) return false;
+  // Rejette les events trop anciens (protection contre le replay) — même
+  // tolérance que la vérification Stripe ci-dessus.
+  const age = Math.abs(Date.now() / 1000 - Number(svixTimestamp));
+  if (!Number.isFinite(age) || age > 300) return false;
+
+  // Le secret Svix est `whsec_<base64>` : seule la partie après le préfixe
+  // est la clé, encodée en base64 (jamais du texte brut comme Stripe).
+  const secretB64 = secret.startsWith('whsec_') ? secret.slice(6) : secret;
+  const keyBytes = Uint8Array.from(atob(secretB64), c => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signedContent = svixId + '.' + svixTimestamp + '.' + rawBody;
+  const sigBuffer = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signedContent));
+  const expected = btoa(String.fromCharCode(...new Uint8Array(sigBuffer)));
+
+  // Le header porte une liste « v1,<sig> » séparée par des espaces (une
+  // signature par secret actif, en cas de rotation) : n'importe laquelle
+  // qui correspond suffit.
+  return svixSigHeader.split(' ').some(part => {
+    const sig = part.startsWith('v1,') ? part.slice(3) : part;
+    if (sig.length !== expected.length) return false;
+    let mismatch = 0;
+    for (let i = 0; i < sig.length; i++) mismatch |= sig.charCodeAt(i) ^ expected.charCodeAt(i);
+    return mismatch === 0;
+  });
+}
+
+/* Rattachement automatique par adresse (feature 3) : un email entrant
+   d'un contact déjà connu se pose sur SA fiche et SON deal, sans qu'on
+   ait rien fait — c'est tout l'intérêt d'une boîte unifiée. Un expéditeur
+   inconnu arrive quand même (contact_id/projet_id null), rattachable à
+   la main depuis la boîte unifiée. */
+async function traiterEmailEntrant(event, supabase) {
+  const data = event.data || {};
+  const emailId = data.email_id;
+  if (!emailId) return new Response('ok', { status: 200 });
+
+  const RESEND = process.env.RESEND_API_KEY;
+  if (!RESEND) return new Response('Réception non configurée (RESEND_API_KEY manquante)', { status: 500 });
+
+  // Le webhook ne porte que les métadonnées (from/to/subject/message_id) —
+  // le corps texte/html et in_reply_to demandent cet appel séparé
+  // (https://resend.com/docs/dashboard/receiving/get-email-content).
+  const contentRes = await fetch('https://api.resend.com/emails/receiving/' + emailId, {
+    headers: { Authorization: 'Bearer ' + RESEND }
+  });
+  const content = await contentRes.json().catch(() => ({}));
+
+  const from = (data.from || content.from || '').trim();
+  const to = (Array.isArray(data.to) ? data.to[0] : data.to) || content.to || null;
+  const emailNorm = from.toLowerCase().replace(/^.*<|>.*$/g, '').trim();
+
+  let contactId = null, projetId = null;
+  if (emailNorm) {
+    try {
+      const r = await supabase('crm_contacts?email=ilike.' + encodeURIComponent(emailNorm) + '&select=id,projet_id&limit=1', 'GET');
+      const rows = await r.json();
+      if (Array.isArray(rows) && rows[0]) { contactId = rows[0].id; projetId = rows[0].projet_id; }
+    } catch (e) { /* un rattachement raté ne doit pas faire échouer la réception */ }
+  }
+
+  // `?on_conflict=message_id_email` + merge-duplicates : Resend peut
+  // relivrer le même événement (mêmes garanties « at-least-once » que
+  // tout webhook) — un second envoi ne doit pas dupliquer le message.
+  // Nécessite l'index unique posé par la migration (§4bis de 0014).
+  try {
+    await supabase('crm_messages?on_conflict=message_id_email', 'POST', {
+      contact_id: contactId, projet_id: projetId, canal: 'email', sens: 'entrant',
+      sujet: data.subject || content.subject || null,
+      contenu: content.text || null, contenu_html: content.html || null,
+      statut: 'recu', expediteur_email: from || null, destinataire_email: to,
+      message_id_email: data.message_id || content.message_id || null,
+      in_reply_to: content.in_reply_to || null, lu: false
+    }, { Prefer: 'return=minimal,resolution=merge-duplicates' });
+  } catch (e) {
+    console.log('email entrant — écriture crm_messages : %s', e.message);
+  }
+  return new Response('ok', { status: 200 });
+}
+
 export default async function handler(req) {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
 
+  const rawBody = await req.text();
+
+  // Un email entrant Resend porte svix-signature ; jamais stripe-signature.
+  // Les deux n'arrivent jamais ensemble, donc l'ordre ne fait pas de choix
+  // implicite entre deux payloads valides.
+  if (req.headers.get('svix-signature')) {
+    const secret = process.env.RESEND_WEBHOOK_SECRET;
+    if (!secret) return new Response('Webhook non configuré (RESEND_WEBHOOK_SECRET manquant)', { status: 500 });
+    const ok = await verifySvixSignature(rawBody, req.headers.get('svix-id'), req.headers.get('svix-timestamp'), req.headers.get('svix-signature'), secret);
+    if (!ok) return new Response('Signature invalide', { status: 400 });
+    let event;
+    try { event = JSON.parse(rawBody); } catch (e) { return new Response('JSON invalide', { status: 400 }); }
+    if (event.type !== 'email.received') return new Response('ok', { status: 200 });
+
+    const SUPABASE_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+    const supabase = async (path, method, body, extraHeaders) => fetch(SUPABASE_URL + '/rest/v1/' + path, {
+      method,
+      headers: Object.assign({
+        apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json', Prefer: 'return=representation'
+      }, extraHeaders || {}),
+      body: body ? JSON.stringify(body) : undefined
+    });
+    try {
+      return await traiterEmailEntrant(event, supabase);
+    } catch (err) {
+      return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    }
+  }
+
   try {
-    const rawBody = await req.text();
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
       return new Response('Webhook non configuré (STRIPE_WEBHOOK_SECRET manquant)', { status: 500 });
