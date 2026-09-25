@@ -365,7 +365,10 @@ const ICON={
  search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
  alerte:'<path d="M10.3 3.9 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 16.5h.01"/>',
  rh:'<circle cx="9" cy="7" r="3.4"/><path d="M2.5 21c0-3.5 2.9-6.3 6.5-6.3s6.5 2.8 6.5 6.3M16 11a3 3 0 1 0 0-6M21.5 21c0-2.8-1.7-5.1-4-6"/>',
- production:'<path d="M6 13a6 6 0 0 1 12 0z"/><path d="M4 13h16M6 13l1 8h10l1-8M9 4v3M12 3v4M15 4v3"/>'
+ production:'<path d="M6 13a6 6 0 0 1 12 0z"/><path d="M4 13h16M6 13l1 8h10l1-8M9 4v3M12 3v4M15 4v3"/>',
+ documents:'<path d="M9 2h7l5 5v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M16 2v5h5M5 6v14a2 2 0 0 0 2 2h9"/>',
+ modele_financier:'<path d="M4 19V6M4 19h16M8 19v-6M12 19V9M16 19v-4"/>',
+ financement:'<path d="M12 21v-9M12 12c0-4 3-6 7-6 0 4-2 7-7 7zM12 15c0-3-2-5-6-5 0 3 1 6 6 6z"/>'
 };
 const ICONES_BLOC=['auto','schema','projet','calendar','check','drive','alerte','commercial','finance','partenariat','developpement','logistique'];
 const CATEGORIES=[
@@ -383,7 +386,16 @@ const ACTIVITES=[
  {cle:'partenariat',nom:'Partenariat',icone:'partenariat',couleur:'#8e5cf7'},
  {cle:'developpement',nom:'Développement',icone:'developpement',couleur:'#101014'},
  {cle:'logistique',nom:'Logistique',icone:'logistique',couleur:'#ff9f0a'},
- {cle:'production',nom:'Production',icone:'production',couleur:'#ff6b35'}
+ {cle:'production',nom:'Production',icone:'production',couleur:'#ff6b35'},
+ /* §4.5, §4.7, §4.8 de la spec : détail métier pas encore construit
+    (modèles de documents versionnés, hypothèses/prévisionnel à trois
+    vues, dossiers de financement) — mais le socle générique (tâches,
+    projets, schéma de blocs, classeur) fonctionne déjà, comme pour
+    toute autre activité. Rendues visibles à la demande de Pablo plutôt
+    que de rester absentes de la navigation en attendant leur tour. */
+ {cle:'documents',nom:'Documents',icone:'documents',couleur:'#8e8e93'},
+ {cle:'modele_financier',nom:'Modèle financier',icone:'modele_financier',couleur:'#30b050'},
+ {cle:'financement',nom:'Financement',icone:'financement',couleur:'#8e5cf7'}
 ];
 const ACT_BY_CLE={};ACTIVITES.forEach(a=>ACT_BY_CLE[a.cle]=a);
 const ROLES={
