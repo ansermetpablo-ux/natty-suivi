@@ -4050,12 +4050,12 @@ de la Production : un bouton « 📄 PDF » sur chaque carte de poste, et « �
 - **si le poste a 2 recettes ou plus** : un 3ᵉ document, fiches **mélangées** (ingrédients cumulés
   par recette + total, étapes dans l'ordre du plan avec « ensemble avec… ») et **PERT mélangé**
   (couleur par recette, ateliers partagés reliés en pointillé orange).
-Tout vient du plan affiché (, ) : mêmes grammes, mêmes horaires, mêmes dépendances.
+Tout vient du plan affiché (`S.plan`, `S.lots`) : mêmes grammes, mêmes horaires, mêmes dépendances.
 Chemin critique en trait épais, étapes passives en pointillé.
 > ⚠️ jsPDF est chargé **à la demande** depuis cdnjs au premier clic. Ses polices standard ne
-> connaissent que le Latin-1 :  remplace flèches, guillemets courbes, puces et emojis —
+> connaissent que le Latin-1 : `pt()` remplace flèches, guillemets courbes, puces et emojis —
 > sinon jsPDF écrit des caractères illisibles sans lever d'erreur.
-> ⚠️ Ces postes n'existent que dans l'onglet Production d'**admin.html** () :
+> ⚠️ Ces postes n'existent que dans l'onglet Production d'**admin.html** (`NattyProd.monter`) :
 > crm.html charge le script mais ne monte pas cette vue.
 
 **La fiche technique, lue comme elle est écrite (`fiche`, `portionPour`)** :
