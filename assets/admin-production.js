@@ -212,6 +212,15 @@
       '.np-gr label input{width:72px}',
       '.np-gr label.mod{background:#c97a0014;outline:1px solid #c97a0055}',
       '.np-gr label small.k{color:var(--muted)}',
+      '.np-tag{font-style:normal;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px}',
+      '.np-base{margin-top:8px;background:#00000005;border-radius:12px;padding:10px 12px}',
+      '.np-base-r{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-size:12px;color:var(--black);margin-bottom:8px}',
+      '.np-base-r label{display:flex;align-items:center;gap:6px}',
+      '.np-base-t{display:grid;gap:4px;font-size:12px;color:var(--black)}',
+      '.np-base-t>div{display:grid;grid-template-columns:minmax(120px,1.4fr) 120px minmax(140px,1.4fr) 60px 60px;gap:8px;align-items:center}',
+      '.np-base-t .hd{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}',
+      '.np-base-t select{padding:5px 8px;font-size:12px}',
+      '.np-base-pied{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end;margin-top:8px}',
       '.np-ecart{font-size:11px;color:var(--muted)}',
       '.np-gr label small{flex:1 1 100%;font-size:10.5px;color:#c97a00}',
       '.np-gr-pied{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:11.5px}',
@@ -596,7 +605,9 @@
      Ce qui en sort est une ESTIMATION, et l'écran le dit : l'écart restant à
      chaque cible est affiché. */
   var OPT_CACHE = {};
-  var POIDS_MAC = { p: 3, g: 2, l: 2, c: 2 }, RAPPEL = 0.08, S_MIN = 0.3, S_MAX = 3;
+  /* Autour de la BASE de la recette (et non plus de la fiche) : le client
+     ajuste, il ne réécrit pas le plat — rappel plus fort, bornes [0,5 ; 2]. */
+  var POIDS_MAC = { p: 3, g: 2, l: 2, c: 2 }, RAPPEL = 0.2, S_MIN = 0.5, S_MAX = 2;
 
   /* La cible d'un repas pour un client, en kcal ET en macros. Les macros du
      jour (`besoinJour`) sont ramenées aux kcal retenues pour ce bon — si
@@ -618,57 +629,179 @@
     return cibleMacros(b && b.user_id, a.kcal_portion);
   }
 
-  function portionOptimale(r, T) {
-    var f = fiche(r), nb = f.nb || 1;
-    var cle = r.id + '|' + Math.round(T.c) + '|' + Math.round(T.p) + '|' + Math.round(T.g) + '|' + Math.round(T.l) + '|' + (NUTRI ? 1 : 0);
-    if (OPT_CACHE[cle]) return OPT_CACHE[cle];
+  /* ── LA BASE D'UNE RECETTE : SES RATIOS ET LES TAGS DE SES INGRÉDIENTS ─────
+     Pablo (2026-09-25) : une recette a sa répartition de base — le % de ses
+     kcal en protéines, glucides, lipides (ex. 50 / 25 / 25) — et chaque
+     ingrédient porte un TAG qui dit quelle macro il apporte. Les quantités se
+     calculent à partir de cette base : la famille « protéine » est dosée pour
+     atteindre la part de protéines, les féculents celle des glucides, les
+     lipides celle des lipides ; légumes et aromates suivent la taille de la
+     portion. Ensuite seulement, les macros du client ajustent chaque aliment
+     autour de cette base, dans des limites (voir portionOptimale).
+     Stockage : `recettes.ratios` (jsonb {p,g,l} en % des kcal) et
+     `recettes_ingredients.tag` — migration 0010. Sans elles, ratios et tags
+     sont DÉDUITS de la fiche (la répartition qu'elle a déjà, le tag de la macro
+     dominante de chaque aliment) : le calcul marche, il n'est simplement pas
+     réglable. */
+  var TAGS = [
+    { k: 'proteine', lib: 'Protéine', mac: 'p', coul: '#c0392b' },
+    { k: 'feculent', lib: 'Féculent', mac: 'g', coul: '#c97a00' },
+    { k: 'lipide', lib: 'Lipide', mac: 'l', coul: '#b23a8e' },
+    { k: 'legume', lib: 'Légume', mac: null, coul: '#2a9e4f' },
+    { k: 'aromate', lib: 'Aromate', mac: null, coul: '#7777aa' }
+  ];
+  var TAG_PAR_K = {}; TAGS.forEach(function (t) { TAG_PAR_K[t.k] = t; });
+  var MAC_TAG = { p: 'proteine', g: 'feculent', l: 'lipide' };
+  var KCAL_G = { p: 4, g: 4, l: 9 };
+
+  /* Le tag qu'un ingrédient prend quand personne ne l'a choisi : la macro qui
+     fait l'essentiel de ses calories. Sous 3 g par portion (sel, épices) ou
+     sans valeur nutritionnelle connue : aromate. Peu calorique : légume. */
+  function tagAuto(nom, gPortion) {
+    var n = nutri100(nom);
+    if (!n || n.cal_per_100g == null || gPortion < 3) return 'aromate';
+    var c = +n.cal_per_100g || 0, p = (+n.prot_per_100g || 0) * 4, g = (+n.gluc_per_100g || 0) * 4, l = (+n.lip_per_100g || 0) * 9;
+    if (c < 60) return 'legume';
+    var tot = p + g + l || 1;
+    if (l / tot >= 0.6) return 'lipide';
+    if (p / tot >= 0.4) return 'proteine';
+    if (g / tot >= 0.5) return 'feculent';
+    return p >= g && p >= l ? 'proteine' : (l >= g ? 'lipide' : 'feculent');
+  }
+  function tagDe(i, nb) {
+    if (i.tag && TAG_PAR_K[i.tag]) return i.tag;
+    return tagAuto(i.ingredient_nom, (parseFloat(i.quantite_g) || 0) / (nb || 1));
+  }
+  // la répartition que la fiche a déjà, comptée sur notre base
+  function ratiosFiche(r) {
+    var t = { p: 0, g: 0, l: 0 };
+    (S.ings[r.id] || []).forEach(function (i) {
+      var n = nutri100(i.ingredient_nom), q = parseFloat(i.quantite_g) || 0;
+      if (!n) return;
+      t.p += q * (+n.prot_per_100g || 0) / 100 * 4; t.g += q * (+n.gluc_per_100g || 0) / 100 * 4; t.l += q * (+n.lip_per_100g || 0) / 100 * 9;
+    });
+    var s = t.p + t.g + t.l;
+    if (!(s > 0)) return { p: 30, g: 45, l: 25 };
+    var o = { p: Math.round(t.p / s * 100), g: Math.round(t.g / s * 100) };
+    o.l = 100 - o.p - o.g;
+    return o;
+  }
+  // les valeurs telles que saisies (le calcul, lui, les ramène à 100)
+  function ratiosBruts(r) {
+    var x = r && r.ratios;
+    if (typeof x === 'string') { try { x = JSON.parse(x); } catch (e) { x = null; } }
+    if (x && (+x.p || 0) + (+x.g || 0) + (+x.l || 0) > 0) return { p: +x.p || 0, g: +x.g || 0, l: +x.l || 0, regle: true };
+    var f = ratiosFiche(r); f.regle = false; return f;
+  }
+  function ratiosDe(r) {
+    var x = r && r.ratios;
+    if (typeof x === 'string') { try { x = JSON.parse(x); } catch (e) { x = null; } }
+    if (x && (+x.p || 0) + (+x.g || 0) + (+x.l || 0) > 0) {
+      var s = (+x.p || 0) + (+x.g || 0) + (+x.l || 0);
+      return { p: (+x.p || 0) * 100 / s, g: (+x.g || 0) * 100 / s, l: (+x.l || 0) * 100 / s, regle: true };
+    }
+    return ratiosFiche(r);
+  }
+
+  /* La BASE d'une portion de C kcal : ratios de la recette × C, chaque famille
+     dosée pour sa macro. Dans une famille, les ingrédients gardent entre eux
+     les proportions de la fiche. Légumes et aromates : la fiche mise à
+     l'échelle des kcal. Trois inconnues (une par famille) : moindres carrés
+     bornés, résolus par descente projetée. */
+  function baseRecette(r, C) {
+    var f = fiche(r), nb = f.nb || 1, R = ratiosDe(r);
     var ings = f.ings.map(function (i) {
       var x0 = (parseFloat(i.quantite_g) || 0) / nb, n = nutri100(i.ingredient_nom);
       var m = n && n.cal_per_100g != null ? { c: +n.cal_per_100g || 0, p: +n.prot_per_100g || 0, g: +n.gluc_per_100g || 0, l: +n.lip_per_100g || 0 } : null;
-      return { nom: i.ingredient_nom, unite: i.unite || 'g', x0: x0, m: m, libre: !!m && x0 >= 3 };
+      return { nom: i.ingredient_nom, unite: i.unite || 'g', x0: x0, m: m, tag: tagDe(i, nb), id: i.id };
     });
-    // kcal d'une portion de fiche, comptées sur NOTRE base
     var kFiche = ings.reduce(function (t, i) { return t + (i.m ? i.x0 * i.m.c / 100 : 0); }, 0);
-    var k0 = kFiche > 0 ? T.c / kFiche : 1;
-    var s = ings.map(function () { return k0; });
+    var k0 = kFiche > 0 ? C / kFiche : 1;
+    // ce que légumes et aromates apportent déjà, à l'échelle
+    var fixe = { p: 0, g: 0, l: 0 };
+    ings.forEach(function (i) { if (!TAG_PAR_K[i.tag].mac && i.m) ['p', 'g', 'l'].forEach(function (m) { fixe[m] += i.x0 * k0 * i.m[m] / 100; }); });
+    var but = {}; ['p', 'g', 'l'].forEach(function (m) { but[m] = Math.max(0, C * R[m] / 100 / KCAL_G[m] - fixe[m]); });
+    // A[m][t] : grammes de macro m qu'apporte la famille t à l'échelle k0 (σ = 1)
+    var fam = ['p', 'g', 'l'], A = {};
+    fam.forEach(function (m) { A[m] = {}; fam.forEach(function (t) {
+      A[m][t] = ings.reduce(function (s, i) { return s + (i.m && i.tag === MAC_TAG[t] ? i.x0 * k0 * i.m[m] / 100 : 0); }, 0);
+    }); });
+    var presentes = fam.filter(function (t) { return ings.some(function (i) { return i.tag === MAC_TAG[t] && i.m && i.x0 > 0; }); });
+    var sig = { p: 1, g: 1, l: 1 };
+    if (presentes.length) {
+      var L = 0;
+      fam.forEach(function (m) { var d = Math.max(but[m], 1); presentes.forEach(function (t) { L += 2 * Math.pow(A[m][t] / d, 2) * presentes.length; }); });
+      L += 0.02; var pas = 1 / (L || 1);
+      for (var it = 0; it < 4000; it++) {
+        var e = {}; fam.forEach(function (m) { var d = Math.max(but[m], 1); e[m] = (presentes.reduce(function (s, t) { return s + A[m][t] * sig[t]; }, 0) - but[m]) / d; });
+        var bouge = 0;
+        presentes.forEach(function (t) {
+          var g = 0.02 * (sig[t] - 1);
+          fam.forEach(function (m) { g += 2 * e[m] * A[m][t] / Math.max(but[m], 1); });
+          var v = Math.max(0.05, Math.min(6, sig[t] - pas * g)); bouge = Math.max(bouge, Math.abs(v - sig[t])); sig[t] = v;
+        });
+        if (bouge < 1e-7) break;
+      }
+    }
+    ings.forEach(function (i) {
+      var t = TAG_PAR_K[i.tag].mac;
+      i.ref = i.x0 * k0 * (t ? sig[t] : 1);
+    });
+    return { ings: ings, R: R, k0: k0, sig: sig, fiche: f };
+  }
+
+  function portionOptimale(r, T) {
+    var B = baseRecette(r, T.c), f = B.fiche, R = B.R;
+    // sans profil client : la cible EST la répartition de la recette
+    if (T.src === 'defaut') T = { c: T.c, p: T.c * R.p / 400, g: T.c * R.g / 400, l: T.c * R.l / 900, src: 'recette' };
+    var sigTags = B.ings.map(function (i) { return i.tag; }).join(',');
+    var cle = r.id + '|' + Math.round(T.c) + '|' + Math.round(T.p) + '|' + Math.round(T.g) + '|' + Math.round(T.l) + '|' + Math.round(R.p) + '/' + Math.round(R.g) + '|' + sigTags + '|' + (NUTRI ? 1 : 0);
+    if (OPT_CACHE[cle]) return OPT_CACHE[cle];
+    var ings = B.ings;
+    // la base de la recette est le point de départ ET le point de rappel
+    var y = ings.map(function (i) { return i.ref; });
     var MACS = ['p', 'g', 'l', 'c'];
-    function totaux(sv) {
+    function totaux(v) {
       var t = { p: 0, g: 0, l: 0, c: 0 };
-      ings.forEach(function (i, k) { if (i.m) MACS.forEach(function (m) { t[m] += i.x0 * sv[k] * i.m[m] / 100; }); });
+      ings.forEach(function (i, k) { if (i.m) MACS.forEach(function (m) { t[m] += v[k] * i.m[m] / 100; }); });
       return t;
     }
-    var libres = ings.map(function (i, k) { return i.libre ? k : -1; }).filter(function (k) { return k >= 0; });
-    if (libres.length && kFiche > 0) {
-      // pas de descente : 1 / constante de Lipschitz du gradient
-      var L = 0;
+    // ajustables : ce qui est chiffré, pèse, et n'est pas un aromate
+    var libres = ings.map(function (i, k) { return i.m && i.ref >= 1 && i.tag !== 'aromate' ? k : -1; }).filter(function (k) { return k >= 0; });
+    if (libres.length && T.src !== 'recette') {
+      // en variable RELATIVE u = y / base : sans ça, 5 g d'huile et 300 g de
+      // riz n'avancent pas au même pas et le calcul s'éternise sur l'huile
+      var L = 2 * RAPPEL;
       MACS.forEach(function (m) {
         if (!(T[m] > 0)) return;
-        var n2 = libres.reduce(function (t, k) { var a = ings[k].x0 * ings[k].m[m] / 100 / T[m]; return t + a * a; }, 0);
-        L += 2 * POIDS_MAC[m] * n2;
+        L += 2 * POIDS_MAC[m] * libres.reduce(function (t, k) { var a = ings[k].ref * ings[k].m[m] / 100 / T[m]; return t + a * a; }, 0);
       });
-      L += 2 * RAPPEL / (k0 * k0);
-      var pas = 1 / (L || 1);
-      for (var it = 0; it < 3000; it++) {
-        var t = totaux(s), e = {};
+      var pas = 1 / L;
+      for (var it = 0; it < 4000; it++) {
+        var t = totaux(y), e = {};
         MACS.forEach(function (m) { e[m] = T[m] > 0 ? (t[m] / T[m] - 1) : 0; });
         var bouge = 0;
         libres.forEach(function (k) {
-          var i = ings[k], g = 2 * RAPPEL * (s[k] / k0 - 1) / k0;
-          MACS.forEach(function (m) { if (T[m] > 0) g += 2 * POIDS_MAC[m] * e[m] * (i.x0 * i.m[m] / 100 / T[m]); });
-          var v = Math.min(S_MAX * k0, Math.max(S_MIN * k0, s[k] - pas * g));
-          bouge = Math.max(bouge, Math.abs(v - s[k]) / k0); s[k] = v;
+          var i = ings[k], u = y[k] / i.ref, g = 2 * RAPPEL * (u - 1);
+          MACS.forEach(function (m) { if (T[m] > 0) g += 2 * POIDS_MAC[m] * e[m] * (i.ref * i.m[m] / 100 / T[m]); });
+          var v = Math.min(S_MAX, Math.max(S_MIN, u - pas * g));
+          bouge = Math.max(bouge, Math.abs(v - u)); y[k] = v * i.ref;
         });
         if (bouge < 1e-6) break;
       }
     }
-    var tot = totaux(s), basePortion = f.gPortionFiche || f.gTotal || 1;
+    var tot = totaux(y), basePortion = f.gPortionFiche || f.gTotal || 1;
     var connus = ings.some(function (i) { return i.m; });
-    // coef : la part de CET aliment par rapport à la fiche mise à l'échelle des kcal (1 = la proportion de la fiche)
-    var sortie = ings.map(function (i, k) { return { nom: i.nom, g: i.x0 * s[k], unite: i.unite, coef: s[k] / k0, gEchelle: i.x0 * k0, gFiche: i.x0 }; });
+    // coef : cet aliment par rapport à la BASE de la recette (1 = la base)
+    var sortie = ings.map(function (i, k) {
+      return { nom: i.nom, g: y[k], unite: i.unite, tag: i.tag, id: i.id, coef: i.ref > 0 ? y[k] / i.ref : 1, gEchelle: i.ref, gFiche: i.x0,
+        mac: i.m ? { p: y[k] * i.m.p / 100, g: y[k] * i.m.g / 100, l: y[k] * i.m.l / 100, c: y[k] * i.m.c / 100 } : null };
+    });
     var gP = sortie.reduce(function (a, i) { return a + i.g; }, 0);
     var res = {
-      facteur: gP / basePortion, gPortion: gP, fiche: f, optim: true, cible: T,
-      mode: libres.length ? 'coefficients par aliment, optimisés sur ses macros' : 'fiche mise à l’échelle (aucun aliment chiffrable)',
+      facteur: gP / basePortion, gPortion: gP, fiche: f, optim: true, cible: T, ratios: R,
+      mode: T.src === 'recette' ? 'base de la recette (ratios ' + Math.round(R.p) + '/' + Math.round(R.g) + '/' + Math.round(R.l) + ')'
+        : 'base de la recette, ajustée sur ses macros',
       kcal: connus ? tot.c : null, mac: connus ? { p: tot.p, g: tot.g, l: tot.l } : null,
       ecart: connus ? { c: tot.c - T.c, p: tot.p - T.p, g: tot.g - T.g, l: tot.l - T.l } : null,
       approx: ings.some(function (i) { return !i.m && i.x0 > 0; }),
@@ -775,7 +908,8 @@
         approx = true; dK += d * dens;
         if (densM) { dP += d * densM.p; dG += d * densM.g; dL += d * densM.l; }
       }
-      return { nom: i.nom, g: ng, unite: i.unite, corrige: true, gAuto: i.g };
+      return { nom: i.nom, g: ng, unite: i.unite, corrige: true, gAuto: i.g, tag: i.tag,
+        mac: n && n.cal_per_100g != null ? { p: ng * (+n.prot_per_100g || 0) / 100, g: ng * (+n.gluc_per_100g || 0) / 100, l: ng * (+n.lip_per_100g || 0) / 100, c: ng * (+n.cal_per_100g || 0) / 100 } : null };
     });
     var gP = ings.reduce(function (t, i) { return t + i.g; }, 0), f = base.fiche, basePortion = f.gPortionFiche || f.gTotal || 1;
     return { facteur: gP / basePortion, gPortion: gP, mode: 'grammages par ingrédient', fiche: f, manuel: true, grammes: true, approx: approx,
@@ -1105,7 +1239,7 @@
   }
 
   /* ── 2. Attribution ─────────────────────────────────────────────────────── */
-  var A = { bon: null, cible: null, sel: {}, fac: {}, gr: {}, ouvert: {} };
+  var A = { bon: null, cible: null, sel: {}, fac: {}, gr: {}, ouvert: {}, base: {}, sale: {} };
 
   function vueAttribution(el) {
     var b = S.bons.find(function (x) { return x.id === S.bonOuvert; });
@@ -1158,8 +1292,10 @@
           + '<span>' + (p.kcal ? '<b>' + (p.approx ? '≈ ' : '') + Math.round(p.kcal) + ' kcal</b>' : 'kcal inconnues') + (p.mac ? ' · ' + libMacros(p.mac) : '') + '</span>'
           + (p.ecart ? '<span class="np-ecart" title="écart à la cible de ce repas (45 % de ses besoins' + (p.cible && p.cible.src === 'defaut' ? ', répartition par défaut faute de profil' : '') + ')">écart cible ' + libEcart(p.ecart) + '</span>' : '')
           + '<button class="np-lien" data-act="ing-ouvrir" data-rec="' + h(r.id) + '">' + (A.ouvert[r.id] ? '▾' : '▸') + ' grammage par ingrédient</button>'
+          + '<button class="np-lien" data-act="base-ouvrir" data-rec="' + h(r.id) + '">' + (A.base[r.id] ? '▾' : '▸') + ' ⚙ base de la recette (' + libRatios(ratiosDe(r)) + ')</button>'
           + (A.fac[r.id] ? '<span class="np-manu">ajustée à la main</span><button class="np-lien" data-act="gram-auto" data-rec="' + h(r.id) + '">↺ revenir à ' + Math.round(auto.gPortion) + ' g (cible)</button>' : '')
           + '</div>'
+          + (A.base[r.id] ? htmlBase(r, p) : '')
           + (A.ouvert[r.id] ? htmlGrammes(p, 'data-ing-rec="' + h(r.id) + '"', gr ? '<button class="np-lien" data-act="ing-auto" data-rec="' + h(r.id) + '">↺ grammages de la portion</button>' : '') : '')
           : '')
         + '</div>'
@@ -1173,15 +1309,61 @@
   /* Les champs d'ingrédients d'une portion : un par ingrédient, en g par
      portion, orange quand il est corrigé. `attr` porte la cible du changement
      (une recette dans l'attribution, une attribution dans l'assemblage). */
+  function libRatios(R) { return Math.round(R.p) + ' / ' + Math.round(R.g) + ' / ' + Math.round(R.l) + (R.regle ? '' : ' déduits'); }
+  /* Le réglage de la base d'une recette : ses ratios (% des kcal) et le tag
+     de chaque ingrédient. Les changements s'appliquent AUSSITÔT au calcul
+     (aperçu), et ne partent en base qu'avec « Enregistrer la base » — elle
+     vaut pour tous les clients de cette recette. */
+  function htmlBase(r, p) {
+    var R = ratiosBruts(r), nb = fiche(r).nb || 1, somme = Math.round(R.p + R.g + R.l);
+    var html = '<div class="np-base"><div class="np-base-r"><b>Répartition du plat</b> (% des kcal)'
+      + ['p', 'g', 'l'].map(function (m) {
+        return '<label>' + { p: 'Protéines', g: 'Glucides', l: 'Lipides' }[m] + ' <input type="number" class="np-in n" data-ratio-rec="' + h(r.id) + '" data-ratio-mac="' + m + '" value="' + Math.round(R[m]) + '" min="0" max="100" step="1"> %</label>';
+      }).join('') + '<span class="np-s">' + (R.regle ? 'réglée' : 'déduite de la fiche') + (somme !== 100 ? ' · <b style="color:#c0392b">total ' + somme + ' % — à ramener à 100 pour enregistrer</b>' : '') + '</span></div>';
+    html += '<div class="np-base-t"><div class="hd"><span>Ingrédient</span><span>Tag</span><span>Pour 100 g</span><span>Base</span><span>Ici</span></div>';
+    (S.ings[r.id] || []).forEach(function (i, k) {
+      var n = nutri100(i.ingredient_nom), t = tagDe(i, nb), o = p.ings.find(function (x) { return x.nom === i.ingredient_nom; });
+      html += '<div><span>' + h(i.ingredient_nom) + (i.tag ? '' : ' <small class="np-s">auto</small>') + '</span>'
+        + '<span><select class="np-in" data-tag-rec="' + h(r.id) + '" data-tag-i="' + k + '" style="border-left:4px solid ' + TAG_PAR_K[t].coul + '">'
+        + TAGS.map(function (x) { return '<option value="' + x.k + '"' + (x.k === t ? ' selected' : '') + '>' + x.lib + '</option>'; }).join('') + '</select></span>'
+        + '<span class="np-s">' + (n ? Math.round(+n.cal_per_100g || 0) + ' kcal · ' + Math.round(+n.prot_per_100g || 0) + ' P · ' + Math.round(+n.gluc_per_100g || 0) + ' G · ' + Math.round(+n.lip_per_100g || 0) + ' L' : 'hors base') + '</span>'
+        + '<span>' + (o ? Math.round(o.gEchelle) + ' g' : '-') + '</span>'
+        + '<span><b>' + (o ? Math.round(o.g) + ' g' : '-') + '</b></span></div>';
+    });
+    html += '</div><div class="np-base-pied">' + (A.sale[r.id] ? '<span class="np-manu">modifications non enregistrées</span>' : '')
+      + '<button class="np-lien" data-act="base-auto" data-rec="' + h(r.id) + '">↺ ratios et tags déduits de la fiche</button>'
+      + '<button class="np-btn sec" data-act="base-save" data-rec="' + h(r.id) + '"' + (A.sale[r.id] ? '' : ' disabled') + '>Enregistrer la base</button></div></div>';
+    return html;
+  }
+  function reRendreAttrib() { var v = document.getElementById('npVue'); if (v && A.bon) v.innerHTML = htmlAttribution(A.bon, A.cible); }
+  function enregistrerBase(recId) {
+    var r = recette(recId); if (!r) return;
+    var R = ratiosBruts(r), nb = fiche(r).nb || 1, envois = [];
+    if (Math.round(R.p + R.g + R.l) !== 100) { toast('La répartition doit faire 100 % (' + Math.round(R.p + R.g + R.l) + ' % actuellement)', 'err'); return; }
+    envois.push(sbq('recettes?id=eq.' + recId, { method: 'PATCH', body: JSON.stringify({ ratios: r.ratios ? { p: Math.round(R.p), g: Math.round(R.g), l: Math.round(R.l) } : null }) }));
+    (S.ings[recId] || []).forEach(function (i) {
+      if (i.id && i._tagModifie) envois.push(sbq('recettes_ingredients?id=eq.' + i.id, { method: 'PATCH', body: JSON.stringify({ tag: i.tag || tagDe(i, nb) }) }));
+    });
+    Promise.all(envois).then(function () {
+      (S.ings[recId] || []).forEach(function (i) { delete i._tagModifie; });
+      delete A.sale[recId]; OPT_CACHE = {}; toast('Base de « ' + r.nom + ' » enregistrée — elle vaut pour tous ses clients', 'ok'); reRendreAttrib();
+    }).catch(function (e) {
+      if (/ratios|tag/.test(String(e.message)) && /PGRST204|42703|column/i.test(String(e.message))) toast('Impossible : exécuter supabase/migrations/0010_recettes_ratios_tags.sql', 'err');
+      else toast('Erreur : ' + e.message, 'err');
+    });
+  }
+
   function libEcart(e) {
     function x(v, u) { v = Math.round(v); return (v > 0 ? '+' : '') + v + u; }
     return x(e.p, ' g P') + ' · ' + x(e.g, ' g G') + ' · ' + x(e.l, ' g L') + ' · ' + x(e.c, ' kcal');
   }
   function htmlGrammes(p, attr, pied) {
     return '<div class="np-gr">' + p.ings.map(function (i) {
-      return '<label class="' + (i.corrige ? 'mod' : '') + '"><span>' + h(i.nom) + '</span><input type="number" class="np-in n" ' + attr + ' data-ing-nom="' + h(i.nom) + '" value="' + (i.g >= 10 ? Math.round(i.g) : Math.round(i.g * 10) / 10) + '" min="0" step="any"> ' + h(i.unite)
+      var tg = i.tag && TAG_PAR_K[i.tag];
+      return '<label class="' + (i.corrige ? 'mod' : '') + '"><span>' + h(i.nom) + (tg ? ' <em class="np-tag" style="background:' + tg.coul + '22;color:' + tg.coul + '">' + tg.lib + '</em>' : '') + '</span>'
+        + (i.mac ? '<small class="k">' + Math.round(i.mac.p) + ' P · ' + Math.round(i.mac.g) + ' G · ' + Math.round(i.mac.l) + ' L · ' + Math.round(i.mac.c) + ' kcal</small>' : '') + '<input type="number" class="np-in n" ' + attr + ' data-ing-nom="' + h(i.nom) + '" value="' + (i.g >= 10 ? Math.round(i.g) : Math.round(i.g * 10) / 10) + '" min="0" step="any"> ' + h(i.unite)
         + (i.corrige ? '<small>au lieu de ' + (i.gAuto >= 10 ? Math.round(i.gAuto) : Math.round(i.gAuto * 10) / 10) + '</small>'
-          : (i.coef != null && i.gEchelle > 0 ? '<small class="k">' + (Math.abs(i.coef - 1) < 0.03 ? 'proportion de la fiche' : 'fiche : ' + Math.round(i.gEchelle) + ' g (×' + (Math.round(i.coef * 100) / 100).toString().replace('.', ',') + ')') + '</small>' : '')) + '</label>';
+          : (i.coef != null && i.gEchelle > 0 ? '<small class="k">' + (Math.abs(i.coef - 1) < 0.03 ? 'base de la recette' : 'base : ' + Math.round(i.gEchelle) + ' g (×' + (Math.round(i.coef * 100) / 100).toString().replace('.', ',') + ')') + '</small>' : '')) + '</label>';
     }).join('') + (pied ? '<div class="np-gr-pied">' + pied + (p.approx ? ' <span class="np-s">≈ : un ingrédient corrigé n’est pas dans ingredients_base, son énergie est estimée.</span>' : '') + '</div>' : (p.approx ? '<div class="np-gr-pied np-s">≈ : un ingrédient corrigé n’est pas dans ingredients_base, son énergie est estimée.</div>' : '')) + '</div>';
   }
 
@@ -2508,6 +2690,13 @@
     if (b.dataset.poste) { prendrePoste(b.dataset.poste, b.dataset.prendre === '1'); return; }
     if (b.dataset.act === 'service') { ouvrirService(); return; }
     if (b.dataset.vue) { S.vue = b.dataset.vue; if (S.vue === 'production' && !S.jour) S.jour = ymd(new Date()); rendre(); return; }
+    if (b.dataset.act === 'base-ouvrir') { A.base[b.dataset.rec] = !A.base[b.dataset.rec]; reRendreAttrib(); return; }
+    if (b.dataset.act === 'base-save') { enregistrerBase(b.dataset.rec); return; }
+    if (b.dataset.act === 'base-auto') {
+      var rb = recette(b.dataset.rec); if (!rb) return;
+      rb.ratios = null; (S.ings[rb.id] || []).forEach(function (i) { if (i.tag) { i.tag = null; i._tagModifie = true; } });
+      A.sale[rb.id] = true; OPT_CACHE = {}; reRendreAttrib(); return;
+    }
     if (b.dataset.act === 'ing-ouvrir') { A.ouvert[b.dataset.rec] = !A.ouvert[b.dataset.rec]; document.getElementById('npVue').innerHTML = htmlAttribution(A.bon, A.cible); return; }
     if (b.dataset.act === 'ing-auto') { delete A.gr[b.dataset.rec]; document.getElementById('npVue').innerHTML = htmlAttribution(A.bon, A.cible); return; }
     if (b.dataset.act === 'ass-auto') { remettreGrammesAssemblage(b.dataset.attr); return; }
@@ -2549,6 +2738,16 @@
       return;
     }
     if (t.dataset.nbBon) { changerNbRepas(t); return; }
+    if (t.dataset.ratioRec) {
+      var rr2 = recette(t.dataset.ratioRec); if (!rr2) return;
+      var R2 = ratiosBruts(rr2), v2 = Math.max(0, Math.min(100, parseFloat(t.value) || 0));
+      var nr = { p: Math.round(R2.p), g: Math.round(R2.g), l: Math.round(R2.l) }; nr[t.dataset.ratioMac] = v2;
+      rr2.ratios = nr; A.sale[rr2.id] = true; OPT_CACHE = {}; reRendreAttrib(); return;
+    }
+    if (t.dataset.tagRec) {
+      var ir = (S.ings[t.dataset.tagRec] || [])[+t.dataset.tagI]; if (!ir) return;
+      ir.tag = t.value; ir._tagModifie = true; A.sale[t.dataset.tagRec] = true; OPT_CACHE = {}; reRendreAttrib(); return;
+    }
     if (t.dataset.ingRec) {
       var rid = t.dataset.ingRec, v = parseFloat(t.value);
       if (!(v >= 0)) { toast('Grammage invalide', 'err'); document.getElementById('npVue').innerHTML = htmlAttribution(A.bon, A.cible); return; }
@@ -3293,7 +3492,7 @@
     // pour crm.html : la même règle (45 %) et les mêmes portions que la cuisine
     charger: function () { return chargerTout(); }, etat: S, cibleClient: cibleClient, nomClient: nomClient,
     portionPour: portionPour, portionFacteur: portionFacteur, portionAttrib: portionAttrib, estManuel: estManuel,
-    fiche: fiche, PART_REPAS: PART_REPAS, cibleMacros: cibleMacros, portionOptimale: portionOptimale, baseNatty: chargerBaseNatty, grammesDe: grammesDe, portionOrigine: portionOrigine, portionAvecGrammes: portionAvecGrammes,
+    fiche: fiche, PART_REPAS: PART_REPAS, cibleMacros: cibleMacros, portionOptimale: portionOptimale, baseRecette: baseRecette, ratiosDe: ratiosDe, tagDe: tagDe, baseNatty: chargerBaseNatty, grammesDe: grammesDe, portionOrigine: portionOrigine, portionAvecGrammes: portionAvecGrammes,
     _dispatcher: dispatcher, _portionPour: portionPour, _etat: S,
     _dependances: dependances, _decoupeDe: decoupeDe, _grapheDuJour: grapheDuJour, _illustration: illustration
   };

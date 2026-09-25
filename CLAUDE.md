@@ -4041,6 +4041,25 @@ pas** une quantité ajustée à la main quand la fiche client change.
 > ⚠️ crm.html ne recopie aucun calcul : il charge `assets/admin-production.js` et appelle
 > `NattyProd.cibleClient` / `portionPour` / `portionFacteur` / `portionAttrib`.
 
+**LA BASE D'UNE RECETTE : RATIOS + TAGS** (2026-09-25, Pablo — choix tranchés : ratios = % des kcal
+par macro ; ils sont le POINT DE DÉPART, les macros du client ajustent ensuite dans des limites).
+- `recettes.ratios` (jsonb `{p,g,l}` en % des kcal, ex. 50/25/25) et `recettes_ingredients.tag`
+  (`proteine` | `feculent` | `lipide` | `legume` | `aromate`) — 🔄 **`supabase/migrations/
+  0010_recettes_ratios_tags.sql` à exécuter**. Sans elles : ratios DÉDUITS de la fiche (sa répartition
+  actuelle sur notre base), tag déduit de la macro dominante de l'aliment (`tagAuto`).
+- `baseRecette(r, kcal)` : chaque famille taguée est dosée pour sa macro (protéine → P, féculent → G,
+  lipide → L) ; dans une famille, les aliments gardent les proportions de la fiche ; légumes et
+  aromates suivent la fiche à l'échelle des kcal. Trois inconnues, moindres carrés bornés.
+- `portionOptimale` part de cette base et s'y rappelle (`RAPPEL` 0,2), coefficients bornés
+  [0,5 ; 2] × base, vers les macros du client. Sans profil client, la base est la portion.
+  Mesuré : ratios 50/25/25, 1 260 kcal → 481 g poulet, 188 g riz, 262 g carottes, 17 g huile
+  (48/24/24 réels : légumes et sel comptent un peu).
+- Réglage : attribution → « ⚙ base de la recette » — ratios, tag par ingrédient, macros pour 100 g,
+  grammes de la base et pour ce client ; aperçu immédiat, « Enregistrer la base » (vaut pour TOUS
+  les clients de la recette), refusé tant que le total ≠ 100 %. « ↺ » repasse en déduit (null).
+- ⚠️ Les ratios saisis sont gardés BRUTS (`ratiosBruts`) : les renormaliser à chaque frappe
+  déformait les deux autres champs (50/25/25 saisi → 48/26/26 enregistré, attrapé au banc).
+
 **LE CRM MONTE LE MODULE DE PRODUCTION D'ADMIN** (2026-09-25, Pablo : « la page commande doit être
 comme le deuxième écran d'admin et avoir les mêmes fonctions, pareil pour la page production »).
 - crm.html → Production → **Commandes** = la vue « Bons de commande » d'`assets/admin-production.js`,
