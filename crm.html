@@ -5371,6 +5371,7 @@ function surplusHtml(b){
   const achat=rp&&rp.achatParIngredient[l.nom.toLowerCase()];
   const qAch=achat&&achat.qKg?achat.qKg*part:null,pAch=achat?achat.prixTotal*part:null;
   const pPrev=qRec!=null&&l.prixKg!=null?qRec*l.prixKg:null;
+  FIN_TIPS['q:'+l.nom.toLowerCase()]=tipQteHtml(l,detailQteRepas(FIN_DONNEES,FIN_EDIT,l,rec));
   const r={nom:l.nom,produit:l.produit,unite:l.unite,qPrev:qRec,qBrut:rec==='tout'?l.q:(l.parRecette[rec]||0),pPrev,qAch,pAch,eQ:qAch!=null&&qRec!=null?qAch-qRec:null,
   // L'écart de PRIX est un écart au kilo : l'effet quantité est déjà dans
   // l'écart de quantité, les additionner compterait deux fois le surplus.
@@ -5384,11 +5385,11 @@ function surplusHtml(b){
  <div class="tbl-wrap"><table><thead><tr><th>Aliment</th><th>Qté prévue</th><th>Prix prévu</th><th>Qté achetée</th><th>Prix payé</th><th>Écart qté</th><th>Écart prix (€/kg)</th></tr></thead><tbody>${lignes.map(l=>`<tr>
   <td>${esc(l.nom)}${l.produit?`<div class="muted" style="font-size:11px">prix : ${esc(l.produit)}</div>`:''}</td>
   ${saisissable(l)?`
-  <td class="num">${champMp(l,'qte',l.qPrev,0.001,'kg')}${l.qSaisie?'<div style="font-size:10.5px;color:var(--amber)">✎ saisi</div>':''}</td>
+  <td class="num" data-fin-tip="q:${esc(l.nom.toLowerCase())}" style="cursor:help">${champMp(l,'qte',l.qPrev,0.001,'kg')}${l.qSaisie?'<div style="font-size:10.5px;color:var(--amber)">✎ saisi</div>':''}</td>
   <td class="num">${champMp(l,'prix',l.pkPrev,0.01,'€/kg')}<div class="muted" style="font-size:11px">${l.pPrev!=null?fmtEur(l.pPrev):'prix inconnu'}</div></td>
   <td class="num">${champMp(l,'achat',l.qAch,0.001,'kg')}</td>
   <td class="num">${champMp(l,'paye',l.pAch,0.01,'€')}${l.pkAch!=null?`<div class="muted" style="font-size:11px">${fmtEur(l.pkAch)}/kg</div>`:''}${l.manuel?'<div style="font-size:10.5px;color:var(--amber)">✎ saisi</div>':''}</td>`:`
-  <td class="num">${l.qPrev!=null?fmtQte(l.qPrev):(Math.round(l.qBrut*10)/10)+' '+esc(l.unite)}</td>
+  <td class="num" data-fin-tip="q:${esc(l.nom.toLowerCase())}" style="cursor:help;text-decoration:underline dotted var(--muted)">${l.qPrev!=null?fmtQte(l.qPrev):(Math.round(l.qBrut*10)/10)+' '+esc(l.unite)}</td>
   <td class="num">${l.pPrev!=null?fmtEur(l.pPrev)+`<div class="muted" style="font-size:11px">${fmtEur(l.pkPrev)}/kg</div>`:'<span class="muted">prix inconnu</span>'}</td>
   <td class="num">${l.qAch!=null?fmtQte(l.qAch):'<span class="muted">—</span>'}</td>
   <td class="num">${l.pAch!=null?fmtEur(l.pAch)+(l.pkAch!=null?`<div class="muted" style="font-size:11px">${fmtEur(l.pkAch)}/kg</div>`:''):'<span class="muted">—</span>'}</td>`}
@@ -5401,6 +5402,44 @@ function surplusHtml(b){
  ${!rp?'<div class="empty">Pas d\'achats relevés — rien à calculer.</div>':bonus.length?`<div class="list">${bonus.map(r=>`<div class="li"><div class="grow">${esc(r.nom)}<div class="meta">${r.bonus>0?`à ${Math.round(r.gPortion*1000)} g par portion (fiche × facteur moyen) · limité par ${esc(r.limitant)}`:`impossible à chiffrer : pas de surplus relevé pour ${esc(r.manquant||'un ingrédient')}`}</div></div><span class="chip ${r.bonus>0?'ok':''}">${r.bonus>0?'× '+r.bonus:'0'}</span></div>`).join('')}</div><p class="muted" style="font-size:11.5px;margin:6px 0 0">Chaque recette est calculée seule sur tout le surplus : les plats en plus ne se cumulent pas d'une recette à l'autre.</p>`:'<div class="empty">Aucune recette pour ce filtre.</div>'}
  </div>`;
 }
+/* Le détail par repas d'un aliment, pour l'infobulle de la quantité prévue.
+   Un repas = une recette dans une commande (une attribution). Quantité =
+   grammage de fiche × portions × coefficient — puis recalée sur le total
+   affiché, qui tient compte d'une quantité saisie à la main (ratio). Les
+   repas de la même recette au même grammage par portion forment UNE ligne. */
+function detailQteRepas(raw,edit,ligne,recFiltre){
+ if(!raw)return[];
+ const cle=ligne.nom.toLowerCase(),lignes=[];
+ raw.attrs.forEach(a=>{
+  if(recFiltre&&recFiltre!=='tout'&&a.recette_id!==recFiltre)return;
+  const rec=raw.recettesById[a.recette_id];if(!rec)return;
+  const ing=raw.recIngredients.find(i=>i.recette_id===a.recette_id&&String(i.ingredient_nom||'').trim().toLowerCase()===cle);
+  if(!ing||!(+ing.quantite_g>0))return;
+  const f=edit&&edit.facteurs&&edit.facteurs[a.recette_id]!=null?edit.facteurs[a.recette_id]:(+a.facteur||1);
+  const parPortion=(+ing.quantite_g)/(rec.nb_portions||1)*f;
+  const bon=raw.bons.find(b=>b.id===a.bon_id)||{};
+  lignes.push({rec:rec.nom,parPortion,portions:a.nb_portions||0,qte:parPortion*(a.nb_portions||0),client:bon.contact_nom||('Commande '+(bon.type||'')),jour:bon.jour_livraison});
+ });
+ const brut=lignes.reduce((t,l)=>t+l.qte,0);
+ const cible=recFiltre&&recFiltre!=='tout'?(ligne.parRecette[recFiltre]||0):ligne.q;
+ const k=brut?cible/brut:1;   // ratio d'une quantité saisie à la main
+ const groupes={};
+ lignes.forEach(l=>{
+  const pp=l.parPortion*k,cleG=l.rec+'|'+Math.round(pp);
+  const g=groupes[cleG]||(groupes[cleG]={rec:l.rec,parPortion:pp,portions:0,qte:0,repas:[]});
+  g.portions+=l.portions;g.qte+=l.qte*k;g.repas.push(l);
+ });
+ return Object.values(groupes).sort((a,b)=>b.qte-a.qte);
+}
+function tipQteHtml(ligne,groupes){
+ const u=ligne.unite,fq=q=>(u==='g'||u==='kg')?fmtQte(qteKg(q,u)):(Math.round(q*10)/10)+' '+esc(u);
+ if(!groupes.length)return '<div class="muted">Aucun repas.</div>';
+ return `<div style="font-weight:600;margin-bottom:6px">${esc(ligne.nom)} — par repas</div>
+ ${groupes.map(g=>`<div style="padding:5px 0;border-top:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:14px"><span>${esc(g.rec)}</span><b class="mono">${fq(g.qte)}</b></div>
+ <div class="muted" style="font-size:11.5px">${fq(g.parPortion)} / portion × ${g.portions} portion${g.portions>1?'s':''} · ${g.repas.length} repas : ${g.repas.map(r=>esc(r.client)+(r.jour?' ('+fd(r.jour)+')':'')+' ×'+r.portions).join(', ')}</div></div>`).join('')}
+ ${ligne.qSaisie?'<div style="font-size:11px;color:var(--amber);margin-top:6px">Quantité saisie à la main : répartie au prorata des fiches.</div>':''}`;
+}
+let FIN_TIPS={};
 /* Saisie à la main du tableau des matières : seulement sur la vue de toute
    la session (la vue par recette est un prorata, la saisir n'aurait pas de
    sens) et pour les aliments en g/kg (un prix au kilo ne se compare pas à
@@ -5795,8 +5834,21 @@ async function ouvrirFactureDetail(factureId){
  };
 }
 
+function montrerTipFinance(el,x,y){
+ let tip=document.getElementById('finTip');
+ if(!tip){tip=document.createElement('div');tip.id='finTip';tip.setAttribute('role','tooltip');tip.style.cssText='position:fixed;z-index:200;max-width:380px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--nm-pop);padding:10px 12px;font-size:12.5px;pointer-events:none';document.body.appendChild(tip)}
+ const h=FIN_TIPS[el.dataset.finTip];if(!h){tip.style.display='none';return}
+ tip.innerHTML=h;tip.style.display='block';
+ const r=tip.getBoundingClientRect();
+ tip.style.left=Math.max(8,Math.min(innerWidth-r.width-8,x+14))+'px';
+ tip.style.top=(y+14+r.height>innerHeight-8?Math.max(8,y-r.height-10):y+14)+'px';
+}
+function cacherTipFinance(){const t=document.getElementById('finTip');if(t)t.style.display='none'}
 function wireFinanceIfPresent(){
+ cacherTipFinance();
  const root=$('#finRoot');if(!root)return;
+ root.addEventListener('mousemove',e=>{const el=e.target.closest('[data-fin-tip]');if(el)montrerTipFinance(el,e.clientX,e.clientY);else cacherTipFinance()});
+ root.addEventListener('mouseleave',cacherTipFinance);
  root.addEventListener('click',async e=>{
   const f=e.target.closest('[data-fin-filtre]');if(f){FIN_FILTRE=f.dataset.finFiltre;render();return}
   const o=e.target.closest('[data-fin-open]');if(o){const [kind,id]=o.dataset.finOpen.split(':');FIN_DETAIL={kind,id};render();return}

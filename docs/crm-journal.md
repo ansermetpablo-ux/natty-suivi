@@ -1070,3 +1070,13 @@ Et un piège évité à la relecture : supprimer les zéros finaux par regex aur
 Vérifié au banc (73/73) et dans le navigateur avec un faux PostgREST en écriture : prix de
 la truite 14 €/kg → +19,59 € ; poulet prévu 1,79 → 5 kg → +18,72 € ; 6 kg achetés 51 € →
 matière réelle 90,59 €, pastille « Achats MP » allumée ; sept écritures, toutes au bon endroit.
+
+### Quantité prévue : le détail par repas au survol (26/09, nuit)
+Survoler la quantité prévue d'un aliment (champ et « kg » compris) ouvre une infobulle :
+sa quantité repas par repas (repas = une recette dans une commande), **regroupés quand
+la recette et le grammage par portion sont les mêmes**, avec portions, commandes et
+jours de livraison. Grammage = fiche × coefficient ; recalé sur le total affiché, donc
+juste aussi quand la quantité a été saisie à la main (et c'est dit). Suit le filtre par
+recette. Infobulle en `position:fixed` hors de `.tbl-wrap`, qui la rognerait.
+Vérifié sur les vraies données du 20/09 : poulet = 765 + 514 + 304 + 208 g = les 1,79 kg
+affichés. Banc 79/79 (regroupement, groupes séparés par coefficient, saisie recalée).
