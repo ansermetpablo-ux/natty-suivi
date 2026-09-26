@@ -995,3 +995,13 @@ filtres par recette, surplus au prorata, plats en plus), page commande, 375 px s
 débordement. Un défaut de mise en page corrigé (montants qui passaient à la ligne).
 🔄 Rien avec une vraie session d'équipe ni une vraie pièce : l'analyse IA d'une photo de
 facture n'a pas été jouée.
+
+### Correctif du même soir — où est Opérationnel, et un seul menu ouvert
+Pablo le cherchait sous **Financement** ; il était sous **Finance**, une autre section de
+la barre latérale (trois activités voisines : Finance, Modèle financier, Financement).
+Déplacé : `VUES.financement` porte désormais Opérationnel + Gestion, et Finance redevient
+une activité générique. Le rôle `finance` reçoit l'accès à `financement`, sans quoi il
+aurait perdu le panneau.
+Barre latérale en **accordéon** : `ouvrirSeulGroupe()` replie toutes les sections avant
+d'en déplier une, au clic sur un en-tête comme à la navigation (`go()`). Vérifié :
+Financement ouvert → seul ouvert ; Commercial ensuite → seul ouvert ; re-clic → tout replié.

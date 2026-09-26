@@ -498,7 +498,7 @@ const ACT_BY_CLE={};ACTIVITES.forEach(a=>ACT_BY_CLE[a.cle]=a);
 const ROLES={
  admin:{l:'Admin',toutes:true},
  commercial:{l:'Commercial',acces:['commercial']},
- finance:{l:'Finance',acces:['finance']},
+ finance:{l:'Finance',acces:['finance','financement']},
  partenariat:{l:'Partenariat',acces:['partenariat']},
  developpement:{l:'Développement',acces:['developpement']},
  logistique:{l:'Logistique',acces:['logistique']},
@@ -599,6 +599,16 @@ function nomDe(userId){const s=S.staff.find(x=>x.user_id===userId);return s?s.no
    Production, ses vues propres ; pour les autres, les cinq génériques
    (Aperçu/Tâches/Sous-projets/Schéma/Drive). */
 let NAV_EXPANDED={pilotage:true};
+/* Un seul menu déroulant ouvert à la fois (demande de Pablo, 26/09) :
+   ouvrir une section replie toutes les autres. Les pages de Pilotage
+   (accueil, tâches, RH, projets, page d'un projet) appartiennent au
+   groupe « pilotage ». */
+function groupeDe(id){return ACT_BY_CLE[id]?id:'pilotage'}
+function ouvrirSeulGroupe(cle){
+ NAV_EXPANDED={pilotage:false};
+ ACTIVITES.forEach(a=>NAV_EXPANDED[a.cle]=false);
+ NAV_EXPANDED[cle]=true;
+}
 function badges(){
  const b={taches:S.taches.filter(t=>t.statut!=='fait').length};
  ACTIVITES.forEach(a=>{b[a.cle]=S.taches.filter(t=>t.activite===a.cle&&t.statut!=='fait').length});
@@ -635,7 +645,7 @@ $('#nav')?.addEventListener('click',e=>{
    // simple bascule, pas une navigation — sinon go() reposerait aussitôt
    // NAV_EXPANDED à `true` et la section ne pourrait jamais se refermer.
    const ouvertAvant=NAV_EXPANDED[cle]!=null?NAV_EXPANDED[cle]:(cle==='pilotage');
-   NAV_EXPANDED[cle]=!ouvertAvant;
+   if(ouvertAvant)NAV_EXPANDED[cle]=false;else ouvrirSeulGroupe(cle);
    renderNav();
   }else{
    SUB['vue-'+cle]=vueParDefaut(cle);
@@ -646,7 +656,7 @@ $('#nav')?.addEventListener('click',e=>{
  const n=e.target.closest('.nitem');
  if(n){
   if(n.dataset.vue)SUB['vue-'+n.dataset.m]=n.dataset.vue;
-  if(n.dataset.m==='finance')FIN_DETAIL=null;   // revenir au tableau d'Opérationnel depuis une page de détail
+  if(n.dataset.m==='financement')FIN_DETAIL=null;   // revenir au tableau d'Opérationnel depuis une page de détail
   go(n.dataset.m);
   $('#side').classList.remove('on');
  }
@@ -655,7 +665,7 @@ function go(id){
  if(!can(id)){toast("Ce rôle n'a pas accès à cette activité");return}
  LINK_MODE=false;LINK_FROM=null;   // le mode « relier » ne doit pas survivre à un changement de page
  CUR=id;
- NAV_EXPANDED[id]=true;   // la section qu'on ouvre reste dépliée
+ ouvrirSeulGroupe(groupeDe(id));   // la section qu'on rejoint se déplie, les autres se replient
  renderNav();
  render();
  window.scrollTo(0,0);
@@ -2826,7 +2836,9 @@ const VUES={
  commercial:[['pipeline','Pipe des ventes','commercial'],['profils','Profils','documents'],['comptes','Comptes & contacts','rh'],['emailing','Emailing & phoning','mail'],['prospection','Base de prospection','funnel'],['gestion','Gestion','projet']],
  production:[['dashboard','Tableau de bord','dash'],['commandes','Commandes','logistique'],['calendrier','Calendrier','calendar'],['stocks','Stocks','stocks'],['production','Production','production'],['livraison','Livraison','livraison'],['gestion','Gestion','projet']],
  logistique:[['tournees','Tournées','logistique'],['commandes','Commandes','livraison'],['gestion','Gestion','projet']],
- finance:[['operationnel','Opérationnel','finance'],['gestion','Gestion','projet']]
+ // Opérationnel vit sous « Financement » (demande de Pablo, 26/09) : c'est là
+ // qu'il le cherche ; « Finance » redevient une activité générique.
+ financement:[['operationnel','Opérationnel','finance'],['gestion','Gestion','projet']]
 };
 function vuesGeneriques(cle){
  const base=[['apercu','Aperçu','dash'],['taches','Tâches','taches'],['projets','Sous-projets','projet'],['schema','Schéma','schema'],['drive','Drive','drive']];
@@ -2901,7 +2913,7 @@ async function rendreVueSpecifique(cle,vue){
   if(vue==='tournees')return await vLogistiqueTournees();
   if(vue==='commandes')return await vCommandesLogistique();
  }
- if(cle==='finance'){
+ if(cle==='financement'){
   if(vue==='operationnel')return await vFinanceOperationnel();
  }
  return '<div class="empty">Vue inconnue.</div>';
