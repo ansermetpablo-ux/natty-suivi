@@ -4769,20 +4769,38 @@ async function chargerFinanceGlobal(){
  const filtres=['session_id.in.('+sIds.join(',')+')'];
  if(blocIds.length)filtres.push('bloc_id.in.('+blocIds.join(',')+')');
  const bonsR=await sbTry('bons_commande?or=('+filtres.join(',')+')&statut=neq.annule&select=id,type,nb_repas,bloc_id,session_id,contact_nom,user_id,jour_livraison,statut');
- const bons=bonsR.ok?bonsR.data:[];
+ const bonsLies=bonsR.ok?bonsR.data:[];
+ // Commandes JAMAIS rattachées à une session (ni session_id ni bloc_id) :
+ // une session qui n'en a aucune reçoit, par DÉDUCTION, celles livrées
+ // entre son jour et le jour de la session suivante — une production
+ // précède ses livraisons. Déduites, annoncées comme telles, et un bouton
+ // les rattache pour de bon (`bons_commande.session_id`).
+ const libresR=await sbTry('bons_commande?session_id=is.null&bloc_id=is.null&statut=neq.annule&jour_livraison=not.is.null&select=id,type,nb_repas,bloc_id,session_id,contact_nom,user_id,jour_livraison,statut');
+ const libres=libresR.ok?libresR.data:[];
+ const deduits={};
+ const chrono=[...sessions].sort((a,b)=>(a.jour||'').localeCompare(b.jour||''));
+ const avecLien=new Set(sessions.filter(s=>bonsLies.some(b=>(s.bloc_id&&b.bloc_id===s.bloc_id)||b.session_id===s.id)).map(s=>s.id));
+ libres.forEach(b=>{
+  let cible=null;
+  chrono.forEach((s,i)=>{const suiv=chrono[i+1];if(s.jour&&s.jour<=b.jour_livraison&&(!suiv||!suiv.jour||b.jour_livraison<suiv.jour))cible=s});
+  if(cible&&!avecLien.has(cible.id))(deduits[cible.id]||(deduits[cible.id]=[])).push({...b,deduit:true});
+ });
+ const bons=[...bonsLies,...Object.values(deduits).flat()];
  const bonIds=bons.map(b=>b.id);
  const attrsR=bonIds.length?await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=bon_id,recette_id,nb_portions,facteur,kcal_portion'):{ok:true,data:[]};
  const attrs=attrsR.ok?attrsR.data:[];
  const recIds=[...new Set(attrs.map(a=>a.recette_id))];
  const vide=Promise.resolve({ok:true,data:[]});
- const [ingR,recR,ingBaseR,etR,eqR,factR]=await Promise.all([
+ const [ingR,recR,ingBaseR,etR,eqR,factR,ficheR]=await Promise.all([
   recIds.length?sbTry('recettes_ingredients?recette_id=in.('+recIds.join(',')+')&select=recette_id,ingredient_nom,quantite_g,unite'):vide,
   recIds.length?sbTry('recettes?id=in.('+recIds.join(',')+')&select=id,nom,nb_portions,calories_portion'):vide,
   sbTry('ingredients_base?select=nom,prix_kg_moyen,prix_achat_ht,poids_colis_kg'),
   sbTry('crm_session_etapes?session_id=in.('+sIds.join(',')+')&phase=eq.production&select=session_id,poste,duree_prevue_min,duree_reelle_min'),
   sbTry('crm_session_equipe?session_id=in.('+sIds.join(',')+')&select=*&order=created_at.asc'),
-  sbTry('factures_fournisseur?session_id=in.('+sIds.join(',')+')&select=*&order=date_facture.desc')
+  sbTry('factures_fournisseur?session_id=in.('+sIds.join(',')+')&select=*&order=date_facture.desc'),
+  recIds.length?sbTry('recettes_etapes?recette_id=in.('+recIds.join(',')+')&phase=eq.production&select=recette_id,poste,geste,duree_min'):vide
  ]);
+ const etapesFiche=ficheR.ok?ficheR.data:[];
  const factures=factR.ok?factR.data:[];
  const fIds=factures.map(f=>f.id);
  const lignesR=fIds.length?await sbTry('lignes_facture?facture_id=in.('+fIds.join(',')+')&select=*'):{ok:true,data:[]};
@@ -4794,7 +4812,7 @@ async function chargerFinanceGlobal(){
  const equipe=eqR.ok?eqR.data:[];
  const rawParSession={};
  sessions.forEach(s=>{
-  const bonsS=bons.filter(b=>(s.bloc_id&&b.bloc_id===s.bloc_id)||b.session_id===s.id);
+  const bonsS=deduits[s.id]||bons.filter(b=>(s.bloc_id&&b.bloc_id===s.bloc_id)||b.session_id===s.id);
   const bIds=new Set(bonsS.map(b=>b.id));
   const attrsS=attrs.filter(a=>bIds.has(a.bon_id));
   const recS=new Set(attrsS.map(a=>a.recette_id));
@@ -4805,6 +4823,12 @@ async function chargerFinanceGlobal(){
    recIngredients:recIngredients.filter(i=>recS.has(i.recette_id)),
    ingredientsIndex,
    minutesMapping:minutesDepuisEtapes(etapes.filter(e=>e.session_id===s.id)),
+   // Sans mapping généré : les étapes des FICHES des recettes de la session,
+   // même règle que genererMapping (poste, sinon geste ; 10 min par défaut)
+   // puis le même max par poste — donc le même chiffre que le mapping
+   // donnera une fois généré (aux durées réelles mesurées près).
+   minutesFiches:minutesDepuisEtapes(etapesFiche.filter(e=>recS.has(e.recette_id)).map(e=>({poste:e.poste||e.geste||'—',duree_prevue_min:e.duree_min||10}))),
+   bonsDeduits:!!deduits[s.id],
    equipe:equipe.filter(e=>e.session_id===s.id),
    factures:facturesS,
    lignes:lignes.filter(l=>fS.has(l.facture_id))
@@ -4816,11 +4840,41 @@ async function chargerFinanceGlobal(){
    ÷ poids_colis_kg. Sans les deux, prix inconnu — jamais une valeur devinée. */
 function indexPrixIngredients(rows){
  const idx={};
+ const produits=[];
  rows.forEach(x=>{
   const cle=String(x.nom||'').trim().toLowerCase();
-  idx[cle]=x.prix_kg_moyen!=null?+x.prix_kg_moyen:(x.prix_achat_ht!=null&&x.poids_colis_kg?+x.prix_achat_ht/+x.poids_colis_kg:null);
+  const prix=x.prix_kg_moyen!=null?+x.prix_kg_moyen:(x.prix_achat_ht!=null&&x.poids_colis_kg?+x.prix_achat_ht/+x.poids_colis_kg:null);
+  idx[cle]=prix;
+  if(prix!=null)produits.push({nom:x.nom,mots:motsProduit(x.nom),prix});
  });
+ // Non énumérable : l'index reste un simple dictionnaire nom → prix.
+ Object.defineProperty(idx,'_produits',{value:produits,enumerable:false});
  return idx;
+}
+/* Mots d'un libellé, comparables : sans accent ni ligature (œ ne se
+   décompose pas en NFD, cf. CLAUDE.md §7), sans ponctuation, sans les mots
+   vides ni les quantités (« 1.5kg », « 30g »), au singulier. */
+const MOTS_VIDES=new Set(['de','du','des','la','le','les','a','au','aux','en','et','d','l']);
+function motsProduit(t){
+ return String(t||'').toLowerCase().replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w&&!MOTS_VIDES.has(w)&&!/^\d/.test(w))
+  .map(w=>w.length>3&&/[sx]$/.test(w)?w.slice(0,-1):w);
+}
+/* Le prix d'un ingrédient de fiche : d'abord le nom exact (s'il porte un
+   prix), sinon le produit Metro dont le libellé contient TOUS les mots de
+   l'ingrédient — « poulet » → « Filet de Poulet 1.5kg FR ». Jamais une
+   sous-chaîne (« ail » n'est pas dans « volaille ») ni une correspondance
+   partielle : « huile olive » ne prend pas le prix d'une huile de
+   tournesol, « riz complet » pas celui d'un riz étuvé — ils restent non
+   chiffrés, et l'écran le dit. Entre plusieurs candidats, le libellé le
+   plus court (le moins spécifique) gagne. */
+function prixIngredient(idx,nom){
+ const cle=String(nom||'').trim().toLowerCase();
+ if(idx[cle]!=null)return{prixKg:idx[cle],produit:null};
+ const produits=idx._produits||[];
+ const m=motsProduit(nom);if(!m.length)return{prixKg:null,produit:null};
+ const cands=produits.filter(p=>m.every(w=>p.mots.includes(w))).sort((a,b)=>a.mots.length-b.mots.length);
+ return cands.length?{prixKg:cands[0].prix,produit:cands[0].nom}:{prixKg:null,produit:null};
 }
 
 /* ---- 2. Calcul pur — aucun accès réseau, appelé à chaque frappe ---- */
@@ -4856,7 +4910,7 @@ function calculerFinance(raw,edit){
   total[cle].parRecette[i.recette_id]=(total[cle].parRecette[i.recette_id]||0)+q;
   (ingredientsParRecette[i.recette_id]||(ingredientsParRecette[i.recette_id]=[])).push({nom,unite,gPerPortion:(+i.quantite_g||0)/base});
   const qKg=qteKg(q,unite);
-  const prixKg=qKg!=null?ingredientsIndex[cle]:null;
+  const prixKg=qKg!=null?prixIngredient(ingredientsIndex,nom).prixKg:null;
   const cout=(qKg!=null&&prixKg!=null)?qKg*prixKg:null;
   (detailParRecette[i.recette_id]||(detailParRecette[i.recette_id]=[])).push({nom,unite,q,qKg,prixKg,cout});
   if(cout!=null)coutMatiereParRecette[i.recette_id]=(coutMatiereParRecette[i.recette_id]||0)+cout;
@@ -4867,10 +4921,13 @@ function calculerFinance(raw,edit){
  let coutMatiere=0,ingConnus=0,ingInconnus=0;
  const lignesIngredients=Object.values(total).map(l=>{
   const qKg=qteKg(l.q,l.unite);
-  const prixKg=qKg!=null?ingredientsIndex[l.nom.toLowerCase()]:null;
+  const pi=prixIngredient(ingredientsIndex,l.nom);
+  const prixKg=qKg!=null?pi.prixKg:null;
   const cout=(qKg!=null&&prixKg!=null)?qKg*prixKg:null;
-  if(cout!=null){coutMatiere+=cout;ingConnus++}else ingInconnus++;
-  return {...l,qKg,prixKg,cout};
+  // Une quantité nulle (sel, thym « à discrétion ») ne coûte rien et ne
+  // manque de rien : ni chiffrée ni « inconnue », elle n'entre pas au compte.
+  if(l.q>0){if(cout!=null){coutMatiere+=cout;ingConnus++}else ingInconnus++}
+  return {...l,qKg,prixKg,cout,produit:qKg!=null&&prixKg!=null?pi.produit:null};
  }).sort((a,b)=>(b.cout||0)-(a.cout||0));
  const parRecette=Object.keys(nbPortionsTotal).map(id=>{
   const nb=nbPortionsTotal[id];
@@ -4890,6 +4947,7 @@ function calculerFinance(raw,edit){
  if(edit.heures!=null)heures=edit.heures;
  else if(s.heures_cuisine_override!=null)heures=+s.heures_cuisine_override;
  else if(minutesMapping!=null){heures=heuresDepuisMinutes(minutesMapping);sourceHeures='mapping'}
+ else if(raw.minutesFiches!=null){heures=heuresDepuisMinutes(raw.minutesFiches);sourceHeures='fiches'}
  else sourceHeures='inconnu';
  const coutLocation=heures!=null?heures*tarifCuisineH:0;
  // Équipe de cuisine : nb × taux × heures prévues (les heures de la
@@ -5088,9 +5146,9 @@ function lignesTableauFinance(global,filtre){
    const q=produits[p.id]||(produits[p.id]={nom:p.nom,ca:0,cout:0});
    if(filtre==='session'){q.ca+=reelOk?p.caReel:p.ca;q.cout+=reelOk?p.coutReel:p.cout}
   });
-  if(filtre==='session')lignes.push({kind:'session',id:s.id,session:s,repas:b.calc.totalRepas,...b.affiche,liens:b.liens});
+  if(filtre==='session')lignes.push({kind:'session',id:s.id,session:s,repas:b.calc.totalRepas,...b.affiche,liens:b.liens,deduit:raw.bonsDeduits});
   else b.bonsDet.forEach(d=>{
-   lignes.push({kind:'commande',id:d.bon.id,session:s,bon:d.bon,repas:d.bon.nb_repas||0,...d.affiche,liens:b.liens});
+   lignes.push({kind:'commande',id:d.bon.id,session:s,bon:d.bon,repas:d.bon.nb_repas||0,...d.affiche,liens:b.liens,deduit:!!d.bon.deduit});
    const nbP=d.attrs.reduce((t,a)=>t+(a.nb_portions||0),0)||1;
    d.attrs.forEach(a=>{
     const p=b.parProduit[a.recette_id];if(!p)return;
@@ -5125,7 +5183,7 @@ function tableauFinanceHtml(t,filtre){
  const libSess=s=>`${fd(s.jour)} · ${s.type==='mise_en_place'?'Mise en place':'Production'}`;
  const rows=t.lignes.map(l=>`<tr class="rowc" data-fin-open="${l.kind}:${l.id}">
   <td>${l.kind==='session'?libSess(l.session):esc(l.bon.contact_nom||('Commande '+(l.bon.type||'')))+`<div class="muted" style="font-size:11.5px">${libSess(l.session)}</div>`}</td>
-  <td class="num">${l.repas}</td>
+  <td class="num">${l.repas}${l.deduit?' <span class="chip warn" title="Commandes prises par déduction (livrées avant la session suivante), pas encore rattachées">déduit</span>':''}</td>
   <td class="num">${fmtEur(l.ca)}</td>
   <td class="num">${fmtEur(l.cout)}</td>
   <td class="num" style="color:${couleurRes(l.res)};font-weight:600">${signeEur(l.res)} <span class="muted" style="font-weight:400;font-size:11px">${l.nature}</span></td>
@@ -5163,7 +5221,7 @@ function detailColonnesHtml(b){
  const src=s=>s==='facture'?'facture':s==='saisi'?'saisi':s==='partiel'?'réel partiel, complété par le prévu':s==='aucune'?'aucune équipe':'⚠ prévu, pièce manquante';
  const gauche=carteLignes('Coûts prévisionnels',[
   ['Matières premières',fmtEur(c.coutMatiere),`${c.ingConnus}/${c.ingConnus+c.ingInconnus} chiffrées`],
-  ['Location cuisine',fmtEur(c.coutLocation),c.heures!=null?`${c.heures} h × ${fmtEur(c.tarifCuisineH)}`:'heures inconnues'],
+  ['Location cuisine',fmtEur(c.coutLocation),c.heures!=null?`${c.heures} h × ${fmtEur(c.tarifCuisineH)}${c.sourceHeures==='fiches'?' · estimées depuis les fiches':c.sourceHeures==='mapping'?' · mapping':''}`:'heures inconnues'],
   ['Équipe de cuisine',fmtEur(c.coutEquipe),`${c.equipe.reduce((t,e)=>t+e.nb,0)} cuisinier(s)`]
  ],'Total',fmtEur(c.coutTotal))+carteLignes('Recettes prévisionnelles',[
   [`${c.nbAbo} repas abonnement`,fmtEur(c.nbAbo*c.prixAbo),`× ${fmtEur(c.prixAbo)}`],
@@ -5218,7 +5276,7 @@ function facteursFormHtml(calc){
  <p class="muted" style="font-size:12px;margin:8px 0 12px">Recalcule en direct. Rien n'est écrit en base tant que « Valider » n'est pas cliqué.</p>
  <div class="form" style="margin-top:0">
  <div class="two">
-  <label>Heures de cuisine${calc.sourceHeures==='mapping'?` <span class="muted" style="font-weight:400">(calculé depuis le mapping : ${calc.heures} h — souvent optimiste)</span>`:calc.sourceHeures==='inconnu'?' <span class="muted" style="font-weight:400">(aucun mapping — saisis une valeur)</span>':''}
+  <label>Heures de cuisine${calc.sourceHeures==='fiches'?` <span class="muted" style="font-weight:400">(estimé depuis les étapes des fiches : ${calc.heures} h)</span>`:calc.sourceHeures==='mapping'?` <span class="muted" style="font-weight:400">(calculé depuis le mapping : ${calc.heures} h — souvent optimiste)</span>`:calc.sourceHeures==='inconnu'?' <span class="muted" style="font-weight:400">(aucun mapping — saisis une valeur)</span>':''}
    <input class="inp" id="finHeuresInput" type="number" min="0" step="0.5" value="${calc.heures??''}" placeholder="ex. 4">
   </label>
   <label>Repas facturés à ${fmtEur(calc.prixUnite)} (le reste à ${fmtEur(calc.prixAbo)})
@@ -5248,18 +5306,18 @@ function surplusHtml(b){
   const achat=rp&&rp.achatParIngredient[l.nom.toLowerCase()];
   const qAch=achat&&achat.qKg?achat.qKg*part:null,pAch=achat?achat.prixTotal*part:null;
   const pPrev=qRec!=null&&l.prixKg!=null?qRec*l.prixKg:null;
-  const r={nom:l.nom,unite:l.unite,qPrev:qRec,qBrut:rec==='tout'?l.q:(l.parRecette[rec]||0),pPrev,qAch,pAch,eQ:qAch!=null&&qRec!=null?qAch-qRec:null,
+  const r={nom:l.nom,produit:l.produit,unite:l.unite,qPrev:qRec,qBrut:rec==='tout'?l.q:(l.parRecette[rec]||0),pPrev,qAch,pAch,eQ:qAch!=null&&qRec!=null?qAch-qRec:null,
   // L'écart de PRIX est un écart au kilo : l'effet quantité est déjà dans
   // l'écart de quantité, les additionner compterait deux fois le surplus.
   pkPrev:l.prixKg,pkAch:achat&&achat.qKg?achat.prixKgConnu/achat.qKg:null};
   r.eP=r.pkAch!=null&&r.pkPrev!=null?r.pkAch-r.pkPrev:null;
   return r;
- }).filter(Boolean);
+ }).filter(r=>r&&r.qBrut>0);
  const bonus=rp?rp.recettesBonus.filter(r=>rec==='tout'||r.recId===rec):[];
  return `<div class="card" style="margin-bottom:16px">
  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;font-size:14px">Matières premières — prévu vs acheté</h3>${selectRecetteHtml('surplus',c,rec)}</div>
  <div class="tbl-wrap"><table><thead><tr><th>Aliment</th><th>Qté prévue</th><th>Prix prévu</th><th>Qté achetée</th><th>Prix payé</th><th>Écart qté</th><th>Écart prix (€/kg)</th></tr></thead><tbody>${lignes.map(l=>`<tr>
-  <td>${esc(l.nom)}</td>
+  <td>${esc(l.nom)}${l.produit?`<div class="muted" style="font-size:11px">prix : ${esc(l.produit)}</div>`:''}</td>
   <td class="num">${l.qPrev!=null?fmtQte(l.qPrev):(Math.round(l.qBrut*10)/10)+' '+esc(l.unite)}</td>
   <td class="num">${l.pPrev!=null?fmtEur(l.pPrev)+`<div class="muted" style="font-size:11px">${fmtEur(l.pkPrev)}/kg</div>`:'<span class="muted">prix inconnu</span>'}</td>
   <td class="num">${l.qAch!=null?fmtQte(l.qAch):'<span class="muted">—</span>'}</td>
@@ -5283,7 +5341,7 @@ function analytiqueHtml(b){
  const src=rec==='tout'?c.lignesIngredients:(c.detailParRecette[rec]||[]);
  const lignes=src.map(l=>({nom:l.nom,cout:l.cout,qKg:l.qKg,q:l.q,unite:l.unite})).sort((a,b)=>(b.cout||0)-(a.cout||0));
  const tot=lignes.reduce((t,l)=>t+(l.cout||0),0);
- const chif=lignes.filter(l=>l.cout!=null),sans=lignes.filter(l=>l.cout==null);
+ const chif=lignes.filter(l=>l.cout!=null),sans=lignes.filter(l=>l.cout==null&&l.q>0);
  return `<div class="card" style="margin-bottom:16px"><h3 style="margin:0 0 10px;font-size:14px">Analytique des charges par poste</h3>
  <div style="display:grid;gap:12px">${postes.map(p=>`<div><div style="font-size:12.5px;font-weight:600;margin-bottom:4px">${p[0]} <span class="muted" style="font-weight:400">· ${c.coutTotal?Math.round(p[1]/c.coutTotal*100):0} % du prévu</span></div>
   ${barres([{label:'Prévu',droite:fmtEur(p[1]),val:p[1],couleur:p[3]},{label:'Réel',droite:fmtEur(p[2]),val:p[2],couleur:p[2]>p[1]?'var(--red)':'var(--green)'}],maxP)}</div>`).join('')}</div></div>
@@ -5294,8 +5352,14 @@ function analytiqueHtml(b){
  ${sans.length?`<p class="muted" style="font-size:12px;margin:10px 0 0">Non chiffrés (prix inconnu, ou unité autre que g/kg) : ${sans.map(l=>esc(l.nom)).join(', ')}.</p>`:''}
  </div>`;
 }
+function bandeauDeduitHtml(raw){
+ if(!raw.bonsDeduits)return'';
+ const n=raw.bons.length,rep=raw.bons.reduce((t,b)=>t+(b.nb_repas||0),0);
+ const jours=[...new Set(raw.bons.map(b=>b.jour_livraison))].sort().map(fd).join(', ');
+ return `<div class="exbar" style="border-color:var(--amber);color:var(--amber);background:var(--amber-bg)"><span class="chip warn">déduit</span><span>Aucune commande n'est rattachée à cette session : ${n} commande${n>1?'s':''} (${rep} repas, livrée${n>1?'s':''} le ${jours}) ${n>1?'sont prises':'est prise'} par déduction — celles livrées entre ce jour de production et la session suivante.</span><button class="btn sm" type="button" data-fin-rattacher style="margin-left:auto;flex:0 0 auto">Rattacher à cette session</button></div>`;
+}
 function renderSessionLive(b){
- return heroDetailHtml(b,'Session du '+fd(b.calc.session.jour))+detailColonnesHtml(b)+
+ return bandeauDeduitHtml(FIN_DONNEES)+heroDetailHtml(b,'Session du '+fd(b.calc.session.jour))+detailColonnesHtml(b)+
   (b.calc.bonsNonAttribues.length?`<div class="exbar"><span class="chip warn">${b.calc.bonsNonAttribues.length}</span><span>commande(s) sans recette attribuée — comptée(s) dans le CA mais PAS dans le coût matière : la marge est surestimée pour ces repas.</span></div>`:'');
 }
 function renderSessionBas(b){return surplusHtml(b)+analytiqueHtml(b)}
@@ -5398,6 +5462,19 @@ async function validerFacteursFinance(){
  }
  toast('Modifications validées — production mise à jour');
  FIN_EDIT={...editVide(),equipe:FIN_EDIT.equipe};
+ render();
+}
+/* Rend la déduction définitive : les commandes prises par déduction
+   reçoivent session_id, puis le mapping est généré (heures réelles de
+   cuisine, écran tablette) — le même chemin que « À planifier ». */
+async function rattacherBonsDeduits(){
+ if(!FIN_DONNEES||!FIN_DONNEES.bonsDeduits)return;
+ const ids=FIN_DONNEES.bons.map(b=>b.id);
+ if(!confirm('Rattacher '+ids.length+' commande(s) à la session du '+fd(FIN_DONNEES.session.jour)+' ? Elles quitteront « À planifier » et le mapping de la session sera généré.'))return;
+ try{await sb('bons_commande?id=in.('+ids.join(',')+')',{method:'PATCH',body:JSON.stringify({session_id:FIN_SESSION})})}
+ catch(e){toast('Rattachement refusé : '+String(e.message||e).slice(0,120));return}
+ toast('Commandes rattachées — génération du mapping…');
+ await genererMapping(FIN_SESSION);
  render();
 }
 async function enregistrerChampEquipe(inp){
@@ -5588,6 +5665,7 @@ function wireFinanceIfPresent(){
   const f=e.target.closest('[data-fin-filtre]');if(f){FIN_FILTRE=f.dataset.finFiltre;render();return}
   const o=e.target.closest('[data-fin-open]');if(o){const [kind,id]=o.dataset.finOpen.split(':');FIN_DETAIL={kind,id};render();return}
   if(e.target.closest('[data-fin-retour]')){FIN_DETAIL=null;render();return}
+  if(e.target.closest('[data-fin-rattacher]')){await rattacherBonsDeduits();return}
   const d=e.target.closest('[data-del-eq]');
   if(d){if(!confirm('Retirer ce poste de l’équipe ?'))return;await sb('crm_session_equipe?id=eq.'+d.dataset.delEq,{method:'DELETE'});delete FIN_EDIT.equipe[d.dataset.delEq];render();return}
   const of=e.target.closest('[data-ouvrir-facture]');if(of){ouvrirFactureDetail(of.dataset.ouvrirFacture);return}

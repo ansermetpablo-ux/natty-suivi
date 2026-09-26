@@ -1005,3 +1005,26 @@ aurait perdu le panneau.
 Barre latérale en **accordéon** : `ouvrirSeulGroupe()` replie toutes les sections avant
 d'en déplier une, au clic sur un en-tête comme à la navigation (`go()`). Vérifié :
 Financement ouvert → seul ouvert ; Commercial ensuite → seul ouvert ; re-clic → tout replié.
+
+### Correctif — les cases vides d'une session sans commande rattachée (26/09, soir)
+Capture de Pablo : session du 20/09 à 0 partout. Deux causes, trouvées en rejouant la page
+sur un instantané des vraies données (`_test-finance-reel.html`, hors dépôt) :
+1. **Aucune commande n'a de `session_id`** : les deux sessions ont été créées sans passer
+   par « À planifier ». Une session sans commande rattachée prend désormais, **par
+   déduction**, les commandes actives livrées entre son jour et celui de la session
+   suivante (20/09 → livraisons des 21 et 22 ; 26/09 → du 28). Bandeau « déduit » et chip
+   dans le tableau ; le bouton « Rattacher à cette session » écrit `session_id` puis
+   génère le mapping — le même chemin que « À planifier ».
+2. **Aucune matière n'était chiffrée même avec les commandes** : les fiches disent
+   « poulet », les prix Metro sont sous « Filet de Poulet 1.5kg FR ». `prixIngredient()`
+   rapproche MOT À MOT (tous les mots de l'ingrédient dans le libellé Metro, sans accent,
+   ligature, pluriel, mot vide ni quantité), jamais en sous-chaîne ni partiellement :
+   « huile olive » ne prend pas le prix d'une huile Puget, « riz complet » pas celui d'un
+   riz étuvé, « cuisse de poulet » pas celui d'un filet. Le produit retenu est écrit sous
+   l'aliment. Les quantités nulles (sel, thym) ne comptent plus comme « non chiffrées ».
+Et **les heures sans mapping** : estimées depuis les étapes des fiches, même règle que
+`genererMapping` (poste sinon geste, 10 min par défaut, max par poste).
+Mesuré sur les vraies données : 20/09 → 14 repas, 141 € de CA, 38,94 € de matières
+(15/26 chiffrées), 4 h ; 26/09 → 53 repas. Les 11 ingrédients restants (truite, bœuf
+haché, riz complet, huile d'olive…) n'ont aucun prix Metro en base — c'est une donnée à
+compléter, pas un calcul à forcer. Banc 57/57 (10 contrôles de rapprochement).
