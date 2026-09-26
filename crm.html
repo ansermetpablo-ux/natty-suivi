@@ -4752,6 +4752,7 @@ let FIN_DETAIL=null;                 // null | {kind:'session'|'commande', id}
 let FIN_SESSION=null, FIN_DONNEES=null;
 let FIN_EDIT={heures:null,nbUnite:null,facteurs:{},equipe:{}};
 let FIN_ANA_REC='tout', FIN_SURPLUS_REC='tout';
+const FOURNISSEUR_MANUEL='Saisie manuelle';   // la pièce MP créée par la saisie du tableau des matières
 const CATEGORIES_PIECE={mp:'Achats matières premières',cuisine:'Cuisine (location, équipe)',vente:'Vente'};
 function editVide(){return{heures:null,nbUnite:null,nbAbo:null,tarifCuisine:null,facteurs:{},equipe:{}}}
 
@@ -4899,13 +4900,23 @@ function calculerFinance(raw,edit){
  // Ingrédients : agrégés pour TOUTE la session, et détaillés par recette
  // (chiffrés — pour l'analytique « poids de chaque aliment par recette »).
  const total={},ingredientsParRecette={},detailParRecette={},coutMatiereParRecette={};
+ // Quantités prévues saisies à la main dans le tableau des matières
+ // (crm_sessions.mp_prevu_override = {aliment: kg}) : un RATIO par aliment,
+ // appliqué à chaque recette qui l'utilise — le total vaut la saisie et la
+ // répartition entre recettes garde la proportion des fiches.
+ const ovQ=s.mp_prevu_override||{},ratio={};
+ if(Object.keys(ovQ).length){
+  const brut={};
+  recIngredients.forEach(i=>{const rec=recettesById[i.recette_id];if(!rec)return;const c=String(i.ingredient_nom||'').trim().toLowerCase();const k=qteKg((+i.quantite_g||0)*(portionsEq[i.recette_id]||0)/(rec.nb_portions||1),(i.unite||'g').trim().toLowerCase());if(k!=null)brut[c]=(brut[c]||0)+k});
+  Object.entries(ovQ).forEach(([c,kg])=>{if(kg!=null&&brut[c]>0)ratio[c]=+kg/brut[c]});
+ }
  recIngredients.forEach(i=>{
   const rec=recettesById[i.recette_id];if(!rec)return;
   const base=rec.nb_portions||1;
   const unite=(i.unite||'g').trim().toLowerCase();
   const nom=String(i.ingredient_nom||'').trim();
   const cle=nom.toLowerCase();
-  const q=(+i.quantite_g||0)*(portionsEq[i.recette_id]||0)/base;
+  const q=(+i.quantite_g||0)*(portionsEq[i.recette_id]||0)/base*(ratio[cle]??1);
   if(!total[cle])total[cle]={nom,unite,q:0,parRecette:{}};
   total[cle].q+=q;
   total[cle].parRecette[i.recette_id]=(total[cle].parRecette[i.recette_id]||0)+q;
@@ -4928,7 +4939,7 @@ function calculerFinance(raw,edit){
   // Une quantité nulle (sel, thym « à discrétion ») ne coûte rien et ne
   // manque de rien : ni chiffrée ni « inconnue », elle n'entre pas au compte.
   if(l.q>0){if(cout!=null){coutMatiere+=cout;ingConnus++}else ingInconnus++}
-  return {...l,qKg,prixKg,cout,produit:qKg!=null&&prixKg!=null?pi.produit:null};
+  return {...l,qKg,prixKg,cout,produit:qKg!=null&&prixKg!=null?pi.produit:null,qSaisie:ratio[l.nom.toLowerCase()]!=null};
  }).sort((a,b)=>(b.cout||0)-(a.cout||0));
  const parRecette=Object.keys(nbPortionsTotal).map(id=>{
   const nb=nbPortionsTotal[id];
@@ -5003,17 +5014,25 @@ function rapprochementFacture(calc,lignesFacture){
  // Regroupe les lignes par nom exact insensible à la casse — pas de
  // correspondance approximative, elle ferait disparaître un écart à tort.
  const achatParIngredient={};
+ // Un aliment saisi à la main dans le tableau des matières : sa ligne
+ // manuelle REMPLACE les lignes de factures pour lui (sinon on compterait
+ // deux fois le même achat).
+ const cleL=l=>(l.ingredient_match||l.designation||'').trim().toLowerCase();
+ const manuels=new Set(lignesFacture.filter(l=>l._manuel).map(cleL));
  lignesFacture.forEach(l=>{
   const nom=(l.ingredient_match||l.designation||'').trim();if(!nom)return;
   const cle=nom.toLowerCase();
-  if(!achatParIngredient[cle])achatParIngredient[cle]={nom,qKg:0,prixTotal:0,prixKgConnu:0};
+  if(manuels.has(cle)&&!l._manuel)return;
+  if(!achatParIngredient[cle])achatParIngredient[cle]={nom,qKg:0,prixTotal:0,prixKgConnu:0,qKgPrix:0,manuel:manuels.has(cle)};
   const qte=+l.quantite||0;
-  const prixTot=l.prix_total!=null?+l.prix_total:(l.prix_unitaire!=null?+l.prix_unitaire*qte:0);
-  achatParIngredient[cle].prixTotal+=prixTot;
+  // Un prix absent n'est pas un prix nul : la quantité compte (surplus),
+  // le prix au kilo ne se calcule que sur les lignes qui en portent un.
+  const prixTot=l.prix_total!=null?+l.prix_total:(l.prix_unitaire!=null?+l.prix_unitaire*qte:null);
+  if(prixTot!=null)achatParIngredient[cle].prixTotal+=prixTot;
   const k=qteKg(qte,l.unite);
-  if(k!=null){achatParIngredient[cle].qKg+=k;achatParIngredient[cle].prixKgConnu+=prixTot}
+  if(k!=null){achatParIngredient[cle].qKg+=k;if(prixTot!=null){achatParIngredient[cle].prixKgConnu+=prixTot;achatParIngredient[cle].qKgPrix+=k}}
  });
- const prixKgReelDe=cle=>{const a=achatParIngredient[cle];return a&&a.qKg>0?a.prixKgConnu/a.qKg:null};
+ const prixKgReelDe=cle=>{const a=achatParIngredient[cle];return a&&a.qKgPrix>0?a.prixKgConnu/a.qKgPrix:null};
  const ecarts=calc.lignesIngredients.filter(l=>l.qKg!=null&&l.prixKg!=null).map(l=>{
   const pr=prixKgReelDe(l.nom.toLowerCase());if(pr==null)return null;
   return {nom:l.nom,prixKgPrevu:l.prixKg,prixKgReel:pr,ecart:pr-l.prixKg,ecartPct:l.prixKg?(pr-l.prixKg)/l.prixKg*100:null};
@@ -5073,7 +5092,8 @@ function bilanSession(raw,edit){
  const calc=calculerFinance(raw,edit);
  if(!calc)return null;
  const factures=raw.factures||[];
- const lignesMp=(raw.lignes||[]).filter(l=>{const f=factures.find(x=>x.id===l.facture_id);return f&&(f.categorie||'mp')==='mp'});
+ const lignesMp=(raw.lignes||[]).filter(l=>{const f=factures.find(x=>x.id===l.facture_id);return f&&(f.categorie||'mp')==='mp'})
+  .map(l=>{const f=factures.find(x=>x.id===l.facture_id);return f.fournisseur===FOURNISSEUR_MANUEL?{...l,_manuel:true}:l});
  const rappro=rapprochementFacture(calc,lignesMp);
  const pMp=montantPieces(factures,'mp'),pCui=montantPieces(factures,'cuisine'),pVen=montantPieces(factures,'vente');
  // Les trois liens — la pastille vert foncé ne s'allume que si les trois
@@ -5354,7 +5374,7 @@ function surplusHtml(b){
   const r={nom:l.nom,produit:l.produit,unite:l.unite,qPrev:qRec,qBrut:rec==='tout'?l.q:(l.parRecette[rec]||0),pPrev,qAch,pAch,eQ:qAch!=null&&qRec!=null?qAch-qRec:null,
   // L'écart de PRIX est un écart au kilo : l'effet quantité est déjà dans
   // l'écart de quantité, les additionner compterait deux fois le surplus.
-  pkPrev:l.prixKg,pkAch:achat&&achat.qKg?achat.prixKgConnu/achat.qKg:null};
+  pkPrev:l.prixKg,pkAch:achat&&achat.qKgPrix?achat.prixKgConnu/achat.qKgPrix:null,manuel:!!(achat&&achat.manuel),qSaisie:l.qSaisie};
   r.eP=r.pkAch!=null&&r.pkPrev!=null?r.pkAch-r.pkPrev:null;
   return r;
  }).filter(r=>r&&r.qBrut>0);
@@ -5363,17 +5383,68 @@ function surplusHtml(b){
  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;font-size:14px">Matières premières — prévu vs acheté</h3>${selectRecetteHtml('surplus',c,rec)}</div>
  <div class="tbl-wrap"><table><thead><tr><th>Aliment</th><th>Qté prévue</th><th>Prix prévu</th><th>Qté achetée</th><th>Prix payé</th><th>Écart qté</th><th>Écart prix (€/kg)</th></tr></thead><tbody>${lignes.map(l=>`<tr>
   <td>${esc(l.nom)}${l.produit?`<div class="muted" style="font-size:11px">prix : ${esc(l.produit)}</div>`:''}</td>
+  ${saisissable(l)?`
+  <td class="num">${champMp(l,'qte',l.qPrev,0.001,'kg')}${l.qSaisie?'<div style="font-size:10.5px;color:var(--amber)">✎ saisi</div>':''}</td>
+  <td class="num">${champMp(l,'prix',l.pkPrev,0.01,'€/kg')}<div class="muted" style="font-size:11px">${l.pPrev!=null?fmtEur(l.pPrev):'prix inconnu'}</div></td>
+  <td class="num">${champMp(l,'achat',l.qAch,0.001,'kg')}</td>
+  <td class="num">${champMp(l,'paye',l.pAch,0.01,'€')}${l.pkAch!=null?`<div class="muted" style="font-size:11px">${fmtEur(l.pkAch)}/kg</div>`:''}${l.manuel?'<div style="font-size:10.5px;color:var(--amber)">✎ saisi</div>':''}</td>`:`
   <td class="num">${l.qPrev!=null?fmtQte(l.qPrev):(Math.round(l.qBrut*10)/10)+' '+esc(l.unite)}</td>
   <td class="num">${l.pPrev!=null?fmtEur(l.pPrev)+`<div class="muted" style="font-size:11px">${fmtEur(l.pkPrev)}/kg</div>`:'<span class="muted">prix inconnu</span>'}</td>
   <td class="num">${l.qAch!=null?fmtQte(l.qAch):'<span class="muted">—</span>'}</td>
-  <td class="num">${l.pAch!=null?fmtEur(l.pAch)+(l.pkAch!=null?`<div class="muted" style="font-size:11px">${fmtEur(l.pkAch)}/kg</div>`:''):'<span class="muted">—</span>'}</td>
+  <td class="num">${l.pAch!=null?fmtEur(l.pAch)+(l.pkAch!=null?`<div class="muted" style="font-size:11px">${fmtEur(l.pkAch)}/kg</div>`:''):'<span class="muted">—</span>'}</td>`}
   <td class="num" style="color:${l.eQ==null?'':l.eQ>=0?'var(--green)':'var(--red)'}">${l.eQ!=null?(l.eQ>=0?'+':'−')+fmtQte(Math.abs(l.eQ)):'—'}</td>
   <td class="num" style="color:${l.eP==null?'':l.eP<=0?'var(--green)':'var(--red)'}">${l.eP!=null?(l.eP>=0?'+':'−')+fmtEur(Math.abs(l.eP))+'/kg'+(l.pkPrev?` <span style="font-size:11px">(${l.eP>=0?'+':'−'}${Math.round(Math.abs(l.eP)/l.pkPrev*100)} %)</span>`:''):'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="muted" style="text-align:center;padding:14px">Aucune matière pour ce filtre.</td></tr>'}</tbody></table></div>
+ <p class="muted" style="font-size:11.5px;margin:6px 0 0">${rec==='tout'?'Les cases se saisissent à la main (enregistrées à la sortie du champ) : la quantité prévue vaut pour cette session, le prix prévu devient le prix de référence de l\'aliment pour toutes les sessions, la quantité achetée et le prix payé forment la pièce « Saisie manuelle » — qui remplace les factures pour cet aliment. Case vidée = retour au calcul.':'Pour saisir à la main, repasse sur « Toute la session ».'}</p>
  ${rec!=='tout'&&rp?'<p class="muted" style="font-size:11.5px;margin:6px 0 0">Par recette, l\'achat est réparti au prorata du besoin de chaque recette : une facture ne dit pas à quelle recette un kilo était destiné.</p>':''}
  ${!rp?'<p class="muted" style="font-size:12px;margin:8px 0 0">Aucun achat de matières avec lignes pour cette session — ajoute une pièce « Achats matières premières » et analyse-la (ou saisis ses lignes) pour remplir les colonnes réelles.</p>':''}
  <h3 style="margin:16px 0 8px;font-size:14px">Plats réalisables en plus avec le surplus acheté</h3>
  ${!rp?'<div class="empty">Pas d\'achats relevés — rien à calculer.</div>':bonus.length?`<div class="list">${bonus.map(r=>`<div class="li"><div class="grow">${esc(r.nom)}<div class="meta">${r.bonus>0?`à ${Math.round(r.gPortion*1000)} g par portion (fiche × facteur moyen) · limité par ${esc(r.limitant)}`:`impossible à chiffrer : pas de surplus relevé pour ${esc(r.manquant||'un ingrédient')}`}</div></div><span class="chip ${r.bonus>0?'ok':''}">${r.bonus>0?'× '+r.bonus:'0'}</span></div>`).join('')}</div><p class="muted" style="font-size:11.5px;margin:6px 0 0">Chaque recette est calculée seule sur tout le surplus : les plats en plus ne se cumulent pas d'une recette à l'autre.</p>`:'<div class="empty">Aucune recette pour ce filtre.</div>'}
  </div>`;
+}
+/* Saisie à la main du tableau des matières : seulement sur la vue de toute
+   la session (la vue par recette est un prorata, la saisir n'aurait pas de
+   sens) et pour les aliments en g/kg (un prix au kilo ne se compare pas à
+   une pièce ou à un volume sans inventer une conversion). */
+function saisissable(l){return FIN_SURPLUS_REC==='tout'&&l.qPrev!=null&&FIN_DETAIL&&FIN_DETAIL.kind==='session'}
+function champMp(l,champ,val,pas,unite){
+ const v=val==null?'':String(+(Math.round(val/pas)*pas).toFixed(pas<0.01?3:2));   // 100 reste 100, 1.500 devient 1.5
+ return `<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><input class="inp fin-mp" data-mp="${champ}" data-nom="${esc(l.nom)}" type="number" min="0" step="${pas}" value="${v}" style="width:84px;padding:4px 6px;text-align:right"><small class="muted">${unite}</small></span>`;
+}
+/* Les quatre écritures du tableau. Toutes s'enregistrent à la sortie du
+   champ puis rechargent le panneau : les postes de coûts (prévus et réels)
+   se recalculent depuis ce que dit la base. */
+async function enregistrerCaseMp(inp){
+ if(!FIN_DONNEES)return;
+ const champ=inp.dataset.mp,nom=inp.dataset.nom,cle=nom.toLowerCase();
+ const v=inp.value===''?null:Math.max(0,+inp.value);
+ try{
+  if(champ==='qte'){
+   const ov={...(FIN_DONNEES.session.mp_prevu_override||{})};
+   if(v==null)delete ov[cle];else ov[cle]=v;
+   await sb('crm_sessions?id=eq.'+FIN_SESSION,{method:'PATCH',body:JSON.stringify({mp_prevu_override:Object.keys(ov).length?ov:null})});
+  }else if(champ==='prix'){
+   // Le prix de référence de l'aliment, pour toutes les sessions : sur la
+   // ligne de même nom si elle existe, sinon une ligne créée à son nom.
+   const ex=await sbTry('ingredients_base?nom=ilike.'+encodeURIComponent(nom.replace(/[%_*]/g,''))+'&select=id&limit=1');
+   const id=ex.ok&&ex.data[0]&&ex.data[0].id;
+   if(id)await sb('ingredients_base?id=eq.'+id,{method:'PATCH',body:JSON.stringify({prix_kg_moyen:v,updated_at:new Date().toISOString()})});
+   else if(v!=null)await sb('ingredients_base',{method:'POST',body:JSON.stringify({nom,nom_normalise:cle,prix_kg_moyen:v})});
+  }else{
+   // Quantité achetée / prix payé : une ligne par aliment dans LA pièce
+   // « Saisie manuelle » de la session, créée au premier besoin.
+   let f=(FIN_DONNEES.factures||[]).find(x=>x.fournisseur===FOURNISSEUR_MANUEL&&(x.categorie||'mp')==='mp');
+   if(!f){const r=await sb('factures_fournisseur',{method:'POST',body:JSON.stringify({session_id:FIN_SESSION,categorie:'mp',fournisseur:FOURNISSEUR_MANUEL,date_facture:FIN_DONNEES.session.jour,statut:'traite'})});f=r[0]}
+   const ligne=(FIN_DONNEES.lignes||[]).find(l=>l.facture_id===f.id&&(l.ingredient_match||'').toLowerCase()===cle);
+   const q=champ==='achat'?v:(ligne?ligne.quantite:null),pt=champ==='paye'?v:(ligne?ligne.prix_total:null);
+   const corps={quantite:q,unite:'kg',prix_total:pt,prix_unitaire:q&&pt!=null?Math.round(pt/q*10000)/10000:null};
+   if(q==null&&pt==null){if(ligne)await sb('lignes_facture?id=eq.'+ligne.id,{method:'DELETE'})}
+   else if(ligne)await sb('lignes_facture?id=eq.'+ligne.id,{method:'PATCH',body:JSON.stringify(corps)});
+   else await sb('lignes_facture',{method:'POST',body:JSON.stringify({facture_id:f.id,designation:nom,ingredient_match:nom,...corps})});
+   await recalculerTotauxFacture(f.id);
+  }
+  toast('Enregistré — coûts recalculés');
+ }catch(e){toast('Échec de l’enregistrement : '+String(e.message||e).slice(0,110));return}
+ render();
 }
 function barres(items,max){
  return `<div style="display:grid;gap:8px">${items.map(p=>`<div><div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-bottom:3px"><span>${p.label}</span><span class="mono">${p.droite}</span></div><div class="bar" style="margin-top:0"><i style="width:${max?Math.min(100,p.val/max*100):0}%;background:${p.couleur||'var(--ink)'}"></i></div></div>`).join('')}</div>`;
@@ -5739,6 +5810,7 @@ function wireFinanceIfPresent(){
  root.addEventListener('change',e=>{
   if(e.target.matches('.fin-eq'))enregistrerChampEquipe(e.target);
   if(e.target.matches('.fin-repas'))enregistrerRepasSession();
+  if(e.target.matches('.fin-mp'))enregistrerCaseMp(e.target);
   if(e.target.matches('[data-fin-rec]')){if(e.target.dataset.finRec==='ana')FIN_ANA_REC=e.target.value;else FIN_SURPLUS_REC=e.target.value;
    if(FIN_DETAIL&&FIN_DETAIL.kind==='session')recalculerFinanceLive();else render()}
  });

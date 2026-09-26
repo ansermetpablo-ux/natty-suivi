@@ -1047,3 +1047,26 @@ compléter, pas un calcul à forcer. Banc 57/57 (10 contrôles de rapprochement)
   tapant « 12 » caractère par caractère sur l'élément réellement focalisé (un premier
   essai écrivait dans l'ancien champ détaché — piège de banc, pas du code).
 Banc 66/66.
+
+### Le tableau des matières se saisit à la main (26/09, nuit)
+Demande de Pablo : saisir le tableau des MP à la main, et que les postes de coûts suivent.
+Sur « Toute la session », les quatre colonnes deviennent des champs, enregistrés à la
+sortie du champ ; le panneau se recharge et les postes prévus ET réels se recalculent.
+Chaque colonne écrit là où elle a un sens :
+- **Qté prévue** → `crm_sessions.mp_prevu_override` (`{aliment: kg}`, migration 0019
+  appliquée), propre à la session. Appliquée comme un RATIO par aliment sur chaque recette
+  qui l'utilise : le total vaut la saisie, la répartition garde la proportion des fiches.
+- **Prix prévu (€/kg)** → `ingredients_base.prix_kg_moyen`, sur la ligne de même nom si
+  elle existe (sinon créée) : c'est le prix de référence, valable pour toutes les sessions
+  — et le moyen de combler les 11 prix manquants.
+- **Qté achetée / prix payé** → une pièce MP « Saisie manuelle » de la session (créée au
+  premier besoin), une ligne par aliment. Pour cet aliment, elle **remplace** les lignes de
+  factures — sinon le même achat compterait deux fois.
+Corrigé au passage dans le rapprochement : **un prix absent n'est plus un prix nul**. Une
+ligne sans prix comptait 0 € (donc une matière réelle gratuite) ; elle compte maintenant
+pour la quantité (surplus) et le prix au kilo ne se calcule que sur les lignes qui en ont.
+Et un piège évité à la relecture : supprimer les zéros finaux par regex aurait affiché
+« 100 » comme « 1 ».
+Vérifié au banc (73/73) et dans le navigateur avec un faux PostgREST en écriture : prix de
+la truite 14 €/kg → +19,59 € ; poulet prévu 1,79 → 5 kg → +18,72 € ; 6 kg achetés 51 € →
+matière réelle 90,59 €, pastille « Achats MP » allumée ; sept écritures, toutes au bon endroit.
