@@ -40,6 +40,16 @@
    explicite) — jamais un silence qui ferait croire à une réservation
    envoyée ; le front-end retombe alors sur un `mailto:`/`sms:` composé
    côté client (§4.2 de la spec CRM).
+
+   TROISIÈME ACTION (session 12, §4.3 feature 2) — un email commercial,
+   toujours derrière un discriminant explicite :
+     POST /api/notifications
+     { action:'envoyer_message_commercial', to, subject, html|text, in_reply_to? }
+   Même garde (staff), même Resend direct, jamais de .ics. La ligne
+   `crm_messages` correspondante N'EST PAS écrite ici : sa RLS est déjà
+   `est_staff()`, donc crm.html l'écrit lui-même après un succès — ce
+   endpoint n'a qu'un rôle qu'un JWT de staff ne peut pas jouer, sortir
+   la clé Resend du serveur.
 */
 const { identite, ligneStaff, emailDe, envoyerEmailInvitation, creerNotification, majEmailStatut } = require('./_notifications.js');
 
@@ -62,6 +72,7 @@ module.exports = async function handler(req, res) {
 
   const body = req.body || {};
   if (body.action === 'reserver_cuisine') return reserverCuisine(body, moi, res);
+  if (body.action === 'envoyer_message_commercial') return envoyerMessageCommercial(body, moi, res);
 
   const { destinataire, objet_type, objet_id, titre, message, echeance, date_debut, date_fin, uid, sequence, annule, canal } = body;
   if (!destinataire || !objet_type || !titre) {
@@ -136,4 +147,44 @@ async function reserverCuisine(body, moi, res) {
   });
   if (!r.ok) return res.status(502).json({ error: await r.text() });
   return res.status(200).json({ ok: true, texte });
+}
+
+/* Session 12 (§4.3 feature 2) — un email commercial simple, sans .ics
+   (ce n'est pas une invitation calendrier). L'écriture de la ligne
+   crm_messages n'a PAS besoin de la clé service : la RLS de cette table
+   est déjà « est_staff() », donc crm.html l'écrit lui-même directement
+   après un succès ici — ce endpoint n'a qu'un rôle qu'un JWT de staff
+   ne peut pas jouer, obtenir la clé Resend côté serveur.
+   `in_reply_to` (optionnel) est le Message-ID du message auquel on
+   répond : posé sur les en-têtes In-Reply-To/References pour que le fil
+   se recompose côté client mail du destinataire, pas seulement dans le
+   CRM. ⚠️ `resend_id` renvoyé n'est PAS garanti être le Message-ID RFC
+   5322 qui finira dans l'email réellement livré (Resend ne le documente
+   pas explicitement) — à vérifier avec un vrai envoi/réponse avant de
+   compter dessus pour le rattachement automatique d'une réponse. */
+async function envoyerMessageCommercial(body, moi, res) {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) return res.status(503).json({ error: 'RESEND_API_KEY absente', degrade: true });
+
+  const { to, subject, html, text, in_reply_to } = body;
+  if (!to || !subject || !(html || text)) {
+    return res.status(400).json({ error: 'to, subject et html (ou text) sont requis' });
+  }
+
+  const FROM = process.env.RESEND_FROM || 'Natty <onboarding@resend.dev>';
+  const payload = {
+    from: FROM, to: [to], subject,
+    html: html || ('<div style="font-family:-apple-system,sans-serif;white-space:pre-wrap">' + escapeHtml(text) + '</div>'),
+    reply_to: FROM
+  };
+  if (in_reply_to) payload.headers = { 'In-Reply-To': in_reply_to, References: in_reply_to };
+
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return res.status(502).json({ error: data.message || JSON.stringify(data) });
+  return res.status(200).json({ ok: true, resend_id: data.id || null });
 }
