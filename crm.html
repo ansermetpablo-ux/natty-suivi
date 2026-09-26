@@ -368,6 +368,7 @@ button.exbar{font:inherit;width:100%;text-align:left;cursor:pointer}
 .bl-q label{display:flex!important;flex-direction:row;align-items:center;gap:6px;font-weight:500}
 .bl-q .bl-g{width:86px!important}
 .bon-cible{display:grid;gap:8px;padding:10px 12px;border-radius:var(--r-md);background:var(--panel);font-size:13px;color:var(--ink)}
+details.fin-rec[open] .fin-chev{transform:rotate(90deg)}details.fin-rec summary::-webkit-details-marker{display:none}
 </style>
 </head>
 <body>
@@ -4752,7 +4753,7 @@ let FIN_SESSION=null, FIN_DONNEES=null;
 let FIN_EDIT={heures:null,nbUnite:null,facteurs:{},equipe:{}};
 let FIN_ANA_REC='tout', FIN_SURPLUS_REC='tout';
 const CATEGORIES_PIECE={mp:'Achats matières premières',cuisine:'Cuisine (location, équipe)',vente:'Vente'};
-function editVide(){return{heures:null,nbUnite:null,facteurs:{},equipe:{}}}
+function editVide(){return{heures:null,nbUnite:null,nbAbo:null,tarifCuisine:null,facteurs:{},equipe:{}}}
 
 function fmtEur(n){return(Math.round((n||0)*100)/100).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}
 function fmtQte(kg){if(kg==null)return'—';return kg<1?Math.round(kg*1000)+' g':(Math.round(kg*100)/100).toLocaleString('fr-FR')+' kg'}
@@ -4942,7 +4943,10 @@ function calculerFinance(raw,edit){
  }).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
  // Heures de cuisine : édition locale > override enregistré en session >
  // calcul depuis le mapping (le MÊME calcul qu'actionReserverCuisine).
- const tarifCuisineH=tarif('tarif_cuisine_h',30);
+ // Taux horaire de la cuisine : édition locale > réglage de la session >
+ // tarif général (crm_tarifs). Une cuisine louée ailleurs n'a pas le même prix.
+ const tarifGeneral=tarif('tarif_cuisine_h',30);
+ const tarifCuisineH=edit.tarifCuisine!=null?edit.tarifCuisine:(s.tarif_cuisine_h_override!=null?+s.tarif_cuisine_h_override:tarifGeneral);
  let heures=null,sourceHeures='override';
  if(edit.heures!=null)heures=edit.heures;
  else if(s.heures_cuisine_override!=null)heures=+s.heures_cuisine_override;
@@ -4962,8 +4966,13 @@ function calculerFinance(raw,edit){
  if(edit.nbUnite!=null)nbUnite=edit.nbUnite;
  else if(s.nb_repas_unite_override!=null)nbUnite=s.nb_repas_unite_override;
  else nbUnite=bons.filter(b=>b.type!=='abonnement').reduce((sum,b)=>sum+(b.nb_repas||0),0);
- nbUnite=Math.max(0,Math.min(totalRepas,nbUnite));
- const nbAbo=totalRepas-nbUnite;
+ // Le nombre de repas à 9 € peut être saisi LUI AUSSI (sur place, dans
+ // « Recettes prévisionnelles ») : les deux deviennent alors indépendants,
+ // et le total vendu peut différer des repas commandés — l'écran le dit.
+ const aboSaisi=edit.nbAbo!=null?edit.nbAbo:(s.nb_repas_abo_override!=null?+s.nb_repas_abo_override:null);
+ let nbAbo;
+ if(aboSaisi!=null){nbUnite=Math.max(0,nbUnite);nbAbo=Math.max(0,aboSaisi)}
+ else{nbUnite=Math.max(0,Math.min(totalRepas,nbUnite));nbAbo=totalRepas-nbUnite}
  const prixAbo=tarif('prix_repas_abo',9),prixUnite=tarif('prix_repas_unite',10.5);
  const ca=nbAbo*prixAbo+nbUnite*prixUnite;
  const coutTotal=coutMatiere+coutCuisine;
@@ -4971,7 +4980,7 @@ function calculerFinance(raw,edit){
  return {
   session:s,totalRepas,nbAbo,nbUnite,prixAbo,prixUnite,ca,
   coutMatiere,lignesIngredients,ingConnus,ingInconnus,ingredientsParRecette,detailParRecette,portionsEq,
-  heures,sourceHeures,tarifCuisineH,coutLocation,equipe,coutEquipe,coutCuisine,coutTotal,gain:ca-coutTotal,
+  heures,sourceHeures,tarifCuisineH,tarifGeneral,coutLocation,equipe,coutEquipe,coutCuisine,coutTotal,gain:ca-coutTotal,
   parRecette,bonsNonAttribues
  };
 }
@@ -5224,8 +5233,9 @@ function detailColonnesHtml(b){
   ['Location cuisine',fmtEur(c.coutLocation),c.heures!=null?`${c.heures} h × ${fmtEur(c.tarifCuisineH)}${c.sourceHeures==='fiches'?' · estimées depuis les fiches':c.sourceHeures==='mapping'?' · mapping':''}`:'heures inconnues'],
   ['Équipe de cuisine',fmtEur(c.coutEquipe),`${c.equipe.reduce((t,e)=>t+e.nb,0)} cuisinier(s)`]
  ],'Total',fmtEur(c.coutTotal))+carteLignes('Recettes prévisionnelles',[
-  [`${c.nbAbo} repas abonnement`,fmtEur(c.nbAbo*c.prixAbo),`× ${fmtEur(c.prixAbo)}`],
-  [`${c.nbUnite} repas à l'unité`,fmtEur(c.nbUnite*c.prixUnite),`× ${fmtEur(c.prixUnite)}`]
+  [`<input class="inp fin-repas" id="finAboLive" type="number" min="0" step="1" value="${c.nbAbo}" style="width:70px;display:inline-block;padding:4px 8px"> repas abonnement`,fmtEur(c.nbAbo*c.prixAbo),`× ${fmtEur(c.prixAbo)}`],
+  [`<input class="inp fin-repas" id="finUniteLive" type="number" min="0" step="1" value="${c.nbUnite}" style="width:70px;display:inline-block;padding:4px 8px"> repas à l'unité`,fmtEur(c.nbUnite*c.prixUnite),`× ${fmtEur(c.prixUnite)}`],
+  ...(c.nbAbo+c.nbUnite!==c.totalRepas?[[`<span style="color:var(--amber)">⚠ ${c.nbAbo+c.nbUnite} repas vendus pour ${c.totalRepas} commandés</span>`,'']]:[])
  ],'Résultat prévu',signeEur(c.gain),couleurRes(c.gain));
  const droite=carteLignes('Coûts réels',[
   ['Matières consommées',fmtEur(r.matiere),src(r.sourceMatiere)],
@@ -5271,7 +5281,7 @@ function piecesHtml(raw){
  ${groupe('mp')}${groupe('cuisine')}${groupe('vente')}</div>`;
 }
 function facteursFormHtml(calc){
- return `<details class="card" style="margin-bottom:16px"${Object.keys(FIN_EDIT.facteurs).length||FIN_EDIT.heures!=null||FIN_EDIT.nbUnite!=null?' open':''}>
+ return `<details class="card" style="margin-bottom:16px"${Object.keys(FIN_EDIT.facteurs).length||FIN_EDIT.heures!=null||FIN_EDIT.nbUnite!=null||FIN_EDIT.tarifCuisine!=null?' open':''}>
  <summary style="cursor:pointer;font-weight:600">Facteurs ajustables</summary>
  <p class="muted" style="font-size:12px;margin:8px 0 12px">Recalcule en direct. Rien n'est écrit en base tant que « Valider » n'est pas cliqué.</p>
  <div class="form" style="margin-top:0">
@@ -5279,16 +5289,51 @@ function facteursFormHtml(calc){
   <label>Heures de cuisine${calc.sourceHeures==='fiches'?` <span class="muted" style="font-weight:400">(estimé depuis les étapes des fiches : ${calc.heures} h)</span>`:calc.sourceHeures==='mapping'?` <span class="muted" style="font-weight:400">(calculé depuis le mapping : ${calc.heures} h — souvent optimiste)</span>`:calc.sourceHeures==='inconnu'?' <span class="muted" style="font-weight:400">(aucun mapping — saisis une valeur)</span>':''}
    <input class="inp" id="finHeuresInput" type="number" min="0" step="0.5" value="${calc.heures??''}" placeholder="ex. 4">
   </label>
-  <label>Repas facturés à ${fmtEur(calc.prixUnite)} (le reste à ${fmtEur(calc.prixAbo)})
-   <input class="inp" id="finNbUniteInput" type="number" min="0" max="${calc.totalRepas}" step="1" value="${calc.nbUnite}">
+  <div class="muted" style="font-size:12px;align-self:end">Le nombre de repas à ${fmtEur(calc.prixAbo)} et à ${fmtEur(calc.prixUnite)} se modifie directement dans « Recettes prévisionnelles ».</div>
+ </div>
+ <div class="two">
+  <label>Taux horaire de la cuisine (€/h)${calc.tarifCuisineH!==calc.tarifGeneral?` <span class="muted" style="font-weight:400">(tarif général : ${fmtEur(calc.tarifGeneral)}/h)</span>`:''}
+   <input class="inp" id="finTarifInput" type="number" min="0" step="0.5" value="${calc.tarifCuisineH}">
   </label>
+  <div></div>
  </div>
  ${calc.parRecette.length?`<div class="sect" style="margin:0"><h2 style="font-size:13px">Quantité moyenne par repas (facteur portion × recette)</h2></div>
- <div class="list">${calc.parRecette.map(r=>`<div class="li"><div class="grow">${esc(r.nom)}<div class="meta">${r.nbPortions} portions attribuées · facteur en base ${r.facteurBaseMoyen.toFixed(2)}${r.kcalPortionRecette?` · fiche : ${r.kcalPortionRecette} kcal/portion`:''}${r.kcalMoyenAttribue?` · commandes : ${Math.round(r.kcalMoyenAttribue)} kcal/portion en moyenne`:''}</div></div><input class="inp fin-facteur" data-recette="${r.id}" type="number" min="0" step="0.05" style="width:90px" value="${r.facteurUtilise.toFixed(2)}"></div>`).join('')}</div>`:''}
+ <div class="list">${calc.parRecette.map(r=>{const g=groupesCoefRecette(FIN_DONNEES,r.id);return `<div class="li" style="align-items:flex-start"><details class="grow fin-rec"><summary style="cursor:pointer;list-style:none"><span class="fin-chev" style="display:inline-block;width:14px;color:var(--muted)">▸</span>${esc(r.nom)}<div class="meta" style="padding-left:14px">${r.nbPortions} portions attribuées · ${g.length>1?g.length+' coefficients différents':'coefficient '+(g[0]?g[0].coef.toFixed(2):r.facteurBaseMoyen.toFixed(2))}${r.kcalPortionRecette?` · fiche : ${r.kcalPortionRecette} kcal/portion`:''}${r.kcalMoyenAttribue?` · commandes : ${Math.round(r.kcalMoyenAttribue)} kcal/portion en moyenne`:''}</div></summary>
+ ${detailCoefsHtml(g)}</details><input class="inp fin-facteur" data-recette="${r.id}" type="number" min="0" step="0.05" style="width:90px;flex:0 0 auto" value="${r.facteurUtilise.toFixed(2)}" title="Remplace le coefficient de TOUS les repas de cette recette"></div>`}).join('')}</div>
+ <p class="muted" style="font-size:11.5px;margin:6px 0 0">La valeur à droite remplace le coefficient de tous les repas de la recette ; ouvre une recette pour voir ses repas regroupés par coefficient.</p>`:''}
  <div class="foot" style="justify-content:flex-start;gap:8px;margin:0">
   <button class="btn sm ghost" type="button" id="finReset">↺ Réinitialiser</button>
   <button class="btn sm primary" type="button" id="finValider">Valider — met aussi à jour la production</button>
  </div></div></details>`;
+}
+/* Le détail d'une recette dans « Facteurs ajustables » : ses repas (une
+   attribution = une recette dans une commande), REGROUPÉS par coefficient
+   identique au centième — dix commandes au même coefficient ne font
+   qu'une ligne. Le grammage par portion vient de la fiche (g et kg
+   seulement, comme le coût matière) × le coefficient. */
+function groupesCoefRecette(raw,recId){
+ if(!raw)return[];
+ const rec=raw.recettesById[recId]||{};
+ const base=rec.nb_portions||1;
+ const gFiche=raw.recIngredients.filter(i=>i.recette_id===recId).reduce((t,i)=>{const k=qteKg(+i.quantite_g||0,i.unite||'g');return t+(k!=null?k*1000:0)},0)/base;
+ const groupes={};
+ raw.attrs.filter(a=>a.recette_id===recId).forEach(a=>{
+  const coef=Math.round((+a.facteur||1)*100)/100;
+  const g=groupes[coef]||(groupes[coef]={coef,portions:0,kcal:[],repas:[]});
+  const bon=raw.bons.find(b=>b.id===a.bon_id)||{};
+  g.portions+=a.nb_portions||0;
+  if(a.kcal_portion)g.kcal.push(+a.kcal_portion);
+  g.repas.push({nom:bon.contact_nom||('Commande '+(bon.type||'')),jour:bon.jour_livraison,portions:a.nb_portions||0,kcal:a.kcal_portion||null});
+ });
+ return Object.values(groupes).map(g=>({...g,gPortion:gFiche?gFiche*g.coef:null})).sort((a,b)=>b.portions-a.portions||a.coef-b.coef);
+}
+function detailCoefsHtml(groupes){
+ if(!groupes.length)return '<div class="muted" style="font-size:12px;padding:6px 0 0 14px">Aucun repas.</div>';
+ return `<div style="display:grid;gap:8px;margin:8px 0 2px 14px">${groupes.map(g=>{
+  const kcal=g.kcal.length?Math.round(g.kcal.reduce((a,b)=>a+b,0)/g.kcal.length):null;
+  return `<div style="border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px">
+  <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12.5px"><b style="font-weight:600">Coefficient ${g.coef.toFixed(2)}</b><span class="muted">${g.repas.length} repas · ${g.portions} portion${g.portions>1?'s':''}${g.gPortion?` · ≈ ${Math.round(g.gPortion)} g/portion`:''}${kcal?` · ${kcal} kcal`:''}</span></div>
+  <div style="font-size:12px;color:var(--muted);margin-top:3px">${g.repas.map(x=>`${esc(x.nom)}${x.jour?' ('+fd(x.jour)+')':''} × ${x.portions}`).join(' · ')}</div></div>`}).join('')}</div>`;
 }
 function selectRecetteHtml(id,calc,cur){
  return `<select class="inp" data-fin-rec="${id}" style="width:auto;min-width:180px"><option value="tout"${cur==='tout'?' selected':''}>Toute la session</option>${calc.parRecette.map(r=>`<option value="${r.id}"${cur===r.id?' selected':''}>${esc(r.nom)}</option>`).join('')}</select>`;
@@ -5353,7 +5398,7 @@ function analytiqueHtml(b){
  </div>`;
 }
 function bandeauDeduitHtml(raw){
- if(!raw.bonsDeduits)return'';
+ if(!raw||!raw.bonsDeduits)return'';
  const n=raw.bons.length,rep=raw.bons.reduce((t,b)=>t+(b.nb_repas||0),0);
  const jours=[...new Set(raw.bons.map(b=>b.jour_livraison))].sort().map(fd).join(', ');
  return `<div class="exbar" style="border-color:var(--amber);color:var(--amber);background:var(--amber-bg)"><span class="chip warn">déduit</span><span>Aucune commande n'est rattachée à cette session : ${n} commande${n>1?'s':''} (${rep} repas, livrée${n>1?'s':''} le ${jours}) ${n>1?'sont prises':'est prise'} par déduction — celles livrées entre ce jour de production et la session suivante.</span><button class="btn sm" type="button" data-fin-rattacher style="margin-left:auto;flex:0 0 auto">Rattacher à cette session</button></div>`;
@@ -5410,9 +5455,12 @@ function vFinanceCommandeDetail(bonId){
 
 /* ---- Édition en direct (aucune requête), et les écritures ---- */
 function lireEditionFinance(){
- const hEl=$('#finHeuresInput'),nEl=$('#finNbUniteInput');
+ const hEl=$('#finHeuresInput'),nEl=$('#finUniteLive'),aEl=$('#finAboLive');
+ if(aEl)FIN_EDIT.nbAbo=aEl.value!==''?Math.max(0,Math.round(+aEl.value)):null;
  if(hEl)FIN_EDIT.heures=hEl.value!==''?Math.max(0,+hEl.value):null;
- if(nEl)FIN_EDIT.nbUnite=nEl.value!==''?Math.max(0,+nEl.value):null;
+ if(nEl)FIN_EDIT.nbUnite=nEl.value!==''?Math.max(0,Math.round(+nEl.value)):null;
+ const tEl=$('#finTarifInput');
+ if(tEl)FIN_EDIT.tarifCuisine=tEl.value!==''?Math.max(0,+tEl.value):null;
  document.querySelectorAll('.fin-facteur').forEach(inp=>{
   const id=inp.dataset.recette;
   if(inp.value==='')delete FIN_EDIT.facteurs[id];
@@ -5427,7 +5475,12 @@ function recalculerFinanceLive(){
  if(!FIN_DONNEES||!$('#finLive'))return;
  lireEditionFinance();
  const b=bilanSession(FIN_DONNEES,FIN_EDIT);
+ // #finLive porte désormais des champs (les nombres de repas) : le réécrire
+ // à chaque frappe ferait perdre le curseur — on le remet où il était.
+ const actif=document.activeElement,idActif=actif&&actif.id&&$('#finLive').contains(actif)?actif.id:null;
+ const sel=idActif?[actif.selectionStart,actif.selectionEnd]:null;
  $('#finLive').innerHTML=renderSessionLive(b);
+ if(idActif){const el=document.getElementById(idActif);if(el){el.focus();try{el.setSelectionRange(sel[0],sel[1])}catch(e){}}}
  const bas=$('#finBas');if(bas)bas.innerHTML=renderSessionBas(b);
  b.calc.equipe.forEach(e=>{
   const p=document.querySelector(`[data-eq-prevu="${e.id}"]`),r=document.querySelector(`[data-eq-reel="${e.id}"]`);
@@ -5437,8 +5490,9 @@ function recalculerFinanceLive(){
 }
 async function reinitialiserFacteursFinance(){
  FIN_EDIT={...editVide(),equipe:FIN_EDIT.equipe};
- if(FIN_DONNEES&&(FIN_DONNEES.session.heures_cuisine_override!=null||FIN_DONNEES.session.nb_repas_unite_override!=null)){
-  await sb('crm_sessions?id=eq.'+FIN_SESSION,{method:'PATCH',body:JSON.stringify({heures_cuisine_override:null,nb_repas_unite_override:null})});
+ const se=FIN_DONNEES&&FIN_DONNEES.session;
+ if(se&&(se.heures_cuisine_override!=null||se.nb_repas_unite_override!=null||se.nb_repas_abo_override!=null||se.tarif_cuisine_h_override!=null)){
+  await sb('crm_sessions?id=eq.'+FIN_SESSION,{method:'PATCH',body:JSON.stringify({heures_cuisine_override:null,nb_repas_unite_override:null,nb_repas_abo_override:null,tarif_cuisine_h_override:null})});
   toast('Réglages de session réinitialisés au calcul automatique');
  }else toast('Édits non enregistrés annulés');
  render();
@@ -5448,6 +5502,8 @@ async function validerFacteursFinance(){
  const patchSession={};
  if(FIN_EDIT.heures!=null)patchSession.heures_cuisine_override=FIN_EDIT.heures;
  if(FIN_EDIT.nbUnite!=null)patchSession.nb_repas_unite_override=FIN_EDIT.nbUnite;
+ if(FIN_EDIT.nbAbo!=null)patchSession.nb_repas_abo_override=FIN_EDIT.nbAbo;
+ if(FIN_EDIT.tarifCuisine!=null)patchSession.tarif_cuisine_h_override=FIN_EDIT.tarifCuisine;
  const recettesTouchees=Object.entries(FIN_EDIT.facteurs).filter(([,v])=>v!=null);
  if(!Object.keys(patchSession).length&&!recettesTouchees.length){toast('Rien à valider — modifie un facteur d’abord');return}
  if(recettesTouchees.length){
@@ -5476,6 +5532,15 @@ async function rattacherBonsDeduits(){
  toast('Commandes rattachées — génération du mapping…');
  await genererMapping(FIN_SESSION);
  render();
+}
+/* Les deux nombres de repas s'enregistrent à la sortie du champ, comme
+   l'équipe : ce sont des réglages de la session, pas de la production. */
+async function enregistrerRepasSession(){
+ if(!FIN_DONNEES)return;
+ lireEditionFinance();
+ const patch={nb_repas_abo_override:FIN_EDIT.nbAbo,nb_repas_unite_override:FIN_EDIT.nbUnite};
+ try{await sb('crm_sessions?id=eq.'+FIN_SESSION,{method:'PATCH',body:JSON.stringify(patch)});Object.assign(FIN_DONNEES.session,patch);toast('Nombre de repas enregistré')}
+ catch(e){toast('Échec de l’enregistrement : '+String(e.message||e).slice(0,100))}
 }
 async function enregistrerChampEquipe(inp){
  const champ=inp.dataset.champ;
@@ -5670,9 +5735,10 @@ function wireFinanceIfPresent(){
   if(d){if(!confirm('Retirer ce poste de l’équipe ?'))return;await sb('crm_session_equipe?id=eq.'+d.dataset.delEq,{method:'DELETE'});delete FIN_EDIT.equipe[d.dataset.delEq];render();return}
   const of=e.target.closest('[data-ouvrir-facture]');if(of){ouvrirFactureDetail(of.dataset.ouvrirFacture);return}
  });
- root.addEventListener('input',e=>{if(e.target.matches('#finHeuresInput,#finNbUniteInput,.fin-facteur,.fin-eq'))recalculerFinanceLive()});
+ root.addEventListener('input',e=>{if(e.target.matches('#finHeuresInput,#finTarifInput,.fin-repas,.fin-facteur,.fin-eq'))recalculerFinanceLive()});
  root.addEventListener('change',e=>{
   if(e.target.matches('.fin-eq'))enregistrerChampEquipe(e.target);
+  if(e.target.matches('.fin-repas'))enregistrerRepasSession();
   if(e.target.matches('[data-fin-rec]')){if(e.target.dataset.finRec==='ana')FIN_ANA_REC=e.target.value;else FIN_SURPLUS_REC=e.target.value;
    if(FIN_DETAIL&&FIN_DETAIL.kind==='session')recalculerFinanceLive();else render()}
  });

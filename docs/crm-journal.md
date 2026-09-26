@@ -1028,3 +1028,22 @@ Mesuré sur les vraies données : 20/09 → 14 repas, 141 € de CA, 38,94 € d
 (15/26 chiffrées), 4 h ; 26/09 → 53 repas. Les 11 ingrédients restants (truite, bœuf
 haché, riz complet, huile d'olive…) n'ont aucun prix Metro en base — c'est une donnée à
 compléter, pas un calcul à forcer. Banc 57/57 (10 contrôles de rapprochement).
+
+### Trois ajouts au panneau d'une session (26/09, nuit)
+- **Détail par repas dans « Facteurs ajustables »** : chaque recette est un menu déroulant
+  qui liste ses repas (une attribution = la recette dans une commande), **regroupés par
+  coefficient identique au centième**, avec portions, kcal et grammage par portion (fiche
+  × coefficient, g/kg seulement). La valeur à droite remplace toujours le coefficient de
+  tous les repas de la recette.
+- **Taux horaire de la cuisine modifiable** : champ dans les facteurs, recalcul en direct,
+  « Valider » l'écrit sur la session (`crm_sessions.tarif_cuisine_h_override`, migration
+  0018 appliquée). Le tarif général reste `crm_tarifs.tarif_cuisine_h`.
+- **Nombre de repas à 9 € et à 10,50 € modifiables sur place**, dans « Recettes
+  prévisionnelles », enregistrés à la sortie du champ (`nb_repas_abo_override`, 0018).
+  Saisis tous les deux, ils deviennent indépendants et l'écran signale un total vendu
+  différent des repas commandés. Le champ doublon des facteurs est retiré.
+  ⚠️ `#finLive` est réécrit à chaque frappe : il porte maintenant des champs, donc
+  `recalculerFinanceLive()` remet le focus et la sélection où ils étaient. Vérifié en
+  tapant « 12 » caractère par caractère sur l'élément réellement focalisé (un premier
+  essai écrivait dans l'ancien champ détaché — piège de banc, pas du code).
+Banc 66/66.
