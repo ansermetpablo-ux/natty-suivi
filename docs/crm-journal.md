@@ -927,3 +927,71 @@ empilés, largeur non pleine). Corrigé en enveloppant dans `<div class="form">`
   14/15 jamais commencées.
 - **La marge cible et les seuils d'alerte** (session 15, feature 6) ne sont pas dans ce
   chantier — celui-ci montre la marge, il ne la compare pas à un objectif.
+
+---
+
+## Finance — Opérationnel refondu : tableau, page de détail, équipe, pièces (26/09/2026, soir)
+
+Demande de Pablo, suite directe du chantier précédent : en arrivant sur Opérationnel,
+un **tableau** de toutes les sessions (ou de toutes les commandes, selon un filtre),
+chaque ligne avec son résultat en vert ou en rouge et une **pastille vert foncé** quand
+toutes les pièces sont reliées ; un **héros** avec le résultat moyen et la marge par
+produit ; une **équipe de cuisine** chiffrée (postes, nombre, taux prévu × heures
+prévues, puis taux et heures réellement payés) ; **plusieurs pièces** par session,
+analysables ; et, au clic, une **page de détail** : prévu à gauche, réel à droite,
+tableau des matières prévu/acheté avec les plats réalisables en plus, analytique des
+charges par poste et du poids de chaque aliment, filtrable par recette.
+
+### Schéma — `supabase/migrations/0017_finance_tableau_equipe_pieces.sql` (appliquée)
+- `factures_fournisseur.categorie` (`mp` / `cuisine` / `vente`, défaut `mp`) et
+  `fichier_nom` : la table portait déjà `fichier_url` et `montant_total` — une pièce de
+  cuisine ou de vente est une ligne de plus, pas une table de plus.
+- `crm_session_equipe` : une ligne par poste, RLS staff. `heures_prevues` NULL = les
+  heures de cuisine de la session.
+
+### Les règles de calcul, et ce qu'elles refusent de faire
+- **Coût cuisine = location + équipe.** La facture de cuisine REMPLACE la location
+  prévue (elle en est la version réelle) ; l'équipe réelle vient des taux/heures réels,
+  champ par champ, le prévu comblant ce qui manque — et la ligne le dit (« réel partiel »).
+- **Pastille « reliée »** : achats de matières AVEC lignes (sans lignes, le rapprochement
+  est impossible, donc le « réel » matière ne serait que le prévu), facture de cuisine
+  avec montant, justificatif de vente avec montant. Le tableau affiche le **réel** d'une
+  ligne dès que les trois y sont, le **prévisionnel** sinon, et écrit lequel.
+- **Matière réelle = matière CONSOMMÉE au prix facturé**, pas le total acheté : le
+  surplus est du stock (il est affiché à part, « pour mémoire », et sert aux plats en plus).
+- **Une commande porte sa part** : CA au tarif de son type, recalé sur le CA de la
+  session (qui porte la répartition 9 €/10,50 € éditable) ; matière selon SES recettes ;
+  cuisine au prorata des portions équivalentes. Vérifié au banc : la somme des commandes
+  redonne exactement la session, et la marge par produit est identique dans les deux filtres.
+- **Écart de prix = écart AU KILO.** La première version comparait des totaux (36 € pour
+  2 kg contre 24 € prévus pour 1,2 kg) et affichait en rouge un bœuf payé MOINS cher au
+  kilo : l'effet quantité, déjà dans la colonne voisine, était compté deux fois. Vu à
+  l'écran, pas au banc.
+- **Par recette, l'achat est réparti au prorata du besoin** — une facture ne dit pas à
+  quelle recette un kilo était destiné. Écrit sous le tableau.
+- **Plats en plus à la quantité MOYENNE produite** (grammage de fiche × facteur moyen de
+  la session), chaque recette seule sur tout le surplus — non cumulables, écrit. Un
+  ingrédient sans surplus relevé (ou en ml/pièce) annule le calcul et est nommé.
+
+### Pièces et IA
+Upload Cloudinary (même chemin que le Drive), une pièce par fichier. Pour une photo,
+`/api/claude` en vision lit fournisseur, date, numéro, montant et, pour les achats, les
+lignes — en rattachant chaque ligne à un ingrédient de la session par son nom EXACT
+(liste fournie dans le prompt), faute de quoi elle reste « non rattachée » plutôt que
+rattachée au hasard. Les PDF sont joints mais pas analysés (`/api/claude` n'accepte que
+des images) — l'écran le dit. Ré-analyse possible depuis la pièce.
+
+### Refactor au passage
+`minutesDepuisEtapes()` extrait de `dureeMappingSession()` : le tableau calcule les
+heures de TOUTES les sessions en une requête, sans recopier l'algorithme.
+
+### Vérifié
+Banc Node sur les fonctions extraites du fichier (jamais recopiées) : **47/47**, dont
+quatre attendus que j'avais faux à la main (besoin en carottes, facteur qui supprime le
+surplus) — corrigés dans le banc après vérification, pas dans le code. Navigateur, avec
+`sbTry` doublé : tableau (2 sessions, pastille sur la complète), filtre commande
+(3 lignes), page session (colonnes, équipe éditée en direct 2 × 16 € × 5 h = 160 €,
+filtres par recette, surplus au prorata, plats en plus), page commande, 375 px sans
+débordement. Un défaut de mise en page corrigé (montants qui passaient à la ligne).
+🔄 Rien avec une vraie session d'équipe ni une vraie pièce : l'analyse IA d'une photo de
+facture n'a pas été jouée.
