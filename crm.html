@@ -4794,7 +4794,7 @@ async function chargerFinanceGlobal(){
  const recIds=[...new Set(attrs.map(a=>a.recette_id))];
  const vide=Promise.resolve({ok:true,data:[]});
  const [ingR,recR,ingBaseR,etR,eqR,factR,ficheR]=await Promise.all([
-  recIds.length?sbTry('recettes_ingredients?recette_id=in.('+recIds.join(',')+')&select=recette_id,ingredient_nom,quantite_g,unite'):vide,
+  recIds.length?sbTry('recettes_ingredients?recette_id=in.('+recIds.join(',')+')&select=recette_id,ingredient_nom,quantite_g,unite,tag').then(r=>r.ok?r:sbTry('recettes_ingredients?recette_id=in.('+recIds.join(',')+')&select=recette_id,ingredient_nom,quantite_g,unite')):vide,
   recIds.length?sbTry('recettes?id=in.('+recIds.join(',')+')&select=id,nom,nb_portions,calories_portion'):vide,
   sbTry('ingredients_base?select=nom,prix_kg_moyen,prix_achat_ht,poids_colis_kg'),
   sbTry('crm_session_etapes?session_id=in.('+sIds.join(',')+')&phase=eq.production&select=session_id,poste,duree_prevue_min,duree_reelle_min'),
@@ -5503,7 +5503,10 @@ function planProduction(raw,calc,rappro,edit){
  const stock={};
  Object.entries(rappro.achatParIngredient).forEach(([cle,a])=>{if(a.qKg>0)stock[cle]=a.qKg});
  const stockInitial={...stock};
- const bonsTries=[...raw.bons].sort((a,b)=>(a.jour_livraison||'9999').localeCompare(b.jour_livraison||'9999'));
+ // Ordre de service : la livraison la plus proche d'abord (elle doit sortir
+ // avant l'autre) ; à date égale, les ABONNÉS d'abord — ils ont déjà payé et
+ // reviennent chaque semaine.
+ const bonsTries=[...raw.bons].sort((a,b)=>(a.jour_livraison||'9999').localeCompare(b.jour_livraison||'9999')||(a.type==='abonnement'?0:1)-(b.type==='abonnement'?0:1));
  const nonMesurables=new Set();
  const commandes=bonsTries.map(bon=>{
   const repas=raw.attrs.filter(a=>a.bon_id===bon.id).map(a=>{
@@ -5513,14 +5516,20 @@ function planProduction(raw,calc,rappro,edit){
     const nom=String(i.ingredient_nom||'').trim();
     const kg=qteKg((+i.quantite_g)/(rec.nb_portions||1)*f,(i.unite||'g').trim().toLowerCase());
     if(kg==null)nonMesurables.add(nom);
-    return{nom,cle:nom.toLowerCase(),kg};
+    return{nom,cle:nom.toLowerCase(),kg,tag:i.tag||null};
    }).filter(i=>i.kg!=null&&i.kg>0);
    const demande=a.nb_portions||0;
    // Seuls les aliments PRINCIPAUX (≥ 15 % du poids de la portion) peuvent
    // fixer le nombre de portions : sinon 1 kg d'huile rendrait faisable un
    // chili sans bœuf. Parmi eux, le plus disponible décide — il est nommé.
    const poids=ings.reduce((t,i)=>t+i.kg,0);
-   let principaux=ings.filter(i=>i.kg>=PART_PRINCIPALE*poids);if(!principaux.length)principaux=ings;
+   // L'étiquette « protéine » de la fiche désigne l'aliment principal quand
+   // elle est posée (moteur de portions, « base de la recette ») ; sinon le
+   // poids décide : ≥ 15 % de la portion.
+   let principaux=ings.filter(i=>i.tag==='proteine');
+   const parTag=principaux.length>0;
+   if(!parTag)principaux=ings.filter(i=>i.kg>=PART_PRINCIPALE*poids);
+   if(!principaux.length)principaux=ings;
    let possible=0,decideur=null;
    principaux.forEach(i=>{const p=Math.floor(((stock[i.cle]||0)+1e-9)/i.kg);if(p>possible){possible=p;decideur=i.nom}});
    const faisable=Math.min(demande,possible);
@@ -5532,7 +5541,7 @@ function planProduction(raw,calc,rappro,edit){
     stock[i.cle]=dispo-pris;
     if(besoin-pris>1e-6)manquants.push({nom:i.nom,kg:besoin-pris,aucunAchat:!(stockInitial[i.cle]>0)});
    });
-   return{recId:a.recette_id,nom:rec.nom||'?',demande,faisable,completes,manquants,decideur:faisable?decideur:null,principaux:principaux.map(i=>i.nom),statut:!faisable?'impossible':manquants.length?'a_completer':'complete'};
+   return{bonId:a.bon_id,recId:a.recette_id,nom:rec.nom||'?',demande,faisable,completes,manquants,decideur:faisable?decideur:null,principaux:principaux.map(i=>i.nom),parTag,statut:!faisable?'impossible':manquants.length?'a_completer':'complete'};
   });
   return{bon,repas,demande:repas.reduce((t,r)=>t+r.demande,0),faisable:repas.reduce((t,r)=>t+r.faisable,0),completes:repas.reduce((t,r)=>t+r.completes,0)};
  });
@@ -5544,7 +5553,12 @@ function planProduction(raw,calc,rappro,edit){
   r.manquants.forEach(m=>{const x=p.manquants[m.nom]||(p.manquants[m.nom]={nom:m.nom,kg:0,aucunAchat:m.aucunAchat});x.kg+=m.kg});
  }));
  const recettes=Object.values(parRecette).map(p=>({...p,manquants:Object.values(p.manquants).sort((a,b)=>b.kg-a.kg)}));
- return{commandes,recettes,
+ // Achats complémentaires : les manquants cumulés par aliment, chiffrés au
+ // prix de référence quand on l'a (même rapprochement que le coût matière).
+ const aAcheter={};
+ recettes.forEach(r=>r.manquants.forEach(m=>{const x=aAcheter[m.nom]||(aAcheter[m.nom]={nom:m.nom,kg:0,aucunAchat:m.aucunAchat});x.kg+=m.kg}));
+ const achats=Object.values(aAcheter).map(a=>{const pi=prixIngredient(raw.ingredientsIndex||{},a.nom);return{...a,prixKg:pi.prixKg,produit:pi.produit,cout:pi.prixKg!=null?a.kg*pi.prixKg:null}}).sort((a,b)=>b.kg-a.kg);
+ return{commandes,recettes,achats,
   demande:commandes.reduce((t,c)=>t+c.demande,0),faisable:commandes.reduce((t,c)=>t+c.faisable,0),completes:commandes.reduce((t,c)=>t+c.completes,0),
   restes:Object.entries(stock).filter(([,v])=>v>0.001).map(([cle,v])=>({nom:(rappro.achatParIngredient[cle]||{}).nom||cle,kg:v})).sort((a,b)=>b.kg-a.kg),
   nonMesurables:[...nonMesurables]};
@@ -5553,7 +5567,11 @@ function planProductionHtml(pl){
  if(!pl)return `<div class="empty" style="margin-top:12px">Aucun achat relevé pour cette session — ajoute une pièce « Achats matières premières » ou saisis la colonne « Qté achetée », puis réorganise.</div>`;
  const man=ms=>ms.map(m=>`<span class="chip ${m.aucunAchat?'bad':'warn'}" title="${m.aucunAchat?'aucun achat relevé':'acheté en quantité insuffisante'}">${esc(m.nom)} −${fmtQte(m.kg)}</span>`).join(' ');
  const completes=pl.recettes.filter(r=>r.faisable&&!r.manquants.length),aCompleter=pl.recettes.filter(r=>r.faisable&&r.manquants.length),impossibles=pl.recettes.filter(r=>!r.faisable);
+ const aReduire=pl.commandes.reduce((t,c)=>t+c.repas.filter(r=>r.faisable<r.demande).length,0);
+ const se=FIN_DONNEES&&FIN_DONNEES.session;
  return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+ ${se&&se.reorg_avant?`<div class="exbar" style="border-color:var(--blue);color:var(--blue);background:var(--blue-bg)"><span class="chip info">appliquée</span><span>Production réorganisée le ${new Date(se.reorg_le).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} : les portions des commandes ont été ramenées au faisable.</span><button class="btn sm" type="button" data-fin-reorg-annuler style="margin-left:auto;flex:0 0 auto">↺ Annuler la réorganisation</button></div>`:''}
+ <div style="display:flex;justify-content:flex-end;margin-bottom:10px">${aReduire?`<button class="btn sm primary" type="button" data-fin-reorg-appliquer>Appliquer à la production (${aReduire} repas à ajuster)</button>`:`<span class="muted" style="font-size:12px">${pl.faisable?'Tout ce qui est commandé est faisable — rien à appliquer.':'Rien n\'est faisable : rien à appliquer.'}</span>`}</div>
  <div class="grid g3" style="margin-bottom:12px">
   <div class="card kpi"><div class="lbl">Repas faisables</div><div class="val">${pl.faisable}<small> / ${pl.demande}</small></div><div class="foot">avec ce qui a été acheté</div></div>
   <div class="card kpi"><div class="lbl">Dont complets</div><div class="val" style="color:var(--green)">${pl.completes}</div><div class="foot">tous les aliments sont là</div></div>
@@ -5562,17 +5580,72 @@ function planProductionHtml(pl){
  <h3 style="margin:0 0 8px;font-size:13.5px">Par commande</h3>
  <div class="list" style="margin-bottom:14px">${pl.commandes.map(c=>`<div class="li" style="display:block">
   <div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:600">${esc(c.bon.contact_nom||('Commande '+(c.bon.type||'')))}${c.bon.jour_livraison?` <span class="muted" style="font-weight:400">· livraison ${fd(c.bon.jour_livraison)}</span>`:''}</b><span class="chip ${c.faisable===c.demande&&c.completes===c.faisable?'ok':c.faisable?'warn':'bad'}">${c.faisable} / ${c.demande} repas</span></div>
-  ${c.repas.map(r=>`<div style="padding:6px 0 0 10px;font-size:12.5px"><div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(r.nom)} — <b>${r.faisable}</b> / ${r.demande}${r.faisable&&r.completes<r.faisable?` <span class="muted">(dont ${r.completes} complète${r.completes>1?'s':''})</span>`:''}${r.decideur&&r.statut!=='complete'?` <span class="muted" style="font-size:11.5px">· selon ${esc(r.decideur)}</span>`:''}${r.statut==='impossible'?` <span class="muted" style="font-size:11.5px">· aucun aliment principal acheté (${r.principaux.map(esc).join(', ')})</span>`:''}</span>${r.statut==='complete'?'<span class="chip ok">complète</span>':r.statut==='impossible'?'<span class="chip bad">impossible</span>':'<span class="chip warn">à compléter</span>'}</div>${r.statut==='a_completer'?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${man(r.manquants)}</div>`:''}</div>`).join('')}
+  ${c.repas.map(r=>`<div style="padding:6px 0 0 10px;font-size:12.5px"><div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(r.nom)} — <b>${r.faisable}</b> / ${r.demande}${r.faisable&&r.completes<r.faisable?` <span class="muted">(dont ${r.completes} complète${r.completes>1?'s':''})</span>`:''}${r.decideur&&r.statut!=='complete'?` <span class="muted" style="font-size:11.5px">· selon ${esc(r.decideur)}${r.parTag?' (protéine)':''}</span>`:''}${r.statut==='impossible'?` <span class="muted" style="font-size:11.5px">· aucun aliment principal acheté (${r.principaux.map(esc).join(', ')})</span>`:''}</span>${r.statut==='complete'?'<span class="chip ok">complète</span>':r.statut==='impossible'?'<span class="chip bad">impossible</span>':'<span class="chip warn">à compléter</span>'}</div>${r.statut==='a_completer'?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${man(r.manquants)}</div>`:''}</div>`).join('')}
  </div>`).join('')}</div>
  <h3 style="margin:0 0 8px;font-size:13.5px">Recettes complètes <span class="muted" style="font-weight:400">· ${completes.length}</span></h3>
  ${completes.length?`<div class="list" style="margin-bottom:14px">${completes.map(r=>`<div class="li"><div class="grow">${esc(r.nom)}</div><span class="chip ok">${r.faisable} / ${r.demande} portions</span></div>`).join('')}</div>`:'<div class="muted" style="font-size:12px;margin-bottom:14px">Aucune.</div>'}
  <h3 style="margin:0 0 8px;font-size:13.5px">Recettes à compléter <span class="muted" style="font-weight:400">· ${aCompleter.length+impossibles.length}</span></h3>
  ${aCompleter.length+impossibles.length?`<div class="list">${[...aCompleter,...impossibles].map(r=>`<div class="li" style="display:block"><div style="display:flex;justify-content:space-between;gap:10px"><span>${esc(r.nom)}</span><span class="chip ${r.faisable?'warn':'bad'}">${r.faisable} / ${r.demande} portions${r.faisable?` · ${r.completes} complète${r.completes>1?'s':''}`:''}</span></div>
   <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:5px">${r.faisable?man(r.manquants):'<span class="muted" style="font-size:12px">Aucun aliment acheté pour cette recette : rien n\'est faisable.</span>'}</div></div>`).join('')}</div>`:'<div class="muted" style="font-size:12px">Aucune.</div>'}
+ ${pl.achats.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px"><h3 style="margin:0;font-size:13.5px">Achats complémentaires <span class="muted" style="font-weight:400">· pour tout compléter</span></h3><button class="btn sm" type="button" data-fin-achats-copier>Copier la liste</button></div>
+ <div class="tbl-wrap"><table><thead><tr><th>Aliment</th><th>À acheter</th><th>Coût estimé</th></tr></thead><tbody>${pl.achats.map(a=>`<tr><td>${esc(a.nom)}${a.produit?`<div class="muted" style="font-size:11px">${esc(a.produit)}</div>`:''}${a.aucunAchat?' <span class="chip bad">jamais acheté</span>':''}</td><td class="num">${fmtQte(a.kg)}</td><td class="num">${a.cout!=null?fmtEur(a.cout):'<span class="muted">prix inconnu</span>'}</td></tr>`).join('')}</tbody></table></div>
+ <p class="muted" style="font-size:12px;margin:6px 0 0">Total estimé : ${fmtEur(pl.achats.reduce((t,a)=>t+(a.cout||0),0))}${pl.achats.some(a=>a.cout==null)?` (sans ${pl.achats.filter(a=>a.cout==null).length} aliment(s) au prix inconnu)`:''}.</p>`:''}
  ${pl.restes.length?`<p class="muted" style="font-size:12px;margin:12px 0 0">Reste en stock après cette production : ${pl.restes.map(r=>esc(r.nom)+' '+fmtQte(r.kg)).join(', ')}.</p>`:''}
  ${pl.nonMesurables.length?`<p class="muted" style="font-size:11.5px;margin:6px 0 0">Non pris en compte (unité autre que g/kg) : ${pl.nonMesurables.map(esc).join(', ')}.</p>`:''}
- <p class="muted" style="font-size:11.5px;margin:6px 0 0">Le nombre de portions faisables est fixé par l'aliment principal le plus disponible (principal = au moins 15 % du poids de la portion : un reste d'huile ou d'ail ne rend pas une recette faisable). Les commandes sont servies dans l'ordre de livraison. Les manquants sont les quantités à acheter pour compléter les portions faisables ; chip rouge = aliment jamais acheté, orange = acheté en quantité insuffisante.</p>
+ <p class="muted" style="font-size:11.5px;margin:6px 0 0">Le nombre de portions faisables est fixé par l'aliment principal le plus disponible — l'ingrédient étiqueté « protéine » dans la fiche, sinon ceux qui font au moins 15 % du poids de la portion (un reste d'huile ou d'ail ne rend pas une recette faisable). Les commandes sont servies dans l'ordre de livraison, les abonnés d'abord à date égale. Les manquants sont les quantités à acheter pour compléter les portions faisables ; chip rouge = aliment jamais acheté, orange = acheté en quantité insuffisante.</p>
  </div>`;
+}
+function planCourant(){
+ if(!FIN_DONNEES)return null;
+ const b=bilanSession(FIN_DONNEES,FIN_EDIT);
+ return planProduction(FIN_DONNEES,b.calc,b.rappro,FIN_EDIT);
+}
+/* Appliquer le plan : chaque repas est ramené à ses portions faisables dans
+   bons_attributions ; un repas à 0 portion est RETIRÉ de la commande
+   (nb_portions > 0 est une contrainte de la table). L'état d'avant est
+   sauvegardé sur la session (reorg_avant) pour pouvoir annuler — une seule
+   sauvegarde, celle d'avant la PREMIÈRE réorganisation, pour qu'annuler
+   ramène toujours à la commande d'origine. */
+async function appliquerReorganisation(){
+ const pl=planCourant();if(!pl)return;
+ const changes=[];pl.commandes.forEach(c=>c.repas.forEach(r=>{if(r.faisable<r.demande)changes.push(r)}));
+ if(!changes.length){toast('Rien à ajuster');return}
+ const retires=changes.filter(r=>!r.faisable).length;
+ if(!confirm(`Appliquer à la production ?\n\n${changes.length} repas ramené(s) au faisable (${pl.faisable} repas produits au lieu de ${pl.demande})${retires?`, dont ${retires} retiré(s) des commandes faute d'aliment principal`:''}.\n\nLa fiche technique et la liste de courses suivront (elles lisent ces portions). Annulable ensuite.`))return;
+ const bonIds=FIN_DONNEES.bons.map(b=>b.id);
+ try{
+  if(!FIN_DONNEES.session.reorg_avant){
+   const av=await sbTry('bons_attributions?bon_id=in.('+bonIds.join(',')+')&select=*');
+   if(!av.ok)throw new Error(av.err);
+   await sb('crm_sessions?id=eq.'+FIN_SESSION,{method:'PATCH',body:JSON.stringify({reorg_avant:av.data,reorg_le:new Date().toISOString()})});
+  }else await sb('crm_sessions?id=eq.'+FIN_SESSION,{method:'PATCH',body:JSON.stringify({reorg_le:new Date().toISOString()})});
+  for(const r of changes){
+   const f='bons_attributions?bon_id=eq.'+r.bonId+'&recette_id=eq.'+r.recId;
+   if(r.faisable>0)await sb(f,{method:'PATCH',body:JSON.stringify({nb_portions:r.faisable})});
+   else await sb(f,{method:'DELETE'});
+  }
+ }catch(e){toast('Échec : '+String(e.message||e).slice(0,120));render();return}
+ toast('Production réorganisée — '+pl.faisable+' repas');
+ render();
+}
+async function annulerReorganisation(){
+ const av=FIN_DONNEES&&FIN_DONNEES.session.reorg_avant;if(!av){toast('Rien à annuler');return}
+ if(!confirm('Revenir aux commandes d’avant la réorganisation ('+av.length+' ligne(s) de recettes) ?'))return;
+ const bonIds=[...new Set([...FIN_DONNEES.bons.map(b=>b.id),...av.map(a=>a.bon_id)])];
+ try{
+  await sb('bons_attributions?bon_id=in.('+bonIds.join(',')+')',{method:'DELETE'});
+  if(av.length)await sb('bons_attributions',{method:'POST',body:JSON.stringify(av)});
+  await sb('crm_sessions?id=eq.'+FIN_SESSION,{method:'PATCH',body:JSON.stringify({reorg_avant:null,reorg_le:null})});
+ }catch(e){toast('Échec de l’annulation : '+String(e.message||e).slice(0,120));render();return}
+ toast('Réorganisation annulée — commandes d’origine rétablies');
+ render();
+}
+function copierAchatsComplementaires(){
+ const pl=planCourant();if(!pl||!pl.achats.length)return;
+ const txt='Achats complémentaires — session du '+fd(FIN_DONNEES.session.jour)+'\n'+pl.achats.map(a=>`- ${a.nom} : ${fmtQte(a.kg)}${a.produit?' ('+a.produit+')':''}${a.cout!=null?' ≈ '+fmtEur(a.cout):''}`).join('\n');
+ const fin=()=>toast('Liste copiée');
+ if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(txt).then(fin,()=>repli());else repli();
+ function repli(){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand('copy');fin()}catch(e){toast('Copie impossible')}t.remove()}
 }
 function barres(items,max){
  return `<div style="display:grid;gap:8px">${items.map(p=>`<div><div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-bottom:3px"><span>${p.label}</span><span class="mono">${p.droite}</span></div><div class="bar" style="margin-top:0"><i style="width:${max?Math.min(100,p.val/max*100):0}%;background:${p.couleur||'var(--ink)'}"></i></div></div>`).join('')}</div>`;
@@ -5944,6 +6017,9 @@ function wireFinanceIfPresent(){
   if(e.target.closest('[data-fin-retour]')){FIN_DETAIL=null;render();return}
   if(e.target.closest('[data-fin-rattacher]')){await rattacherBonsDeduits();return}
   if(e.target.closest('[data-fin-reorg]')){FIN_REORG=!FIN_REORG;recalculerFinanceLive();return}
+  if(e.target.closest('[data-fin-reorg-appliquer]')){await appliquerReorganisation();return}
+  if(e.target.closest('[data-fin-reorg-annuler]')){await annulerReorganisation();return}
+  if(e.target.closest('[data-fin-achats-copier]')){copierAchatsComplementaires();return}
   const d=e.target.closest('[data-del-eq]');
   if(d){if(!confirm('Retirer ce poste de l’équipe ?'))return;await sb('crm_session_equipe?id=eq.'+d.dataset.delEq,{method:'DELETE'});delete FIN_EDIT.equipe[d.dataset.delEq];render();return}
   const of=e.target.closest('[data-ouvrir-facture]');if(of){ouvrirFactureDetail(of.dataset.ouvrirFacture);return}

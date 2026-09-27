@@ -1103,3 +1103,26 @@ La colonne `recettes_ingredients.tag` (migration 0010 de main) aurait permis de 
 protéine, mais elle n'est pas appliquée en base — règle de poids, vérifiable, en attendant.
 Ce n'est qu'un plan : rien n'est écrit en production. Banc 91/91 (l'exemple de Pablo, le
 partage du stock entre deux commandes, le chili à l'huile).
+
+### « Réorganiser », suite : appliquer, annuler, achats complémentaires (27/09)
+- **Appliquer à la production** : chaque repas est ramené à ses portions faisables dans
+  `bons_attributions` ; un repas à 0 portion est **retiré** de la commande
+  (`nb_portions > 0` est une contrainte de la table). La fiche technique et la liste de
+  courses suivent — elles lisent ces portions ; le mapping minuté, non (il ne dépend pas du
+  nombre de portions, et la boîte de confirmation ne prétend plus le contraire).
+- **Annuler la réorganisation** : l'état d'avant est sauvegardé sur la session
+  (`crm_sessions.reorg_avant` + `reorg_le`, migration 0020 appliquée) — UNE sauvegarde,
+  celle d'avant la PREMIÈRE réorganisation, pour qu'annuler ramène toujours à la commande
+  d'origine même après plusieurs applications.
+- **Achats complémentaires** : les manquants cumulés par aliment, chiffrés au prix de
+  référence (même rapprochement que le coût matière), total estimé, bouton « Copier la liste ».
+Les deux points « à trancher », réglés :
+- **Aliment principal** : `0010_recettes_ratios_tags.sql` (de main, jamais passée en base)
+  est **appliquée** ; un ingrédient étiqueté `proteine` désigne l'aliment principal, la règle
+  des 15 % du poids ne sert plus que de repli. Les étiquettes se posent dans « ⚙ base de la
+  recette » du formulaire de commande (moteur de portions) ; aucune n'est posée aujourd'hui.
+- **Ordre de service** : livraison la plus proche d'abord (elle doit sortir avant),
+  **abonnés d'abord à date égale** (déjà payés, récurrents).
+Vérifié : banc 98/98 ; dans la page, sur une base simulée en écriture, appliquer retire les
+chilis (aucun aliment principal) et le curry de Marc (poulet épuisé par Julie, livrée la
+veille), sauvegarde 9 lignes ; annuler rétablit les commandes À L'IDENTIQUE.
