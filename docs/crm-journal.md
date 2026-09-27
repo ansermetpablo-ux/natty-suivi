@@ -1080,3 +1080,26 @@ juste aussi quand la quantité a été saisie à la main (et c'est dit). Suit le
 recette. Infobulle en `position:fixed` hors de `.tbl-wrap`, qui la rognerait.
 Vérifié sur les vraies données du 20/09 : poulet = 765 + 514 + 304 + 208 g = les 1,79 kg
 affichés. Banc 79/79 (regroupement, groupes séparés par coefficient, saisie recalée).
+
+### « Réorganiser » : la production faisable avec ce qui a vraiment été acheté (27/09)
+Bouton **↻ Réorganiser** en haut à droite du tableau des matières (page d'une session).
+Le stock = les quantités achetées relevées par les pièces MP et la saisie du tableau
+(g/kg). `planProduction()` — pur — sert les commandes dans l'ordre de livraison (la plus
+proche d'abord) et consomme ce stock, pour qu'un aliment partagé ne serve pas deux fois.
+Pour chaque repas (recette × commande) :
+- **faisable** = portions permises par l'aliment principal LE PLUS disponible (demande de
+  Pablo : assez de saumon pour 3 → on en fait 3, même sans assez d'oignons ni de
+  boulgour) ; l'aliment qui décide est nommé (« selon poulet ») ;
+- **complètes** = celles que TOUS les aliments permettent ; les autres sont **à
+  compléter**, avec chaque aliment manquant et sa quantité (rouge = jamais acheté, orange =
+  acheté en quantité insuffisante) ; **impossible** = aucun aliment principal acheté.
+Affichage : trois chiffres (faisables / complets / à compléter), le détail par commande,
+puis les recettes complètes et les recettes à compléter, et le stock restant.
+⚠️ **« Le plus disponible » pris au pied de la lettre était faux**, vu sur les vraies
+données : 1 kg d'huile d'olive rendait faisable un chili sans bœuf. Seuls les aliments
+**principaux** (≥ 15 % du poids de la portion, `PART_PRINCIPALE`) peuvent fixer le nombre ;
+les autres ne peuvent qu'être manquants. L'exemple de Pablo reste juste (saumon = 54 %).
+La colonne `recettes_ingredients.tag` (migration 0010 de main) aurait permis de désigner la
+protéine, mais elle n'est pas appliquée en base — règle de poids, vérifiable, en attendant.
+Ce n'est qu'un plan : rien n'est écrit en production. Banc 91/91 (l'exemple de Pablo, le
+partage du stock entre deux commandes, le chili à l'huile).

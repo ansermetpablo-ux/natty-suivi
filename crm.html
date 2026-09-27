@@ -4751,7 +4751,7 @@ let FIN_FILTRE='session';            // 'session' | 'commande'
 let FIN_DETAIL=null;                 // null | {kind:'session'|'commande', id}
 let FIN_SESSION=null, FIN_DONNEES=null;
 let FIN_EDIT={heures:null,nbUnite:null,facteurs:{},equipe:{}};
-let FIN_ANA_REC='tout', FIN_SURPLUS_REC='tout';
+let FIN_ANA_REC='tout', FIN_SURPLUS_REC='tout', FIN_REORG=false;
 const FOURNISSEUR_MANUEL='Saisie manuelle';   // la pièce MP créée par la saisie du tableau des matières
 const CATEGORIES_PIECE={mp:'Achats matières premières',cuisine:'Cuisine (location, équipe)',vente:'Vente'};
 function editVide(){return{heures:null,nbUnite:null,nbAbo:null,tarifCuisine:null,facteurs:{},equipe:{}}}
@@ -5381,7 +5381,7 @@ function surplusHtml(b){
  }).filter(r=>r&&r.qBrut>0);
  const bonus=rp?rp.recettesBonus.filter(r=>rec==='tout'||r.recId===rec):[];
  return `<div class="card" style="margin-bottom:16px">
- <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;font-size:14px">Matières premières — prévu vs acheté</h3>${selectRecetteHtml('surplus',c,rec)}</div>
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;font-size:14px">Matières premières — prévu vs acheté</h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${selectRecetteHtml('surplus',c,rec)}${FIN_DETAIL&&FIN_DETAIL.kind==='session'?`<button class="btn sm ${FIN_REORG?'':'primary'}" type="button" data-fin-reorg>${FIN_REORG?'Masquer la réorganisation':'↻ Réorganiser'}</button>`:''}</div></div>
  <div class="tbl-wrap"><table><thead><tr><th>Aliment</th><th>Qté prévue</th><th>Prix prévu</th><th>Qté achetée</th><th>Prix payé</th><th>Écart qté</th><th>Écart prix (€/kg)</th></tr></thead><tbody>${lignes.map(l=>`<tr>
   <td>${esc(l.nom)}${l.produit?`<div class="muted" style="font-size:11px">prix : ${esc(l.produit)}</div>`:''}</td>
   ${saisissable(l)?`
@@ -5398,6 +5398,7 @@ function surplusHtml(b){
  <p class="muted" style="font-size:11.5px;margin:6px 0 0">${rec==='tout'?'Les cases se saisissent à la main (enregistrées à la sortie du champ) : la quantité prévue vaut pour cette session, le prix prévu devient le prix de référence de l\'aliment pour toutes les sessions, la quantité achetée et le prix payé forment la pièce « Saisie manuelle » — qui remplace les factures pour cet aliment. Case vidée = retour au calcul.':'Pour saisir à la main, repasse sur « Toute la session ».'}</p>
  ${rec!=='tout'&&rp?'<p class="muted" style="font-size:11.5px;margin:6px 0 0">Par recette, l\'achat est réparti au prorata du besoin de chaque recette : une facture ne dit pas à quelle recette un kilo était destiné.</p>':''}
  ${!rp?'<p class="muted" style="font-size:12px;margin:8px 0 0">Aucun achat de matières avec lignes pour cette session — ajoute une pièce « Achats matières premières » et analyse-la (ou saisis ses lignes) pour remplir les colonnes réelles.</p>':''}
+ ${FIN_REORG&&FIN_DETAIL&&FIN_DETAIL.kind==='session'?planProductionHtml(planProduction(FIN_DONNEES,c,rp,FIN_EDIT)):''}
  <h3 style="margin:16px 0 8px;font-size:14px">Plats réalisables en plus avec le surplus acheté</h3>
  ${!rp?'<div class="empty">Pas d\'achats relevés — rien à calculer.</div>':bonus.length?`<div class="list">${bonus.map(r=>`<div class="li"><div class="grow">${esc(r.nom)}<div class="meta">${r.bonus>0?`à ${Math.round(r.gPortion*1000)} g par portion (fiche × facteur moyen) · limité par ${esc(r.limitant)}`:`impossible à chiffrer : pas de surplus relevé pour ${esc(r.manquant||'un ingrédient')}`}</div></div><span class="chip ${r.bonus>0?'ok':''}">${r.bonus>0?'× '+r.bonus:'0'}</span></div>`).join('')}</div><p class="muted" style="font-size:11.5px;margin:6px 0 0">Chaque recette est calculée seule sur tout le surplus : les plats en plus ne se cumulent pas d'une recette à l'autre.</p>`:'<div class="empty">Aucune recette pour ce filtre.</div>'}
  </div>`;
@@ -5484,6 +5485,94 @@ async function enregistrerCaseMp(inp){
   toast('Enregistré — coûts recalculés');
  }catch(e){toast('Échec de l’enregistrement : '+String(e.message||e).slice(0,110));return}
  render();
+}
+/* ---- Réorganiser la production selon ce qui a VRAIMENT été acheté ----
+   Le stock = les quantités achetées relevées par les pièces MP et la saisie
+   du tableau (g/kg seulement). Les commandes passent dans l'ordre de
+   livraison — la plus proche d'abord — et consomment ce stock, pour qu'une
+   même carotte ne serve pas deux fois.
+   Pour chaque repas (recette × commande), le nombre de portions FAISABLES
+   est fixé par l'aliment le PLUS disponible (demande de Pablo : assez de
+   saumon pour 3 → on en fait 3, même s'il manque des oignons ou tout le
+   boulgour) ; ces portions sont COMPLÈTES si tous leurs aliments suivent, À
+   COMPLÉTER sinon, avec chaque aliment manquant et sa quantité. Un aliment
+   sans aucun achat relevé compte comme manquant — pas comme disponible. */
+const PART_PRINCIPALE=0.15;   // part du poids d'une portion au-delà de laquelle un aliment est « principal »
+function planProduction(raw,calc,rappro,edit){
+ if(!raw||!rappro)return null;
+ const stock={};
+ Object.entries(rappro.achatParIngredient).forEach(([cle,a])=>{if(a.qKg>0)stock[cle]=a.qKg});
+ const stockInitial={...stock};
+ const bonsTries=[...raw.bons].sort((a,b)=>(a.jour_livraison||'9999').localeCompare(b.jour_livraison||'9999'));
+ const nonMesurables=new Set();
+ const commandes=bonsTries.map(bon=>{
+  const repas=raw.attrs.filter(a=>a.bon_id===bon.id).map(a=>{
+   const rec=raw.recettesById[a.recette_id]||{};
+   const f=edit&&edit.facteurs&&edit.facteurs[a.recette_id]!=null?edit.facteurs[a.recette_id]:(+a.facteur||1);
+   const ings=raw.recIngredients.filter(i=>i.recette_id===a.recette_id&&+i.quantite_g>0).map(i=>{
+    const nom=String(i.ingredient_nom||'').trim();
+    const kg=qteKg((+i.quantite_g)/(rec.nb_portions||1)*f,(i.unite||'g').trim().toLowerCase());
+    if(kg==null)nonMesurables.add(nom);
+    return{nom,cle:nom.toLowerCase(),kg};
+   }).filter(i=>i.kg!=null&&i.kg>0);
+   const demande=a.nb_portions||0;
+   // Seuls les aliments PRINCIPAUX (≥ 15 % du poids de la portion) peuvent
+   // fixer le nombre de portions : sinon 1 kg d'huile rendrait faisable un
+   // chili sans bœuf. Parmi eux, le plus disponible décide — il est nommé.
+   const poids=ings.reduce((t,i)=>t+i.kg,0);
+   let principaux=ings.filter(i=>i.kg>=PART_PRINCIPALE*poids);if(!principaux.length)principaux=ings;
+   let possible=0,decideur=null;
+   principaux.forEach(i=>{const p=Math.floor(((stock[i.cle]||0)+1e-9)/i.kg);if(p>possible){possible=p;decideur=i.nom}});
+   const faisable=Math.min(demande,possible);
+   // combien de ces portions sont complètes (l'aliment le MOINS disponible)
+   const completes=ings.length?Math.min(faisable,...ings.map(i=>Math.floor(((stock[i.cle]||0)+1e-9)/i.kg))):0;
+   const manquants=[];
+   ings.forEach(i=>{
+    const besoin=faisable*i.kg,dispo=stock[i.cle]||0,pris=Math.min(besoin,dispo);
+    stock[i.cle]=dispo-pris;
+    if(besoin-pris>1e-6)manquants.push({nom:i.nom,kg:besoin-pris,aucunAchat:!(stockInitial[i.cle]>0)});
+   });
+   return{recId:a.recette_id,nom:rec.nom||'?',demande,faisable,completes,manquants,decideur:faisable?decideur:null,principaux:principaux.map(i=>i.nom),statut:!faisable?'impossible':manquants.length?'a_completer':'complete'};
+  });
+  return{bon,repas,demande:repas.reduce((t,r)=>t+r.demande,0),faisable:repas.reduce((t,r)=>t+r.faisable,0),completes:repas.reduce((t,r)=>t+r.completes,0)};
+ });
+ // vue par recette : complètes / à compléter, manquants cumulés
+ const parRecette={};
+ commandes.forEach(c=>c.repas.forEach(r=>{
+  const p=parRecette[r.recId]||(parRecette[r.recId]={nom:r.nom,demande:0,faisable:0,completes:0,manquants:{}});
+  p.demande+=r.demande;p.faisable+=r.faisable;p.completes+=r.completes;
+  r.manquants.forEach(m=>{const x=p.manquants[m.nom]||(p.manquants[m.nom]={nom:m.nom,kg:0,aucunAchat:m.aucunAchat});x.kg+=m.kg});
+ }));
+ const recettes=Object.values(parRecette).map(p=>({...p,manquants:Object.values(p.manquants).sort((a,b)=>b.kg-a.kg)}));
+ return{commandes,recettes,
+  demande:commandes.reduce((t,c)=>t+c.demande,0),faisable:commandes.reduce((t,c)=>t+c.faisable,0),completes:commandes.reduce((t,c)=>t+c.completes,0),
+  restes:Object.entries(stock).filter(([,v])=>v>0.001).map(([cle,v])=>({nom:(rappro.achatParIngredient[cle]||{}).nom||cle,kg:v})).sort((a,b)=>b.kg-a.kg),
+  nonMesurables:[...nonMesurables]};
+}
+function planProductionHtml(pl){
+ if(!pl)return `<div class="empty" style="margin-top:12px">Aucun achat relevé pour cette session — ajoute une pièce « Achats matières premières » ou saisis la colonne « Qté achetée », puis réorganise.</div>`;
+ const man=ms=>ms.map(m=>`<span class="chip ${m.aucunAchat?'bad':'warn'}" title="${m.aucunAchat?'aucun achat relevé':'acheté en quantité insuffisante'}">${esc(m.nom)} −${fmtQte(m.kg)}</span>`).join(' ');
+ const completes=pl.recettes.filter(r=>r.faisable&&!r.manquants.length),aCompleter=pl.recettes.filter(r=>r.faisable&&r.manquants.length),impossibles=pl.recettes.filter(r=>!r.faisable);
+ return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+ <div class="grid g3" style="margin-bottom:12px">
+  <div class="card kpi"><div class="lbl">Repas faisables</div><div class="val">${pl.faisable}<small> / ${pl.demande}</small></div><div class="foot">avec ce qui a été acheté</div></div>
+  <div class="card kpi"><div class="lbl">Dont complets</div><div class="val" style="color:var(--green)">${pl.completes}</div><div class="foot">tous les aliments sont là</div></div>
+  <div class="card kpi"><div class="lbl">À compléter</div><div class="val" style="color:${pl.faisable-pl.completes?'var(--amber)':'inherit'}">${pl.faisable-pl.completes}</div><div class="foot">${pl.demande-pl.faisable} impossible${pl.demande-pl.faisable>1?'s':''} faute de l'aliment principal</div></div>
+ </div>
+ <h3 style="margin:0 0 8px;font-size:13.5px">Par commande</h3>
+ <div class="list" style="margin-bottom:14px">${pl.commandes.map(c=>`<div class="li" style="display:block">
+  <div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:600">${esc(c.bon.contact_nom||('Commande '+(c.bon.type||'')))}${c.bon.jour_livraison?` <span class="muted" style="font-weight:400">· livraison ${fd(c.bon.jour_livraison)}</span>`:''}</b><span class="chip ${c.faisable===c.demande&&c.completes===c.faisable?'ok':c.faisable?'warn':'bad'}">${c.faisable} / ${c.demande} repas</span></div>
+  ${c.repas.map(r=>`<div style="padding:6px 0 0 10px;font-size:12.5px"><div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(r.nom)} — <b>${r.faisable}</b> / ${r.demande}${r.faisable&&r.completes<r.faisable?` <span class="muted">(dont ${r.completes} complète${r.completes>1?'s':''})</span>`:''}${r.decideur&&r.statut!=='complete'?` <span class="muted" style="font-size:11.5px">· selon ${esc(r.decideur)}</span>`:''}${r.statut==='impossible'?` <span class="muted" style="font-size:11.5px">· aucun aliment principal acheté (${r.principaux.map(esc).join(', ')})</span>`:''}</span>${r.statut==='complete'?'<span class="chip ok">complète</span>':r.statut==='impossible'?'<span class="chip bad">impossible</span>':'<span class="chip warn">à compléter</span>'}</div>${r.statut==='a_completer'?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${man(r.manquants)}</div>`:''}</div>`).join('')}
+ </div>`).join('')}</div>
+ <h3 style="margin:0 0 8px;font-size:13.5px">Recettes complètes <span class="muted" style="font-weight:400">· ${completes.length}</span></h3>
+ ${completes.length?`<div class="list" style="margin-bottom:14px">${completes.map(r=>`<div class="li"><div class="grow">${esc(r.nom)}</div><span class="chip ok">${r.faisable} / ${r.demande} portions</span></div>`).join('')}</div>`:'<div class="muted" style="font-size:12px;margin-bottom:14px">Aucune.</div>'}
+ <h3 style="margin:0 0 8px;font-size:13.5px">Recettes à compléter <span class="muted" style="font-weight:400">· ${aCompleter.length+impossibles.length}</span></h3>
+ ${aCompleter.length+impossibles.length?`<div class="list">${[...aCompleter,...impossibles].map(r=>`<div class="li" style="display:block"><div style="display:flex;justify-content:space-between;gap:10px"><span>${esc(r.nom)}</span><span class="chip ${r.faisable?'warn':'bad'}">${r.faisable} / ${r.demande} portions${r.faisable?` · ${r.completes} complète${r.completes>1?'s':''}`:''}</span></div>
+  <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:5px">${r.faisable?man(r.manquants):'<span class="muted" style="font-size:12px">Aucun aliment acheté pour cette recette : rien n\'est faisable.</span>'}</div></div>`).join('')}</div>`:'<div class="muted" style="font-size:12px">Aucune.</div>'}
+ ${pl.restes.length?`<p class="muted" style="font-size:12px;margin:12px 0 0">Reste en stock après cette production : ${pl.restes.map(r=>esc(r.nom)+' '+fmtQte(r.kg)).join(', ')}.</p>`:''}
+ ${pl.nonMesurables.length?`<p class="muted" style="font-size:11.5px;margin:6px 0 0">Non pris en compte (unité autre que g/kg) : ${pl.nonMesurables.map(esc).join(', ')}.</p>`:''}
+ <p class="muted" style="font-size:11.5px;margin:6px 0 0">Le nombre de portions faisables est fixé par l'aliment principal le plus disponible (principal = au moins 15 % du poids de la portion : un reste d'huile ou d'ail ne rend pas une recette faisable). Les commandes sont servies dans l'ordre de livraison. Les manquants sont les quantités à acheter pour compléter les portions faisables ; chip rouge = aliment jamais acheté, orange = acheté en quantité insuffisante.</p>
+ </div>`;
 }
 function barres(items,max){
  return `<div style="display:grid;gap:8px">${items.map(p=>`<div><div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-bottom:3px"><span>${p.label}</span><span class="mono">${p.droite}</span></div><div class="bar" style="margin-top:0"><i style="width:${max?Math.min(100,p.val/max*100):0}%;background:${p.couleur||'var(--ink)'}"></i></div></div>`).join('')}</div>`;
@@ -5854,6 +5943,7 @@ function wireFinanceIfPresent(){
   const o=e.target.closest('[data-fin-open]');if(o){const [kind,id]=o.dataset.finOpen.split(':');FIN_DETAIL={kind,id};render();return}
   if(e.target.closest('[data-fin-retour]')){FIN_DETAIL=null;render();return}
   if(e.target.closest('[data-fin-rattacher]')){await rattacherBonsDeduits();return}
+  if(e.target.closest('[data-fin-reorg]')){FIN_REORG=!FIN_REORG;recalculerFinanceLive();return}
   const d=e.target.closest('[data-del-eq]');
   if(d){if(!confirm('Retirer ce poste de l’équipe ?'))return;await sb('crm_session_equipe?id=eq.'+d.dataset.delEq,{method:'DELETE'});delete FIN_EDIT.equipe[d.dataset.delEq];render();return}
   const of=e.target.closest('[data-ouvrir-facture]');if(of){ouvrirFactureDetail(of.dataset.ouvrirFacture);return}
