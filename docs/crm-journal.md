@@ -1344,3 +1344,32 @@ estimées pour 6 h de plan.
   travail : 300 min sur 363 ».
 Vérifié sur la copie + faux PostgREST : 180 € dans Opérationnel ET dans les marges,
 bourguignon 83 % / curry 17 % ; banc 32/32 ; console vide.
+
+---
+
+## Production réelle : déjà produites, prêtes à faire, à compléter — commande et surplus (28/09/2026, nuit)
+
+Capture de Pablo (poulet à la moutarde, 10 commandées, ingrédients saisis) : « saisir combien
+sont déjà produites dans la commande ; avec la saisie des ingrédients du reste, combien sont
+prêtes à être faites, combien à compléter dans la commande, et combien à compléter ou prêtes
+en surplus ».
+- **« Déjà produites dans la commande »** (par recette, mode ingrédients) : saisi, sinon les
+  plats validés à l'assemblage. Les ingrédients saisis deviennent le RESTE de la production.
+- **`prRepartir`** : N commandées, D déjà faites, P déjà faites en plus (assemblage), et avec le
+  reste C prêtes (tous les aliments) / F faisables (F − C à compléter). La commande est servie
+  d'abord — prêtes puis à compléter —, le reste va au surplus :
+  commande = { déjà, prêtes, à compléter, manquent } ; surplus = { prêtes, à compléter }.
+  `enPlus` (Produits) = surplus prêtes ; Produits ne liste comme « à compléter » que celles du surplus.
+- **Écran** : quatre indicateurs (déjà produites, prêtes à faire, à compléter, surplus), un
+  tableau par recette avec les sept colonnes, et sous la saisie de chaque recette un
+  récapitulatif en pastilles mis à jour à chaque frappe.
+- 🔴 **Même correction qu'en Assemblage** : le principal le PLUS LIMITANT fixe les faisables.
+  Sur la capture, riz et poulet sont tous deux principaux ; « le plus disponible » annonçait 15
+  (le riz) avec du poulet pour 4. Avec la règle corrigée : 4 faisables, 0 prêtes (carotte à 0),
+  4 à compléter. Le premier exemple de Pablo (riz et poulet pour 20) ne change pas.
+  « Réorganiser » garde sa règle.
+- L'inventaire compte comme utilisé le reste pesé + les portions déjà faites.
+Vérifié : banc 36/36 (la capture de Pablo, avec et sans 3 déjà produites ; poulet à 5 kg →
+7 prêtes pour la commande, 1 prête et 7 à compléter en surplus) ; navigateur : curry 3 déjà
+faites → « 7 prêtes à faire · surplus 3 prêtes · 10 à compléter », enregistré, curseur gardé,
+console vide. 🔄 Largeur 375 px non remesurée (fenêtre réduite pendant le test).

@@ -89,18 +89,21 @@ function productionReelle(raw, calc, saisie) {
   const recettes = calc.parRecette.map(p => {
     const s = saisie[p.id] || {}, mode = s.mode === 'global' ? 'global' : 'ingredients';
     const besoins = prBesoins(raw, calc, p.id);
-    const base = { recId: p.id, nom: p.nom, demande: p.nbPortions, mode, besoins, manquants: [], nonSaisis: [], decideur: null };
+    const N = p.nbPortions;
+    const base = { recId: p.id, nom: p.nom, demande: N, mode, besoins, manquants: [], nonSaisis: [], decideur: null };
     // Validés à l'assemblage (Production → session → Assemblage) :
     // saisie._faits[recId] = { clients: { bonId: plats faits }, enPlus: n }.
-    // Une saisie d'Opérationnel pour la recette l'emporte (elle dit aussi ce
-    // qui est à compléter) ; sinon les plats validés sont la production réelle.
     const fa = saisie._faits && saisie._faits[p.id];
-    if (!saisie[p.id] && fa) {
-      const faitsCommande = raw.attrs.filter(a => a.recette_id === p.id)
-        .reduce((t, a) => t + Math.min(a.nb_portions || 0, Math.max(0, +((fa.clients || {})[a.bon_id]) || 0)), 0);
-      const plus = Math.max(0, +fa.enPlus || 0);
-      if (faitsCommande || plus) return { ...base, mode: 'assemblage', saisi: true, faisable: faitsCommande + plus, completes: faitsCommande + plus, aCompleter: 0, faitsCommande, enPlusFixe: plus };
-    }
+    const faitsAssemblage = fa ? raw.attrs.filter(a => a.recette_id === p.id)
+      .reduce((t, a) => t + Math.min(a.nb_portions || 0, Math.max(0, +((fa.clients || {})[a.bon_id]) || 0)), 0) : 0;
+    const plusAssemblage = fa ? Math.max(0, +fa.enPlus || 0) : 0;
+    // « Déjà produites dans la commande » (demande de Pablo, 28/09) : saisi à
+    // la main, sinon les plats validés à l'assemblage. Les ingrédients saisis
+    // sont alors le RESTE de la production, pas encore en barquette.
+    const dejaSaisi = s.deja != null && s.deja !== '';
+    const deja = Math.min(N, Math.max(0, Math.floor(dejaSaisi ? +s.deja : faitsAssemblage)));
+    const dejaPlus = plusAssemblage;
+    let C = 0, F = 0, extra = {}, saisi = deja > 0 || dejaPlus > 0;
     if (mode === 'global') {
       const portions = s.portions != null && s.portions !== '' ? Math.max(0, Math.floor(+s.portions)) : null;
       const tot = s.total && s.total.v != null && s.total.v !== '' ? { q: prVersBase(s.total.v, s.total.u), fam: prFamille(s.total.u) } : null;
@@ -110,8 +113,11 @@ function productionReelle(raw, calc, saisie) {
       const porSaisie = s.portion && s.portion.v != null && s.portion.v !== '' && +s.portion.v > 0 ? { q: prVersBase(s.portion.v, s.portion.u), fam: prFamille(s.portion.u) } : null;
       const por = porSaisie && tot && porSaisie.fam === tot.fam ? porSaisie.q : null;
       const calcule = tot && por ? Math.floor(tot.q / por + 1e-9) : null;
-      const completes = portions != null ? portions : (calcule != null ? calcule : 0);
-      return { ...base, saisi: portions != null || calcule != null, faisable: completes, completes, aCompleter: 0, total: tot, portion: por, calcule };
+      // Un plat entier compte TOUTES ses portions : « déjà produites » ne s'y ajoute pas.
+      C = F = portions != null ? portions : (calcule != null ? calcule : 0);
+      saisi = portions != null || calcule != null;
+      extra = { total: tot, portion: por, calcule };
+      return prRepartir({ ...base, ...extra, saisi }, 0, 0, C, F);
     }
     const saisis = besoins.map(b => {
       const e = s.ings && s.ings[b.cle];
@@ -120,34 +126,51 @@ function productionReelle(raw, calc, saisie) {
       if (q == null) { base.nonSaisis.push(b.nom); return null; }
       return { ...b, prod: q, possible: b.parPortion > 0 ? Math.floor(q / b.parPortion + 1e-9) : Infinity };
     }).filter(Boolean);
-    if (!saisis.length) return { ...base, saisi: false, faisable: 0, completes: 0, aCompleter: 0 };
-    // L'aliment principal fixe le nombre de portions (même règle que « Réorganiser »).
-    const poids = saisis.filter(i => i.fam !== 'p').reduce((t, i) => t + i.parPortion, 0);
-    let principaux = saisis.filter(i => i.tag === 'proteine');
-    if (!principaux.length) principaux = saisis.filter(i => i.fam !== 'p' && i.parPortion >= PART_PRINCIPALE * poids);
-    if (!principaux.length) principaux = saisis;
-    let faisable = 0, decideur = null;
-    principaux.forEach(i => { if (i.possible > faisable) { faisable = i.possible; decideur = i.nom; } });
-    const completes = Math.min(faisable, ...saisis.map(i => i.possible));
-    const manquants = saisis.filter(i => i.possible < faisable).map(i => ({ nom: i.nom, fam: i.fam, q: faisable * i.parPortion - i.prod }));
-    return { ...base, saisi: true, faisable, completes, aCompleter: faisable - completes, manquants, decideur, saisis };
+    if (saisis.length) {
+      // L'aliment principal fixe le nombre de portions faisables : l'étiquette
+      // « protéine », sinon les aliments d'au moins 15 % du poids — et parmi eux
+      // le PLUS LIMITANT (même règle que « ce que le stock permet » en
+      // Assemblage). « Le plus disponible » annonçait 15 poulets-moutarde avec
+      // du poulet pour 4, parce que le riz en permettait 15 (capture de Pablo).
+      const poids = saisis.filter(i => i.fam !== 'p').reduce((t, i) => t + i.parPortion, 0);
+      let principaux = saisis.filter(i => i.tag === 'proteine');
+      if (!principaux.length) principaux = saisis.filter(i => i.fam !== 'p' && i.parPortion >= PART_PRINCIPALE * poids);
+      if (!principaux.length) principaux = saisis;
+      let decideur = principaux[0].nom; F = Infinity;
+      principaux.forEach(i => { if (i.possible < F) { F = i.possible; decideur = i.nom; } });
+      if (!isFinite(F)) F = 0;
+      C = Math.min(F, ...saisis.map(i => i.possible));
+      base.manquants = saisis.filter(i => i.possible < F).map(i => ({ nom: i.nom, fam: i.fam, q: F * i.parPortion - i.prod }));
+      base.decideur = decideur; base.saisis = saisis; saisi = true;
+    } else if (!saisie[p.id] && fa) base.mode = 'assemblage';
+    return prRepartir({ ...base, saisi, dejaSaisi, faitsAssemblage }, deja, dejaPlus, C, F);
   });
   const somme = k => recettes.reduce((t, r) => t + (r[k] || 0), 0);
-  recettes.forEach(r => {
-    // À l'assemblage, « en plus » est déclaré (compteur à part) et le manque est
-    // ce qui reste à faire des commandes — pas une différence de totaux, qui
-    // ferait passer un plat en plus pour une portion de commande.
-    if (r.mode === 'assemblage') { r.enPlus = r.enPlusFixe; r.manque = Math.max(0, r.demande - r.faitsCommande); return; }
-    r.enPlus = r.saisi ? Math.max(0, r.completes - r.demande) : 0; r.manque = r.saisi ? Math.max(0, r.demande - r.completes) : 0;
-  });
-  return { recettes, saisi: recettes.some(r => r.saisi), completes: somme('completes'), aCompleter: somme('aCompleter'), demande: somme('demande'), enPlus: somme('enPlus'), manque: somme('manque') };
+  const sommeDe = (o, k) => recettes.reduce((t, r) => t + (r[o] ? r[o][k] || 0 : 0), 0);
+  return { recettes, saisi: recettes.some(r => r.saisi), completes: somme('completes'), aCompleter: somme('aCompleter'), demande: somme('demande'), enPlus: somme('enPlus'), manque: somme('manque'),
+    deja: somme('deja'), commande: { pretes: sommeDe('commande', 'pretes'), aCompleter: sommeDe('commande', 'aCompleter') }, surplus: { pretes: sommeDe('surplus', 'pretes'), aCompleter: sommeDe('surplus', 'aCompleter') } };
+}
+/* La répartition d'une recette entre la commande et le surplus :
+   N commandées, D déjà produites pour la commande, P déjà produites en plus
+   (assemblage), et, avec le reste de la production, C portions prêtes à faire
+   (tous les aliments sont là) et F faisables (dont F − C à compléter).
+   La commande est servie d'abord — les prêtes, puis les à compléter — et ce
+   qui dépasse part au surplus. */
+function prRepartir(r, D, P, C, F) {
+  const N = r.demande, reste = Math.max(0, N - D), A = Math.max(0, F - C);
+  const pretesCmd = Math.min(C, reste), aCompCmd = Math.min(A, reste - pretesCmd);
+  const commande = { deja: D, reste, pretes: pretesCmd, aCompleter: aCompCmd, manque: reste - pretesCmd - aCompCmd };
+  const surplus = { deja: P, pretes: P + (C - pretesCmd), aCompleter: A - aCompCmd };
+  return { ...r, deja: D, faisable: D + P + F, completes: D + P + C, aCompleter: A, commande, surplus,
+    enPlus: r.saisi ? surplus.pretes : 0, manque: r.saisi ? commande.manque : 0 };
 }
 /* Ce que la production réelle a consommé d'un aliment, en unité de base —
-   seulement ce qui a été saisi par ingrédient (un plat entier ne dit pas ses
-   ingrédients). Sert l'inventaire. */
+   seulement pour les recettes pesées par ingrédient (un plat entier ne dit pas
+   ses ingrédients) : le reste pesé PLUS les portions déjà faites, à la portion
+   moyenne de la session. Sert l'inventaire. */
 function prConsommeReel(pr) {
   const m = {};
-  pr.recettes.forEach(r => (r.saisis || []).forEach(i => { const k = i.cle + '|' + i.fam; m[k] = (m[k] || 0) + i.prod; }));
+  pr.recettes.forEach(r => (r.saisis || []).forEach(i => { const k = i.cle + '|' + i.fam; m[k] = (m[k] || 0) + i.prod + (r.deja || 0) * i.parPortion; }));
   return m;
 }
 
@@ -160,26 +183,47 @@ function prCalcul() {
   const b = bilanSession(FIN_DONNEES, FIN_EDIT);
   return { b, pr: productionReelle(FIN_DONNEES, b.calc, prSaisieCourante()) };
 }
+/* Une recette en une ligne de pastilles : la commande (déjà faites, prêtes à
+   faire avec le reste de la production, à compléter, manquent), puis le
+   surplus (prêtes, à compléter). Affichée dans le tableau des résultats ET
+   sous la saisie de chaque recette, mise à jour à chaque frappe. */
+function prSommaireHtml(r) {
+  if (!r.saisi) return '<span class="muted" style="font-size:12px">Rien de saisi pour cette recette.</span>';
+  const c = r.commande, sp = r.surplus, n = (v, t) => `${v} ${t}`;
+  return `<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:12px">
+    <b style="font-weight:600">Commande ${r.demande}</b>
+    ${c.deja ? `<span class="chip ink">${n(c.deja, 'déjà faite' + (c.deja > 1 ? 's' : ''))}</span>` : ''}
+    <span class="chip ok">${n(c.pretes, 'prête' + (c.pretes > 1 ? 's' : '') + ' à faire')}</span>
+    ${c.aCompleter ? `<span class="chip warn">${n(c.aCompleter, 'à compléter')}</span>` : ''}
+    ${c.manque ? `<span class="chip bad">${n(c.manque, 'manque' + (c.manque > 1 ? 'nt' : ''))}</span>` : ''}
+    <b style="font-weight:600;margin-left:8px">Surplus</b>
+    <span class="chip vi">${n(sp.pretes, 'prête' + (sp.pretes > 1 ? 's' : ''))}</span>
+    ${sp.aCompleter ? `<span class="chip warn">${n(sp.aCompleter, 'à compléter')}</span>` : ''}
+  </div>`;
+}
 function prResultatsHtml(pr) {
-  if (!pr.saisi) return `<div class="empty">Rien de saisi : indique ce qui est sorti de la cuisine, recette par recette (par ingrédient, ou le plat entier et ses portions).</div>`;
-  const faites = pr.recettes.filter(r => r.saisi && r.completes > 0), aComp = pr.recettes.filter(r => r.saisi && r.aCompleter > 0);
+  if (!pr.saisi) return `<div class="empty">Rien de saisi : indique ce qui est déjà produit et ce qui reste en cuisine, recette par recette (par ingrédient, ou le plat entier et ses portions) — ou valide les plats dans Production → session → Assemblage.</div>`;
+  const aComp = pr.recettes.filter(r => r.saisi && r.aCompleter > 0 && r.manquants.length);
   const sansSaisie = pr.recettes.filter(r => !r.saisi);
   const man = r => r.manquants.map(m => `<span class="chip warn">${esc(m.nom)} −${prFmt(m.q, m.fam)}</span>`).join(' ');
+  const cell = (v, coul) => `<td class="num" style="${v && coul ? 'color:' + coul + ';font-weight:600' : ''}">${v || '<span class="muted">0</span>'}</td>`;
+  const reste = pr.commande.pretes + pr.commande.aCompleter;
   return `<div class="grid g4" style="margin-bottom:12px">
-   <div class="card kpi"><div class="lbl">Portions complètes</div><div class="val" style="color:var(--green)">${pr.completes}</div><div class="foot">pour ${pr.demande} commandées</div></div>
-   <div class="card kpi"><div class="lbl">À compléter</div><div class="val" style="color:${pr.aCompleter ? 'var(--amber)' : 'inherit'}">${pr.aCompleter}</div><div class="foot">un aliment manque</div></div>
-   <button class="card kpi click" type="button" data-pr-produits><div class="lbl">En plus des commandes</div><div class="val" style="color:var(--violet)">${pr.enPlus}</div><div class="kpi-go">disponibles à la vente → Produits</div></button>
-   <div class="card kpi"><div class="lbl">Manquent aux commandes</div><div class="val" style="color:${pr.manque ? 'var(--red)' : 'inherit'}">${pr.manque}</div><div class="foot">commandées, pas complètes</div></div>
+   <div class="card kpi"><div class="lbl">Déjà produites</div><div class="val">${pr.deja}</div><div class="foot">sur ${pr.demande} commandées</div></div>
+   <div class="card kpi"><div class="lbl">Prêtes à faire</div><div class="val" style="color:var(--green)">${pr.commande.pretes}</div><div class="foot">pour la commande, avec le reste de la production</div></div>
+   <div class="card kpi"><div class="lbl">À compléter</div><div class="val" style="color:${pr.commande.aCompleter ? 'var(--amber)' : 'inherit'}">${pr.commande.aCompleter}</div><div class="foot">${pr.manque ? `<span style="color:var(--red)">${pr.manque} manque${pr.manque > 1 ? 'nt' : ''} encore</span>` : reste ? 'pour finir la commande' : 'commande couverte'}</div></div>
+   <button class="card kpi click" type="button" data-pr-produits><div class="lbl">Surplus</div><div class="val" style="color:var(--violet)">${pr.surplus.pretes}<small style="font-size:14px;color:var(--amber)">${pr.surplus.aCompleter ? ' + ' + pr.surplus.aCompleter + ' à compl.' : ''}</small></div><div class="kpi-go">prêtes, à vendre → Produits</div></button>
   </div>
-  <h3 style="margin:0 0 8px;font-size:13.5px">Complètes <span class="muted" style="font-weight:400">· ${pr.completes}</span></h3>
-  ${faites.length ? `<div class="list" style="margin-bottom:14px">${faites.map(r => `<div class="li"><div class="grow">${esc(r.nom)}<div class="meta">${r.mode === 'assemblage' ? `validé à l'assemblage · ${r.faitsCommande} de la commande${r.enPlus ? ' + ' + r.enPlus + ' en plus' : ''}` : r.mode === 'global' ? (r.total ? 'plat entier · ' + prFmt(r.total.q, r.total.fam) + (r.portion ? ' à ' + prFmt(r.portion, r.total.fam) + ' la portion' : '') : 'plat entier · portions comptées') : 'par ingrédient' + (r.decideur ? ' · selon ' + esc(r.decideur) : '')} · ${r.demande} commandée${r.demande > 1 ? 's' : ''}</div></div>
-    <span class="chip ok">${r.completes} portion${r.completes > 1 ? 's' : ''}</span>${r.enPlus ? ` <span class="chip vi">+${r.enPlus} en plus</span>` : ''}${r.manque ? ` <span class="chip bad">−${r.manque}</span>` : ''}</div>`).join('')}</div>` : '<div class="muted" style="font-size:12px;margin-bottom:14px">Aucune.</div>'}
-  <h3 style="margin:0 0 8px;font-size:13.5px">À compléter <span class="muted" style="font-weight:400">· ${pr.aCompleter}</span></h3>
-  ${aComp.length ? `<div class="list">${aComp.map(r => `<div class="li" style="display:block"><div style="display:flex;justify-content:space-between;gap:10px"><span>${esc(r.nom)} <span class="muted" style="font-size:11.5px">· ${r.faisable} faisables selon ${esc(r.decideur || '—')}, ${r.completes} complètes</span></span><span class="chip warn">${r.aCompleter} à compléter</span></div>
+  <div class="tbl-wrap" style="margin-bottom:14px"><table><thead><tr><th>Recette</th><th>Commandées</th><th>Déjà faites</th><th>Prêtes à faire</th><th>À compléter</th><th>Manquent</th><th>Surplus prêtes</th><th>Surplus à compl.</th></tr></thead><tbody>
+  ${pr.recettes.map(r => `<tr><td>${esc(r.nom)}<div class="muted" style="font-size:11px">${!r.saisi ? 'rien de saisi' : r.mode === 'global' ? (r.total ? 'plat entier · ' + prFmt(r.total.q, r.total.fam) + (r.portion ? ' à ' + prFmt(r.portion, r.total.fam) + ' la portion' : '') : 'plat entier · portions comptées') : [r.deja ? (r.dejaSaisi ? r.deja + ' déjà faites (saisi)' : r.deja + ' validées à l’assemblage') : '', r.saisis ? 'reste pesé' + (r.decideur ? ', selon ' + esc(r.decideur) : '') : ''].filter(Boolean).join(' · ')}</div></td>
+    <td class="num">${r.demande}</td>${r.saisi ? cell(r.commande.deja, 'var(--ink)') + cell(r.commande.pretes, 'var(--green)') + cell(r.commande.aCompleter, 'var(--amber)') + cell(r.commande.manque, 'var(--red)') + cell(r.surplus.pretes, 'var(--violet)') + cell(r.surplus.aCompleter, 'var(--amber)') : '<td colspan="6" class="muted" style="text-align:center">—</td>'}</tr>`).join('')}
+  </tbody></table></div>
+  ${aComp.length ? `<h3 style="margin:0 0 8px;font-size:13.5px">À compléter — ce qui manque</h3><div class="list">${aComp.map(r => `<div class="li" style="display:block"><div style="display:flex;justify-content:space-between;gap:10px"><span>${esc(r.nom)} <span class="muted" style="font-size:11.5px">· ${r.faisable - r.deja} faisables avec le reste selon ${esc(r.decideur || '—')}, ${r.completes - r.deja} prêtes</span></span><span class="chip warn">${r.aCompleter} à compléter</span></div>
     <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:5px"><span class="muted" style="font-size:12px">Il manque :</span>${man(r)}</div>
-    <div class="muted" style="font-size:11.5px;margin-top:4px">${r.saisis.map(i => `${esc(i.nom)} ${prFmt(i.prod, i.fam)} → ${i.possible === Infinity ? '∞' : i.possible} portions (${prFmt(i.parPortion, i.fam)} / portion)`).join(' · ')}</div></div>`).join('')}</div>` : '<div class="muted" style="font-size:12px">Aucune.</div>'}
-  ${pr.recettes.filter(r => r.saisi && r.nonSaisis.length && r.mode !== 'global').map(r => `<p class="muted" style="font-size:11.5px;margin:8px 0 0">${esc(r.nom)} — non pesés, donc non comptés : ${r.nonSaisis.map(esc).join(', ')}.</p>`).join('')}
-  ${sansSaisie.length ? `<p class="muted" style="font-size:11.5px;margin:8px 0 0">Sans production saisie : ${sansSaisie.map(r => esc(r.nom)).join(', ')}.</p>` : ''}`;
+    <div class="muted" style="font-size:11.5px;margin-top:4px">${r.saisis.map(i => `${esc(i.nom)} ${prFmt(i.prod, i.fam)} → ${i.possible === Infinity ? '∞' : i.possible} portions (${prFmt(i.parPortion, i.fam)} / portion)`).join(' · ')}</div></div>`).join('')}</div>` : ''}
+  ${pr.recettes.filter(r => r.saisi && r.saisis && r.nonSaisis.length).map(r => `<p class="muted" style="font-size:11.5px;margin:8px 0 0">${esc(r.nom)} — non pesés, donc non comptés : ${r.nonSaisis.map(esc).join(', ')}.</p>`).join('')}
+  ${sansSaisie.length ? `<p class="muted" style="font-size:11.5px;margin:8px 0 0">Sans production saisie : ${sansSaisie.map(r => esc(r.nom)).join(', ')}.</p>` : ''}
+  <p class="muted" style="font-size:11.5px;margin:8px 0 0">Prêtes = tous les aliments sont là pour les assembler ; à compléter = l'aliment principal est là, il manque un accompagnement. La commande est servie d'abord (les prêtes, puis les à compléter), le reste part au surplus.</p>`;
 }
 function prChamp(attrs, v, placeholder, largeur) {
   return `<input class="inp pr-champ" ${attrs} type="number" min="0" step="any" value="${v == null ? '' : esc(v)}" placeholder="${esc(placeholder || '')}" style="width:${largeur || 90}px;display:inline-block;padding:4px 8px">`;
@@ -193,7 +237,7 @@ function prEditionHtml(pr) {
   return pr.recettes.map(r => {
     const e = s[r.recId] || {}, mode = r.mode;
     const tete = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b style="font-size:13.5px">${esc(r.nom)} <span class="muted" style="font-weight:400;font-size:12px">· ${r.demande} portion${r.demande > 1 ? 's' : ''} commandée${r.demande > 1 ? 's' : ''}</span></b>
-      <div class="seg"><button type="button" data-pr-mode="${r.recId}:ingredients" aria-pressed="${mode === 'ingredients'}">Par ingrédient</button><button type="button" data-pr-mode="${r.recId}:global" aria-pressed="${mode === 'global'}">Plat entier</button></div></div>`;
+      <div class="seg"><button type="button" data-pr-mode="${r.recId}:ingredients" aria-pressed="${mode !== 'global'}">Par ingrédient</button><button type="button" data-pr-mode="${r.recId}:global" aria-pressed="${mode === 'global'}">Plat entier</button></div></div>`;
     if (mode === 'global') {
       const tu = (e.total && e.total.u) || 'L', pu = (e.portion && e.portion.u) || (prFamille(tu) === 'v' ? 'ml' : prFamille(tu) === 'm' ? 'g' : 'pièce');
       return `<div class="card" style="margin-bottom:10px">${tete}
@@ -202,14 +246,18 @@ function prEditionHtml(pr) {
          <label>Portion servie<br>${prChamp(`data-pr-rec="${r.recId}" data-pr-k="portion.v"`, e.portion && e.portion.v, pu === 'ml' ? 'ex. 330' : pu === 'g' ? 'ex. 350' : 'ex. 1')} ${prSelectUnite(`data-pr-rec="${r.recId}" data-pr-k="portion.u"`, prFamille(tu), pu)}</label>
          <label>Portions obtenues<br>${prChamp(`data-pr-rec="${r.recId}" data-pr-k="portions"`, e.portions, r.calcule != null ? String(r.calcule) : 'ex. 30', 80)}</label>
         </div>
-        <p class="muted" style="font-size:11.5px;margin:6px 0 0">Les portions obtenues, si tu les comptes, l'emportent ; sinon quantité produite ÷ portion servie. Un plat entier compte ses portions comme complètes.</p></div>`;
+        <p class="muted" style="font-size:11.5px;margin:6px 0 0">Les portions obtenues, si tu les comptes, l'emportent ; sinon quantité produite ÷ portion servie. Un plat entier compte toutes ses portions comme prêtes.</p>
+        <div id="prSum-${r.recId}" style="margin-top:10px">${prSommaireHtml(r)}</div></div>`;
     }
     return `<div class="card" style="margin-bottom:10px">${tete}
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px;margin-bottom:8px"><label>Déjà produites dans la commande ${prChamp(`data-pr-rec="${r.recId}" data-pr-k="deja"`, e.deja, r.faitsAssemblage ? String(r.faitsAssemblage) : '0', 70)} / ${r.demande}</label>
+       <span class="muted" style="font-size:11.5px">${r.faitsAssemblage && (e.deja == null || e.deja === '') ? r.faitsAssemblage + ' validées à l’assemblage — ' : ''}les quantités ci-dessous = le reste de la production, pas encore en barquette</span></div>
       ${r.besoins.length ? `<div class="tbl-wrap"><table><thead><tr><th>Aliment</th><th>Prévu / portion</th><th>Prévu pour ${r.demande}</th><th>Produit</th></tr></thead><tbody>${r.besoins.map(b => {
         const v = e.ings && e.ings[b.cle];
         return `<tr><td>${esc(b.nom)}${b.tag === 'proteine' ? ' <span class="chip info">protéine</span>' : ''}</td><td class="num">${prFmt(b.parPortion, b.fam)}</td><td class="num">${prFmt(b.q, b.fam)}</td>
           <td class="num" style="white-space:nowrap">${prChamp(`data-pr-rec="${r.recId}" data-pr-ing="${esc(b.cle)}" data-pr-k="v"`, v && v.v, '')} ${prSelectUnite(`data-pr-rec="${r.recId}" data-pr-ing="${esc(b.cle)}" data-pr-k="u"`, b.fam, (v && v.u) || PR_UNITES[b.fam][0])}</td></tr>`;
-      }).join('')}</tbody></table></div>` : '<div class="muted" style="font-size:12px">Aucun ingrédient chiffré dans la fiche — passe en « Plat entier ».</div>'}</div>`;
+      }).join('')}</tbody></table></div>` : '<div class="muted" style="font-size:12px">Aucun ingrédient chiffré dans la fiche — passe en « Plat entier ».</div>'}
+      <div id="prSum-${r.recId}" style="margin-top:10px">${prSommaireHtml(r)}</div></div>`;
   }).join('') + `<p class="muted" style="font-size:11.5px;margin:4px 0 0">Enregistré à la sortie de chaque champ. Prévu par portion = la moyenne de la session (fiche × coefficients), pas le grammage de chaque client. Case vide = aliment non pesé, ni manquant ni limitant.</p>`;
 }
 function prCarteHtml() {
@@ -228,6 +276,7 @@ function prCarteHtml() {
 function prRafraichir(tout) {
   const c = prCalcul(); if (!c) return;
   const res = document.getElementById('prRes'); if (res) res.innerHTML = prResultatsHtml(c.pr);
+  c.pr.recettes.forEach(r => { const el = document.getElementById('prSum-' + r.recId); if (el) el.innerHTML = prSommaireHtml(r); });
   if (tout) { const car = document.getElementById('prCarte'); if (car) car.outerHTML = prCarteHtml(); }
 }
 function prLireChamp(inp) {
@@ -240,7 +289,7 @@ function prLireChamp(inp) {
     const x = e.ings[ing] || (e.ings[ing] = {});
     x[k] = val;
     if (k === 'v' && x.u == null) { const sel = document.querySelector(`select[data-pr-rec="${rec}"][data-pr-ing="${CSS.escape(ing)}"]`); if (sel) x.u = sel.value; }
-  } else if (k === 'portions') e.portions = val;
+  } else if (k === 'portions' || k === 'deja') e[k] = val;
   else { const [o, p] = k.split('.'); e[o] = e[o] || {}; e[o][p] = val;
     if (p === 'v' && e[o].u == null) { const sel = document.querySelector(`select[data-pr-rec="${rec}"][data-pr-k="${o}.u"]`); if (sel) e[o].u = sel.value; } }
 }
@@ -451,7 +500,7 @@ function prProduitsDisponibles(global, plats) {
       if (!r.saisi) return;
       const assignes = plats.filter(p => p.session_id === s.id && p.recette_id === r.recId);
       if (r.enPlus || assignes.length) dispo.push({ session: s, rec: r, enPlus: r.enPlus, assignes: assignes.length, dispo: Math.max(0, r.enPlus - assignes.length) });
-      if (r.aCompleter) aCompleter.push({ session: s, rec: r });
+      if (r.surplus && r.surplus.aCompleter) aCompleter.push({ session: s, rec: r });
     });
   });
   return { dispo, aCompleter, sansSaisie };
@@ -465,7 +514,7 @@ async function prVueDisponibles() {
   const colonne = FIN_GLOBAL.sessions.length && Object.prototype.hasOwnProperty.call(FIN_GLOBAL.sessions[0], 'production_reelle');
   const bonDe = id => E && E.bons.find(b => b.id === id);
   const jPlus = j => { const n = Math.round((new Date(isoLocal(new Date()) + 'T00:00:00') - new Date(j + 'T00:00:00')) / 864e5); return n <= 0 ? 'du jour' : 'J+' + n; };
-  const totDispo = dispo.reduce((t, d) => t + d.dispo, 0), totAc = aCompleter.reduce((t, d) => t + d.rec.aCompleter, 0);
+  const totDispo = dispo.reduce((t, d) => t + d.dispo, 0), totAc = aCompleter.reduce((t, d) => t + d.rec.surplus.aCompleter, 0);
   return `<div id="prodRoot">
   ${!colonne || PLATS_MANQUE ? `<div class="exbar"><span class="chip bad">SQL</span><span>Tables de la production réelle absentes — exécuter ${PR_SQL}.</span></div>` : ''}
   <div class="grid g3" style="margin-bottom:16px">
@@ -477,7 +526,7 @@ async function prVueDisponibles() {
   ${dispo.filter(d => d.dispo > 0).length ? `<div class="grid g2" style="margin-bottom:16px">${dispo.filter(d => d.dispo > 0).map(d => `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>${esc(d.rec.nom)}</b><div class="muted" style="font-size:12px;margin-top:2px">session du ${fd(d.session.jour)} · ${jPlus(d.session.jour)} · ${d.enPlus} en plus${d.assignes ? `, ${d.assignes} déjà assigné${d.assignes > 1 ? 's' : ''}` : ''}</div></div><span class="chip vi">${d.dispo} dispo</span></div>
     <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:10px"><button class="btn sm ghost" type="button" data-fin-voir-session="${d.session.id}">Session →</button><button class="btn sm primary" type="button" data-plat-assigner="${d.session.id}:${d.rec.recId}">Assigner à une commande →</button></div></div>`).join('')}</div>`
     : `<div class="empty" style="margin-bottom:16px">Aucun plat en plus${sansSaisie.length ? ' pour l\'instant — la production réelle n\'est saisie pour aucune session récente' : ''}. Les plats en plus viennent de la production réelle : validés dans Production → session → Assemblage (compteur « en plus »), ou saisis dans Opérationnel (page d'une session). L'inventaire seul ne crée pas de plats : il dit ce que le stock permet encore de faire (affiché dans Assemblage).</div>`}
-  ${aCompleter.length ? `<div class="sect"><h2>À compléter</h2><span>${totAc}</span></div><div class="list" style="margin-bottom:16px">${aCompleter.map(d => `<div class="li" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(d.rec.nom)} <span class="muted" style="font-size:12px">· session du ${fd(d.session.jour)}</span></span><span class="chip warn">${d.rec.aCompleter} à compléter</span></div><div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:5px">${d.rec.manquants.map(m => `<span class="chip warn">${esc(m.nom)} −${prFmt(m.q, m.fam)}</span>`).join('')}</div></div>`).join('')}</div>` : ''}
+  ${aCompleter.length ? `<div class="sect"><h2>À compléter</h2><span>${totAc}</span></div><div class="list" style="margin-bottom:16px">${aCompleter.map(d => `<div class="li" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(d.rec.nom)} <span class="muted" style="font-size:12px">· session du ${fd(d.session.jour)}</span></span><span class="chip warn">${d.rec.surplus.aCompleter} à compléter en surplus</span></div><div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:5px">${d.rec.manquants.map(m => `<span class="chip warn">${esc(m.nom)} −${prFmt(m.q, m.fam)}</span>`).join('')}</div></div>`).join('')}</div>` : ''}
   <div class="sect"><h2>Plats assignés</h2><span>${plats.length}</span></div>
   ${plats.length ? `<div class="tbl-wrap"><table><thead><tr><th>Plat</th><th>Recette</th><th>Produit le</th><th>Commande</th><th>Livraison</th><th>À la place de</th><th></th></tr></thead><tbody>${plats.slice().reverse().map(p => { const b = bonDe(p.bon_id); const recR = p.remplace_recette_id && E ? (E.recettes.find(r => r.id === p.remplace_recette_id) || {}).nom : null; return `<tr>
     <td>${platPastille(p)}</td><td>${esc(p.recette_nom || '—')}</td><td>${p.produit_le ? fd(p.produit_le) : '—'}</td>
