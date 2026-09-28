@@ -1373,3 +1373,27 @@ Vérifié : banc 36/36 (la capture de Pablo, avec et sans 3 déjà produites ; p
 7 prêtes pour la commande, 1 prête et 7 à compléter en surplus) ; navigateur : curry 3 déjà
 faites → « 7 prêtes à faire · surplus 3 prêtes · 10 à compléter », enregistré, curseur gardé,
 console vide. 🔄 Largeur 375 px non remesurée (fenêtre réduite pendant le test).
+
+---
+
+## Marges : la matière = P × q ÷ Q, aliment par aliment (28/09/2026, nuit)
+
+Règle de Pablo : prix payé P pour une quantité achetée Q ; une recette consomme q → son coût
+pour cette matière = P × q ÷ Q ; la recette = la somme sur toutes ses matières.
+C'était déjà l'intention (prix au kilo × q), mais trois écarts la trahissaient :
+1. **Seuls les kilos comptaient** (le rapprochement ne convertit que g/kg) : crème au litre,
+   œufs à la pièce restaient « sans prix ». Nouveau `prmAchats(raw)` : les lignes des pièces MP
+   par aliment ET par famille d'unités (g/kg, ml/L, pièce), la saisie manuelle remplaçant les
+   factures pour son aliment, Q (tout) / Qp et P (lignes avec prix).
+2. **q oubliait les portions déjà faites** depuis « déjà produites » : q = reste pesé + (déjà
+   faites + déjà en plus) × portion moyenne.
+3. **Plat entier / validé à l'assemblage** : q = portions produites × portion moyenne (au lieu
+   du besoin prévu).
+Sans achat de l'aliment dans la session : prix de référence (kg), écrit sous le coût. Le tableau
+d'une sortie montre q, Q, P, q ÷ Q, le coût, le prix payé vs la moyenne pondérée (par kg, L ou
+pièce), et le **reste de l'achat** = Q − ce que toutes les recettes de la session ont consommé
+(du stock, pas un coût : la somme des recettes ne dépasse jamais P).
+Vérifié : banc 43/43 (kg + g additionnés, litres et pièces à part, ligne sans prix, saisie
+manuelle prioritaire, facture de cuisine exclue, 20 € × 1 kg ÷ 2,5 kg = 8 €) ; navigateur :
+riz 10 € × 5 ÷ 5 = 10 €, poulet 16 € × 2 ÷ 2 = 16 €, session du 20/09 poulet 10 € × 0,8 ÷ 1 = 8 €
++ riz au prix de référence 4 € = 12 € ; console vide.

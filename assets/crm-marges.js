@@ -64,24 +64,53 @@ function prmCuisineSession(s, b, E) {
   const part = id => auTemps ? minutes[id] / totMin : (pEqTot ? (c.portionsEq[id] || 0) / pEqTot : 0);
   return { total: location + equipe, location, equipe, heures, sourceHeures, tarif: c.tarifCuisineH, facture: factureCuisine, auTemps, minutes, totMin, part };
 }
+/* Les achats de matières d'une session, par aliment ET par famille d'unités
+   (kg/g, L/ml, pièce) — les lignes des pièces MP, la « Saisie manuelle » du
+   tableau des matières remplaçant les factures pour son aliment (même règle
+   que rapprochementFacture). Q = quantité achetée ; Qp et P = quantité et
+   montant des seules lignes qui portent un prix (un prix absent n'est pas un
+   prix nul). En unités de base : g, ml, pièces. */
+function prmAchats(raw) {
+  const factures = raw.factures || [];
+  const lignes = (raw.lignes || []).map(l => ({ l, f: factures.find(x => x.id === l.facture_id) })).filter(x => x.f && (x.f.categorie || 'mp') === 'mp');
+  const cleL = l => (l.ingredient_match || l.designation || '').trim().toLowerCase();
+  const manuels = new Set(lignes.filter(x => x.f.fournisseur === FOURNISSEUR_MANUEL).map(x => cleL(x.l)));
+  const A = {};
+  lignes.forEach(({ l, f }) => {
+    const nom = (l.ingredient_match || l.designation || '').trim(); if (!nom) return;
+    const cle = nom.toLowerCase(); if (manuels.has(cle) && f.fournisseur !== FOURNISSEUR_MANUEL) return;
+    const fam = prFamille(l.unite || 'kg'), k = cle + '|' + fam, q = prVersBase(+l.quantite || 0, l.unite || 'kg');
+    const a = A[k] || (A[k] = { nom, fam, Q: 0, Qp: 0, P: 0, lignes: 0 });
+    const prix = l.prix_total != null ? +l.prix_total : (l.prix_unitaire != null ? +l.prix_unitaire * (+l.quantite || 0) : null);
+    a.Q += q; a.lignes++;
+    if (prix != null) { a.P += prix; a.Qp += q; }
+  });
+  return A;
+}
+/* Le prix unitaire affiché : au kg, au litre ou à la pièce (base g/ml → × 1000). */
+const prmPrixUnite = (P, Qp, fam) => Qp > 0 ? P / Qp * (fam === 'p' ? 1 : 1000) : null;
+const PRM_UNITE = { m: 'kg', v: 'L', p: 'pièce' };
 function prMarges(global, plats, inventaires, auj, E) {
   const moyen = {}, bilans = [];
   global.sessions.filter(s => s.jour && s.jour <= auj).forEach(s => {
     const raw = global.rawParSession[s.id]; if (!raw) return;
     const b = bilanSession(raw, editVide()); if (!b) return;
-    bilans.push({ s, b, pr: productionReelle(raw, b.calc, s.production_reelle) });
-    if (b.rappro) Object.entries(b.rappro.achatParIngredient).forEach(([cle, a]) => {
-      if (!(a.qKgPrix > 0)) return;
-      const m = moyen[cle] || (moyen[cle] = { eur: 0, kg: 0, n: 0, min: Infinity, max: 0 });
-      const pk = a.prixKgConnu / a.qKgPrix;
-      m.eur += a.prixKgConnu; m.kg += a.qKgPrix; m.n++; m.min = Math.min(m.min, pk); m.max = Math.max(m.max, pk);
+    const achats = prmAchats(raw);
+    bilans.push({ s, b, achats, pr: productionReelle(raw, b.calc, s.production_reelle) });
+    // Prix moyen pondéré de chaque aliment : Σ payé ÷ Σ quantité, toutes sessions passées.
+    Object.entries(achats).forEach(([k, a]) => {
+      if (!(a.Qp > 0)) return;
+      const m = moyen[k] || (moyen[k] = { P: 0, Qp: 0, n: 0, min: Infinity, max: 0, fam: a.fam });
+      const pu = prmPrixUnite(a.P, a.Qp, a.fam);
+      m.P += a.P; m.Qp += a.Qp; m.n++; m.min = Math.min(m.min, pu); m.max = Math.max(m.max, pu);
     });
   });
-  Object.values(moyen).forEach(m => { m.prixKg = m.kg ? m.eur / m.kg : null; });
+  Object.values(moyen).forEach(m => { m.prixUnite = prmPrixUnite(m.P, m.Qp, m.fam); });
   const produits = {};
-  bilans.forEach(({ s, b, pr }) => {
+  bilans.forEach(({ s, b, pr, achats }) => {
     const c = b.calc, reelOk = b.liens.complet;
     const cu = prmCuisineSession(s, b, E);
+    const lignesSession = [];
     Object.values(b.parProduit).forEach(p => {
       const cp = c.parRecette.find(x => x.id === p.id); if (!cp) return;
       const prc = pr.recettes.find(r => r.recId === p.id) || { saisi: false };
@@ -94,21 +123,34 @@ function prMarges(global, plats, inventaires, auj, E) {
         const x = vus[cle] || (vus[cle] = { nom: l.nom, cle, fam, prevu: 0 });
         if (x.fam === fam) x.prevu += prVersBase(l.q, l.unite);
       });
+      /* La matière d'une recette, aliment par aliment — la règle de Pablo
+         (28/09) : P payé pour Q acheté, q consommé par la recette →
+         coût = P × q ÷ Q ; la recette = la somme sur toutes ses matières.
+         q = ce que la recette a vraiment consommé : le reste pesé + les
+         portions déjà faites (à la portion moyenne) quand elle a été pesée ;
+         les portions produites × la portion moyenne pour un plat entier ou
+         une validation à l'assemblage ; le besoin prévu sinon.
+         Sans achat relevé de l'aliment dans la session : son prix de
+         référence (au kg seulement), et c'est écrit. */
+      const pp = x => commandees ? x.prevu / commandees : 0;
       const mp = Object.values(vus).filter(x => x.prevu > 0).map(x => {
         const tot = c.lignesIngredients.find(l => l.nom.toLowerCase() === x.cle);
-        const totBase = tot ? prVersBase(tot.q, tot.unite) : 0, part = totBase ? x.prevu / totBase : 1;
         const saisi = prc.saisis && prc.saisis.find(i => i.cle === x.cle);
-        const a = b.rappro && b.rappro.achatParIngredient[x.cle];
-        const prixPaye = a && a.qKgPrix > 0 ? a.prixKgConnu / a.qKgPrix : null;
-        const prixRef = tot ? tot.prixKg : null, m = moyen[x.cle];
-        const consomme = saisi ? saisi.prod : x.prevu;
-        const prix = prixPaye != null ? prixPaye : prixRef;
-        const cout = x.fam === 'm' && prix != null ? consomme / 1000 * prix : null;
+        const deja = (prc.deja || 0) + ((prc.surplus && prc.surplus.deja) || 0);
+        const consomme = saisi ? saisi.prod + deja * pp(x) : prc.saisi ? (prc.completes || 0) * pp(x) : x.prevu;
+        const sourceQ = saisi ? 'pesé' : prc.saisi ? 'portions produites' : 'prévu';
+        const k = x.cle + '|' + x.fam, a = achats[k], m = moyen[k];
+        const prixRef = tot && x.fam === 'm' ? tot.prixKg : null;
+        let cout = null, sourcePrix = null;
+        if (a && a.Qp > 0) { cout = a.P * consomme / a.Qp; sourcePrix = 'achat'; }
+        else if (prixRef != null) { cout = consomme / 1000 * prixRef; sourcePrix = 'référence'; }
         const inv = inventaires.find(v => v.session_id === s.id && String(v.ingredient_nom || '').trim().toLowerCase() === x.cle);
-        return { ...x, produit: saisi ? saisi.prod : null, consomme, achete: a && a.qKg > 0 ? a.qKg * 1000 * part : null,
-          surplus: b.rappro && b.rappro.surplusG[x.cle] ? b.rappro.surplusG[x.cle] * part : null,
-          prixPaye, prixRef, prixMoyen: m ? m.prixKg : null, nAchats: m ? m.n : 0, cout,
+        const ligne = { ...x, k, produit: saisi ? saisi.prod : null, consomme, sourceQ, Q: a ? a.Q : null, Qp: a ? a.Qp : null, P: a ? a.P : null,
+          part: a && a.Qp > 0 ? consomme / a.Qp : null, prixPaye: a ? prmPrixUnite(a.P, a.Qp, x.fam) : null, prixRef,
+          prixMoyen: m ? m.prixUnite : null, nAchats: m ? m.n : 0, cout, sourcePrix,
           inventaire: inv ? { attendu: inv.attendu, compte: +inv.compte, unite: inv.unite } : null };
+        lignesSession.push(ligne);
+        return ligne;
       });
       const matiere = mp.reduce((t, x) => t + (x.cout || 0), 0);
       const part = cu.part(p.id), cuisine = cu.total * part;
@@ -121,6 +163,11 @@ function prMarges(global, plats, inventaires, auj, E) {
         inventaire: !!s.inventaire_le, mp, sansPrix: mp.filter(x => x.cout == null).map(x => x.nom),
         cu, partCuisine: part, minutesRecette: cu.minutes[p.id] || 0 });
     });
+    // Ce qui reste de chaque achat une fois TOUTES les recettes servies : du
+    // stock, pas un coût — la somme des recettes vaut P × Σq ÷ Q, jamais plus que P.
+    const conso = {};
+    lignesSession.forEach(l => { conso[l.k] = (conso[l.k] || 0) + (l.consomme || 0); });
+    lignesSession.forEach(l => { l.reste = l.Q != null ? l.Q - conso[l.k] : null; l.consoSession = conso[l.k]; });
   });
   const liste = Object.values(produits).map(q => {
     const t = k => q.sorties.reduce((a, x) => a + (x[k] || 0), 0);
@@ -149,24 +196,28 @@ function prMargesTableauHtml(M) {
     <td class="num">${p.enPlus} · ${p.assignes}</td><td class="num">${fmtEur(p.ca)}</td><td class="num">${fmtEur(p.matiere)}</td><td class="num">${fmtEur(p.cuisine)}</td><td class="num">${p.coutParPlat != null ? fmtEur(p.coutParPlat) : '—'}</td>
     <td class="num" style="color:${couleurRes(p.res)};font-weight:600">${signeEur(p.res)}</td><td class="num">${prmPct(p.marge)}</td></tr>`).join('') || '<tr><td colspan="11" class="muted" style="text-align:center;padding:18px">Aucune session passée avec des commandes attribuées.</td></tr>'}
   </tbody></table></div>
-  <p class="muted" style="font-size:12px;margin-top:8px">Une ligne par produit, toutes ses sorties (sessions passées) cumulées. Réel quand les trois pièces d'une session sont reliées, prévu sinon. Matière = ce qui a été produit (pesé dans « Portions réellement réalisées »), sinon le besoin prévu, au prix payé dans la session. Cuisine = location (heures × tarif, ou la facture de cuisine) + équipe, imputée à chaque recette au prorata de son temps de travail dans le plan de production (des portions à défaut). Coût par plat = coûts ÷ portions produites (complètes + à compléter, qui ont consommé la même matière). Clique un produit pour chacune de ses sorties.</p>`;
+  <p class="muted" style="font-size:12px;margin-top:8px">Une ligne par produit, toutes ses sorties (sessions passées) cumulées. Réel quand les trois pièces d'une session sont reliées, prévu sinon. Matière = pour chaque aliment, payé P × consommé q ÷ acheté Q dans la session (q = le pesé + les portions déjà faites, sinon les portions produites, sinon le besoin prévu), additionné sur toutes les matières de la recette. Cuisine = location (heures × tarif, ou la facture de cuisine) + équipe, imputée à chaque recette au prorata de son temps de travail dans le plan de production (des portions à défaut). Coût par plat = coûts ÷ portions produites (complètes + à compléter, qui ont consommé la même matière). Clique un produit pour chacune de ses sorties.</p>`;
 }
 function prMargesMpHtml(x) {
   const q = (v, fam) => v == null ? '<span class="muted">—</span>' : prFmt(v, fam);
-  return `<div class="tbl-wrap" style="margin-top:8px"><table><thead><tr><th>Aliment</th><th>Prévu</th><th>Produit</th><th>Acheté</th><th>Surplus</th><th>Inventaire</th><th>Prix payé</th><th>Moyenne pondérée</th><th>Coût</th></tr></thead><tbody>
-  ${x.mp.map(m => { const e = m.prixPaye != null && m.prixMoyen != null ? m.prixPaye - m.prixMoyen : null; return `<tr><td>${esc(m.nom)}</td><td class="num">${q(m.prevu, m.fam)}</td><td class="num">${m.produit != null ? prFmt(m.produit, m.fam) : '<span class="muted">non pesé</span>'}</td>
-   <td class="num">${q(m.achete, m.fam)}</td><td class="num">${q(m.surplus, m.fam)}</td>
-   <td class="num">${m.inventaire ? `${m.inventaire.compte.toLocaleString('fr-FR')} ${esc(m.inventaire.unite)}${m.inventaire.attendu != null ? `<div class="muted" style="font-size:10.5px">attendu ${(+m.inventaire.attendu).toLocaleString('fr-FR')}</div>` : ''}` : '<span class="muted">—</span>'}</td>
-   <td class="num">${m.prixPaye != null ? fmtEur(m.prixPaye) + '/kg' : m.prixRef != null ? `<span class="muted">${fmtEur(m.prixRef)}/kg réf.</span>` : '<span class="muted">inconnu</span>'}</td>
-   <td class="num">${m.prixMoyen != null ? fmtEur(m.prixMoyen) + '/kg' + `<div class="muted" style="font-size:10.5px">${m.nAchats} achat${m.nAchats > 1 ? 's' : ''}${e != null ? ` · <span style="color:${e > 0 ? 'var(--red)' : 'var(--green)'}">${e >= 0 ? '+' : '−'}${fmtEur(Math.abs(e))}</span>` : ''}</div>` : '<span class="muted">—</span>'}</td>
-   <td class="num">${m.cout != null ? fmtEur(m.cout) : '<span class="muted">—</span>'}</td></tr>`; }).join('')}
-  </tbody></table></div>`;
+  const pu = (v, fam) => v == null ? '<span class="muted">—</span>' : fmtEur(v) + '/' + PRM_UNITE[fam];
+  return `<div class="tbl-wrap" style="margin-top:8px"><table><thead><tr><th>Aliment</th><th>Consommé q</th><th>Acheté Q</th><th>Payé P</th><th>q ÷ Q</th><th>Coût = P × q ÷ Q</th><th>Prix payé · moyenne</th><th>Reste de l'achat</th><th>Inventaire</th></tr></thead><tbody>
+  ${x.mp.map(m => { const e = m.prixPaye != null && m.prixMoyen != null ? m.prixPaye - m.prixMoyen : null; return `<tr><td>${esc(m.nom)}</td>
+   <td class="num">${prFmt(m.consomme, m.fam)}<div class="muted" style="font-size:10.5px">${m.sourceQ}${m.sourceQ !== 'prévu' ? ' · prévu ' + prFmt(m.prevu, m.fam) : ''}</div></td>
+   <td class="num">${q(m.Q, m.fam)}</td><td class="num">${m.P != null && m.Qp > 0 ? fmtEur(m.P) : '<span class="muted">—</span>'}</td>
+   <td class="num">${m.part != null ? Math.round(m.part * 1000) / 10 + ' %' : '<span class="muted">—</span>'}</td>
+   <td class="num">${m.cout != null ? `<b>${fmtEur(m.cout)}</b>` + (m.sourcePrix === 'référence' ? `<div class="muted" style="font-size:10.5px">aucun achat : prix de réf. ${fmtEur(m.prixRef)}/kg</div>` : '') : '<span class="muted">sans prix</span>'}</td>
+   <td class="num">${pu(m.prixPaye, m.fam)}${m.prixMoyen != null ? `<div class="muted" style="font-size:10.5px">moy. ${pu(m.prixMoyen, m.fam)} · ${m.nAchats} achat${m.nAchats > 1 ? 's' : ''}${e != null ? ` · <span style="color:${e > 0 ? 'var(--red)' : 'var(--green)'}">${e >= 0 ? '+' : '−'}${fmtEur(Math.abs(e))}</span>` : ''}</div>` : ''}</td>
+   <td class="num">${m.reste != null ? (m.reste >= 0 ? prFmt(m.reste, m.fam) : `<span style="color:var(--red)">−${prFmt(-m.reste, m.fam)}</span><div class="muted" style="font-size:10.5px">consommé > acheté</div>`) : '<span class="muted">—</span>'}</td>
+   <td class="num">${m.inventaire ? `${m.inventaire.compte.toLocaleString('fr-FR')} ${esc(m.inventaire.unite)}${m.inventaire.attendu != null ? `<div class="muted" style="font-size:10.5px">attendu ${(+m.inventaire.attendu).toLocaleString('fr-FR')}</div>` : ''}` : '<span class="muted">—</span>'}</td></tr>`; }).join('')}
+  </tbody></table></div>
+  <p class="muted" style="font-size:11.5px;margin:6px 0 0">Coût d'une matière = payé P × consommé q ÷ acheté Q ; la matière de la recette = la somme. Reste de l'achat = Q moins ce que TOUTES les recettes de la session ont consommé : du stock, pas un coût.</p>`;
 }
 function prMargesDetailHtml(M) {
   const p = M.produits.find(x => x.id === PRM.rec);
   if (!p) { PRM.rec = null; return prMargesTableauHtml(M); }
   const alim = {};
-  p.sorties.forEach(x => x.mp.forEach(m => { const a = alim[m.cle] || (alim[m.cle] = { nom: m.nom, fam: m.fam, consomme: 0, cout: 0 }); a.consomme += m.consomme || 0; a.cout += m.cout || 0; }));
+  p.sorties.forEach(x => x.mp.forEach(m => { const a = alim[m.k] || (alim[m.k] = { nom: m.nom, fam: m.fam, consomme: 0, cout: 0 }); a.consomme += m.consomme || 0; a.cout += m.cout || 0; }));
   return `<div style="margin-bottom:12px"><button class="btn sm ghost" type="button" data-prm-retour>← Tous les produits</button></div>
   <div class="card lift" style="text-align:center;padding:24px 18px;margin-bottom:16px;border:1px solid ${couleurRes(p.res)}">
    <div class="muted" style="font-size:12.5px">${esc(p.nom)} — ${p.sorties.length} sortie${p.sorties.length > 1 ? 's' : ''}</div>
@@ -198,9 +249,9 @@ function prMargesDetailHtml(M) {
   </tbody></table></div>
   <div class="sect" style="margin-top:18px"><h2>Matières, toutes sorties</h2></div>
   <div class="tbl-wrap"><table><thead><tr><th>Aliment</th><th>Consommé</th><th>Coût</th><th>Prix moyen pondéré</th><th>Payé min – max</th></tr></thead><tbody>
-  ${Object.entries(alim).map(([cle, a]) => { const m = M.moyen[cle]; return `<tr><td>${esc(a.nom)}</td><td class="num">${prFmt(a.consomme, a.fam)}</td><td class="num">${a.cout ? fmtEur(a.cout) : '—'}</td><td class="num">${m && m.prixKg != null ? fmtEur(m.prixKg) + '/kg' : '<span class="muted">aucun achat relevé</span>'}</td><td class="num">${m && m.n ? fmtEur(m.min) + ' – ' + fmtEur(m.max) : '—'}</td></tr>`; }).join('')}
+  ${Object.entries(alim).map(([cle, a]) => { const m = M.moyen[cle]; return `<tr><td>${esc(a.nom)}</td><td class="num">${prFmt(a.consomme, a.fam)}</td><td class="num">${a.cout ? fmtEur(a.cout) : '—'}</td><td class="num">${m && m.prixUnite != null ? fmtEur(m.prixUnite) + '/' + PRM_UNITE[a.fam] : '<span class="muted">aucun achat relevé</span>'}</td><td class="num">${m && m.n ? fmtEur(m.min) + ' – ' + fmtEur(m.max) : '—'}</td></tr>`; }).join('')}
   </tbody></table></div>
-  <p class="muted" style="font-size:11.5px;margin-top:8px">Prix moyen pondéré = total payé ÷ kilos achetés, sur toutes les pièces MP de toutes les sessions passées (pas seulement celles de ce produit). Acheté et surplus d'une sortie = la part de ce produit dans l'achat de la session, au prorata de son besoin. Inventaire = le compté de fin de session pour l'aliment (tout le stock, pas la part du produit).</p>`;
+  <p class="muted" style="font-size:11.5px;margin-top:8px">Prix moyen pondéré = total payé ÷ quantité achetée (au kg, au litre ou à la pièce), sur toutes les pièces MP de toutes les sessions passées (pas seulement celles de ce produit). Inventaire = le compté de fin de session pour l'aliment (tout le stock, pas la part du produit).</p>`;
 }
 async function prVueMarges() {
   const inv = await prTry('crm_session_inventaire?select=*&order=created_at.desc');
