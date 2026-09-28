@@ -718,7 +718,8 @@ $('#nav')?.addEventListener('click',e=>{
  const n=e.target.closest('.nitem');
  if(n){
   if(n.dataset.vue)SUB['vue-'+n.dataset.m]=n.dataset.vue;
-  if(n.dataset.m==='financement')FIN_DETAIL=null;   // revenir au tableau d'Opérationnel depuis une page de détail
+  if(n.dataset.m==='financement')FIN_DETAIL=null;
+  if(n.dataset.m==='production'&&typeof CMD!=='undefined')CMD.assigner=null;   // quitter la page « Assigner » d'une commande   // revenir au tableau d'Opérationnel depuis une page de détail
   go(n.dataset.m);
   $('#side').classList.remove('on');
  }
@@ -2421,7 +2422,9 @@ function chargerProd(force){
 const clientNatty=uid=>{const E=window.NattyProd&&NattyProd.etat;return E&&E.charge&&E.clients[uid]?NattyProd.nomClient(uid):null};
 const fmtMac=m=>m?Math.round(m.p)+' g P · '+Math.round(m.g)+' g G · '+Math.round(m.l)+' g L':'';
 
-async function ouvrirFormBon(bonId,jourDefaut){
+/* `ajout` = { recette, n } : ouvre la commande avec cette recette déjà ajoutée
+   (page « Assigner », crm-assigner.js) — le formulaire calcule la portion. */
+async function ouvrirFormBon(bonId,jourDefaut,ajout){
  let bon={type:'manuel',nb_repas:1,statut:'a_attribuer',jour_livraison:jourDefaut||isoLocal(new Date()),adresse:'',notes:'',user_id:''},attrs=[];
  const E=await chargerProd();
  if(!E){toast('Calcul des portions indisponible (assets/admin-production.js)');}
@@ -2445,6 +2448,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
   fac:E?(r&&!NattyProd.grammesDe(a)&&NattyProd.estManuel(r,a)?parseFloat(a.facteur):null):(parseFloat(a.facteur)||null),
   // grammages par ingrédient posés dans l'outil de production : conservés tels quels
   gr:E?NattyProd.grammesDe(a):(a.grammes||null),facBrut:parseFloat(a.facteur)||null}});
+ if(ajout&&ajout.recette){const l=L.find(x=>x.rec===ajout.recette);if(l)l.n+=ajout.n||1;else L.push({rec:ajout.recette,n:ajout.n||1,fac:null})}
  if(!L.length)L.push({rec:'',n:1,fac:null});
  const cibleStockee=(attrs.find(a=>parseFloat(a.kcal_portion)>0)||{}).kcal_portion||null;
  const notes=bon.notes||'';
@@ -3101,7 +3105,7 @@ async function rendreVueSpecifique(cle,vue){
   if(vue==='commandes')return await vCommandesNatif();
   if(vue==='menu')return await vProdMenu();   // le menu de la semaine (plats_menu), comme admin — assets/crm-menu.js
   if(vue==='calendrier')return await vInterfaceProduction();
-  if(vue==='stocks')return await vProdStocks();
+  if(vue==='stocks')return await vProdStocksOnglets();   // matières premières + plats en stock (crm-assigner.js)
   if(vue==='production')return await vProdSessionsNatif()+(CP.id?'':'<div class="sect" style="margin-top:22px"><h2>Menus des blocs</h2></div>'+await vProductionMenus());
   if(vue==='livraison')return await vProdLivraison();
  }
@@ -6124,5 +6128,6 @@ async function demarrerApp(){
 <script src="/assets/crm-produits.js"></script>
 <script src="/assets/crm-marges.js"></script>
 <script src="/assets/crm-menu.js"></script>
+<script src="/assets/crm-assigner.js"></script>
 </body>
 </html>

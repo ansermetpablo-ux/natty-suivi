@@ -1397,3 +1397,35 @@ Vérifié : banc 43/43 (kg + g additionnés, litres et pièces à part, ligne sa
 manuelle prioritaire, facture de cuisine exclue, 20 € × 1 kg ÷ 2,5 kg = 8 €) ; navigateur :
 riz 10 € × 5 ÷ 5 = 10 €, poulet 16 € × 2 ÷ 2 = 16 €, session du 20/09 poulet 10 € × 0,8 ÷ 1 = 8 €
 + riz au prix de référence 4 € = 12 € ; console vide.
+
+---
+
+## Plats en stock, et la page « Assigner » d'une commande (28/09/2026, nuit)
+
+Demande de Pablo : dans Stocks, une page des plats en stock (nom, quantité, date de
+production) ; les assigner depuis Commandes ; et « Assigner » en page complète, qui met en
+avant les recettes dont les ingrédients sont déjà en inventaire, avec leurs quantités et le
+nombre de plats possibles. Nouveau fichier **`assets/crm-assigner.js`**.
+- **Production → Stocks** a deux onglets : Matières premières (l'écran d'avant) et **Plats
+  en stock** — plat, quantité, produit le (J+n), « Assigner → » (la fenêtre d'assignation de
+  Produits). Un plat en stock = un plat en plus des commandes, pas encore assigné
+  (`prProduitsDisponibles`) ; les plus anciens d'abord.
+- **Commandes** : chaque carte a « Assigner → » (la nouvelle page) à côté de
+  Modifier/Attribuer. La page (`vAssignerCommande`, `CMD.assigner`) : commandés / déjà
+  attribués (avec les pastilles) / à attribuer ; **Plats déjà prêts** — une ligne par plat
+  avec « à la place de » (repas libre d'abord, sinon la même recette, sinon une autre, sinon
+  un repas de plus) et le nombre ; **Recettes faisables avec le stock**, triées par plats
+  complets possibles puis faisables : pour chacune, ses ingrédients — par plat (fiche), en
+  stock, plats possibles (vert / orange / rouge) —, les manques pour compléter, bordure verte
+  quand le stock couvre tous les repas à attribuer. Les recettes sans l'ingrédient principal
+  en stock sont repliées en bas.
+- Les plats d'une session qui produit CETTE commande sont exclus (même garde que la fenêtre).
+- **« Attribuer »** d'une recette ouvre le formulaire de commande avec la recette ajoutée
+  (`ouvrirFormBon(bonId, null, { recette, n })`) : c'est lui qui calcule la portion du client
+  (45 %, base de recette) — la page n'affiche que la portion de la fiche, comme repère.
+- Le nombre de plats possibles suit la règle d'Assemblage (`prPossibleStock` : principal le
+  plus limitant, < 3 g/ml par portion ne bloque pas).
+Vérifié sur la copie + faux PostgREST : 4 bourguignons en stock (5 en plus, 1 assigné) ;
+page de Léa : curry ×3 possibles selon 0,35 kg de poulet, 0 complet, bourguignon replié (vin
+absent) ; assigner → `boeuf267` à la place de la portion de bourguignon, on reste sur la page ;
+« Attribuer » curry → formulaire avec curry 2 → 3. Console vide, 0 px de débordement à 375 px.

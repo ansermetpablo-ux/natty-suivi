@@ -588,6 +588,7 @@ const CMD = { filtre: 'tous', q: '' };
 async function vCommandesNatif() {
   const E = await chargerProd();
   if (!E) return '<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire les commandes — session d’équipe requise.</span></div>';
+  if (CMD.assigner) return await vAssignerCommande(CMD.assigner);   // la page « Assigner » d'une commande (crm-assigner.js)
   await chargerPlats();   // plats déjà produits assignés (crm-produits.js) : ils comptent comme attribués
   const st = b => { const n = E.attribs.filter(a => a.bon_id === b.id).reduce((t, a) => t + (a.nb_portions || 0), 0) + platsDuBon(b.id).length; return b.statut === 'livre' || b.statut === 'en_production' || b.statut === 'annule' ? b.statut : (n >= b.nb_repas && n > 0 ? 'attribue' : 'a_attribuer'); };
   const tous = E.bons.filter(b => b.statut !== 'annule');
@@ -608,7 +609,7 @@ async function vCommandesNatif() {
       <div class="muted" style="font-size:12px">${b.jour_livraison ? 'Livraison ' + esc(cpJ(b.jour_livraison)) : '<span style="color:var(--red)">sans date de livraison</span>'} · ${esc(b.adresse || 'adresse non renseignée')}</div>
       ${recs ? `<div style="font-size:12.5px;margin-top:4px">🍽 ${esc(recs)}${pa !== b.nb_repas ? ` <b style="color:var(--red)">(${pa}/${b.nb_repas})</b>` : ''}</div>` : ''}${platsPastillesHtml(b.id)}</div>
       <div class="cmd-d"><label class="muted" style="font-size:12px">Repas <input class="inp" type="number" min="1" max="40" data-cmd-nb="${b.id}" value="${b.nb_repas}"></label><input class="inp" type="date" data-cmd-jour="${b.id}" value="${b.jour_livraison || ''}">${chipStatut(x)}
-      <button class="btn sm primary" data-edit-bon="${b.id}">${att.length ? 'Modifier' : 'Attribuer'} →</button>${x === 'attribue' || x === 'en_production' ? `<button class="btn sm ghost" data-cmd-livre="${b.id}">Livré ✓</button>` : ''}<button class="btn sm ghost" data-cmd-annuler="${b.id}" title="Annuler ce bon">✕</button></div></div>`;
+      <button class="btn sm primary" data-cmd-assigner="${b.id}" title="Plats prêts en stock et recettes faisables avec l’inventaire">Assigner →</button><button class="btn sm ghost" data-edit-bon="${b.id}">${att.length ? 'Modifier' : 'Attribuer'}</button>${x === 'attribue' || x === 'en_production' ? `<button class="btn sm ghost" data-cmd-livre="${b.id}">Livré ✓</button>` : ''}<button class="btn sm ghost" data-cmd-annuler="${b.id}" title="Annuler ce bon">✕</button></div></div>`;
   };
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
    <div class="tabs" style="margin:0">${[['tous', 'En cours'], ['rouge', 'À traiter'], ['attribue', 'Attribués'], ['livre', 'Livrés']].map(([k, l]) => `<button data-cmd-filtre="${k}" aria-selected="${CMD.filtre === k}">${l} <span class="b">${compte[k]}</span></button>`).join('')}</div>
