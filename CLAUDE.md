@@ -4070,6 +4070,13 @@ pastille violette dans Commandes et dans la session qui produit la commande ; il
 0021_inventaire_production_reelle_produits.sql` à exécuter.** Détail et règles : `docs/crm-journal.md`
 (entrée du 28/09).
 
+**PRODUCTION → MENU (`assets/crm-menu.js`) ET PRODUITS → MARGES PAR PRODUIT (`assets/crm-marges.js`)**
+(2026-09-28). Le menu = `plats_menu` d'admin, en natif ; il garde les colonnes de production
+d'une fiche (unité, étiquette) et ne renomme jamais une recette. Marges : sessions passées,
+une ligne par produit, puis chaque sortie avec ses matières (prix payé vs moyenne pondérée,
+produit, acheté, surplus, inventaire). Coût par plat = coûts ÷ portions produites (complètes +
+à compléter). Détail : `docs/crm-journal.md`.
+
 **LA PRODUCTION DU CRM EST NATIVE** (2026-09-25, Pablo : « tu as juste intégré admin, je veux que tu
 reprennes nativement les fonctionnalités »). `assets/crm-production.js`, chargé après le script de
 crm.html : les ÉCRANS dans le style du CRM ; le CALCUL reste `NattyProd` (admin-production.js :

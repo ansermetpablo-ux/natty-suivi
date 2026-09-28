@@ -1202,3 +1202,68 @@ Aucune erreur console ; 0 px de débordement à 375 px.
 - admin.html lit `stocks_mp.quantite_kg` sans l'unité : une ligne en litres y passerait pour
   des kilos si une fiche donne ce liquide en grammes.
 - Pas de DLC sur les plats en plus : l'écran affiche seulement J+n depuis la production.
+
+---
+
+## Production → Menu, et Produits → Marges par produit (28/09/2026, suite)
+
+Demande de Pablo : voir le menu dans Production, ajouter et retirer des plats comme sur
+admin ; sous Opérationnel, dans Produits, un onglet pour vérifier les marges par produit
+« sur ce modèle » (lu comme le modèle d'Opérationnel : héros, tableau, page de détail —
+aucune maquette jointe), avec le réalisé : chaque sortie du plat, et au clic le prix des MP
+payé pondéré avec la moyenne et le nombre de plats produits, croisé inventaire / produits /
+commandes / surplus.
+
+### Production → Menu — `assets/crm-menu.js`
+L'onglet « Menu de la semaine » d'admin.html (`plats_menu`, ce que voient les clients),
+dans le style du CRM : cartes photo, filtre par catégorie (Performance / Objectif /
+Bien-être), « ✓ Au menu » ↔ « ✗ Retiré » (`actif`), Modifier, Supprimer, « + Ajouter un
+plat » (nom, description, catégorie, photo Cloudinary — même preset qu'admin —, macros,
+ingrédients). Les macros se recalculent depuis `ingredients_base` quand au moins un
+ingrédient y est trouvé.
+Trois écarts voulus avec admin :
+- **La fiche technique est préservée** : les ingrédients d'un plat sont ceux de la recette
+  du même nom (comme admin), mais une ligne restée dans la liste GARDE ses colonnes de
+  production (unité, étiquette `proteine`, ordre). admin réécrivait nom + grammes seuls.
+  Une fiche identique n'est pas réécrite ; si la réécriture échoue, l'ancienne est remise.
+- **Un plat renommé ne renomme pas sa fiche** (des commandes et des sessions l'utilisent) :
+  il pointe vers la recette du nouveau nom, trouvée ou créée — le comportement d'admin.
+- **Rapprochement des macros mot à mot**, jamais en sous-chaîne (admin : `ilike *nom*`).
+Supprimer un plat du menu garde la recette.
+🐛 Trouvé au test : le champ grammes avait `step="5"` — le 1 g de sel d'une fiche rendait
+le formulaire invalide et le navigateur bloquait l'envoi sans message. `step="any"` partout.
+🐛 Et un débordement de 8 px à 375 px (le sélecteur de fichier imposait sa largeur à la
+grille du formulaire) : `min-width:0` sur les enfants de `#menuForm`.
+
+### Produits → Marges par produit — `assets/crm-marges.js`
+Produits a deux onglets : « Disponibles à la vente » (l'écran d'avant, `prVueDisponibles`)
+et « Marges par produit ». Sessions PASSÉES seulement (le réalisé).
+- **Tableau** : un héros (marge moyenne par produit, résultat, marge globale, chips) et une
+  ligne par produit — sorties, commandés, produits, en plus · assignés, CA, coûts, coût par
+  plat, résultat, marge.
+- **Page d'un produit** : héros, quatre indicateurs, « Chaque sortie » (une ligne par
+  session). Clic sur une sortie → les chips commandés / produits complets / à compléter /
+  en plus / plats assignés (pastilles) / inventaire, le calcul du coût par plat, et le
+  tableau des matières : prévu, produit, acheté (part du produit), surplus, inventaire
+  (compté, attendu), prix payé, moyenne pondérée (et l'écart), coût. En bas, les matières
+  toutes sorties confondues avec prix moyen pondéré et fourchette payée.
+Règles :
+- CA et part de cuisine = `bilanSession` (réels si les trois pièces sont reliées).
+- Matière = quantité PRODUITE pesée (production réelle), sinon besoin prévu ; au prix payé
+  dans la session, sinon au prix de référence.
+- Plats en plus assignés : au CA de la recette qui les a produits, au prix moyen d'une
+  portion de la session. Dans Opérationnel ils restent au CA de la commande qui les reçoit.
+- Coût par plat = coûts ÷ portions produites, **complètes ET à compléter** (première
+  version : complètes seules — 26 € de matière sur 10 plats alors qu'elle avait servi à 20
+  portions commencées ; corrigé à la vue des chiffres).
+- Prix moyen pondéré = total payé ÷ kg achetés, toutes pièces MP de toutes les sessions passées.
+
+### Vérifié
+Navigateur, copie de crm.html + faux PostgREST (`_test-produits.html`, supprimée après) :
+deux sessions passées avec factures — poulet 1 kg à 10 € et 2 kg à 16 € → moyenne 8,67 €/kg,
+fourchette 8–10 € ; matière du 27/09 = 5 kg riz × 2 € + 2 kg poulet × 8 € = 26 € ; coût par
+plat (26 + 17,14) ÷ 20 = 2,16 € ; CA bourguignon 25 × 10,50 + 1 plat assigné = 273 €. Menu :
+retirer/remettre, ajout d'un plat (150 g poulet + 200 g riz → 508 kcal, 51,9 g P, recette
+créée), modification du curry (riz 250 → 260 g, étiquette et ml conservés, pas de recette en
+double), suppression. Console vide ; 0 px de débordement à 375 px sur les trois écrans.
+🔄 Pas joué sur les vraies données ni avec une vraie photo Cloudinary.

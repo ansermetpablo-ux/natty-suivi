@@ -439,9 +439,10 @@ function prProduitsDisponibles(global, plats) {
   });
   return { dispo, aCompleter, sansSaisie };
 }
-async function vFinanceProduits() {
-  FIN_GLOBAL = await chargerFinanceGlobal();
-  const plats = await chargerPlats(true);
+/* L'onglet « Disponibles à la vente » de Produits. FIN_GLOBAL et les plats
+   sont chargés par vFinanceProduits (assets/crm-marges.js), qui porte les onglets. */
+async function prVueDisponibles() {
+  const plats = PLATS_CACHE || [];
   const E = await chargerProd();
   const { dispo, aCompleter, sansSaisie } = prProduitsDisponibles(FIN_GLOBAL, plats);
   const colonne = FIN_GLOBAL.sessions.length && Object.prototype.hasOwnProperty.call(FIN_GLOBAL.sessions[0], 'production_reelle');
