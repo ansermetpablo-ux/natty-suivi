@@ -151,6 +151,10 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
 .x{border:0;background:var(--card);border-radius:50%;width:34px;height:34px;font-size:18px;line-height:1;flex:none;margin-left:auto}
 .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-46%) scale(.98);opacity:0;pointer-events:none;width:min(520px,calc(100% - 32px));max-height:calc(100% - 40px);overflow-y:auto;background:var(--bg);border-radius:var(--r-lg);box-shadow:var(--nm-pop);z-index:32;padding:22px;transition:.18s}
 .modal.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
+.modal.large{width:min(960px,calc(100% - 32px))}
+/* Un plat déjà produit, assigné à une commande (assets/crm-produits.js) : pastille pleine, violette, son code en chasse fixe. */
+.plat-pastille{display:inline-flex;align-items:center;gap:5px;font:600 11px/1 'DM Mono',ui-monospace,monospace;padding:4px 9px 4px 7px;border-radius:var(--r-full);background:var(--violet);color:#fff;white-space:nowrap}
+.plat-pastille i{width:7px;height:7px;border-radius:50%;background:#fff;display:inline-block}
 .modal h2{margin:0 0 4px;font-size:18px}
 .form{display:grid;gap:12px;margin-top:14px}
 .form label{display:grid;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted)}
@@ -2418,7 +2422,9 @@ async function ouvrirFormBon(bonId,jourDefaut){
   bon=r.data[0];
   const a=await sbTry('bons_attributions?bon_id=eq.'+bonId+'&select=*');
   attrs=a.ok?a.data:[];
+  if(typeof chargerPlats==='function')await chargerPlats(true);   // les plats déjà produits qu'on lui a assignés (crm-produits.js)
  }
+ const nbPlats=bonId&&typeof platsDuBon==='function'?platsDuBon(bonId).length:0;
  const recettes=E?E.recettes:[];
  const recById=id=>recettes.find(x=>x.id===id);
  const clients=E?Object.keys(E.clients).map(uid=>({uid,nom:NattyProd.nomClient(uid)})).sort((a,b)=>a.nom.localeCompare(b.nom,'fr')):[];
@@ -2458,7 +2464,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
   <label>Instructions d'accès<input class="inp" id="bfAcces" value="${esc(bon.instructions_acces||'')}" placeholder="ex. digicode 1234, 3e étage"></label>
   <label>Recettes produites<div id="bfLignes" style="display:grid;gap:8px"></div>
    <button type="button" class="btn sm ghost" id="bfAdd" style="justify-self:start">+ Ajouter une recette</button>
-   <span class="muted" id="bfSomme" style="font-weight:400"></span></label>
+   <span class="muted" id="bfSomme" style="font-weight:400"></span>${nbPlats?platsPastillesHtml(bonId):''}</label>
   <label>Notes<textarea class="inp" id="bfNotes" rows="2">${esc(reste)}</textarea></label>
   <div class="foot">${bonId?'<button type="button" class="btn danger" id="bfDel" style="margin-right:auto">Supprimer</button>':''}${bonId&&attrs.length?'<button type="button" class="btn ghost" id="bfFiche">📄 Fiche technique</button>':''}<button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Enregistrer</button></div>
  </form>`);
@@ -2493,7 +2499,7 @@ async function ouvrirFormBon(bonId,jourDefaut){
   const TG={proteine:['Protéine','#ff6b6b'],feculent:['Féculent','#ffb340'],lipide:['Lipide','#c77dff'],legume:['Légume','#32d74b'],aromate:['Aromate','#9a9aaa']};
   return `<div class="bl-ings">${p.ings.map(i=>{const t=TG[i.tag];return `<label class="${i.corrige?'mod':''}"><span>${esc(i.nom)}${t?` <em style="color:${t[1]}">${t[0]}</em>`:''}</span><span><input class="inp bl-ing" type="number" min="0" step="any" data-nom="${esc(i.nom)}" value="${i.g>=10?Math.round(i.g):Math.round(i.g*10)/10}"> ${esc(i.unite||'g')}</span><small>${i.mac?Math.round(i.mac.p)+' P · '+Math.round(i.mac.g)+' G · '+Math.round(i.mac.l)+' L · '+Math.round(i.mac.c)+' kcal':''}${i.corrige?' · au lieu de '+Math.round(i.gAuto)+' '+(i.unite||'g'):(i.gEchelle?' · base '+Math.round(i.gEchelle)+' '+(i.unite||'g'):'')}</small></label>`}).join('')}</div>${p.ecart?`<div class="muted" style="font-size:11.5px">écart à la cible : ${['p','g','l'].map(m=>(p.ecart[m]>0?'+':'')+Math.round(p.ecart[m])+' g '+m.toUpperCase()).join(' · ')} · ${(p.ecart.c>0?'+':'')+Math.round(p.ecart.c)} kcal</div>`:''}`;
  }
- function somme(){const t=L.reduce((s,l)=>s+(l.rec?(+l.n||0):0),0);const nb=+$('#bfNb').value||0;$('#bfSomme').textContent=t?`${t} portion${t>1?'s':''} attribuée${t>1?'s':''} pour ${nb} repas`+(t!==nb?' — les deux ne correspondent pas':''):''}
+ function somme(){const t=L.reduce((s,l)=>s+(l.rec?(+l.n||0):0),0)+nbPlats;const nb=+$('#bfNb').value||0;$('#bfSomme').textContent=t?`${t} portion${t>1?'s':''} attribuée${t>1?'s':''}${nbPlats?` (dont ${nbPlats} plat${nbPlats>1?'s':''} déjà produit${nbPlats>1?'s':''})`:''} pour ${nb} repas`+(t!==nb?' — les deux ne correspondent pas':''):''}
  const ligneDe=el=>L[+el.closest('.bon-l').dataset.i];
  zone.addEventListener('change',e=>{
   const l=ligneDe(e.target);
@@ -2908,11 +2914,11 @@ async function vProdStocks(){
  // (chip rouge existant) ; celui qui va l'être dans les 3 jours ne se
  // voyait pas du tout, alors que c'est LUI qu'on peut encore utiliser.
  const dans3j=new Date(TODAY.getTime()+3*864e5).toISOString().slice(0,10);
- return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn sm primary" data-new="stock">+ Entrée stock</button></div>
+ return `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px"><button class="btn sm" data-inventaire-session="">📋 Inventaire de fin de session</button><button class="btn sm primary" data-new="stock">+ Entrée stock</button></div>
  <div class="tbl-wrap"><table><thead><tr><th>Ingrédient</th><th>Quantité</th><th>Péremption</th><th>Stockage</th><th>Statut</th><th>Lot</th></tr></thead><tbody>${stocks.map(s=>{
   const perime=s.date_peremption&&s.date_peremption<todayStr;
   const bientot=!perime&&s.date_peremption&&s.date_peremption<=dans3j&&s.statut==='disponible';
-  return `<tr class="rowc" data-edit-stock="${s.id}"><td>${esc(s.ingredient_nom)}</td><td class="num">${s.quantite_kg} kg</td><td>${s.date_peremption?fd(s.date_peremption):'—'}${perime?' <span class="chip bad">périmé</span>':bientot?' <span class="chip warn">bientôt périmé</span>':''}</td><td>${esc(s.temperature_stockage||'—')}</td><td><span class="chip ${s.statut==='disponible'?'ok':s.statut==='perime'?'bad':''}">${esc(s.statut)}</span></td><td>${esc(s.lot||'—')}</td></tr>`;
+  return `<tr class="rowc" data-edit-stock="${s.id}"><td>${esc(s.ingredient_nom)}</td><td class="num">${s.quantite_kg} ${esc(s.unite||'kg')}</td><td>${s.date_peremption?fd(s.date_peremption):'—'}${perime?' <span class="chip bad">périmé</span>':bientot?' <span class="chip warn">bientôt périmé</span>':''}</td><td>${esc(s.temperature_stockage||'—')}</td><td><span class="chip ${s.statut==='disponible'?'ok':s.statut==='perime'?'bad':''}">${esc(s.statut)}</span></td><td>${esc(s.lot||'—')}</td></tr>`;
  }).join('')||'<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">Aucun stock enregistré</td></tr>'}</tbody></table></div>`;
 }
 document.addEventListener('click',e=>{
@@ -2925,7 +2931,7 @@ async function ouvrirEditionStock(id){
  modal(`<h2>Modifier le stock</h2><form class="form" id="editStockForm">
   <label>Ingrédient<input class="inp" id="es1" value="${esc(s.ingredient_nom)}" required list="ingListe"></label>
   <datalist id="ingListe">${(INGREDIENTS_CACHE||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
-  <div class="two"><label>Quantité (kg)<input class="inp" id="es2" type="number" step="0.1" value="${s.quantite_kg}"></label><label>Péremption<input class="inp" id="es3" type="date" value="${s.date_peremption||''}"></label></div>
+  <div class="two"><label>Quantité (${esc(s.unite||'kg')})<input class="inp" id="es2" type="number" step="0.1" value="${s.quantite_kg}"></label><label>Péremption<input class="inp" id="es3" type="date" value="${s.date_peremption||''}"></label></div>
   <div class="two"><label>Stockage<select id="es4">${opt(['frais','ambiant','surgele'],s.temperature_stockage)}</select></label><label>Statut<select id="es5">${opt(['disponible','epuise','perime'],s.statut)}</select></label></div>
   <label>Lot<input class="inp" id="es6" value="${esc(s.lot||'')}"></label>
   <div class="foot"><button type="button" class="btn danger sm" data-del-stock="${s.id}">Supprimer</button><button class="btn primary sm" type="submit">Enregistrer</button></div>
@@ -3013,7 +3019,8 @@ const VUES={
  logistique:[['tournees','Tournées','logistique'],['commandes','Commandes','livraison'],['gestion','Gestion','projet']],
  // Opérationnel vit sous « Financement » (demande de Pablo, 26/09) : c'est là
  // qu'il le cherche ; « Finance » redevient une activité générique.
- financement:[['operationnel','Opérationnel','finance'],['gestion','Gestion','projet']]
+ // Produits : les repas faits en plus des commandes, à vendre (assets/crm-produits.js).
+ financement:[['operationnel','Opérationnel','finance'],['produits','Produits','stocks'],['gestion','Gestion','projet']]
 };
 function vuesGeneriques(cle){
  const base=[['apercu','Aperçu','dash'],['taches','Tâches','taches'],['projets','Sous-projets','projet'],['schema','Schéma','schema'],['drive','Drive','drive']];
@@ -3094,6 +3101,7 @@ async function rendreVueSpecifique(cle,vue){
  }
  if(cle==='financement'){
   if(vue==='operationnel')return await vFinanceOperationnel();
+  if(vue==='produits')return await vFinanceProduits();
  }
  return '<div class="empty">Vue inconnue.</div>';
 }
@@ -4693,7 +4701,7 @@ document.addEventListener('click',e=>{
 /* ============ DRAWER / MODALE / PALETTE ============ */
 function drawer(h){$('#drawer').innerHTML=h;$('#drawer').classList.add('on');$('#scrim').classList.add('on');$('#drawer').setAttribute('aria-hidden','false')}
 function modal(h){$('#modal').innerHTML=h;$('#modal').classList.add('on');$('#scrim').classList.add('on');const f=$('#modal').querySelector('input,select,textarea');if(f)setTimeout(()=>f.focus(),50)}
-function closeAll(){['#drawer','#modal','#pal','#pop'].forEach(s=>$(s).classList.remove('on'));$('#scrim').classList.remove('on');$('#side').classList.remove('on');$('#drawer').setAttribute('aria-hidden','true')}
+function closeAll(){['#drawer','#modal','#pal','#pop'].forEach(s=>$(s).classList.remove('on'));$('#modal').classList.remove('large');$('#scrim').classList.remove('on');$('#side').classList.remove('on');$('#drawer').setAttribute('aria-hidden','true')}
 $('#scrim').onclick=closeAll;
 document.addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeAll()});
 function pop(anchor,html){const p=$('#pop');p.innerHTML=html;p.classList.add('on');const r=anchor.getBoundingClientRect();const w=Math.max(200,p.offsetWidth);p.style.top=(r.bottom+8)+'px';p.style.left=Math.max(12,Math.min(window.innerWidth-w-12,r.right-w))+'px'}
@@ -5681,12 +5689,13 @@ function renderSessionLive(b){
 }
 function renderSessionBas(b){return surplusHtml(b)+analytiqueHtml(b)}
 async function vFinanceSessionDetail(id){
- if(FIN_SESSION!==id){FIN_SESSION=id;FIN_EDIT=editVide();FIN_ANA_REC='tout';FIN_SURPLUS_REC='tout'}
+ if(FIN_SESSION!==id){FIN_SESSION=id;FIN_EDIT=editVide();FIN_ANA_REC='tout';FIN_SURPLUS_REC='tout';PR_EDIT=null;PR_OUVERT=false}
  FIN_DONNEES=FIN_GLOBAL.rawParSession[id];
  const b=bilanSession(FIN_DONNEES,FIN_EDIT);
  return `<div id="finRoot">
  <div style="margin-bottom:12px"><button class="btn sm ghost" type="button" data-fin-retour>← Toutes les sessions</button></div>
  <div id="finLive">${renderSessionLive(b)}</div>
+ ${prCarteHtml()}
  ${equipeHtml(b.calc)}
  ${piecesHtml(FIN_DONNEES)}
  ${facteursFormHtml(b.calc)}
@@ -5754,6 +5763,7 @@ function recalculerFinanceLive(){
  $('#finLive').innerHTML=renderSessionLive(b);
  if(idActif){const el=document.getElementById(idActif);if(el){el.focus();try{el.setSelectionRange(sel[0],sel[1])}catch(e){}}}
  const bas=$('#finBas');if(bas)bas.innerHTML=renderSessionBas(b);
+ prRafraichir();   // la production réelle se lit à la portion moyenne, qui suit les facteurs
  b.calc.equipe.forEach(e=>{
   const p=document.querySelector(`[data-eq-prevu="${e.id}"]`),r=document.querySelector(`[data-eq-reel="${e.id}"]`);
   if(p)p.textContent=e.coutPrevu!=null?fmtEur(e.coutPrevu):'—';
@@ -6091,5 +6101,6 @@ async function demarrerApp(){
 }
 </script>
 <script src="/assets/crm-production.js"></script>
+<script src="/assets/crm-produits.js"></script>
 </body>
 </html>

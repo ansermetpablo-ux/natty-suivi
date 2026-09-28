@@ -4060,6 +4060,16 @@ par macro ; ils sont le POINT DE DÉPART, les macros du client ajustent ensuite 
 - ⚠️ Les ratios saisis sont gardés BRUTS (`ratiosBruts`) : les renormaliser à chaque frappe
   déformait les deux autres champs (50/25/25 saisi → 48/26/26 enregistré, attrapé au banc).
 
+**CE QUI SORT VRAIMENT DE LA CUISINE — `assets/crm-produits.js`** (2026-09-28, Pablo). Inventaire de
+fin de session (le compté réécrit `stocks_mp`, lots les plus proches de la péremption consommés
+d'abord), portions réellement réalisées dans Opérationnel (complètes / à compléter, même règle de
+l'aliment principal que « Réorganiser »), Financement → **Produits** (plats en plus des commandes)
+et assignation à une commande : chaque plat reçoit un code (`curry266`, table `crm_plats`), en
+pastille violette dans Commandes et dans la session qui produit la commande ; il décrémente
+`bons_attributions`, donc le plan, les fiches et les courses. 🔄 **`supabase/migrations/
+0021_inventaire_production_reelle_produits.sql` à exécuter.** Détail et règles : `docs/crm-journal.md`
+(entrée du 28/09).
+
 **LA PRODUCTION DU CRM EST NATIVE** (2026-09-25, Pablo : « tu as juste intégré admin, je veux que tu
 reprennes nativement les fonctionnalités »). `assets/crm-production.js`, chargé après le script de
 crm.html : les ÉCRANS dans le style du CRM ; le CALCUL reste `NattyProd` (admin-production.js :
@@ -5028,6 +5038,7 @@ Colonnes **relevées en base** (`select=*`, juillet 2026) :
 | statut | text | disponible/epuise/perime |
 | lot | text | |
 | created_at | timestamptz | |
+| unite | text | 🔄 `kg` / `L` / `pièce`, défaut `kg` (migration 0021) — l'unité de `quantite_kg` |
 
 #### `recettes`
 | Colonne | Type | Notes |

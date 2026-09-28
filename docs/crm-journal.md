@@ -1126,3 +1126,79 @@ Les deux points « à trancher », réglés :
 Vérifié : banc 98/98 ; dans la page, sur une base simulée en écriture, appliquer retire les
 chilis (aucun aliment principal) et le curry de Marc (poulet épuisé par Julie, livrée la
 veille), sauvegarde 9 lignes ; annuler rétablit les commandes À L'IDENTIQUE.
+
+---
+
+## Inventaire, production réelle, Produits et plats numérotés (28/09/2026)
+
+Demande de Pablo : (1) un **inventaire** de toutes les MP alimentaires après chaque session,
+qui met à jour les stocks ; (2) dans Opérationnel, les **portions réellement réalisées** —
+« 10 L de bourguignon = 30 portions ; 5 kg de riz, 2 kg de poulet, 400 g de légumes, 300 ml
+de sauce = 10 complètes et 10 à compléter », complètes en haut, à compléter en dessous avec le
+détail ; (3) sous Opérationnel, un dossier **Produits** : les repas faits en plus, disponibles
+à la vente, assignables à une commande ; l'assignation donne un numéro + un nom (« curry266 »),
+en pastille dans la commande et dans la production, et retire les MP et les portions à produire.
+
+### Où c'est
+- Nouveau fichier **`assets/crm-produits.js`** (chargé après `crm-production.js`) : calcul pur
+  de la production réelle, carte d'Opérationnel, inventaire, vue Produits, assignation, pastilles.
+- `crm.html` : entrée `produits` dans `VUES.financement`, carte `prCarteHtml()` sous le héros de
+  la page d'une session, bouton « 📋 Inventaire de fin de session » dans Stocks, unité affichée
+  dans Stocks, `.plat-pastille` et `.modal.large` en CSS, plats comptés dans le formulaire de commande.
+- `crm-production.js` : pastilles dans Commandes (et plats comptés dans le statut), bandeau
+  « Déjà produits — à joindre, pas à cuisiner » et bouton Inventaire dans une session, plats à
+  joindre dans Assemblage.
+- 🔄 **`supabase/migrations/0021_inventaire_production_reelle_produits.sql` à exécuter** :
+  `stocks_mp.unite` (kg / L / pièce, défaut kg), `crm_session_inventaire`, `crm_sessions.
+  inventaire_le` et `.production_reelle`, `crm_plats` (numéro par identité, code posé par
+  trigger). Sans elle, chaque écran le dit et n'écrit rien à moitié (les requêtes passent par
+  `prTry`, pas `sbTry`, pour ne pas déclencher le faux bandeau « natty_crm.sql »).
+
+### Les règles
+- **Portion moyenne de la session** : le prévu de la recette (fiche × coefficients, saisie du
+  tableau des matières comprise) ÷ portions commandées. Pas le grammage de chaque client.
+- **Faisables** = selon l'aliment principal le plus disponible (étiquette `proteine`, sinon
+  ≥ 15 % du poids — `PART_PRINCIPALE`, la règle de « Réorganiser ») ; **complètes** = ce que
+  tous les aliments pesés permettent ; le reste est **à compléter**, manque chiffré par aliment.
+- **Un aliment laissé vide n'est pas compté** (on ne pèse pas le sel) — nommé sous la recette.
+- **Plat entier** : portions comptées, sinon quantité ÷ portion servie saisie. **Jamais déduit
+  de la fiche** : une première version divisait 10 L par les 150 ml de vin de la fiche (66
+  « portions ») — retiré avant livraison.
+- Unités par famille (g/kg, ml/L, pièce), jamais mélangées.
+- **Inventaire** : attendu = stock + acheté (pièces MP, kg) − utilisé (réel saisi par
+  ingrédient, sinon prévu). Le **compté remplace** le stock de l'aliment : excédent retiré des
+  lots les plus proches de la péremption (un lot vidé passe `epuise`), surplus ajouté en lot
+  `inventaire-<jour>`. Case vide = stock inchangé. Historique dans `crm_session_inventaire`.
+- **En plus** = complètes − commandées, par recette et par session ; disponibles = en plus −
+  plats déjà assignés. Les à compléter sont listés, pas vendables.
+- **Assignation** : à une commande en cours d'une AUTRE session (celles de la session source
+  sont exclues — sinon la demande baisserait et le « en plus » monterait en boucle). Chaque plat
+  remplace : une portion d'une recette attribuée (`bons_attributions` décrémenté ou supprimé →
+  planning, fiches et liste de courses suivent, car NattyProd lit ces portions), un repas non
+  attribué, ou un repas de plus (`nb_repas + 1`). Préfixe = premier mot significatif de la
+  recette (« Bœuf bourguignon » → `boeuf`). Retirer un plat rend exactement ce qu'il avait pris
+  (ligne d'attribution d'avant gardée dans `attribution_avant`) et le plat redevient disponible.
+  Si l'écriture sur la commande échoue, les plats créés sont supprimés.
+
+### Vérifié
+Banc Node sur les fonctions extraites des fichiers (`calculerFinance`, `productionReelle`,
+`prLignesInventaire`, `prefixePlat`) : **23/23**, dont l'exemple de Pablo au chiffre près
+(curry 20 faisables selon le poulet, 10 complètes, 10 à compléter : légumes −400 g, sauce
+−300 ml ; bourguignon 30 portions, 5 en plus). Navigateur, sur une copie de crm.html avec un
+faux PostgREST en mémoire (`_test-produits.html`, gitignoré) : saisie tapée champ par champ,
+enregistrée dans `production_reelle` ; Produits → assigner → `boeuf266`, portion de Léa retirée,
+statut resté « attribué » ; pastille dans Commandes ; session du 30/09 à 2 portions au lieu de 3
+avec le bandeau « à joindre » ; retrait → attribution rétablie à l'identique ; « repas de plus »
+× 2 → `boeuf267`, `boeuf268`, commande à 5 repas ; inventaire → lot B (péremption la plus
+proche) épuisé, lot A à 1,5 kg, +0,5 L d'huile et +0,3 kg de poulet en lots `inventaire-…`.
+Aucune erreur console ; 0 px de débordement à 375 px.
+🔄 **Pas joué** : la migration 0021 en base, une vraie session d'équipe, les vraies données.
+
+### Points ouverts
+- La vente d'un plat en plus n'entre pas au CA de la session source (le repas « de plus »
+  augmente le CA de la commande cible, les deux autres cas non).
+- Les grammages par client (`bons_attributions.grammes`) ne sont pas lus par la portion
+  moyenne — même limite que tout Opérationnel.
+- admin.html lit `stocks_mp.quantite_kg` sans l'unité : une ligne en litres y passerait pour
+  des kilos si une fiche donne ce liquide en grammes.
+- Pas de DLC sur les plats en plus : l'écran affiche seulement J+n depuis la production.
