@@ -1320,3 +1320,27 @@ commandés et du bœuf pour 15, **« 3 / 10 faits · 7 à faire ✓ stock · +8 
 « en plus » ×2 → Opérationnel « validé à l'assemblage · 3 de la commande + 2 en plus » et
 Produits « 2 en plus, 1 déjà assigné, 1 dispo » ; la saisie curry d'Opérationnel conservée.
 Console vide, 0 px de débordement à 375 px.
+
+---
+
+## Marges par produit : le coût de la cuisine imputé à chaque recette (28/09/2026, nuit)
+
+Capture de Pablo : les coûts des marges (17 à 38 € pour 10 portions) ne montraient pas la
+cuisine. Elle y était, mais presque nulle : sans heures saisies ni mapping généré,
+Opérationnel estimait les heures depuis les étapes des fiches (1 h minimum), qui ne
+connaissent ni le nombre de portions ni le parallélisme — sur la session de test, 2 h
+estimées pour 6 h de plan.
+- **Heures** : une source de plus dans `calculerFinance`, entre le mapping et les fiches :
+  `raw.heuresPlan`, posées par `chargerFinanceGlobal` depuis le plan de production
+  (`cpContexte` → `NattyProd.planSession`, durée + 30 min arrondie à l'heure — le même calcul
+  que « Réservation cuisine »). Opérationnel affiche « · plan de production ». Ordre :
+  saisie > mapping > plan > fiches. Opérationnel et les marges disent donc le même montant.
+- **Imputation** (`prmCuisineSession`, crm-marges.js) : location (ou facture de cuisine) +
+  équipe, répartie au **temps de travail actif** de chaque recette dans le plan (les étapes
+  passives — mijoter, four — ne prennent personne) ; au prorata des portions si la session
+  n'a pas de plan ou qu'une recette n'y figure pas.
+- **Affichage** : colonnes Matière et Cuisine séparées dans le tableau ; le détail d'une
+  sortie dit « cuisine 148,76 € = 83 % de 180,00 € (6 h × 30 € selon le plan), au temps de
+  travail : 300 min sur 363 ».
+Vérifié sur la copie + faux PostgREST : 180 € dans Opérationnel ET dans les marges,
+bourguignon 83 % / curry 17 % ; banc 32/32 ; console vide.

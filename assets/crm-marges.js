@@ -31,7 +31,40 @@
    chargerPlats, PLATS_CACHE, platPastille, prVueDisponibles) — chargé après.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function prMarges(global, plats, inventaires, auj) {
+/* Le coût de cuisine d'une session (location + équipe) et sa part par recette.
+   Retour de Pablo (28/09) : « il faut inclure le coût de la cuisine imputé à
+   chaque recette ». Deux choses le rendaient invisible :
+   - les HEURES : sans heures saisies ni mapping généré, Opérationnel les
+     estime depuis les étapes des fiches — 1 h minimum si les fiches n'ont pas
+     d'étapes de production — alors que le plan de production de la session
+     connaît la vraie durée. Ici : heures d'Opérationnel quand elles sont
+     sûres (saisies ou mapping), sinon celles du PLAN (NattyProd.planSession,
+     le même calcul que « Réservation cuisine » : durée + 30 min, arrondi à
+     l'heure pleine) ; la facture de cuisine l'emporte quand elle est reliée ;
+   - l'IMPUTATION : au temps de travail ACTIF de chaque recette dans le plan
+     (un bourguignon qui mijote 3 h ne prend personne), sinon, sans plan ou si
+     une recette n'y figure pas, au prorata des portions (portions × facteur). */
+function prmCuisineSession(s, b, E) {
+  const c = b.calc, reelOk = b.liens.complet;
+  const factureCuisine = reelOk || (b.pieces && b.pieces.cuisine && b.pieces.cuisine.nbAvecMontant > 0);
+  let ctx = null;
+  try { if (E && window.NattyProd && typeof cpContexte === 'function') { const sf = cpFusion(s); if (sf.recettes.length && sf.jours_livraison.length) ctx = cpContexte(sf, E); } } catch (e) { ctx = null; }
+  const aPlan = !!(ctx && ctx.plan && ctx.plan.taches && ctx.plan.taches.length);
+  let heures = c.heures, sourceHeures = c.sourceHeures, location = factureCuisine ? b.reel.location : c.coutLocation;
+  if (!factureCuisine && aPlan && (c.sourceHeures === 'fiches' || c.sourceHeures === 'inconnu')) {
+    heures = ctx.heures; sourceHeures = 'plan'; location = heures * c.tarifCuisineH;
+  }
+  const equipe = reelOk ? b.reel.equipe : c.coutEquipe;
+  const minutes = {};
+  if (aPlan) ctx.plan.taches.forEach(t => { if (!t.passif && t.recId && t.cuisinier >= 0) minutes[t.recId] = (minutes[t.recId] || 0) + Math.max(0, t.fin - t.debut); });
+  const totMin = Object.values(minutes).reduce((t, v) => t + v, 0);
+  const recs = Object.keys(b.parProduit);
+  const auTemps = totMin > 0 && recs.every(id => minutes[id] > 0);
+  const pEqTot = Object.values(c.portionsEq).reduce((t, v) => t + v, 0);
+  const part = id => auTemps ? minutes[id] / totMin : (pEqTot ? (c.portionsEq[id] || 0) / pEqTot : 0);
+  return { total: location + equipe, location, equipe, heures, sourceHeures, tarif: c.tarifCuisineH, facture: factureCuisine, auTemps, minutes, totMin, part };
+}
+function prMarges(global, plats, inventaires, auj, E) {
   const moyen = {}, bilans = [];
   global.sessions.filter(s => s.jour && s.jour <= auj).forEach(s => {
     const raw = global.rawParSession[s.id]; if (!raw) return;
@@ -48,7 +81,7 @@ function prMarges(global, plats, inventaires, auj) {
   const produits = {};
   bilans.forEach(({ s, b, pr }) => {
     const c = b.calc, reelOk = b.liens.complet;
-    const pEqTot = Object.values(c.portionsEq).reduce((t, v) => t + v, 0);
+    const cu = prmCuisineSession(s, b, E);
     Object.values(b.parProduit).forEach(p => {
       const cp = c.parRecette.find(x => x.id === p.id); if (!cp) return;
       const prc = pr.recettes.find(r => r.recId === p.id) || { saisi: false };
@@ -78,22 +111,22 @@ function prMarges(global, plats, inventaires, auj) {
           inventaire: inv ? { attendu: inv.attendu, compte: +inv.compte, unite: inv.unite } : null };
       });
       const matiere = mp.reduce((t, x) => t + (x.cout || 0), 0);
-      const part = pEqTot ? (c.portionsEq[p.id] || 0) / pEqTot : 0;
-      const cuisine = (reelOk ? b.reel.cuisine : c.coutCuisine) * part;
+      const part = cu.part(p.id), cuisine = cu.total * part;
       const nbProduits = produites != null ? produites + (prc.aCompleter || 0) : commandees;
       const caTot = ca + assignes.length * prixPortion, cout = matiere + cuisine;
       (produits[p.id] || (produits[p.id] = { id: p.id, nom: p.nom, sorties: [] })).sorties.push({
         session: s, commandees, produites, aCompleter: prc.saisi ? prc.aCompleter : 0, enPlus: prc.saisi ? prc.enPlus : 0,
         assignes, ca: caTot, caCommandes: ca, prixPortion, matiere, cuisine, cout, nbProduits, coutParPlat: nbProduits ? cout / nbProduits : null,
         res: caTot - cout, marge: caTot ? (caTot - cout) / caTot * 100 : null, nature: reelOk ? 'réel' : 'prévu', productionSaisie: !!prc.saisi,
-        inventaire: !!s.inventaire_le, mp, sansPrix: mp.filter(x => x.cout == null).map(x => x.nom) });
+        inventaire: !!s.inventaire_le, mp, sansPrix: mp.filter(x => x.cout == null).map(x => x.nom),
+        cu, partCuisine: part, minutesRecette: cu.minutes[p.id] || 0 });
     });
   });
   const liste = Object.values(produits).map(q => {
     const t = k => q.sorties.reduce((a, x) => a + (x[k] || 0), 0);
     const ca = t('ca'), cout = t('cout'), nb = t('nbProduits'), cmd = t('commandees');
     q.sorties.sort((a, b) => b.session.jour.localeCompare(a.session.jour));
-    return { ...q, commandees: cmd, produits: nb, enPlus: t('enPlus'), aCompleter: t('aCompleter'), assignes: q.sorties.reduce((a, x) => a + x.assignes.length, 0),
+    return { ...q, matiere: t('matiere'), cuisine: t('cuisine'), commandees: cmd, produits: nb, enPlus: t('enPlus'), aCompleter: t('aCompleter'), assignes: q.sorties.reduce((a, x) => a + x.assignes.length, 0),
       ca, cout, res: ca - cout, marge: ca ? (ca - cout) / ca * 100 : null, coutParPlat: nb ? cout / nb : null, prixPortion: cmd ? t('caCommandes') / cmd : null,
       toutReel: q.sorties.every(x => x.nature === 'réel'), saisies: q.sorties.filter(x => x.productionSaisie).length };
   }).sort((a, b) => (b.marge ?? -1e9) - (a.marge ?? -1e9));
@@ -110,13 +143,13 @@ function prMargesTableauHtml(M) {
    <div style="font-size:40px;font-weight:700;letter-spacing:-.02em;color:${couleurRes(moy || 0)};margin:4px 0">${moy != null ? Math.round(moy) + ' %' : '—'}</div>
    <div class="muted" style="font-size:12px">Résultat ${signeEur(M.res)} sur ${fmtEur(M.ca)} de ventes${M.marge != null ? ` · marge globale ${Math.round(M.marge)} %` : ''}</div>
    ${M.produits.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px">${M.produits.map(p => `<span class="chip ${(p.marge || 0) >= 0 ? 'ok' : 'bad'}">${esc(p.nom)} · ${p.marge != null ? Math.round(p.marge) + ' %' : '—'}</span>`).join('')}</div>` : ''}</div>
-  <div class="tbl-wrap"><table><thead><tr><th>Produit</th><th>Sorties</th><th>Commandés</th><th>Produits</th><th>En plus · assignés</th><th>CA</th><th>Coûts</th><th>Coût / plat</th><th>Résultat</th><th>Marge</th></tr></thead><tbody>
+  <div class="tbl-wrap"><table><thead><tr><th>Produit</th><th>Sorties</th><th>Commandés</th><th>Produits</th><th>En plus · assignés</th><th>CA</th><th>Matière</th><th>Cuisine</th><th>Coût / plat</th><th>Résultat</th><th>Marge</th></tr></thead><tbody>
   ${M.produits.map(p => `<tr class="rowc" data-prm-ouvrir="${p.id}"><td>${esc(p.nom)}${p.toutReel ? '' : ' <span class="muted" style="font-size:11px">prévu</span>'}</td><td class="num">${p.sorties.length}</td><td class="num">${p.commandees}</td>
     <td class="num">${p.produits}${p.saisies < p.sorties.length ? `<div class="muted" style="font-size:10.5px">${p.sorties.length - p.saisies} sans prod. réelle</div>` : ''}</td>
-    <td class="num">${p.enPlus} · ${p.assignes}</td><td class="num">${fmtEur(p.ca)}</td><td class="num">${fmtEur(p.cout)}</td><td class="num">${p.coutParPlat != null ? fmtEur(p.coutParPlat) : '—'}</td>
-    <td class="num" style="color:${couleurRes(p.res)};font-weight:600">${signeEur(p.res)}</td><td class="num">${prmPct(p.marge)}</td></tr>`).join('') || '<tr><td colspan="10" class="muted" style="text-align:center;padding:18px">Aucune session passée avec des commandes attribuées.</td></tr>'}
+    <td class="num">${p.enPlus} · ${p.assignes}</td><td class="num">${fmtEur(p.ca)}</td><td class="num">${fmtEur(p.matiere)}</td><td class="num">${fmtEur(p.cuisine)}</td><td class="num">${p.coutParPlat != null ? fmtEur(p.coutParPlat) : '—'}</td>
+    <td class="num" style="color:${couleurRes(p.res)};font-weight:600">${signeEur(p.res)}</td><td class="num">${prmPct(p.marge)}</td></tr>`).join('') || '<tr><td colspan="11" class="muted" style="text-align:center;padding:18px">Aucune session passée avec des commandes attribuées.</td></tr>'}
   </tbody></table></div>
-  <p class="muted" style="font-size:12px;margin-top:8px">Une ligne par produit, toutes ses sorties (sessions passées) cumulées. Réel quand les trois pièces d'une session sont reliées, prévu sinon. Matière = ce qui a été produit (pesé dans « Portions réellement réalisées »), sinon le besoin prévu, au prix payé dans la session. Coût par plat = coûts ÷ portions produites (complètes + à compléter, qui ont consommé la même matière). Clique un produit pour chacune de ses sorties.</p>`;
+  <p class="muted" style="font-size:12px;margin-top:8px">Une ligne par produit, toutes ses sorties (sessions passées) cumulées. Réel quand les trois pièces d'une session sont reliées, prévu sinon. Matière = ce qui a été produit (pesé dans « Portions réellement réalisées »), sinon le besoin prévu, au prix payé dans la session. Cuisine = location (heures × tarif, ou la facture de cuisine) + équipe, imputée à chaque recette au prorata de son temps de travail dans le plan de production (des portions à défaut). Coût par plat = coûts ÷ portions produites (complètes + à compléter, qui ont consommé la même matière). Clique un produit pour chacune de ses sorties.</p>`;
 }
 function prMargesMpHtml(x) {
   const q = (v, fam) => v == null ? '<span class="muted">—</span>' : prFmt(v, fam);
@@ -160,7 +193,7 @@ function prMargesDetailHtml(M) {
       ${x.assignes.map(platPastille).join('')}
       <span class="chip ${x.inventaire ? 'info' : ''}">${x.inventaire ? 'inventaire fait' : 'pas d’inventaire'}</span>
       <button class="btn sm ghost" type="button" data-fin-voir-session="${x.session.id}" style="margin-left:auto">Session dans Opérationnel →</button></div>
-     <div class="muted" style="font-size:12px;margin-top:6px">CA ${fmtEur(x.caCommandes)} des commandes${x.assignes.length ? ` + ${x.assignes.length} × ${fmtEur(x.prixPortion)} de plats assignés` : ''} · matière ${fmtEur(x.matiere)} (${x.productionSaisie ? 'quantités produites' : 'besoin prévu'}) · cuisine ${fmtEur(x.cuisine)} · ${x.nbProduits} portion${x.nbProduits > 1 ? 's' : ''} produite${x.nbProduits > 1 ? 's' : ''}${x.aCompleter ? ' (dont ' + x.aCompleter + ' à compléter)' : ''} → ${x.coutParPlat != null ? fmtEur(x.coutParPlat) : '—'} par plat${x.sansPrix.length ? ` · sans prix : ${x.sansPrix.map(esc).join(', ')}` : ''}</div>
+     <div class="muted" style="font-size:12px;margin-top:6px">CA ${fmtEur(x.caCommandes)} des commandes${x.assignes.length ? ` + ${x.assignes.length} × ${fmtEur(x.prixPortion)} de plats assignés` : ''} · matière ${fmtEur(x.matiere)} (${x.productionSaisie ? 'quantités produites' : 'besoin prévu'}) · cuisine ${fmtEur(x.cuisine)} = ${Math.round(x.partCuisine * 100)} % de ${fmtEur(x.cu.total)} (${x.cu.facture ? 'facture de cuisine' : (x.cu.heures != null ? x.cu.heures + ' h × ' + fmtEur(x.cu.tarif) : 'heures inconnues') + (x.cu.sourceHeures === 'plan' ? ' selon le plan de production' : x.cu.sourceHeures === 'fiches' ? ' estimées depuis les fiches' : '')}${x.cu.equipe ? ' + équipe ' + fmtEur(x.cu.equipe) : ''}), ${x.cu.auTemps ? `au temps de travail : ${Math.round(x.minutesRecette)} min sur ${Math.round(x.cu.totMin)}` : 'au prorata des portions'} · ${x.nbProduits} portion${x.nbProduits > 1 ? 's' : ''} produite${x.nbProduits > 1 ? 's' : ''}${x.aCompleter ? ' (dont ' + x.aCompleter + ' à compléter)' : ''} → ${x.coutParPlat != null ? fmtEur(x.coutParPlat) : '—'} par plat${x.sansPrix.length ? ` · sans prix : ${x.sansPrix.map(esc).join(', ')}` : ''}</div>
      ${prMargesMpHtml(x)}</td></tr>` : ''}`; }).join('')}
   </tbody></table></div>
   <div class="sect" style="margin-top:18px"><h2>Matières, toutes sorties</h2></div>
@@ -171,7 +204,8 @@ function prMargesDetailHtml(M) {
 }
 async function prVueMarges() {
   const inv = await prTry('crm_session_inventaire?select=*&order=created_at.desc');
-  const M = prMarges(FIN_GLOBAL, PLATS_CACHE || [], inv.ok ? inv.data : [], isoLocal(new Date()));
+  const E = await chargerProd();   // le plan de production de chaque session : heures et temps par recette
+  const M = prMarges(FIN_GLOBAL, PLATS_CACHE || [], inv.ok ? inv.data : [], isoLocal(new Date()), E);
   return `<div id="prodRoot">${PRM.rec ? prMargesDetailHtml(M) : prMargesTableauHtml(M)}</div>`;
 }
 async function vFinanceProduits() {

@@ -159,6 +159,7 @@ textarea.inp{width:100%;min-height:70px;resize:vertical}
 .menu-photo{position:relative;height:140px;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:38px}
 .menu-photo img{width:100%;height:100%;object-fit:cover}.menu-photo .chip{position:absolute;top:8px;left:8px;background:var(--bg);color:var(--ink)}
 .menu-mini{width:40px;height:40px;border-radius:10px;background:var(--panel);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto}.menu-mini img{width:100%;height:100%;object-fit:cover}
+#prodRoot td.num{white-space:nowrap}   /* Produits : un montant ne se coupe pas avant son « € » */
 #menuForm>*,#menuForm .two>*{min-width:0}#menuForm input[type=file]{max-width:100%;width:100%}
 .menu-ing{display:grid;grid-template-columns:minmax(0,1fr) 78px auto minmax(0,auto) auto;gap:6px;align-items:center;margin-bottom:6px}
 @media (max-width:540px){.menu-ing{grid-template-columns:minmax(0,1fr) 70px auto auto}.menu-ing>span:nth-of-type(2){display:none}}
@@ -4853,6 +4854,15 @@ async function chargerFinanceGlobal(){
    lignes:lignes.filter(l=>fS.has(l.facture_id))
   };
  });
+ // Les heures du PLAN de production (NattyProd.planSession via cpContexte,
+ // crm-production.js) : le même calcul que « Réservation cuisine » — durée du
+ // plan + 30 min, arrondi à l'heure pleine. Il passe avant l'estimation depuis
+ // les fiches, qui ne connaît ni le nombre de portions ni les étapes en
+ // parallèle (6 h de plan estimées 2 h sur une vraie session de test, 28/09).
+ const E=await chargerProd().catch(()=>null);
+ if(E&&typeof cpContexte==='function')sessions.forEach(s=>{
+  try{const sf=cpFusion(s);if(!sf.recettes.length||!sf.jours_livraison.length)return;const ctx=cpContexte(sf,E);if(ctx.plan&&ctx.plan.taches&&ctx.plan.taches.length)rawParSession[s.id].heuresPlan=ctx.heures}catch(e){}
+ });
  return{sessions,rawParSession,equipeManquante:!eqR.ok&&eqR.manque};
 }
 /* Prix au kg : prix_kg_moyen s'il existe, sinon prix_achat_ht (au COLIS)
@@ -4979,6 +4989,7 @@ function calculerFinance(raw,edit){
  if(edit.heures!=null)heures=edit.heures;
  else if(s.heures_cuisine_override!=null)heures=+s.heures_cuisine_override;
  else if(minutesMapping!=null){heures=heuresDepuisMinutes(minutesMapping);sourceHeures='mapping'}
+ else if(raw.heuresPlan!=null){heures=raw.heuresPlan;sourceHeures='plan'}
  else if(raw.minutesFiches!=null){heures=heuresDepuisMinutes(raw.minutesFiches);sourceHeures='fiches'}
  else sourceHeures='inconnu';
  const coutLocation=heures!=null?heures*tarifCuisineH:0;
@@ -5267,7 +5278,7 @@ function detailColonnesHtml(b){
  const src=s=>s==='facture'?'facture':s==='saisi'?'saisi':s==='partiel'?'réel partiel, complété par le prévu':s==='aucune'?'aucune équipe':'⚠ prévu, pièce manquante';
  const gauche=carteLignes('Coûts prévisionnels',[
   ['Matières premières',fmtEur(c.coutMatiere),`${c.ingConnus}/${c.ingConnus+c.ingInconnus} chiffrées`],
-  ['Location cuisine',fmtEur(c.coutLocation),c.heures!=null?`${c.heures} h × ${fmtEur(c.tarifCuisineH)}${c.sourceHeures==='fiches'?' · estimées depuis les fiches':c.sourceHeures==='mapping'?' · mapping':''}`:'heures inconnues'],
+  ['Location cuisine',fmtEur(c.coutLocation),c.heures!=null?`${c.heures} h × ${fmtEur(c.tarifCuisineH)}${c.sourceHeures==='fiches'?' · estimées depuis les fiches':c.sourceHeures==='plan'?' · plan de production':c.sourceHeures==='mapping'?' · mapping':''}`:'heures inconnues'],
   ['Équipe de cuisine',fmtEur(c.coutEquipe),`${c.equipe.reduce((t,e)=>t+e.nb,0)} cuisinier(s)`]
  ],'Total',fmtEur(c.coutTotal))+carteLignes('Recettes prévisionnelles',[
   [`<input class="inp fin-repas" id="finAboLive" type="number" min="0" step="1" value="${c.nbAbo}" style="width:70px;display:inline-block;padding:4px 8px"> repas abonnement`,fmtEur(c.nbAbo*c.prixAbo),`× ${fmtEur(c.prixAbo)}`],
