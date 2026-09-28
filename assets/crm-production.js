@@ -170,7 +170,16 @@ async function vSession(s, E) {
   let corps = '';
   if (CP.onglet === 'planning') corps = cpPlanning(ctx);
   if (CP.onglet === 'postes') corps = cpPostes(ctx, s);
-  if (CP.onglet === 'assemblage') corps = cpAssemblage(ctx);
+  if (CP.onglet === 'assemblage') {
+    // Les plats validés vivent dans crm_sessions.production_reelle._faits (migration 0021) ;
+    // le stock est celui de stocks_mp, réécrit par l'inventaire.
+    CP.colonneFaits = Object.prototype.hasOwnProperty.call(s, 'production_reelle');
+    CP.faits = (s.production_reelle && s.production_reelle._faits) || {};
+    const st = await prTry('stocks_mp?statut=eq.disponible&select=*');
+    CP.stock = prStockIndex(st.ok ? st.data : []);
+    CP.stockLu = st.ok;
+    corps = cpAssemblage(ctx);
+  }
   if (CP.onglet === 'equipe') corps = cpEquipe(s, ctx);
   if (CP.onglet === 'cuisine') corps = cpCuisine(s, ctx);
   if (CP.onglet === 'courses') corps = cpCourses(ctx);
@@ -229,13 +238,76 @@ function cpPostes(ctx, s) {
     ${p.lots.length ? `<div class="muted" style="font-size:12px;margin-top:6px">~${p.min} min${p.eco ? ' · ~' + p.eco + ' min gagnées ensemble' : ''}</div>` : ''}</div>`).join('')}</div>`;
 }
 
+/* L'assemblage valide les plats, client par client (demande de Pablo, 28/09) :
+   en tête de chaque recette, faits / commandés, puis ce que le stock permet
+   encore — le reste de la commande en vert, le surplus possible en violet
+   (« 3 / 10 faits, le stock en permet 15 → 7 en vert, 8 en violet »). Un
+   compteur « en plus » déclare les plats faits au-delà des commandes : ils
+   deviennent disponibles dans Financement → Produits. */
+function cpFaitsDe(recId) { return CP.faits[recId] || { clients: {}, enPlus: 0 }; }
+function cpParPortion(l) {
+  const E = NattyProd.etat;
+  return Object.keys(l.ingTot).map(nom => {
+    const ing = (E.ings[l.rec.id] || []).find(i => i.ingredient_nom === nom), u = (ing && ing.unite) || 'g';
+    return { nom: nom.trim(), fam: prFamille(u), q: l.portions ? prVersBase(l.ingTot[nom], u) / l.portions : 0, tag: (ing && ing.tag) || null };
+  });
+}
+function cpEnteteLot(l) {
+  const fa = cpFaitsDe(l.rec.id);
+  const faits = l.parClient.reduce((t, pc) => t + Math.min(pc.n, +(fa.clients || {})[pc.bon.id] || 0), 0);
+  const pos = CP.stockLu ? prPossibleStock(cpParPortion(l), CP.stock) : null;
+  const rep = prRepartition(l.portions, faits, pos ? pos.faisables : 0);
+  const inv = CP.s && CP.s.inventaire_le ? 'inventaire du ' + new Date(CP.s.inventaire_le).toLocaleDateString('fr-FR') : 'stock actuel, sans inventaire de cette session';
+  return `<div class="card" style="margin-bottom:10px">
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-size:26px;font-weight:700" class="num">${faits}<span class="muted" style="font-size:16px;font-weight:500"> / ${l.portions}</span></span><span class="muted" style="font-size:12.5px">faits${faits >= l.portions ? ' — commande complète' : ''}</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+     ${rep.reste ? `<span class="chip ok" title="À faire pour finir les commandes, et le stock le permet">${rep.vert} à faire${rep.vert ? ' ✓ stock' : ''}</span>` : ''}
+     ${rep.manque ? `<span class="chip bad" title="Il reste à faire, mais le stock ne suffit pas">−${rep.manque} manquent</span>` : ''}
+     ${pos ? `<span class="chip vi" title="Plats supplémentaires que le stock permet, au-delà des commandes">+${rep.violet} en plus possibles</span>` : ''}
+    </div></div>
+   <div class="muted" style="font-size:12px;margin-top:6px">${!CP.stockLu ? 'Stock illisible.' : pos ? `Le stock (${inv}) permet encore <b style="color:var(--ink)">${pos.faisables}</b> portion${pos.faisables > 1 ? 's' : ''}, selon ${esc(pos.decideur)}${pos.completes < pos.faisables ? ` — dont ${pos.completes} complète${pos.completes > 1 ? 's' : ''}` : ''}.` : 'Aucun aliment pesable dans cette recette.'}</div>
+   ${pos && pos.manquants.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px"><span class="muted" style="font-size:12px">Pour les compléter :</span>${pos.manquants.map(m => `<span class="chip warn">${esc(m.nom)} −${prFmt(m.q, m.fam)}</span>`).join('')}</div>` : ''}
+   <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;font-size:12.5px"><span>Plats faits en plus des commandes</span>
+    <span style="display:inline-flex;gap:8px;align-items:center"><button class="btn sm ghost" type="button" data-cp-plus="${l.rec.id}|-1" ${fa.enPlus ? '' : 'disabled'}>−</button><b class="num" style="min-width:18px;text-align:center;color:var(--violet)">${fa.enPlus || 0}</b><button class="btn sm ghost" type="button" data-cp-plus="${l.rec.id}|1">+</button></span>
+    <span class="muted" style="font-size:11.5px">→ disponibles à la vente dans Financement → Produits</span></div>
+  </div>`;
+}
+function cpCompteurClient(l, pc) {
+  const n = Math.min(pc.n, +(cpFaitsDe(l.rec.id).clients || {})[pc.bon.id] || 0), k = l.rec.id + '|' + pc.bon.id;
+  return `<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn sm ghost" type="button" data-cp-fait="${k}|-1" ${n ? '' : 'disabled'}>−</button><b class="num" style="color:${n >= pc.n ? 'var(--green)' : 'inherit'}">${n} / ${pc.n}</b><button class="btn sm ghost" type="button" data-cp-fait="${k}|1" ${n < pc.n ? '' : 'disabled'}>+</button>${n < pc.n ? `<button class="btn sm" type="button" data-cp-fait="${k}|${pc.n - n}">✓ Tout fait</button>` : '<span class="chip ok">fait</span>'}</div>`;
+}
 function cpAssemblage(ctx) {
   const joindre = ctx.bons.filter(b => platsDuBon(b.id).length);
-  return (joindre.length ? `<div class="sect" style="margin-top:6px"><h2>Plats déjà produits à joindre</h2></div><div class="grid g2" style="margin-bottom:10px">${joindre.map(b => `<div class="card"><b>${esc(cpNomClient(b))}</b>${platsPastillesHtml(b.id)}</div>`).join('')}</div>` : '') + ctx.lots.map(l => `<div class="sect" style="margin-top:6px"><h2><span class="dot" style="background:${l.couleur};display:inline-block;margin:0 6px 0 0"></span>${esc(l.rec.nom)} — ${l.portions} portion(s)</h2></div>
+  return (CP.colonneFaits ? '' : `<div class="exbar"><span class="chip bad">SQL</span><span>La colonne <span class="mono">crm_sessions.production_reelle</span> manque — exécuter ${PR_SQL} pour enregistrer les plats validés.</span></div>`) +
+   (joindre.length ? `<div class="sect" style="margin-top:6px"><h2>Plats déjà produits à joindre</h2></div><div class="grid g2" style="margin-bottom:10px">${joindre.map(b => `<div class="card"><b>${esc(cpNomClient(b))}</b>${platsPastillesHtml(b.id)}</div>`).join('')}</div>` : '') + ctx.lots.map(l => `<div class="sect" style="margin-top:6px"><h2><span class="dot" style="background:${l.couleur};display:inline-block;margin:0 6px 0 0"></span>${esc(l.rec.nom)} — ${l.portions} portion(s)</h2></div>
+   ${cpEnteteLot(l)}
    <div class="grid g2">${l.parClient.map(pc => `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${esc(cpNomClient(pc.bon))}</b><span class="muted" style="font-size:12px">× ${pc.n} · ${Math.round(pc.p.gPortion)} g${pc.p.kcal ? ' · ' + Math.round(pc.p.kcal) + ' kcal' : ''}${pc.p.mac ? ' · ' + NattyProd.libMacros(pc.p.mac) : ''}</span></div>
      <div class="cp-ings">${pc.p.ings.map(i => `<span><b class="num">${cpQ(i.g, i.unite)}</b>${esc(i.nom)}</span>`).join('')}</div>
+     ${cpCompteurClient(l, pc)}
      <div class="muted" style="font-size:11.5px;margin-top:6px">Grammages à corriger dans Commandes → Modifier la commande.</div></div>`).join('')}</div>`).join('');
 }
+/* Enregistre un compteur : relit production_reelle en base avant d'écrire,
+   pour ne pas écraser la saisie d'Opérationnel faite ailleurs. */
+async function cpMajFaits(recId, maj) {
+  const r = await prTry('crm_sessions?id=eq.' + CP.s.id + '&select=production_reelle');
+  if (!r.ok) { toast(r.manque ? 'Colonne production_reelle absente — exécuter la migration 0021' : 'Lecture de la session impossible'); return; }
+  const pr = (r.data[0] && r.data[0].production_reelle) || {};
+  pr._faits = pr._faits || {};
+  const fa = pr._faits[recId] || (pr._faits[recId] = { clients: {}, enPlus: 0 });
+  fa.clients = fa.clients || {};
+  maj(fa);
+  const w = await prTry('crm_sessions?id=eq.' + CP.s.id, { method: 'PATCH', body: JSON.stringify({ production_reelle: pr }) });
+  if (!w.ok) { toast('Échec de l’enregistrement'); return; }
+  render();
+}
+document.addEventListener('click', async e => {
+  const f = e.target.closest('[data-cp-fait]');
+  if (f) { const [rec, bon, d] = f.dataset.cpFait.split('|'); const lot = CP.ctx && CP.ctx.lots.find(l => l.rec.id === rec), pc = lot && lot.parClient.find(x => x.bon.id === bon);
+    await cpMajFaits(rec, fa => { fa.clients[bon] = Math.max(0, Math.min(pc ? pc.n : 99, (+fa.clients[bon] || 0) + (+d))); }); return; }
+  const p = e.target.closest('[data-cp-plus]');
+  if (p) { const [rec, d] = p.dataset.cpPlus.split('|'); await cpMajFaits(rec, fa => { fa.enPlus = Math.max(0, (+fa.enPlus || 0) + (+d)); }); }
+});
 
 /* L'équipe : les membres de l'équipe, leur disponibilité ce jour-là (RH), et
    la mise au calendrier RH — une RÉUNION « Session de production », pour que

@@ -1267,3 +1267,56 @@ retirer/remettre, ajout d'un plat (150 g poulet + 200 g riz → 508 kcal, 51,9 g
 créée), modification du curry (riz 250 → 260 g, étiquette et ml conservés, pas de recette en
 double), suppression. Console vide ; 0 px de débordement à 375 px sur les trois écrans.
 🔄 Pas joué sur les vraies données ni avec une vraie photo Cloudinary.
+
+---
+
+## Valider les plats à l'assemblage — faits, reste à faire, en plus possibles (28/09/2026, soir)
+
+Retour de Pablo : « j'ai validé l'inventaire mais toujours rien dans Produits », et : pouvoir
+valider les plats dans Assemblage pour voir combien de repas sont faits, combien de la
+commande restent à faire, combien on pourra faire en plus — « 3 bourguignons / 10 faits,
+l'inventaire montre qu'on peut encore en faire 15 → 7 en vert et 8 en violet ».
+
+### Pourquoi Produits restait vide
+Produits ne lisait que la production réelle SAISIE dans Opérationnel ; l'inventaire ne crée
+pas de plats (il réécrit le stock). Rien n'avait été saisi, donc rien d'« en plus ». La
+validation à l'assemblage alimente maintenant la même production réelle, et le message
+vide de Produits dit d'où viennent les plats. (Non vérifiable d'ici : si la migration 0021
+n'était pas passée, Produits affiche aussi un bandeau SQL.)
+
+### Ce qui change
+- **Production → session → Assemblage** : chaque client a un compteur « − n / N + » et
+  « ✓ Tout fait ». En tête de chaque recette : **faits / commandés**, puis
+  **vert** = reste à faire de la commande que le stock couvre, **violet** = en plus
+  possibles, **rouge** = ce qui manquera ; la phrase « le stock permet encore N portions,
+  selon <aliment> », les manques pour les compléter, et un compteur **« plats faits en plus
+  des commandes »** — ceux-là deviennent disponibles dans Financement → Produits.
+- Stockage : `crm_sessions.production_reelle._faits = { recId: { clients: { bonId: n },
+  enPlus: n } }` (pas de nouvelle migration — colonne de 0021). L'écriture relit la ligne
+  avant de PATCHer, pour ne pas écraser la saisie d'Opérationnel.
+- `productionReelle` : une recette sans saisie d'Opérationnel mais validée à l'assemblage
+  est en mode `assemblage` — complètes = faits (plafonnés à la commande de chaque client) +
+  en plus ; `enPlus` = le compteur déclaré ; manque = commandé − faits. Une saisie
+  d'Opérationnel pour la recette l'emporte (elle dit aussi ce qui est à compléter).
+- **Le stock** (`prStockIndex`, `prPossibleStock`, `prRepartition`) : `stocks_mp`
+  disponible, donc le compté du dernier inventaire ; portion = moyenne du lot de la
+  session (grammes réels des clients ÷ portions) ; les aliments de moins de 3 g/ml par
+  portion ne bloquent pas ; chaque recette seule sur tout le stock (non cumulables).
+
+### 🔴 Le principal le PLUS LIMITANT, pas le plus disponible
+Attrapé au banc : sans étiquette, le bœuf (180 g) et le vin (150 ml) d'un bourguignon sont
+tous deux « principaux » (≥ 15 % du poids), et la règle de « Réorganiser » — le principal
+le plus disponible décide — annonçait 20 bourguignons avec du bœuf pour 15. Pour dire ce
+que le stock PERMET, tous les principaux sont nécessaires : le plus limitant décide ;
+l'étiquette `proteine` restreint les principaux à elle. « Réorganiser » garde sa règle
+(choix de Pablo : faire le plat même sans assez d'accompagnement).
+
+### Vérifié
+Banc 32/32 (l'exemple de Pablo : 3/10 faits + 15 possibles → 7 vert, 8 violet ; 5 possibles
+→ 5 vert, 2 manquent ; bœuf étiqueté + vin court → 15 faisables, 10 complètes, vin −750 ml ;
+mode assemblage ; saisie d'Opérationnel prioritaire ; faits plafonnés). Navigateur sur la
+copie + faux PostgREST : trois clics « + » → `_faits` écrit, 3/25 puis, rejoué à 10
+commandés et du bœuf pour 15, **« 3 / 10 faits · 7 à faire ✓ stock · +8 en plus possibles »** ;
+« en plus » ×2 → Opérationnel « validé à l'assemblage · 3 de la commande + 2 en plus » et
+Produits « 2 en plus, 1 déjà assigné, 1 dispo » ; la saisie curry d'Opérationnel conservée.
+Console vide, 0 px de débordement à 375 px.
