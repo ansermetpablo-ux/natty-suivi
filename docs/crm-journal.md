@@ -1429,3 +1429,34 @@ Vérifié sur la copie + faux PostgREST : 4 bourguignons en stock (5 en plus, 1 
 page de Léa : curry ×3 possibles selon 0,35 kg de poulet, 0 complet, bourguignon replié (vin
 absent) ; assigner → `boeuf267` à la place de la portion de bourguignon, on reste sur la page ;
 « Attribuer » curry → formulaire avec curry 2 → 3. Console vide, 0 px de débordement à 375 px.
+
+---
+
+## Opérationnel : la page d'une session en onglets (29/09/2026)
+
+Demande de Pablo : fractionner la page d'une session d'Opérationnel en onglets — « Prévisionnel »
+avec les tableaux et les facteurs variables affichés (plus dans un volet replié) et modifiables
+en direct ; « Matières premières » avec le tableau de saisie, un total tout en haut et le
+tableau réparti par recette avec de simples sous-titres.
+- Le héros (résultat) reste au-dessus, commun ; trois onglets : **Prévisionnel** (cartes prévu /
+  réel, *Facteurs variables*, équipe), **Matières premières** (tableau, réorganisation, plats en
+  plus), **Réel & pièces** (portions réalisées, pièces, analytique). Changer d'onglet ne recharge
+  rien (`basculerOngletSession`) : les éditions en cours restent.
+- *Facteurs variables* : heures et taux horaire s'enregistrent à la sortie du champ
+  (`enregistrerReglageCuisine`, comme les nombres de repas) ; les coefficients sont un tableau
+  (recette, portions, repas groupés par coefficient, coût matière en direct, coefficient) et
+  attendent « Valider » puisqu'ils réécrivent `bons_attributions`. Corrigé au passage : seul un
+  coefficient **changé** est validé — avant, n'importe quelle frappe recopiait la moyenne
+  affichée dans toutes les recettes, et « Valider » écrasait des coefficients différents.
+- Tableau des matières : ligne **Total de la session** en tête (kg prévus, prévu €, kg achetés,
+  payé €, écart kg, payé − prévu €), puis une section par recette (sous-titre : portions, prévu,
+  payé). Tout se saisit dans chaque section : la quantité prévue vaut pour la recette
+  (clé `recette|aliment` dans `mp_prevu_override`, prioritaire sur la clé de l'aliment seul — pas
+  de migration, c'est du jsonb) ; l'achat reste un par aliment, réparti au prorata du besoin, et
+  saisir X dans la case d'une recette fixe l'achat total à X ÷ sa part. Le filtre par recette du
+  tableau a disparu (les sections le remplacent) ; celui de l'analytique reste.
+Vérifié sur la copie + faux PostgREST : curry 7,60 € / bourguignon 4,92 € ; 4 h → location
+120 € en direct, PATCH `heures_cuisine_override` ; coefficient bourguignon 1,5 → 6,15 € en direct,
+« Valider » ne réécrit que r2 (le curry à 0,9/1,0 intact) ; oignon du bourguignon 0,1 kg →
+`{"r2|oignon":0.1}`, curry inchangé ; achat oignon curry 0,72 kg à 65,5 % → 1,099 kg au total.
+Onglets sans requête, console vide, 0 px de débordement à 375 px.
