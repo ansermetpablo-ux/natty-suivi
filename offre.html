@@ -533,6 +533,27 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 .adr-row input::placeholder { color:var(--muted); }
 .adr-labels { display:grid; grid-template-columns:64px 1fr 84px; gap:6px; font-size:10.5px; color:var(--muted2); margin-bottom:4px; }
 .unite-quand { margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+
+/* ═══ « NOS PLATS » — la carte d'un plat, photo en tête (2026-09-30) ═══════
+   La photo passe au-dessus et prend toute la largeur : une vignette de 62 px
+   ne montre rien d'un plat qu'on achète sur son apparence. En dessous, le nom
+   et le pas-à-pas, puis les quatre macros moyennes, puis les allergènes. */
+.unite-plat { flex-direction:column; align-items:stretch; gap:0; padding:0; overflow:hidden; }
+.unite-plat .unite-img { width:100%; height:auto; aspect-ratio:16/10; border-radius:0; box-shadow:none; }
+.unite-plat .unite-img.vide { aspect-ratio:auto; height:84px; background:var(--card); }
+.unite-plat .unite-img.vide svg { width:30px; height:30px; }
+.unite-corps { padding:12px 14px 14px; display:flex; flex-direction:column; gap:10px; }
+.unite-haut { display:flex; align-items:flex-start; gap:10px; }
+.unite-plat .unite-des { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.unite-plat .unite-mac { margin:0; white-space:normal; overflow:visible; }
+.um-lib { font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.um-grille { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.um-grille span { display:flex; flex-direction:column; align-items:center; gap:1px; padding:7px 2px; border-radius:12px; background:var(--bg); box-shadow:inset 2px 2px 5px var(--creux-20),inset -2px -2px 5px var(--relief-85); font-size:10px; font-weight:500; color:var(--muted2); }
+.um-grille b { font-size:14px; font-weight:800; color:var(--txt); letter-spacing:-.3px; }
+.unite-all { font-size:11.5px; line-height:1.4; color:var(--txt); padding:8px 10px; border-radius:12px; background:rgba(255,149,0,.12); }
+.unite-all b { font-weight:700; }
+.unite-all.ok { background:var(--vert-clair); color:var(--vert); font-weight:600; }
+.unite-all a { color:inherit; font-weight:700; }
 </style>
 </head>
 <body>
@@ -1765,8 +1786,10 @@ async function uniteCharger() {
     // Les plats du menu, les plus récents d'abord. `actif` écarte ceux qui ont
     // été retirés par l'admin sans être supprimés.
     unitePlats = await Natty.sbFetch(
-      'plats_menu?actif=eq.true&order=semaine.desc,nom.asc&limit=30'
-      + '&select=id,nom,description,photo_url,calories,proteines') || [];
+      /* ⚠️ limit=80 et non 30 : le menu compte 41 plats actifs, et la limite
+         de 30 en faisait disparaître onze sans un mot. */
+      'plats_menu?actif=eq.true&order=semaine.desc,nom.asc&limit=80'
+      + '&select=id,nom,description,photo_url,calories,proteines,glucides,lipides,allergenes') || [];
   } catch (e) { unitePlats = []; }
 
   if (!unitePlats.length) {
@@ -1779,26 +1802,46 @@ async function uniteCharger() {
     return;
   }
 
+  const g = v => v == null || v === '' ? '–' : Math.round(Number(v));
   liste.innerHTML = unitePlats.map(function(p){
     const img = p.photo_url
-      ? '<img class="unite-img" src="' + ech(p.photo_url) + '" alt="" loading="lazy">'
+      /* Une photo qui n'arrive pas laisse un cadre vide de 200 px au milieu
+         du menu : on repose l'assiette à sa place (même précaution que
+         brancherVignettes d'assets/planning.js). */
+      ? '<img class="unite-img" src="' + ech(p.photo_url) + '" alt="' + ech(p.nom || '') + '" loading="lazy" data-repli="1">'
       : PL_ASSIETTE;
-    const mac = [
-      p.calories ? Math.round(p.calories) + ' kcal' : null,
-      // « g prot. » et non « g de protéines » : la ligne fait 150 px, et un
-      // libellé qui déborde se coupe sur le CHIFFRE — voir la règle .unite-pas.
-      p.proteines ? Math.round(p.proteines) + ' g prot.' : null
-    ].filter(Boolean).join(' · ');
+    /* « Moyenne par portion » : la portion d'un plat à l'unité est celle de la
+       fiche technique, sans ajustement à un profil — un abonné, lui, reçoit
+       une portion calculée sur SES besoins. Le mot dit donc exactement ce
+       que ces chiffres sont. */
+    const mac = p.calories == null ? ''
+      : '<div class="unite-mac"><div class="um-lib">Moyenne par portion</div><div class="um-grille">'
+        + '<span><b>' + g(p.calories) + '</b>kcal</span>'
+        + '<span><b>' + g(p.proteines) + ' g</b>protéines</span>'
+        + '<span><b>' + g(p.glucides) + ' g</b>glucides</span>'
+        + '<span><b>' + g(p.lipides) + ' g</b>lipides</span></div></div>';
+    /* Trois cas, et le troisième n'est PAS « aucun allergène » : un plat sans
+       fiche technique n'a pas d'allergènes CONNUS. Écrire « aucun » là-dessus
+       serait une affirmation de sécurité que rien ne soutient. */
+    const al = Array.isArray(p.allergenes)
+      ? (p.allergenes.length
+          ? '<div class="unite-all"><b>Allergènes&nbsp;:</b> ' + p.allergenes.map(ech).join(', ') + '</div>'
+          : '<div class="unite-all ok">Aucun des 14 allergènes majeurs</div>')
+      : '<div class="unite-all">Allergènes&nbsp;: <a href="tel:+33770242964">nous consulter</a></div>';
     return '<div class="unite-plat" id="up_' + ech(p.id) + '">' + img
-      + '<div class="unite-inf"><div class="unite-nom">' + ech(p.nom || 'Plat') + '</div>'
-      + (p.description ? '<div class="unite-des">' + ech(p.description) + '</div>' : '')
-      + (mac ? '<div class="unite-mac">' + mac + '</div>' : '') + '</div>'
+      + '<div class="unite-corps"><div class="unite-haut"><div class="unite-inf"><div class="unite-nom">' + ech(p.nom || 'Plat') + '</div>'
+      + (p.description ? '<div class="unite-des">' + ech(p.description) + '</div>' : '') + '</div>'
       + '<div class="unite-pas">'
       + '<button data-moins="' + ech(p.id) + '" aria-label="Retirer" disabled>−</button>'
       + '<span class="unite-qte" id="uq_' + ech(p.id) + '">0</span>'
       + '<button data-plus="' + ech(p.id) + '" aria-label="Ajouter">+</button>'
-      + '</div></div>';
+      + '</div></div>' + mac + al + '</div></div>';
   }).join('');
+
+  liste.querySelectorAll('img[data-repli]').forEach(function (im) {
+    function repli() { im.insertAdjacentHTML('afterend', PL_ASSIETTE); im.remove(); }
+    if (im.complete && !im.naturalWidth) repli(); else im.addEventListener('error', repli);
+  });
 
   liste.addEventListener('click', function(ev){
     const plus = ev.target.closest('[data-plus]');
