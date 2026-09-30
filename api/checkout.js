@@ -8,6 +8,36 @@
    chiffres. */
 const REPAS_MIN = 1, REPAS_MAX = 10;
 
+/* La DURÉE de l'abonnement, en semaines (offre.html la fait choisir en héros,
+   2 par défaut). Elle MULTIPLIE la quantité Stripe : on facture « repas ×
+   semaines » plats d'un coup, et la souscription se renouvelle toutes les N
+   semaines (`interval_count`). Facturer chaque semaine une quantité multipliée
+   serait facturer N fois trop. 24 = le plafond du curseur ; Stripe accepte 52. */
+const SEMAINES_MIN = 1, SEMAINES_MAX = 24, SEMAINES_DEFAUT = 2;
+const CRENEAUX = ['11h30 – 13h30', '12h – 14h', '18h – 20h', '19h – 21h'];
+
+/* La date de la PREMIÈRE livraison. Règle produit (2026-09-30) : on ne commande
+   jamais du jour au lendemain, on commande pour la semaine SUIVANTE — donc du
+   lundi qui suit à cinq semaines. Calculé à l'heure de Paris : le serveur est
+   en UTC, et un dimanche 23 h à Paris y est encore dimanche… ou déjà lundi. */
+function aujourdhuiParis() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
+}
+function ajouterJours(ymd, n) {
+  const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function lundiSuivant() {
+  const auj = aujourdhuiParis();
+  const j = new Date(auj + 'T12:00:00Z').getUTCDay();          // 0 = dimanche
+  return ajouterJours(auj, j === 0 ? 1 : 8 - j);
+}
+function dateValide(v) {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return '';
+  const min = lundiSuivant(), max = ajouterJours(min, 34);
+  return v >= min && v <= max ? v : '';
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -63,6 +93,8 @@ export default async function handler(req, res) {
     const livraison = {
       jour:    typeof body.jourLivraison === 'string' ? body.jourLivraison.slice(0, 20) : '',
       adresse: typeof body.adresse === 'string' ? body.adresse.slice(0, 480) : '',
+      date:    dateValide(body.dateLivraison),
+      creneau: CRENEAUX.indexOf(body.creneau) >= 0 ? body.creneau : '',
       // Les plats choisis à l'unité : [{id, n}] — l'attribution en cuisine
       // part de là. Bornée elle aussi.
       plats:   Array.isArray(body.plats)
@@ -84,6 +116,13 @@ export default async function handler(req, res) {
 
     if (!STRIPE_SECRET_KEY) {
       return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
+    }
+
+    /* ⚠️ Une date de livraison est OBLIGATOIRE et doit tomber la semaine
+       suivante au plus tôt. L'écran grise la semaine en cours ; un POST
+       bricolé, lui, ne passe pas par l'écran. */
+    if (!livraison.date) {
+      return res.status(400).json({ error: 'Choisissez une date de livraison à partir du ' + lundiSuivant() });
     }
 
     /* ── L'achat À L'UNITÉ ─────────────────────────────────────────────────
@@ -158,11 +197,19 @@ export default async function handler(req, res) {
       });
     }
 
+    let semaines = Math.floor(Number(body.semaines));
+    if (!Number.isFinite(semaines) || semaines <= 0) semaines = SEMAINES_DEFAUT;
+    if (semaines < SEMAINES_MIN || semaines > SEMAINES_MAX) {
+      return res.status(400).json({ error: 'Entre ' + SEMAINES_MIN + ' et ' + SEMAINES_MAX + ' semaines' });
+    }
+
     return await creerSession({
       res, STRIPE_SECRET_KEY, token, userId, plateforme, livraison,
       priceId: PRIX_ABO || LEGACY[n],
-      quantite: PRIX_ABO ? n : 1,
-      stripeMode: 'subscription', repas: n
+      /* La quantité Stripe = plats × semaines (chemin au plat), ou semaines
+         (chemin historique, où le prix porte déjà les 3 ou 4 repas). */
+      quantite: (PRIX_ABO ? n : 1) * semaines,
+      stripeMode: 'subscription', repas: n, semaines
     });
 
   } catch (err) {
@@ -179,7 +226,7 @@ export default async function handler(req, res) {
    justement coûté le piège de la WebView (§8). */
 async function creerSession(o) {
   const { res, STRIPE_SECRET_KEY, token, userId, plateforme,
-          priceId, quantite, stripeMode, repas, livraison } = o;
+          priceId, quantite, stripeMode, repas, livraison, semaines } = o;
   const origin = 'https://natty-suivi.vercel.app';
   const unique = stripeMode === 'payment';
 
@@ -195,7 +242,25 @@ async function creerSession(o) {
 
   const params = new URLSearchParams();
   params.append('mode', stripeMode);
-  params.append('line_items[0][price]', priceId);
+  if (!unique && semaines && semaines > 1) {
+    /* ⚠️ UN PRIX RÉCURRENT PORTE SON INTERVALLE : le prix au plat est
+       HEBDOMADAIRE. Pour renouveler toutes les N semaines, on recompose un prix
+       à la volée (`price_data`) avec le MÊME produit et le MÊME montant unitaire
+       — lus chez Stripe, jamais pris du client — et `interval_count = N`. */
+    const pr = await fetch('https://api.stripe.com/v1/prices/' + encodeURIComponent(priceId), {
+      headers: { 'Authorization': 'Bearer ' + STRIPE_SECRET_KEY }
+    }).then(function (r) { return r.json(); });
+    if (!pr || !pr.unit_amount || !pr.product) {
+      return res.status(500).json({ error: 'Prix Stripe illisible' });
+    }
+    params.append('line_items[0][price_data][currency]', pr.currency || 'eur');
+    params.append('line_items[0][price_data][product]', typeof pr.product === 'string' ? pr.product : pr.product.id);
+    params.append('line_items[0][price_data][unit_amount]', String(pr.unit_amount));
+    params.append('line_items[0][price_data][recurring][interval]', 'week');
+    params.append('line_items[0][price_data][recurring][interval_count]', String(semaines));
+  } else {
+    params.append('line_items[0][price]', priceId);
+  }
   params.append('line_items[0][quantity]', String(quantite));
   params.append('success_url', retour('ok'));
   params.append('cancel_url', retour('annule'));
@@ -218,7 +283,12 @@ async function creerSession(o) {
   if (liv.jour)    params.append('metadata[livraison]', liv.jour);
   if (liv.adresse) params.append('metadata[adresse]', liv.adresse);
   if (liv.plats)   params.append('metadata[plats]', liv.plats);
+  if (liv.date)    params.append('metadata[date]', liv.date);
+  if (liv.creneau) params.append('metadata[creneau]', liv.creneau);
+  if (semaines)    params.append('metadata[semaines]', String(semaines));
   if (!unique) {
+    if (semaines)    params.append('subscription_data[metadata][semaines]', String(semaines));
+    if (liv.creneau) params.append('subscription_data[metadata][creneau]', liv.creneau);
     params.append('subscription_data[metadata][user_id]', userId || '');
     if (repas) params.append('subscription_data[metadata][repas]', String(repas));
     if (liv.jour)    params.append('subscription_data[metadata][livraison]', liv.jour);

@@ -509,14 +509,14 @@ const CMD = { filtre: 'tous', q: '' };
 async function vCommandesNatif() {
   const E = await chargerProd();
   if (!E) return '<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire les commandes — session d’équipe requise.</span></div>';
-  const st = b => { const n = E.attribs.filter(a => a.bon_id === b.id).reduce((t, a) => t + (a.nb_portions || 0), 0); return b.statut === 'livre' || b.statut === 'en_production' || b.statut === 'annule' ? b.statut : (n >= b.nb_repas && n > 0 ? 'attribue' : 'a_attribuer'); };
+  const st = b => { const n = E.attribs.filter(a => a.bon_id === b.id).reduce((t, a) => t + (a.nb_portions || 0), 0); return b.statut === 'livre' || b.statut === 'en_production' || b.statut === 'en_livraison' || b.statut === 'annule' ? b.statut : (n >= b.nb_repas && n > 0 ? 'attribue' : 'a_attribuer'); };
   const tous = E.bons.filter(b => b.statut !== 'annule');
-  const compte = { tous: tous.filter(b => st(b) !== 'livre').length, rouge: tous.filter(b => st(b) === 'a_attribuer' || !b.jour_livraison).length, attribue: tous.filter(b => st(b) === 'attribue' || st(b) === 'en_production').length, livre: tous.filter(b => st(b) === 'livre').length };
+  const compte = { tous: tous.filter(b => st(b) !== 'livre').length, rouge: tous.filter(b => st(b) === 'a_attribuer' || !b.jour_livraison).length, attribue: tous.filter(b => st(b) === 'attribue' || st(b) === 'en_production' || st(b) === 'en_livraison').length, livre: tous.filter(b => st(b) === 'livre').length };
   const q = CMD.q.trim().toLowerCase();
   const list = tous.filter(b => {
     const x = st(b);
     if (CMD.filtre === 'rouge' && !(x === 'a_attribuer' || !b.jour_livraison)) return false;
-    if (CMD.filtre === 'attribue' && !(x === 'attribue' || x === 'en_production')) return false;
+    if (CMD.filtre === 'attribue' && !(x === 'attribue' || x === 'en_production' || x === 'en_livraison')) return false;
     if (CMD.filtre === 'livre' && x !== 'livre') return false;
     if (CMD.filtre === 'tous' && x === 'livre') return false;
     return !q || (cpNomClient(b) + ' ' + (b.adresse || '') + ' ' + (b.notes || '')).toLowerCase().indexOf(q) >= 0;

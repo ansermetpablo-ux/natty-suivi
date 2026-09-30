@@ -278,6 +278,15 @@ Défis perso/duo/entreprise. Autonome, aucune dépendance avec `narration.html`.
 - Autres fonctions : `setStep`, `updateCTA`, `initSlider`/`drawSliderGraph`, `chargerNutris`, `choisirNutri`, `selectJour`, `buildRecap`, `toggleRGPD`.
 - ⚠️ Lignes ~205/213 : images inline base64 volumineuses (poids fichier).
 
+#### « Ma commande », la semaine N+1, la durée qui multiplie Stripe (2026-09-30)
+- **Tunnel en 7 étapes** — Formule · **Repas** (page entière de tuiles-héros, `stepRepas`) · Objectif · Durée · Nutri · Livraison · Récap. `ETAPES_IDS` dit l'ordre : les anciens `step2…step6` sont gardés, jamais renumérotés.
+- **Durée en héros** (semaines ou mois = 4 sem., 2 semaines par défaut), synchronisée avec le curseur du graphique. `semaines` part à `api/checkout.js` et **multiplie la quantité Stripe** (repas × semaines) ; la souscription se renouvelle toutes les N semaines via `price_data` (même produit, même montant unitaire lus chez Stripe, `interval_count = N`). Le webhook crée **un bon par semaine** (`stripe_ref`, `#1`, `#2`…).
+- **Pas de commande du jour au lendemain** : calendrier sur deux semaines, N grisée, N+1 ouverte (tunnel ET achat à l'unité), plus un créneau. `api/checkout.js` refuse (400) une date avant le lundi suivant (heure de Paris).
+- **Adresse en trois blocs** (n°, rue, code postal) recomposée en `n° rue, CP` pour la base.
+- **« Ma commande »** (étape 1 et vue « Nos plats ») : date, créneau, suivi Confirmée → En préparation → En cours de livraison, détail (attributions, sinon plats), adresse modifiable par `rpc/modifier_adresse_bon` (la RLS ne donne au client que la lecture), et le **code de réception** à 4 chiffres.
+- **CRM → Production → Livraison** : « En préparation », « Partir en livraison », et confirmation par le code (`rpc/confirmer_livraison`, réservée à l'équipe, rend `false` sur un mauvais code). « sans code » reste possible et est tracé dans `livre_par`.
+- Base : `supabase/migrations/0021_bons_code_reception_creneau.sql` (appliquée) — `code_reception` (défaut aléatoire), `creneau_livraison`, `livre_at`, `livre_par`, statut `en_livraison`.
+
 ### `questionnaire-alim.html`
 Étape **distincte et complémentaire** à `onboarding.html` (pas un doublon) : `onboarding.html` gère objectif/profil (table `onboarding`) ; celui-ci gère les préférences alimentaires détaillées, table **`questionnaire_alim`** (colonnes : `user_id`, `allergies`, `regime`, `aliments_aimes`, `aliments_evites`, `decouverte_cuisines/styles/ingredients/variantes`, `curiosite_libre`, `frequence_cuisine`, `nb_repas`, `snacking`, `repas_sautes`, `ressenti`, `craquage`, `satisfaction_stars`, `commentaire_libre`, `defi_principal`, `completed_at`).
 

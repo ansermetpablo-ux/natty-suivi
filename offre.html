@@ -8,7 +8,7 @@
      iOS l'ignore). Synchrone et dans le <head>, comme theme.js. -->
 <script src="/assets/zoom.js"></script>
 <script src="/assets/theme.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* ── Thème ────────────────────────────────────────────────────
    Cet écran n'avait aucune variable : toutes ses couleurs étaient écrites en
@@ -444,6 +444,95 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 /* Le toast passe au-dessus des DEUX barres, sinon il s'affiche derrière. */
 .toast { position: fixed; bottom: calc(178px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(40px); background:var(--txt); color:var(--bg); padding: 11px 22px; border-radius: 20px; font-size: 13px; z-index: 3000; transition: transform 0.3s, opacity 0.3s; pointer-events: none; opacity: 0; }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* ═══ MA COMMANDE — le héros, dès qu'une commande existe ═══════════════
+   Noir dans les deux thèmes : c'est une carte, posée sur la page. Couleurs
+   écrites en clair PARCE QUE le fond est fixe (règle 33). */
+.mc { background:linear-gradient(145deg,#1c1c26,#0d0d14); color:#fff; border-radius:26px; padding:20px 18px 18px; box-shadow:0 14px 34px rgba(0,0,0,.28); }
+.mc-kick { font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.5); font-weight:600; }
+.mc-titre { font-size:24px; font-weight:800; letter-spacing:-.02em; margin:4px 0 2px; }
+.mc-sous { font-size:13px; color:rgba(255,255,255,.62); }
+.mc-suivi { display:flex; align-items:flex-start; margin:18px 0 16px; }
+.mc-et { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:6px; width:74px; text-align:center; }
+.mc-et i { width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center; font-style:normal; font-size:12px; font-weight:700; color:rgba(255,255,255,.45); }
+.mc-et span { font-size:10.5px; line-height:1.2; color:rgba(255,255,255,.45); }
+.mc-et.fait i { background:#34c759; color:#fff; }
+.mc-et.fait span { color:rgba(255,255,255,.75); }
+.mc-et.cours i { background:#fff; color:#0d0d14; box-shadow:0 0 0 5px rgba(255,255,255,.14); }
+.mc-et.cours span { color:#fff; font-weight:700; }
+.mc-trait { flex:1; height:2px; background:rgba(255,255,255,.12); margin-top:12px; }
+.mc-trait.fait { background:#34c759; }
+.mc-code { display:flex; align-items:center; justify-content:space-between; gap:12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:12px 14px; margin-bottom:10px; }
+.mc-code b { font-size:30px; font-weight:800; letter-spacing:.22em; font-variant-numeric:tabular-nums; }
+.mc-code small { display:block; font-size:11.5px; color:rgba(255,255,255,.55); line-height:1.35; max-width:170px; }
+.mc-lignes { display:flex; flex-direction:column; }
+.mc-l { display:flex; gap:12px; padding:10px 0; border-top:1px solid rgba(255,255,255,.08); font-size:13px; }
+.mc-l > span:first-child { flex:0 0 76px; color:rgba(255,255,255,.5); }
+.mc-l > div { flex:1; min-width:0; color:#fff; font-weight:600; overflow-wrap:anywhere; }
+.mc-l .mc-det { font-weight:400; color:rgba(255,255,255,.72); font-size:12.5px; margin-top:2px; }
+.mc-modif { background:none; border:none; color:#9fe0b2; font:inherit; font-size:12.5px; font-weight:700; padding:6px 0 0; cursor:pointer; }
+.mc-edit { margin-top:8px; }
+.mc-edit .adr-row input { background:rgba(255,255,255,.08); color:#fff; border-color:rgba(255,255,255,.14); box-shadow:none; }
+.mc-edit .adr-row input::placeholder { color:rgba(255,255,255,.35); }
+.mc-edit-act { display:flex; gap:8px; margin-top:8px; }
+.mc-edit-act button { flex:1; border:none; border-radius:12px; padding:11px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+.mc-edit-act .ok { background:#fff; color:#0d0d14; }
+.mc-edit-act .non { background:rgba(255,255,255,.1); color:#fff; }
+.mc-plus { margin-top:4px; font-size:12px; color:rgba(255,255,255,.5); }
+
+/* ═══ PAGE « COMBIEN DE REPAS » — une page entière de héros ═════════════ */
+.rp-grille { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.rp-tuile { position:relative; overflow:hidden; border:none; border-radius:24px; min-height:132px; padding:16px 14px 14px; text-align:left; cursor:pointer; font-family:inherit;
+  background:linear-gradient(150deg,#2a2a38,#101018); color:#fff; box-shadow:0 10px 24px rgba(0,0,0,.22); display:flex; flex-direction:column; justify-content:flex-end; transition:transform .15s, box-shadow .2s; }
+.rp-tuile:active { transform:scale(.97); }
+.rp-tuile svg { position:absolute; top:12px; right:10px; width:74px; height:52px; opacity:.9; }
+.rp-tuile b { font-size:46px; font-weight:800; line-height:.95; letter-spacing:-.03em; color:#fff; }
+.rp-tuile em { font-style:normal; font-size:13px; font-weight:700; color:#fff; margin-top:4px; }
+.rp-tuile small { font-size:11.5px; color:rgba(255,255,255,.6); margin-top:3px; }
+.rp-tuile.on { background:linear-gradient(150deg,#1f6b3a,#0f3a1f); box-shadow:0 0 0 3px var(--vert),0 12px 26px rgba(31,107,58,.35); }
+.rp-tuile.on::after { content:'✓'; position:absolute; top:10px; left:12px; width:24px; height:24px; border-radius:50%; background:#fff; color:#0f3a1f; font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+.rp-total { text-align:center; font-size:13px; color:var(--muted2); margin-top:4px; }
+.rp-total b { color:var(--txt); font-weight:700; }
+
+/* ═══ DURÉE — le chiffre en héros ═════════════════════════════════════ */
+.du-hero { background:linear-gradient(150deg,#2a2a38,#101018); color:#fff; border-radius:26px; padding:18px; text-align:center; box-shadow:0 12px 28px rgba(0,0,0,.22); }
+.du-unites { display:inline-flex; background:rgba(255,255,255,.1); border-radius:999px; padding:3px; margin-bottom:10px; }
+.du-unites button { border:none; background:none; color:rgba(255,255,255,.6); font:inherit; font-size:12.5px; font-weight:700; padding:7px 16px; border-radius:999px; cursor:pointer; }
+.du-unites button.on { background:#fff; color:#101018; }
+.du-ligne { display:flex; align-items:center; justify-content:center; gap:18px; }
+.du-ligne button { width:46px; height:46px; border-radius:50%; border:none; background:rgba(255,255,255,.12); color:#fff; font-size:24px; font-weight:700; cursor:pointer; }
+.du-ligne button:disabled { opacity:.3; cursor:default; }
+.du-nb { min-width:110px; }
+.du-nb b { display:block; font-size:64px; font-weight:800; line-height:1; letter-spacing:-.04em; }
+.du-nb span { font-size:14px; font-weight:700; }
+.du-prix { margin-top:12px; font-size:13px; color:rgba(255,255,255,.7); }
+.du-prix b { color:#fff; font-size:15px; }
+
+/* ═══ CALENDRIER N / N+1 ══════════════════════════════════════════════ */
+.cal-sem { margin-top:4px; }
+.cal-sem + .cal-sem { margin-top:12px; }
+.cal-lib { display:flex; justify-content:space-between; align-items:baseline; font-size:12px; font-weight:600; color:var(--txt); margin-bottom:6px; }
+.cal-lib span { font-weight:500; color:var(--muted2); font-size:11px; }
+.cal-jours { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+.cal-j { border:2px solid transparent; border-radius:12px; padding:7px 0 6px; background:var(--bg); font-family:inherit; color:var(--txt); cursor:pointer; box-shadow:3px 3px 8px var(--creux-38),-3px -3px 8px var(--relief-85); display:flex; flex-direction:column; align-items:center; gap:1px; }
+.cal-j small { font-size:9.5px; color:var(--muted2); text-transform:uppercase; }
+.cal-j b { font-size:16px; font-weight:700; }
+.cal-j:disabled { cursor:not-allowed; box-shadow:none; background:var(--creux-18); color:var(--muted); opacity:.55; text-decoration:line-through; }
+.cal-j:disabled small { color:var(--muted); }
+/* --txt/--bg et non --ink : en sombre, --ink est un gris presque noir sur fond
+   noir, et le jour choisi ne se distinguait plus des autres. */
+.cal-j.selected, .cren-row .jour-btn.selected { background:var(--txt); color:var(--bg); border-color:var(--txt); }
+.cal-j.selected small { color:var(--bg); opacity:.7; }
+.cal-note { font-size:11.5px; color:var(--muted2); margin-top:8px; line-height:1.4; }
+.cren-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+/* ═══ ADRESSE — trois blocs sur une ligne ═════════════════════════════ */
+.adr-row { display:grid; grid-template-columns:64px 1fr 84px; gap:6px; }
+.adr-row input { min-width:0; width:100%; background:var(--bg); border:2px solid var(--creux-30); border-radius:12px; padding:12px 8px; font-size:14px; color:var(--txt); font-family:inherit; outline:none; box-shadow:inset 2px 2px 5px var(--creux-20); }
+.adr-row input:focus { border-color:var(--muted2); }
+.adr-row input::placeholder { color:var(--muted); }
+.adr-labels { display:grid; grid-template-columns:64px 1fr 84px; gap:6px; font-size:10.5px; color:var(--muted2); margin-bottom:4px; }
+.unite-quand { margin-top:14px; display:flex; flex-direction:column; gap:10px; }
 </style>
 </head>
 <body>
@@ -479,16 +568,22 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
   <div class="etapes-row">
     <div class="etape-item"><div class="etape-dot active" id="dot1">1</div><div class="etape-lbl active" id="lbl1">Formule</div></div>
     <div class="etape-line" id="line1"></div>
-    <div class="etape-item"><div class="etape-dot" id="dot2">2</div><div class="etape-lbl" id="lbl2">Objectif</div></div>
+    <div class="etape-item"><div class="etape-dot" id="dot2">2</div><div class="etape-lbl" id="lbl2">Repas</div></div>
     <div class="etape-line" id="line2"></div>
-    <div class="etape-item"><div class="etape-dot" id="dot3">3</div><div class="etape-lbl" id="lbl3">Durée</div></div>
+    <div class="etape-item"><div class="etape-dot" id="dot3">3</div><div class="etape-lbl" id="lbl3">Objectif</div></div>
     <div class="etape-line" id="line3"></div>
-    <div class="etape-item"><div class="etape-dot" id="dot4">4</div><div class="etape-lbl" id="lbl4">Nutri.</div></div>
+    <div class="etape-item"><div class="etape-dot" id="dot4">4</div><div class="etape-lbl" id="lbl4">Durée</div></div>
     <div class="etape-line" id="line4"></div>
-    <div class="etape-item"><div class="etape-dot" id="dot5">5</div><div class="etape-lbl" id="lbl5">Livraison</div></div>
+    <div class="etape-item"><div class="etape-dot" id="dot5">5</div><div class="etape-lbl" id="lbl5">Nutri.</div></div>
     <div class="etape-line" id="line5"></div>
-    <div class="etape-item"><div class="etape-dot" id="dot6">6</div><div class="etape-lbl" id="lbl6">Récap</div></div>
+    <div class="etape-item"><div class="etape-dot" id="dot6">6</div><div class="etape-lbl" id="lbl6">Livraison</div></div>
+    <div class="etape-line" id="line6"></div>
+    <div class="etape-item"><div class="etape-dot" id="dot7">7</div><div class="etape-lbl" id="lbl7">Récap</div></div>
   </div>
+
+  <!-- « Ma commande » : rempli par chargerMaCommande() dès qu'une commande
+       non livrée existe. Vide sinon — un héros « aucune commande » ne dirait rien. -->
+  <div id="maCommande"></div>
 
   <!-- ═══ COMMANDE À L'UNITÉ ═══════════════════════════════════════════════
        Parcours court, ouvert par offre.html?mode=unite (depuis la pastille de
@@ -509,6 +604,11 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
     </div>
     <div id="uniteListe" class="unite-liste">
       <div class="unite-vide">Chargement du menu…</div>
+    </div>
+    <div class="unite-quand" id="uniteQuand" style="display:none">
+      <div class="neu-card livraison-block"><div class="liv-title">📦 Jour de livraison</div><div id="calUnite"></div>
+        <div class="cal-note">Pas de commande du jour au lendemain : la livraison se fait la semaine prochaine.</div></div>
+      <div class="neu-card livraison-block"><div class="liv-title">🕐 Créneau</div><div class="cren-row" id="crenUnite"></div></div>
     </div>
     <div class="unite-total" id="uniteTotal" style="display:none">
       <div class="unite-total-l"><span id="uniteNb">0 plat</span><strong id="unitePrix">0 €</strong></div>
@@ -544,17 +644,6 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
       </div>
     </div>
 
-    <!-- Combien de repas par semaine — n'a de sens que pour l'abonnement.
-         ⚠️ Le nombre proposé dépend de ce que le serveur sait VENDRE : sans le
-         prix au plat, seules les deux formules historiques existent, et
-         afficher « 5 repas » pour se faire refuser au paiement serait pire que
-         ne pas l'afficher. `chargerOffres()` s'en charge. -->
-    <div class="repas-wrap" id="repasWrap">
-      <div class="repas-titre">Combien de repas par semaine&nbsp;?</div>
-      <div class="repas-row" id="repasRow"></div>
-      <div class="repas-total" id="repasTotal"></div>
-    </div>
-
     <div class="tabs-row">
       <button class="tab active" onclick="showTab(0)">🧑‍⚕️ Nutritionniste</button>
       <button class="tab" onclick="showTab(1)">📅 Rendez-vous</button>
@@ -577,6 +666,13 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
     <div class="inclus-detail" id="tab3">
       <div class="inclus-row"><div class="inclus-icon">📖</div><div class="inclus-text"><h4>Kit recettes hebdo</h4><p>Recettes exclusives et conseils nutritionnels chaque semaine par email.</p></div></div>
     </div>
+  </div>
+
+  <!-- STEP REPAS — une page entière : chaque nombre est un héros. -->
+  <div class="step" id="stepRepas">
+    <div class="page-header"><h1>Combien de repas par semaine&nbsp;?</h1><p>9 € le plat · livrés chaque semaine</p></div>
+    <div class="rp-grille" id="repasRow"></div>
+    <div class="rp-total" id="repasTotal"></div>
   </div>
 
   <!-- STEP 2 OBJECTIF -->
@@ -617,15 +713,24 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
   <!-- STEP 3 DUREE CURSEUR — 1 à 24 semaines -->
   <div class="step" id="step3">
     <div class="page-header"><h1>Choisissez votre durée</h1><p>Plus la durée est longue, plus les résultats arrivent vite</p></div>
+    <div class="du-hero">
+      <div class="du-unites"><button type="button" data-du-unite="sem" class="on">Semaines</button><button type="button" data-du-unite="mois">Mois</button></div>
+      <div class="du-ligne">
+        <button type="button" id="duMoins" aria-label="Moins">−</button>
+        <div class="du-nb"><b id="duNb">2</b><span id="duUnite">semaines</span></div>
+        <button type="button" id="duPlus" aria-label="Plus">+</button>
+      </div>
+      <div class="du-prix" id="duPrix"></div>
+    </div>
     <div class="duree-slider-card">
       <div class="slider-top">
         <div class="slider-label">Durée de l'abonnement</div>
-        <div class="slider-val-bubble" id="sliderBubble">1 semaine</div>
+        <div class="slider-val-bubble" id="sliderBubble">2 semaines</div>
       </div>
       <div class="slider-track-wrap">
         <div class="slider-track-bg"></div>
         <div class="slider-track-fill" id="sliderFill" style="width:0%"></div>
-        <input type="range" class="duree-range" id="dureeRange" min="1" max="24" step="1" value="1" oninput="onSliderChange(this.value)">
+        <input type="range" class="duree-range" id="dureeRange" min="1" max="24" step="1" value="2" oninput="onSliderChange(this.value)">
       </div>
       <div class="slider-minmax"><span>1 sem.</span><span>24 sem.</span></div>
       <div class="graph-wrap">
@@ -652,24 +757,25 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 
   <!-- STEP 5 LIVRAISON -->
   <div class="step" id="step5">
-    <div class="page-header"><h1>Livraison</h1><p>Choisissez le jour et l'adresse</p></div>
+    <div class="page-header"><h1>Livraison</h1><p>On commande pour la semaine suivante</p></div>
     <div class="neu-card livraison-block">
-      <div class="liv-title">📦 Jour de livraison</div>
-      <div class="jours-grid">
-        <button class="jour-btn" onclick="selectJour('lundi',this)">Lun.</button>
-        <button class="jour-btn" onclick="selectJour('mardi',this)">Mar.</button>
-        <button class="jour-btn" onclick="selectJour('mercredi',this)">Mer.</button>
-        <button class="jour-btn" onclick="selectJour('jeudi',this)">Jeu.</button>
-        <button class="jour-btn" onclick="selectJour('vendredi',this)">Ven.</button>
-        <button class="jour-btn" onclick="selectJour('samedi',this)">Sam.</button>
-        <button class="jour-btn" onclick="selectJour('dimanche',this)">Dim.</button>
-      </div>
+      <div class="liv-title">📦 Première livraison</div>
+      <div id="calLivraison"></div>
+      <div class="cal-note">Les plats sont cuisinés pour vous : la semaine en cours est fermée, la livraison commence la semaine prochaine. Les semaines suivantes, même jour.</div>
+    </div>
+    <div class="neu-card livraison-block">
+      <div class="liv-title">🕐 Créneau</div>
+      <div class="cren-row" id="crenLivraison"></div>
     </div>
     <div class="neu-card livraison-block">
       <div class="liv-title">🏢 Adresse de livraison</div>
       <div class="adresse-wrap">
-        <div class="adresse-label">Adresse complète (bureau ou domicile)</div>
-        <textarea class="adresse-input" id="adresseInput" rows="3" placeholder="12 rue de la Paix, 75001 Paris" oninput="updateCTA()"></textarea>
+        <div class="adr-labels"><span>N°</span><span>Rue</span><span>Code postal</span></div>
+        <div class="adr-row" id="adrLivraison">
+          <input id="adrNum" inputmode="text" autocomplete="address-line1" placeholder="12" maxlength="8" oninput="updateCTA()">
+          <input id="adrRue" autocomplete="street-address" placeholder="rue de la Paix" maxlength="120" oninput="updateCTA()">
+          <input id="adrCp" inputmode="numeric" autocomplete="postal-code" placeholder="75001" maxlength="5" oninput="updateCTA()">
+        </div>
       </div>
     </div>
   </div>
@@ -684,11 +790,12 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
       <div class="recap-row"><div class="recap-key">Durée</div><div class="recap-val" id="recapDuree">–</div></div>
       <div class="recap-row"><div class="recap-key">Nutritionniste</div><div class="recap-val" id="recapNutri">–</div></div>
       <div class="recap-row"><div class="recap-key">Livraison</div><div class="recap-val" id="recapLivraison">–</div></div>
+      <div class="recap-row"><div class="recap-key">Adresse</div><div class="recap-val" id="recapAdresse">–</div></div>
       <div class="recap-price-row">
         <div class="recap-price-label">Total</div>
         <div>
           <div class="recap-price-val" id="recapPrix">–</div>
-          <div class="recap-price-per">/ semaine · sans engagement</div>
+          <div class="recap-price-per" id="recapPrixPer">–</div>
         </div>
       </div>
     </div>
@@ -711,7 +818,7 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 </div>
 
 <div class="cta-fixed">
-  <button class="cta-btn" id="ctaBtn" onclick="ctaAction()">Choisir mon objectif →</button>
+  <button class="cta-btn" id="ctaBtn" onclick="ctaAction()">Choisir mes repas →</button>
   <button class="cta-btn-back" id="backBtn" onclick="goBack()" style="display:none;">← Retour</button>
 </div>
 <div class="toast" id="toast"></div>
@@ -740,7 +847,11 @@ let OFFRE = { unite: true, abo: false, choix: [3, 4], repondu: false };
 const PRIX_ABO = 9;
 let selectedObjectif = null;
 let selectedObjectifVal = 5;
-let selectedDuree = { semaines: 1, label: "1 semaine" };
+let selectedDuree = { semaines: 2, label: "2 semaines" };   // 2 semaines par défaut — c'est ce nombre qui multiplie la quantité Stripe
+let duUnite = 'sem';            // l'unité du héros de durée : 'sem' | 'mois' (1 mois = 4 semaines)
+let selectedDate = null;        // première livraison, 'AAAA-MM-JJ' — semaine N+1 au plus tôt
+let selectedCreneau = null;
+let uniteDate = null, uniteCreneau = null;
 let clientBMRData = null; // { tdee, weeksPerKg } calculé depuis Supabase onboarding
 let selectedNutriId = null;
 let selectedNutriNom = null;
@@ -770,7 +881,14 @@ const NUTRI_DEMO = [
 /* Le retour suit les étapes : reculer d'une case tant qu'il y en a une derrière,
    et seulement au bout revenir au menu. Sortir du tunnel dès le premier tap
    ferait perdre les réponses déjà données. */
-var ETAPES_NOMS = ['Formule', 'Objectif', 'Durée', 'Nutritionniste', 'Livraison', 'Récapitulatif'];
+var ETAPES_NOMS = ['Formule', 'Repas', 'Objectif', 'Durée', 'Nutritionniste', 'Livraison', 'Récapitulatif'];
+/* ⚠️ L'ÉTAPE n DÉSIGNE UN PANNEAU PAR SON IDENTIFIANT, via cette table. La
+   page « Repas » s'est insérée en 2ᵉ position (2026-09-30) : les anciens
+   identifiants step2…step6 sont gardés tels quels, c'est la table qui dit
+   l'ordre. Renommer six panneaux pour décaler un indice, c'était six endroits
+   où se tromper. */
+var ETAPES_IDS = ['step1', 'stepRepas', 'step2', 'step3', 'step4', 'step5', 'step6'];
+var NB_ETAPES = ETAPES_IDS.length;
 document.getElementById('ofrBack').addEventListener('click', function(){
   /* ⚠️ Depuis le menu, le retour va au MENU D'ACCUEIL, pas à l'offre : « Nos
      plats » est une vue de plein droit, atteignable directement depuis la
@@ -793,18 +911,20 @@ function setStep(n) {
      restait bloqué sur la première étape, sans le moindre message d'erreur.
      Un `.step` ajouté n'importe où ne peut plus rien décaler. */
   document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
-  var panneau = document.getElementById("step" + n);
+  var panneau = document.getElementById(ETAPES_IDS[n - 1]);
+  /* « Ma commande » ne s'affiche qu'à l'arrivée : répété à chaque étape, il
+     poussait sous le pli la question même qu'on était venu y trancher. */
+  var mc = document.getElementById('maCommande');
+  if (mc) mc.style.display = n === 1 ? '' : 'none';
   if (panneau) panneau.classList.add("active");
-  [1,2,3,4,5,6].forEach(i => {
+  for (let i = 1; i <= NB_ETAPES; i++) (i => {
     const dot=document.getElementById("dot"+i), lbl=document.getElementById("lbl"+i);
     if(!dot) return;
     dot.className="etape-dot"+(i===n?" active":i<n?" done":"");
     lbl.className="etape-lbl"+(i===n?" active":"");
-  });
-  [1,2,3,4,5].forEach(i => {
     const line=document.getElementById("line"+i);
     if(line) line.className="etape-line"+(i<n?" done":"");
-  });
+  })(i);
   document.getElementById("backBtn").style.display = n>1?"block":"none";
   updateCTA();
   window.scrollTo({top:0,behavior:"smooth"});
@@ -812,18 +932,19 @@ function setStep(n) {
 
 function updateCTA() {
   const btn=document.getElementById("ctaBtn");
-  const adresse=(document.getElementById("adresseInput")||{}).value?.trim()||"";
+  const adrOk = !!adresseSaisie();
   const email=(document.getElementById("emailField")||{}).value?.trim()||"";
   const map={
     /* À l'unité, l'étape 1 ne mène pas au tunnel : elle mène au menu. Le
        libellé doit donc dire où l'on va — « Choisir mon objectif » sur un
        parcours sans engagement annoncerait cinq étapes qui n'existent pas. */
-    1:[selectedMode==='unite'?"Voir les plats →":"Choisir mon objectif →",false],
-    2:[selectedObjectif?"Voir les durées →":"Sélectionnez votre objectif",!selectedObjectif],
-    3:["Choisir mon nutritionniste →",false],
-    4:[selectedNutriId?"Choisir la livraison →":"Choisissez votre nutritionniste",!selectedNutriId],
-    5:[(selectedJour&&adresse)?"Voir le récapitulatif →":"Complétez la livraison",!(selectedJour&&adresse)],
-    6:["Payer →", !email || !rgpdChecked],
+    1:[selectedMode==='unite'?"Voir les plats →":"Choisir mes repas →",false],
+    2:["Choisir mon objectif →",false],
+    3:[selectedObjectif?"Voir les durées →":"Sélectionnez votre objectif",!selectedObjectif],
+    4:["Choisir mon nutritionniste →",false],
+    5:[selectedNutriId?"Choisir la livraison →":"Choisissez votre nutritionniste",!selectedNutriId],
+    6:[(selectedDate&&selectedCreneau&&adrOk)?"Voir le récapitulatif →":(!selectedDate?"Choisissez un jour de la semaine prochaine":!selectedCreneau?"Choisissez un créneau":"Complétez l'adresse"),!(selectedDate&&selectedCreneau&&adrOk)],
+    7:["Payer →", !email || !rgpdChecked],
   };
   const [text,dis]=map[currentStep]||["Continuer →",false];
   btn.textContent=text; btn.disabled=dis;
@@ -834,11 +955,12 @@ function ctaAction() {
     if(selectedMode==='unite'){ afficherVue('plats'); return; }
     setStep(2);
   }
-  else if(currentStep===2) { setStep(3); initSlider(); }
-  else if(currentStep===3) { setStep(4); chargerNutris(); }
-  else if(currentStep===4) setStep(5);
-  else if(currentStep===5) { buildRecap(); setStep(6); }
-  else if(currentStep===6) souscrire();
+  else if(currentStep===2) setStep(3);
+  else if(currentStep===3) { setStep(4); initSlider(); }
+  else if(currentStep===4) { setStep(5); chargerNutris(); }
+  else if(currentStep===5) { setStep(6); rendreLivraison(); }
+  else if(currentStep===6) { buildRecap(); setStep(7); }
+  else if(currentStep===7) souscrire();
 }
 
 function goBack() { if(currentStep>1) setStep(currentStep-1); }
@@ -851,56 +973,40 @@ function selectMode(m) {
   selectedMode = m;
   document.getElementById("cardUnite").classList.toggle("selected", m === 'unite');
   document.getElementById("cardAbo").classList.toggle("selected", m === 'abo');
-  document.getElementById("repasWrap").classList.toggle("off", m !== 'abo');
   majTotalRepas();
   if (typeof updateCTA === 'function') updateCTA();
 }
 
 function choisirRepas(n) {
   selectedFormule = n;
-  let actif = null;
-  document.querySelectorAll("#repasRow button").forEach(b => {
+  document.querySelectorAll("#repasRow .rp-tuile").forEach(b => {
     const cible = Number(b.dataset.n) === n;
     b.classList.toggle("on", cible);
-    if (cible) actif = b;
+    b.setAttribute("aria-pressed", cible ? "true" : "false");
   });
   majTotalRepas();
-
-  /* ⚠️ ON RAMÈNE LE CHOIX DANS LE CHAMP DE VISION. À dix pastilles sur un
-     écran de 375 px, la rangée défile : mesuré, 596 px de contenu pour 343 de
-     large. Sans ce recentrage, choisir « 10 » sélectionne une pastille qui
-     sort de l'écran — et en revenant à l'étape 1 on ne voit plus ce qu'on a
-     pris.
-     ⚠️ On écrit `scrollLeft` à la main plutôt que d'appeler `scrollIntoView` :
-     celui-ci fait aussi défiler les ancêtres, donc la PAGE, et déplacerait le
-     tunnel sous le doigt pour recentrer un bouton. */
-  const row = document.getElementById("repasRow");
-  if (row && actif) {
-    /* ⚠️ `offsetLeft` se mesure contre le premier ANCÊTRE POSITIONNÉ. Sans le
-       `position:relative` de `.repas-row`, il se comptait depuis le corps de la
-       page et le recentrage visait à côté. */
-    const max = row.scrollWidth - row.clientWidth;
-    const vise = Math.max(0, Math.min(
-      actif.offsetLeft - (row.clientWidth - actif.offsetWidth) / 2, max));
-    row.scrollTo({ left: vise, behavior: "smooth" });
-    /* ⚠️ ET UN FILET, parce que l'état final ne doit jamais dépendre d'une
-       animation : une page qui ne peint pas — app en arrière-plan, onglet
-       caché — gèle le défilement doux à sa première image. Mesuré au banc,
-       `scrollLeft` restait à 16 pour une cible à 253. La pastille choisie
-       serait alors hors de l'écran, c'est-à-dire invisible au moment précis où
-       elle vient d'être choisie. */
-    setTimeout(function () {
-      if (Math.abs(row.scrollLeft - vise) > 2) row.scrollLeft = vise;
-    }, 420);
-  }
+  majDureeHero();
 }
 
 function majTotalRepas() {
   const t = document.getElementById("repasTotal");
   if (!t) return;
-  t.innerHTML = selectedMode === 'abo'
-    ? "<b>" + euros(selectedFormule * PRIX_ABO) + "</b> par semaine · " + euros(PRIX_ABO) + " le plat"
-    : "";
+  t.innerHTML = "<b>" + selectedFormule + " repas</b> · " + euros(selectedFormule * PRIX_ABO) + " par semaine";
+}
+
+/* Une assiette par repas, jusqu'à quatre, puis une pile : au-delà, dix
+   assiettes dans 74 px ne se comptent plus, elles font une texture. */
+function svgRepas(n) {
+  const k = Math.min(n, 4), pas = 16;
+  let g = '';
+  for (let i = 0; i < k; i++) {
+    const x = 12 + i * pas;
+    g += '<circle cx="' + x + '" cy="30" r="11" fill="none" stroke="#fff" stroke-width="2" opacity="' + (0.35 + 0.65 * (i + 1) / k) + '"/>'
+       + '<circle cx="' + x + '" cy="30" r="5.5" fill="none" stroke="#fff" stroke-width="1.4" opacity="' + (0.25 + 0.5 * (i + 1) / k) + '"/>';
+  }
+  if (n > 4) g += '<text x="70" y="12" fill="#fff" font-size="11" font-weight="800" text-anchor="end" opacity=".8">×' + n + '</text>';
+  return '<svg viewBox="0 0 74 52" aria-hidden="true">' + g
+    + '<path d="M4 48h66" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".35"/></svg>';
 }
 
 function rendreRepas() {
@@ -909,9 +1015,10 @@ function rendreRepas() {
   row.innerHTML = "";
   OFFRE.choix.forEach(n => {
     const b = document.createElement("button");
-    b.type = "button"; b.dataset.n = n; b.textContent = n;
+    b.type = "button"; b.className = "rp-tuile"; b.dataset.n = n;
     b.setAttribute("aria-label", n + " repas par semaine");
-    b.addEventListener("click", () => choisirRepas(n));
+    b.innerHTML = svgRepas(n) + '<b>' + n + '</b><em>repas / semaine</em><small>' + euros(n * PRIX_ABO) + ' la semaine</small>';
+    b.addEventListener("click", () => { choisirRepas(n); });
     row.appendChild(b);
   });
   // Le choix courant peut ne plus exister quand la liste se restreint.
@@ -1051,6 +1158,7 @@ function onSliderChange(val) {
   const label = formatWeeksLabel(val);
   document.getElementById("sliderBubble").textContent = label;
   selectedDuree = { semaines: val, label: label };
+  majDureeHero();
   document.getElementById("graphGoalLabel").textContent = getGoalLabel();
   updateDureeMessage(val);
   requestAnimationFrame(()=>drawSliderGraph(val));
@@ -1262,12 +1370,125 @@ function choisirNutri(id,nom){
   updateCTA();
 }
 
-// STEP 5 LIVRAISON
-function selectJour(jour,btn){
-  selectedJour=jour;
-  document.querySelectorAll(".jour-btn").forEach(b=>b.classList.remove("selected"));
-  btn.classList.add("selected");
+// DURÉE — le héros (semaines ou mois), synchronisé avec le curseur du graphique
+/* ⚠️ Le héros et le curseur écrivent le MÊME `selectedDuree` et passent tous
+   deux par `onSliderChange` : deux réglages de la même valeur qui ne se
+   parleraient pas finiraient par annoncer deux durées différentes. */
+function poserDuree(sem) {
+  sem = Math.max(1, Math.min(24, Math.round(sem)));
+  const r = document.getElementById("dureeRange");
+  if (r) r.value = sem;
+  onSliderChange(sem);
+}
+function majDureeHero() {
+  const sem = selectedDuree ? selectedDuree.semaines : 2;
+  const nb = document.getElementById("duNb"), un = document.getElementById("duUnite");
+  if (!nb) return;
+  const mois = duUnite === 'mois';
+  const v = mois ? Math.max(1, Math.round(sem / 4)) : sem;
+  nb.textContent = v;
+  un.textContent = mois ? "mois" : (v > 1 ? "semaines" : "semaine");
+  document.getElementById("duMoins").disabled = mois ? v <= 1 : sem <= 1;
+  document.getElementById("duPlus").disabled = mois ? v >= 6 : sem >= 24;
+  document.querySelectorAll("[data-du-unite]").forEach(b => b.classList.toggle("on", b.dataset.duUnite === duUnite));
+  const tot = selectedFormule * sem;
+  document.getElementById("duPrix").innerHTML = "<b>" + tot + " repas · " + euros(tot * PRIX_ABO) + "</b><br>"
+    + (sem > 1 ? "réglés toutes les " + sem + " semaines" : "réglés chaque semaine") + " · " + selectedFormule + " repas par semaine";
+}
+document.querySelectorAll("[data-du-unite]").forEach(b => b.addEventListener("click", () => {
+  duUnite = b.dataset.duUnite;
+  // En mois, la durée tombe sur un nombre entier de mois (4 semaines chacun).
+  if (duUnite === 'mois') poserDuree(Math.max(1, Math.round(selectedDuree.semaines / 4)) * 4);
+  else majDureeHero();
+}));
+document.getElementById("duMoins").addEventListener("click", () => poserDuree(selectedDuree.semaines - (duUnite === 'mois' ? 4 : 1)));
+document.getElementById("duPlus").addEventListener("click", () => poserDuree(selectedDuree.semaines + (duUnite === 'mois' ? 4 : 1)));
+
+// LIVRAISON — calendrier N / N+1, créneau, adresse en trois blocs
+/* ⚠️ RÈGLE PRODUIT : pas de commande du jour au lendemain. La semaine en cours
+   (N) est affichée GRISÉE — on la voit, on comprend pourquoi on ne peut pas la
+   prendre — et seule la semaine N+1 est ouverte. Le serveur refait le même
+   contrôle (api/checkout.js, `dateValide`) : un POST bricolé ne passe pas par
+   cet écran. La date est LOCALE, jamais `toISOString()` (§3, `Natty.jour`). */
+const CRENEAUX = ['11h30 – 13h30', '12h – 14h', '18h – 20h', '19h – 21h'];
+const JOURS_C = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const JOURS_NOM = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+function isoLoc(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function lundiCourant() {
+  const d = new Date(); d.setHours(12, 0, 0, 0);
+  const j = d.getDay(); d.setDate(d.getDate() - (j === 0 ? 6 : j - 1));
+  return d;
+}
+function dateLisible(ymd) {
+  if (!ymd) return '–';
+  const d = new Date(ymd + 'T12:00:00');
+  return JOURS_NOM[d.getDay()].replace(/^./, c => c.toUpperCase()) + ' ' + d.getDate() + ' ' + MOIS_C[d.getMonth()];
+}
+function rendreCalendrier(hoteId, sel, surChoix) {
+  const hote = document.getElementById(hoteId);
+  if (!hote) return;
+  const l0 = lundiCourant();
+  let html = '';
+  [0, 1].forEach(k => {
+    const debut = new Date(l0); debut.setDate(l0.getDate() + 7 * k);
+    const fin = new Date(debut); fin.setDate(debut.getDate() + 6);
+    html += '<div class="cal-sem"><div class="cal-lib">' + (k ? 'Semaine prochaine' : 'Cette semaine')
+      + '<span>' + debut.getDate() + ' ' + MOIS_C[debut.getMonth()] + ' – ' + fin.getDate() + ' ' + MOIS_C[fin.getMonth()]
+      + (k ? '' : ' · fermée') + '</span></div><div class="cal-jours">';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(debut); d.setDate(debut.getDate() + i);
+      const iso = isoLoc(d);
+      html += '<button type="button" class="cal-j' + (iso === sel ? ' selected' : '') + '" data-cal="' + iso + '"'
+        + (k ? '' : ' disabled aria-disabled="true"') + ' aria-label="' + dateLisible(iso) + '">'
+        + '<small>' + JOURS_C[i] + '</small><b>' + d.getDate() + '</b></button>';
+    }
+    html += '</div></div>';
+  });
+  hote.innerHTML = html;
+  hote.onclick = ev => {
+    const b = ev.target.closest('[data-cal]');
+    if (!b || b.disabled) return;
+    hote.querySelectorAll('.cal-j').forEach(x => x.classList.toggle('selected', x === b));
+    surChoix(b.dataset.cal);
+  };
+}
+function rendreCreneaux(hoteId, sel, surChoix) {
+  const hote = document.getElementById(hoteId);
+  if (!hote) return;
+  hote.innerHTML = CRENEAUX.map(c => '<button type="button" class="jour-btn' + (c === sel ? ' selected' : '') + '" data-cren="' + c + '">' + c + '</button>').join('');
+  hote.onclick = ev => {
+    const b = ev.target.closest('[data-cren]');
+    if (!b) return;
+    hote.querySelectorAll('[data-cren]').forEach(x => x.classList.toggle('selected', x === b));
+    surChoix(b.dataset.cren);
+  };
+}
+function rendreLivraison() {
+  // Une date retenue qui serait passée dans la semaine en cours (page restée
+  // ouverte depuis la semaine dernière) n'est plus valable.
+  const min = new Date(lundiCourant()); min.setDate(min.getDate() + 7);
+  if (selectedDate && selectedDate < isoLoc(min)) selectedDate = null;
+  rendreCalendrier('calLivraison', selectedDate, d => { selectedDate = d; selectedJour = JOURS_NOM[new Date(d + 'T12:00:00').getDay()]; updateCTA(); });
+  rendreCreneaux('crenLivraison', selectedCreneau, c => { selectedCreneau = c; updateCTA(); });
   updateCTA();
+}
+/* L'adresse en trois blocs — n°, rue, code postal — recomposée en une ligne
+   pour la base : le CRM, la tournée et le géocodage lisent `adresse` d'un
+   seul tenant. Vide tant qu'un bloc manque ou que le code postal n'a pas ses
+   cinq chiffres. */
+function composerAdresse(num, rue, cp) {
+  num = (num || '').trim(); rue = (rue || '').trim(); cp = (cp || '').trim();
+  if (!num || rue.length < 3 || !/^\d{5}$/.test(cp)) return '';
+  return num + ' ' + rue + ', ' + cp;
+}
+function adresseSaisie() {
+  const v = id => (document.getElementById(id) || {}).value || '';
+  return composerAdresse(v('adrNum'), v('adrRue'), v('adrCp'));
+}
+function decomposerAdresse(a) {
+  const m = String(a || '').match(/^\s*(\S+)\s+(.+?),?\s+(\d{5})\b/);
+  return m ? { num: m[1], rue: m[2].replace(/,\s*$/, ''), cp: m[3] } : { num: '', rue: String(a || ''), cp: '' };
 }
 
 // STEP 6 RECAP
@@ -1277,13 +1498,16 @@ function buildRecap(){
   let objStr=OBJ_LABELS[selectedObjectif]||selectedObjectif;
   if(selectedObjectifVal&&(selectedObjectif==="prise_masse"||selectedObjectif==="perte_poids"))
     objStr+=" · "+(selectedObjectif==="prise_masse"?"+":"-")+selectedObjectifVal+" kg";
-  const adresse=document.getElementById("adresseInput").value.trim();
+  const adresse=adresseSaisie();
+  const sem=selectedDuree?selectedDuree.semaines:2;
   document.getElementById("recapFormule").textContent=selectedFormule+" repas / semaine";
   document.getElementById("recapObjectif").textContent=objStr;
-  document.getElementById("recapDuree").textContent=selectedDuree?selectedDuree.label:"–";
+  document.getElementById("recapDuree").textContent=(selectedDuree?selectedDuree.label:"–")+" · "+(selectedFormule*sem)+" repas";
   document.getElementById("recapNutri").textContent=selectedNutriNom||"–";
-  document.getElementById("recapLivraison").textContent=(JOUR_LABELS[selectedJour]||"–")+" · "+(adresse.split(",")[0]||adresse);
-  document.getElementById("recapPrix").textContent=euros(selectedFormule*PRIX_ABO);
+  document.getElementById("recapLivraison").textContent=dateLisible(selectedDate)+" · "+(selectedCreneau||"–");
+  document.getElementById("recapAdresse").textContent=adresse||"–";
+  document.getElementById("recapPrix").textContent=euros(selectedFormule*PRIX_ABO*sem);
+  document.getElementById("recapPrixPer").textContent=sem>1?"pour "+sem+" semaines · renouvelé toutes les "+sem+" semaines":"/ semaine · sans engagement";
 }
 function toggleRGPD(){
   rgpdChecked=!rgpdChecked;
@@ -1389,9 +1613,13 @@ async function souscrire(){
         objectif:selectedObjectif,
         objectifValeur:selectedObjectifVal,
         dureeSemaines:selectedDuree?selectedDuree.semaines:null,
+        // La DURÉE multiplie la quantité Stripe (repas × semaines) — api/checkout.js.
+        semaines:selectedDuree?selectedDuree.semaines:2,
+        dateLivraison:selectedDate,
+        creneau:selectedCreneau,
         nutritionnisteId:selectedNutriId,
         jourLivraison:selectedJour,
-        adresse:document.getElementById("adresseInput").value.trim(),
+        adresse:adresseSaisie(),
         emailRecap: email,
       })
     });
@@ -1409,7 +1637,7 @@ async function souscrire(){
         window.location.href=data.url;
       }
     }
-    else{showToast("Erreur lors du paiement");btn.disabled=false;btn.textContent="Payer →";}
+    else{showToast(data.error||"Erreur lors du paiement");btn.disabled=false;btn.textContent="Payer →";}
   }catch(e){showToast("Erreur réseau");btn.disabled=false;btn.textContent="Payer →";}
 }
 
@@ -1490,6 +1718,7 @@ function afficherVue(v, opts) {
        un titre qui le répète est du bruit. */
     if (titre) titre.textContent = '';
     document.getElementById('stepUnite').classList.add('active');
+    var mc = document.getElementById('maCommande'); if (mc) mc.style.display = '';
     uniteCharger();
   } else {
     document.getElementById('stepUnite').classList.remove('active');
@@ -1626,15 +1855,23 @@ function uniteMaj(){
   document.getElementById('uniteNb').textContent = n + ' plat' + (n > 1 ? 's' : '');
   document.getElementById('unitePrix').textContent = euros(n * PRIX_UNITE_AFFICHE);
   document.getElementById('uniteTotal').style.display = n === 0 ? 'none' : 'block';
+  const q = document.getElementById('uniteQuand');
+  if (q && n > 0 && q.style.display === 'none') {
+    q.style.display = '';
+    rendreCalendrier('calUnite', uniteDate, d => { uniteDate = d; uniteMaj(); });
+    rendreCreneaux('crenUnite', uniteCreneau, c => { uniteCreneau = c; uniteMaj(); });
+  } else if (q && n === 0) q.style.display = 'none';
   const b = document.getElementById('unitePayer');
-  b.disabled = n === 0;
-  b.textContent = 'Payer ' + euros(n * PRIX_UNITE_AFFICHE) + ' →';
+  const pret = n > 0 && uniteDate && uniteCreneau;
+  b.disabled = !pret;
+  b.textContent = n === 0 ? 'Payer →' : !uniteDate ? 'Choisissez un jour ↑' : !uniteCreneau ? 'Choisissez un créneau ↑'
+    : 'Payer ' + euros(n * PRIX_UNITE_AFFICHE) + ' →';
 }
 
 async function unitePayer(){
   const b = document.getElementById('unitePayer');
   const n = uniteTotalQte();
-  if (!n) return;
+  if (!n || !uniteDate || !uniteCreneau) return;
   b.disabled = true; b.textContent = 'Redirection vers le paiement…';
   try {
     const res = await fetch(Natty.API + '/api/checkout', {
@@ -1646,6 +1883,8 @@ async function unitePayer(){
         // Les plats retenus voyagent pour la préparation de commande ; le prix,
         // lui, ne vient jamais d'ici (le serveur le lit dans son environnement).
         plats: Object.keys(uniteQte).map(function(id){ return { id: id, n: uniteQte[id] }; }),
+        dateLivraison: uniteDate,
+        creneau: uniteCreneau,
         userId, token,
         plateforme: estNatif() ? 'natif' : 'web'
       })
@@ -1669,6 +1908,122 @@ async function unitePayer(){
   }
 }
 
+/* ═══ MA COMMANDE ═════════════════════════════════════════════════════════
+   Le héros en tête de l'offre, dès qu'une commande non livrée existe : jour,
+   créneau, détail, adresse (modifiable), état, et le CODE DE RÉCEPTION que le
+   client donne au livreur — c'est lui qui confirme la livraison dans le CRM
+   (Production → Livraison, `confirmer_livraison`).
+   ⚠️ L'adresse s'écrit par `rpc/modifier_adresse_bon`, pas par un PATCH : la
+   RLS ne donne au client que la LECTURE de ses bons, et c'est voulu — un PATCH
+   ouvert lui laisserait réécrire son statut ou son nombre de repas. La
+   fonction ne touche qu'à l'adresse, et seulement tant que la commande n'est
+   pas partie. Elle corrige aussi les semaines suivantes du même abonnement.
+   Le CRM lit la même ligne : rien à synchroniser. */
+const MC_ETAPES = [['confirme', 'Confirmée'], ['prep', 'En préparation'], ['route', 'En cours de livraison']];
+function mcRang(statut) {
+  if (statut === 'en_livraison') return 2;
+  if (statut === 'en_production') return 1;
+  return 0;
+}
+let MC_BON = null, MC_AUTRES = 0;
+
+async function chargerMaCommande() {
+  const hote = document.getElementById('maCommande');
+  if (!hote || !userId) return;
+  let bons = [];
+  try {
+    bons = await Natty.sbFetch('bons_commande?user_id=eq.' + encodeURIComponent(userId)
+      + '&statut=in.(a_attribuer,attribue,en_production,en_livraison)'
+      + '&select=id,type,nb_repas,jour_livraison,creneau_livraison,adresse,plats,statut,code_reception,abonnement_id'
+      + '&order=jour_livraison.asc.nullslast&limit=12') || [];
+  } catch (e) { bons = []; }
+  if (!bons.length) { hote.innerHTML = ''; return; }
+  MC_BON = bons[0];
+  MC_AUTRES = bons.length - 1;
+
+  // Le détail : les recettes attribuées par la cuisine, sinon les plats choisis à l'unité.
+  let detail = '';
+  try {
+    const at = await Natty.sbFetch('bons_attributions?bon_id=eq.' + MC_BON.id + '&select=nb_portions,recettes(nom)');
+    if (at && at.length) detail = at.map(a => ech((a.recettes && a.recettes.nom) || 'Plat') + ' × ' + a.nb_portions).join(' · ');
+  } catch (e) {}
+  if (!detail && Array.isArray(MC_BON.plats) && MC_BON.plats.length) {
+    try {
+      const ids = MC_BON.plats.map(p => p.id).filter(Boolean);
+      const noms = {};
+      (await Natty.sbFetch('plats_menu?id=in.(' + ids.join(',') + ')&select=id,nom') || []).forEach(p => { noms[p.id] = p.nom; });
+      detail = MC_BON.plats.map(p => ech(noms[p.id] || 'Plat') + ' × ' + p.n).join(' · ');
+    } catch (e) {}
+  }
+  if (!detail) detail = MC_BON.type === 'abonnement'
+    ? 'Vos recettes sont choisies par votre nutritionniste — le détail arrive avant la livraison.'
+    : 'Détail en préparation.';
+  peindreMaCommande(detail);
+}
+
+function peindreMaCommande(detail) {
+  const b = MC_BON, hote = document.getElementById('maCommande');
+  if (!b || !hote) return;
+  const rang = mcRang(b.statut);
+  const suivi = MC_ETAPES.map((e, i) =>
+    (i ? '<div class="mc-trait' + (i <= rang ? ' fait' : '') + '"></div>' : '')
+    + '<div class="mc-et ' + (i < rang ? 'fait' : i === rang ? 'cours' : '') + '"><i>' + (i < rang ? '✓' : i + 1) + '</i><span>' + e[1] + '</span></div>'
+  ).join('');
+  const modifiable = b.statut !== 'en_livraison';
+  hote.innerHTML = '<div class="mc">'
+    + '<div class="mc-kick">Ma commande</div>'
+    + '<div class="mc-titre">' + (b.jour_livraison ? dateLisible(b.jour_livraison) : 'Date à confirmer') + '</div>'
+    + '<div class="mc-sous">' + (b.creneau_livraison ? 'Livraison entre ' + ech(b.creneau_livraison) : 'Créneau communiqué la veille') + '</div>'
+    + '<div class="mc-suivi">' + suivi + '</div>'
+    + (b.code_reception ? '<div class="mc-code"><small>Code de réception — à donner au livreur, il confirme la livraison avec.</small><b>' + ech(b.code_reception) + '</b></div>' : '')
+    + '<div class="mc-lignes">'
+    + '<div class="mc-l"><span>Commande</span><div>' + b.nb_repas + ' repas · ' + (b.type === 'unite' ? 'à l’unité' : 'abonnement')
+    + '<div class="mc-det">' + detail + '</div></div></div>'
+    + '<div class="mc-l"><span>Adresse</span><div><span id="mcAdr">' + ech(b.adresse || 'non renseignée') + '</span>'
+    + (modifiable ? '<br><button type="button" class="mc-modif" id="mcModif">Modifier l’adresse</button>' : '')
+    + '<div class="mc-edit" id="mcEdit" hidden></div></div></div>'
+    + '</div>'
+    + (MC_AUTRES ? '<div class="mc-plus">+ ' + MC_AUTRES + ' autre' + (MC_AUTRES > 1 ? 's' : '') + ' livraison' + (MC_AUTRES > 1 ? 's' : '') + ' à venir</div>' : '')
+    + '</div>';
+  const m = document.getElementById('mcModif');
+  if (m) m.addEventListener('click', ouvrirEditionAdresse);
+}
+
+function ouvrirEditionAdresse() {
+  const ed = document.getElementById('mcEdit');
+  if (!ed || !MC_BON) return;
+  const a = decomposerAdresse(MC_BON.adresse);
+  ed.hidden = false;
+  document.getElementById('mcModif').hidden = true;
+  ed.innerHTML = '<div class="adr-labels" style="color:rgba(255,255,255,.5)"><span>N°</span><span>Rue</span><span>Code postal</span></div>'
+    + '<div class="adr-row"><input id="mcNum" placeholder="12" maxlength="8" value="' + ech(a.num) + '">'
+    + '<input id="mcRue" placeholder="rue de la Paix" maxlength="120" value="' + ech(a.rue) + '">'
+    + '<input id="mcCp" inputmode="numeric" placeholder="75001" maxlength="5" value="' + ech(a.cp) + '"></div>'
+    + '<div class="mc-edit-act"><button type="button" class="non" id="mcAnnuler">Annuler</button><button type="button" class="ok" id="mcOk">Enregistrer</button></div>';
+  document.getElementById('mcAnnuler').addEventListener('click', () => {
+    ed.hidden = true; ed.innerHTML = ''; document.getElementById('mcModif').hidden = false;
+  });
+  document.getElementById('mcOk').addEventListener('click', async () => {
+    const v = id => document.getElementById(id).value;
+    const adr = composerAdresse(v('mcNum'), v('mcRue'), v('mcCp'));
+    if (!adr) { showToast('N°, rue et code postal à 5 chiffres'); return; }
+    const ok = document.getElementById('mcOk');
+    ok.disabled = true; ok.textContent = 'Enregistrement…';
+    try {
+      await Natty.sbPost('rpc/modifier_adresse_bon', { p_bon: MC_BON.id, p_adresse: adr });
+      MC_BON.adresse = adr;
+      document.getElementById('mcAdr').textContent = adr;
+      ed.hidden = true; ed.innerHTML = ''; document.getElementById('mcModif').hidden = false;
+      showToast('Adresse mise à jour ✓');
+    } catch (e) {
+      let msg = 'Impossible de modifier l’adresse';
+      try { msg = JSON.parse(e.message).message || msg; } catch (x) {}
+      showToast(msg);
+      ok.disabled = false; ok.textContent = 'Enregistrer';
+    }
+  });
+}
+
 /* L'interrupteur du header. Les deux boutons appellent la même fonction — un
    seul chemin pour changer de vue, sinon les deux moitiés divergent. */
 document.getElementById('segPlats').addEventListener('click', function(){ afficherVue('plats'); });
@@ -1686,6 +2041,7 @@ afficherVue(uniteActif() ? 'plats' : 'offre', { silencieux: true });
 /* Ce que la route sait vendre — en tâche de fond, l'écran est déjà utilisable
    avec les deux formules historiques. */
 chargerOffres();
+chargerMaCommande();
 
 function showToast(msg){
   const t=document.getElementById("toast");

@@ -220,6 +220,7 @@ export default async function handler(req) {
           user_id: userId, type: 'unite',
           nb_repas: nombreDePlats(session),
           jour: session.metadata?.livraison, adresse: session.metadata?.adresse,
+          date: session.metadata?.date, creneau: session.metadata?.creneau,
           plats: lireJson(session.metadata?.plats),
           stripe_ref: 'cs_' + session.id,
           montant: session.amount_total, email: session.customer_details?.email
@@ -270,6 +271,9 @@ export default async function handler(req) {
         nb_repas: n || (formule === '4_repas' ? 4 : 3),
         jour: session.metadata?.livraison || sub.metadata?.livraison,
         adresse: session.metadata?.adresse || sub.metadata?.adresse,
+        date: session.metadata?.date,
+        creneau: session.metadata?.creneau || sub.metadata?.creneau,
+        semaines: Number(session.metadata?.semaines || sub.metadata?.semaines) || 1,
         abonnement_id: aboId,
         stripe_ref: 'cs_' + session.id,
         montant: session.amount_total, email: session.customer_details?.email
@@ -298,10 +302,24 @@ export default async function handler(req) {
           const r = await supabase('abonnements?stripe_subscription_id=eq.' + invoice.subscription + '&select=id&limit=1', 'GET');
           const a = await r.json(); aboId = Array.isArray(a) && a[0] ? a[0].id : null;
         } catch (e) {}
+        /* L'adresse que le client a pu corriger depuis « Ma commande »
+           (offre.html → modifier_adresse_bon) vit en BASE, pas dans les
+           métadonnées Stripe figées au paiement : on reprend celle du dernier
+           bon de l'abonnement, et la date suit la dernière livraison. */
+        let adresse = meta.adresse, creneau = meta.creneau, derniere = null;
+        if (aboId) {
+          try {
+            const r = await supabase('bons_commande?abonnement_id=eq.' + aboId + '&select=adresse,creneau_livraison,jour_livraison&order=jour_livraison.desc.nullslast&limit=1', 'GET');
+            const a = await r.json();
+            if (Array.isArray(a) && a[0]) { adresse = a[0].adresse || adresse; creneau = a[0].creneau_livraison || creneau; derniere = a[0].jour_livraison; }
+          } catch (e) {}
+        }
         await creerBon(supabase, {
           user_id: userId, type: 'abonnement',
           nb_repas: Number(meta.repas) || 3,
-          jour: meta.livraison, adresse: meta.adresse,
+          jour: meta.livraison, adresse: adresse, creneau: creneau,
+          date: derniere ? ajouterJours(derniere, 7) : null,
+          semaines: Number(meta.semaines) || 1,
           abonnement_id: aboId,
           stripe_ref: 'in_' + invoice.id,
           montant: invoice.amount_paid, email: invoice.customer_email
@@ -373,33 +391,52 @@ function nombreDePlats(session) {
   return Number.isFinite(r) && r > 0 ? Math.min(40, r) : 1;
 }
 
+function ajouterJours(ymd, n) {
+  const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/* Un paiement couvre `semaines` semaines (la durée choisie dans offre.html
+   multiplie la quantité Stripe) : on crée donc UN BON PAR SEMAINE, chacun avec
+   sa date et son propre code de réception. La référence Stripe du premier
+   reste nue — un webhook rejoué retombe sur les mêmes `stripe_ref` (#1, #2…)
+   et chaque POST repart en 409. Le récapitulatif ne part qu'une fois. */
 async function creerBon(supabase, b) {
-  const jour = prochaineDate(b.jour);
-  try {
-    const r = await supabase('bons_commande', 'POST', {
-      user_id: b.user_id,
-      type: b.type,
-      nb_repas: b.nb_repas,
-      jour_livraison: jour,
-      semaine: lundiDe(jour),
-      adresse: b.adresse || null,
-      plats: b.plats || null,
-      abonnement_id: b.abonnement_id || null,
-      stripe_ref: b.stripe_ref || null,
-      statut: 'a_attribuer'
-    });
-    // 409 = déjà créé pour cette référence Stripe : un webhook rejoué. Normal —
-    // et on ne renvoie pas le récapitulatif une seconde fois.
-    if (r.status === 409) return;
-    if (!r.ok) { console.log('bon de commande non créé — %s', r.status); return; }
-    let bon = null;
-    try { const a = await r.json(); bon = Array.isArray(a) ? a[0] : a; } catch (e) {}
-    await envoyerRecap(supabase, Object.assign({}, b, { jour_livraison: jour, id: bon && bon.id }));
-  } catch (e) {
-    // Ne jamais faire échouer le webhook pour un bon : l'abonnement, lui, est
-    // écrit. Stripe rejouerait sinon l'événement entier.
-    console.log('bon de commande — %s', e.message);
+  const debut = /^\d{4}-\d{2}-\d{2}$/.test(b.date || '') ? b.date : prochaineDate(b.jour);
+  const n = Math.max(1, Math.min(24, Math.floor(Number(b.semaines) || 1)));
+  let premier = null;
+  for (let k = 0; k < n; k++) {
+    const jour = debut ? ajouterJours(debut, 7 * k) : null;
+    try {
+      const r = await supabase('bons_commande', 'POST', {
+        user_id: b.user_id,
+        type: b.type,
+        nb_repas: b.nb_repas,
+        jour_livraison: jour,
+        semaine: lundiDe(jour),
+        adresse: b.adresse || null,
+        creneau_livraison: b.creneau || null,
+        plats: b.plats || null,
+        abonnement_id: b.abonnement_id || null,
+        stripe_ref: b.stripe_ref ? (k ? b.stripe_ref + '#' + k : b.stripe_ref) : null,
+        statut: 'a_attribuer'
+      });
+      // 409 = déjà créé pour cette référence Stripe : un webhook rejoué.
+      if (r.status === 409) { if (k === 0) return; continue; }
+      if (!r.ok) { console.log('bon de commande non créé — %s', r.status); continue; }
+      if (k === 0) { try { const a = await r.json(); premier = Array.isArray(a) ? a[0] : a; } catch (e) {} }
+    } catch (e) {
+      // Ne jamais faire échouer le webhook pour un bon : l'abonnement, lui, est
+      // écrit. Stripe rejouerait sinon l'événement entier.
+      console.log('bon de commande — %s', e.message);
+    }
   }
+  try {
+    await envoyerRecap(supabase, Object.assign({}, b, {
+      jour_livraison: debut, id: premier && premier.id,
+      code: premier && premier.code_reception, semaines: n
+    }));
+  } catch (e) { console.log('récap — %s', e.message); }
 }
 
 
@@ -454,7 +491,9 @@ async function envoyerRecap(supabase, b) {
   const lignes = [
     ['Formule', type + ' — ' + b.nb_repas + ' repas'],
     plats ? ['Plats', plats] : null,
-    ['Livraison', dateLongue(b.jour_livraison)],
+    ['Livraison', dateLongue(b.jour_livraison) + (b.creneau ? ' · ' + b.creneau : '')],
+    b.semaines > 1 ? ['Durée', b.semaines + ' semaines — une livraison par semaine'] : null,
+    b.code ? ['Code de réception', b.code + ' — à donner au livreur'] : null,
     ['Adresse', b.adresse || 'non renseignée — nous vous contactons'],
     b.montant ? ['Montant réglé', euros(b.montant)] : null
   ].filter(Boolean);
