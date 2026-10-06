@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Natty — déjeuners de chef livrés à Paris, avec le suivi nutritionnel inclus</title>
+<meta name="description" content="Repas sains et personnalisés livrés à votre bureau à Paris et à La Défense. Conçus avec un chef, adaptés à vos objectifs, et enregistrés automatiquement dans votre suivi nutritionnel. 9 € le plat en abonnement.">
+<link rel="canonical" href="https://www.natty-nutrition.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Natty">
+<meta property="og:title" content="Natty — déjeuners de chef livrés à Paris, avec le suivi nutritionnel inclus">
+<meta property="og:description" content="Repas sains et personnalisés livrés à votre bureau à Paris et à La Défense. Conçus avec un chef, adaptés à vos objectifs, et enregistrés automatiquement dans votre suivi nutritionnel. 9 € le plat en abonnement.">
+<meta property="og:image" content="https://www.natty-nutrition.com/img/hero.webp">
+<meta property="og:url" content="https://www.natty-nutrition.com/">
+<meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0E0E11" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<link rel="apple-touch-icon" href="/natty-icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/natty-favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/natty-favicon-16.png">
+<link rel="manifest" href="/manifest.json">
+<!--
+  ════════════════════════════════════════════════════════════════
+  Natty — page d'accueil, refonte v1 (29/09/2026)
+
+  ⚠️ AVANT MISE EN LIGNE — deux choses à régler :
+  1. Les valeurs nutritionnelles des 12 plats sont CALCULÉES depuis
+     scripts/fiches-natty.mjs avec la table de api/_nutrition.js,
+     divisées par 6 portions. Elles ne sont pas validées. Plusieurs
+     sont incohérentes avec la catégorie du plat (chili sin carne
+     classé prise de masse à 9,5 g de protéines ; bœuf braisé classé
+     bien-être à 742 kcal). Francis doit les valider avant publication.
+  2. Tout ce qui porte la classe .tbd est un trou à combler.
+
+  Cible de déploiement : dépôt natty-suivi, à la racine.
+  Images : img/plats/*.webp, img/hero.webp
+  ════════════════════════════════════════════════════════════════
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Instrument+Sans:ital,wght@0,400..700;1,400..600&display=swap">
+
+<link rel="stylesheet" href="css/natty.css">
+
+</head>
+<body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="wordmark" href="#top">NATTY</a>
+    <nav class="nav-links">
+      <a href="#plats">Nos plats</a>
+      <a href="#marche">Comment ça marche</a>
+      <a href="#suivi">Le suivi</a>
+      <a href="#tarifs">Tarifs</a>
+      <a href="entreprises.html">Entreprises</a>
+    </nav>
+    <button class="theme-btn" id="themeBtn" aria-label="Changer de thème">
+      <svg viewBox="0 0 24 24"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg>
+    </button>
+    <a class="btn primary sm" href="#plats">Commander</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ═══ HERO ═══════════════════════════════════════════ -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>Des plats de chef au bureau. Vos macros <em>remplies toutes seules.</em></h1>
+        <p class="hero-sub">Nos déjeuners sont conçus avec un chef passé par le Cheval Blanc, livrés à Paris et à La Défense, et enregistrés dans votre suivi nutritionnel le jour de la livraison. Vous ne saisissez rien.</p>
+        <div class="hero-cta">
+          <a class="btn primary" href="#plats">Voir les plats de la semaine</a>
+          <span class="price-inline"><b class="num">9 €</b> le plat en abonnement</span>
+        </div>
+      </div>
+      <figure class="hero-photo" style="margin:0">
+        <img src="img/hero.webp" alt="Assiette Natty : filet de poisson, légumes rôtis et céréales complètes" width="1400" height="1367">
+        <figcaption class="hero-tag">Recettes signées par un chef</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ═══ PREUVES ════════════════════════════════════════ -->
+  <div class="proofs">
+    <div class="proof">
+      <b>Un chef passé par le Cheval Blanc</b>
+      <span>Francis D'Almeida signe chaque fiche technique.</span>
+    </div>
+    <div class="proof">
+      <b>Un nutritionniste suit votre semaine</b>
+      <span>Inclus dans l'abonnement, par messagerie et rendez-vous.</span>
+    </div>
+    <div class="proof">
+      <b>Paris et La Défense</b>
+      <span>Livré au bureau, prêt à réchauffer.</span>
+    </div>
+  </div>
+
+  <!-- ═══ MANIFESTE ══════════════════════════════════════ -->
+  <section class="manifesto">
+    <div class="wrap manifesto-grid">
+      <div>
+        <p class="eyebrow">Pourquoi Natty existe</p>
+        <h2>Bien manger au bureau ne devrait pas être un arbitrage.</h2>
+      </div>
+      <div class="manifesto-body">
+        <p>Treize heures cinq, la réunion se termine. On descend prendre un truc rapide, on le mange d'une main, l'autre sur la souris. À treize heures trente-cinq c'est fini, et on ne sait déjà plus ce qu'on a avalé.</p>
+        <p>Le déjeuner est le seul moment de la journée qu'on sacrifie sans jamais l'inscrire à l'ordre du jour. On protège les créneaux de réunion. Celui-là, jamais. Pourtant c'est lui qui décide de l'après-midi.</p>
+        <p>Natty prend le problème par le seul bout réaliste : <strong>rendre le bon déjeuner plus simple que le mauvais</strong>. Un chef écrit la recette au gramme, les plats arrivent au bureau, c'est prêt en deux minutes. Au prix d'un déjeuner de cantine.</p>
+        <p>Et le plat se compte tout seul. Calories et macronutriments arrivent dans votre application sans que vous ayez rien à photographier. Personne d'autre ne fait ça en France aujourd'hui.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ MENU ═══════════════════════════════════════════ -->
+  <section id="plats" class="rule">
+    <div class="wrap">
+      <div class="menu-head">
+        <div>
+          <p class="eyebrow">La carte de la semaine</p>
+          <h2>Douze plats, trois objectifs.</h2>
+        </div>
+        <div class="filters" id="filters" role="group" aria-label="Filtrer par objectif">
+          <button type="button" data-f="tous" aria-pressed="true">Tous</button>
+          <button type="button" data-f="masse" aria-pressed="false">Prise de masse</button>
+          <button type="button" data-f="perte" aria-pressed="false">Perte de poids</button>
+          <button type="button" data-f="bien" aria-pressed="false">Bien-être</button>
+        </div>
+      </div>
+
+      <div class="dishes" id="dishes"></div>
+
+      <p class="menu-note">
+        <span>Valeurs calculées à partir des fiches techniques du chef, ramenées au poids de la barquette.</span>
+        <span class="tbd">en cours de validation</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══ COMMENT ÇA MARCHE ══════════════════════════════ -->
+  <section id="marche" class="rule">
+    <div class="wrap">
+      <p class="eyebrow">En trois gestes</p>
+      <h2 style="margin-bottom:46px">De la carte à votre suivi, sans rien saisir.</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-n num">1</div>
+          <h3>Vous composez votre semaine</h3>
+          <p>De un à dix plats. Vous changez la sélection chaque semaine, vous mettez en pause quand vous partez, vous arrêtez quand vous voulez.</p>
+        </div>
+        <div class="step">
+          <div class="step-n num">2</div>
+          <h3>On cuisine et on livre</h3>
+          <p>Les plats sont préparés en début de semaine et livrés au bureau. Deux minutes au micro-ondes et c'est prêt. <span class="tbd">lieu de préparation et durée de conservation à préciser</span></p>
+        </div>
+        <div class="step">
+          <div class="step-n num">3</div>
+          <h3>Le suivi se remplit seul</h3>
+          <p>Le jour de la livraison, le plat entre dans votre journée avec ses calories et ses macros. Votre nutritionniste voit la même chose que vous.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ LE SUIVI ═══════════════════════════════════════ -->
+  <section id="suivi" class="suivi rule">
+    <div class="wrap suivi-grid">
+      <div>
+        <p class="eyebrow">Ce que personne d'autre ne fait</p>
+        <h2>Le plat que vous mangez est déjà compté.</h2>
+        <p class="lede" style="margin-top:22px">Les applications de suivi vous demandent de peser, photographier, chercher dans une base. Les services de livraison, eux, ne savent rien de vos objectifs. Natty tient les deux bouts : nous connaissons la recette au gramme, donc nous savons exactement ce que vous avez dans l'assiette.</p>
+        <div class="hero-cta">
+          <a class="btn ghost" href="https://apps.apple.com/fr/app/natty-nutrition/id6805629752">Télécharger l'application</a>
+        </div>
+      </div>
+
+      <div class="flow">
+        <div class="flow-card">
+          <div class="thumb"><img src="img/plats/poulet-moutarde.webp" alt="" width="52" height="52"></div>
+          <div class="t">
+            <b>Poulet à la moutarde</b>
+            <span>Livré mardi, 11 h 40</span>
+          </div>
+          <span class="stamp">Livré</span>
+        </div>
+
+        <div class="flow-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 30"><path d="M12 2v24M5 19l7 7 7-7"/></svg>
+        </div>
+
+        <div class="rings">
+          <div class="rings-head">
+            <b>Votre mardi</b>
+            <span>mis à jour tout seul</span>
+          </div>
+          <div class="ring-row">
+            <div class="ring">
+              <svg viewBox="0 0 72 72" role="img" aria-label="Protéines : 86 grammes sur 140">
+                <circle cx="36" cy="36" r="30" fill="none" stroke="var(--line)" stroke-width="8"/>
+                <circle cx="36" cy="36" r="30" fill="none" stroke="var(--ink)" stroke-width="8" stroke-linecap="round"
+                        stroke-dasharray="188.5" stroke-dashoffset="72" transform="rotate(-90 36 36)"/>
+                <text x="36" y="41" text-anchor="middle" fill="var(--ink)" font-size="17" font-weight="700" font-family="Instrument Sans, sans-serif">86</text>
+              </svg>
+              <span class="lab">Protéines</span>
+              <span class="val num">86 / 140 g</span>
+            </div>
+            <div class="ring">
+              <svg viewBox="0 0 72 72" role="img" aria-label="Glucides : 75 grammes sur 260">
+                <circle cx="36" cy="36" r="30" fill="none" stroke="var(--line)" stroke-width="8"/>
+                <circle cx="36" cy="36" r="30" fill="none" stroke="var(--ink)" stroke-width="8" stroke-linecap="round"
+                        stroke-dasharray="188.5" stroke-dashoffset="134" transform="rotate(-90 36 36)"/>
+                <text x="36" y="41" text-anchor="middle" fill="var(--ink)" font-size="17" font-weight="700" font-family="Instrument Sans, sans-serif">75</text>
+              </svg>
+              <span class="lab">Glucides</span>
+              <span class="val num">75 / 260 g</span>
+            </div>
+            <div class="ring">
+              <svg viewBox="0 0 72 72" role="img" aria-label="Lipides : 22 grammes sur 70">
+                <circle cx="36" cy="36" r="30" fill="none" stroke="var(--line)" stroke-width="8"/>
+                <circle cx="36" cy="36" r="30" fill="none" stroke="var(--ink)" stroke-width="8" stroke-linecap="round"
+                        stroke-dasharray="188.5" stroke-dashoffset="129" transform="rotate(-90 36 36)"/>
+                <text x="36" y="41" text-anchor="middle" fill="var(--ink)" font-size="17" font-weight="700" font-family="Instrument Sans, sans-serif">22</text>
+              </svg>
+              <span class="lab">Lipides</span>
+              <span class="val num">22 / 70 g</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TARIFS ═════════════════════════════════════════ -->
+  <section id="tarifs" class="rule">
+    <div class="wrap">
+      <p class="eyebrow">Tarifs</p>
+      <h2>Un prix au plat. Rien d'autre.</h2>
+      <p class="lede" style="margin:18px 0 42px">Neuf euros, c'est le prix d'un déjeuner de cantine. Avec un chef derrière, et sans la queue.</p>
+
+      <div class="plans">
+        <div class="plan">
+          <h3>À l'unité</h3>
+          <div class="amount"><b class="num">12,50</b><span>€ le plat</span></div>
+          <ul>
+            <li>Vous commandez quand vous voulez</li>
+            <li>Aucun engagement</li>
+            <li>Livraison incluse</li>
+          </ul>
+          <a class="btn ghost" href="https://natty-suivi.vercel.app/offre.html">Commander à l'unité</a>
+        </div>
+
+        <div class="plan feature">
+          <span class="plan-flag">Le plus choisi</span>
+          <h3>Abonnement</h3>
+          <div class="amount"><b class="num">9</b><span>€ le plat</span></div>
+          <ul>
+            <li>De 1 à 10 plats par semaine</li>
+            <li>Suivi nutritionniste inclus</li>
+            <li>Vos plats enregistrés dans l'application</li>
+            <li>Pause et résiliation quand vous voulez</li>
+          </ul>
+          <a class="btn primary" href="https://natty-suivi.vercel.app/offre.html">Démarrer l'abonnement</a>
+        </div>
+      </div>
+
+      <div class="volume">
+        <table>
+          <thead>
+            <tr><th>Par semaine</th><th>Prix du plat</th><th>Total semaine</th><th>Par mois</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>3 plats</td><td><b class="num">9,00 €</b></td><td class="num">27 €</td><td class="num">108 €</td></tr>
+            <tr><td>5 plats</td><td><b class="num">9,00 €</b></td><td class="num">45 €</td><td class="num">180 €</td></tr>
+            <tr><td>10 plats</td><td><b class="num">9,00 €</b></td><td class="num">90 €</td><td class="num">360 €</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══ ENTREPRISES ════════════════════════════════════ -->
+  <section class="suivi rule">
+    <div class="wrap suivi-grid">
+      <div>
+        <p class="eyebrow">Pour les entreprises</p>
+        <h2>Le seul créneau que personne ne protège.</h2>
+        <p class="lede" style="margin-top:22px">L'Organisation internationale du travail a consacré un rapport entier au déjeuner au bureau. Sa conclusion : la qualité de l'alimentation sur le lieu de travail fait varier la productivité jusqu'à 20 %. C'est plus que ce que promet la plupart des outils qu'on déploie pour gagner en efficacité.</p>
+        <div class="hero-cta">
+          <a class="btn primary" href="entreprises.html">Natty pour vos équipes</a>
+          <a class="btn ghost" href="entreprises.html#contact">Demander une proposition</a>
+        </div>
+      </div>
+      <div class="flow">
+        <div class="flow-card">
+          <div class="t"><b>Prise en charge employeur</b><span>Partielle ou totale, au choix</span></div>
+          <span class="stamp">RH</span>
+        </div>
+        <div class="flow-card">
+          <div class="t"><b>Une livraison, tout le bureau</b><span>Un seul point de dépose</span></div>
+          <span class="stamp">Logistique</span>
+        </div>
+        <div class="flow-card">
+          <div class="t"><b>Facture unique</b><span>Mensuelle, par entreprise</span></div>
+          <span class="stamp">Compta</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ QUI ════════════════════════════════════════════ -->
+  <section class="rule">
+    <div class="wrap">
+      <p class="eyebrow">Derrière les plats</p>
+      <h2 style="margin-bottom:42px">Une cuisine, pas une usine.</h2>
+      <div class="people">
+        <div class="person">
+          <span class="role">Le chef</span>
+          <h3>Francis D'Almeida</h3>
+          <p>Passé par le Cheval Blanc. Il écrit les fiches techniques de chaque plat, ingrédient par ingrédient et geste par geste. C'est ce qui nous permet de connaître la composition exacte de ce que vous mangez.</p>
+        </div>
+        <div class="person">
+          <span class="role">Ambassadrice</span>
+          <h3>Romane Dicko</h3>
+          <p>Judokate en plus de 78 kg, au PSG Judo, en route vers Los Angeles 2028. Elle porte avec nous l'idée qu'une alimentation de haut niveau doit être traçable, du producteur à l'assiette. <span class="tbd">citation à recueillir</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FAQ ════════════════════════════════════════════ -->
+  <section class="rule">
+    <div class="wrap">
+      <p class="eyebrow">Questions</p>
+      <h2 style="margin-bottom:34px">Ce qu'on nous demande le plus.</h2>
+      <div class="faq">
+        <details open>
+          <summary>Où livrez-vous ?</summary>
+          <p>Paris et La Défense, au bureau. <span class="tbd">arrondissements et créneaux à préciser</span></p>
+        </details>
+        <details>
+          <summary>Comment les plats se conservent-ils ?</summary>
+          <p><span class="tbd">mode de conservation, durée et température à compléter</span></p>
+        </details>
+        <details>
+          <summary>Puis-je changer mes plats chaque semaine ?</summary>
+          <p>Oui. La sélection se modifie dans l'application jusqu'à la clôture des commandes. <span class="tbd">jour et heure de clôture à préciser</span></p>
+        </details>
+        <details>
+          <summary>Comment arrêter l'abonnement ?</summary>
+          <p>Depuis votre compte, sans appel ni courrier. <span class="tbd">préavis à préciser</span></p>
+        </details>
+        <details>
+          <summary>En quoi consiste le suivi nutritionniste ?</summary>
+          <p>Un nutritionniste ajuste vos objectifs caloriques et vos macros au fil des semaines, à partir de ce que vous mangez réellement. Vous échangez avec lui par messagerie dans l'application et vous pouvez prendre rendez-vous.</p>
+        </details>
+        <details>
+          <summary>Et les allergènes ?</summary>
+          <p><span class="tbd">liste des allergènes par plat à publier — obligatoire avant la mise en ligne</span></p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ BANDEAU FINAL ══════════════════════════════════ -->
+  <section class="final rule">
+    <div class="wrap">
+      <h2>Commencez par trois plats.</h2>
+      <p class="lede" style="margin-top:18px">27 € la semaine, résiliable quand vous voulez.</p>
+      <a class="btn primary" href="https://natty-suivi.vercel.app/offre.html">Composer ma première semaine</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <span class="wordmark">NATTY</span>
+        <p>Des déjeuners conçus avec un chef, livrés à Paris, et comptés pour vous.</p>
+      </div>
+      <div>
+        <h4>Produit</h4>
+        <ul>
+          <li><a href="#plats">Nos plats</a></li>
+          <li><a href="#tarifs">Tarifs</a></li>
+          <li><a href="https://natty-suivi.vercel.app/offre.html">S'abonner</a></li>
+          <li><a href="https://apps.apple.com/fr/app/natty-nutrition/id6805629752">Application iPhone</a></li>
+          <li><a href="entreprises.html">Pour les entreprises</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Natty</h4>
+        <ul>
+          <li><a href="https://www.instagram.com/natty__.fr/">Instagram</a></li>
+          <li><a href="https://www.linkedin.com/company/natty-nutrition/">LinkedIn</a></li>
+          <li><a href="#">Nous écrire <span class="tbd">adresse</span></a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Légal</h4>
+        <ul>
+          <li><a href="https://natty-suivi.vercel.app/cgv.html">Conditions de vente</a></li>
+          <li><a href="https://natty-suivi.vercel.app/cgu.html">Conditions d'utilisation</a></li>
+          <li><a href="https://natty-suivi.vercel.app/confidentialite.html">Confidentialité</a></li>
+          <li><a href="mentions-legales.html">Mentions légales</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-legal">
+      <span>© 2026 Natty</span>
+      <span>NATTY, SAS au capital de 4 € · SIREN 106 073 711 · 110 rue de Belleville, 75020 Paris</span>
+      <span class="sep">Fait à Paris</span>
+    </div>
+  </div>
+</footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Fiche du plat" hidden></aside>
+
+<div class="basket" id="basket" aria-live="polite">
+  <div class="basket-in">
+    <div class="basket-txt">
+      <b id="basketCount">0 plat</b>
+      <span id="basketDetail">9 € le plat en abonnement</span>
+    </div>
+    <a class="btn sm" id="basketGo" href="https://natty-suivi.vercel.app/offre.html">Continuer</a>
+  </div>
+</div>
+
+<script src="data/plats.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   Les plats viennent de data/plats.js, produit par scripts/gen-plats.mjs
+   depuis les fiches techniques du chef. Rien n'est écrit en dur ici :
+   pour changer un prix, une description ou une catégorie, on modifie le
+   tableau VENTE du générateur et on le relance.
+
+   ⚠️ Les macros et les allergènes sont CALCULÉS et non validés. La page
+   n'affiche la liste d'allergènes d'un plat que si `allergenes_valides`
+   est à true dans le catalogue — donc rien pour l'instant, volontairement.
+   ═══════════════════════════════════════════════════════════════ */
+const CATALOGUE  = window.NATTY_CATALOGUE || { prix:{unite:12.5,abonnement:9}, plats:[], libelles_allergenes:{} };
+const PRIX_UNITE = CATALOGUE.prix.unite;
+const PRIX_ABO   = CATALOGUE.prix.abonnement;
+const LIB_ALLERG = CATALOGUE.libelles_allergenes || {};
+const PLATS      = CATALOGUE.plats;
+
+/* ── Thème ─────────────────────────────────────────────── */
+(function(){
+  var r = document.documentElement, b = document.getElementById('themeBtn');
+  try { var s = localStorage.getItem('natty-theme'); if (s) r.setAttribute('data-theme', s); } catch(e){}
+  b.addEventListener('click', function(){
+    var sombre = r.getAttribute('data-theme') === 'dark'
+      || (!r.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+    var next = sombre ? 'light' : 'dark';
+    r.setAttribute('data-theme', next);
+    try { localStorage.setItem('natty-theme', next); } catch(e){}
+  });
+})();
+
+/* ── Carte ─────────────────────────────────────────────── */
+var choisis = new Set();
+var filtre = 'tous';
+var grille = document.getElementById('dishes');
+
+function nb(v){ return Number(v).toLocaleString('fr-FR'); }
+function eur(v){ return Number(v).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €'; }
+
+function carte(d){
+  var pris = choisis.has(d.id);
+  return '<article class="dish' + (pris ? ' picked' : '') + '" data-obj="' + d.categorie + '" data-id="' + d.id + '">'
+    + '<div class="dish-photo">'
+    +   '<img src="' + d.photo + '" alt="' + d.nom + '" width="720" height="720" loading="lazy">'
+    +   '<span class="dish-goal">' + d.categorie_label + '</span>'
+    + '</div>'
+    + '<div class="dish-body">'
+    +   '<button class="dish-open" type="button" data-open="' + d.id + '">'
+    +     '<h3>' + d.nom + '</h3>'
+    +   '</button>'
+    +   '<p class="dish-desc">' + d.description + '</p>'
+    +   '<div class="macros">'
+    +     '<div class="macro kcal"><span class="v num">' + nb(d.nutrition.kcal) + '</span><span class="k">kcal</span></div>'
+    +     '<div class="macro"><span class="v num">' + nb(d.nutrition.proteines) + '</span><span class="k">prot.</span></div>'
+    +     '<div class="macro"><span class="v num">' + nb(d.nutrition.glucides) + '</span><span class="k">gluc.</span></div>'
+    +     '<div class="macro"><span class="v num">' + nb(d.nutrition.lipides) + '</span><span class="k">lip.</span></div>'
+    +   '</div>'
+    +   '<div class="dish-foot">'
+    +     '<span class="dish-price"><b class="num">' + eur(PRIX_ABO) + '</b><span>abonné · ' + eur(PRIX_UNITE) + ' à l\'unité</span></span>'
+    +     '<button class="add" type="button" aria-pressed="' + pris + '" aria-label="' + (pris ? 'Retirer ' : 'Ajouter ') + d.nom + '">' + (pris ? '✓' : '+') + '</button>'
+    +   '</div>'
+    + '</div>'
+    + '</article>';
+}
+
+function dessine(){
+  /* Un plat dont le générateur a marqué `coherent: false` ne sort pas :
+     ses valeurs sont hors des bornes de vraisemblance, et un chiffre faux
+     sur une étiquette alimentaire coûte plus cher qu'un plat en moins. */
+  var liste = PLATS.filter(function(d){
+    return d.coherent !== false && (filtre === 'tous' || d.categorie === filtre);
+  });
+  grille.innerHTML = liste.map(carte).join('');
+}
+
+function panier(){
+  var n = choisis.size;
+  var bar = document.getElementById('basket');
+  bar.classList.toggle('on', n > 0);
+  if (!n) return;
+  document.getElementById('basketCount').textContent = n + (n > 1 ? ' plats' : ' plat') + ' · ' + nb(n * PRIX_ABO) + ' € la semaine';
+  document.getElementById('basketDetail').textContent = eur(PRIX_ABO) + ' le plat en abonnement, au lieu de ' + eur(PRIX_UNITE);
+}
+
+/* ── Fiche plat ────────────────────────────────────────────
+   Ce que le client veut vraiment savoir avant d'acheter : ce qu'il y a
+   dedans, dans quel ordre, et ce à quoi il est allergique. */
+var sheet = document.getElementById('sheet');
+var scrim = document.getElementById('scrim');
+var dernierFocus = null;
+
+function ligneIngredients(ings){
+  // Ordre décroissant de poids, comme sur une étiquette.
+  return ings.map(function(i, k){
+    return (k === 0 ? '<b>' + i.nom + '</b>' : i.nom);
+  }).join(', ');
+}
+
+function contenuFiche(d){
+  var pris = choisis.has(d.id);
+  var allerg = (d.allergenes_valides && d.allergenes.length)
+    ? '<div class="allerg">' + d.allergenes.map(function(a){
+        return '<span>' + (LIB_ALLERG[a] || a) + '</span>';
+      }).join('') + '</div>'
+    : (d.allergenes_valides
+        ? '<p class="ing-list">Aucun des 14 allergènes à déclaration obligatoire.</p>'
+        : '<p class="ing-list"><span class="tbd">liste en cours de validation par le chef</span></p>');
+
+  return '<div class="sheet-photo">'
+    +   '<img src="' + d.photo + '" alt="' + d.nom + '" width="720" height="540">'
+    +   '<button class="sheet-close" type="button" data-close aria-label="Fermer">×</button>'
+    + '</div>'
+    + '<div class="sheet-body">'
+    +   '<div>'
+    +     '<p class="sheet-cat">' + d.categorie_label + '</p>'
+    +     '<h3>' + d.nom + '</h3>'
+    +   '</div>'
+    +   '<p class="sheet-desc">' + d.description + '</p>'
+    +   '<div class="sheet-block">'
+    +     '<h4>Pour une portion de ' + d.portion_g + ' g</h4>'
+    +     '<div class="sheet-macros">'
+    +       '<div class="kcal"><span class="v num">' + nb(d.nutrition.kcal) + '</span><span class="k">kcal</span></div>'
+    +       '<div><span class="v num">' + nb(d.nutrition.proteines) + ' g</span><span class="k">protéines</span></div>'
+    +       '<div><span class="v num">' + nb(d.nutrition.glucides) + ' g</span><span class="k">glucides</span></div>'
+    +       '<div><span class="v num">' + nb(d.nutrition.lipides) + ' g</span><span class="k">lipides</span></div>'
+    +     '</div>'
+    +     '<p class="ing-list" style="margin-top:10px">Pour 100 g : ' + nb(d.pour_100g.kcal) + ' kcal · '
+    +       nb(d.pour_100g.proteines) + ' g de protéines · ' + nb(d.pour_100g.glucides) + ' g de glucides · '
+    +       nb(d.pour_100g.lipides) + ' g de lipides.</p>'
+    +   '</div>'
+    +   '<div class="sheet-block">'
+    +     '<h4>Ingrédients</h4>'
+    +     '<p class="ing-list">' + ligneIngredients(d.ingredients) + '.</p>'
+    +   '</div>'
+    +   '<div class="sheet-block">'
+    +     '<h4>Allergènes</h4>'
+    +     allerg
+    +   '</div>'
+    +   '<div class="sheet-buy">'
+    +     '<span class="p"><b class="num">' + eur(PRIX_ABO) + '</b><span>abonné · ' + eur(PRIX_UNITE) + ' à l\'unité</span></span>'
+    +     '<button class="btn ' + (pris ? '' : 'primary ') + 'sm" type="button" data-toggle="' + d.id + '">'
+    +       (pris ? 'Retirer de ma semaine' : 'Ajouter à ma semaine')
+    +     '</button>'
+    +   '</div>'
+    + '</div>';
+}
+
+function ouvreFiche(id){
+  var d = PLATS.find(function(x){ return x.id === id; });
+  if (!d) return;
+  dernierFocus = document.activeElement;
+  sheet.innerHTML = contenuFiche(d);
+  sheet.hidden = false;
+  // Un frame d'écart, sinon la transition ne part pas depuis l'état masqué.
+  requestAnimationFrame(function(){
+    sheet.classList.add('on');
+    scrim.classList.add('on');
+  });
+  document.body.style.overflow = 'hidden';
+  var c = sheet.querySelector('[data-close]');
+  if (c) c.focus();
+}
+
+function fermeFiche(){
+  sheet.classList.remove('on');
+  scrim.classList.remove('on');
+  document.body.style.overflow = '';
+  setTimeout(function(){ if (!sheet.classList.contains('on')) sheet.hidden = true; }, 300);
+  if (dernierFocus && dernierFocus.focus) dernierFocus.focus();
+}
+
+scrim.addEventListener('click', fermeFiche);
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape' && sheet.classList.contains('on')) fermeFiche();
+});
+sheet.addEventListener('click', function(e){
+  if (e.target.closest('[data-close]')) { fermeFiche(); return; }
+  var t = e.target.closest('[data-toggle]');
+  if (!t) return;
+  var id = t.dataset.toggle;
+  if (choisis.has(id)) { choisis.delete(id); }
+  else if (choisis.size >= 10) { return; }
+  else { choisis.add(id); }
+  dessine();
+  panier();
+  var d = PLATS.find(function(x){ return x.id === id; });
+  sheet.innerHTML = contenuFiche(d);
+});
+
+grille.addEventListener('click', function(e){
+  var o = e.target.closest('[data-open]');
+  if (o) { ouvreFiche(o.dataset.open); return; }
+  var b = e.target.closest('.add');
+  if (!b) return;
+  var id = b.closest('.dish').dataset.id;
+  if (choisis.has(id)) { choisis.delete(id); }
+  else if (choisis.size >= 10) { return; }
+  else { choisis.add(id); }
+  dessine();
+  panier();
+});
+
+document.getElementById('filters').addEventListener('click', function(e){
+  var b = e.target.closest('button[data-f]');
+  if (!b) return;
+  filtre = b.dataset.f;
+  [].forEach.call(this.querySelectorAll('button'), function(x){
+    x.setAttribute('aria-pressed', String(x === b));
+  });
+  dessine();
+});
+
+dessine();
+</script>
+
+</body>
+</html>
