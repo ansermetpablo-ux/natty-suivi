@@ -61,46 +61,69 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 /* ── Ce que l'équipe décide, plat par plat ──────────────────────
    `fiche` doit correspondre AU CARACTÈRE PRÈS au champ `nom` d'une entrée
    de FICHES — une faute de frappe arrête le script.
-   `portion` est la portion de RÉFÉRENCE en grammes — celle affichée sur le
-   site. La portion réellement livrée est calculée par le CRM, par client. */
+
+   ⚠️ IL N'Y A PLUS DE COLONNE `portion`. Elle a existé, elle portait des
+   nombres choisis à la main, et c'était un bug : la barquette affichée ne
+   correspondait plus à ce que la recette produit vraiment. Jusqu'à 43 %
+   d'écart, dans les deux sens — le curry annonçait 617 kcal pour une part
+   qui en fait 974. Un client qui suit ses macros mangeait l'un et notait
+   l'autre.
+
+   La portion vendue à l'unité est maintenant CALCULÉE : masse de la recette
+   après rendements, divisée par les 6 portions que les fiches annoncent,
+   arrondie à 5 g. Elle ne peut plus diverger de la fiche, puisqu'elle en
+   sort. Changer la recette change la barquette, automatiquement.
+
+   `portion_forcee` existe pour le jour où une barquette doit s'écarter de
+   ce calcul (un format imposé par le conditionnement, par exemple). Elle
+   demande alors une raison écrite, et le script le signale au-delà de 15 %.
+
+   L'abonnement, lui, ne lit pas ce nombre : le CRM calibre chaque barquette
+   sur les besoins du client à partir de son suivi. Le chiffre ci-dessous est
+   celui de la commande à l'unité, et la référence pour 100 g reste vraie
+   dans tous les cas. */
 const VENTE = [
   { id:'poulet-moutarde', fiche:"Poulet à la moutarde, riz complet, légumes rôtis",
-    nom:"Poulet à la moutarde", cat:'masse', portion:450,
+    nom:"Poulet à la moutarde", cat:'masse',
     desc:"Poulet rôti à la moutarde, riz complet et légumes rôtis." },
   { id:'curry-poulet', fiche:"Curry de poulet rôti, riz complet",
-    nom:"Curry de poulet rôti", cat:'masse', portion:450,
+    nom:"Curry de poulet rôti", cat:'masse',
     desc:"Poulet au curry, lait de coco, haricots verts et riz complet." },
   { id:'thon-mangue', fiche:"Thon grillé, salsa de mangue, riz sauvage",
-    nom:"Thon grillé, salsa de mangue", cat:'masse', portion:480,
+    nom:"Thon grillé, salsa de mangue", cat:'masse',
     desc:"Steak de thon grillé, salsa de mangue, riz sauvage." },
   { id:'chili-sin-carne', fiche:"Chili sin carne, haricots noirs et quinoa",
-    nom:"Chili sin carne", cat:'bien', portion:400,
+    nom:"Chili sin carne", cat:'bien',
     desc:"Haricots noirs, quinoa et avocat. Sans viande." },
 
   { id:'dinde-vapeur', fiche:"Dinde à la vapeur, légumes",
-    nom:"Dinde à la vapeur", cat:'perte', portion:380,
+    nom:"Dinde à la vapeur", cat:'perte',
     desc:"Poitrine de dinde vapeur, carottes, haricots verts, brocolis." },
   { id:'salade-poulet', fiche:"Salade de poulet grillé",
-    nom:"Salade de poulet grillé", cat:'perte', portion:380,
+    nom:"Salade de poulet grillé", cat:'perte',
     desc:"Poulet grillé, laitue, tomates cerises, concombre, vinaigrette légère." },
   { id:'natty-wrap', fiche:"Natty wrap",
-    nom:"Le Natty wrap", cat:'perte', portion:330,
+    nom:"Le Natty wrap", cat:'perte',
     desc:"Poulet grillé, légumes frais, sauce signature au yaourt." },
   { id:'merlu', fiche:"Merlu poché, brocoli, kale et mangue",
-    nom:"Filet de merlu", cat:'perte', portion:430,
+    nom:"Filet de merlu", cat:'perte',
     desc:"Merlu poché, brocoli, mangue et chou kale." },
   { id:'salade-quinoa', fiche:"Salade de quinoa",
-    nom:"Salade de quinoa", cat:'perte', portion:380,
+    nom:"Salade de quinoa", cat:'perte',
     desc:"Quinoa, légumes croquants, avocat, vinaigrette au citron." },
 
   { id:'boeuf-braise', fiche:"Bœuf braisé aux légumes",
-    nom:"Bœuf braisé", cat:'bien', portion:400,
+    /* 'bien' était mon erreur : 735 kcal et 45 g de lipides sur 500 g, ce
+       n'est pas un plat bien-être. La fiche du chef le code PM, un code que
+       personne n'a encore défini. Ses propres chiffres tranchent : prise de
+       masse. */
+    nom:"Bœuf braisé", cat:'masse',
     desc:"Bœuf braisé, carottes, céleri, oignon, sauce au laurier." },
   { id:'truite-herbes', fiche:"Truite aux herbes",
-    nom:"Truite aux herbes", cat:'bien', portion:400,
+    nom:"Truite aux herbes", cat:'bien',
     desc:"Truite au four aux herbes fraîches, légumes vapeur." },
   { id:'quinoa-bowl', fiche:"Quinoa bowl, légumes grillés, sauce tahini",
-    nom:"Quinoa bowl", cat:'bien', portion:400,
+    nom:"Quinoa bowl", cat:'bien',
     desc:"Quinoa, légumes grillés et sauce tahini." }
 ];
 
@@ -131,7 +154,25 @@ const RENDEMENT = [
    à l'app. Chaque entrée dit la valeur retenue pour 100 g. */
 const CORRECTIONS = {
   'riz sauvage': { c:101, p:4,   l:0.3, g:21,
-                   pourquoi:"la table le rattachait au riz blanc (130 kcal) ; le riz sauvage cuit en fait 101" }
+                   pourquoi:"la table le rattachait au riz blanc (130 kcal) ; le riz sauvage cuit en fait 101" },
+
+  /* Les deux épices ci-dessous manquaient à la table. Elles sont ajoutées ICI
+     et non dans api/_nutrition.js : ce fichier-là est une copie mécanique de
+     la table NT d'assets/core.js, régénérée par scripts/gen-nutrition.mjs.
+     Y écrire à la main, c'est refaire diverger les deux tables — le bug qui a
+     déjà fait annoncer au rappel du soir d'autres grammes que l'écran.
+     Valeurs ANSES Ciqual 2020, table française, énergie au sens du règlement
+     UE 1169/2011. Glucides hors fibres, convention Ciqual. */
+  'thym': { c:285, p:9.11, l:7.43, g:26.9,
+            pourquoi:"Ciqual 2020, « Thym, séché » ; 1 g sur 3357 g de recette, soit 0,03 %" },
+
+  /* Le chili en poudre est un mélange (piment, cumin, origan, ail, sel) et
+     n'a pas d'entrée Ciqual. On retient le piment de Cayenne, qui en est le
+     composant principal et la valeur la plus haute : l'écart avec un mélange
+     commercial joue sur 0,7 kcal pour 100 g de plat fini, soit 3 kcal sur une
+     portion de 400 g. On majore plutôt que de minorer. */
+  'chili en poudre': { c:376, p:12, l:17.3, g:29.4,
+                       pourquoi:"Ciqual 2020, « Poivre de Cayenne ou piment de Cayenne » ; 12 g sur 1672 g, soit 0,72 %" }
 };
 
 /* ── Bornes de vraisemblance ───────────────────────────────────
@@ -271,8 +312,13 @@ const plats = VENTE.map(v => {
     lipides:   masse ? r1(l / masse * 100) : 0
   };
 
-  // 3. portion = décision × densité
-  const k = v.portion / 100;
+  // 3. portion = ce que la recette produit, divisé par le nombre de parts
+  //    que la fiche annonce. Arrondi à 5 g : un gramme près sur une barquette
+  //    n'a pas de sens, mais 10 g en coûtaient 1,4 % sur la truite — et c'est
+  //    une étiquette alimentaire, pas une estimation.
+  const portionCalculee = Math.round(masse / PORTIONS / 5) * 5;
+  const portion = v.portion_forcee ?? portionCalculee;
+  const k = portion / 100;
   const nutrition = {
     kcal:      Math.round(pour100.kcal * k),
     proteines: Math.round(pour100.proteines * k),
@@ -292,10 +338,11 @@ const plats = VENTE.map(v => {
   if (nonChiffres.length) {
     hors.push(`ingrédient hors table : ${nonChiffres.join(', ')}`);
   }
-  // Une portion décidée très loin de celle de la fiche mérite un regard.
-  const portionFiche = Math.round(masse / PORTIONS);
-  if (Math.abs(v.portion - portionFiche) / portionFiche > 0.45) {
-    hors.push(`portion fixée à ${v.portion} g alors que la fiche en donne ${portionFiche} g`);
+  // La portion calculée ne peut plus s'écarter de la fiche. Une portion
+  // FORCÉE, si : on la laisse passer mais on l'écrit noir sur blanc.
+  if (v.portion_forcee && Math.abs(v.portion_forcee - portionCalculee) / portionCalculee > 0.15) {
+    alertes.push(`${v.id} : barquette forcée à ${v.portion_forcee} g alors que la recette en donne ` +
+                 `${portionCalculee} g (${v.pourquoi_portion || 'SANS RAISON ÉCRITE'})`);
   }
   for (const h of hors) alertes.push(`${v.id} : ${h}`);
 
@@ -307,7 +354,7 @@ const plats = VENTE.map(v => {
     description: v.desc,
     photo: `img/plats/${v.id}.webp`,
     prix: { unite: PRIX.unite, abonnement: PRIX.abonnement },
-    portion_reference_g: v.portion,
+    portion_reference_g: portion,
     pour_100g: pour100,
     nutrition,
     coherent: hors.length === 0,
@@ -355,7 +402,7 @@ console.log('\n┌─ Valeurs retenues ' + '─'.repeat(52));
 console.log('│ ' + 'plat'.padEnd(24) + 'portion'.padStart(8) + 'kcal/100g'.padStart(11) + 'kcal'.padStart(7) + 'prot'.padStart(6) + 'gluc'.padStart(6) + 'lip'.padStart(5) + '   état');
 for (const p of plats) {
   console.log('│ ' + p.nom.slice(0,23).padEnd(24)
-    + (p.portion_g+' g').padStart(8)
+    + (p.portion_reference_g+' g').padStart(8)
     + String(p.pour_100g.kcal).padStart(11)
     + String(p.nutrition.kcal).padStart(7)
     + String(p.nutrition.proteines).padStart(6)

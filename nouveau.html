@@ -133,7 +133,7 @@
       <div class="dishes" id="dishes"></div>
 
       <p class="menu-note">
-        <span>Valeurs par portion de référence, calculées depuis les fiches techniques du chef. Votre barquette est calibrée sur vos besoins : ouvrez une fiche pour le détail pour 100 g.</span>
+        <span>Valeurs pour la barquette vendue à l'unité, calculées depuis les fiches techniques du chef. En abonnement, la barquette est calibrée sur vos besoins à partir de votre suivi : les valeurs pour 100 g, elles, ne bougent pas.</span>
         <span class="tbd">en cours de validation</span>
       </p>
     </div>
@@ -556,11 +556,12 @@ function contenuFiche(d){
     +       '<div><span class="v num">' + nb(d.pour_100g.glucides) + ' g</span><span class="k">glucides</span></div>'
     +       '<div><span class="v num">' + nb(d.pour_100g.lipides) + ' g</span><span class="k">lipides</span></div>'
     +     '</div>'
-    +     '<p class="ing-list" style="margin-top:10px">Sur une portion de référence de '
-    +       d.portion_reference_g + ' g : ' + nb(d.nutrition.kcal) + ' kcal, '
+    +     '<p class="ing-list" style="margin-top:10px">La barquette vendue à l\'unité fait <b>'
+    +       d.portion_reference_g + ' g</b> : ' + nb(d.nutrition.kcal) + ' kcal, '
     +       nb(d.nutrition.proteines) + ' g de protéines, ' + nb(d.nutrition.glucides) + ' g de glucides, '
-    +       nb(d.nutrition.lipides) + ' g de lipides. <b>Votre barquette est calibrée sur vos besoins</b>, '
-    +       'donc sur votre portion ces valeurs montent ou descendent d\'autant.</p>'
+    +       nb(d.nutrition.lipides) + ' g de lipides. C\'est la recette du chef divisée par le nombre de '
+    +       'parts qu\'elle donne, pas un format arrondi. <b>En abonnement, on calibre la barquette sur '
+    +       'vos besoins</b> d\'après votre suivi : le poids change, les valeurs pour 100 g ci-dessus non.</p>'
     +   '</div>'
     +   '<div class="sheet-block">'
     +     '<h4>Ingrédients</h4>'

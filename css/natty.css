@@ -539,8 +539,14 @@ footer{ border-top: 1px solid var(--line); padding-block: 54px 40px; font-size: 
 
 /* Trou de contenu — repris de la convention du back-office */
 .tbd{
+  /* Pas d'ambre ici. L'orange ne fait pas partie de la marque, et ce
+     n'est de toute façon pas une alerte : c'est une mention de statut,
+     qui disparaît le jour où le chef signe. Elle se distingue par le
+     poids et l'encadré, comme le reste de la page. « --warn » n'a jamais
+     été défini nulle part — la couleur était donc héritée au hasard. */
   font-size: .78em; font-weight: 600;
-  color: var(--warn); background: var(--amber-bg);
+  color: var(--muted); background: var(--surface-2);
+  border: 1px solid var(--line);
   padding: 1px 7px; border-radius: 6px;
   /* Pas de `nowrap` : une pastille qui porte une phrase déborde l'écran
      en 390 px. Elle se coupe comme du texte, puisque c'en est. */
