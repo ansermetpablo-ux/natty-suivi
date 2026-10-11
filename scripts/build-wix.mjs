@@ -51,7 +51,7 @@ if (!publiables.length) {
 }
 
 const entete = `/* Natty — <natty-carte> pour Wix Studio.
-   FICHIER GÉNÉRÉ par scripts/build-wix.mjs le ${new Date().toISOString().slice(0, 10)}.
+   FICHIER GÉNÉRÉ par scripts/build-wix.mjs le ${process.env.NATTY_DATE || new Date().toISOString().slice(0, 10)}.
    Ne pas éditer à la main : modifier wix/natty-carte.src.js et relancer.
    Catalogue : ${publiables.length} plats publiables sur ${catalogue.plats.length}. */
 `;
