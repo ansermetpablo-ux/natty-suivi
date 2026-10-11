@@ -129,7 +129,7 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
 .plat.retenu .ajout{background:var(--green);color:#fff}
 
 .note{margin:22px 0 0;font-size:.8rem;color:var(--muted);display:flex;gap:9px;flex-wrap:wrap;align-items:center}
-.tbd{font-size:.95em;font-weight:600;color:var(--amber);background:var(--amber-bg);padding:1px 7px;border-radius:6px}
+.tbd{font-size:.95em;font-weight:600;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);padding:1px 7px;border-radius:6px}
 
 /* La fiche s'ouvre DANS le composant : un volet fixe par-dessus une page
    Wix recouvrirait sa propre barre d'outils, et on ne maîtrise pas ce
@@ -229,8 +229,9 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
         + '<section class="fiche" id="fiche" hidden aria-live="polite"></section>'
         + '<div class="grille" id="grille"></div>'
         + '<p class="note">'
-        +   '<span>Valeurs par portion de référence, calculées depuis les fiches techniques du chef. '
-        +   'Votre barquette est calibrée sur vos besoins : ouvrez une fiche pour le détail pour 100 g.</span>'
+        +   '<span>Valeurs pour la barquette vendue à l\'unité, calculées depuis les fiches techniques '
+        +   'du chef. En abonnement, la barquette est calibrée sur vos besoins à partir de votre suivi : '
+        +   'les valeurs pour 100 g, elles, ne bougent pas.</span>'
         +   '<span class="tbd">en cours de validation</span>'
         + '</p>'
         + '<div class="panier" id="panier" hidden>'
@@ -335,9 +336,9 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
         +     '<div><span class="v num">' + nb(c.glucides) + ' g</span><span class="k">glucides</span></div>'
         +     '<div><span class="v num">' + nb(c.lipides) + ' g</span><span class="k">lipides</span></div>'
         +   '</div>'
-        +   '<p class="liste" style="margin-top:10px">Sur une portion de référence de ' + d.portion_reference_g + ' g : '
+        +   '<p class="liste" style="margin-top:10px">La barquette vendue à l\'unité fait <b>' + d.portion_reference_g + ' g</b> : '
         +     nb(n.kcal) + ' kcal, ' + nb(n.proteines) + ' g de protéines, ' + nb(n.glucides) + ' g de glucides, '
-        +     nb(n.lipides) + ' g de lipides. <b>Votre barquette est calibrée sur vos besoins</b>, donc sur votre portion ces valeurs montent ou descendent d\'autant.</p>'
+        +     nb(n.lipides) + ' g de lipides. C\'est la recette du chef divisée par le nombre de parts qu\'elle donne, pas un format arrondi. <b>En abonnement, on calibre la barquette sur vos besoins</b> d\'après votre suivi : le poids change, les valeurs pour 100 g ci-dessus non.</p>'
         +   '</div>'
         +   '<div class="bloc"><h4>Ingrédients</h4><p class="liste">'
         +     d.ingredients.map(function (i, k) { return k === 0 ? '<b>' + esc(i.nom) + '</b>' : esc(i.nom); }).join(', ')
