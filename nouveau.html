@@ -24,14 +24,14 @@
   ════════════════════════════════════════════════════════════════
   Natty — page d'accueil, refonte v1 (29/09/2026)
 
-  ⚠️ AVANT MISE EN LIGNE — deux choses à régler :
-  1. Les valeurs nutritionnelles des 12 plats sont CALCULÉES depuis
-     scripts/fiches-natty.mjs avec la table de api/_nutrition.js,
-     divisées par 6 portions. Elles ne sont pas validées. Plusieurs
-     sont incohérentes avec la catégorie du plat (chili sin carne
-     classé prise de masse à 9,5 g de protéines ; bœuf braisé classé
-     bien-être à 742 kcal). Francis doit les valider avant publication.
-  2. Tout ce qui porte la classe .tbd est un trou à combler.
+  Les valeurs nutritionnelles viennent de data/plats.js (gen-plats.mjs,
+  Ciqual 2020). Elles ne sont pas validées : seules les valeurs POUR
+  100 g sont affichées, avec leur source. Les quantités par plat ne le
+  sont plus (12/10/2026) : elles sont calculées pour chaque abonné à
+  l'inscription, un cadenas l'explique et mène à la création de compte.
+
+  Cette page est aussi la source des composants Wix : build-wix.mjs la
+  transforme en <natty-accueil>. Aucune classe .tbd ne doit y rester.
 
   Cible de déploiement : dépôt natty-suivi, à la racine.
   Images : img/plats/*.webp, img/hero.webp
@@ -133,8 +133,7 @@
       <div class="dishes" id="dishes"></div>
 
       <p class="menu-note">
-        <span>Valeurs pour la barquette vendue à l'unité, calculées depuis les fiches techniques du chef. En abonnement, la barquette est calibrée sur vos besoins à partir de votre suivi : les valeurs pour 100 g, elles, ne bougent pas.</span>
-        <span class="tbd">en cours de validation</span>
+        <span>La quantité de chaque plat est calculée pour vous à l'inscription, d'après votre poids, votre objectif et votre activité. La composition pour 100 g, elle, est la même pour tout le monde : elle est sur la fiche de chaque plat.</span>
       </p>
     </div>
   </section>
@@ -153,7 +152,7 @@
         <div class="step">
           <div class="step-n num">2</div>
           <h3>On cuisine et on livre</h3>
-          <p>Les plats sont préparés en début de semaine et livrés au bureau. Deux minutes au micro-ondes et c'est prêt. <span class="tbd">lieu de préparation et durée de conservation à préciser</span></p>
+          <p>Les plats sont préparés en début de semaine et livrés au bureau. Au réfrigérateur dès réception, deux minutes au micro-ondes et c'est prêt.</p>
         </div>
         <div class="step">
           <div class="step-n num">3</div>
@@ -324,7 +323,7 @@
         <div class="person">
           <span class="role">Ambassadrice</span>
           <h3>Romane Dicko</h3>
-          <p>Judokate en plus de 78 kg, au PSG Judo, en route vers Los Angeles 2028. Elle porte avec nous l'idée qu'une alimentation de haut niveau doit être traçable, du producteur à l'assiette. <span class="tbd">citation à recueillir</span></p>
+          <p>Judokate en plus de 78 kg, au PSG Judo, en route vers Los Angeles 2028. Elle porte avec nous l'idée qu'une alimentation de haut niveau doit être traçable, du producteur à l'assiette.</p>
         </div>
       </div>
     </div>
@@ -338,19 +337,19 @@
       <div class="faq">
         <details open>
           <summary>Où livrez-vous ?</summary>
-          <p>Paris et La Défense, au bureau. <span class="tbd">arrondissements et créneaux à préciser</span></p>
+          <p>Paris et La Défense, au bureau, le jour que vous choisissez.</p>
         </details>
         <details>
           <summary>Comment les plats se conservent-ils ?</summary>
-          <p><span class="tbd">mode de conservation, durée et température à compléter</span></p>
+          <p>Au réfrigérateur dès réception, et à consommer avant la date limite indiquée sur chaque barquette.</p>
         </details>
         <details>
           <summary>Puis-je changer mes plats chaque semaine ?</summary>
-          <p>Oui. La sélection se modifie dans l'application jusqu'à la clôture des commandes. <span class="tbd">jour et heure de clôture à préciser</span></p>
+          <p>Oui. Vous modifiez votre sélection et votre jour de livraison dans l'application, au plus tard 24 heures avant la livraison. Vous pouvez aussi passer une semaine : elle n'est pas facturée.</p>
         </details>
         <details>
           <summary>Comment arrêter l'abonnement ?</summary>
-          <p>Depuis votre compte, sans appel ni courrier. <span class="tbd">préavis à préciser</span></p>
+          <p>Depuis l'application ou par email, à tout moment, sans motif et sans frais. La résiliation prend effet à la fin de la semaine en cours.</p>
         </details>
         <details>
           <summary>En quoi consiste le suivi nutritionniste ?</summary>
@@ -358,7 +357,7 @@
         </details>
         <details>
           <summary>Et les allergènes ?</summary>
-          <p><span class="tbd">liste des allergènes par plat à publier — obligatoire avant la mise en ligne</span></p>
+          <p>Chaque barquette est livrée avec sa composition et la liste des allergènes présents. Nos cuisines manipulent la plupart des allergènes majeurs : en cas d'allergie, écrivez-nous à <a href="mailto:contact@natty-nutrition.com">contact@natty-nutrition.com</a> avant de commander.</p>
         </details>
       </div>
     </div>
@@ -396,7 +395,7 @@
         <ul>
           <li><a href="https://www.instagram.com/natty__.fr/">Instagram</a></li>
           <li><a href="https://www.linkedin.com/company/natty-nutrition/">LinkedIn</a></li>
-          <li><a href="#">Nous écrire <span class="tbd">adresse</span></a></li>
+          <li><a href="mailto:contact@natty-nutrition.com">contact@natty-nutrition.com</a></li>
         </ul>
       </div>
       <div>
@@ -417,10 +416,26 @@
   </div>
 </footer>
 
-<div class="scrim" id="scrim"></div>
-<aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Fiche du plat" hidden></aside>
+<!-- La fiche et le panier vivent dans la COUCHE SUPÉRIEURE du navigateur
+     (<dialog> ouvert en modal, popover) : une page Wix pose des transform
+     sur ses conteneurs, et un position:fixed sous un transform se cale sur
+     le conteneur au lieu de l'écran (mesuré : fiche de 9 195 px de haut). -->
+<dialog class="sheet" id="sheet" aria-label="Fiche du plat"></dialog>
 
-<div class="basket" id="basket" aria-live="polite">
+<dialog class="explique" id="explique" aria-labelledby="expTitre">
+  <div class="explique-in">
+    <span class="explique-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>
+    <h3 id="expTitre">Vos quantités sont calculées pour vous.</h3>
+    <p>La taille de chaque barquette, donc ses calories et ses macros, dépend de <b>votre poids, de votre objectif et de votre activité</b>. Nous la calculons à votre inscription, puis votre nutritionniste l'ajuste au fil des semaines.</p>
+    <p>Un chiffre affiché ici serait celui de quelqu'un d'autre. Créez votre compte : vos quantités apparaissent dans l'application, plat par plat.</p>
+    <div class="explique-act">
+      <a class="btn primary" href="https://natty-suivi.vercel.app/login.html?inscription=1&amp;motif=quantites">Créer mon compte</a>
+      <button class="btn ghost" type="button" data-ferme-exp>Plus tard</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="basket" id="basket" popover="manual" aria-live="polite">
   <div class="basket-in">
     <div class="basket-txt">
       <b id="basketCount">0 plat</b>
@@ -443,6 +458,14 @@
    est à true dans le catalogue — donc rien pour l'instant, volontairement.
    ═══════════════════════════════════════════════════════════════ */
 const CATALOGUE  = window.NATTY_CATALOGUE || { prix:{unite:10.5,abonnement:9}, plats:[], libelles_allergenes:{} };
+
+/* Les quantités ne sont plus affichées (12/10/2026) : la barquette d'un
+   abonné est calculée pour lui à l'inscription. Le cadenas l'explique. */
+var CADENAS = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>';
+var VERROU  = '<button class="verrou" type="button" data-verrou>' + CADENAS
+  + '<span><b>Vos quantités</b>calculées pour vous à l\'inscription</span></button>';
+var SOURCE  = 'Calculé depuis la fiche technique du chef avec la table Ciqual 2020 (ANSES), énergie au sens '
+  + 'du règlement UE 1169/2011, glucides hors fibres. En attente de validation.';
 const PRIX_UNITE = CATALOGUE.prix.unite;
 const PRIX_ABO   = CATALOGUE.prix.abonnement;
 const LIB_ALLERG = CATALOGUE.libelles_allergenes || {};
@@ -481,12 +504,7 @@ function carte(d){
     +     '<h3>' + d.nom + '</h3>'
     +   '</button>'
     +   '<p class="dish-desc">' + d.description + '</p>'
-    +   '<div class="macros">'
-    +     '<div class="macro kcal"><span class="v num">' + nb(d.nutrition.kcal) + '</span><span class="k">kcal</span></div>'
-    +     '<div class="macro"><span class="v num">' + nb(d.nutrition.proteines) + '</span><span class="k">prot.</span></div>'
-    +     '<div class="macro"><span class="v num">' + nb(d.nutrition.glucides) + '</span><span class="k">gluc.</span></div>'
-    +     '<div class="macro"><span class="v num">' + nb(d.nutrition.lipides) + '</span><span class="k">lip.</span></div>'
-    +   '</div>'
+    +   VERROU
     +   '<div class="dish-foot">'
     +     '<span class="dish-price"><b class="num">' + eur(PRIX_ABO) + '</b><span>abonné · ' + eur(PRIX_UNITE) + ' à l\'unité</span></span>'
     +     '<button class="add" type="button" aria-pressed="' + pris + '" aria-label="' + (pris ? 'Retirer ' : 'Ajouter ') + d.nom + '">' + (pris ? '✓' : '+') + '</button>'
@@ -509,6 +527,11 @@ function panier(){
   var n = choisis.size;
   var bar = document.getElementById('basket');
   bar.classList.toggle('on', n > 0);
+  if (bar.showPopover) {
+    // Pas de panier par-dessus la fiche : il passerait au-dessus de son fond.
+    var voulu = n > 0 && !sheet.open, ouvert = bar.matches(':popover-open');
+    try { if (voulu && !ouvert) bar.showPopover(); if (!voulu && ouvert) bar.hidePopover(); } catch(e){}
+  }
   if (!n) return;
   document.getElementById('basketCount').textContent = n + (n > 1 ? ' plats' : ' plat') + ' · ' + nb(n * PRIX_ABO) + ' € la semaine';
   document.getElementById('basketDetail').textContent = eur(PRIX_ABO) + ' le plat en abonnement, au lieu de ' + eur(PRIX_UNITE);
@@ -518,7 +541,6 @@ function panier(){
    Ce que le client veut vraiment savoir avant d'acheter : ce qu'il y a
    dedans, dans quel ordre, et ce à quoi il est allergique. */
 var sheet = document.getElementById('sheet');
-var scrim = document.getElementById('scrim');
 var dernierFocus = null;
 
 function ligneIngredients(ings){
@@ -536,7 +558,7 @@ function contenuFiche(d){
       }).join('') + '</div>'
     : (d.allergenes_valides
         ? '<p class="ing-list">Aucun des 14 allergènes à déclaration obligatoire.</p>'
-        : '<p class="ing-list"><span class="tbd">liste en cours de validation par le chef</span></p>');
+        : '<p class="ing-list">Liste en cours de validation par le chef. En cas d\'allergie, écrivez-nous avant de commander : <b>contact@natty-nutrition.com</b>.</p>');
 
   return '<div class="sheet-photo">'
     +   '<img src="' + d.photo + '" alt="' + d.nom + '" width="720" height="540">'
@@ -556,12 +578,11 @@ function contenuFiche(d){
     +       '<div><span class="v num">' + nb(d.pour_100g.glucides) + ' g</span><span class="k">glucides</span></div>'
     +       '<div><span class="v num">' + nb(d.pour_100g.lipides) + ' g</span><span class="k">lipides</span></div>'
     +     '</div>'
-    +     '<p class="ing-list" style="margin-top:10px">La barquette vendue à l\'unité fait <b>'
-    +       d.portion_reference_g + ' g</b> : ' + nb(d.nutrition.kcal) + ' kcal, '
-    +       nb(d.nutrition.proteines) + ' g de protéines, ' + nb(d.nutrition.glucides) + ' g de glucides, '
-    +       nb(d.nutrition.lipides) + ' g de lipides. C\'est la recette du chef divisée par le nombre de '
-    +       'parts qu\'elle donne, pas un format arrondi. <b>En abonnement, on calibre la barquette sur '
-    +       'vos besoins</b> d\'après votre suivi : le poids change, les valeurs pour 100 g ci-dessus non.</p>'
+    +     '<p class="source">' + SOURCE + '</p>'
+    +   '</div>'
+    +   '<div class="sheet-block">'
+    +     '<h4>Votre portion</h4>'
+    +     VERROU
     +   '</div>'
     +   '<div class="sheet-block">'
     +     '<h4>Ingrédients</h4>'
@@ -585,31 +606,43 @@ function ouvreFiche(id){
   if (!d) return;
   dernierFocus = document.activeElement;
   sheet.innerHTML = contenuFiche(d);
-  sheet.hidden = false;
+  try { if (!sheet.open) sheet.showModal(); } catch(e) { sheet.setAttribute('open', ''); }
+  panier();
   // Un frame d'écart, sinon la transition ne part pas depuis l'état masqué.
-  requestAnimationFrame(function(){
-    sheet.classList.add('on');
-    scrim.classList.add('on');
-  });
+  // Le setTimeout double la rAF : une page qui ne peint pas n'en reçoit aucune,
+  // et la fiche resterait ouverte mais hors de l'écran.
+  function glisse(){ sheet.classList.add('on'); }
+  requestAnimationFrame(glisse); setTimeout(glisse, 50);
   document.body.style.overflow = 'hidden';
   var c = sheet.querySelector('[data-close]');
   if (c) c.focus();
 }
 
+var explique = document.getElementById('explique');
+function expliquer(){
+  try { explique.showModal(); } catch(e) { explique.setAttribute('open', ''); }
+}
+explique.addEventListener('click', function(e){
+  // Un clic sur le fond (hors du panneau) ferme, comme « Plus tard ».
+  if (e.target === explique || e.target.closest('[data-ferme-exp]')) explique.close();
+});
+
 function fermeFiche(){
   sheet.classList.remove('on');
-  scrim.classList.remove('on');
   document.body.style.overflow = '';
-  setTimeout(function(){ if (!sheet.classList.contains('on')) sheet.hidden = true; }, 300);
+  setTimeout(function(){
+    if (!sheet.classList.contains('on') && sheet.open) sheet.close();
+    panier();
+  }, 300);
   if (dernierFocus && dernierFocus.focus) dernierFocus.focus();
 }
 
-scrim.addEventListener('click', fermeFiche);
-document.addEventListener('keydown', function(e){
-  if (e.key === 'Escape' && sheet.classList.contains('on')) fermeFiche();
-});
+// Échap : on garde la sortie animée au lieu de la fermeture sèche du <dialog>.
+sheet.addEventListener('cancel', function(e){ e.preventDefault(); fermeFiche(); });
 sheet.addEventListener('click', function(e){
-  if (e.target.closest('[data-close]')) { fermeFiche(); return; }
+  // Un clic sur le fond : la cible est le <dialog> lui-même.
+  if (e.target === sheet || e.target.closest('[data-close]')) { fermeFiche(); return; }
+  if (e.target.closest('[data-verrou]')) { expliquer(); return; }
   var t = e.target.closest('[data-toggle]');
   if (!t) return;
   var id = t.dataset.toggle;
@@ -625,6 +658,7 @@ sheet.addEventListener('click', function(e){
 grille.addEventListener('click', function(e){
   var o = e.target.closest('[data-open]');
   if (o) { ouvreFiche(o.dataset.open); return; }
+  if (e.target.closest('[data-verrou]')) { expliquer(); return; }
   var b = e.target.closest('.add');
   if (!b) return;
   var id = b.closest('.dish').dataset.id;

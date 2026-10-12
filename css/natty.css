@@ -359,6 +359,8 @@ section{ padding-block: clamp(64px, 9vw, 128px); }
   transition: transform .26s cubic-bezier(.2,.8,.3,1);
 }
 .basket.on{ transform: none; }
+/* En popover (couche supérieure), on annule le cadre que le navigateur pose. */
+.basket[popover]{ inset: auto 0 env(safe-area-inset-bottom, 0px) 0; margin: 0; border: 0; background: none; width: auto; height: auto; overflow: visible; color: inherit; }
 .basket-in{
   pointer-events: auto;
   width: 100%; max-width: 560px;
@@ -555,14 +557,11 @@ footer{ border-top: 1px solid var(--line); padding-block: 54px 40px; font-size: 
 
 
 /* ── Tiroir « fiche plat » ───────────────────────────────── */
-.scrim{
-  position: fixed; inset: 0; z-index: 60;
-  background: rgba(5,4,3,.55);
-  opacity: 0; pointer-events: none;
-  transition: opacity .22s ease;
-}
-.scrim.on{ opacity: 1; pointer-events: auto; }
+/* Un <dialog> ouvert en modal : couche supérieure, fond = ::backdrop. */
+.sheet::backdrop{ background: rgba(5,4,3,.55); }
 .sheet{
+  margin: 0; inset: 0 0 0 auto; max-width: none; max-height: none; border: 0; padding: 0;
+  color: inherit; font-family: var(--text);
   position: fixed; z-index: 61;
   top: 0; right: 0; height: 100%;
   width: min(480px, 100%);
@@ -634,7 +633,7 @@ footer{ border-top: 1px solid var(--line); padding-block: 54px 40px; font-size: 
 }
 .dish-open:hover h3{ text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 560px){
-  .sheet{ top: auto; bottom: 0; right: 0; left: 0; width: 100%; height: 92%; border-left: 0; border-top: 1px solid var(--line); border-radius: var(--r-xl) var(--r-xl) 0 0; transform: translateY(101%); }
+  .sheet{ inset: auto 0 0 0; top: auto; bottom: 0; right: 0; left: 0; width: 100%; height: 92%; border-left: 0; border-top: 1px solid var(--line); border-radius: var(--r-xl) var(--r-xl) 0 0; transform: translateY(101%); }
   .sheet.on{ transform: none; }
   .sheet-photo{ border-radius: var(--r-xl) var(--r-xl) 0 0; }
 }
@@ -642,3 +641,31 @@ footer{ border-top: 1px solid var(--line); padding-block: 54px 40px; font-size: 
 @media (prefers-reduced-motion: reduce){
   *{ transition: none !important; animation: none !important; }
 }
+
+/* ═══ Le cadenas des quantités (12/10/2026) ═══════════════════
+   Les quantités par plat ne sont plus affichées : la barquette d'un
+   abonné est calculée pour lui à l'inscription. Même dessin que dans
+   wix/natty-carte.src.js. */
+.verrou{
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: 1px dashed var(--line); border-radius: var(--r-md); background: var(--bg);
+  padding: 10px 12px; text-align: left; color: var(--muted); font: inherit;
+  font-size: .82rem; line-height: 1.3; cursor: pointer;
+  transition: border-color .14s, color .14s;
+}
+.verrou:hover{ border-color: var(--ink); color: var(--ink); }
+.verrou svg{ width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.verrou b{ display: block; color: var(--ink); font-weight: 600; font-size: .86rem; }
+.source{ font-size: .76rem; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
+dialog.explique{
+  border: 0; border-radius: var(--r-xl); padding: 0; max-width: 440px; width: calc(100% - 32px);
+  background: var(--surface); color: var(--ink); font-family: var(--text); box-shadow: var(--shadow);
+}
+dialog.explique::backdrop{ background: rgba(10,10,12,.55); backdrop-filter: blur(3px); }
+.explique-in{ padding: 28px 26px 24px; display: flex; flex-direction: column; gap: 14px; }
+.explique-ic{ width: 46px; height: 46px; border-radius: 50%; background: var(--ink); color: var(--on-ink); display: grid; place-items: center; }
+.explique-ic svg{ width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.explique h3{ font-family: var(--display); font-weight: 600; font-size: 1.45rem; letter-spacing: -.02em; margin: 0; line-height: 1.12; }
+.explique p{ margin: 0; font-size: .93rem; color: var(--muted); line-height: 1.55; }
+.explique p b{ color: var(--ink); font-weight: 600; }
+.explique-act{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
