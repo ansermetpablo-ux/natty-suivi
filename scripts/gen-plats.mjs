@@ -146,8 +146,10 @@ const CATEGORIES = {
   bien:  { label:"Bien-être",      promesse:"L'équilibre au quotidien" }
 };
 
-/* Prix — décision du 29/09/2026. */
-const PRIX = { unite: 12.5, abonnement: 9 };
+/* Prix — 10,50 € à l'unité depuis le 12/10/2026 (12,50 € décidé le 29/09
+   n'a jamais été appliqué) : c'est le prix que Stripe facture
+   (STRIPE_PRICE_UNITE), que les CGV et offre.html annoncent. */
+const PRIX = { unite: 10.5, abonnement: 9 };
 
 /* ── Rendements ────────────────────────────────────────────────
    Part réellement comestible d'un ingrédient pesé tel qu'il est écrit sur

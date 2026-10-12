@@ -1,10 +1,10 @@
 {
-  "genere_le": "2026-10-11",
+  "genere_le": "2026-10-12",
   "genere_par": "scripts/gen-plats.mjs",
   "avertissement": "Fichier généré. Ne pas éditer à la main : relancer le script. Les valeurs sont calculées depuis les fiches techniques et NON VALIDÉES tant que nutrition_validee et allergenes_valides sont à false. Un plat avec coherent:false ne doit pas être publié en l'état.",
   "methode": "Densité pour 100 g calculée depuis la fiche du chef après application des rendements, puis multipliée par le poids de portion décidé dans le tableau VENTE du générateur.",
   "prix": {
-    "unite": 12.5,
+    "unite": 10.5,
     "abonnement": 9
   },
   "categories": {
@@ -46,7 +46,7 @@
       "description": "Poulet rôti à la moutarde, riz complet et légumes rôtis.",
       "photo": "img/plats/poulet-moutarde.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 560,
@@ -125,7 +125,7 @@
       "description": "Poulet au curry, lait de coco, haricots verts et riz complet.",
       "photo": "img/plats/curry-poulet.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 710,
@@ -212,7 +212,7 @@
       "description": "Steak de thon grillé, salsa de mangue, riz sauvage.",
       "photo": "img/plats/thon-mangue.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 475,
@@ -291,7 +291,7 @@
       "description": "Haricots noirs, quinoa et avocat. Sans viande.",
       "photo": "img/plats/chili-sin-carne.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 280,
@@ -383,7 +383,7 @@
       "description": "Poitrine de dinde vapeur, carottes, haricots verts, brocolis.",
       "photo": "img/plats/dinde-vapeur.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 390,
@@ -458,7 +458,7 @@
       "description": "Poulet grillé, laitue, tomates cerises, concombre, vinaigrette légère.",
       "photo": "img/plats/salade-poulet.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 350,
@@ -530,7 +530,7 @@
       "description": "Poulet grillé, légumes frais, sauce signature au yaourt.",
       "photo": "img/plats/natty-wrap.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 280,
@@ -615,7 +615,7 @@
       "description": "Merlu poché, brocoli, mangue et chou kale.",
       "photo": "img/plats/merlu.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 310,
@@ -685,7 +685,7 @@
       "description": "Quinoa, légumes croquants, avocat, vinaigrette au citron.",
       "photo": "img/plats/salade-quinoa.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 340,
@@ -772,7 +772,7 @@
       "description": "Bœuf braisé, carottes, céleri, oignon, sauce au laurier.",
       "photo": "img/plats/boeuf-braise.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 505,
@@ -856,7 +856,7 @@
       "description": "Truite au four aux herbes fraîches, légumes vapeur.",
       "photo": "img/plats/truite-herbes.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 285,
@@ -930,7 +930,7 @@
       "description": "Quinoa, légumes grillés et sauce tahini.",
       "photo": "img/plats/quinoa-bowl.webp",
       "prix": {
-        "unite": 12.5,
+        "unite": 10.5,
         "abonnement": 9
       },
       "portion_reference_g": 320,
