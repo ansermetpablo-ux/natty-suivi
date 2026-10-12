@@ -722,9 +722,32 @@ async function ouvrirFournisseur(provider) {
     await Browser.open({ url: urlAutorisation(provider, CAP_REDIRECT) });
     return;
   }
+  /* DANS LE SITE WIX (<natty-app>, iframe) : Google refuse de s'afficher
+     dans un cadre, et la session de l'app vit dans le stockage DU CADRE.
+     On envoie donc la PAGE ENTIÈRE chez le fournisseur, avec un retour vers
+     la page Wix (?retour=, posé par le composant) ; le composant rend ensuite
+     les jetons au cadre, qui ouvre la session chez lui.
+     ⚠️ L'adresse de retour doit figurer dans Supabase → Authentication →
+     Redirect URLs. Sinon Supabase retombe sur le Site URL (Vercel) : la
+     connexion marche, mais hors du site Wix. */
+  var retour = retourSiteWix();
+  if (retour) {
+    try { window.top.location.href = urlAutorisation(provider, retour); return; }
+    catch (e) { /* navigation du haut refusée : on retombe sur le cas simple */ }
+  }
   // Le retour doit pointer vers Vercel, pas localhost.
   window.location.href = urlAutorisation(provider,
     'https://natty-suivi.vercel.app/login.html?oauth=1');
+}
+
+/* L'adresse de la page Wix qui nous héberge, seulement si on est bien dans un
+   cadre ET qu'elle est sur notre domaine : une adresse de retour fournie par
+   l'URL ne doit jamais pouvoir envoyer des jetons ailleurs. */
+function retourSiteWix() {
+  if (window.self === window.top) return null;
+  var r = new URLSearchParams(location.search).get('retour') || '';
+  if (!r) { try { r = sessionStorage.getItem('natty_retour') || ''; } catch (e) {} }
+  return /^https:\/\/(www\.)?natty-nutrition\.com\/[\w\/-]*$/.test(r) ? r : null;
 }
 
 function doGoogle() { return ouvrirFournisseur('google'); }

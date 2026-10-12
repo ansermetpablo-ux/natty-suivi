@@ -30,8 +30,8 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { CARTE, PAGES, LIENS } from './wix-composants.mjs';
-import { pageVersComposant } from './page-vers-wix.mjs';
+import { CARTE, APP, PAGES, LIENS } from './wix-composants.mjs';
+import { pageVersComposant, menuPourApp } from './page-vers-wix.mjs';
 
 const SRC = CARTE.modele;
 const OUT = CARTE.sortie;
@@ -74,6 +74,28 @@ writeFileSync(OUT, sortie, 'utf8');
 
 const ko = Math.round(Buffer.byteLength(sortie, 'utf8') / 1024);
 console.log(`${OUT} écrit — ${ko} Ko, ${publiables.length} plats.`);
+
+{
+  /* <natty-app> : le menu et la feuille du site, injectés dans le modèle. */
+  const m = menuPourApp(APP.menu, LIENS);
+  let app = readFileSync(APP.modele, 'utf8');
+  const marques = {
+    '/*__CSS__*/ ""': JSON.stringify(m.css),
+    '/*__MENU__*/ ""': JSON.stringify(m.nav),
+    '/*__DEFAUTS__*/ {}': JSON.stringify(m.defauts),
+    '/*__ATTRIBUTS__*/ []': JSON.stringify(m.attributs),
+  };
+  for (const [k, v] of Object.entries(marques)) {
+    if (!app.includes(k)) throw new Error(`Le marqueur ${k} a disparu de ${APP.modele}.`);
+    app = app.replace(k, () => v);
+  }
+  app = `/* Natty — <${APP.balise}> pour Wix Studio.
+   FICHIER GÉNÉRÉ par scripts/build-wix.mjs le ${DATE}, depuis ${APP.modele} et le menu de ${APP.menu}.
+   Ne pas éditer à la main. */
+` + app;
+  writeFileSync(APP.sortie, app, 'utf8');
+  console.log(`${APP.sortie} écrit — ${Math.round(Buffer.byteLength(app, 'utf8') / 1024)} Ko.`);
+}
 
 for (const p of PAGES) {
   const { composant, velo } = pageVersComposant(p, { liens: LIENS, catalogue, date: DATE });

@@ -79,6 +79,29 @@ export function texteSeo(main, catalogue) {
   return h;
 }
 
+/* Le CSS et le menu d'une page, pour <natty-app> : l'app embarquée porte
+   EXACTEMENT le menu du site, pris dans la page et non recopié. Les ancres du
+   menu (#plats, #tarifs) visent la page d'accueil, puisqu'elles n'existent
+   pas dans la page de l'app. */
+export function menuPourApp(page, liens) {
+  const html = readFileSync(page, 'utf8').replace(/\r\n/g, '\n');
+  let css = '';
+  for (const m of html.matchAll(/<link rel="stylesheet" href="(?!https?:)([^"]+)">/g)) {
+    css += readFileSync(join(dirname(page), m[1]), 'utf8') + '\n';
+  }
+  const i = html.indexOf('<header class="nav">');
+  const j = html.indexOf('</header>', i);
+  if (i < 0 || j < 0) throw new Error(`${page} : <header class="nav"> introuvable`);
+  const accueil = liens['nouveau.html'].attribut;
+  const nav = reecrireLiens(html.slice(i, j + '</header>'.length), liens)
+    .replace(/href="#/g, `href="@@${accueil}@@#`);
+  const attributs = ['base', ...Object.values(liens).map(l => l.attribut)];
+  const defauts = { base: BASE, ...Object.fromEntries(Object.values(liens).map(l => [l.attribut, l.defaut])) };
+  return { css: `.n-page{ letter-spacing: normal; word-spacing: normal; text-transform: none; text-indent: 0;
+  text-align: start; white-space: normal; font-style: normal; font-weight: 400; line-height: normal; }
+` + cssPourHote(css), nav, attributs, defauts };
+}
+
 export function pageVersComposant({ balise, page }, { liens, catalogue, date }) {
   const html = readFileSync(page, 'utf8').replace(/\r\n/g, '\n');
   const racine = dirname(page);

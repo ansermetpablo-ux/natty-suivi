@@ -3,6 +3,18 @@
    Utilisé par tous les nouveaux écrans (suivi/menu/repas/coaching/profil/défis).
    Ne duplique pas cette logique par page — un seul point de vérité.
    ═══════════════════════════════════════════════════════════ */
+/* Dans le site Wix, l'app tourne dans le cadre de <natty-app>, qui passe
+   ?retour=<page Wix> à la première page. On le garde pour toute la visite du
+   cadre (sessionStorage) : l'app change de page et redirige vers login.html
+   sans recopier la requête, et c'est login.html qui en a besoin, pour que
+   Google ou Apple ramènent le visiteur sur la page Wix et pas sur Vercel. */
+(function () {
+  try {
+    var r = new URLSearchParams(location.search).get('retour');
+    if (r && window.self !== window.top) sessionStorage.setItem('natty_retour', r);
+  } catch (e) { /* stockage refusé : Google retombera sur Vercel */ }
+})();
+
 var Natty = (function () {
   var SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
   var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';

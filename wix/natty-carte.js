@@ -33,9 +33,10 @@
    ATTRIBUTS, réglables depuis l'éditeur Wix
      theme     "auto" (défaut) · "light" · "dark"
      img-base  racine des photos, défaut https://natty-suivi.vercel.app/img/
-     lien-offre où mène « Continuer », défaut le tunnel d'abonnement
-     lien-inscription où mène le cadenas des quantités, défaut la
-               création de compte de l'application
+     lien-offre où mène « Continuer », défaut la page Wix /commander
+     lien-inscription où mène le cadenas des quantités, défaut la page
+               Wix /suivi, ouverte sur l'onglet Inscription
+               (les deux embarquent l'app : voir <natty-app>)
 
    LES QUANTITÉS NE SONT PAS AFFICHÉES (décision du 12/10/2026). La
    barquette d'un abonné est calculée pour lui à l'inscription, d'après
@@ -235,8 +236,8 @@ dialog.explique::backdrop{background:rgba(10,10,12,.55);backdrop-filter:blur(3px
     }
 
     get base() { return this.getAttribute('img-base') || 'https://natty-suivi.vercel.app/img/'; }
-    get lienInscription() { return this.getAttribute('lien-inscription') || 'https://natty-suivi.vercel.app/login.html?inscription=1&motif=quantites'; }
-    get lienOffre() { return this.getAttribute('lien-offre') || 'https://natty-suivi.vercel.app/offre.html'; }
+    get lienInscription() { return this.getAttribute('lien-inscription') || '/suivi?inscription=1&motif=quantites'; }
+    get lienOffre() { return this.getAttribute('lien-offre') || '/commander'; }
 
     connectedCallback() {
       chargerPolices();
