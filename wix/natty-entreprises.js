@@ -115,4 +115,10 @@ document.getElementById('copyMail').addEventListener('click', function(){
     }
   }
   customElements.define(BALISE, Composant);
+  /* Wix Studio ne garde pas toujours le « Nom du tag » saisi dans l'éditeur
+     (constaté le 12/10/2026 : le site publié rendait <wix-default-custom-element>
+     alors que l'éditeur affichait le bon nom). Le composant répond donc aussi
+     à la balise par défaut de Wix : une page Wix ne charge qu'UN script de
+     composant, il n'y a pas de conflit possible. */
+  if (!customElements.get('wix-default-custom-element')) customElements.define('wix-default-custom-element', class extends Composant {});
 })();
