@@ -305,6 +305,13 @@
   <!-- Reconnexion : affiché quand core.js a renvoyé ici quelqu'un qui se
        croyait connecté (identité héritée, sans session). Sans ce mot, la
        personne se retrouve devant un formulaire sans savoir pourquoi. -->
+  <!-- Arrivée depuis le cadenas des quantités du site (?motif=quantites) :
+       on dit pourquoi on demande un compte avant de montrer un chiffre. -->
+  <div id="msgQuantites" style="display:none;background:var(--card);border-radius:14px;padding:12px 14px;
+       margin-bottom:16px;font-size:13px;line-height:1.5;text-align:center;">
+    Vos quantités sont calculées pour vous : créez votre compte, répondez au
+    questionnaire, et chaque plat s'affiche à votre mesure.
+  </div>
   <div id="msgReconnexion" style="display:none;background:var(--card);border-radius:14px;padding:12px 14px;
        margin-bottom:16px;font-size:13px;line-height:1.5;color:#8a5a00;text-align:center;">
     Reconnectez-vous une fois : Natty sécurise désormais votre compte,
@@ -491,6 +498,17 @@ async function reporterPrenom() {
 
 // core.js renvoie ici avec ?reconnexion=1 quand il a trouvé une identité
 // héritée sans session : la personne se croyait connectée, on le lui explique.
+// Le site envoie ?inscription=1 : on ouvre directement l'onglet Inscription,
+// le visiteur vient de cliquer « Créer mon compte ».
+(function(){
+  var p = new URLSearchParams(location.search);
+  if (p.get('inscription') === '1') switchTab('signup');
+  if (p.get('motif') === 'quantites') {
+    var m = document.getElementById('msgQuantites');
+    if (m) m.style.display = 'block';
+  }
+})();
+
 if (new URLSearchParams(location.search).get('reconnexion') === '1') {
   var _mr = document.getElementById('msgReconnexion');
   if (_mr) _mr.style.display = 'block';
