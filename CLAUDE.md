@@ -39,10 +39,8 @@ Elle permet aux clients de :
 - Sophie Martin (`sophie@natty.fr`) — spécialiste Performance / Prise de masse
 - Lucas Bernard (`lucas@natty.fr`) — spécialiste Perte de poids / Rééquilibrage
 - Emma Rousseau (`emma@natty.fr`) — spécialiste Bien-être / Alimentation intuitive
-- Mot de passe commun démo : `Nutri26` (encodé base64 dans Supabase : `TnV0cmkyNg==`)
-- Admin global : mdp `Natty2026!` (accès via "Accès administrateur" dans l'écran login)
-- Chef : mdp `Chef2026!`
-- Logistique : mdp `Logistique2026!`
+- Mot de passe commun démo : **retiré de ce document** — l'ancienne colonne `nutritionnistes.mdp_hash` a été supprimée, les nutritionnistes entrent par leur compte Supabase Auth
+- Admin, Chef, Logistique : un compte Supabase Auth par personne + une ligne `staff` (`natty_staff.sql`). **Les mots de passe partagés ont été retirés d'`admin.html` le 2026-10-12** ; ceux qui ont circulé sont à considérer comme compromis
 - Back-office admin : `natty-suivi.vercel.app/admin.html`
 
 ### Modèle commercial
@@ -291,10 +289,10 @@ Existait comme dashboard "progression nutritionnelle" (suggestions IA, analyse c
 ### `admin.html`
 Back-office multi-rôles — accessible à `natty-suivi.vercel.app/admin.html`.
 
-**Authentification** : 3 rôles avec mots de passe hardcodés :
-- Admin : `Natty2026!` — accès complet
-- Chef : `Chef2026!` — onglets Chef et Menu
-- Logistique : `Logistique2026!` — onglets Stocks et Commandes
+**Authentification** : un compte Supabase Auth par personne, rôle lu dans la table `staff`. Le mode de secours par mots de passe partagés a été **supprimé le 2026-10-12** — un identifiant refusé reste refusé :
+- Admin — accès complet
+- Chef — onglets Chef et Menu
+- Logistique — onglets Stocks et Commandes
 
 **Onglets disponibles** :
 - Clients, Repas à programmer, Messages, RDV, Menu, Commandes, Chef, Stocks, Équipe

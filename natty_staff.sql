@@ -2,7 +2,7 @@
 -- Natty — Une identité en base pour l'équipe (option A)
 -- ───────────────────────────────────────────────────────────
 -- POURQUOI. `admin.html` s'authentifie aujourd'hui avec des mots de passe
--- écrits en clair dans le HTML (Natty2026! / Chef2026! / Logistique2026!) et
+-- écrits en clair dans le HTML (retirés depuis, le 2026-10-12) et
 -- parle à Supabase avec la clé anon. Le back-office n'a donc AUCUNE identité
 -- au sens de la base : `auth.uid()` y est nul. Toute policy RLS l'exclurait,
 -- et le jour où l'on active la RLS l'admin ne voit plus rien.
@@ -168,7 +168,7 @@ end $$;
 -- § 6. Où j'en suis, et comment me rouvrir la porte.
 --      Le nouveau admin.html est en ligne depuis le 2026-08-04, et
 --      `staff_configure()` renvoie déjà `true` : les mots de passe partagés
---      (Natty2026! / Chef2026! / Logistique2026!) sont donc REFUSÉS en prod.
+--      (retirés du HTML le 2026-10-12) sont donc REFUSÉS en prod.
 --      Seuls les comptes de la table `staff` entrent.
 --
 -- Qui a un compte Auth, et qui a sa ligne d'équipe :
