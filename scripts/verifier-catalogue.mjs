@@ -7,7 +7,9 @@
 
    1. data/plats.json et data/plats.js sont exactement ce que
       scripts/gen-plats.mjs produit ;
-   2. chaque wix/*.js généré est exactement ce que scripts/build-wix.mjs
+   2. chaque fichier écrit par scripts/build-wix.mjs (la carte, les
+      composants des pages et leur code Velo — liste dans
+      scripts/wix-composants.mjs) est exactement ce que le générateur
       produit ;
    3. pour chaque plat, portion_reference_g = masse_fiche_g / portions_fiche
       arrondi à 5 g, à 1 g près ;
@@ -33,6 +35,7 @@ import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { SOURCES, SORTIES } from './wix-composants.mjs';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const echecs = [];
@@ -69,15 +72,10 @@ console.log(`Catalogue : ${plats.length} plats, généré le ${catalogue.genere_
 console.log('Reproductibilité des fichiers générés');
 const tmp = mkdtempSync(join(tmpdir(), 'natty-verif-'));
 try {
-  for (const d of ['scripts', 'api', 'wix']) cpSync(join(RACINE, d), join(tmp, d), { recursive: true });
-  cpSync(join(RACINE, 'package.json'), join(tmp, 'package.json'));
+  for (const d of SOURCES) cpSync(join(RACINE, d), join(tmp, d), { recursive: true });
   mkdirSync(join(tmp, 'data'), { recursive: true });
   // Les sorties suivies sont retirées de la copie : elles doivent renaître du générateur.
-  for (const f of readdirSync(join(tmp, 'wix'))) {
-    if (f.endsWith('.js') && !f.endsWith('.src.js') && existsSync(join(RACINE, 'wix', f.replace(/\.js$/, '.src.js')))) {
-      rmSync(join(tmp, 'wix', f));
-    }
-  }
+  for (const f of SORTIES) rmSync(join(tmp, f), { force: true });
 
   const env = { NATTY_DATE: catalogue.genere_le };
   const gen = lancer('scripts/gen-plats.mjs', tmp, env);
@@ -92,11 +90,8 @@ try {
     if (bw.status !== 0) {
       ko('build-wix.mjs a échoué :\n' + (bw.stderr || bw.stdout).trim().split('\n').slice(0, 6).join('\n'));
     } else {
-      const produits = readdirSync(join(tmp, 'wix')).filter(f => f.endsWith('.js') && !f.endsWith('.src.js')
-        && existsSync(join(tmp, 'wix', f.replace(/\.js$/, '.src.js'))));
-      if (!produits.length) ko('build-wix.mjs n\'a produit aucun composant');
-      for (const f of produits) {
-        const rel = 'wix/' + f;
+      for (const rel of SORTIES) {
+        if (!existsSync(join(tmp, rel))) { ko(`${rel} n'a pas été produit par build-wix.mjs`); continue; }
         if (!existsSync(join(RACINE, rel))) { ko(`${rel} est produit par build-wix.mjs mais absent du dépôt`); continue; }
         const diff = premiereDifference(lire(rel), lire(rel, tmp));
         diff ? ko(`${rel} diffère de ce que build-wix.mjs produit — ${diff}`) : ok(`${rel} identique à la sortie de build-wix.mjs`);
