@@ -30,6 +30,16 @@
      theme     "auto" (défaut) · "light" · "dark"
      img-base  racine des photos, défaut https://natty-suivi.vercel.app/img/
      lien-offre où mène « Continuer », défaut le tunnel d'abonnement
+     lien-inscription où mène le cadenas des quantités, défaut la
+               création de compte de l'application
+
+   LES QUANTITÉS NE SONT PAS AFFICHÉES (décision du 12/10/2026). La
+   barquette d'un abonné est calculée pour lui à l'inscription, d'après
+   son poids, son objectif et son activité : un poids « de référence »
+   affiché ici serait faux pour presque tout le monde. Chaque carte porte
+   donc un cadenas qui explique pourquoi et mène à l'inscription. Ce qui
+   ne dépend de personne — la composition pour 100 g, les ingrédients —
+   reste affiché.
    ═══════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -94,7 +104,11 @@ button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:4px}
 .num{font-variant-numeric:tabular-nums}
 
-.enveloppe{padding:clamp(20px,4vw,40px) clamp(16px,4vw,40px)}
+/* Les propriétés héritées traversent le Shadow DOM : un *{letter-spacing}
+   posé par la page Wix atteindrait la carte. On les remet à zéro ici. */
+/* Couleur et police sont redites ici : sur :host, la feuille de la page Wix
+   l'emporte (mesuré au banc : titres en rouge, texte en Comic Sans). */
+.enveloppe{padding:clamp(20px,4vw,40px) clamp(16px,4vw,40px);font-family:var(--text);color:var(--ink);background:var(--bg);font-size:17px;line-height:1.55;font-weight:400;letter-spacing:normal;word-spacing:normal;text-transform:none;text-indent:0;text-align:start;white-space:normal;font-style:normal;text-shadow:none}
 
 .entete{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:28px}
 .sur{font-size:.74rem;text-transform:uppercase;letter-spacing:.16em;font-weight:600;color:var(--muted);margin:0 0 14px}
@@ -124,6 +138,20 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
 .prix{display:flex;flex-direction:column;margin-right:auto}
 .prix b{font-size:1.1rem;font-weight:700;letter-spacing:-.02em}
 .prix span{font-size:.73rem;color:var(--muted)}
+.verrou{display:flex;align-items:center;gap:10px;width:100%;border:1px dashed var(--line);border-radius:var(--r-md);background:var(--bg);padding:10px 12px;text-align:left;color:var(--muted);font-size:.82rem;line-height:1.3;transition:border-color .14s,color .14s}
+.verrou:hover{border-color:var(--ink);color:var(--ink)}
+.verrou svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.verrou b{display:block;color:var(--ink);font-weight:600;font-size:.86rem}
+.source{font-size:.76rem;color:var(--muted);margin:10px 0 0;line-height:1.5}
+dialog.explique{border:0;border-radius:var(--r-xl);padding:0;max-width:440px;width:calc(100% - 32px);background:var(--surface);color:var(--ink);font-family:var(--text);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+dialog.explique::backdrop{background:rgba(10,10,12,.55);backdrop-filter:blur(3px)}
+.explique .in{padding:28px 26px 24px;display:flex;flex-direction:column;gap:14px}
+.explique .ic{width:46px;height:46px;border-radius:50%;background:var(--ink);color:var(--on-ink);display:grid;place-items:center}
+.explique .ic svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.explique h3{font-family:var(--display);font-weight:600;font-size:1.45rem;letter-spacing:-.02em;margin:0;line-height:1.12}
+.explique p{margin:0;font-size:.93rem;color:var(--muted);line-height:1.55}
+.explique p b{color:var(--ink);font-weight:600}
+.explique .act{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
 .ajout{width:40px;height:40px;flex:none;border:0;border-radius:50%;background:var(--ink);color:var(--on-ink);display:grid;place-items:center;font-size:1.25rem;line-height:1;transition:transform .12s}
 .ajout:hover{transform:scale(1.07)}
 .plat.retenu .ajout{background:var(--green);color:#fff}
@@ -180,8 +208,15 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
 
   var MAX_SEMAINE = 10;
 
+  var CADENAS = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>';
+  var VERROU = '<button class="verrou" type="button" data-verrou>' + CADENAS
+    + '<span><b>Vos quantités</b>calculées pour vous à l\'inscription</span></button>';
+  /* La source des valeurs pour 100 g (scripts/gen-plats.mjs, CORRECTIONS). */
+  var SOURCE = 'Calculé depuis la fiche technique du chef avec la table Ciqual 2020 (ANSES), énergie au sens '
+    + 'du règlement UE 1169/2011, glucides hors fibres. En attente de validation.';
+
   class NattyCarte extends HTMLElement {
-    static get observedAttributes() { return ['theme', 'img-base', 'lien-offre']; }
+    static get observedAttributes() { return ['theme', 'img-base', 'lien-offre', 'lien-inscription']; }
 
     constructor() {
       super();
@@ -196,6 +231,7 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
     }
 
     get base() { return this.getAttribute('img-base') || 'https://natty-suivi.vercel.app/img/'; }
+    get lienInscription() { return this.getAttribute('lien-inscription') || 'https://natty-suivi.vercel.app/login.html?inscription=1&motif=quantites'; }
     get lienOffre() { return this.getAttribute('lien-offre') || 'https://natty-suivi.vercel.app/offre.html'; }
 
     connectedCallback() {
@@ -229,11 +265,25 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
         + '<section class="fiche" id="fiche" hidden aria-live="polite"></section>'
         + '<div class="grille" id="grille"></div>'
         + '<p class="note">'
-        +   '<span>Valeurs pour la barquette vendue à l\'unité, calculées depuis les fiches techniques '
-        +   'du chef. En abonnement, la barquette est calibrée sur vos besoins à partir de votre suivi : '
-        +   'les valeurs pour 100 g, elles, ne bougent pas.</span>'
-        +   '<span class="tbd">en cours de validation</span>'
+        +   '<span>La quantité de chaque plat est calculée pour vous à l\'inscription, d\'après votre '
+        +   'poids, votre objectif et votre activité. La composition pour 100 g, elle, est la même pour '
+        +   'tout le monde : elle est sur la fiche de chaque plat.</span>'
         + '</p>'
+        + '<dialog class="explique" id="explique" aria-labelledby="expTitre">'
+        +   '<div class="in">'
+        +     '<span class="ic">' + CADENAS + '</span>'
+        +     '<h3 id="expTitre">Vos quantités sont calculées pour vous.</h3>'
+        +     '<p>La taille de chaque barquette, donc ses calories et ses macros, dépend de <b>votre poids, '
+        +     'de votre objectif et de votre activité</b>. Nous la calculons à votre inscription, puis votre '
+        +     'nutritionniste l\'ajuste au fil des semaines.</p>'
+        +     '<p>Un chiffre affiché ici serait celui de quelqu\'un d\'autre. Créez votre compte : vos '
+        +     'quantités apparaissent dans l\'application, plat par plat.</p>'
+        +     '<div class="act">'
+        +       '<a class="btn pri" id="expLien">Créer mon compte</a>'
+        +       '<button class="btn" type="button" data-ferme-exp>Plus tard</button>'
+        +     '</div>'
+        +   '</div>'
+        + '</dialog>'
         + '<div class="panier" id="panier" hidden>'
         +   '<div class="panier-in">'
         +     '<div class="panier-txt"><b id="pTitre"></b><span id="pDetail"></span></div>'
@@ -256,11 +306,17 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
       this._$('grille').addEventListener('click', function (e) {
         var t = e.target.closest('[data-ouvre]');
         if (t) { self._ouvrir(t.dataset.ouvre); return; }
+        if (e.target.closest('[data-verrou]')) { self._expliquer(); return; }
         var a = e.target.closest('.ajout');
         if (a) self._basculer(a.closest('.plat').dataset.id);
       });
+      this._$('explique').addEventListener('click', function (e) {
+        // Un clic sur le fond (hors du panneau) ferme, comme « Plus tard ».
+        if (e.target === this || e.target.closest('[data-ferme-exp]')) this.close();
+      });
       this._$('fiche').addEventListener('click', function (e) {
         if (e.target.closest('[data-ferme]')) { self._fermer(); return; }
+        if (e.target.closest('[data-verrou]')) { self._expliquer(); return; }
         var t = e.target.closest('[data-bascule]');
         if (t) self._basculer(t.dataset.bascule);
       });
@@ -287,7 +343,6 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
       var liste = this._plats.filter(function (p) { return f === 'tous' || p.categorie === f; });
       this._$('grille').innerHTML = liste.map(function (d) {
         var pris = self._retenus.has(d.id);
-        var n = d.nutrition;
         return '<article class="plat' + (pris ? ' retenu' : '') + '" data-id="' + esc(d.id) + '">'
           + '<div class="photo">'
           +   '<img src="' + esc(self.base + 'plats/' + d.id + '.webp') + '" alt="' + esc(d.nom) + '" width="720" height="720" loading="lazy">'
@@ -296,12 +351,7 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
           + '<div class="corps">'
           +   '<button class="titre" type="button" data-ouvre="' + esc(d.id) + '">' + esc(d.nom) + '</button>'
           +   '<p class="desc">' + esc(d.description) + '</p>'
-          +   '<div class="macros">'
-          +     '<div class="macro kcal"><span class="v num">' + nb(n.kcal) + '</span><span class="k">kcal</span></div>'
-          +     '<div class="macro"><span class="v num">' + nb(n.proteines) + '</span><span class="k">prot.</span></div>'
-          +     '<div class="macro"><span class="v num">' + nb(n.glucides) + '</span><span class="k">gluc.</span></div>'
-          +     '<div class="macro"><span class="v num">' + nb(n.lipides) + '</span><span class="k">lip.</span></div>'
-          +   '</div>'
+          +   VERROU
           +   '<div class="pied">'
           +     '<span class="prix"><b class="num">' + eur(d.prix.abonnement) + '</b><span>abonné · ' + eur(d.prix.unite) + ' à l\'unité</span></span>'
           +     '<button class="ajout" type="button" aria-pressed="' + pris + '" aria-label="' + (pris ? 'Retirer ' : 'Ajouter ') + esc(d.nom) + '">' + (pris ? '✓' : '+') + '</button>'
@@ -314,13 +364,14 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
     _ouvrir(id, sansDefiler) {
       var d = this._plat(id); if (!d) return;
       this._ouvert = id;
-      var pris = this._retenus.has(id), n = d.nutrition, c = d.pour_100g;
+      var pris = this._retenus.has(id), c = d.pour_100g;
       var lib = CATALOGUE.libelles_allergenes || {};
       var allerg = (d.allergenes_valides && d.allergenes.length)
         ? '<div class="puces">' + d.allergenes.map(function (a) { return '<span>' + esc(lib[a] || a) + '</span>'; }).join('') + '</div>'
         : (d.allergenes_valides
             ? '<p class="liste">Aucun des 14 allergènes à déclaration obligatoire.</p>'
-            : '<p class="liste"><span class="tbd">liste en cours de validation par le chef</span></p>');
+            : '<p class="liste">Liste en cours de validation par le chef. En cas d\'allergie, écrivez-nous avant de commander : '
+              + '<b>contact@natty-nutrition.com</b>.</p>');
 
       var fiche = this._$('fiche');
       fiche.innerHTML = '<div class="ph">'
@@ -336,10 +387,9 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
         +     '<div><span class="v num">' + nb(c.glucides) + ' g</span><span class="k">glucides</span></div>'
         +     '<div><span class="v num">' + nb(c.lipides) + ' g</span><span class="k">lipides</span></div>'
         +   '</div>'
-        +   '<p class="liste" style="margin-top:10px">La barquette vendue à l\'unité fait <b>' + d.portion_reference_g + ' g</b> : '
-        +     nb(n.kcal) + ' kcal, ' + nb(n.proteines) + ' g de protéines, ' + nb(n.glucides) + ' g de glucides, '
-        +     nb(n.lipides) + ' g de lipides. C\'est la recette du chef divisée par le nombre de parts qu\'elle donne, pas un format arrondi. <b>En abonnement, on calibre la barquette sur vos besoins</b> d\'après votre suivi : le poids change, les valeurs pour 100 g ci-dessus non.</p>'
+        +   '<p class="source">' + SOURCE + '</p>'
         +   '</div>'
+        +   '<div class="bloc"><h4>Votre portion</h4>' + VERROU + '</div>'
         +   '<div class="bloc"><h4>Ingrédients</h4><p class="liste">'
         +     d.ingredients.map(function (i, k) { return k === 0 ? '<b>' + esc(i.nom) + '</b>' : esc(i.nom); }).join(', ')
         +   '.</p></div>'
@@ -355,6 +405,12 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(1.8rem,4vw,2.9rem)
         try { fiche.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) { /* vieux navigateur */ }
         var f = fiche.querySelector('[data-ferme]'); if (f) f.focus();
       }
+    }
+
+    _expliquer() {
+      var d = this._$('explique');
+      this._$('expLien').setAttribute('href', this.lienInscription);
+      try { d.showModal(); } catch (e) { d.setAttribute('open', ''); }
     }
 
     _fermer() {
