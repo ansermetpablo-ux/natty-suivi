@@ -185,7 +185,18 @@ section{ padding-block: clamp(64px, 9vw, 128px); }
   display: grid; place-items: center;
 }
 .theme-btn svg{ width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-@media (max-width: 860px){ .nav-links{ display: none; } }
+/* Sur téléphone, le menu passe SOUS le logo en une rangée qu'on fait défiler.
+   Il était masqué (display:none) : il ne restait que « Commander », donc
+   aucun moyen d'atteindre le suivi, les entreprises ou les tarifs. */
+@media (max-width: 860px){
+  .nav-in{ flex-wrap: wrap; row-gap: 0; }
+  .nav-links{
+    order: 3; width: 100%; overflow-x: auto; scrollbar-width: none;
+    margin: 0 -6px; padding: 0 0 10px;
+  }
+  .nav-links::-webkit-scrollbar{ display: none; }
+  .nav-links a{ white-space: nowrap; flex: none; padding: 7px 12px; font-size: .88rem; }
+}
 
 /* ── Hero ────────────────────────────────────────────────── */
 .hero{ padding-block: clamp(44px, 7vw, 84px) clamp(48px, 7vw, 92px); }
