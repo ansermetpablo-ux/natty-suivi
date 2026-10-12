@@ -12,7 +12,9 @@
    dessous, en pleine hauteur. Le visiteur ne quitte jamais natty-nutrition.com.
 
    ATTRIBUTS
-     page      la page de l'app à afficher : menu.html (défaut, le suivi),
+     page      la page de l'app à afficher ; sans attribut, elle se déduit de
+               l'adresse de la page Wix (/suivi, /commander, /cgv…). Sinon :
+               menu.html (défaut, le suivi),
                offre.html, login.html, cgv.html, cgu.html, confidentialite.html
      base      racine de l'app, défaut https://natty-suivi.vercel.app/
      lien-*    adresses des pages Wix du menu (voir scripts/wix-composants.mjs)
@@ -38,6 +40,14 @@
   var ATTRIBUTS = /*__ATTRIBUTS__*/ [];
   var POLICES = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Instrument+Sans:ital,wght@0,400..700;1,400..600&display=swap';
   var PAGES = ['menu.html', 'suivi.html', 'offre.html', 'login.html', 'cgv.html', 'cgu.html', 'confidentialite.html'];
+  /* La page de l'app se déduit de l'adresse de la page Wix : les attributs
+     saisis dans l'éditeur Wix ne sont pas fiables (le « Nom du tag » ne
+     tenait pas), l'adresse, elle, est celle qu'on choisit en créant la page. */
+  var PAR_ADRESSE = {
+    'suivi': 'menu.html', 'mon-suivi': 'menu.html', 'commander': 'offre.html',
+    'inscription': 'login.html', 'connexion': 'login.html',
+    'cgv': 'cgv.html', 'cgu': 'cgu.html', 'confidentialite': 'confidentialite.html'
+  };
 
   var CSS_APP = `
 :host{ display: block; }
@@ -68,7 +78,8 @@
     /* L'adresse de la page de l'app, avec ce que la page Wix lui transmet. */
     adresseCadre() {
       var base = this.attr('base');
-      var page = this.getAttribute('page') || 'menu.html';
+      var dernier = location.pathname.replace(/\/+$/, '').split('/').pop();
+      var page = this.getAttribute('page') || PAR_ADRESSE[dernier] || 'menu.html';
       if (PAGES.indexOf(page.split('?')[0]) < 0) page = 'menu.html';
       var q = new URLSearchParams(page.split('?')[1] || '');
       new URLSearchParams(location.search).forEach(function (v, k) { q.set(k, v); });

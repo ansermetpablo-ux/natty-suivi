@@ -371,6 +371,11 @@ section{ padding-block: clamp(64px, 9vw, 128px); }
 }
 .basket.on{ transform: none; }
 /* En popover (couche supérieure), on annule le cadre que le navigateur pose. */
+/* ⚠️ Un popover fermé n'est masqué que par la feuille du NAVIGATEUR
+   ([popover]:not(:popover-open){display:none}), que notre display:flex
+   écrase : fermé, le panier restait affiché par-dessus la fiche (constaté
+   dans Wix). On le redit ici. */
+.basket[popover]:not(:popover-open){ display: none; }
 .basket[popover]{ inset: auto 0 env(safe-area-inset-bottom, 0px) 0; margin: 0; border: 0; background: none; width: auto; height: auto; overflow: visible; color: inherit; }
 .basket-in{
   pointer-events: auto;
