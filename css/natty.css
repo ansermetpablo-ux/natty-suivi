@@ -92,8 +92,16 @@ body{
   font-size: 17px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  /* clip et non hidden : dans Wix, body devient l'enveloppe .n-page du
+     composant, et un overflow « hidden » en fait une zone de défilement — le
+     menu collant se colle alors à elle au lieu de la fenêtre et part avec la
+     page (mesuré le 13/10/2026). hidden reste en repli pour Safari < 16. */
   overflow-x: hidden;
+  overflow-x: clip;
 }
+/* Une ancre ne doit pas atterrir SOUS le menu collant. */
+[id]{ scroll-margin-top: 84px; }
+@media (max-width: 860px){ [id]{ scroll-margin-top: 104px; } }
 img{ max-width:100%; display:block; }
 a{ color: inherit; }
 button{ font: inherit; color: inherit; cursor: pointer; }
@@ -189,13 +197,21 @@ section{ padding-block: clamp(64px, 9vw, 128px); }
    Il était masqué (display:none) : il ne restait que « Commander », donc
    aucun moyen d'atteindre le suivi, les entreprises ou les tarifs. */
 @media (max-width: 860px){
-  .nav-in{ flex-wrap: wrap; row-gap: 0; }
+  /* Sur deux rangées, min-height ne vaut que pour l'ensemble : la première
+     rangée collait au bord haut (bouton à 0 px). D'où un retrait explicite. */
+  .nav-in{ flex-wrap: wrap; row-gap: 6px; min-height: 0; gap: 10px; padding-top: 10px; }
   .nav-links{
     order: 3; width: 100%; overflow-x: auto; scrollbar-width: none;
-    margin: 0 -6px; padding: 0 0 10px;
+    margin: 0 -6px; padding: 0 0 8px;
+    /* La rangée défile : un fondu à droite dit qu'il y a d'autres liens. */
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+            mask-image: linear-gradient(90deg, #000 85%, transparent);
   }
   .nav-links::-webkit-scrollbar{ display: none; }
-  .nav-links a{ white-space: nowrap; flex: none; padding: 7px 12px; font-size: .88rem; }
+  .nav-links a{ white-space: nowrap; flex: none; padding: 6px 11px; font-size: .86rem; }
+  .wordmark{ font-size: 1.2rem; }
+  .theme-btn{ width: 34px; height: 34px; }
+  .nav-in > .btn{ padding: 9px 16px; font-size: .86rem; }
 }
 
 /* ── Hero ────────────────────────────────────────────────── */
