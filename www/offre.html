@@ -22,6 +22,9 @@
    Le style est celui du site (css/natty.css) : cette page s'affiche SOUS le
    menu du site dans Wix, elle doit en être la suite, pas une autre marque. */
 body{ padding-bottom: 120px; }
+/* natty.css donne 115 px de marge haute et basse à toute <section> du site :
+   ici, ce sont des étapes, pas des sections de page d'accueil. */
+.cmd section{ padding: 0; }
 .cmd{ max-width: 980px; margin: 0 auto; padding: 28px var(--gutter) 40px; }
 .cmd h1{ font-family: var(--display); font-weight: 400; font-size: clamp(1.9rem, 4.4vw, 2.8rem); line-height: 1.08; letter-spacing: -.01em; margin: 0 0 8px; }
 .cmd h1 em{ font-style: italic; color: var(--muted); }
@@ -178,7 +181,7 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   <!-- ── Étape 2 : la livraison ──────────────────────────────────── -->
   <section id="e2" hidden>
     <h1>Où et <em>quand</em> livrer ?</h1>
-    <p class="lead">Nous livrons à Paris et en Île-de-France, au bureau ou à domicile, le midi.</p>
+    <p class="lead">Nous livrons à Paris et en Île-de-France, au bureau ou à domicile.</p>
 
     <h2>Jour de livraison</h2>
     <div class="jours" id="jours"></div>
@@ -344,7 +347,9 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
     return d;
   }
   function dessinerJours() {
-    $('jours').innerHTML = JOURS.map(function (j) {
+    // Dans l'ordre des DATES, pas des jours : « Jeudi 15 » avant « Lundi 19 ».
+    var ordre = JOURS.slice().sort(function (a, b) { return prochaineDate(a) - prochaineDate(b); });
+    $('jours').innerHTML = ordre.map(function (j) {
       var d = prochaineDate(j).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
       return '<button type="button" data-jour="' + j + '" aria-pressed="' + (etat.jour === j) + '">'
         + j.charAt(0).toUpperCase() + j.slice(1) + '<small>' + d + '</small></button>';
