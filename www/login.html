@@ -496,6 +496,8 @@ async function reporterPrenom() {
   } catch (e) {}
 }
 
+var SUITE_OK = /^offre\.html(\?[\w=&%-]*)?$/;
+
 // core.js renvoie ici avec ?reconnexion=1 quand il a trouvé une identité
 // héritée sans session : la personne se croyait connectée, on le lui explique.
 // Le site envoie ?inscription=1 : on ouvre directement l'onglet Inscription,
@@ -507,6 +509,12 @@ async function reporterPrenom() {
     var m = document.getElementById('msgQuantites');
     if (m) m.style.display = 'block';
   }
+  /* ?suite= : la page où revenir après connexion (la commande en cours). Gardée
+     en sessionStorage pour survivre à l'aller-retour chez Google ou Apple.
+     Liste blanche : une destination libre ferait de cette page une
+     redirection ouverte. */
+  var s = p.get('suite');
+  if (s && SUITE_OK.test(s)) { try { sessionStorage.setItem('natty_suite', s); } catch (e) {} }
 })();
 
 if (new URLSearchParams(location.search).get('reconnexion') === '1') {
@@ -522,7 +530,9 @@ async function entrerDansApp(auth) {
   // menu.html existe des deux côtés : à la racine c'est le fichier lui-même,
   // dans le bundle natif c'est un relais vers index.html (nom imposé par
   // Capacitor). L'ancien tableau de bord n'est plus le point d'arrivée.
-  window.location.href = 'menu.html';
+  var suite = null;
+  try { suite = sessionStorage.getItem('natty_suite'); sessionStorage.removeItem('natty_suite'); } catch (e) {}
+  window.location.href = suite && SUITE_OK.test(suite) ? suite : 'menu.html';
 }
 
 async function doLogin() {

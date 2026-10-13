@@ -71,6 +71,14 @@ export default async function handler(req, res) {
           })).slice(0, 490)
         : ''
     };
+    /* La page du SITE d'où vient la commande (www.natty-nutrition.com/commander).
+       Stripe ne s'affiche pas dans un cadre : depuis Wix, c'est la page entière
+       qui part au paiement, et elle doit revenir sur le site, pas sur Vercel.
+       ⚠️ Liste blanche stricte : une URL de retour libre ferait de cette route
+       une redirection ouverte. */
+    const retourSite = typeof body.retour === 'string'
+      && /^https:\/\/(www\.)?natty-nutrition\.com\/[\w\/-]*$/.test(body.retour) ? body.retour : '';
+    livraison.retour = retourSite;
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
     // ⚠️ Ne jamais journaliser le body : offre.html y met l'adresse de
@@ -187,11 +195,14 @@ async function creerSession(o) {
   // hors de l'app apres son paiement. Stripe n'acceptant que des URL http(s),
   // on passe par checkout-retour.html, qui rebondit vers com.nattynutrition.app://.
   const natif = plateforme === 'natif';
+  /* Web : retour sur la page de commande, qui affiche la confirmation (ok) ou
+     garde le panier (annule). Elle renvoyait vers « / », c'est-à-dire l'ancien
+     tableau de bord. Depuis le site Wix, on revient sur la page du site. */
+  const site = livraison && livraison.retour;
   const retour = (statut) => natif
     ? origin + '/checkout-retour.html?statut=' + statut + '&token=' + encodeURIComponent(token || '')
-    : (statut === 'ok'
-        ? origin + '/?token=' + (token || '') + (unique ? '&commande=1' : '&subscribed=1')
-        : origin + '/offre.html?token=' + (token || '') + '&cancelled=1');
+    : (site ? site + '?statut=' + statut
+            : origin + '/offre.html?statut=' + statut + (token ? '&token=' + encodeURIComponent(token) : ''));
 
   const params = new URLSearchParams();
   params.append('mode', stripeMode);

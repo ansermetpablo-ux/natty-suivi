@@ -129,6 +129,9 @@ function panier(){
     try { if (voulu && !ouvert) bar.showPopover(); if (!voulu && ouvert) bar.hidePopover(); } catch(e){}
   }
   if (!n) return;
+  // Les plats choisis partent avec le visiteur : la commande s'ouvre déjà remplie.
+  var go = document.getElementById('basketGo');
+  go.href = go.href.split('?')[0] + '?plats=' + encodeURIComponent(Array.from(choisis).join(','));
   document.getElementById('basketCount').textContent = n + (n > 1 ? ' plats' : ' plat') + ' · ' + nb(n * PRIX_ABO) + ' € la semaine';
   document.getElementById('basketDetail').textContent = eur(PRIX_ABO) + ' le plat en abonnement, au lieu de ' + eur(PRIX_UNITE);
 }
