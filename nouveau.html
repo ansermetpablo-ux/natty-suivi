@@ -256,7 +256,7 @@
           <h3>Abonnement</h3>
           <div class="amount"><b class="num">9</b><span>€ le plat</span></div>
           <ul>
-            <li>De 3 à 10 plats par semaine</li>
+            <li>À partir de 3 plats par semaine (jusqu'à 10)</li>
             <li>Suivi nutritionniste inclus</li>
             <li>Vos plats enregistrés dans l'application</li>
             <li>Pause et résiliation quand vous voulez</li>
@@ -538,7 +538,11 @@ function panier(){
   var go = document.getElementById('basketGo');
   go.href = go.href.split('?')[0] + '?plats=' + encodeURIComponent(Array.from(choisis).join(','));
   document.getElementById('basketCount').textContent = n + (n > 1 ? ' plats' : ' plat') + ' · ' + nb(n * PRIX_ABO) + ' € la semaine';
-  document.getElementById('basketDetail').textContent = eur(PRIX_ABO) + ' le plat en abonnement, au lieu de ' + eur(PRIX_UNITE);
+  // L'abonnement se souscrit à partir de 3 plats (api/checkout.js, REPAS_MIN) :
+  // en dessous, on le dit plutôt que d'afficher un prix qui sera refusé.
+  document.getElementById('basketDetail').textContent = n < 3
+    ? 'Abonnement dès 3 plats par semaine — encore ' + (3 - n) + ' à choisir'
+    : eur(PRIX_ABO) + ' le plat en abonnement, au lieu de ' + eur(PRIX_UNITE);
 }
 
 /* ── Fiche plat ────────────────────────────────────────────
