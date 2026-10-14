@@ -6,7 +6,9 @@
    douzaine de repas. Le plafond n'est pas là pour dire ce qui est raisonnable,
    il est là pour qu'une quantité bricolée ne crée pas une session à quatre
    chiffres. */
-const REPAS_MIN = 1, REPAS_MAX = 10;
+// L'abonnement commence à 3 plats par semaine (décision du 14/10/2026) :
+// en dessous, c'est la commande à l'unité.
+const REPAS_MIN = 3, REPAS_MAX = 10;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

@@ -271,7 +271,8 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   var CAT = window.NATTY_CATALOGUE || { plats: [], prix: {} };
   var PRIX = { abo: (CAT.prix && CAT.prix.abonnement) || 9, unite: (CAT.prix && CAT.prix.unite) || 10.5 };
   var PLATS = (CAT.plats || []).filter(function (p) { return p.coherent !== false; });
-  var LIMITES = { abo: { min: 1, max: 10, liste: null }, unite: { min: 1, max: 20 } };
+  // L'abonnement commence à 3 plats par semaine ; en dessous, c'est l'unité.
+  var LIMITES = { abo: { min: 3, max: 10, liste: null }, unite: { min: 1, max: 20 } };
   var JOURS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
   var CP_IDF = /^(75|77|78|91|92|93|94|95)\d{3}$/;
   var CLE = 'natty_commande';
@@ -453,7 +454,9 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
     var msg = '', ok = etapeOk(etat.etape);
     if (etat.etape === 1) {
       if (!n) msg = 'Choisissez au moins un plat';
-      else if (!nombreValide(n)) msg = LIMITES.abo.liste ? 'Abonnement : ' + LIMITES.abo.liste.join(' ou ') + ' plats' : 'Entre 1 et ' + maxFreq() + ' plats';
+      else if (!nombreValide(n)) msg = etat.freq === 'unite' ? 'Jusqu\'à ' + maxFreq() + ' plats'
+        : (LIMITES.abo.liste ? 'Abonnement : ' + LIMITES.abo.liste.join(' ou ') + ' plats'
+          : (n < LIMITES.abo.min ? 'Abonnement dès ' + LIMITES.abo.min + ' plats — encore ' + (LIMITES.abo.min - n) + ' à choisir' : 'Jusqu\'à ' + maxFreq() + ' plats par semaine'));
       else msg = etat.freq === 'abo' ? 'Livré chaque semaine' : 'Livré une fois';
     } else if (etat.etape === 2) {
       msg = !etat.jour ? 'Choisissez un jour' : (!adresseValide() ? 'Complétez l\'adresse' : 'Livraison le ' + etat.jour);
@@ -542,7 +545,7 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   // Ce que le serveur sait vendre aujourd'hui (unité, abonnement au plat).
   fetch(Natty.API + '/api/checkout').then(function (r) { return r.json(); }).then(function (d) {
     if (d.repas && d.repas.liste) LIMITES.abo.liste = d.repas.liste;
-    else if (d.repas) { LIMITES.abo.min = d.repas.min; LIMITES.abo.max = d.repas.max; }
+    else if (d.repas) { LIMITES.abo.min = Math.max(3, d.repas.min); LIMITES.abo.max = d.repas.max; }
     if (d.unite === false) {
       document.querySelector('[data-freq="unite"]').hidden = true;
       if (etat.freq === 'unite') etat.freq = 'abo';
