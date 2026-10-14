@@ -56,6 +56,14 @@ body{ padding-bottom: 120px; }
   text-transform: uppercase; background: var(--ink); color: var(--on-ink); padding: 4px 9px; border-radius: var(--r-full); }
 .note{ font-size: .84rem; color: var(--muted); margin: 10px 0 0; }
 
+/* Filtres par objectif : les plats sont conçus pour un objectif, c'est la
+   première question que se pose un client Natty. */
+.filtres{ display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 0 14px; padding-bottom: 2px; }
+.filtres::-webkit-scrollbar{ display: none; }
+.filtres button{ flex: none; padding: 9px 14px; border-radius: var(--r-full); border: 1.5px solid var(--line);
+  background: transparent; color: var(--muted); font-weight: 500; font-size: .88rem; }
+.filtres button[aria-pressed="true"]{ background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+
 /* La grille des plats */
 .plats{ display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
 .plat{ background: var(--surface); border-radius: var(--r-lg); overflow: hidden; display: flex; flex-direction: column;
@@ -175,6 +183,7 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
     <p class="note" id="noteFreq"></p>
 
     <h2>Les plats de la semaine</h2>
+    <div class="filtres" id="filtres" role="group" aria-label="Filtrer par objectif"></div>
     <div class="plats" id="plats"></div>
   </section>
 
@@ -295,10 +304,26 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   }
 
   /* ── Étape 1 ─────────────────────────────────────────────────────── */
+  var filtre = 'tous';
+  function dessinerFiltres() {
+    var vus = {}, cats = [];
+    PLATS.forEach(function (p) { if (p.categorie && !vus[p.categorie]) { vus[p.categorie] = 1; cats.push([p.categorie, p.categorie_label || p.categorie]); } });
+    if (cats.length < 2) { $('filtres').hidden = true; return; }
+    $('filtres').innerHTML = [['tous', 'Tous les plats']].concat(cats).map(function (c) {
+      return '<button type="button" data-filtre="' + c[0] + '" aria-pressed="' + (filtre === c[0]) + '">' + c[1] + '</button>';
+    }).join('');
+  }
+  $('filtres').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-filtre]'); if (!b) return;
+    filtre = b.getAttribute('data-filtre'); dessinerFiltres(); dessinerPlats();
+  });
   function dessinerPlats() {
     var prix = etat.freq === 'abo' ? PRIX.abo : PRIX.unite;
     var plein = nbPlats() >= maxFreq();
-    $('plats').innerHTML = PLATS.map(function (p) {
+    // Les plats déjà choisis restent visibles quel que soit le filtre.
+    $('plats').innerHTML = PLATS.filter(function (p) {
+      return filtre === 'tous' || p.categorie === filtre || etat.plats[p.id];
+    }).map(function (p) {
       var n = etat.plats[p.id] || 0;
       return '<article class="plat' + (n ? ' pris' : '') + '" data-id="' + p.id + '">'
         + '<img src="' + p.photo + '" alt="" loading="lazy" width="440" height="330">'
@@ -506,7 +531,7 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
     });
   }
   if (q.get('mode') === 'unite') etat.freq = 'unite';
-  majFreq(); dessinerPlats();
+  majFreq(); dessinerFiltres(); dessinerPlats();
   $('rue').value = etat.rue; $('complement').value = etat.complement; $('cp').value = etat.cp; $('ville').value = etat.ville;
   if (q.get('statut') === 'ok') terminer();
   else {
