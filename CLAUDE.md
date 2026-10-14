@@ -269,14 +269,44 @@ Défis perso/duo/entreprise. Autonome, aucune dépendance avec `narration.html`.
 - Fonctions : `chargerPerso`, `startChallenge`, `abandonnerChallenge`, `chargerDuo`, `inviterDuo`/`creerDuo`/`accepterDuo`, `chargerEntreprise`, `chargerClassement`/`afficherClassementDemo` (fallback avec données factices codées en dur si la requête échoue), `subscribeRealtime` (même pattern WebSocket manuel obsolète que `chat.html`, topic `realtime:public:challenges`).
 - ⚠️ Onclick inline avec quotes échappées manuellement (lignes ~391/423/514/555/556) — fragile, à migrer vers `data-*` + `addEventListener` (règle #8) si retouché. `navigator.clipboard` (ligne ~587) exige un contexte sécurisé — à tester dans la WebView Capacitor.
 
-### `offre.html`
-**Fonctionnel et complet** — contrairement au statut "à faire" indiqué historiquement dans ce document (corrigé en §8). Contient l'intégration Stripe Checkout complète.
+### `offre.html` — la commande, en trois étapes (refonte du 13-14/10/2026)
+Une seule page de commande pour le site Wix (`/commander`, embarquée par `<natty-app>`) et
+l'app (onglet « Offre »). L'ancien tunnel en six étapes (formule, objectif, durée,
+nutritionniste, livraison, récap) a disparu : trois de ses réponses n'étaient lues par
+personne côté serveur.
+1. **Les plats** — « Chaque semaine » (9 €/plat) ou « Une seule fois » (10,50 €), puis +/−
+   par plat, filtres par objectif. Source : `data/plats.js` (les 9 plats `coherent` du
+   catalogue de l'accueil). ⚠️ Pas encore les 38 fiches de `plats_menu` : à brancher.
+   `?plats=a,b` (envoyé par le panier de l'accueil) pré-remplit, `?mode=unite` aussi.
+2. **Livraison** — 5 prochains jours ouvrés (triés par DATE, à J+2 minimum comme
+   `prochaineDate()` du webhook), adresse ; code postal limité à 75/77/78/91/92/93/94/95.
+3. **Paiement** — récap, compte obligatoire (le webhook ne crée rien sans `user_id`) :
+   `login.html?suite=offre.html%3Fetape%3D3` ramène ici après connexion (liste blanche
+   `SUITE_OK`, gardée en sessionStorage pour l'aller-retour Google/Apple), CGV, Stripe.
+- **Abonnement : 3 à 10 plats par semaine** (`REPAS_MIN = 3` dans `api/checkout.js`, relu
+  par le GET ; décision du 14/10/2026). À l'unité : 1 à 20.
+- Le panier vit en `sessionStorage` (`natty_commande`) : il survit à la connexion et à un
+  paiement annulé.
+- **Stripe ne s'affiche pas dans un cadre** : depuis Wix, `window.top` part au paiement.
+  `retour` (liste blanche natty-nutrition.com) fait revenir sur `/commander?statut=ok|annule`
+  ; hors Wix, sur `offre.html?statut=…`. En natif : `Browser.open` + deep link, inchangé.
+- La barre d'onglets de l'app (`nav.js`) n'est chargée que hors iframe.
+- Style : `css/natty.css` (celui du site). ⚠️ `.cmd section{padding:0}` annule les 115 px
+  que natty.css donne à toute `<section>`.
 
-- Prix en dur : `PRICE_3 = "price_1TbhMB0TTrkVKRpiPvbGHLyI"`, `PRICE_4 = "price_1TbhWk0TTrkVKRpiFNYOOcEJ"`.
-- Flux `souscrire()` (ligne ~786) : 1) PATCH `onboarding?user_id=eq.<id>` (email, non bloquant) ; 2) `POST /api/checkout` avec `{priceId, userId, token, formule, objectif, objectifValeur, dureeSemaines, nutritionnisteId, jourLivraison, adresse, emailRecap}` ; 3) redirection vers `data.url` (`window.top.location.href` si iframe, sinon `location.href`).
-- Table lue : `nutritionnistes` (`?actif=eq.true`), fallback `NUTRI_DEMO` (3 profils factices) si vide/erreur.
-- Autres fonctions : `setStep`, `updateCTA`, `initSlider`/`drawSliderGraph`, `chargerNutris`, `choisirNutri`, `selectJour`, `buildRecap`, `toggleRGPD`.
-- ⚠️ Lignes ~205/213 : images inline base64 volumineuses (poids fichier).
+### Site Wix ↔ dépôt (octobre 2026)
+Chaque page Wix porte UN élément personnalisé dont le script est servi par Vercel depuis
+`main` (`https://natty-suivi.vercel.app/wix/…`) : accueil → `natty-accueil.js`,
+/entreprises → `natty-entreprises.js`, /mentions-legales → `natty-mentions.js`, et
+/suivi, /commander, /cgv, /cgu, /confidentialite → `natty-app.js` (menu du site + la page
+de l'app en iframe, déduite de l'adresse). Les pages sont GÉNÉRÉES depuis `nouveau.html`,
+`entreprises.html`, `mentions-legales.html` par `node scripts/build-wix.mjs`
+(`NATTY_DATE=2026-10-12`), vérifiées par `npm test`. Une fusion dans `main` met le site à
+jour sans toucher à Wix. Pages Wix d'avant (Ancien accueil, Inscription, Mon suivi, Menu,
+Login) : gardées, masquées.
+⚠️ Mentions légales : plus de téléphone (pas de ligne pro), les quatre co-fondateurs
+(Pablo Ansermet, Anatole Bouhours, Antoine Canivet, Ferreol Weisman-Morel), Pablo
+directeur de la publication. Ne pas réintroduire le portable personnel.
 
 ### `questionnaire-alim.html`
 Étape **distincte et complémentaire** à `onboarding.html` (pas un doublon) : `onboarding.html` gère objectif/profil (table `onboarding`) ; celui-ci gère les préférences alimentaires détaillées, table **`questionnaire_alim`** (colonnes : `user_id`, `allergies`, `regime`, `aliments_aimes`, `aliments_evites`, `decouverte_cuisines/styles/ingredients/variantes`, `curiosite_libre`, `frequence_cuisine`, `nb_repas`, `snacking`, `repas_sautes`, `ressenti`, `craquage`, `satisfaction_stars`, `commentaire_libre`, `defi_principal`, `completed_at`).
