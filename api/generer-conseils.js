@@ -23,7 +23,15 @@
 // ⚠️ Runtime Node (pas edge) : appel long, et `_generation.js` n'est pas conçu
 // pour edge.
 
+// FUSIONNÉ AVEC api/save-conseils.js (2026-10-12) : la limite de 12 fonctions
+// du plan Hobby. Son code vit tel quel dans _save-conseils.js et son adresse
+// reste valable — vercel.json réécrit /api/save-conseils vers
+// /api/generer-conseils?op=save-conseils. Même famille (écrire les conseils de
+// la personne qui appelle), même garde : la session de cette personne.
+
 import { processUser, getLundiSemaine } from './_generation.js';
+import { operation } from './_operation.js';
+import saveConseils from './_save-conseils.js';
 
 // Vercel coupe la fonction à `maxDuration`, et une coupure au milieu de l'appel
 // n'écrit RIEN : ni conseils, ni recettes, ni plats macro.
@@ -43,6 +51,8 @@ const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
 
 export default async function handler(req, res) {
+  if (operation(req, ['save-conseils']) === 'save-conseils') return saveConseils(req, res);
+
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');

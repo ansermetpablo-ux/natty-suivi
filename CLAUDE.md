@@ -3429,6 +3429,15 @@ préfixés `_`) :
   > derrière `{action:'reserver_cuisine'}` dans le corps de la requête.
   > `api/` compte **12 fonctions** depuis — vérifié en comptant les fichiers
   > non préfixés `_`, jamais en supposant qu'une seule fusion suffirait.
+  > ✅ **Ramené à 9 le 2026-10-12** (demande de Pablo) : `rappel-macros` et
+  > `recalc-macros` vivent dans `api/push-amis.js`, `save-conseils` dans
+  > `api/generer-conseils.js`. Leur code est inchangé, dans `_rappel-macros.js`,
+  > `_recalc-macros.js` et `_save-conseils.js`, et **leurs anciennes adresses
+  > marchent toujours** : `vercel.json` (`rewrites`) les réécrit vers la
+  > fonction hôte avec `?op=…`, que lit `api/_operation.js`. Le cron, le bouton
+  > de l'admin et l'ancien `index.html` n'ont rien eu à changer. Ne pas fusionner
+  > `send-email` (ESM, public) dans `notifications` (CommonJS, réservé à
+  > l'équipe) sans réécrire l'un des deux : les formats ne se mélangent pas.
   passage, même si trois personnes qu'il suit ont publié.
 
 > ⚠️ **Le secret d'un cron Vercel ne voyage pas là où on croit.** Une entrée `crons` de
