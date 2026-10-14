@@ -92,8 +92,16 @@ body{
   font-size: 17px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  /* clip et non hidden : dans Wix, body devient l'enveloppe .n-page du
+     composant, et un overflow « hidden » en fait une zone de défilement — le
+     menu collant se colle alors à elle au lieu de la fenêtre et part avec la
+     page (mesuré le 13/10/2026). hidden reste en repli pour Safari < 16. */
   overflow-x: hidden;
+  overflow-x: clip;
 }
+/* Une ancre ne doit pas atterrir SOUS le menu collant. */
+[id]{ scroll-margin-top: 84px; }
+@media (max-width: 860px){ [id]{ scroll-margin-top: 104px; } }
 img{ max-width:100%; display:block; }
 a{ color: inherit; }
 button{ font: inherit; color: inherit; cursor: pointer; }
@@ -185,7 +193,26 @@ section{ padding-block: clamp(64px, 9vw, 128px); }
   display: grid; place-items: center;
 }
 .theme-btn svg{ width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-@media (max-width: 860px){ .nav-links{ display: none; } }
+/* Sur téléphone, le menu passe SOUS le logo en une rangée qu'on fait défiler.
+   Il était masqué (display:none) : il ne restait que « Commander », donc
+   aucun moyen d'atteindre le suivi, les entreprises ou les tarifs. */
+@media (max-width: 860px){
+  /* Sur deux rangées, min-height ne vaut que pour l'ensemble : la première
+     rangée collait au bord haut (bouton à 0 px). D'où un retrait explicite. */
+  .nav-in{ flex-wrap: wrap; row-gap: 6px; min-height: 0; gap: 10px; padding-top: 10px; }
+  .nav-links{
+    order: 3; width: 100%; overflow-x: auto; scrollbar-width: none;
+    margin: 0 -6px; padding: 0 0 8px;
+    /* La rangée défile : un fondu à droite dit qu'il y a d'autres liens. */
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+            mask-image: linear-gradient(90deg, #000 85%, transparent);
+  }
+  .nav-links::-webkit-scrollbar{ display: none; }
+  .nav-links a{ white-space: nowrap; flex: none; padding: 6px 11px; font-size: .86rem; }
+  .wordmark{ font-size: 1.2rem; }
+  .theme-btn{ width: 34px; height: 34px; }
+  .nav-in > .btn{ padding: 9px 16px; font-size: .86rem; }
+}
 
 /* ── Hero ────────────────────────────────────────────────── */
 .hero{ padding-block: clamp(44px, 7vw, 84px) clamp(48px, 7vw, 92px); }
@@ -359,6 +386,13 @@ section{ padding-block: clamp(64px, 9vw, 128px); }
   transition: transform .26s cubic-bezier(.2,.8,.3,1);
 }
 .basket.on{ transform: none; }
+/* En popover (couche supérieure), on annule le cadre que le navigateur pose. */
+/* ⚠️ Un popover fermé n'est masqué que par la feuille du NAVIGATEUR
+   ([popover]:not(:popover-open){display:none}), que notre display:flex
+   écrase : fermé, le panier restait affiché par-dessus la fiche (constaté
+   dans Wix). On le redit ici. */
+.basket[popover]:not(:popover-open){ display: none; }
+.basket[popover]{ inset: auto 0 env(safe-area-inset-bottom, 0px) 0; margin: 0; border: 0; background: none; width: auto; height: auto; overflow: visible; color: inherit; }
 .basket-in{
   pointer-events: auto;
   width: 100%; max-width: 560px;
@@ -555,14 +589,11 @@ footer{ border-top: 1px solid var(--line); padding-block: 54px 40px; font-size: 
 
 
 /* ── Tiroir « fiche plat » ───────────────────────────────── */
-.scrim{
-  position: fixed; inset: 0; z-index: 60;
-  background: rgba(5,4,3,.55);
-  opacity: 0; pointer-events: none;
-  transition: opacity .22s ease;
-}
-.scrim.on{ opacity: 1; pointer-events: auto; }
+/* Un <dialog> ouvert en modal : couche supérieure, fond = ::backdrop. */
+.sheet::backdrop{ background: rgba(5,4,3,.55); }
 .sheet{
+  margin: 0; inset: 0 0 0 auto; max-width: none; max-height: none; border: 0; padding: 0;
+  color: inherit; font-family: var(--text);
   position: fixed; z-index: 61;
   top: 0; right: 0; height: 100%;
   width: min(480px, 100%);
@@ -634,7 +665,7 @@ footer{ border-top: 1px solid var(--line); padding-block: 54px 40px; font-size: 
 }
 .dish-open:hover h3{ text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 560px){
-  .sheet{ top: auto; bottom: 0; right: 0; left: 0; width: 100%; height: 92%; border-left: 0; border-top: 1px solid var(--line); border-radius: var(--r-xl) var(--r-xl) 0 0; transform: translateY(101%); }
+  .sheet{ inset: auto 0 0 0; top: auto; bottom: 0; right: 0; left: 0; width: 100%; height: 92%; border-left: 0; border-top: 1px solid var(--line); border-radius: var(--r-xl) var(--r-xl) 0 0; transform: translateY(101%); }
   .sheet.on{ transform: none; }
   .sheet-photo{ border-radius: var(--r-xl) var(--r-xl) 0 0; }
 }
@@ -642,3 +673,31 @@ footer{ border-top: 1px solid var(--line); padding-block: 54px 40px; font-size: 
 @media (prefers-reduced-motion: reduce){
   *{ transition: none !important; animation: none !important; }
 }
+
+/* ═══ Le cadenas des quantités (12/10/2026) ═══════════════════
+   Les quantités par plat ne sont plus affichées : la barquette d'un
+   abonné est calculée pour lui à l'inscription. Même dessin que dans
+   wix/natty-carte.src.js. */
+.verrou{
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: 1px dashed var(--line); border-radius: var(--r-md); background: var(--bg);
+  padding: 10px 12px; text-align: left; color: var(--muted); font: inherit;
+  font-size: .82rem; line-height: 1.3; cursor: pointer;
+  transition: border-color .14s, color .14s;
+}
+.verrou:hover{ border-color: var(--ink); color: var(--ink); }
+.verrou svg{ width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.verrou b{ display: block; color: var(--ink); font-weight: 600; font-size: .86rem; }
+.source{ font-size: .76rem; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
+dialog.explique{
+  border: 0; border-radius: var(--r-xl); padding: 0; max-width: 440px; width: calc(100% - 32px);
+  background: var(--surface); color: var(--ink); font-family: var(--text); box-shadow: var(--shadow);
+}
+dialog.explique::backdrop{ background: rgba(10,10,12,.55); backdrop-filter: blur(3px); }
+.explique-in{ padding: 28px 26px 24px; display: flex; flex-direction: column; gap: 14px; }
+.explique-ic{ width: 46px; height: 46px; border-radius: 50%; background: var(--ink); color: var(--on-ink); display: grid; place-items: center; }
+.explique-ic svg{ width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.explique h3{ font-family: var(--display); font-weight: 600; font-size: 1.45rem; letter-spacing: -.02em; margin: 0; line-height: 1.12; }
+.explique p{ margin: 0; font-size: .93rem; color: var(--muted); line-height: 1.55; }
+.explique p b{ color: var(--ink); font-weight: 600; }
+.explique-act{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }

@@ -305,6 +305,13 @@
   <!-- Reconnexion : affiché quand core.js a renvoyé ici quelqu'un qui se
        croyait connecté (identité héritée, sans session). Sans ce mot, la
        personne se retrouve devant un formulaire sans savoir pourquoi. -->
+  <!-- Arrivée depuis le cadenas des quantités du site (?motif=quantites) :
+       on dit pourquoi on demande un compte avant de montrer un chiffre. -->
+  <div id="msgQuantites" style="display:none;background:var(--card);border-radius:14px;padding:12px 14px;
+       margin-bottom:16px;font-size:13px;line-height:1.5;text-align:center;">
+    Vos quantités sont calculées pour vous : créez votre compte, répondez au
+    questionnaire, et chaque plat s'affiche à votre mesure.
+  </div>
   <div id="msgReconnexion" style="display:none;background:var(--card);border-radius:14px;padding:12px 14px;
        margin-bottom:16px;font-size:13px;line-height:1.5;color:#8a5a00;text-align:center;">
     Reconnectez-vous une fois : Natty sécurise désormais votre compte,
@@ -489,8 +496,27 @@ async function reporterPrenom() {
   } catch (e) {}
 }
 
+var SUITE_OK = /^offre\.html(\?[\w=&%-]*)?$/;
+
 // core.js renvoie ici avec ?reconnexion=1 quand il a trouvé une identité
 // héritée sans session : la personne se croyait connectée, on le lui explique.
+// Le site envoie ?inscription=1 : on ouvre directement l'onglet Inscription,
+// le visiteur vient de cliquer « Créer mon compte ».
+(function(){
+  var p = new URLSearchParams(location.search);
+  if (p.get('inscription') === '1') switchTab('signup');
+  if (p.get('motif') === 'quantites') {
+    var m = document.getElementById('msgQuantites');
+    if (m) m.style.display = 'block';
+  }
+  /* ?suite= : la page où revenir après connexion (la commande en cours). Gardée
+     en sessionStorage pour survivre à l'aller-retour chez Google ou Apple.
+     Liste blanche : une destination libre ferait de cette page une
+     redirection ouverte. */
+  var s = p.get('suite');
+  if (s && SUITE_OK.test(s)) { try { sessionStorage.setItem('natty_suite', s); } catch (e) {} }
+})();
+
 if (new URLSearchParams(location.search).get('reconnexion') === '1') {
   var _mr = document.getElementById('msgReconnexion');
   if (_mr) _mr.style.display = 'block';
@@ -504,7 +530,9 @@ async function entrerDansApp(auth) {
   // menu.html existe des deux côtés : à la racine c'est le fichier lui-même,
   // dans le bundle natif c'est un relais vers index.html (nom imposé par
   // Capacitor). L'ancien tableau de bord n'est plus le point d'arrivée.
-  window.location.href = 'menu.html';
+  var suite = null;
+  try { suite = sessionStorage.getItem('natty_suite'); sessionStorage.removeItem('natty_suite'); } catch (e) {}
+  window.location.href = suite && SUITE_OK.test(suite) ? suite : 'menu.html';
 }
 
 async function doLogin() {
@@ -704,9 +732,32 @@ async function ouvrirFournisseur(provider) {
     await Browser.open({ url: urlAutorisation(provider, CAP_REDIRECT) });
     return;
   }
+  /* DANS LE SITE WIX (<natty-app>, iframe) : Google refuse de s'afficher
+     dans un cadre, et la session de l'app vit dans le stockage DU CADRE.
+     On envoie donc la PAGE ENTIÈRE chez le fournisseur, avec un retour vers
+     la page Wix (?retour=, posé par le composant) ; le composant rend ensuite
+     les jetons au cadre, qui ouvre la session chez lui.
+     ⚠️ L'adresse de retour doit figurer dans Supabase → Authentication →
+     Redirect URLs. Sinon Supabase retombe sur le Site URL (Vercel) : la
+     connexion marche, mais hors du site Wix. */
+  var retour = retourSiteWix();
+  if (retour) {
+    try { window.top.location.href = urlAutorisation(provider, retour); return; }
+    catch (e) { /* navigation du haut refusée : on retombe sur le cas simple */ }
+  }
   // Le retour doit pointer vers Vercel, pas localhost.
   window.location.href = urlAutorisation(provider,
     'https://natty-suivi.vercel.app/login.html?oauth=1');
+}
+
+/* L'adresse de la page Wix qui nous héberge, seulement si on est bien dans un
+   cadre ET qu'elle est sur notre domaine : une adresse de retour fournie par
+   l'URL ne doit jamais pouvoir envoyer des jetons ailleurs. */
+function retourSiteWix() {
+  if (window.self === window.top) return null;
+  var r = new URLSearchParams(location.search).get('retour') || '';
+  if (!r) { try { r = sessionStorage.getItem('natty_retour') || ''; } catch (e) {} }
+  return /^https:\/\/(www\.)?natty-nutrition\.com\/[\w\/-]*$/.test(r) ? r : null;
 }
 
 function doGoogle() { return ouvrirFournisseur('google'); }

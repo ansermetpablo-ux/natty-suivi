@@ -55,8 +55,21 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { FICHES, PORTIONS } from './fiches-natty.mjs';
-import { getNutri } from '../api/_nutrition.js';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
+
+/* api/_nutrition.js est écrit en syntaxe de module ES (`export function`),
+   mais package.json déclare "type": "commonjs" : Node le charge donc comme
+   CommonJS et refuse le mot `export`, par import nommé comme par import par
+   défaut. Vercel, lui, le compile. On le lit comme gen-nutrition.mjs le fait
+   déjà pour son contrôle : texte sans ses `export`, évalué une fois. */
+const { getNutri } = new Function(
+  readFileSync(new URL('../api/_nutrition.js', import.meta.url), 'utf8').replace(/^export /gm, '')
+  + '; return { getNutri };')();
+
+/* NATTY_DATE fixe la date écrite dans le catalogue. Sans elle, c'est le jour
+   même ; scripts/verifier-catalogue.mjs la pose pour régénérer à l'identique
+   un catalogue produit un autre jour. */
+const AUJOURDHUI = process.env.NATTY_DATE || new Date().toISOString().slice(0, 10);
 
 /* ── Ce que l'équipe décide, plat par plat ──────────────────────
    `fiche` doit correspondre AU CARACTÈRE PRÈS au champ `nom` d'une entrée
@@ -133,8 +146,10 @@ const CATEGORIES = {
   bien:  { label:"Bien-être",      promesse:"L'équilibre au quotidien" }
 };
 
-/* Prix — décision du 29/09/2026. */
-const PRIX = { unite: 12.5, abonnement: 9 };
+/* Prix — 10,50 € à l'unité depuis le 12/10/2026 (12,50 € décidé le 29/09
+   n'a jamais été appliqué) : c'est le prix que Stripe facture
+   (STRIPE_PRICE_UNITE), que les CGV et offre.html annoncent. */
+const PRIX = { unite: 10.5, abonnement: 9 };
 
 /* ── Rendements ────────────────────────────────────────────────
    Part réellement comestible d'un ingrédient pesé tel qu'il est écrit sur
@@ -367,7 +382,7 @@ const plats = VENTE.map(v => {
 });
 
 const sortie = {
-  genere_le: new Date().toISOString().slice(0, 10),
+  genere_le: AUJOURDHUI,
   genere_par: 'scripts/gen-plats.mjs',
   avertissement: "Fichier généré. Ne pas éditer à la main : relancer le script. " +
                  "Les valeurs sont calculées depuis les fiches techniques et NON VALIDÉES " +

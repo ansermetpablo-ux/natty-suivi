@@ -270,6 +270,9 @@ export default async function handler(req) {
         nb_repas: n || (formule === '4_repas' ? 4 : 3),
         jour: session.metadata?.livraison || sub.metadata?.livraison,
         adresse: session.metadata?.adresse || sub.metadata?.adresse,
+        // Les plats choisis pour la première semaine (la page de commande les
+        // fait choisir dans les deux formules depuis le 13/10/2026).
+        plats: lireJson(session.metadata?.plats),
         abonnement_id: aboId,
         stripe_ref: 'cs_' + session.id,
         montant: session.amount_total, email: session.customer_details?.email
@@ -438,16 +441,24 @@ async function envoyerRecap(supabase, b) {
   } catch (e) {}
   email = email || b.email || '';
 
-  // Les plats choisis à l'unité, par leur nom
+  /* Les plats choisis, par leur nom. Deux sortes d'identifiants : l'uuid de
+     `plats_menu` (ancienne page de commande) et l'identifiant du catalogue du
+     site (« poulet-moutarde », page de commande du 13/10/2026). Le second se
+     lit tel quel : on lui rend ses espaces et sa majuscule. */
   let plats = '';
   if (b.plats && b.plats.length) {
+    const UUID = /^[0-9a-f-]{36}$/i;
+    const nom = {};
     try {
-      const ids = b.plats.map(p => p.id).filter(Boolean);
-      const r = await supabase('plats_menu?id=in.(' + ids.join(',') + ')&select=id,nom', 'GET');
-      const rows = await r.json(); const nom = {};
-      (Array.isArray(rows) ? rows : []).forEach(p => { nom[p.id] = p.nom; });
-      plats = b.plats.map(p => (nom[p.id] || 'Plat') + ' × ' + p.n).join(', ');
+      const ids = b.plats.map(p => p.id).filter(id => UUID.test(String(id || '')));
+      if (ids.length) {
+        const r = await supabase('plats_menu?id=in.(' + ids.join(',') + ')&select=id,nom', 'GET');
+        const rows = await r.json();
+        (Array.isArray(rows) ? rows : []).forEach(p => { nom[p.id] = p.nom; });
+      }
     } catch (e) {}
+    const lisible = id => { const s = String(id || '').replace(/-/g, ' '); return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Plat'; };
+    plats = b.plats.map(p => (nom[p.id] || (UUID.test(String(p.id)) ? 'Plat' : lisible(p.id))) + ' × ' + p.n).join(', ');
   }
 
   const type = b.type === 'unite' ? 'Commande à l’unité' : 'Abonnement hebdomadaire';
@@ -460,7 +471,7 @@ async function envoyerRecap(supabase, b) {
   ].filter(Boolean);
 
   const texte = 'Votre commande est confirmée ✅\n' + lignes.map(l => l[0] + ' : ' + l[1]).join('\n')
-    + (b.type === 'abonnement' ? '\nVos recettes sont choisies par votre nutritionniste ; vous recevrez le détail avant la livraison.' : '');
+    + (b.type === 'abonnement' ? '\nLes plats des semaines suivantes sont choisis avec votre nutritionniste ; vous recevrez le détail avant chaque livraison.' : '');
 
   // 3. dans l'app
   try {

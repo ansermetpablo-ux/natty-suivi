@@ -2,7 +2,8 @@
    Natty — fabrication du Custom Element pour Wix Studio
 
        node scripts/gen-plats.mjs     (d'abord : produit data/plats.json)
-       node scripts/build-wix.mjs     (ensuite : produit wix/natty-carte.js)
+       node scripts/build-wix.mjs     (ensuite : produit wix/natty-carte.js
+                                       et les composants des pages)
 
    Ce que fait ce script, et uniquement ça : prendre wix/natty-carte.src.js
    et y remplacer le marqueur `/*__CATALOGUE__* / null` par le contenu de
@@ -15,6 +16,13 @@
    premier rendu — un trou blanc au milieu de la page, puis les plats.
    Le catalogue pèse une douzaine de kilo-octets : il tient dans le script.
 
+   LES PAGES (12/10/2026). Le script transforme aussi les pages HTML du
+   site (nouveau.html, entreprises.html, mentions-legales.html) en
+   composants <natty-accueil>, <natty-entreprises>, <natty-mentions>, et
+   écrit pour chacune son code Velo (seoMarkup). La liste est dans
+   scripts/wix-composants.mjs, la transformation dans
+   scripts/page-vers-wix.mjs.
+
    ⚠️ NE JAMAIS ÉDITER wix/natty-carte.js À LA MAIN. C'est la règle qui
    a déjà été apprise à nos dépens avec api/_nutrition.js : une copie
    manuelle finit toujours par diverger de son original. On édite le
@@ -22,9 +30,12 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { CARTE, APP, PAGES, LIENS } from './wix-composants.mjs';
+import { pageVersComposant, menuPourApp } from './page-vers-wix.mjs';
 
-const SRC = 'wix/natty-carte.src.js';
-const OUT = 'wix/natty-carte.js';
+const SRC = CARTE.modele;
+const OUT = CARTE.sortie;
+const DATE = process.env.NATTY_DATE || new Date().toISOString().slice(0, 10);
 const MARQUEUR = '/*__CATALOGUE__*/ null';
 
 let modele;
@@ -51,7 +62,7 @@ if (!publiables.length) {
 }
 
 const entete = `/* Natty — <natty-carte> pour Wix Studio.
-   FICHIER GÉNÉRÉ par scripts/build-wix.mjs le ${new Date().toISOString().slice(0, 10)}.
+   FICHIER GÉNÉRÉ par scripts/build-wix.mjs le ${DATE}.
    Ne pas éditer à la main : modifier wix/natty-carte.src.js et relancer.
    Catalogue : ${publiables.length} plats publiables sur ${catalogue.plats.length}. */
 `;
@@ -63,6 +74,35 @@ writeFileSync(OUT, sortie, 'utf8');
 
 const ko = Math.round(Buffer.byteLength(sortie, 'utf8') / 1024);
 console.log(`${OUT} écrit — ${ko} Ko, ${publiables.length} plats.`);
+
+{
+  /* <natty-app> : le menu et la feuille du site, injectés dans le modèle. */
+  const m = menuPourApp(APP.menu, LIENS);
+  let app = readFileSync(APP.modele, 'utf8');
+  const marques = {
+    '/*__CSS__*/ ""': JSON.stringify(m.css),
+    '/*__MENU__*/ ""': JSON.stringify(m.nav),
+    '/*__DEFAUTS__*/ {}': JSON.stringify(m.defauts),
+    '/*__ATTRIBUTS__*/ []': JSON.stringify(m.attributs),
+  };
+  for (const [k, v] of Object.entries(marques)) {
+    if (!app.includes(k)) throw new Error(`Le marqueur ${k} a disparu de ${APP.modele}.`);
+    app = app.replace(k, () => v);
+  }
+  app = `/* Natty — <${APP.balise}> pour Wix Studio.
+   FICHIER GÉNÉRÉ par scripts/build-wix.mjs le ${DATE}, depuis ${APP.modele} et le menu de ${APP.menu}.
+   Ne pas éditer à la main. */
+` + app;
+  writeFileSync(APP.sortie, app, 'utf8');
+  console.log(`${APP.sortie} écrit — ${Math.round(Buffer.byteLength(app, 'utf8') / 1024)} Ko.`);
+}
+
+for (const p of PAGES) {
+  const { composant, velo } = pageVersComposant(p, { liens: LIENS, catalogue, date: DATE });
+  writeFileSync(p.sortie, composant, 'utf8');
+  writeFileSync(p.velo, velo, 'utf8');
+  console.log(`${p.sortie} écrit — ${Math.round(Buffer.byteLength(composant, 'utf8') / 1024)} Ko, depuis ${p.page} (+ ${p.velo}).`);
+}
 
 const caches = catalogue.plats.filter(p => p.coherent === false);
 if (caches.length) {
