@@ -1460,3 +1460,54 @@ Vérifié sur la copie + faux PostgREST : curry 7,60 € / bourguignon 4,92 € 
 « Valider » ne réécrit que r2 (le curry à 0,9/1,0 intact) ; oignon du bourguignon 0,1 kg →
 `{"r2|oignon":0.1}`, curry inchangé ; achat oignon curry 0,72 kg à 65,5 % → 1,099 kg au total.
 Onglets sans requête, console vide, 0 px de débordement à 375 px.
+
+---
+
+## Refonte Natty OS — la coquille alignée sur la maquette v3 (26/10/2026)
+
+Demande d'Anatole : « lance la refonte du CRM », périmètre choisi : aligner `crm.html`
+sur la maquette « Natty OS v3 » (artefact claude.ai), sans perdre de fonction.
+
+**Branche `refonte-crm`, partie de `main`, pas de `crm`.** `origin/crm` est en retard
+de 60 commits sur `main` pour le CRM (Produits, Marges, Menu, Assigner, Opérationnel en
+onglets y manquent) ; ses 2 commits propres portent sur l'offre et entrent en conflit
+avec la refonte de l'offre déjà en production (`offre.html`, `api/webhook.js`). Partir
+de `crm` aurait été travailler sur une copie obsolète — l'incident du 25/09.
+
+**Ce qui change — la façon d'arriver aux écrans, pas les écrans.**
+- Barre latérale en groupes MÉTIER (`NAV`) : Pilotage, Commercial, Opérations, Finances,
+  Organisation. Chaque entrée est une paire `[cle, vue]` qui pointe vers une vue
+  existante ; `go()`, `SUB['vue-'+cle]` et toutes les vues sont inchangés.
+- Groupes repliables, tous ouverts par défaut, état mémorisé (`natty_crm_nav_fermes`).
+  Le groupe de la page courante ne se replie jamais à l'affichage.
+- Les activités génériques (Finance, Partenariat, Développement, Documents, Modèle
+  financier) n'énumèrent plus leurs cinq vues dans la barre : Aperçu / Tâches /
+  Sous-projets / Schéma / Drive sont des onglets de leur page (`vGestionInterne`). Les
+  vues « Gestion » de Commercial, Production, Logistique et Financement deviennent
+  « Suivi commercial », « Suivi production », « Suivi logistique », « Dossiers de
+  financement ».
+- La vue choisie est restaurée au rechargement (`natty_crm_vue_<cle>`).
+- Tableau de bord : rangée d'indicateurs (tâches ouvertes en carte métal, échéances à
+  7 j, bons de commande à traiter, projets actifs) et bloc « À traiter » (tâches en
+  retard, bons sans attribution ou sans date, tâches sans porteur). Les échéances, la
+  grille des activités et les onglets Projets / Mapping restent en dessous.
+- Recherche Ctrl K : les modules de la nouvelle navigation remplacent « Pages » et
+  « Activités ».
+- Nom : « Natty OS · ERP interne » (titre, barre latérale, connexion).
+
+**Ce qui n'est PAS repris de la maquette, volontairement** : Clients appli, Messages &
+RDV, Signalements (dans `admin.html`, et aucun chemin ne doit y mener depuis le CRM) ;
+Journal des actions, Agent Natty, Banque Qonto, Feuille de route, Intégrations (rien
+de construit derrière : une entrée vers un écran vide est pire qu'une entrée absente) ;
+les indicateurs abonnés / trésorerie (aucune source branchée). Le sélecteur
+« voir en tant que » n'est pas repris : le rôle vient de `staff`, côté base.
+- `logistique · commandes` (`vCommandesLogistique`) n'a plus d'entrée propre : Bons de
+  commande et Livraison couvrent le même besoin. Reste atteignable par le raccourci de
+  l'aperçu Logistique.
+
+**Vérifié** : `node --check` sur le script inline ; en navigateur (session d'équipe
+simulée, données vides via la clé anon) les 28 entrées ouvrent la bonne page avec le
+bon fil d'Ariane et l'entrée active, sans erreur (« Équipe & RH » exige une session :
+avec une session simulée, aucune erreur) ; Ctrl K « stocks » → Opérations · Stocks ;
+repli d'un groupe ; mémoire de la vue ; 375 px sans défilement horizontal, menu latéral
+qui s'ouvre. 🔄 Non vérifié avec une vraie session d'équipe ni de vraies données.

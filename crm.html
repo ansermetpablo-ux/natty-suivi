@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Natty CRM</title>
+<title>Natty OS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap">
 <style>
@@ -389,7 +389,7 @@ details.fin-rec[open] .fin-chev{transform:rotate(90deg)}details.fin-rec summary:
 <div class="loginwrap" id="loginScreen">
   <div class="logincard">
     <div class="logo">n</div>
-    <h1>Natty CRM</h1>
+    <h1>Natty OS</h1>
     <p class="sub">Connecte-toi avec ton compte d'équipe (le même que admin.html).</p>
     <div class="loginerr" id="loginErr"></div>
     <input class="inp" id="emailInput" type="email" placeholder="email@natty-nutrition.com" autocomplete="username">
@@ -400,7 +400,7 @@ details.fin-rec[open] .fin-chev{transform:rotate(90deg)}details.fin-rec summary:
 
 <div class="app hide" id="mainApp">
   <aside class="side" id="side" aria-label="Navigation">
-    <div class="brand"><div class="logo">n</div><div><b>Natty CRM</b><small>Projets &amp; échéances</small></div></div>
+    <div class="brand"><div class="logo">n</div><div><b>Natty OS</b><small>ERP interne</small></div></div>
     <div class="navscroll" id="nav"></div>
     <div class="side-foot">
       <div class="av dk" id="meAv">·</div>
@@ -424,7 +424,7 @@ details.fin-rec[open] .fin-chev{transform:rotate(90deg)}details.fin-rec summary:
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 <div class="modal" id="modal" role="dialog" aria-modal="true"></div>
-<div class="pal" id="pal" role="dialog" aria-label="Recherche"><input id="palIn" placeholder="Tâche, sous-projet, activité…" autocomplete="off"><div class="res" id="palRes"></div></div>
+<div class="pal" id="pal" role="dialog" aria-label="Recherche"><input id="palIn" placeholder="Module, tâche, projet…" autocomplete="off"><div class="res" id="palRes"></div></div>
 <div class="pop" id="pop"></div>
 <div class="toast" id="toast" role="status"></div>
 <div class="tablette" id="tablette"></div>
@@ -652,87 +652,124 @@ function peopleOptions(sel){
    pour `porteur` (un texte libre) mais pas pour retrouver un compte. */
 function nomDe(userId){const s=S.staff.find(x=>x.user_id===userId);return s?s.nom:'—'}
 
-/* ============ NAVIGATION ============
-   La barre latérale est un accordéon : chaque section (Pilotage, puis une
-   par activité) se déroule sur son chevron, et pour une activité, cliquer
-   l'EN-TÊTE navigue aussi vers sa vue par défaut — dérouler et arriver sont
-   le même geste, pas deux. Les enfants d'une section sont ses VUES
-   (`vuesDe()`, définie plus bas avec vActivite) : pour Commercial et
-   Production, ses vues propres ; pour les autres, les cinq génériques
-   (Aperçu/Tâches/Sous-projets/Schéma/Drive). */
-let NAV_EXPANDED={pilotage:true};
-/* Un seul menu déroulant ouvert à la fois (demande de Pablo, 26/09) :
-   ouvrir une section replie toutes les autres. Les pages de Pilotage
-   (accueil, tâches, RH, projets, page d'un projet) appartiennent au
-   groupe « pilotage ». */
-function groupeDe(id){return ACT_BY_CLE[id]?id:'pilotage'}
-function ouvrirSeulGroupe(cle){
- NAV_EXPANDED={pilotage:false};
- ACTIVITES.forEach(a=>NAV_EXPANDED[a.cle]=false);
- NAV_EXPANDED[cle]=true;
+/* ============ NAVIGATION — Natty OS (refonte du 26/10/2026) ============
+   La barre latérale suit la maquette « Natty OS v3 » : des groupes MÉTIER
+   (Pilotage, Commercial, Opérations, Finances, Organisation) et non plus une
+   section par activité. Chaque entrée pointe vers une page EXISTANTE —
+   `[cle, vue]`, la même paire que lisaient go()/SUB['vue-'+cle] — donc aucun
+   écran n'est réécrit : seule la façon d'y arriver change.
+   Ce qui n'a pas de vue native dans le CRM n'apparaît pas (Clients appli,
+   Messages, Signalements vivent dans admin.html, et « aucun chemin ne doit
+   mener vers admin.html » ; Journal, Agent IA et Qonto ne sont pas
+   construits) : une entrée qui mène à un écran vide est pire qu'une entrée
+   absente. Les activités sans vues propres (Finance, Partenariat,
+   Développement, Documents, Modèle financier) gardent leurs cinq vues
+   génériques en onglets dans la page (vGestionInterne). */
+const NAV=[
+ {g:'pilotage',l:'Pilotage',items:[
+  {l:'Tableau de bord',ic:'dash',to:['dash']},
+  {l:'Tâches & agenda',ic:'taches',to:['taches']}]},
+ {g:'commercial',l:'Commercial',items:[
+  {l:'Pipe des ventes',ic:'commercial',to:['commercial','pipeline']},
+  {l:'Comptes & contacts',ic:'rh',to:['commercial','comptes']},
+  {l:'Profils types',ic:'documents',to:['commercial','profils']},
+  {l:'Emailing & phoning',ic:'mail',to:['commercial','emailing']},
+  {l:'Base de prospection',ic:'funnel',to:['commercial','prospection']},
+  {l:'Partenariats',ic:'partenariat',to:['partenariat']},
+  {l:'Suivi commercial',ic:'projet',to:['commercial','gestion']}]},
+ {g:'operations',l:'Opérations',items:[
+  {l:'Vue d’ensemble',ic:'dash',to:['production','dashboard']},
+  {l:'Bons de commande',ic:'logistique',to:['production','commandes']},
+  {l:'Calendrier',ic:'calendar',to:['production','calendrier']},
+  {l:'Production',ic:'production',to:['production','production']},
+  {l:'Menu & recettes',ic:'documents',to:['production','menu']},
+  {l:'Stocks',ic:'stocks',to:['production','stocks']},
+  {l:'Livraison',ic:'livraison',to:['production','livraison']},
+  {l:'Tournées',ic:'logistique',to:['logistique','tournees']},
+  {l:'Suivi production',ic:'projet',to:['production','gestion']},
+  {l:'Suivi logistique',ic:'projet',to:['logistique','gestion']}]},
+ {g:'finances',l:'Finances',items:[
+  {l:'Opérationnel & marges',ic:'finance',to:['financement','operationnel']},
+  {l:'Produits',ic:'stocks',to:['financement','produits']},
+  {l:'Trésorerie & charges',ic:'finance',to:['finance']},
+  {l:'Prévisionnel',ic:'modele_financier',to:['modele_financier']},
+  {l:'Dossiers de financement',ic:'financement',to:['financement','gestion']}]},
+ {g:'organisation',l:'Organisation',items:[
+  {l:'Projets & schémas',ic:'projet',to:['projets']},
+  {l:'Équipe & RH',ic:'rh',to:['rh']},
+  {l:'Documents & juridique',ic:'documents',to:['documents']},
+  {l:'Développement',ic:'developpement',to:['developpement']}]}
+];
+/* Groupes repliés : mémorisés par appareil, comme dans la maquette. Tous
+   ouverts par défaut — la liste tient sur un écran de portable. */
+let NAV_FERMES=(()=>{try{return new Set(JSON.parse(localStorage.getItem('natty_crm_nav_fermes')||'[]'))}catch(e){return new Set()}})();
+function navItemsVisibles(grp){return grp.items.filter(it=>can(it.to[0]))}
+/* L'entrée qui correspond à la page affichée. Une page d'activité sans vue
+   (générique) ou une vue sans entrée propre retombe sur la première entrée
+   de la même activité ; un projet, sur « Projets & schémas ». */
+function navCourant(){
+ const cle=CUR.startsWith('projet:')?'projets':CUR;
+ const vue=VUES[cle]?(SUB['vue-'+cle]||vueParDefaut(cle)):null;
+ let trouve=null,repli=null;
+ NAV.forEach(g=>g.items.forEach(it=>{
+  if(it.to[0]!==cle)return;
+  if(!repli)repli={g,it};
+  if((it.to[1]||null)===vue)trouve={g,it};
+ }));
+ return trouve||repli;
 }
 function badges(){
- const b={taches:S.taches.filter(t=>t.statut!=='fait').length};
- ACTIVITES.forEach(a=>{b[a.cle]=S.taches.filter(t=>t.activite===a.cle&&t.statut!=='fait').length});
+ const ouvertes=S.taches.filter(t=>t.statut!=='fait');
  document.querySelectorAll('.nitem').forEach(n=>{
   const e=n.querySelector('.b');if(!e)return;
   const cle=n.dataset.m,vue=n.dataset.vue;
-  const montre=!vue||vue===vueParDefaut(cle);
-  const v=montre?b[cle]:0;
+  let v=0;
+  if(cle==='taches')v=ouvertes.filter(t=>can(t.activite)).length;
+  // Une activité générique compte ses tâches ouvertes ; les vues métier
+  // (pipe, commandes…) ne portent pas de compteur de tâches, qui y
+  // ressemblerait à un nombre d'opportunités ou de commandes.
+  else if(ACT_BY_CLE[cle]&&(!vue||vue==='gestion'))v=ouvertes.filter(t=>t.activite===cle).length;
   e.textContent=v||'';e.classList.toggle('hide',!v);
  });
 }
 function renderNav(){
- const items=[['dash','Accueil','dash'],['taches','Toutes les tâches','taches'],['rh','RH','rh'],['projets','Projets','projet']].filter(([id])=>can(id));
- const acts=ACTIVITES.filter(a=>can(a.cle));
- $('#nav').innerHTML=
-  groupeHtml('pilotage','Pilotage',items.map(([id,l,ic])=>navBtn(id,l,ic)).join('')) +
-  acts.map(a=>groupeHtml(a.cle,a.nom,vuesDe(a.cle).map(([vid,l,ic])=>navBtn(a.cle,l,ic,vid)).join(''))).join('');
+ const cour=navCourant();
+ $('#nav').innerHTML=NAV.map(grp=>{
+  const its=navItemsVisibles(grp);if(!its.length)return'';
+  return `<div class="ngroup ${NAV_FERMES.has(grp.g)&&!(cour&&cour.g===grp)?'closed':''}"><div data-ghead="${grp.g}">${esc(grp.l)}<svg viewBox="0 0 24 24">${ICON.chevron}</svg></div>${its.map(it=>navBtn(it,cour&&cour.it===it)).join('')}</div>`;
+ }).join('');
  badges();
 }
-function groupeHtml(cle,label,inner){
- const ouvert=NAV_EXPANDED[cle]!=null?NAV_EXPANDED[cle]:CUR===cle;
- return `<div class="ngroup ${ouvert?'':'closed'}"><div data-ghead="${cle}">${esc(label)}<svg viewBox="0 0 24 24">${ICON.chevron}</svg></div>${inner}</div>`;
-}
-function navBtn(id,label,icon,vue){
- const actif=vue?(CUR===id&&(SUB['vue-'+id]||vueParDefaut(id))===vue):(CUR===id);
- return `<button class="nitem" data-m="${id}" ${vue?`data-vue="${esc(vue)}"`:''} ${actif?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ICON[icon]}</svg><span>${esc(label)}</span><em class="b hide"></em></button>`;
+function navBtn(it,actif){
+ const [cle,vue]=it.to;
+ return `<button class="nitem" data-m="${esc(cle)}" ${vue?`data-vue="${esc(vue)}"`:''} ${actif?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ICON[it.ic]||ICON.projet}</svg><span>${esc(it.l)}</span><em class="b hide"></em></button>`;
 }
 $('#nav')?.addEventListener('click',e=>{
  const gh=e.target.closest('[data-ghead]');
  if(gh){
-  const cle=gh.dataset.ghead;
-  if(cle==='pilotage'||cle===CUR){
-   // Déjà sur cette page (ou Pilotage, jamais une page en soi) : une
-   // simple bascule, pas une navigation — sinon go() reposerait aussitôt
-   // NAV_EXPANDED à `true` et la section ne pourrait jamais se refermer.
-   const ouvertAvant=NAV_EXPANDED[cle]!=null?NAV_EXPANDED[cle]:(cle==='pilotage');
-   if(ouvertAvant)NAV_EXPANDED[cle]=false;else ouvrirSeulGroupe(cle);
-   renderNav();
-  }else{
-   SUB['vue-'+cle]=vueParDefaut(cle);
-   go(cle);   // go() déplie la section qu'on rejoint
-  }
+  const g=gh.dataset.ghead;
+  if(NAV_FERMES.has(g))NAV_FERMES.delete(g);else NAV_FERMES.add(g);
+  try{localStorage.setItem('natty_crm_nav_fermes',JSON.stringify([...NAV_FERMES]))}catch(err){}
+  gh.parentElement.classList.toggle('closed',NAV_FERMES.has(g));
   return;
  }
  const n=e.target.closest('.nitem');
  if(n){
   if(n.dataset.vue)SUB['vue-'+n.dataset.m]=n.dataset.vue;
-  if(n.dataset.m==='financement')FIN_DETAIL=null;
-  if(n.dataset.m==='production'&&typeof CMD!=='undefined')CMD.assigner=null;   // quitter la page « Assigner » d'une commande   // revenir au tableau d'Opérationnel depuis une page de détail
+  if(n.dataset.m==='financement')FIN_DETAIL=null;   // revenir au tableau d'Opérationnel depuis une page de détail
+  if(n.dataset.m==='production'&&typeof CMD!=='undefined')CMD.assigner=null;   // quitter la page « Assigner » d'une commande
   go(n.dataset.m);
-  $('#side').classList.remove('on');
+  $('#side').classList.remove('on');$('#scrim').classList.remove('on');
  }
 });
 function go(id){
- if(!can(id)){toast("Ce rôle n'a pas accès à cette activité");return}
+ if(!can(id)){toast("Ce rôle n'a pas accès à cette page");return}
  LINK_MODE=false;LINK_FROM=null;   // le mode « relier » ne doit pas survivre à un changement de page
  CUR=id;
- ouvrirSeulGroupe(groupeDe(id));   // la section qu'on rejoint se déplie, les autres se replient
  renderNav();
  render();
  window.scrollTo(0,0);
- try{localStorage.setItem('natty_crm_cur',id)}catch(e){}
+ try{localStorage.setItem('natty_crm_cur',id);if(VUES[id])localStorage.setItem('natty_crm_vue_'+id,SUB['vue-'+id]||'')}catch(e){}
 }
 async function render(){
  $('#crumb').innerHTML=crumbFor(CUR);
@@ -740,16 +777,13 @@ async function render(){
  afterRender(CUR);
 }
 function crumbFor(cle){
- if(cle==='dash')return'<b>Accueil</b>';
- if(cle==='taches')return'Pilotage · <b>Toutes les tâches</b>';
- if(cle==='rh')return'Pilotage · <b>RH</b>';
- if(cle==='projets')return'Pilotage · <b>Projets</b>';
  if(cle.startsWith('projet:')){
-  const p=S.projets.find(x=>x.id===cle.slice(7));if(!p)return'<b>Projet</b>';
+  const p=S.projets.find(x=>x.id===cle.slice(7));if(!p)return'Organisation · <b>Projet</b>';
   const a=ACT_BY_CLE[p.activite];
-  return `${a?esc(a.nom):''} · Projet · <b>${esc(p.nom)}</b>`;
+  return `Organisation · ${a?esc(a.nom)+' · ':''}<b>${esc(p.nom)}</b>`;
  }
- const a=ACT_BY_CLE[cle];return a?`Activité · <b>${esc(a.nom)}</b>`:'<b>—</b>';
+ const c=navCourant();
+ return c?`${esc(c.g.l)} · <b>${esc(c.it.l)}</b>`:'<b>—</b>';
 }
 function schemaManqueBanner(){
  if(!SCHEMA_MANQUANT)return'';
@@ -778,11 +812,44 @@ async function vDash(){
  let body='';
  if(tb.cur==='projets')body=vAccueilProjets();
  if(tb.cur==='mapping')body=vMappingGeneral();
- return ph(`Bonjour ${esc(STAFF_NOM||'')}`,`${TODAY.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · ${urgentes.length} échéance${urgentes.length>1?'s':''} en cours`,`<button class="btn primary" data-new="projet">+ Projet</button>`)+
+ return ph(`Bonjour ${esc(STAFF_NOM||'')}`,`${TODAY.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · vue ${esc((ROLES[STAFF_ROLE]||{}).l||STAFF_ROLE||'')}`,`<button class="btn" data-go="taches">Toutes les tâches</button><button class="btn primary" data-new="projet">+ Projet</button>`)+
  `<div id="notifsAccueil"></div>`+
+ await dashKpis(urgentes)+
+ `<div class="sect"><h2>Prochaines échéances</h2><span>${urgentes.length} en cours</span></div>`+
  (heros.length?`<div class="hero-carousel">${heros.map(heroCard).join('')}</div>`:`<div class="empty">Aucune échéance en cours. Les tâches avec une date arrivent ici.</div>`)+
  vGrilleActivites()+
  tb.html+body;
+}
+/* Natty OS : la rangée d'indicateurs et le bloc « À traiter » de la
+   maquette, sur les VRAIES données — tâches, projets et bons de commande.
+   Rien n'est affiché qui ne se lise en base : pas d'abonnés, pas de
+   trésorerie tant qu'aucune source n'est branchée (Qonto, abonnements). */
+async function dashKpis(urgentes){
+ const todayStr=TODAY.toISOString().slice(0,10);
+ const dans7=new Date(TODAY.getTime()+7*864e5).toISOString().slice(0,10);
+ const ouvertes=S.taches.filter(t=>can(t.activite)&&t.statut!=='fait');
+ const enRetard=ouvertes.filter(t=>t.echeance&&t.echeance<todayStr);
+ const semaine=ouvertes.filter(t=>t.echeance&&t.echeance>=todayStr&&t.echeance<=dans7);
+ const sansPorteur=ouvertes.filter(t=>!t.porteur);
+ const projetsActifs=S.projets.filter(p=>can(p.activite)&&p.statut==='actif');
+ let bons=null;
+ if(can('production')){
+  const r=await sbTry('bons_commande?select=id,statut,jour_livraison&statut=not.in.(annule,livre)&limit=500');
+  if(r.ok)bons=r.data;
+ }
+ const bonsATraiter=bons?bons.filter(b=>b.statut==='a_attribuer'||!b.jour_livraison).length:null;
+ const kpi=`<div class="grid g4">
+  <button class="card metal kpi click" data-go="taches" style="text-align:left;border:0"><div class="lbl">Tâches ouvertes <span class="chip" style="background:rgba(255,255,255,.14);color:#fff">${enRetard.length} en retard</span></div><div class="val num">${ouvertes.length}</div><div class="foot">Toutes activités accessibles</div></button>
+  <button class="card kpi click" data-go="taches" style="text-align:left;border:0"><div class="lbl">Cette semaine <span class="chip ${semaine.length?'warn':''}">7 j</span></div><div class="val num">${semaine.length}</div><div class="kpi-go">Échéances à venir →</div></button>
+  ${bons?`<button class="card kpi click" data-kpi-vue="commandes" data-kpi-filtre="rouge" style="text-align:left;border:0"><div class="lbl">Bons à traiter <span class="chip ${bonsATraiter?'bad':'ok'}">${bonsATraiter?'à attribuer':'à jour'}</span></div><div class="val num" ${bonsATraiter?'style="color:var(--red)"':''}>${bonsATraiter}</div><div class="kpi-go">${bons.length} bon${bons.length>1?'s':''} en cours →</div></button>`:''}
+  <button class="card kpi click" data-go="projets" style="text-align:left;border:0"><div class="lbl">Projets actifs</div><div class="val num">${projetsActifs.length}</div><div class="kpi-go">Projets & schémas →</div></button>
+ </div>`;
+ const lignes=[];
+ enRetard.sort((a,b)=>a.echeance.localeCompare(b.echeance)).slice(0,4).forEach(t=>lignes.push(`<div class="li c" data-open-tache="${t.id}"><span class="dot bad"></span><div class="grow"><b style="font-weight:500">${esc(t.titre)}</b><div class="meta">${esc((ACT_BY_CLE[t.activite]||{}).nom||t.activite||'')} · ${joursInfo(t.echeance).label} · ${own(t.porteur)}</div></div>›</div>`));
+ if(bonsATraiter)lignes.push(`<div class="li c" data-kpi-vue="commandes" data-kpi-filtre="rouge"><span class="dot bad"></span><div class="grow"><b style="font-weight:500">${bonsATraiter} bon${bonsATraiter>1?'s':''} de commande sans attribution ou sans date</b><div class="meta">Opérations · Bons de commande</div></div>›</div>`);
+ if(sansPorteur.length)lignes.push(`<div class="li c" data-go="taches"><span class="dot warn"></span><div class="grow"><b style="font-weight:500">${sansPorteur.length} tâche${sansPorteur.length>1?'s':''} sans porteur</b><div class="meta">À attribuer dans Tâches & agenda</div></div>›</div>`);
+ const aTraiter=`<div class="card lift" style="margin-top:14px"><h3>À traiter <span class="chip ${lignes.length?'bad':'ok'}">${lignes.length||'rien'}</span></h3><p class="sub">Retards, bons de commande incomplets, tâches sans porteur</p><div class="list">${lignes.join('')||'<div class="muted" style="font-size:12.5px">Rien d’urgent. Bonne journée.</div>'}</div></div>`;
+ return kpi+aTraiter;
 }
 
 /* Le « cadrillage héro » : un bloc par activité, cliquable — clique →
@@ -3049,10 +3116,13 @@ async function vActivite(cle){
  const vues=vuesDe(cle);
  const vueId=SUB['vue-'+cle]||vues[0][0];
  const vueDef=vues.find(v=>v[0]===vueId)||vues[0];
- const body=(!VUES[cle])?await vGenerique(cle,vueId,tachesAct)
+ // Natty OS : la barre latérale n'énumère plus les cinq vues génériques
+ // d'une activité ; elles sont des onglets de sa page (vGestionInterne).
+ const body=(!VUES[cle])?await vGestionInterne(cle,tachesAct)
   :vueId==='gestion'?await vGestionInterne(cle,tachesAct)
   :await rendreVueSpecifique(cle,vueId);
- return ph(a.nom,`${vueDef[1]} — ${a.nom}`,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
+ const nc=navCourant();
+ return ph(nc?nc.it.l:a.nom,VUES[cle]?`${vueDef[1]} — ${a.nom}`:'Aperçu, tâches, sous-projets, schéma et drive de l’activité',`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
   routineHero(cle,routine)+body;
 }
 /* Une activité sans vues dédiées : chaque vue générique est directement une
@@ -4729,8 +4799,7 @@ $('#createBtn').onclick=e=>{
 let palSel=0,palItems=[];
 function palRender(q){
  q=(q||'').toLowerCase();const it=[];
- [['dash','Accueil'],['taches','Toutes les tâches']].filter(([id])=>can(id)).forEach(([id,l])=>it.push({g:'Pages',l,s:'',fn:()=>go(id)}));
- ACTIVITES.filter(a=>can(a.cle)).forEach(a=>it.push({g:'Activités',l:a.nom,s:'',fn:()=>go(a.cle)}));
+ NAV.forEach(grp=>navItemsVisibles(grp).forEach(n=>it.push({g:'Modules',l:n.l,s:grp.l,fn:()=>{const [c,v]=n.to;if(v)SUB['vue-'+c]=v;go(c)}})));
  S.taches.forEach(t=>it.push({g:'Tâches',l:t.titre,s:own(t.porteur).replace(/<[^>]+>/g,''),fn:()=>openTache(t.id)}));
  S.projets.forEach(p=>it.push({g:'Projets',l:p.nom,s:(ACT_BY_CLE[p.activite]||{}).nom||'',fn:()=>go('projet:'+p.id)}));
  palItems=it.filter(i=>!q||(i.l+' '+i.s).toLowerCase().includes(q)).slice(0,30);palSel=0;let last='';
@@ -6215,7 +6284,11 @@ async function demarrerApp(){
  $('#meNom').textContent=STAFF_NOM;
  $('#meRole').textContent=(ROLES[STAFF_ROLE]||{}).l||STAFF_ROLE;
  await chargerBase();
- try{const c=localStorage.getItem('natty_crm_cur');if(c&&can(c))CUR=c;else CUR='dash'}catch(e){CUR='dash'}
+ try{
+  const c=localStorage.getItem('natty_crm_cur');if(c&&can(c))CUR=c;else CUR='dash';
+  const v=VUES[CUR]&&localStorage.getItem('natty_crm_vue_'+CUR);
+  if(v&&VUES[CUR].some(x=>x[0]===v))SUB['vue-'+CUR]=v;
+ }catch(e){CUR='dash'}
  renderNav();
  await render();
  demarrerSondageNotifs();
