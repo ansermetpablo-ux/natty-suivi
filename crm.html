@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Natty CRM</title>
+<title>Natty OS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap">
 <style>
@@ -111,6 +111,9 @@ main{padding-block:22px 80px;padding-inline:clamp(16px,3vw,32px);min-width:0}
 .sect h2{margin:0;font-size:17px;letter-spacing:-.02em}.sect span{color:var(--muted);font-size:12.5px}
 .exbar{display:flex;gap:10px;align-items:center;padding:9px 14px;border-radius:var(--r-md);border:1px dashed var(--red);color:var(--red);font-size:12.5px;margin-bottom:14px;background:var(--red-bg)}
 .tbl-wrap{overflow-x:auto;border-radius:var(--r-lg);border:1px solid var(--line);background:var(--bg)}
+.mx td,.mx th{text-align:center}.mx td:first-child,.mx th:first-child{text-align:left;white-space:nowrap}
+.mx tr.mx-g td{background:var(--panel);font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.yes{color:var(--green);font-weight:700}.ro{color:var(--blue);font-weight:600;font-size:12px}.no{color:var(--muted);opacity:.45}
 table{width:100%;border-collapse:collapse;min-width:640px}
 th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
 th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--panel)}
@@ -389,7 +392,7 @@ details.fin-rec[open] .fin-chev{transform:rotate(90deg)}details.fin-rec summary:
 <div class="loginwrap" id="loginScreen">
   <div class="logincard">
     <div class="logo">n</div>
-    <h1>Natty CRM</h1>
+    <h1>Natty OS</h1>
     <p class="sub">Connecte-toi avec ton compte d'équipe (le même que admin.html).</p>
     <div class="loginerr" id="loginErr"></div>
     <input class="inp" id="emailInput" type="email" placeholder="email@natty-nutrition.com" autocomplete="username">
@@ -400,7 +403,7 @@ details.fin-rec[open] .fin-chev{transform:rotate(90deg)}details.fin-rec summary:
 
 <div class="app hide" id="mainApp">
   <aside class="side" id="side" aria-label="Navigation">
-    <div class="brand"><div class="logo">n</div><div><b>Natty CRM</b><small>Projets &amp; échéances</small></div></div>
+    <div class="brand"><div class="logo">n</div><div><b>Natty OS</b><small>ERP interne</small></div></div>
     <div class="navscroll" id="nav"></div>
     <div class="side-foot">
       <div class="av dk" id="meAv">·</div>
@@ -424,7 +427,7 @@ details.fin-rec[open] .fin-chev{transform:rotate(90deg)}details.fin-rec summary:
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true"></aside>
 <div class="modal" id="modal" role="dialog" aria-modal="true"></div>
-<div class="pal" id="pal" role="dialog" aria-label="Recherche"><input id="palIn" placeholder="Tâche, sous-projet, activité…" autocomplete="off"><div class="res" id="palRes"></div></div>
+<div class="pal" id="pal" role="dialog" aria-label="Recherche"><input id="palIn" placeholder="Module, tâche, projet…" autocomplete="off"><div class="res" id="palRes"></div></div>
 <div class="pop" id="pop"></div>
 <div class="toast" id="toast" role="status"></div>
 <div class="tablette" id="tablette"></div>
@@ -473,8 +476,146 @@ async function sb(path,options={}){
   const res=await fetch(SB_URL+'/rest/v1/'+path,{...options,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+jetonStaff(),'Content-Type':'application/json','Prefer':'return=representation',...(options.headers||{})}});
   const text=await res.text();
   if(!res.ok)throw new Error(text);
-  return text?JSON.parse(text):[];
+  const data=text?JSON.parse(text):[];
+  try{journalNoter(path,options,data)}catch(e){}   // le journal ne doit JAMAIS faire échouer une écriture
+  return data;
 }
+
+/* ============ JOURNAL DES ACTIONS (0022_crm_journal.sql) ============
+   Toute écriture d'équipe passe par sb() : c'est donc ICI qu'on la trace,
+   une fois, plutôt qu'à chacun des centaines d'appels — un appel oublié
+   aurait fait un journal troué sans que rien ne le dise.
+   Les écritures en rafale (20 attributions d'une commande, 12 étapes d'une
+   session) sur la même table et du même type deviennent UNE ligne, `nb`
+   les compte : un journal de 300 lignes pour un seul geste ne se lit pas.
+   Le journal lui-même s'écrit par fetch direct, jamais par sb() — sinon il
+   se tracerait lui-même. */
+const JOURNAL_TABLES={
+ crm_taches:{m:'Tâches',s:'tâche',p:'tâches',f:1,n:'titre'},
+ crm_taches_dependances:{m:'Tâches',s:'dépendance',p:'dépendances',f:1},
+ crm_projets:{m:'Projets',s:'projet',p:'projets',n:'nom'},
+ crm_schema_blocs:{m:'Projets',s:'bloc de schéma',p:'blocs de schéma',n:'titre'},
+ crm_schema_liens:{m:'Projets',s:'lien de schéma',p:'liens de schéma'},
+ crm_modeles_blocs:{m:'Projets',s:'modèle de bloc',p:'modèles de bloc',n:'nom'},
+ crm_modeles_bloc_taches:{m:'Projets',s:'tâche modèle',p:'tâches modèles',f:1,n:'titre'},
+ crm_documents:{m:'Documents',s:'document',p:'documents',n:'nom'},
+ bons_commande:{m:'Commandes',s:'bon de commande',p:'bons de commande'},
+ bons_attributions:{m:'Commandes',s:'attribution',p:'attributions',f:1},
+ abonnements:{m:'Commandes',s:'abonnement',p:'abonnements'},
+ crm_sessions:{m:'Production',s:'session de production',p:'sessions de production',f:1,n:'jour'},
+ crm_session_etapes:{m:'Production',s:'étape de session',p:'étapes de session',f:1,n:'titre'},
+ crm_session_equipe:{m:'Production',s:'membre de session',p:'membres de session'},
+ crm_session_inventaire:{m:'Stocks',s:'ligne d’inventaire',p:'lignes d’inventaire',f:1,n:'ingredient_nom'},
+ crm_menus:{m:'Production',s:'menu',p:'menus',n:'nom'},
+ crm_menu_recettes:{m:'Production',s:'recette de menu',p:'recettes de menu',f:1},
+ recettes:{m:'Menu & recettes',s:'recette',p:'recettes',f:1,n:'nom'},
+ recettes_ingredients:{m:'Menu & recettes',s:'ingrédient de recette',p:'ingrédients de recette',n:'ingredient_nom'},
+ recettes_etapes:{m:'Menu & recettes',s:'étape de recette',p:'étapes de recette',f:1,n:'titre'},
+ plats_menu:{m:'Menu & recettes',s:'plat du menu',p:'plats du menu',n:'nom'},
+ stocks_mp:{m:'Stocks',s:'lot de stock',p:'lots de stock',n:'ingredient_nom'},
+ ingredients_base:{m:'Stocks',s:'ingrédient de base',p:'ingrédients de base',n:'nom'},
+ crm_plats:{m:'Produits',s:'plat',p:'plats',n:'code'},
+ factures_fournisseur:{m:'Finances',s:'facture fournisseur',p:'factures fournisseur',f:1,n:'fournisseur'},
+ lignes_facture:{m:'Finances',s:'ligne de facture',p:'lignes de facture',f:1,n:'libelle'},
+ crm_tarifs:{m:'Finances',s:'tarif',p:'tarifs',n:'cle'},
+ crm_tournees:{m:'Logistique',s:'tournée',p:'tournées',f:1,n:'jour'},
+ crm_tournee_arrets:{m:'Logistique',s:'arrêt de tournée',p:'arrêts de tournée',n:'adresse'},
+ crm_contacts:{m:'Commercial',s:'contact',p:'contacts',n:'nom'},
+ crm_messages:{m:'Commercial',s:'message',p:'messages',n:'sujet'},
+ crm_interactions:{m:'Commercial',s:'échange',p:'échanges'},
+ crm_suivi_etapes:{m:'Commercial',s:'suivi d’étape',p:'suivis d’étape'},
+ crm_suivi_arguments:{m:'Commercial',s:'verdict d’argument',p:'verdicts d’argument'},
+ crm_profils_types:{m:'Commercial',s:'profil type',p:'profils types',n:'nom'},
+ crm_profil_arguments:{m:'Commercial',s:'argument',p:'arguments',n:'texte'},
+ crm_profil_objections:{m:'Commercial',s:'objection',p:'objections',f:1,n:'objection'},
+ crm_relance_regles:{m:'Commercial',s:'règle de relance',p:'règles de relance',f:1},
+ reunions:{m:'RH',s:'réunion',p:'réunions',f:1,n:'titre'},
+ participations:{m:'RH',s:'participation',p:'participations',f:1},
+ indisponibilites:{m:'RH',s:'indisponibilité',p:'indisponibilités',f:1},
+ manquements:{m:'RH',s:'manquement',p:'manquements'},
+ regles_presence:{m:'RH',s:'règle de présence',p:'règles de présence',f:1,n:'cle'},
+ staff:{m:'Équipe',s:'compte d’équipe',p:'comptes d’équipe',n:'nom'}
+};
+/* Ce qui n'est pas un geste de l'équipe : des notifications lues, un
+   historique que le CRM tient lui-même, le journal. */
+const JOURNAL_IGNORE=new Set(['notifications','crm_taches_historique','crm_journal']);
+let JOURNAL_ETAT='inconnu';   // 'ok' | 'manquant' (migration 0022 pas exécutée) | 'refuse'
+const JOURNAL_FILE=new Map();
+function journalTypeDe(table,methode,body,prefer){
+ if(methode==='DELETE')return'suppression';
+ if(methode==='POST')return/merge-duplicates/.test(prefer||'')?'enregistrement':'creation';
+ if(body&&body.statut==='fait'&&table==='crm_taches')return'fait';
+ if(body&&body.statut==='livre'&&(table==='bons_commande'||table==='crm_tournee_arrets'))return'fait';
+ return'modification';
+}
+function journalNoter(path,options,data){
+ const methode=(options.method||'GET').toUpperCase();
+ if(!['POST','PATCH','DELETE'].includes(methode)||!STAFF_SESSION||JOURNAL_ETAT==='manquant')return;
+ const table=path.split('?')[0];
+ if(JOURNAL_IGNORE.has(table)||table.startsWith('rpc/'))return;
+ let body=null;try{body=options.body?JSON.parse(options.body):null}catch(e){}
+ // Déplacer un bloc sur un canevas n'est pas une action à tracer.
+ if(methode==='PATCH'&&body&&!Array.isArray(body)&&Object.keys(body).every(k=>k==='x'||k==='y'))return;
+ const cfg=JOURNAL_TABLES[table]||{m:'Autre',s:table,p:table};
+ let type=journalTypeDe(table,methode,body,options.headers&&options.headers.Prefer);
+ // Les gestes qui comptent ont un nom à eux, plus parlant que « session
+ // de production modifiée » : on le lit dans ce qui vient d'être écrit.
+ const sem=body&&!Array.isArray(body)?journalSemantique(table,methode,body):null;
+ if(sem)type=sem.type;
+ const lignes=Array.isArray(data)&&data.length?data:(Array.isArray(body)?body:(body?[body]:[]));
+ const noms=cfg.n?lignes.map(l=>l&&l[cfg.n]).filter(Boolean).map(String):[];
+ const idFiltre=(path.match(/[?&]id=eq\.([^&]+)/)||[])[1];
+ const ids=lignes.map(l=>l&&l.id).filter(Boolean);
+ const cle=table+'|'+type+'|'+(sem?sem.phrase:'');
+ const e=JOURNAL_FILE.get(cle)||{table,type,cfg:sem?{...cfg,m:sem.m||cfg.m}:cfg,sem,nb:0,noms:[],ids:[],page:($('#crumb')?.textContent||'').trim()};
+ e.nb+=Math.max(1,lignes.length||1);
+ noms.forEach(n=>{if(!e.noms.includes(n))e.noms.push(n)});
+ (ids.length?ids:idFiltre?[idFiltre]:[]).forEach(i=>e.ids.push(String(i)));
+ clearTimeout(e.t);e.t=setTimeout(()=>journalEnvoyer(cle),1500);
+ JOURNAL_FILE.set(cle,e);
+}
+const JOURNAL_VERBES={creation:['créé','créée','créés','créées'],modification:['modifié','modifiée','modifiés','modifiées'],suppression:['supprimé','supprimée','supprimés','supprimées'],enregistrement:['enregistré','enregistrée','enregistrés','enregistrées']};
+function journalSemantique(table,methode,b){
+ if(table==='crm_sessions'&&methode==='PATCH'){
+  if(b.statut_reservation==='envoyee')return{type:'info',phrase:'Réservation de cuisine envoyée',m:'Production'};
+  if(b.statut_reservation==='confirmee')return{type:'fait',phrase:'Réservation de cuisine confirmée',m:'Production'};
+  if(b.terminee_le)return{type:'fait',phrase:'Session de production terminée',m:'Production'};
+  if(b.demarree_le)return{type:'info',phrase:'Session de production démarrée',m:'Production'};
+ }
+ if(table==='crm_messages'&&methode==='POST'&&b.sens==='sortant')return{type:'info',phrase:b.canal==='email'?'Email envoyé':'Message envoyé',m:'Commercial'};
+ if(table==='crm_projets'&&methode==='PATCH'&&b.etape_pipeline)return{type:'modification',phrase:'Opportunité passée à l’étape « '+String(b.etape_pipeline).replace(/_/g,' ')+' »',m:'Commercial'};
+ if(table==='bons_commande'&&methode==='PATCH'&&b.statut==='attribue')return{type:'fait',phrase:'Bon de commande attribué',m:'Commandes'};
+ if(table==='bons_commande'&&methode==='PATCH'&&b.statut==='annule')return{type:'suppression',phrase:'Bon de commande annulé',m:'Commandes'};
+ return null;
+}
+function journalPhrase(e){
+ const c=e.cfg,plus=e.nb>1;
+ const nomsTxt=e.noms.length?' : '+e.noms.slice(0,3).map(n=>'« '+n+' »').join(', ')+(e.noms.length>3?'…':''):'';
+ if(e.sem)return(plus?e.sem.phrase+' (×'+e.nb+')':e.sem.phrase)+nomsTxt;
+ if(e.type==='fait'){
+  if(e.table==='crm_taches')return(plus?e.nb+' tâches terminées':'Tâche terminée')+nomsTxt;
+  return(plus?e.nb+' '+c.p+' livrés':(c.s.charAt(0).toUpperCase()+c.s.slice(1))+' livré')+nomsTxt;
+ }
+ const v=JOURNAL_VERBES[e.type][(plus?2:0)+(c.f?1:0)];
+ return(plus?e.nb+' '+c.p+' '+v:c.s.charAt(0).toUpperCase()+c.s.slice(1)+' '+v)+nomsTxt;
+}
+async function journalEnvoyer(cle,keepalive){
+ const e=JOURNAL_FILE.get(cle);if(!e)return;JOURNAL_FILE.delete(cle);clearTimeout(e.t);
+ if(!STAFF_SESSION||JOURNAL_ETAT==='manquant')return;
+ const ligne={auteur_id:STAFF_SESSION.user_id,auteur_nom:STAFF_NOM||null,module:e.cfg.m,action:journalPhrase(e).slice(0,500),type:e.type,table_cible:e.table,objet_id:e.ids.length===1?e.ids[0]:null,nb:e.nb,page:e.page||null};
+ try{
+  const r=await fetch(SB_URL+'/rest/v1/crm_journal',{method:'POST',keepalive:!!keepalive,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+jetonStaff(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(ligne)});
+  if(r.ok){JOURNAL_ETAT='ok';return}
+  const t=await r.text();
+  if(/PGRST205|42P01/.test(t))JOURNAL_ETAT='manquant';
+  else if(r.status===401||r.status===403)JOURNAL_ETAT='refuse';
+  console.warn('Journal non écrit',r.status,t);
+ }catch(err){console.warn('Journal non écrit',err)}
+}
+/* Fermer l'onglet juste après un geste ne doit pas le perdre. */
+function journalVider(){[...JOURNAL_FILE.keys()].forEach(k=>journalEnvoyer(k,true))}
+window.addEventListener('pagehide',journalVider);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)journalVider()});
 /* Une table qui n'existe pas encore (natty_crm.sql pas exécuté) ne doit
    jamais planter l'écran en silence — elle doit le DIRE (règle du dépôt). */
 let SCHEMA_MANQUANT=false;
@@ -527,7 +668,8 @@ const ICON={
  funnel:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>',
  stocks:'<rect x="3" y="10" width="8" height="8" rx="1"/><rect x="13" y="10" width="8" height="8" rx="1"/><rect x="8" y="3" width="8" height="6" rx="1"/>',
  livraison:'<rect x="2" y="8" width="11" height="8" rx="1"/><path d="M13 11h4l3 3v2h-7z"/><circle cx="6" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/>',
- chevron:'<path d="M6 9l6 6 6-6"/>'
+ chevron:'<path d="M6 9l6 6 6-6"/>',
+ journal:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>'
 };
 const ICONES_BLOC=['auto','schema','projet','calendar','check','drive','alerte','commercial','finance','partenariat','developpement','logistique'];
 const CATEGORIES=[
@@ -568,15 +710,23 @@ const ROLES={
  associe:{l:'Associé',acces:[]},   // un associé n'a d'accès que par SES domaines — voir can()
  livreur:{l:'Livreur',acces:['logistique']}
 };
-function can(cle){
- if(cle==='dash'||cle==='taches'||cle==='rh'||cle==='projets')return true;
- if(cle.startsWith('projet:')){const p=S.projets.find(x=>x.id===cle.slice(7));return p?can(p.activite):false}
- const r=ROLES[STAFF_ROLE];if(!r)return false;
+/* Pages ouvertes à toute l'équipe, quel que soit le rôle. */
+const PAGES_COMMUNES=['dash','taches','rh','projets','equipe','journal'];
+/* La règle d'accès, pour UN rôle donné — c'est elle que lit can() pour la
+   personne connectée, et elle que lit la matrice « Rôles & droits » pour
+   tous les rôles : une seule règle, jamais une copie qui divergerait. */
+function canRole(role,cle,domaines){
+ if(PAGES_COMMUNES.includes(cle))return true;
+ const r=ROLES[role];if(!r)return false;
  if(r.toutes)return true;
  if(r.acces&&r.acces.includes(cle))return true;
  // Un associé cumule un ou plusieurs domaines (spec §3.2) — son rôle seul
  // ('associe') ne donne accès à rien, c'est staff.domaines qui décide.
- return(STAFF_DOMAINES||[]).includes(cle);
+ return(domaines||[]).includes(cle);
+}
+function can(cle){
+ if(cle.startsWith('projet:')){const p=S.projets.find(x=>x.id===cle.slice(7));return p?can(p.activite):false}
+ return canRole(STAFF_ROLE,cle,STAFF_DOMAINES);
 }
 
 /* ============ ÉTAT ============ */
@@ -590,14 +740,18 @@ async function chargerBase(){
  const [t,p,st,se,pf,ta]=await Promise.all([
   sbTry('crm_taches?select=*&order=echeance.asc.nullslast'),
   sbTry('crm_projets?select=*&order=echeance.asc.nullslast'),
-  sbTry('staff?select=user_id,nom,role,statut&actif=eq.true'),
+  sbTry('staff?select=user_id,nom,role,statut,domaines&actif=eq.true'),
   sbTry('crm_sessions?select=id,bloc_id,type,statut_reservation'),
   sbTry('crm_profils_types?select=*&order=nom.asc'),
   sbTry('crm_tarifs?select=*')
  ]);
  S.taches=t.ok?t.data:[];
  S.projets=p.ok?p.data:[];
- S.staff=st.ok?st.data:[];
+ // Une colonne absente fait refuser TOUTE la requête (42703) : sans ce
+ // repli, une instance sans `domaines` perdrait la liste de l'équipe entière.
+ let staff=st;
+ if(!st.ok&&/42703|domaines/.test(st.err||''))staff=await sbTry('staff?select=user_id,nom,role,statut&actif=eq.true');
+ S.staff=staff.ok?staff.data:[];
  S.sessions=se.ok?se.data:[];
  S.profils=pf.ok?pf.data:[];
  S.tarifs=ta.ok?ta.data:[];
@@ -652,87 +806,127 @@ function peopleOptions(sel){
    pour `porteur` (un texte libre) mais pas pour retrouver un compte. */
 function nomDe(userId){const s=S.staff.find(x=>x.user_id===userId);return s?s.nom:'—'}
 
-/* ============ NAVIGATION ============
-   La barre latérale est un accordéon : chaque section (Pilotage, puis une
-   par activité) se déroule sur son chevron, et pour une activité, cliquer
-   l'EN-TÊTE navigue aussi vers sa vue par défaut — dérouler et arriver sont
-   le même geste, pas deux. Les enfants d'une section sont ses VUES
-   (`vuesDe()`, définie plus bas avec vActivite) : pour Commercial et
-   Production, ses vues propres ; pour les autres, les cinq génériques
-   (Aperçu/Tâches/Sous-projets/Schéma/Drive). */
-let NAV_EXPANDED={pilotage:true};
-/* Un seul menu déroulant ouvert à la fois (demande de Pablo, 26/09) :
-   ouvrir une section replie toutes les autres. Les pages de Pilotage
-   (accueil, tâches, RH, projets, page d'un projet) appartiennent au
-   groupe « pilotage ». */
-function groupeDe(id){return ACT_BY_CLE[id]?id:'pilotage'}
-function ouvrirSeulGroupe(cle){
- NAV_EXPANDED={pilotage:false};
- ACTIVITES.forEach(a=>NAV_EXPANDED[a.cle]=false);
- NAV_EXPANDED[cle]=true;
+/* ============ NAVIGATION — Natty OS (refonte du 26/10/2026) ============
+   La barre latérale suit la maquette « Natty OS v3 » : des groupes MÉTIER
+   (Pilotage, Commercial, Opérations, Finances, Organisation) et non plus une
+   section par activité. Chaque entrée pointe vers une page EXISTANTE —
+   `[cle, vue]`, la même paire que lisaient go()/SUB['vue-'+cle] — donc aucun
+   écran n'est réécrit : seule la façon d'y arriver change.
+   Ce qui n'a pas de vue native dans le CRM n'apparaît pas (Clients appli,
+   Messages, Signalements vivent dans admin.html, et « aucun chemin ne doit
+   mener vers admin.html » ; Journal, Agent IA et Qonto ne sont pas
+   construits) : une entrée qui mène à un écran vide est pire qu'une entrée
+   absente. Les activités sans vues propres (Finance, Partenariat,
+   Développement, Documents, Modèle financier) gardent leurs cinq vues
+   génériques en onglets dans la page (vGestionInterne). */
+const NAV=[
+ {g:'pilotage',l:'Pilotage',items:[
+  {l:'Tableau de bord',ic:'dash',to:['dash']},
+  {l:'Tâches & agenda',ic:'taches',to:['taches']},
+  {l:'Journal des actions',ic:'journal',to:['journal']}]},
+ {g:'commercial',l:'Commercial',items:[
+  {l:'Pipe des ventes',ic:'commercial',to:['commercial','pipeline']},
+  {l:'Comptes & contacts',ic:'rh',to:['commercial','comptes']},
+  {l:'Profils types',ic:'documents',to:['commercial','profils']},
+  {l:'Emailing & phoning',ic:'mail',to:['commercial','emailing']},
+  {l:'Base de prospection',ic:'funnel',to:['commercial','prospection']},
+  {l:'Partenariats',ic:'partenariat',to:['partenariat']},
+  {l:'Suivi commercial',ic:'projet',to:['commercial','gestion']}]},
+ {g:'operations',l:'Opérations',items:[
+  {l:'Vue d’ensemble',ic:'dash',to:['production','dashboard']},
+  {l:'Bons de commande',ic:'logistique',to:['production','commandes']},
+  {l:'Calendrier',ic:'calendar',to:['production','calendrier']},
+  {l:'Production',ic:'production',to:['production','production']},
+  {l:'Menu & recettes',ic:'documents',to:['production','menu']},
+  {l:'Stocks',ic:'stocks',to:['production','stocks']},
+  {l:'Livraison',ic:'livraison',to:['production','livraison']},
+  {l:'Tournées',ic:'logistique',to:['logistique','tournees']},
+  {l:'Suivi production',ic:'projet',to:['production','gestion']},
+  {l:'Suivi logistique',ic:'projet',to:['logistique','gestion']}]},
+ {g:'finances',l:'Finances',items:[
+  {l:'Opérationnel & marges',ic:'finance',to:['financement','operationnel']},
+  {l:'Produits',ic:'stocks',to:['financement','produits']},
+  {l:'Trésorerie & charges',ic:'finance',to:['finance']},
+  {l:'Prévisionnel',ic:'modele_financier',to:['modele_financier']},
+  {l:'Dossiers de financement',ic:'financement',to:['financement','gestion']}]},
+ {g:'organisation',l:'Organisation',items:[
+  {l:'Projets & schémas',ic:'projet',to:['projets']},
+  {l:'Équipe & accès',ic:'partenariat',to:['equipe']},
+  {l:'RH & disponibilités',ic:'rh',to:['rh']},
+  {l:'Documents & juridique',ic:'documents',to:['documents']},
+  {l:'Développement',ic:'developpement',to:['developpement']}]}
+];
+/* Groupes repliés : mémorisés par appareil, comme dans la maquette. Tous
+   ouverts par défaut — la liste tient sur un écran de portable. */
+let NAV_FERMES=(()=>{try{return new Set(JSON.parse(localStorage.getItem('natty_crm_nav_fermes')||'[]'))}catch(e){return new Set()}})();
+function navItemsVisibles(grp){return grp.items.filter(it=>can(it.to[0]))}
+/* L'entrée qui correspond à la page affichée. Une page d'activité sans vue
+   (générique) ou une vue sans entrée propre retombe sur la première entrée
+   de la même activité ; un projet, sur « Projets & schémas ». */
+function navCourant(){
+ const cle=CUR.startsWith('projet:')?'projets':CUR;
+ const vue=VUES[cle]?(SUB['vue-'+cle]||vueParDefaut(cle)):null;
+ let trouve=null,repli=null;
+ NAV.forEach(g=>g.items.forEach(it=>{
+  if(it.to[0]!==cle)return;
+  if(!repli)repli={g,it};
+  if((it.to[1]||null)===vue)trouve={g,it};
+ }));
+ return trouve||repli;
 }
 function badges(){
- const b={taches:S.taches.filter(t=>t.statut!=='fait').length};
- ACTIVITES.forEach(a=>{b[a.cle]=S.taches.filter(t=>t.activite===a.cle&&t.statut!=='fait').length});
+ const ouvertes=S.taches.filter(t=>t.statut!=='fait');
  document.querySelectorAll('.nitem').forEach(n=>{
   const e=n.querySelector('.b');if(!e)return;
   const cle=n.dataset.m,vue=n.dataset.vue;
-  const montre=!vue||vue===vueParDefaut(cle);
-  const v=montre?b[cle]:0;
+  let v=0;
+  if(cle==='taches')v=ouvertes.filter(t=>can(t.activite)).length;
+  // Une activité générique compte ses tâches ouvertes ; les vues métier
+  // (pipe, commandes…) ne portent pas de compteur de tâches, qui y
+  // ressemblerait à un nombre d'opportunités ou de commandes.
+  else if(ACT_BY_CLE[cle]&&(!vue||vue==='gestion'))v=ouvertes.filter(t=>t.activite===cle).length;
   e.textContent=v||'';e.classList.toggle('hide',!v);
  });
 }
 function renderNav(){
- const items=[['dash','Accueil','dash'],['taches','Toutes les tâches','taches'],['rh','RH','rh'],['projets','Projets','projet']].filter(([id])=>can(id));
- const acts=ACTIVITES.filter(a=>can(a.cle));
- $('#nav').innerHTML=
-  groupeHtml('pilotage','Pilotage',items.map(([id,l,ic])=>navBtn(id,l,ic)).join('')) +
-  acts.map(a=>groupeHtml(a.cle,a.nom,vuesDe(a.cle).map(([vid,l,ic])=>navBtn(a.cle,l,ic,vid)).join(''))).join('');
+ const cour=navCourant();
+ $('#nav').innerHTML=NAV.map(grp=>{
+  const its=navItemsVisibles(grp);if(!its.length)return'';
+  return `<div class="ngroup ${NAV_FERMES.has(grp.g)&&!(cour&&cour.g===grp)?'closed':''}"><div data-ghead="${grp.g}">${esc(grp.l)}<svg viewBox="0 0 24 24">${ICON.chevron}</svg></div>${its.map(it=>navBtn(it,cour&&cour.it===it)).join('')}</div>`;
+ }).join('');
  badges();
 }
-function groupeHtml(cle,label,inner){
- const ouvert=NAV_EXPANDED[cle]!=null?NAV_EXPANDED[cle]:CUR===cle;
- return `<div class="ngroup ${ouvert?'':'closed'}"><div data-ghead="${cle}">${esc(label)}<svg viewBox="0 0 24 24">${ICON.chevron}</svg></div>${inner}</div>`;
-}
-function navBtn(id,label,icon,vue){
- const actif=vue?(CUR===id&&(SUB['vue-'+id]||vueParDefaut(id))===vue):(CUR===id);
- return `<button class="nitem" data-m="${id}" ${vue?`data-vue="${esc(vue)}"`:''} ${actif?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ICON[icon]}</svg><span>${esc(label)}</span><em class="b hide"></em></button>`;
+function navBtn(it,actif){
+ const [cle,vue]=it.to;
+ return `<button class="nitem" data-m="${esc(cle)}" ${vue?`data-vue="${esc(vue)}"`:''} ${actif?'aria-current="page"':''}><svg viewBox="0 0 24 24">${ICON[it.ic]||ICON.projet}</svg><span>${esc(it.l)}</span><em class="b hide"></em></button>`;
 }
 $('#nav')?.addEventListener('click',e=>{
  const gh=e.target.closest('[data-ghead]');
  if(gh){
-  const cle=gh.dataset.ghead;
-  if(cle==='pilotage'||cle===CUR){
-   // Déjà sur cette page (ou Pilotage, jamais une page en soi) : une
-   // simple bascule, pas une navigation — sinon go() reposerait aussitôt
-   // NAV_EXPANDED à `true` et la section ne pourrait jamais se refermer.
-   const ouvertAvant=NAV_EXPANDED[cle]!=null?NAV_EXPANDED[cle]:(cle==='pilotage');
-   if(ouvertAvant)NAV_EXPANDED[cle]=false;else ouvrirSeulGroupe(cle);
-   renderNav();
-  }else{
-   SUB['vue-'+cle]=vueParDefaut(cle);
-   go(cle);   // go() déplie la section qu'on rejoint
-  }
+  const g=gh.dataset.ghead;
+  if(NAV_FERMES.has(g))NAV_FERMES.delete(g);else NAV_FERMES.add(g);
+  try{localStorage.setItem('natty_crm_nav_fermes',JSON.stringify([...NAV_FERMES]))}catch(err){}
+  gh.parentElement.classList.toggle('closed',NAV_FERMES.has(g));
   return;
  }
  const n=e.target.closest('.nitem');
  if(n){
   if(n.dataset.vue)SUB['vue-'+n.dataset.m]=n.dataset.vue;
-  if(n.dataset.m==='financement')FIN_DETAIL=null;
-  if(n.dataset.m==='production'&&typeof CMD!=='undefined')CMD.assigner=null;   // quitter la page « Assigner » d'une commande   // revenir au tableau d'Opérationnel depuis une page de détail
+  if(n.dataset.m==='financement')FIN_DETAIL=null;   // revenir au tableau d'Opérationnel depuis une page de détail
+  if(n.dataset.m==='production'&&typeof CMD!=='undefined')CMD.assigner=null;   // quitter la page « Assigner » d'une commande
   go(n.dataset.m);
-  $('#side').classList.remove('on');
+  $('#side').classList.remove('on');$('#scrim').classList.remove('on');
  }
 });
 function go(id){
- if(!can(id)){toast("Ce rôle n'a pas accès à cette activité");return}
+ if(!can(id)){toast("Ce rôle n'a pas accès à cette page");return}
  LINK_MODE=false;LINK_FROM=null;   // le mode « relier » ne doit pas survivre à un changement de page
  CUR=id;
- ouvrirSeulGroupe(groupeDe(id));   // la section qu'on rejoint se déplie, les autres se replient
+ if(id==='journal')JOURNAL_CACHE=null;   // arriver sur le journal le relit ; filtrer, non
  renderNav();
  render();
  window.scrollTo(0,0);
- try{localStorage.setItem('natty_crm_cur',id)}catch(e){}
+ try{localStorage.setItem('natty_crm_cur',id);if(VUES[id])localStorage.setItem('natty_crm_vue_'+id,SUB['vue-'+id]||'')}catch(e){}
 }
 async function render(){
  $('#crumb').innerHTML=crumbFor(CUR);
@@ -740,16 +934,13 @@ async function render(){
  afterRender(CUR);
 }
 function crumbFor(cle){
- if(cle==='dash')return'<b>Accueil</b>';
- if(cle==='taches')return'Pilotage · <b>Toutes les tâches</b>';
- if(cle==='rh')return'Pilotage · <b>RH</b>';
- if(cle==='projets')return'Pilotage · <b>Projets</b>';
  if(cle.startsWith('projet:')){
-  const p=S.projets.find(x=>x.id===cle.slice(7));if(!p)return'<b>Projet</b>';
+  const p=S.projets.find(x=>x.id===cle.slice(7));if(!p)return'Organisation · <b>Projet</b>';
   const a=ACT_BY_CLE[p.activite];
-  return `${a?esc(a.nom):''} · Projet · <b>${esc(p.nom)}</b>`;
+  return `Organisation · ${a?esc(a.nom)+' · ':''}<b>${esc(p.nom)}</b>`;
  }
- const a=ACT_BY_CLE[cle];return a?`Activité · <b>${esc(a.nom)}</b>`:'<b>—</b>';
+ const c=navCourant();
+ return c?`${esc(c.g.l)} · <b>${esc(c.it.l)}</b>`:'<b>—</b>';
 }
 function schemaManqueBanner(){
  if(!SCHEMA_MANQUANT)return'';
@@ -760,6 +951,8 @@ async function renderView(cle){
  if(cle==='taches')return vTachesGlobal();
  if(cle==='rh')return await vRH();
  if(cle==='projets')return vProjetsHub();
+ if(cle==='equipe')return vEquipe();
+ if(cle==='journal')return await vJournal();
  if(cle.startsWith('projet:'))return await vProjetPage(cle.slice(7));
  return await vActivite(cle);
 }
@@ -778,11 +971,44 @@ async function vDash(){
  let body='';
  if(tb.cur==='projets')body=vAccueilProjets();
  if(tb.cur==='mapping')body=vMappingGeneral();
- return ph(`Bonjour ${esc(STAFF_NOM||'')}`,`${TODAY.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · ${urgentes.length} échéance${urgentes.length>1?'s':''} en cours`,`<button class="btn primary" data-new="projet">+ Projet</button>`)+
+ return ph(`Bonjour ${esc(STAFF_NOM||'')}`,`${TODAY.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · vue ${esc((ROLES[STAFF_ROLE]||{}).l||STAFF_ROLE||'')}`,`<button class="btn" data-go="taches">Toutes les tâches</button><button class="btn primary" data-new="projet">+ Projet</button>`)+
  `<div id="notifsAccueil"></div>`+
+ await dashKpis(urgentes)+
+ `<div class="sect"><h2>Prochaines échéances</h2><span>${urgentes.length} en cours</span></div>`+
  (heros.length?`<div class="hero-carousel">${heros.map(heroCard).join('')}</div>`:`<div class="empty">Aucune échéance en cours. Les tâches avec une date arrivent ici.</div>`)+
  vGrilleActivites()+
  tb.html+body;
+}
+/* Natty OS : la rangée d'indicateurs et le bloc « À traiter » de la
+   maquette, sur les VRAIES données — tâches, projets et bons de commande.
+   Rien n'est affiché qui ne se lise en base : pas d'abonnés, pas de
+   trésorerie tant qu'aucune source n'est branchée (Qonto, abonnements). */
+async function dashKpis(urgentes){
+ const todayStr=TODAY.toISOString().slice(0,10);
+ const dans7=new Date(TODAY.getTime()+7*864e5).toISOString().slice(0,10);
+ const ouvertes=S.taches.filter(t=>can(t.activite)&&t.statut!=='fait');
+ const enRetard=ouvertes.filter(t=>t.echeance&&t.echeance<todayStr);
+ const semaine=ouvertes.filter(t=>t.echeance&&t.echeance>=todayStr&&t.echeance<=dans7);
+ const sansPorteur=ouvertes.filter(t=>!t.porteur);
+ const projetsActifs=S.projets.filter(p=>can(p.activite)&&p.statut==='actif');
+ let bons=null;
+ if(can('production')){
+  const r=await sbTry('bons_commande?select=id,statut,jour_livraison&statut=not.in.(annule,livre)&limit=500');
+  if(r.ok)bons=r.data;
+ }
+ const bonsATraiter=bons?bons.filter(b=>b.statut==='a_attribuer'||!b.jour_livraison).length:null;
+ const kpi=`<div class="grid g4">
+  <button class="card metal kpi click" data-go="taches" style="text-align:left;border:0"><div class="lbl">Tâches ouvertes <span class="chip" style="background:rgba(255,255,255,.14);color:#fff">${enRetard.length} en retard</span></div><div class="val num">${ouvertes.length}</div><div class="foot">Toutes activités accessibles</div></button>
+  <button class="card kpi click" data-go="taches" style="text-align:left;border:0"><div class="lbl">Cette semaine <span class="chip ${semaine.length?'warn':''}">7 j</span></div><div class="val num">${semaine.length}</div><div class="kpi-go">Échéances à venir →</div></button>
+  ${bons?`<button class="card kpi click" data-kpi-vue="commandes" data-kpi-filtre="rouge" style="text-align:left;border:0"><div class="lbl">Bons à traiter <span class="chip ${bonsATraiter?'bad':'ok'}">${bonsATraiter?'à attribuer':'à jour'}</span></div><div class="val num" ${bonsATraiter?'style="color:var(--red)"':''}>${bonsATraiter}</div><div class="kpi-go">${bons.length} bon${bons.length>1?'s':''} en cours →</div></button>`:''}
+  <button class="card kpi click" data-go="projets" style="text-align:left;border:0"><div class="lbl">Projets actifs</div><div class="val num">${projetsActifs.length}</div><div class="kpi-go">Projets & schémas →</div></button>
+ </div>`;
+ const lignes=[];
+ enRetard.sort((a,b)=>a.echeance.localeCompare(b.echeance)).slice(0,4).forEach(t=>lignes.push(`<div class="li c" data-open-tache="${t.id}"><span class="dot bad"></span><div class="grow"><b style="font-weight:500">${esc(t.titre)}</b><div class="meta">${esc((ACT_BY_CLE[t.activite]||{}).nom||t.activite||'')} · ${joursInfo(t.echeance).label} · ${own(t.porteur)}</div></div>›</div>`));
+ if(bonsATraiter)lignes.push(`<div class="li c" data-kpi-vue="commandes" data-kpi-filtre="rouge"><span class="dot bad"></span><div class="grow"><b style="font-weight:500">${bonsATraiter} bon${bonsATraiter>1?'s':''} de commande sans attribution ou sans date</b><div class="meta">Opérations · Bons de commande</div></div>›</div>`);
+ if(sansPorteur.length)lignes.push(`<div class="li c" data-go="taches"><span class="dot warn"></span><div class="grow"><b style="font-weight:500">${sansPorteur.length} tâche${sansPorteur.length>1?'s':''} sans porteur</b><div class="meta">À attribuer dans Tâches & agenda</div></div>›</div>`);
+ const aTraiter=`<div class="card lift" style="margin-top:14px"><h3>À traiter <span class="chip ${lignes.length?'bad':'ok'}">${lignes.length||'rien'}</span></h3><p class="sub">Retards, bons de commande incomplets, tâches sans porteur</p><div class="list">${lignes.join('')||'<div class="muted" style="font-size:12.5px">Rien d’urgent. Bonne journée.</div>'}</div></div>`;
+ return kpi+aTraiter;
 }
 
 /* Le « cadrillage héro » : un bloc par activité, cliquable — clique →
@@ -814,6 +1040,107 @@ function vProjetsHub(){
  <div class="card lift"><div class="list">${mesTaches.map(taskLi).join('')||'<div class="empty">Rien qui vous est attribué pour l’instant.</div>'}</div></div>
  <div class="sect"><h2>Tous les projets, en vrac</h2><span>${projets.length}</span></div>
  <div class="grid g3">${projets.map(projetCard).join('')||'<div class="empty">Aucun projet — « + Projet » pour en créer un.</div>'}</div>`;
+}
+
+/* ============ JOURNAL DES ACTIONS — maquette Natty OS v3 ============
+   Lecture de crm_journal (0022) : les 500 dernières actions, filtrables
+   sans requête de plus. Les actions encore en file (regroupement de 1,5 s)
+   partent AVANT la lecture : on doit y voir le geste qu'on vient de faire. */
+let JOURNAL_CACHE=null,JOURNAL_ERR=null;
+const JF={q:'',m:'all',w:'all',t:'all'};
+const JOURNAL_TYPES={creation:['création','ok'],modification:['modification','info'],enregistrement:['enregistrement','info'],fait:['fait','ok'],suppression:['suppression','bad'],info:['info','']};
+async function chargerJournal(){
+ await Promise.all([...JOURNAL_FILE.keys()].map(k=>journalEnvoyer(k)));
+ // sb() et pas sbTry() : sbTry lève SCHEMA_MANQUANT, dont la bannière parle
+ // de natty_crm.sql — fausse si seule la migration 0022 manque.
+ try{JOURNAL_CACHE=await sb('crm_journal?select=*&order=created_at.desc&limit=500');JOURNAL_ERR=null}
+ catch(err){
+  const msg=(err&&err.message)||String(err);
+  JOURNAL_CACHE=[];
+  JOURNAL_ERR=/PGRST205|42P01/.test(msg)?'manquant':msg;
+  if(JOURNAL_ERR==='manquant')JOURNAL_ETAT='manquant';
+ }
+}
+function journalFiltre(){
+ const q=JF.q.trim().toLowerCase();
+ return(JOURNAL_CACHE||[]).filter(j=>(JF.m==='all'||j.module===JF.m)&&(JF.w==='all'||j.auteur_nom===JF.w)&&(JF.t==='all'||j.type===JF.t)&&(!q||(j.action+' '+(j.page||'')+' '+(j.auteur_nom||'')).toLowerCase().includes(q)));
+}
+const fdh=iso=>{const d=new Date(iso);return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})};
+async function vJournal(){
+ if(!JOURNAL_CACHE)await chargerJournal();
+ const head=ph('Journal des actions','Qui a fait quoi, quand, dans quel module. Rien ne s’efface.',`<button class="btn" data-journal-recharger>Actualiser</button><button class="btn" data-journal-export>Exporter (CSV)</button>`);
+ if(JOURNAL_ERR==='manquant')return head+`<div class="exbar"><span class="chip bad">Table manquante</span><span>La table <span class="mono">crm_journal</span> n’existe pas encore : exécuter <span class="mono">supabase/migrations/0022_crm_journal.sql</span> dans Supabase. Tant qu’elle manque, rien n’est tracé.</span></div>`;
+ if(JOURNAL_ERR)return head+`<div class="exbar"><span class="chip bad">Illisible</span><span>Lecture du journal impossible (session d’équipe requise) : ${esc(JOURNAL_ERR.slice(0,160))}</span></div>`;
+ const all=JOURNAL_CACHE||[];
+ const auj=new Date().toDateString();
+ const mods=[...new Set(all.map(j=>j.module))].sort((a,b)=>a.localeCompare(b,'fr'));
+ const qui=[...new Set(all.map(j=>j.auteur_nom).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr'));
+ const rows=journalFiltre();
+ const opt=(v,cur)=>`<option ${v===cur?'selected':''}>${esc(v)}</option>`;
+ return head+`<div class="grid g4" style="margin-bottom:14px">
+  <div class="card metal kpi"><div class="lbl">Actions tracées</div><div class="val num">${all.length}${all.length>=500?'<small style="color:var(--metal-mut)"> dernières</small>':''}</div><div class="foot">${all.reduce((a,j)=>a+(j.nb||1),0)} écritures regroupées</div></div>
+  <div class="card kpi"><div class="lbl">Aujourd’hui</div><div class="val num">${all.filter(j=>new Date(j.created_at).toDateString()===auj).length}</div></div>
+  <div class="card kpi"><div class="lbl">Modules touchés</div><div class="val num">${mods.length}</div></div>
+  <div class="card kpi"><div class="lbl">Suppressions</div><div class="val num" ${all.some(j=>j.type==='suppression')?'style="color:var(--red)"':''}>${all.filter(j=>j.type==='suppression').length}</div></div>
+ </div>
+ <div class="filters"><input class="inp search" id="jq" placeholder="Filtrer les actions" value="${esc(JF.q)}">
+  <select class="pill" id="jm"><option value="all">Tous modules</option>${mods.map(m=>opt(m,JF.m)).join('')}</select>
+  <select class="pill" id="jw"><option value="all">Tout le monde</option>${qui.map(m=>opt(m,JF.w)).join('')}</select>
+  <select class="pill" id="jt"><option value="all">Tous types</option>${Object.entries(JOURNAL_TYPES).map(([k,[l]])=>`<option value="${k}" ${k===JF.t?'selected':''}>${l}</option>`).join('')}</select>
+  <span class="muted" style="font-size:12.5px">${rows.length} action${rows.length>1?'s':''}</span></div>
+ <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Auteur</th><th>Module</th><th>Action</th><th>Type</th></tr></thead><tbody>${
+  rows.map(j=>{const [tl,tc]=JOURNAL_TYPES[j.type]||[j.type,''];return `<tr><td class="num" style="white-space:nowrap">${fdh(j.created_at)}</td><td><div class="who"><div class="av">${ini(j.auteur_nom||'?')}</div>${esc(j.auteur_nom||'—')}</div></td><td><span class="chip">${esc(j.module)}</span></td><td>${esc(j.action)}${j.page?`<div class="muted" style="font-size:11.5px">${esc(j.page)}</div>`:''}</td><td><span class="chip ${tc}">${esc(tl)}</span></td></tr>`}).join('')
+  ||`<tr><td colspan="5" class="muted" style="text-align:center;padding:26px">${all.length?'Aucune action pour ces filtres':'Aucune action tracée pour l’instant. Chaque création, modification ou suppression faite dans Natty OS arrive ici.'}</td></tr>`
+ }</tbody></table></div>`;
+}
+AFTER.journal=()=>{
+ const q=$('#jq');if(!q)return;
+ q.addEventListener('input',async e=>{JF.q=e.target.value;const p=e.target.selectionStart;await render();const i=$('#jq');i.focus();i.setSelectionRange(p,p)});
+ $('#jm').onchange=e=>{JF.m=e.target.value;render()};
+ $('#jw').onchange=e=>{JF.w=e.target.value;render()};
+ $('#jt').onchange=e=>{JF.t=e.target.value;render()};
+};
+document.addEventListener('click',async e=>{
+ if(e.target.closest('[data-journal-recharger]')){JOURNAL_CACHE=null;await render();toast('Journal actualisé');return}
+ if(e.target.closest('[data-journal-export]')){
+  const cell=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const lignes=[['Date','Auteur','Module','Action','Type','Nombre','Page'].map(cell).join(';')].concat(journalFiltre().map(j=>[new Date(j.created_at).toLocaleString('fr-FR'),j.auteur_nom,j.module,j.action,(JOURNAL_TYPES[j.type]||[j.type])[0],j.nb,j.page].map(cell).join(';')));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+lignes.join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='journal-natty-'+new Date().toISOString().slice(0,10)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+ }
+});
+
+/* ============ ÉQUIPE & ACCÈS — maquette Natty OS v3 ============
+   Deux lectures, aucune écriture : les comptes de `staff` (qui est là, avec
+   quel rôle et quels domaines) et la matrice des droits, calculée par
+   canRole() — la règle même qu'applique la navigation, pas une copie. La
+   création de compte et le changement de rôle restent dans Supabase
+   (natty_staff.sql) : un écran qui écrirait un rôle sans que la RLS le
+   protège serait une faille, pas une commodité. */
+function vEquipe(){
+ const tb=tabs('equipe',[['membres','Membres',S.staff.length],['roles','Rôles & droits']]);
+ let b='';
+ if(tb.cur==='membres'){
+  const ouvertes=nom=>S.taches.filter(t=>t.statut!=='fait'&&t.porteur===nom).length;
+  b=S.staff.length?`<div class="tbl-wrap"><table><thead><tr><th>Personne</th><th>Rôle</th><th>Domaines</th><th>Statut</th><th>Tâches ouvertes</th></tr></thead><tbody>${
+   S.staff.slice().sort((a,c)=>String(a.nom||'').localeCompare(String(c.nom||''),'fr')).map(s=>{
+    const doms=(s.domaines||[]).map(d=>`<span class="chip">${esc((ACT_BY_CLE[d]||{}).nom||d)}</span>`).join(' ');
+    const moi=STAFF_SESSION&&s.user_id===STAFF_SESSION.user_id;
+    return `<tr><td><div class="who"><div class="av ${s.role==='admin'?'dk':''}">${ini(s.nom)}</div><div><b>${esc(s.nom||'—')}</b>${moi?' <span class="chip" style="margin-left:4px">vous</span>':''}</div></div></td><td><span class="chip info">${esc((ROLES[s.role]||{}).l||s.role||'—')}</span></td><td>${doms||'<span class="muted">—</span>'}</td><td>${esc(s.statut||'—')}</td><td class="num">${ouvertes(s.nom)}</td></tr>`;
+   }).join('')}</tbody></table></div>`
+  :`<div class="empty">Liste de l’équipe illisible : session d’équipe requise, ou table <span class="mono">staff</span> absente.</div>`;
+  b+=`<p class="muted" style="font-size:12.5px;margin-top:10px">Créer un compte ou changer un rôle se fait dans Supabase : un compte Auth par personne, puis sa ligne dans <span class="mono">staff</span> (<span class="mono">natty_staff.sql</span>).</p>`;
+ }
+ if(tb.cur==='roles'){
+  const roles=Object.keys(ROLES);
+  const lignes=NAV.map(g=>`<tr class="mx-g"><td colspan="${roles.length+1}">${esc(g.l)}</td></tr>`+g.items.map(it=>`<tr><td>${esc(it.l)}</td>${roles.map(k=>{
+   if(canRole(k,it.to[0],[]))return'<td><span class="yes" aria-label="accès">✓</span></td>';
+   if(k==='associe'&&ACT_BY_CLE[it.to[0]])return'<td><span class="ro">domaine</span></td>';
+   return'<td><span class="no" aria-label="pas d’accès">—</span></td>';
+  }).join('')}</tr>`).join('')).join('');
+  b=`<div class="tbl-wrap"><table class="mx"><thead><tr><th>Module</th>${roles.map(k=>`<th>${esc(ROLES[k].l)}</th>`).join('')}</tr></thead><tbody>${lignes}</tbody></table></div>
+  <p class="muted" style="font-size:12.5px;margin-top:10px">« domaine » : un associé voit l’activité si elle figure dans ses domaines (colonne <span class="mono">staff.domaines</span>). Cette matrice décrit la navigation ; les données, elles, sont protégées en base par la RLS (<span class="mono">est_staff()</span>).</p>`;
+ }
+ return ph('Équipe & accès','Un compte par personne, un rôle par compte')+tb.html+b;
 }
 
 /* ============ NOTIFICATIONS — assigné à une tâche, un bloc ou un projet :
@@ -3049,10 +3376,13 @@ async function vActivite(cle){
  const vues=vuesDe(cle);
  const vueId=SUB['vue-'+cle]||vues[0][0];
  const vueDef=vues.find(v=>v[0]===vueId)||vues[0];
- const body=(!VUES[cle])?await vGenerique(cle,vueId,tachesAct)
+ // Natty OS : la barre latérale n'énumère plus les cinq vues génériques
+ // d'une activité ; elles sont des onglets de sa page (vGestionInterne).
+ const body=(!VUES[cle])?await vGestionInterne(cle,tachesAct)
   :vueId==='gestion'?await vGestionInterne(cle,tachesAct)
   :await rendreVueSpecifique(cle,vueId);
- return ph(a.nom,`${vueDef[1]} — ${a.nom}`,`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
+ const nc=navCourant();
+ return ph(nc?nc.it.l:a.nom,VUES[cle]?`${vueDef[1]} — ${a.nom}`:'Aperçu, tâches, sous-projets, schéma et drive de l’activité',`<button class="btn primary" data-new="tache" data-activite="${cle}">+ Tâche</button>`)+
   routineHero(cle,routine)+body;
 }
 /* Une activité sans vues dédiées : chaque vue générique est directement une
@@ -4729,8 +5059,7 @@ $('#createBtn').onclick=e=>{
 let palSel=0,palItems=[];
 function palRender(q){
  q=(q||'').toLowerCase();const it=[];
- [['dash','Accueil'],['taches','Toutes les tâches']].filter(([id])=>can(id)).forEach(([id,l])=>it.push({g:'Pages',l,s:'',fn:()=>go(id)}));
- ACTIVITES.filter(a=>can(a.cle)).forEach(a=>it.push({g:'Activités',l:a.nom,s:'',fn:()=>go(a.cle)}));
+ NAV.forEach(grp=>navItemsVisibles(grp).forEach(n=>it.push({g:'Modules',l:n.l,s:grp.l,fn:()=>{const [c,v]=n.to;if(v)SUB['vue-'+c]=v;go(c)}})));
  S.taches.forEach(t=>it.push({g:'Tâches',l:t.titre,s:own(t.porteur).replace(/<[^>]+>/g,''),fn:()=>openTache(t.id)}));
  S.projets.forEach(p=>it.push({g:'Projets',l:p.nom,s:(ACT_BY_CLE[p.activite]||{}).nom||'',fn:()=>go('projet:'+p.id)}));
  palItems=it.filter(i=>!q||(i.l+' '+i.s).toLowerCase().includes(q)).slice(0,30);palSel=0;let last='';
@@ -6215,7 +6544,11 @@ async function demarrerApp(){
  $('#meNom').textContent=STAFF_NOM;
  $('#meRole').textContent=(ROLES[STAFF_ROLE]||{}).l||STAFF_ROLE;
  await chargerBase();
- try{const c=localStorage.getItem('natty_crm_cur');if(c&&can(c))CUR=c;else CUR='dash'}catch(e){CUR='dash'}
+ try{
+  const c=localStorage.getItem('natty_crm_cur');if(c&&can(c))CUR=c;else CUR='dash';
+  const v=VUES[CUR]&&localStorage.getItem('natty_crm_vue_'+CUR);
+  if(v&&VUES[CUR].some(x=>x[0]===v))SUB['vue-'+CUR]=v;
+ }catch(e){CUR='dash'}
  renderNav();
  await render();
  demarrerSondageNotifs();

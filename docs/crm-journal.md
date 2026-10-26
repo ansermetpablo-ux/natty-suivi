@@ -1460,3 +1460,112 @@ Vérifié sur la copie + faux PostgREST : curry 7,60 € / bourguignon 4,92 € 
 « Valider » ne réécrit que r2 (le curry à 0,9/1,0 intact) ; oignon du bourguignon 0,1 kg →
 `{"r2|oignon":0.1}`, curry inchangé ; achat oignon curry 0,72 kg à 65,5 % → 1,099 kg au total.
 Onglets sans requête, console vide, 0 px de débordement à 375 px.
+
+---
+
+## Refonte Natty OS — la coquille alignée sur la maquette v3 (26/10/2026)
+
+Demande d'Anatole : « lance la refonte du CRM », périmètre choisi : aligner `crm.html`
+sur la maquette « Natty OS v3 » (artefact claude.ai), sans perdre de fonction.
+
+**Branche `refonte-crm`, partie de `main`, pas de `crm`.** `origin/crm` est en retard
+de 60 commits sur `main` pour le CRM (Produits, Marges, Menu, Assigner, Opérationnel en
+onglets y manquent) ; ses 2 commits propres portent sur l'offre et entrent en conflit
+avec la refonte de l'offre déjà en production (`offre.html`, `api/webhook.js`). Partir
+de `crm` aurait été travailler sur une copie obsolète — l'incident du 25/09.
+
+**Ce qui change — la façon d'arriver aux écrans, pas les écrans.**
+- Barre latérale en groupes MÉTIER (`NAV`) : Pilotage, Commercial, Opérations, Finances,
+  Organisation. Chaque entrée est une paire `[cle, vue]` qui pointe vers une vue
+  existante ; `go()`, `SUB['vue-'+cle]` et toutes les vues sont inchangés.
+- Groupes repliables, tous ouverts par défaut, état mémorisé (`natty_crm_nav_fermes`).
+  Le groupe de la page courante ne se replie jamais à l'affichage.
+- Les activités génériques (Finance, Partenariat, Développement, Documents, Modèle
+  financier) n'énumèrent plus leurs cinq vues dans la barre : Aperçu / Tâches /
+  Sous-projets / Schéma / Drive sont des onglets de leur page (`vGestionInterne`). Les
+  vues « Gestion » de Commercial, Production, Logistique et Financement deviennent
+  « Suivi commercial », « Suivi production », « Suivi logistique », « Dossiers de
+  financement ».
+- La vue choisie est restaurée au rechargement (`natty_crm_vue_<cle>`).
+- Tableau de bord : rangée d'indicateurs (tâches ouvertes en carte métal, échéances à
+  7 j, bons de commande à traiter, projets actifs) et bloc « À traiter » (tâches en
+  retard, bons sans attribution ou sans date, tâches sans porteur). Les échéances, la
+  grille des activités et les onglets Projets / Mapping restent en dessous.
+- Recherche Ctrl K : les modules de la nouvelle navigation remplacent « Pages » et
+  « Activités ».
+- Nom : « Natty OS · ERP interne » (titre, barre latérale, connexion).
+
+**Ce qui n'est PAS repris de la maquette, volontairement** : Clients appli, Messages &
+RDV, Signalements (dans `admin.html`, et aucun chemin ne doit y mener depuis le CRM) ;
+Journal des actions, Agent Natty, Banque Qonto, Feuille de route, Intégrations (rien
+de construit derrière : une entrée vers un écran vide est pire qu'une entrée absente) ;
+les indicateurs abonnés / trésorerie (aucune source branchée). Le sélecteur
+« voir en tant que » n'est pas repris : le rôle vient de `staff`, côté base.
+- `logistique · commandes` (`vCommandesLogistique`) n'a plus d'entrée propre : Bons de
+  commande et Livraison couvrent le même besoin. Reste atteignable par le raccourci de
+  l'aperçu Logistique.
+
+**Vérifié** : `node --check` sur le script inline ; en navigateur (session d'équipe
+simulée, données vides via la clé anon) les 28 entrées ouvrent la bonne page avec le
+bon fil d'Ariane et l'entrée active, sans erreur (« Équipe & RH » exige une session :
+avec une session simulée, aucune erreur) ; Ctrl K « stocks » → Opérations · Stocks ;
+repli d'un groupe ; mémoire de la vue ; 375 px sans défilement horizontal, menu latéral
+qui s'ouvre. 🔄 Non vérifié avec une vraie session d'équipe ni de vraies données.
+
+### Suite du même jour — « Équipe & accès »
+
+La page de la maquette, en lecture seule, dans Organisation (« Équipe & RH » devient
+« RH & disponibilités », la page RH n'a pas changé).
+- **Membres** : les comptes actifs de `staff` — rôle, domaines, statut, tâches ouvertes
+  de chacun. `chargerBase` demande désormais `domaines`, avec un repli sans la colonne :
+  une colonne absente fait refuser toute la requête (42703), et l'équipe entière
+  disparaîtrait des listes de porteurs.
+- **Rôles & droits** : la matrice module × rôle, calculée par `canRole()` — la règle
+  que `can()` applique à la personne connectée, sortie en fonction pour servir aux
+  deux. Une seule règle, pas une copie qui divergerait. « domaine » pour un associé :
+  il voit l'activité si elle est dans `staff.domaines`.
+- Rien ne s'écrit d'ici : créer un compte ou changer un rôle reste dans Supabase
+  (`natty_staff.sql`), protégé par la RLS.
+- Non repris de la maquette : l'onglet « Sécurité » (son plan d'action date de la fuite
+  des mots de passe, refermée depuis le 12/10) et le bouton « Créer le compte ».
+
+Vérifié en navigateur : 3 comptes, rôles et domaines affichés, « vous » sur la ligne de
+la personne connectée ; matrice à 9 rôles ; un associé aux domaines `commercial`
+accède à Commercial et pas à Finance ; 375 px sans débordement.
+
+### Suite du même jour — Journal des actions
+
+« Qui a fait quoi, quand, dans quel module. Rien ne s'efface. » (maquette v3).
+🔄 **`supabase/migrations/0022_crm_journal.sql` à exécuter** : sans la table, l'écran le
+dit et rien n'est tracé — le reste du CRM n'en est pas affecté.
+- **La table** `crm_journal` : auteur (id + nom), module, phrase d'action, type
+  (création, modification, enregistrement, fait, suppression, info), table, objet, `nb`
+  (écritures regroupées), page d'origine. RLS : SELECT et INSERT pour l'équipe, aucune
+  policy UPDATE ni DELETE — un journal qu'on peut réécrire ne prouve rien — et un INSERT
+  ne peut porter que son propre `auteur_id`.
+- **Le traçage est dans `sb()`**, pas dans les appels : toutes les écritures du CRM y
+  passent (vérifié : aucun `fetch` REST en dehors), donc aucune ne peut être oubliée.
+  `JOURNAL_TABLES` donne à chaque table son module et son nom d'objet (une table
+  inconnue est tracée quand même, module « Autre ») ; `journalSemantique()` nomme les
+  gestes qui comptent : réservation de cuisine envoyée / confirmée, session démarrée /
+  terminée, email envoyé, opportunité passée à une étape, bon attribué / annulé, tâche
+  terminée, bon livré.
+- **Regroupement** : même table + même type en moins de 1,5 s = une ligne (« 5
+  attributions créées »). Ce qui reste en file part à la fermeture de l'onglet
+  (`keepalive`).
+- **Pas tracé** : déplacer un bloc ou un projet sur un canevas (PATCH x/y seuls), les
+  notifications lues, `crm_taches_historique`, le journal lui-même (écrit par `fetch`
+  direct, jamais par `sb()`). Les envois par `/api/notifications` sont tracés par
+  l'écriture en base qui les suit (crm_messages, crm_sessions).
+- Une erreur du journal n'empêche JAMAIS l'écriture qu'il trace (`try` autour).
+- **L'écran** (Pilotage → Journal des actions) : 500 dernières actions, indicateurs,
+  filtres module / auteur / type / texte sans nouvelle requête, export CSV (UTF-8 avec
+  BOM, séparateur `;`, pour Excel). Lu par `sb()` et non `sbTry()` : la bannière de
+  `sbTry` parlerait de `natty_crm.sql`, fausse si seule la 0022 manque.
+
+Vérifié en navigateur sur un faux PostgREST : création, tâche terminée, 5 attributions
+→ 1 ligne `nb=5`, déplacement x/y et notification non tracés, réservation de cuisine
+et étape de pipeline nommées, suppression ; écran : 6 lignes, filtre module, recherche
+qui garde le curseur ; table absente → bannière 0022, aucune écriture tentée ensuite,
+les écritures du CRM passent ; 375 px sans débordement. 🔄 Non vérifié contre la vraie
+base (migration pas exécutée) ni avec une vraie session.
