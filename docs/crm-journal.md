@@ -1511,3 +1511,24 @@ bon fil d'Ariane et l'entrée active, sans erreur (« Équipe & RH » exige une 
 avec une session simulée, aucune erreur) ; Ctrl K « stocks » → Opérations · Stocks ;
 repli d'un groupe ; mémoire de la vue ; 375 px sans défilement horizontal, menu latéral
 qui s'ouvre. 🔄 Non vérifié avec une vraie session d'équipe ni de vraies données.
+
+### Suite du même jour — « Équipe & accès »
+
+La page de la maquette, en lecture seule, dans Organisation (« Équipe & RH » devient
+« RH & disponibilités », la page RH n'a pas changé).
+- **Membres** : les comptes actifs de `staff` — rôle, domaines, statut, tâches ouvertes
+  de chacun. `chargerBase` demande désormais `domaines`, avec un repli sans la colonne :
+  une colonne absente fait refuser toute la requête (42703), et l'équipe entière
+  disparaîtrait des listes de porteurs.
+- **Rôles & droits** : la matrice module × rôle, calculée par `canRole()` — la règle
+  que `can()` applique à la personne connectée, sortie en fonction pour servir aux
+  deux. Une seule règle, pas une copie qui divergerait. « domaine » pour un associé :
+  il voit l'activité si elle est dans `staff.domaines`.
+- Rien ne s'écrit d'ici : créer un compte ou changer un rôle reste dans Supabase
+  (`natty_staff.sql`), protégé par la RLS.
+- Non repris de la maquette : l'onglet « Sécurité » (son plan d'action date de la fuite
+  des mots de passe, refermée depuis le 12/10) et le bouton « Créer le compte ».
+
+Vérifié en navigateur : 3 comptes, rôles et domaines affichés, « vous » sur la ligne de
+la personne connectée ; matrice à 9 rôles ; un associé aux domaines `commercial`
+accède à Commercial et pas à Finance ; 375 px sans débordement.

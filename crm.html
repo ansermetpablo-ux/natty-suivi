@@ -111,6 +111,9 @@ main{padding-block:22px 80px;padding-inline:clamp(16px,3vw,32px);min-width:0}
 .sect h2{margin:0;font-size:17px;letter-spacing:-.02em}.sect span{color:var(--muted);font-size:12.5px}
 .exbar{display:flex;gap:10px;align-items:center;padding:9px 14px;border-radius:var(--r-md);border:1px dashed var(--red);color:var(--red);font-size:12.5px;margin-bottom:14px;background:var(--red-bg)}
 .tbl-wrap{overflow-x:auto;border-radius:var(--r-lg);border:1px solid var(--line);background:var(--bg)}
+.mx td,.mx th{text-align:center}.mx td:first-child,.mx th:first-child{text-align:left;white-space:nowrap}
+.mx tr.mx-g td{background:var(--panel);font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.yes{color:var(--green);font-weight:700}.ro{color:var(--blue);font-weight:600;font-size:12px}.no{color:var(--muted);opacity:.45}
 table{width:100%;border-collapse:collapse;min-width:640px}
 th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
 th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--panel)}
@@ -568,15 +571,23 @@ const ROLES={
  associe:{l:'Associé',acces:[]},   // un associé n'a d'accès que par SES domaines — voir can()
  livreur:{l:'Livreur',acces:['logistique']}
 };
-function can(cle){
- if(cle==='dash'||cle==='taches'||cle==='rh'||cle==='projets')return true;
- if(cle.startsWith('projet:')){const p=S.projets.find(x=>x.id===cle.slice(7));return p?can(p.activite):false}
- const r=ROLES[STAFF_ROLE];if(!r)return false;
+/* Pages ouvertes à toute l'équipe, quel que soit le rôle. */
+const PAGES_COMMUNES=['dash','taches','rh','projets','equipe'];
+/* La règle d'accès, pour UN rôle donné — c'est elle que lit can() pour la
+   personne connectée, et elle que lit la matrice « Rôles & droits » pour
+   tous les rôles : une seule règle, jamais une copie qui divergerait. */
+function canRole(role,cle,domaines){
+ if(PAGES_COMMUNES.includes(cle))return true;
+ const r=ROLES[role];if(!r)return false;
  if(r.toutes)return true;
  if(r.acces&&r.acces.includes(cle))return true;
  // Un associé cumule un ou plusieurs domaines (spec §3.2) — son rôle seul
  // ('associe') ne donne accès à rien, c'est staff.domaines qui décide.
- return(STAFF_DOMAINES||[]).includes(cle);
+ return(domaines||[]).includes(cle);
+}
+function can(cle){
+ if(cle.startsWith('projet:')){const p=S.projets.find(x=>x.id===cle.slice(7));return p?can(p.activite):false}
+ return canRole(STAFF_ROLE,cle,STAFF_DOMAINES);
 }
 
 /* ============ ÉTAT ============ */
@@ -590,14 +601,18 @@ async function chargerBase(){
  const [t,p,st,se,pf,ta]=await Promise.all([
   sbTry('crm_taches?select=*&order=echeance.asc.nullslast'),
   sbTry('crm_projets?select=*&order=echeance.asc.nullslast'),
-  sbTry('staff?select=user_id,nom,role,statut&actif=eq.true'),
+  sbTry('staff?select=user_id,nom,role,statut,domaines&actif=eq.true'),
   sbTry('crm_sessions?select=id,bloc_id,type,statut_reservation'),
   sbTry('crm_profils_types?select=*&order=nom.asc'),
   sbTry('crm_tarifs?select=*')
  ]);
  S.taches=t.ok?t.data:[];
  S.projets=p.ok?p.data:[];
- S.staff=st.ok?st.data:[];
+ // Une colonne absente fait refuser TOUTE la requête (42703) : sans ce
+ // repli, une instance sans `domaines` perdrait la liste de l'équipe entière.
+ let staff=st;
+ if(!st.ok&&/42703|domaines/.test(st.err||''))staff=await sbTry('staff?select=user_id,nom,role,statut&actif=eq.true');
+ S.staff=staff.ok?staff.data:[];
  S.sessions=se.ok?se.data:[];
  S.profils=pf.ok?pf.data:[];
  S.tarifs=ta.ok?ta.data:[];
@@ -696,7 +711,8 @@ const NAV=[
   {l:'Dossiers de financement',ic:'financement',to:['financement','gestion']}]},
  {g:'organisation',l:'Organisation',items:[
   {l:'Projets & schémas',ic:'projet',to:['projets']},
-  {l:'Équipe & RH',ic:'rh',to:['rh']},
+  {l:'Équipe & accès',ic:'partenariat',to:['equipe']},
+  {l:'RH & disponibilités',ic:'rh',to:['rh']},
   {l:'Documents & juridique',ic:'documents',to:['documents']},
   {l:'Développement',ic:'developpement',to:['developpement']}]}
 ];
@@ -794,6 +810,7 @@ async function renderView(cle){
  if(cle==='taches')return vTachesGlobal();
  if(cle==='rh')return await vRH();
  if(cle==='projets')return vProjetsHub();
+ if(cle==='equipe')return vEquipe();
  if(cle.startsWith('projet:'))return await vProjetPage(cle.slice(7));
  return await vActivite(cle);
 }
@@ -881,6 +898,40 @@ function vProjetsHub(){
  <div class="card lift"><div class="list">${mesTaches.map(taskLi).join('')||'<div class="empty">Rien qui vous est attribué pour l’instant.</div>'}</div></div>
  <div class="sect"><h2>Tous les projets, en vrac</h2><span>${projets.length}</span></div>
  <div class="grid g3">${projets.map(projetCard).join('')||'<div class="empty">Aucun projet — « + Projet » pour en créer un.</div>'}</div>`;
+}
+
+/* ============ ÉQUIPE & ACCÈS — maquette Natty OS v3 ============
+   Deux lectures, aucune écriture : les comptes de `staff` (qui est là, avec
+   quel rôle et quels domaines) et la matrice des droits, calculée par
+   canRole() — la règle même qu'applique la navigation, pas une copie. La
+   création de compte et le changement de rôle restent dans Supabase
+   (natty_staff.sql) : un écran qui écrirait un rôle sans que la RLS le
+   protège serait une faille, pas une commodité. */
+function vEquipe(){
+ const tb=tabs('equipe',[['membres','Membres',S.staff.length],['roles','Rôles & droits']]);
+ let b='';
+ if(tb.cur==='membres'){
+  const ouvertes=nom=>S.taches.filter(t=>t.statut!=='fait'&&t.porteur===nom).length;
+  b=S.staff.length?`<div class="tbl-wrap"><table><thead><tr><th>Personne</th><th>Rôle</th><th>Domaines</th><th>Statut</th><th>Tâches ouvertes</th></tr></thead><tbody>${
+   S.staff.slice().sort((a,c)=>String(a.nom||'').localeCompare(String(c.nom||''),'fr')).map(s=>{
+    const doms=(s.domaines||[]).map(d=>`<span class="chip">${esc((ACT_BY_CLE[d]||{}).nom||d)}</span>`).join(' ');
+    const moi=STAFF_SESSION&&s.user_id===STAFF_SESSION.user_id;
+    return `<tr><td><div class="who"><div class="av ${s.role==='admin'?'dk':''}">${ini(s.nom)}</div><div><b>${esc(s.nom||'—')}</b>${moi?' <span class="chip" style="margin-left:4px">vous</span>':''}</div></div></td><td><span class="chip info">${esc((ROLES[s.role]||{}).l||s.role||'—')}</span></td><td>${doms||'<span class="muted">—</span>'}</td><td>${esc(s.statut||'—')}</td><td class="num">${ouvertes(s.nom)}</td></tr>`;
+   }).join('')}</tbody></table></div>`
+  :`<div class="empty">Liste de l’équipe illisible : session d’équipe requise, ou table <span class="mono">staff</span> absente.</div>`;
+  b+=`<p class="muted" style="font-size:12.5px;margin-top:10px">Créer un compte ou changer un rôle se fait dans Supabase : un compte Auth par personne, puis sa ligne dans <span class="mono">staff</span> (<span class="mono">natty_staff.sql</span>).</p>`;
+ }
+ if(tb.cur==='roles'){
+  const roles=Object.keys(ROLES);
+  const lignes=NAV.map(g=>`<tr class="mx-g"><td colspan="${roles.length+1}">${esc(g.l)}</td></tr>`+g.items.map(it=>`<tr><td>${esc(it.l)}</td>${roles.map(k=>{
+   if(canRole(k,it.to[0],[]))return'<td><span class="yes" aria-label="accès">✓</span></td>';
+   if(k==='associe'&&ACT_BY_CLE[it.to[0]])return'<td><span class="ro">domaine</span></td>';
+   return'<td><span class="no" aria-label="pas d’accès">—</span></td>';
+  }).join('')}</tr>`).join('')).join('');
+  b=`<div class="tbl-wrap"><table class="mx"><thead><tr><th>Module</th>${roles.map(k=>`<th>${esc(ROLES[k].l)}</th>`).join('')}</tr></thead><tbody>${lignes}</tbody></table></div>
+  <p class="muted" style="font-size:12.5px;margin-top:10px">« domaine » : un associé voit l’activité si elle figure dans ses domaines (colonne <span class="mono">staff.domaines</span>). Cette matrice décrit la navigation ; les données, elles, sont protégées en base par la RLS (<span class="mono">est_staff()</span>).</p>`;
+ }
+ return ph('Équipe & accès','Un compte par personne, un rôle par compte')+tb.html+b;
 }
 
 /* ============ NOTIFICATIONS — assigné à une tâche, un bloc ou un projet :
