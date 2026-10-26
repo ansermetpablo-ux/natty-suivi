@@ -476,8 +476,146 @@ async function sb(path,options={}){
   const res=await fetch(SB_URL+'/rest/v1/'+path,{...options,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+jetonStaff(),'Content-Type':'application/json','Prefer':'return=representation',...(options.headers||{})}});
   const text=await res.text();
   if(!res.ok)throw new Error(text);
-  return text?JSON.parse(text):[];
+  const data=text?JSON.parse(text):[];
+  try{journalNoter(path,options,data)}catch(e){}   // le journal ne doit JAMAIS faire échouer une écriture
+  return data;
 }
+
+/* ============ JOURNAL DES ACTIONS (0022_crm_journal.sql) ============
+   Toute écriture d'équipe passe par sb() : c'est donc ICI qu'on la trace,
+   une fois, plutôt qu'à chacun des centaines d'appels — un appel oublié
+   aurait fait un journal troué sans que rien ne le dise.
+   Les écritures en rafale (20 attributions d'une commande, 12 étapes d'une
+   session) sur la même table et du même type deviennent UNE ligne, `nb`
+   les compte : un journal de 300 lignes pour un seul geste ne se lit pas.
+   Le journal lui-même s'écrit par fetch direct, jamais par sb() — sinon il
+   se tracerait lui-même. */
+const JOURNAL_TABLES={
+ crm_taches:{m:'Tâches',s:'tâche',p:'tâches',f:1,n:'titre'},
+ crm_taches_dependances:{m:'Tâches',s:'dépendance',p:'dépendances',f:1},
+ crm_projets:{m:'Projets',s:'projet',p:'projets',n:'nom'},
+ crm_schema_blocs:{m:'Projets',s:'bloc de schéma',p:'blocs de schéma',n:'titre'},
+ crm_schema_liens:{m:'Projets',s:'lien de schéma',p:'liens de schéma'},
+ crm_modeles_blocs:{m:'Projets',s:'modèle de bloc',p:'modèles de bloc',n:'nom'},
+ crm_modeles_bloc_taches:{m:'Projets',s:'tâche modèle',p:'tâches modèles',f:1,n:'titre'},
+ crm_documents:{m:'Documents',s:'document',p:'documents',n:'nom'},
+ bons_commande:{m:'Commandes',s:'bon de commande',p:'bons de commande'},
+ bons_attributions:{m:'Commandes',s:'attribution',p:'attributions',f:1},
+ abonnements:{m:'Commandes',s:'abonnement',p:'abonnements'},
+ crm_sessions:{m:'Production',s:'session de production',p:'sessions de production',f:1,n:'jour'},
+ crm_session_etapes:{m:'Production',s:'étape de session',p:'étapes de session',f:1,n:'titre'},
+ crm_session_equipe:{m:'Production',s:'membre de session',p:'membres de session'},
+ crm_session_inventaire:{m:'Stocks',s:'ligne d’inventaire',p:'lignes d’inventaire',f:1,n:'ingredient_nom'},
+ crm_menus:{m:'Production',s:'menu',p:'menus',n:'nom'},
+ crm_menu_recettes:{m:'Production',s:'recette de menu',p:'recettes de menu',f:1},
+ recettes:{m:'Menu & recettes',s:'recette',p:'recettes',f:1,n:'nom'},
+ recettes_ingredients:{m:'Menu & recettes',s:'ingrédient de recette',p:'ingrédients de recette',n:'ingredient_nom'},
+ recettes_etapes:{m:'Menu & recettes',s:'étape de recette',p:'étapes de recette',f:1,n:'titre'},
+ plats_menu:{m:'Menu & recettes',s:'plat du menu',p:'plats du menu',n:'nom'},
+ stocks_mp:{m:'Stocks',s:'lot de stock',p:'lots de stock',n:'ingredient_nom'},
+ ingredients_base:{m:'Stocks',s:'ingrédient de base',p:'ingrédients de base',n:'nom'},
+ crm_plats:{m:'Produits',s:'plat',p:'plats',n:'code'},
+ factures_fournisseur:{m:'Finances',s:'facture fournisseur',p:'factures fournisseur',f:1,n:'fournisseur'},
+ lignes_facture:{m:'Finances',s:'ligne de facture',p:'lignes de facture',f:1,n:'libelle'},
+ crm_tarifs:{m:'Finances',s:'tarif',p:'tarifs',n:'cle'},
+ crm_tournees:{m:'Logistique',s:'tournée',p:'tournées',f:1,n:'jour'},
+ crm_tournee_arrets:{m:'Logistique',s:'arrêt de tournée',p:'arrêts de tournée',n:'adresse'},
+ crm_contacts:{m:'Commercial',s:'contact',p:'contacts',n:'nom'},
+ crm_messages:{m:'Commercial',s:'message',p:'messages',n:'sujet'},
+ crm_interactions:{m:'Commercial',s:'échange',p:'échanges'},
+ crm_suivi_etapes:{m:'Commercial',s:'suivi d’étape',p:'suivis d’étape'},
+ crm_suivi_arguments:{m:'Commercial',s:'verdict d’argument',p:'verdicts d’argument'},
+ crm_profils_types:{m:'Commercial',s:'profil type',p:'profils types',n:'nom'},
+ crm_profil_arguments:{m:'Commercial',s:'argument',p:'arguments',n:'texte'},
+ crm_profil_objections:{m:'Commercial',s:'objection',p:'objections',f:1,n:'objection'},
+ crm_relance_regles:{m:'Commercial',s:'règle de relance',p:'règles de relance',f:1},
+ reunions:{m:'RH',s:'réunion',p:'réunions',f:1,n:'titre'},
+ participations:{m:'RH',s:'participation',p:'participations',f:1},
+ indisponibilites:{m:'RH',s:'indisponibilité',p:'indisponibilités',f:1},
+ manquements:{m:'RH',s:'manquement',p:'manquements'},
+ regles_presence:{m:'RH',s:'règle de présence',p:'règles de présence',f:1,n:'cle'},
+ staff:{m:'Équipe',s:'compte d’équipe',p:'comptes d’équipe',n:'nom'}
+};
+/* Ce qui n'est pas un geste de l'équipe : des notifications lues, un
+   historique que le CRM tient lui-même, le journal. */
+const JOURNAL_IGNORE=new Set(['notifications','crm_taches_historique','crm_journal']);
+let JOURNAL_ETAT='inconnu';   // 'ok' | 'manquant' (migration 0022 pas exécutée) | 'refuse'
+const JOURNAL_FILE=new Map();
+function journalTypeDe(table,methode,body,prefer){
+ if(methode==='DELETE')return'suppression';
+ if(methode==='POST')return/merge-duplicates/.test(prefer||'')?'enregistrement':'creation';
+ if(body&&body.statut==='fait'&&table==='crm_taches')return'fait';
+ if(body&&body.statut==='livre'&&(table==='bons_commande'||table==='crm_tournee_arrets'))return'fait';
+ return'modification';
+}
+function journalNoter(path,options,data){
+ const methode=(options.method||'GET').toUpperCase();
+ if(!['POST','PATCH','DELETE'].includes(methode)||!STAFF_SESSION||JOURNAL_ETAT==='manquant')return;
+ const table=path.split('?')[0];
+ if(JOURNAL_IGNORE.has(table)||table.startsWith('rpc/'))return;
+ let body=null;try{body=options.body?JSON.parse(options.body):null}catch(e){}
+ // Déplacer un bloc sur un canevas n'est pas une action à tracer.
+ if(methode==='PATCH'&&body&&!Array.isArray(body)&&Object.keys(body).every(k=>k==='x'||k==='y'))return;
+ const cfg=JOURNAL_TABLES[table]||{m:'Autre',s:table,p:table};
+ let type=journalTypeDe(table,methode,body,options.headers&&options.headers.Prefer);
+ // Les gestes qui comptent ont un nom à eux, plus parlant que « session
+ // de production modifiée » : on le lit dans ce qui vient d'être écrit.
+ const sem=body&&!Array.isArray(body)?journalSemantique(table,methode,body):null;
+ if(sem)type=sem.type;
+ const lignes=Array.isArray(data)&&data.length?data:(Array.isArray(body)?body:(body?[body]:[]));
+ const noms=cfg.n?lignes.map(l=>l&&l[cfg.n]).filter(Boolean).map(String):[];
+ const idFiltre=(path.match(/[?&]id=eq\.([^&]+)/)||[])[1];
+ const ids=lignes.map(l=>l&&l.id).filter(Boolean);
+ const cle=table+'|'+type+'|'+(sem?sem.phrase:'');
+ const e=JOURNAL_FILE.get(cle)||{table,type,cfg:sem?{...cfg,m:sem.m||cfg.m}:cfg,sem,nb:0,noms:[],ids:[],page:($('#crumb')?.textContent||'').trim()};
+ e.nb+=Math.max(1,lignes.length||1);
+ noms.forEach(n=>{if(!e.noms.includes(n))e.noms.push(n)});
+ (ids.length?ids:idFiltre?[idFiltre]:[]).forEach(i=>e.ids.push(String(i)));
+ clearTimeout(e.t);e.t=setTimeout(()=>journalEnvoyer(cle),1500);
+ JOURNAL_FILE.set(cle,e);
+}
+const JOURNAL_VERBES={creation:['créé','créée','créés','créées'],modification:['modifié','modifiée','modifiés','modifiées'],suppression:['supprimé','supprimée','supprimés','supprimées'],enregistrement:['enregistré','enregistrée','enregistrés','enregistrées']};
+function journalSemantique(table,methode,b){
+ if(table==='crm_sessions'&&methode==='PATCH'){
+  if(b.statut_reservation==='envoyee')return{type:'info',phrase:'Réservation de cuisine envoyée',m:'Production'};
+  if(b.statut_reservation==='confirmee')return{type:'fait',phrase:'Réservation de cuisine confirmée',m:'Production'};
+  if(b.terminee_le)return{type:'fait',phrase:'Session de production terminée',m:'Production'};
+  if(b.demarree_le)return{type:'info',phrase:'Session de production démarrée',m:'Production'};
+ }
+ if(table==='crm_messages'&&methode==='POST'&&b.sens==='sortant')return{type:'info',phrase:b.canal==='email'?'Email envoyé':'Message envoyé',m:'Commercial'};
+ if(table==='crm_projets'&&methode==='PATCH'&&b.etape_pipeline)return{type:'modification',phrase:'Opportunité passée à l’étape « '+String(b.etape_pipeline).replace(/_/g,' ')+' »',m:'Commercial'};
+ if(table==='bons_commande'&&methode==='PATCH'&&b.statut==='attribue')return{type:'fait',phrase:'Bon de commande attribué',m:'Commandes'};
+ if(table==='bons_commande'&&methode==='PATCH'&&b.statut==='annule')return{type:'suppression',phrase:'Bon de commande annulé',m:'Commandes'};
+ return null;
+}
+function journalPhrase(e){
+ const c=e.cfg,plus=e.nb>1;
+ const nomsTxt=e.noms.length?' : '+e.noms.slice(0,3).map(n=>'« '+n+' »').join(', ')+(e.noms.length>3?'…':''):'';
+ if(e.sem)return(plus?e.sem.phrase+' (×'+e.nb+')':e.sem.phrase)+nomsTxt;
+ if(e.type==='fait'){
+  if(e.table==='crm_taches')return(plus?e.nb+' tâches terminées':'Tâche terminée')+nomsTxt;
+  return(plus?e.nb+' '+c.p+' livrés':(c.s.charAt(0).toUpperCase()+c.s.slice(1))+' livré')+nomsTxt;
+ }
+ const v=JOURNAL_VERBES[e.type][(plus?2:0)+(c.f?1:0)];
+ return(plus?e.nb+' '+c.p+' '+v:c.s.charAt(0).toUpperCase()+c.s.slice(1)+' '+v)+nomsTxt;
+}
+async function journalEnvoyer(cle,keepalive){
+ const e=JOURNAL_FILE.get(cle);if(!e)return;JOURNAL_FILE.delete(cle);clearTimeout(e.t);
+ if(!STAFF_SESSION||JOURNAL_ETAT==='manquant')return;
+ const ligne={auteur_id:STAFF_SESSION.user_id,auteur_nom:STAFF_NOM||null,module:e.cfg.m,action:journalPhrase(e).slice(0,500),type:e.type,table_cible:e.table,objet_id:e.ids.length===1?e.ids[0]:null,nb:e.nb,page:e.page||null};
+ try{
+  const r=await fetch(SB_URL+'/rest/v1/crm_journal',{method:'POST',keepalive:!!keepalive,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+jetonStaff(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(ligne)});
+  if(r.ok){JOURNAL_ETAT='ok';return}
+  const t=await r.text();
+  if(/PGRST205|42P01/.test(t))JOURNAL_ETAT='manquant';
+  else if(r.status===401||r.status===403)JOURNAL_ETAT='refuse';
+  console.warn('Journal non écrit',r.status,t);
+ }catch(err){console.warn('Journal non écrit',err)}
+}
+/* Fermer l'onglet juste après un geste ne doit pas le perdre. */
+function journalVider(){[...JOURNAL_FILE.keys()].forEach(k=>journalEnvoyer(k,true))}
+window.addEventListener('pagehide',journalVider);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)journalVider()});
 /* Une table qui n'existe pas encore (natty_crm.sql pas exécuté) ne doit
    jamais planter l'écran en silence — elle doit le DIRE (règle du dépôt). */
 let SCHEMA_MANQUANT=false;
@@ -530,7 +668,8 @@ const ICON={
  funnel:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>',
  stocks:'<rect x="3" y="10" width="8" height="8" rx="1"/><rect x="13" y="10" width="8" height="8" rx="1"/><rect x="8" y="3" width="8" height="6" rx="1"/>',
  livraison:'<rect x="2" y="8" width="11" height="8" rx="1"/><path d="M13 11h4l3 3v2h-7z"/><circle cx="6" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/>',
- chevron:'<path d="M6 9l6 6 6-6"/>'
+ chevron:'<path d="M6 9l6 6 6-6"/>',
+ journal:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>'
 };
 const ICONES_BLOC=['auto','schema','projet','calendar','check','drive','alerte','commercial','finance','partenariat','developpement','logistique'];
 const CATEGORIES=[
@@ -572,7 +711,7 @@ const ROLES={
  livreur:{l:'Livreur',acces:['logistique']}
 };
 /* Pages ouvertes à toute l'équipe, quel que soit le rôle. */
-const PAGES_COMMUNES=['dash','taches','rh','projets','equipe'];
+const PAGES_COMMUNES=['dash','taches','rh','projets','equipe','journal'];
 /* La règle d'accès, pour UN rôle donné — c'est elle que lit can() pour la
    personne connectée, et elle que lit la matrice « Rôles & droits » pour
    tous les rôles : une seule règle, jamais une copie qui divergerait. */
@@ -683,7 +822,8 @@ function nomDe(userId){const s=S.staff.find(x=>x.user_id===userId);return s?s.no
 const NAV=[
  {g:'pilotage',l:'Pilotage',items:[
   {l:'Tableau de bord',ic:'dash',to:['dash']},
-  {l:'Tâches & agenda',ic:'taches',to:['taches']}]},
+  {l:'Tâches & agenda',ic:'taches',to:['taches']},
+  {l:'Journal des actions',ic:'journal',to:['journal']}]},
  {g:'commercial',l:'Commercial',items:[
   {l:'Pipe des ventes',ic:'commercial',to:['commercial','pipeline']},
   {l:'Comptes & contacts',ic:'rh',to:['commercial','comptes']},
@@ -782,6 +922,7 @@ function go(id){
  if(!can(id)){toast("Ce rôle n'a pas accès à cette page");return}
  LINK_MODE=false;LINK_FROM=null;   // le mode « relier » ne doit pas survivre à un changement de page
  CUR=id;
+ if(id==='journal')JOURNAL_CACHE=null;   // arriver sur le journal le relit ; filtrer, non
  renderNav();
  render();
  window.scrollTo(0,0);
@@ -811,6 +952,7 @@ async function renderView(cle){
  if(cle==='rh')return await vRH();
  if(cle==='projets')return vProjetsHub();
  if(cle==='equipe')return vEquipe();
+ if(cle==='journal')return await vJournal();
  if(cle.startsWith('projet:'))return await vProjetPage(cle.slice(7));
  return await vActivite(cle);
 }
@@ -899,6 +1041,73 @@ function vProjetsHub(){
  <div class="sect"><h2>Tous les projets, en vrac</h2><span>${projets.length}</span></div>
  <div class="grid g3">${projets.map(projetCard).join('')||'<div class="empty">Aucun projet — « + Projet » pour en créer un.</div>'}</div>`;
 }
+
+/* ============ JOURNAL DES ACTIONS — maquette Natty OS v3 ============
+   Lecture de crm_journal (0022) : les 500 dernières actions, filtrables
+   sans requête de plus. Les actions encore en file (regroupement de 1,5 s)
+   partent AVANT la lecture : on doit y voir le geste qu'on vient de faire. */
+let JOURNAL_CACHE=null,JOURNAL_ERR=null;
+const JF={q:'',m:'all',w:'all',t:'all'};
+const JOURNAL_TYPES={creation:['création','ok'],modification:['modification','info'],enregistrement:['enregistrement','info'],fait:['fait','ok'],suppression:['suppression','bad'],info:['info','']};
+async function chargerJournal(){
+ await Promise.all([...JOURNAL_FILE.keys()].map(k=>journalEnvoyer(k)));
+ // sb() et pas sbTry() : sbTry lève SCHEMA_MANQUANT, dont la bannière parle
+ // de natty_crm.sql — fausse si seule la migration 0022 manque.
+ try{JOURNAL_CACHE=await sb('crm_journal?select=*&order=created_at.desc&limit=500');JOURNAL_ERR=null}
+ catch(err){
+  const msg=(err&&err.message)||String(err);
+  JOURNAL_CACHE=[];
+  JOURNAL_ERR=/PGRST205|42P01/.test(msg)?'manquant':msg;
+  if(JOURNAL_ERR==='manquant')JOURNAL_ETAT='manquant';
+ }
+}
+function journalFiltre(){
+ const q=JF.q.trim().toLowerCase();
+ return(JOURNAL_CACHE||[]).filter(j=>(JF.m==='all'||j.module===JF.m)&&(JF.w==='all'||j.auteur_nom===JF.w)&&(JF.t==='all'||j.type===JF.t)&&(!q||(j.action+' '+(j.page||'')+' '+(j.auteur_nom||'')).toLowerCase().includes(q)));
+}
+const fdh=iso=>{const d=new Date(iso);return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})};
+async function vJournal(){
+ if(!JOURNAL_CACHE)await chargerJournal();
+ const head=ph('Journal des actions','Qui a fait quoi, quand, dans quel module. Rien ne s’efface.',`<button class="btn" data-journal-recharger>Actualiser</button><button class="btn" data-journal-export>Exporter (CSV)</button>`);
+ if(JOURNAL_ERR==='manquant')return head+`<div class="exbar"><span class="chip bad">Table manquante</span><span>La table <span class="mono">crm_journal</span> n’existe pas encore : exécuter <span class="mono">supabase/migrations/0022_crm_journal.sql</span> dans Supabase. Tant qu’elle manque, rien n’est tracé.</span></div>`;
+ if(JOURNAL_ERR)return head+`<div class="exbar"><span class="chip bad">Illisible</span><span>Lecture du journal impossible (session d’équipe requise) : ${esc(JOURNAL_ERR.slice(0,160))}</span></div>`;
+ const all=JOURNAL_CACHE||[];
+ const auj=new Date().toDateString();
+ const mods=[...new Set(all.map(j=>j.module))].sort((a,b)=>a.localeCompare(b,'fr'));
+ const qui=[...new Set(all.map(j=>j.auteur_nom).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr'));
+ const rows=journalFiltre();
+ const opt=(v,cur)=>`<option ${v===cur?'selected':''}>${esc(v)}</option>`;
+ return head+`<div class="grid g4" style="margin-bottom:14px">
+  <div class="card metal kpi"><div class="lbl">Actions tracées</div><div class="val num">${all.length}${all.length>=500?'<small style="color:var(--metal-mut)"> dernières</small>':''}</div><div class="foot">${all.reduce((a,j)=>a+(j.nb||1),0)} écritures regroupées</div></div>
+  <div class="card kpi"><div class="lbl">Aujourd’hui</div><div class="val num">${all.filter(j=>new Date(j.created_at).toDateString()===auj).length}</div></div>
+  <div class="card kpi"><div class="lbl">Modules touchés</div><div class="val num">${mods.length}</div></div>
+  <div class="card kpi"><div class="lbl">Suppressions</div><div class="val num" ${all.some(j=>j.type==='suppression')?'style="color:var(--red)"':''}>${all.filter(j=>j.type==='suppression').length}</div></div>
+ </div>
+ <div class="filters"><input class="inp search" id="jq" placeholder="Filtrer les actions" value="${esc(JF.q)}">
+  <select class="pill" id="jm"><option value="all">Tous modules</option>${mods.map(m=>opt(m,JF.m)).join('')}</select>
+  <select class="pill" id="jw"><option value="all">Tout le monde</option>${qui.map(m=>opt(m,JF.w)).join('')}</select>
+  <select class="pill" id="jt"><option value="all">Tous types</option>${Object.entries(JOURNAL_TYPES).map(([k,[l]])=>`<option value="${k}" ${k===JF.t?'selected':''}>${l}</option>`).join('')}</select>
+  <span class="muted" style="font-size:12.5px">${rows.length} action${rows.length>1?'s':''}</span></div>
+ <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Auteur</th><th>Module</th><th>Action</th><th>Type</th></tr></thead><tbody>${
+  rows.map(j=>{const [tl,tc]=JOURNAL_TYPES[j.type]||[j.type,''];return `<tr><td class="num" style="white-space:nowrap">${fdh(j.created_at)}</td><td><div class="who"><div class="av">${ini(j.auteur_nom||'?')}</div>${esc(j.auteur_nom||'—')}</div></td><td><span class="chip">${esc(j.module)}</span></td><td>${esc(j.action)}${j.page?`<div class="muted" style="font-size:11.5px">${esc(j.page)}</div>`:''}</td><td><span class="chip ${tc}">${esc(tl)}</span></td></tr>`}).join('')
+  ||`<tr><td colspan="5" class="muted" style="text-align:center;padding:26px">${all.length?'Aucune action pour ces filtres':'Aucune action tracée pour l’instant. Chaque création, modification ou suppression faite dans Natty OS arrive ici.'}</td></tr>`
+ }</tbody></table></div>`;
+}
+AFTER.journal=()=>{
+ const q=$('#jq');if(!q)return;
+ q.addEventListener('input',async e=>{JF.q=e.target.value;const p=e.target.selectionStart;await render();const i=$('#jq');i.focus();i.setSelectionRange(p,p)});
+ $('#jm').onchange=e=>{JF.m=e.target.value;render()};
+ $('#jw').onchange=e=>{JF.w=e.target.value;render()};
+ $('#jt').onchange=e=>{JF.t=e.target.value;render()};
+};
+document.addEventListener('click',async e=>{
+ if(e.target.closest('[data-journal-recharger]')){JOURNAL_CACHE=null;await render();toast('Journal actualisé');return}
+ if(e.target.closest('[data-journal-export]')){
+  const cell=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const lignes=[['Date','Auteur','Module','Action','Type','Nombre','Page'].map(cell).join(';')].concat(journalFiltre().map(j=>[new Date(j.created_at).toLocaleString('fr-FR'),j.auteur_nom,j.module,j.action,(JOURNAL_TYPES[j.type]||[j.type])[0],j.nb,j.page].map(cell).join(';')));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+lignes.join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='journal-natty-'+new Date().toISOString().slice(0,10)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+ }
+});
 
 /* ============ ÉQUIPE & ACCÈS — maquette Natty OS v3 ============
    Deux lectures, aucune écriture : les comptes de `staff` (qui est là, avec

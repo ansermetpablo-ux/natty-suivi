@@ -1532,3 +1532,40 @@ La page de la maquette, en lecture seule, dans Organisation (« Équipe & RH » 
 Vérifié en navigateur : 3 comptes, rôles et domaines affichés, « vous » sur la ligne de
 la personne connectée ; matrice à 9 rôles ; un associé aux domaines `commercial`
 accède à Commercial et pas à Finance ; 375 px sans débordement.
+
+### Suite du même jour — Journal des actions
+
+« Qui a fait quoi, quand, dans quel module. Rien ne s'efface. » (maquette v3).
+🔄 **`supabase/migrations/0022_crm_journal.sql` à exécuter** : sans la table, l'écran le
+dit et rien n'est tracé — le reste du CRM n'en est pas affecté.
+- **La table** `crm_journal` : auteur (id + nom), module, phrase d'action, type
+  (création, modification, enregistrement, fait, suppression, info), table, objet, `nb`
+  (écritures regroupées), page d'origine. RLS : SELECT et INSERT pour l'équipe, aucune
+  policy UPDATE ni DELETE — un journal qu'on peut réécrire ne prouve rien — et un INSERT
+  ne peut porter que son propre `auteur_id`.
+- **Le traçage est dans `sb()`**, pas dans les appels : toutes les écritures du CRM y
+  passent (vérifié : aucun `fetch` REST en dehors), donc aucune ne peut être oubliée.
+  `JOURNAL_TABLES` donne à chaque table son module et son nom d'objet (une table
+  inconnue est tracée quand même, module « Autre ») ; `journalSemantique()` nomme les
+  gestes qui comptent : réservation de cuisine envoyée / confirmée, session démarrée /
+  terminée, email envoyé, opportunité passée à une étape, bon attribué / annulé, tâche
+  terminée, bon livré.
+- **Regroupement** : même table + même type en moins de 1,5 s = une ligne (« 5
+  attributions créées »). Ce qui reste en file part à la fermeture de l'onglet
+  (`keepalive`).
+- **Pas tracé** : déplacer un bloc ou un projet sur un canevas (PATCH x/y seuls), les
+  notifications lues, `crm_taches_historique`, le journal lui-même (écrit par `fetch`
+  direct, jamais par `sb()`). Les envois par `/api/notifications` sont tracés par
+  l'écriture en base qui les suit (crm_messages, crm_sessions).
+- Une erreur du journal n'empêche JAMAIS l'écriture qu'il trace (`try` autour).
+- **L'écran** (Pilotage → Journal des actions) : 500 dernières actions, indicateurs,
+  filtres module / auteur / type / texte sans nouvelle requête, export CSV (UTF-8 avec
+  BOM, séparateur `;`, pour Excel). Lu par `sb()` et non `sbTry()` : la bannière de
+  `sbTry` parlerait de `natty_crm.sql`, fausse si seule la 0022 manque.
+
+Vérifié en navigateur sur un faux PostgREST : création, tâche terminée, 5 attributions
+→ 1 ligne `nb=5`, déplacement x/y et notification non tracés, réservation de cuisine
+et étape de pipeline nommées, suppression ; écran : 6 lignes, filtre module, recherche
+qui garde le curseur ; table absente → bannière 0022, aucune écriture tentée ensuite,
+les écritures du CRM passent ; 375 px sans débordement. 🔄 Non vérifié contre la vraie
+base (migration pas exécutée) ni avec une vraie session.
