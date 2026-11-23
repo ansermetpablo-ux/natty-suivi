@@ -504,7 +504,12 @@ async function entrerDansApp(auth) {
   // menu.html existe des deux côtés : à la racine c'est le fichier lui-même,
   // dans le bundle natif c'est un relais vers index.html (nom imposé par
   // Capacitor). L'ancien tableau de bord n'est plus le point d'arrivée.
-  window.location.href = 'menu.html';
+  // Une page qui a envoyé se connecter (mes-commandes.html, depuis le site)
+  // laisse sa destination dans `natty_suite`. Liste blanche : jamais une URL
+  // lue telle quelle, elle pourrait mener hors de Natty.
+  var suite = null;
+  try { suite = localStorage.getItem('natty_suite'); localStorage.removeItem('natty_suite'); } catch (e) {}
+  window.location.href = ['mes-commandes.html'].indexOf(suite) >= 0 ? suite : 'menu.html';
 }
 
 async function doLogin() {

@@ -1618,7 +1618,9 @@ if (estNatif() && window.Capacitor.Plugins.App) {
       return;
     }
     showToast("Paiement confirmé ✓");
-    setTimeout(function(){ Natty.goto('suivi.html'); }, 900);
+    // Le récap de la commande, pas Suivi : sans lui, on payait sans jamais voir
+    // ce qu'on venait de commander (mes-commandes.html attend le webhook).
+    setTimeout(function(){ window.location.href = 'mes-commandes.html?nouvelle=1'; }, 900);
   });
 }
 

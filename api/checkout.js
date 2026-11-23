@@ -269,7 +269,10 @@ async function creerSession(o) {
   const retour = (statut) => natif
     ? origin + '/checkout-retour.html?statut=' + statut + '&token=' + encodeURIComponent(token || '')
     : (statut === 'ok'
-        ? origin + '/?token=' + (token || '') + (unique ? '&commande=1' : '&subscribed=1')
+        /* Le récap de ce qui vient d'être payé (mes-commandes.html attend que le
+           webhook écrive le bon). L'ancien `/?token=` menait au vieux tableau de
+           bord, où aucune commande ne s'affichait. */
+        ? origin + '/mes-commandes.html?nouvelle=1&type=' + (unique ? 'unite' : 'abonnement')
         : origin + '/offre.html?token=' + (token || '') + '&cancelled=1');
 
   const params = new URLSearchParams();
