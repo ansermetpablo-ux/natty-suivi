@@ -331,6 +331,27 @@ directeur de la publication. Ne pas réintroduire le portable personnel.
 - **CRM** : Commercial → **Clients** (`assets/crm-clients.js`) — inscrits (`membres_admin()`, recréée par 0023), ont commandé, en cours, à confirmer, modif. à notifier, abonnés ; fiche avec récap des commandes, réponses du client, « Envoyer le mail de confirmation », « Modifier dans Production → ». Toute modification d'une commande client (formulaire ou ligne de Commandes) pose l'alerte **Notifier / Ignorer** (`modif_non_notifiee`) ; « Notifier » envoie « Votre commande a été mise à jour » et redemande la validation. Une **annulation** (✕ dans Commandes, ou statut « Annulé » dans le formulaire) pose l'alerte « Prévenir le client / Ignorer », avec un message facultatif : email « Commande annulée » (ou « Livraison annulée » si une seule semaine d'un abonnement l'est, avec les livraisons maintenues) — `raison:'annulation'`, `envoyerAnnulation()`.
 - 🔄 Non vérifié contre les vrais Supabase/Resend/Stripe : testé avec le vrai code serveur derrière une doublure en mémoire, et la page en navigateur.
 
+### Une commande payée ne doit JAMAIS dépendre de l'email pour être vue (2026-11-23, issue #14)
+Le 23/11, une commande à l'unité (9 plats, sans date ni adresse) n'a été vue que par hasard :
+l'email « 🧾 Nouvelle commande » à `contact@` part par Resend avec
+`RESEND_FROM || onboarding@resend.dev`, et sans domaine vérifié Resend refuse en silence
+(un `console.log` côté Vercel, rien d'autre). Deux filets, indépendants de Resend :
+- **`api/webhook.js` → `creerBon()`** écrit une notification CRM (`Commande.notifierEquipe`,
+  table `notifications`, popup du CRM) **avant** l'email, une seule par paiement (le 409 d'un
+  webhook rejoué n'y arrive pas), avec « ⚠️ À rappeler : date/adresse manquante » quand c'est
+  le cas. ⚠️ `notifierEquipe` ne vise que les comptes `staff` de rôle `admin` (repli : tout
+  le staff actif s'il n'y a aucun admin).
+- **`admin.html` → bandeau `#cmdAlerte`** en tête, pour les rôles qui voient Commandes : relit
+  `bons_commande` (hors `manuel`, hors `livre`/`annule`) à la connexion, toutes les 2 min et au
+  retour sur l'onglet. « N nouvelles commandes » = créées depuis le dernier clic « Voir »
+  (repère `natty_admin_cmd_vu_<user_id>` en localStorage, **par appareil** ; 14 jours au
+  premier passage) ; « N à rappeler » = sans date OU sans adresse, affiché tant que le manque
+  existe. On compte des COMMANDES (`stripe_ref` sans son `#k`), pas des bons.
+- **Variables Vercel pour que l'email reparte** (à poser par l'équipe, pas par le code) :
+  `RESEND_API_KEY` présente, et `RESEND_FROM` = une adresse d'un domaine **vérifié** dans
+  Resend (`natty-nutrition.com`, enregistrements DNS SPF/DKIM). Vérifier dans les logs
+  Vercel de `/api/webhook` qu'il n'y a plus de ligne `récap email équipe —`.
+
 ### `questionnaire-alim.html`
 Étape **distincte et complémentaire** à `onboarding.html` (pas un doublon) : `onboarding.html` gère objectif/profil (table `onboarding`) ; celui-ci gère les préférences alimentaires détaillées, table **`questionnaire_alim`** (colonnes : `user_id`, `allergies`, `regime`, `aliments_aimes`, `aliments_evites`, `decouverte_cuisines/styles/ingredients/variantes`, `curiosite_libre`, `frequence_cuisine`, `nb_repas`, `snacking`, `repas_sautes`, `ressenti`, `craquage`, `satisfaction_stars`, `commentaire_libre`, `defi_principal`, `completed_at`).
 
