@@ -1,5 +1,5 @@
 /* Natty — <natty-entreprises> pour Wix Studio.
-   FICHIER GÉNÉRÉ par scripts/build-wix.mjs le 2026-10-12, depuis entreprises.html.
+   FICHIER GÉNÉRÉ par scripts/build-wix.mjs le 2026-11-23, depuis entreprises.html.
    Ne pas éditer à la main : modifier entreprises.html (ou css/natty.css) et relancer.
    Attributs : base, lien-accueil, lien-entreprises, lien-mentions, lien-suivi, lien-commande, lien-cgv, lien-cgu, lien-confidentialite. */
 (function () {
