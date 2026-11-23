@@ -293,6 +293,13 @@ personne côté serveur.
   que natty.css donne à toute `<section>`.
 
 ### Site Wix ↔ dépôt (octobre 2026)
+> 🔴 ⚠️ **WIX SERT UNE PAGE VIDE DÈS QU'UNE ADRESSE DU SITE PORTE UN `?`** (relevé le
+> 2026-11-23 : `/commander?statut=ok` — le retour de Stripe —, `/commander?vue=…`). Tout ce
+> que le site transmet à l'app passe donc par le **fragment** : `#commandes` (onglet
+> « Me connecter » → `mes-commandes.html`), `#statut=ok|annule` (retour de paiement), relus par
+> `<natty-app>`. La page Wix **`/suivi` s'affiche vide** elle aussi, même sans `?` — donc
+> « Mon suivi » du menu ne mène à rien : à republier côté Wix. « Me connecter » passe par
+> `/commander`.
 Chaque page Wix porte UN élément personnalisé dont le script est servi par Vercel depuis
 `main` (`https://natty-suivi.vercel.app/wix/…`) : accueil → `natty-accueil.js`,
 /entreprises → `natty-entreprises.js`, /mentions-legales → `natty-mentions.js`, et
