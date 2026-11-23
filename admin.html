@@ -229,6 +229,23 @@ input[type="file"] { display: none; }
 .cmd-plats { display: flex; flex-wrap: wrap; gap: 6px; }
 .cmd-plat-chip { padding: 5px 10px; border-radius: 99px; font-size: 11px; background: var(--bg); box-shadow: var(--sm); color: var(--text); display: flex; align-items: center; gap: 5px; }
 .cmd-plat-img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+/* Bons de commande (bons_commande) — issue #14, cause 2 */
+.bon-sec { margin-bottom: 16px; }
+.bon-sec-titre { font-size: 12px; font-weight: 700; color: var(--black); margin: 0 2px 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.bon-sec-titre small { font-weight: 400; color: var(--muted); }
+.bon-card { background: var(--bg); border-radius: 16px; padding: 12px 14px; box-shadow: var(--sm); margin-bottom: 8px; }
+.bon-card.rappel { box-shadow: var(--sm), inset 3px 0 0 var(--red); }
+.bon-tete { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.bon-client { font-size: 14px; font-weight: 700; color: var(--black); margin-right: auto; }
+.bon-pill { font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: #e8eaf4; color: var(--black); white-space: nowrap; }
+.bon-pill.unite { background: var(--al); color: var(--amber); }
+.bon-pill.rappel { background: var(--rl); color: var(--red); }
+.bon-pill.ok { background: var(--gl); color: var(--green); }
+.bon-ligne { font-size: 12px; color: var(--text); margin-top: 6px; line-height: 1.45; overflow-wrap: anywhere; }
+.bon-ligne .manque { color: var(--red); font-weight: 600; }
+.bon-plats { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.cal-event.ev-bon { background: var(--al); color: var(--amber); }
+.cal-event.ev-bon.rappel { background: var(--rl); color: var(--red); }
 .fiche-screen { display: none; }
 .fiche-screen.visible { display: block; }
 .fiche-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; max-width: 900px; margin: 0 auto; }
@@ -774,6 +791,8 @@ input[type="file"] { display: none; }
           <!-- Sous-onglet Calendrier -->
           <div id="cmdCalendrierView">
             <div class="semaine-nav"><div><div class="semaine-label" id="semaineLabel">–</div><div class="semaine-sub" id="semaineSub">–</div></div><div class="semaine-btns"><button class="btn-semaine" id="btnSemPrev">‹</button><button class="btn-semaine" id="btnSemNext">›</button></div></div>
+            <!-- Les bons payés (bons_commande) : ceux à rappeler, puis ceux de la semaine -->
+            <div id="cmdBonsSemaine"></div>
             <div class="commandes-stats"><div class="cmd-stat"><div class="cmd-stat-val" id="cmdTotal">–</div><div class="cmd-stat-lbl">Commandes</div></div><div class="cmd-stat"><div class="cmd-stat-val" id="cmdConfirmees">–</div><div class="cmd-stat-lbl">Confirmées</div></div><div class="cmd-stat"><div class="cmd-stat-val" id="cmdLivrees">–</div><div class="cmd-stat-lbl">Livrées</div></div></div>
             <!-- Calendrier hebdo -->
             <div style="background:var(--bg);border-radius:16px;box-shadow:var(--so);overflow:hidden;margin-bottom:14px;">
@@ -4132,6 +4151,88 @@ function switchFicheRight(panel, el) {
 // ══════════════════════════════════════════════════════════
 // COMMANDES — CALENDRIER & LISTE DE COURSES
 // ══════════════════════════════════════════════════════════
+/* ═══ LES BONS DE COMMANDE DANS L'ONGLET COMMANDES (issue #14, cause 2) ═══
+   Le webhook Stripe écrit chaque commande payée dans `bons_commande` (un bon par
+   semaine livrée) ; cet onglet ne lisait que `commandes` et `plans_repas`, donc
+   AUCUNE commande passée par Stripe n'y apparaissait — calendrier vide, liste
+   vide, courses vides, alors qu'un client avait payé. Les bons sont désormais
+   lus partout ici (policy `bons_commande_staff`) ; `commandes`/`plans_repas`
+   restent affichés à côté, tant qu'il en existe.
+   ⚠️ Lecture seule : le statut, la date, l'attribution des recettes et les
+   emails au client se gèrent dans le CRM (Production), qui porte la règle J+7
+   et les alertes « Notifier ». Les refaire ici en ferait une seconde version. */
+const BON_SELECT = 'id,user_id,type,nb_repas,jour_livraison,creneau_livraison,adresse,plats,statut,stripe_ref,created_at,confirmee_at';
+const BON_STATUTS = { a_attribuer: 'À attribuer', attribue: 'Attribué', en_production: 'En production', en_livraison: 'En livraison', livre: 'Livré', annule: 'Annulé' };
+const BON_TYPES = { abonnement: 'Abonnement', unite: 'À l’unité', manuel: 'Manuel' };
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
+function ymdLocal(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function nomClientBon(uid) {
+  const c = (allClients || []).find(x => x.user_id === uid);
+  const n = c ? [c.prenom, c.nom].filter(Boolean).join(' ') : '';
+  return n || (c && c.email) || 'Client ' + String(uid || '').slice(0, 8);
+}
+// Deux sortes d'identifiants de plat : l'uuid de `plats_menu` et le slug du
+// catalogue du site (« poulet-moutarde »), qui se lit tel quel — même règle
+// que `envoyerRecap()` du webhook.
+function nomPlatBon(id) {
+  const p = (allPlats || []).find(x => x.id === id);
+  if (p) return p.nom;
+  if (UUID_RE.test(String(id || ''))) return 'Plat';
+  const s = String(id || '').replace(/-/g, ' ');
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Plat';
+}
+function bonActif(b) { return b.statut !== 'livre' && b.statut !== 'annule'; }
+function dateBon(ymd) {
+  if (!ymd) return '';
+  return new Date(ymd + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+function carteBon(b) {
+  const rappel = bonActif(b) && b.type !== 'manuel' && bonARappeler(b);
+  const plats = Array.isArray(b.plats) ? b.plats : [];
+  const passe = b.created_at ? new Date(b.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+  return '<div class="bon-card' + (rappel ? ' rappel' : '') + '">'
+    + '<div class="bon-tete"><span class="bon-client">' + escHtml(nomClientBon(b.user_id)) + '</span>'
+    + (rappel ? '<span class="bon-pill rappel">⚠️ À rappeler</span>' : '')
+    + '<span class="bon-pill' + (b.type === 'unite' ? ' unite' : '') + '">' + (BON_TYPES[b.type] || escHtml(b.type || '')) + ' · ' + (b.nb_repas || 0) + ' plat' + ((b.nb_repas || 0) > 1 ? 's' : '') + '</span>'
+    + '<span class="bon-pill' + (b.statut === 'livre' ? ' ok' : '') + '">' + (BON_STATUTS[b.statut] || escHtml(b.statut || '–')) + (b.confirmee_at ? ' · validé client' : '') + '</span></div>'
+    + '<div class="bon-ligne">📅 ' + (b.jour_livraison ? escHtml(dateBon(b.jour_livraison)) : '<span class="manque">Date à convenir</span>')
+    + (b.creneau_livraison ? ' · ' + escHtml(b.creneau_livraison) : '') + '</div>'
+    + '<div class="bon-ligne">📍 ' + (String(b.adresse || '').trim() ? escHtml(b.adresse) : '<span class="manque">Adresse non renseignée</span>') + '</div>'
+    + (plats.length ? '<div class="bon-plats">' + plats.map(p => '<span class="cmd-plat-chip">' + escHtml(nomPlatBon(p.id)) + ' × ' + (Number(p.n) || 1) + '</span>').join('') + '</div>'
+       : (b.type === 'abonnement' ? '<div class="bon-ligne" style="color:var(--muted)">Plats choisis avec le nutritionniste</div>' : ''))
+    + (passe ? '<div class="bon-ligne" style="color:var(--muted);font-size:11px">Passée le ' + escHtml(passe) + (b.stripe_ref ? ' · réf. ' + escHtml(String(b.stripe_ref).slice(-8)) : '') + '</div>' : '')
+    + '</div>';
+}
+// Les bons livrés cette semaine-là, et — quelle que soit la semaine — ceux qui
+// n'ont PAS de date : sans elle aucun calendrier ne peut les montrer.
+async function lireBonsSemaine(lundi) {
+  const fin = new Date(lundi + 'T12:00:00'); fin.setDate(fin.getDate() + 7);
+  const [semaine, sansDate] = await Promise.all([
+    sb('bons_commande?jour_livraison=gte.' + lundi + '&jour_livraison=lt.' + ymdLocal(fin) + '&statut=neq.annule&select=' + BON_SELECT + '&order=jour_livraison.asc'),
+    sb('bons_commande?jour_livraison=is.null&statut=not.in.(annule,livre)&select=' + BON_SELECT + '&order=created_at.desc&limit=100')
+  ]);
+  return { semaine: semaine || [], sansDate: sansDate || [] };
+}
+function rendreBonsSemaine(B) {
+  const el = document.getElementById('cmdBonsSemaine');
+  if (!el) return;
+  const sansAdresse = B.semaine.filter(b => bonActif(b) && b.type !== 'manuel' && !String(b.adresse || '').trim());
+  const aRappeler = B.sansDate.filter(b => b.type !== 'manuel').concat(sansAdresse);
+  let h = '';
+  if (aRappeler.length) h += '<div class="bon-sec"><div class="bon-sec-titre">⚠️ À rappeler (' + aRappeler.length + ') <small>sans date ou sans adresse — appeler le client, puis compléter dans le CRM</small></div>'
+    + aRappeler.map(carteBon).join('') + '</div>';
+  const autres = B.semaine.filter(b => aRappeler.indexOf(b) < 0);
+  h += '<div class="bon-sec"><div class="bon-sec-titre">🧾 Commandes payées livrées cette semaine (' + autres.length + ') <small><a href="crm.html" style="color:inherit">gérer dans le CRM → Production</a></small></div>'
+    + (autres.length ? autres.map(carteBon).join('') : '<div class="bon-ligne" style="color:var(--muted);padding:4px 2px 0">Aucune livraison prévue cette semaine.</div>') + '</div>';
+  el.innerHTML = h;
+}
+function creneauSlot(c) {
+  const h = parseInt(String(c || ''), 10);
+  if (!Number.isFinite(h)) return 'midi';
+  return h < 11 ? 'matin' : h < 16 ? 'midi' : 'soir';
+}
+
 function switchCmdSub(sub, el) {
   document.querySelectorAll('.cmd-subtab').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
@@ -4171,18 +4272,28 @@ async function chargerCommandesCalendrier() {
     const stocks = await sb('stocks_mp?statut=eq.disponible&select=ingredient_nom,quantite_kg').catch(()=>[]);
     const stockMap = {}; stocks.forEach(s => { stockMap[(s.ingredient_nom||'').toLowerCase()] = parseFloat(s.quantite_kg)||0; });
 
-    // Stats from plans
-    const uniqueClients = [...new Set(plans.map(p => p.user_id))];
-    setText('cmdTotal',      uniqueClients.length);
-    setText('cmdConfirmees', cmds.filter(c=>c.statut==='valide').length);
-    setText('cmdLivrees',    cmds.filter(c=>c.statut==='livre').length);
+    // Les bons payés (webhook Stripe) — lus À PART : une policy manquante ou
+    // une panne coûte ce bloc, pas le reste de l'onglet.
+    let B = { semaine: [], sansDate: [] };
+    try { B = await lireBonsSemaine(lundi); rendreBonsSemaine(B); }
+    catch (e) {
+      const eb = document.getElementById('cmdBonsSemaine');
+      if (eb) eb.innerHTML = '<div class="bon-ligne" style="color:var(--red)">Bons de commande illisibles : ' + escHtml(String(e.message || e).slice(0, 160)) + '</div>';
+    }
+    const bonsSem = B.semaine;
 
-    rendreCalendrierCommandes(plans, lundi, onbMap);
+    // Stats : les livraisons payées de la semaine + les clients des anciens plans
+    const uniqueClients = [...new Set(plans.map(p => p.user_id))];
+    setText('cmdTotal',      bonsSem.length + uniqueClients.length);
+    setText('cmdConfirmees', bonsSem.filter(b => b.confirmee_at).length + cmds.filter(c=>c.statut==='valide').length);
+    setText('cmdLivrees',    bonsSem.filter(b => b.statut === 'livre').length + cmds.filter(c=>c.statut==='livre').length);
+
+    rendreCalendrierCommandes(plans, lundi, onbMap, bonsSem);
     await rendreVuePreparation(plans, onbMap, stockMap, lundi);
   } catch(e) {}
 }
 
-function rendreCalendrierCommandes(cmds, lundi) {
+function rendreCalendrierCommandes(cmds, lundi, onbMap, bons) {
   const cal = document.getElementById('calBody');
   if (!cal) return;
   const CRENEAUX = ['Matin 8h','Midi 12h','Soir 18h'];
@@ -4193,9 +4304,14 @@ function rendreCalendrierCommandes(cmds, lundi) {
     html += '<div class="cal-time-cell">'+CRENEAUX[si]+'</div>';
     for (let j=0; j<7; j++) {
       const d = new Date(lundiDate); d.setDate(d.getDate()+j);
-      const ds = d.toISOString().split('T')[0];
+      // ⚠️ Date LOCALE : `toISOString()` d'un minuit de Paris rend la veille.
+      const ds = ymdLocal(d);
       const dayCmds = cmds.filter(c => c.semaine === ds);
+      const dayBons = (bons || []).filter(b => b.jour_livraison === ds && creneauSlot(b.creneau_livraison) === slot);
       html += '<div class="cal-day-cell">'
+        + dayBons.map(b => '<div class="cal-event ev-bon' + (bonActif(b) && b.type !== 'manuel' && bonARappeler(b) ? ' rappel' : '') + '" title="'
+            + escHtml((BON_TYPES[b.type] || '') + ' · ' + (b.creneau_livraison || 'créneau à convenir')) + '">'
+            + escHtml(nomClientBon(b.user_id).split(' ')[0]) + ' · ' + (b.nb_repas || '?') + 'p</div>').join('')
         + dayCmds.map(c => '<div class="cal-event ev-'+(c.statut||'')+'">'+
             (c.user_nom||'Client')+' · '+(c.formule_nb_plats||'?')+'p'+'</div>'
           ).join('')
@@ -4209,10 +4325,21 @@ async function chargerCommandesListe() {
   const el = document.getElementById('commandesListView');
   if (!el) return;
   el.innerHTML = '<div class="loading">Chargement...</div>';
-  try {
-    const cmds = await sb('commandes?select=*&order=semaine.desc&limit=50');
-    rendreListeCommandes(cmds, 'commandesListView');
-  } catch(e) {}
+  // Les bons payés d'abord (la vraie source depuis Stripe), puis l'ancienne
+  // table `commandes` s'il y reste des lignes. Deux lectures isolées.
+  let bons = null, cmds = [], err = '';
+  try { bons = await sb('bons_commande?select=' + BON_SELECT + '&order=created_at.desc&limit=100'); }
+  catch (e) { err = String(e.message || e).slice(0, 160); }
+  try { cmds = await sb('commandes?select=*&order=semaine.desc&limit=50'); } catch (e) {}
+  const rappel = (bons || []).filter(b => bonActif(b) && b.type !== 'manuel' && bonARappeler(b));
+  const reste = (bons || []).filter(b => rappel.indexOf(b) < 0);
+  el.innerHTML =
+      (err ? '<div class="bon-ligne" style="color:var(--red)">Bons de commande illisibles : ' + escHtml(err) + '</div>' : '')
+    + (rappel.length ? '<div class="bon-sec"><div class="bon-sec-titre">⚠️ À rappeler (' + rappel.length + ')</div>' + rappel.map(carteBon).join('') + '</div>' : '')
+    + '<div class="bon-sec"><div class="bon-sec-titre">🧾 Commandes payées — les 100 dernières <small><a href="crm.html" style="color:inherit">gérer dans le CRM → Production</a></small></div>'
+    + (reste.length ? reste.map(carteBon).join('') : '<div class="bon-ligne" style="color:var(--muted)">Aucune autre commande.</div>') + '</div>'
+    + (cmds.length ? '<div class="bon-sec"><div class="bon-sec-titre">Anciennes commandes <small>table « commandes », avant les bons</small></div><div id="commandesListViewAnciennes"></div></div>' : '');
+  if (cmds.length) rendreListeCommandes(cmds, 'commandesListViewAnciennes');
 }
 
 function rendreListeCommandes(cmds, elId) {
@@ -4274,6 +4401,23 @@ async function genererListeCourses() {
       needed[nom].qty_kg += (plan.quantite_g||300) / 1000;
       needed[nom].count++;
     });
+    // 3 bis. Les bons payés livrés dans la période (issue #14) : leurs plats
+    // choisis, à la même portion par défaut que les plans (300 g). Un bon
+    // d'abonnement sans plats choisis ne se chiffre pas encore — il est compté
+    // à part, pour que le total ne paraisse pas complet alors qu'il ne l'est pas.
+    let bonsPeriode = [], platsNonChoisis = 0;
+    try { bonsPeriode = await sb('bons_commande?jour_livraison=gte.' + dateDebut + '&jour_livraison=lt.' + dateFinStr + '&statut=neq.annule&select=' + BON_SELECT); }
+    catch (e) { console.warn('courses — bons :', e); }
+    bonsPeriode.forEach(b => {
+      const pl = Array.isArray(b.plats) ? b.plats : [];
+      if (!pl.length) { platsNonChoisis += Number(b.nb_repas) || 0; return; }
+      pl.forEach(p => {
+        const n = Number(p.n) || 1, libelle = nomPlatBon(p.id), nom = libelle.toLowerCase();
+        if (!needed[nom]) needed[nom] = {nom:libelle, qty_kg:0, count:0};
+        needed[nom].qty_kg += n * 0.3;
+        needed[nom].count += n;
+      });
+    });
     // 4. Calculate what needs to be ordered
     const items = Object.values(needed).map(item => {
       const stock = stockMap[item.nom.toLowerCase()] || 0;
@@ -4281,10 +4425,11 @@ async function genererListeCourses() {
       return {...item, stock_kg:stock, to_order_kg:toOrder};
     });
     // 5. Render
-    if (!items.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);">Aucune commande cette semaine</div>'; return; }
+    const noteNonChoisis = platsNonChoisis ? '<div class="bon-ligne" style="color:var(--amber);margin:-6px 0 14px">⚠️ ' + platsNonChoisis + ' plat' + (platsNonChoisis > 1 ? 's' : '') + ' d’abonnement payé' + (platsNonChoisis > 1 ? 's' : '') + ' sans plats choisis — à attribuer (CRM → Production) avant de compter leurs ingrédients.</div>' : '';
+    if (!items.length) { el.innerHTML = noteNonChoisis + '<div style="text-align:center;padding:32px;color:var(--muted);">Aucune commande cette semaine</div>'; return; }
     const alertItems = items.filter(i => i.to_order_kg > 0);
     const okItems    = items.filter(i => i.to_order_kg === 0);
-    let html = '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Semaine du '+dateDebut+' — '+plans.length+' repas programmés</div>';
+    let html = '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Semaine du '+dateDebut+' — '+plans.length+' repas programmés · '+bonsPeriode.length+' bon'+(bonsPeriode.length>1?'s':'')+' payé'+(bonsPeriode.length>1?'s':'')+'</div>' + noteNonChoisis;
     if (alertItems.length) {
       html += '<div class="ldc-section"><div class="ldc-section-title">🛒 À commander ('+alertItems.length+' articles)</div>';
       html += alertItems.map(i => '<div class="ldc-item ldc-alert">'

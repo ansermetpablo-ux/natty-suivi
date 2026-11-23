@@ -352,6 +352,24 @@ l'email « 🧾 Nouvelle commande » à `contact@` part par Resend avec
   Resend (`natty-nutrition.com`, enregistrements DNS SPF/DKIM). Vérifier dans les logs
   Vercel de `/api/webhook` qu'il n'y a plus de ligne `récap email équipe —`.
 
+**⚠️ `bons_commande` EST LA SOURCE DES COMMANDES PAYÉES — `commandes` n'en reçoit plus**
+(issue #14, causes 2 et 3). Le webhook n'écrit que des bons ; tout écran qui montre « ma
+commande » ou « les commandes » doit lire `bons_commande` d'abord (`_soi` côté client,
+`_staff` côté équipe), l'ancienne table `commandes` en repli seulement. Un achat à l'unité ne
+crée PAS d'`abonnements`.
+- `admin.html`, onglet Commandes : bloc `#cmdBonsSemaine` (« ⚠️ À rappeler » = sans date, toutes
+  semaines, ou sans adresse ; puis les livraisons payées de la semaine), bons dans le
+  calendrier (rangée par `creneau_livraison`), sous-onglet Liste (100 derniers bons, puis les
+  anciennes `commandes`), Liste de courses (plats choisis × 300 g ; les plats d'abonnement non
+  encore attribués sont comptés à part). **Lecture seule** : statut, date, attribution et
+  emails restent dans le CRM (Production). `carteBon()` / `lireBonsSemaine()` / `BON_SELECT`.
+  ⚠️ Le calendrier compare des dates LOCALES (`ymdLocal`) : `toISOString()` d'un minuit de
+  Paris rend la veille.
+- `suivi.html` (« Mes prochains repas », `prChargerBonClient`) et `assets/commande.js`
+  (pastille + feuille de l'app, `depuisBon`) : le prochain bon actif daté, sinon un bon payé
+  sans date ; « nous vous contactons » quand date ou adresse manquent ; le détail renvoie à
+  `mes-commandes.html` au lieu d'en faire une copie.
+
 ### `questionnaire-alim.html`
 Étape **distincte et complémentaire** à `onboarding.html` (pas un doublon) : `onboarding.html` gère objectif/profil (table `onboarding`) ; celui-ci gère les préférences alimentaires détaillées, table **`questionnaire_alim`** (colonnes : `user_id`, `allergies`, `regime`, `aliments_aimes`, `aliments_evites`, `decouverte_cuisines/styles/ingredients/variantes`, `curiosite_libre`, `frequence_cuisine`, `nb_repas`, `snacking`, `repas_sautes`, `ressenti`, `craquage`, `satisfaction_stars`, `commentaire_libre`, `defi_principal`, `completed_at`).
 

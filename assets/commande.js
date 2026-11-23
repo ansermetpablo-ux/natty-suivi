@@ -218,12 +218,34 @@ var NattyCommande = (function () {
       etat.abo = (a && a.length) ? a[0] : null;
     } catch (e) { etat.abo = null; }
 
+    /* ⚠️ UNE COMMANDE PAYÉE VIT DANS `bons_commande` (issue #14, cause 3) : le
+       webhook Stripe y écrit un bon par semaine livrée, et rien dans
+       `commandes`. Un achat à l'unité ne crée pas non plus d'`abonnements`.
+       Ce module ne lisait que ces deux tables : un client qui venait de payer
+       voyait « Commander ». Le prochain bon actif passe donc d'abord (policy
+       `bons_commande_soi`), traduit dans la forme qu'attend le reste du module ;
+       l'ancienne table ne sert plus que de repli. */
+    etat.bon = null;
     try {
-      var c = await Natty.sbFetch('commandes?user_id=eq.' + uid
-        + '&order=semaine.desc&limit=1'
-        + '&select=id,semaine,plats_choisis,statut,skip,created_at');
-      etat.cmd = (c && c.length) ? c[0] : null;
-    } catch (e) { etat.cmd = null; }
+      var champs = '&select=id,type,nb_repas,jour_livraison,creneau_livraison,adresse,plats,statut,confirmee_at,created_at';
+      var bons = await Natty.sbFetch('bons_commande?user_id=eq.' + uid
+        + '&statut=not.in.(livre,annule)&jour_livraison=gte.' + Natty.jour()
+        + champs + '&order=jour_livraison.asc&limit=1');
+      if (!bons || !bons.length) bons = await Natty.sbFetch('bons_commande?user_id=eq.' + uid
+        + '&statut=not.in.(livre,annule)&jour_livraison=is.null' + champs + '&order=created_at.desc&limit=1');
+      etat.bon = (bons && bons.length) ? bons[0] : null;
+    } catch (e) { etat.bon = null; }
+
+    if (etat.bon) {
+      etat.cmd = depuisBon(etat.bon);
+    } else {
+      try {
+        var c = await Natty.sbFetch('commandes?user_id=eq.' + uid
+          + '&order=semaine.desc&limit=1'
+          + '&select=id,semaine,plats_choisis,statut,skip,created_at');
+        etat.cmd = (c && c.length) ? c[0] : null;
+      } catch (e) { etat.cmd = null; }
+    }
 
     /* L'achat à l'unité n'existe que si un prix Stripe est configuré, et cette
        information ne vit que sur le serveur (`STRIPE_PRICE_UNITE`).
@@ -239,12 +261,35 @@ var NattyCommande = (function () {
     // `plats_choisis` ne porte que des identifiants : les noms sont ailleurs.
     etat.plats = [];
     var ids = etat.cmd && etat.cmd.plats_choisis;
+    // Les plats d'un bon : `{id, n}`, l'id étant un uuid de `plats_menu` ou le
+    // slug du catalogue du site. Seuls les uuid ont une fiche à relire ; les
+    // slugs se lisent tels quels (même règle que le récap du webhook).
+    if (etat.bon) {
+      var pb = Array.isArray(etat.bon.plats) ? etat.bon.plats : [];
+      ids = pb.map(function (p) { return p.id; }).filter(function (id) { return UUID.test(String(id || '')); });
+      etat.plats = pb.filter(function (p) { return !UUID.test(String(p.id || '')); }).map(function (p) {
+        var s = String(p.id || '').replace(/-/g, ' ');
+        return { nom: (s.charAt(0).toUpperCase() + s.slice(1)) + (p.n > 1 ? ' × ' + p.n : ''), photo_url: null };
+      });
+    }
     if (ids && ids.length) {
       try {
-        etat.plats = await Natty.sbFetch('plats_menu?id=in.(' + ids.join(',') + ')'
-          + '&select=id,nom,photo_url') || [];
-      } catch (e) { etat.plats = []; }
+        etat.plats = (await Natty.sbFetch('plats_menu?id=in.(' + ids.join(',') + ')'
+          + '&select=id,nom,photo_url') || []).concat(etat.plats);
+      } catch (e) { /* on garde les plats lisibles sans fiche */ }
     }
+  }
+
+  var UUID = /^[0-9a-f-]{36}$/i;
+
+  /* Un bon → la forme `commandes` que lisent pastille, jalons et récap.
+     Les trois jalons restent ceux que la base sait dire : Commandée (bon créé,
+     à attribuer), Confirmée (plats attribués, en production ou en livraison),
+     Livrée. `_bon` garde l'original pour le récap. */
+  function depuisBon(b) {
+    var rang = { a_attribuer: 'en_attente', attribue: 'confirmee', en_production: 'confirmee', en_livraison: 'confirmee', livre: 'livree', annule: 'annulee' };
+    return { id: b.id, semaine: b.jour_livraison || lundi(), plats_choisis: null,
+             statut: rang[b.statut] || 'en_attente', skip: false, created_at: b.created_at, _bon: b };
   }
 
   /* Ce que dit la pastille — trois situations, parce qu'il n'y a que trois
@@ -311,7 +356,15 @@ var NattyCommande = (function () {
       if (PRIX[a.formule]) l.push(['Prix', PRIX[a.formule] + ' € par semaine']);
       if (a.date_debut) l.push(['Depuis', dateCourte(a.date_debut)]);
     }
-    if (c) {
+    if (c && c._bon) {
+      var b = c._bon, n = b.nb_repas || 0;
+      l.push(['Commande', (b.type === 'unite' ? 'À l\'unité' : 'Abonnement') + ' · ' + n + ' plat' + (n > 1 ? 's' : '')]);
+      // Un bon sans date ou sans adresse : le dire, et dire qui agit.
+      l.push(['Livraison', b.jour_livraison
+        ? dateCourte(b.jour_livraison + 'T12:00:00') + (b.creneau_livraison ? ' · ' + b.creneau_livraison : '')
+        : 'à convenir — nous vous contactons']);
+      l.push(['Adresse', String(b.adresse || '').trim() || 'à renseigner — nous vous contactons']);
+    } else if (c) {
       l.push(['Semaine', 'du ' + dateCourte(c.semaine)]);
       if (c.skip) l.push(['Livraison', 'sautée cette semaine']);
     }
@@ -342,7 +395,10 @@ var NattyCommande = (function () {
      même discipline que `APPLE_ACTIF` sur l'écran de connexion. */
   function htmlActions() {
     return '<div class="act">'
-      + '<button class="b b1" data-go="semaine">Commander mes repas de la semaine</button>'
+      // Le détail d'une commande payée (plats, code de réception, lien de
+      // confirmation) vit dans mes-commandes.html : on y renvoie.
+      + (etat.bon ? '<button class="b b1" data-go="detail">Voir le détail de ma commande</button>' : '')
+      + '<button class="b ' + (etat.bon ? 'b2' : 'b1') + '" data-go="semaine">Commander mes repas de la semaine</button>'
       + (etat.unite
           ? '<button class="b b2" data-go="unite">Commander des plats à l\'unité</button>'
           : '')
@@ -396,8 +452,9 @@ var NattyCommande = (function () {
       var b = ev.target.closest('[data-go]');
       if (!b) return;
       // Le mode voyage en paramètre : offre.html est le seul écran de paiement.
-      Natty.goto(b.getAttribute('data-go') === 'unite'
-        ? 'offre.html?mode=unite' : 'offre.html');
+      var go = b.getAttribute('data-go');
+      Natty.goto(go === 'detail' ? 'mes-commandes.html'
+        : go === 'unite' ? 'offre.html?mode=unite' : 'offre.html');
     });
   }
 
