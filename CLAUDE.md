@@ -300,13 +300,19 @@ personne côté serveur.
   que natty.css donne à toute `<section>`.
 
 ### Site Wix ↔ dépôt (octobre 2026)
-> 🔴 ⚠️ **WIX SERT UNE PAGE VIDE DÈS QU'UNE ADRESSE DU SITE PORTE UN `?`** (relevé le
-> 2026-11-23 : `/commander?statut=ok` — le retour de Stripe —, `/commander?vue=…`). Tout ce
-> que le site transmet à l'app passe donc par le **fragment** : `#commandes` (onglet
-> « Me connecter » → `mes-commandes.html`), `#statut=ok|annule` (retour de paiement), relus par
-> `<natty-app>`. La page Wix **`/suivi` s'affiche vide** elle aussi, même sans `?` — donc
-> « Mon suivi » du menu ne mène à rien : à republier côté Wix. « Me connecter » passe par
-> `/commander`.
+> ✅ **Les pages Wix VIDES du 23/11/2026 — cause trouvée et retirée le jour même.** `/suivi`,
+> et toute adresse portant un `?` (`/commander?statut=ok`, `/commander?vue=…`), s'affichaient
+> blanches, sans titre. Cause : un **Code personnalisé** Wix (« Pop natty », en-tête, toutes
+> les pages) contenait une page HTML entière collée (`<!DOCTYPE html>…`, chart.js, polices
+> Barlow/DM Mono, un popup) **coupée à ~4 Ko au milieu d'un `<style>` jamais fermé** : le
+> navigateur lisait alors tout le reste du document — dont les scripts de Wix — comme du CSS.
+> Les pages déjà en cache chez Wix (rendues avant l'ajout) s'affichaient, d'où « seulement
+> certaines adresses ». Extrait **supprimé** avec l'accord d'Anatole ; vérifié : `/suivi` →
+> « Mon suivi | Natty » + `<natty-app>`, `/commander?vue=…` s'affiche.
+> ⚠️ **Ne jamais coller une page HTML complète dans le Code personnalisé Wix** (Paramètres →
+> Code personnalisé) : un extrait d'en-tête mal fermé casse TOUT le site, en silence. Le
+> passage par le **fragment** (`#commandes`, `#statut=ok|annule`, relus par `<natty-app>`)
+> reste en place : il ne coûte rien et ne dépend plus de ce défaut.
 Chaque page Wix porte UN élément personnalisé dont le script est servi par Vercel depuis
 `main` (`https://natty-suivi.vercel.app/wix/…`) : accueil → `natty-accueil.js`,
 /entreprises → `natty-entreprises.js`, /mentions-legales → `natty-mentions.js`, et
