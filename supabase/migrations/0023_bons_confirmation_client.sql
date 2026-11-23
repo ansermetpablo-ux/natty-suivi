@@ -59,6 +59,17 @@ begin
   end if;
   min_jour := (coalesce(new.created_at, now()) at time zone 'Europe/Paris')::date + 7;
   if new.jour_livraison < min_jour then
+    -- À la CRÉATION, on avance de semaine en semaine (même jour) plutôt que de
+    -- refuser : un webhook dont la date tombe trop tôt perdrait sinon le bon
+    -- — une livraison payée qui n'existerait nulle part. Une MODIFICATION,
+    -- elle, est refusée : c'est quelqu'un qui choisit la date, il doit le voir.
+    if tg_op = 'INSERT' then
+      while new.jour_livraison < min_jour loop
+        new.jour_livraison := new.jour_livraison + 7;
+      end loop;
+      new.semaine := new.jour_livraison - ((extract(isodow from new.jour_livraison)::int) - 1);
+      return new;
+    end if;
     raise exception 'Livraison au plus tôt le % (7 jours après la commande)', to_char(min_jour, 'DD/MM/YYYY')
       using errcode = 'check_violation';
   end if;
