@@ -6,7 +6,7 @@
    douzaine de repas. Le plafond n'est pas là pour dire ce qui est raisonnable,
    il est là pour qu'une quantité bricolée ne crée pas une session à quatre
    chiffres. */
-import { CRENEAUX, dateMinPour, ajouterJours, codePostal, estIDF, lireParJeton, repondre, envoyerConfirmation, envoyerAnnulation, estStaff } from './_commande.js';
+import { CRENEAUX, dateMinPour, ajouterJours, codePostal, estIDF, lireParJeton, repondre, envoyerConfirmation, envoyerAnnulation, marquerConfirmationEnvoyee, estStaff } from './_commande.js';
 
 // L'abonnement commence à 3 plats par semaine (décision du 14/10/2026) :
 // en dessous, c'est la commande à l'unité.
@@ -37,7 +37,10 @@ function dateValide(v) {
      commande_lire     { token }                 public — la page commande.html
      commande_repondre { token, mode, …champs }  public — valider / modifier
      commande_envoyer  { bon_id, raison, modifications? }  staff (JWT) — le CRM
-                       raison 'annulation' (+ motif?) : l'email d'annulation */
+                       raison 'annulation' (+ motif?) : l'email d'annulation
+                       brouillon: true → le même mail en texte, SANS Resend :
+                       l'équipe l'envoie de sa messagerie, rien n'est noté
+     commande_marquer  { bon_id, raison }        staff — « je l'ai envoyé à la main » */
 async function actionCommande(req, res, body) {
   try {
     if (body.action === 'commande_lire') {
@@ -54,7 +57,12 @@ async function actionCommande(req, res, body) {
       if (!moi) return res.status(401).json({ error: 'Session d’équipe requise' });
       if (body.raison === 'annulation') return res.status(200).json(await envoyerAnnulation(body.bon_id, { motif: body.motif }));
       const raison = ['manuel', 'modification'].indexOf(body.raison) >= 0 ? body.raison : 'manuel';
-      return res.status(200).json(await envoyerConfirmation(body.bon_id, { raison, modifications: body.modifications }));
+      return res.status(200).json(await envoyerConfirmation(body.bon_id, { raison, modifications: body.modifications, brouillon: body.brouillon === true }));
+    }
+    if (body.action === 'commande_marquer') {
+      const jwt = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+      if (!(await estStaff(jwt))) return res.status(401).json({ error: 'Session d’équipe requise' });
+      return res.status(200).json(await marquerConfirmationEnvoyee(body.bon_id, body.raison));
     }
     return res.status(400).json({ error: 'Action inconnue' });
   } catch (e) {

@@ -374,7 +374,8 @@ export async function envoyerConfirmation(bonId, o) {
   if (tete.statut === 'annule') throw erreur('Cette commande est annulée : rien à confirmer.', 409);
   const cl = await client(tete.user_id);
   const to = String(o.to || cl.email || '').trim();
-  if (!to) throw erreur('Aucun email connu pour ce client.', 422);
+  // À la main, l'équipe peut taper l'adresse elle-même : un email inconnu n'arrête rien.
+  if (!to && !o.brouillon) throw erreur('Aucun email connu pour ce client.', 422);
   const C = await contenus(g.bons);
   const m = manques(tete), complet = !m.length;
   const lien = a => ORIGIN + '/commande.html?t=' + tete.confirmation_token + (a ? '&a=' + a : '');
@@ -417,19 +418,67 @@ export async function envoyerConfirmation(bonId, o) {
   const t = titres[o.raison] || titres.manuel;
   const sujet = o.raison === 'modification' ? '✏️ Votre commande Natty a été mise à jour'
     : complet ? '✅ Confirmez votre commande Natty' : '📍 Votre commande Natty : renseignez la livraison';
+
+  /* ── SANS RESEND (2026-11-23) : le même mail, en texte, envoyé par l'équipe
+     depuis sa propre messagerie. Rien n'est écrit ici : c'est
+     `marquerConfirmationEnvoyee` qui le note, une fois le mail parti pour de
+     vrai — sinon le CRM afficherait « envoyé » pour un brouillon resté ouvert. */
+  if (o.brouillon) {
+    const L = [];
+    L.push('Bonjour' + (cl.prenom ? ' ' + cl.prenom : '') + ',', '');
+    L.push(o.raison === 'modification' ? 'Notre équipe a modifié votre commande Natty.' : 'Voici le récapitulatif de votre commande Natty.');
+    if (o.raison === 'modification' && modifs.length) { L.push('', 'Ce qui a changé :'); modifs.forEach(x => L.push('• ' + x)); }
+    L.push('', 'Commande : ' + (tete.type === 'unite' ? 'à l’unité' : 'abonnement') + ' · ' + tete.nb_repas + ' repas' + (g.bons.length > 1 ? ' × ' + g.bons.length + ' semaines' : ''));
+    L.push('Au menu :');
+    g.bons.forEach((b, i) => {
+      const c = C[b.id] || [];
+      if (g.bons.length > 1) L.push('  Semaine ' + (i + 1) + (b.jour_livraison ? ' · ' + dateLongue(b.jour_livraison) : ''));
+      if (c.length) c.forEach(x => L.push('  – ' + x.nom + ' × ' + x.n));
+      else L.push('  – ' + b.nb_repas + ' repas choisis par votre nutritionniste');
+    });
+    L.push('Livraison : ' + (tete.jour_livraison ? dateLongue(tete.jour_livraison) + (tete.creneau_livraison ? ' · ' + tete.creneau_livraison : ' · créneau à renseigner') : 'à renseigner'));
+    L.push('Adresse : ' + (tete.adresse || 'à renseigner'));
+    if (tete.code_reception) L.push('Code de réception : ' + tete.code_reception + ' (à donner au livreur)');
+    L.push('');
+    if (complet) {
+      L.push('Vérifiez la date et le lieu de livraison, puis validez — ou modifiez-les si besoin :');
+      L.push('✅ Valider ma commande : ' + lien('valider'));
+      L.push('✏️ Modifier : ' + lien('modifier'));
+    } else {
+      L.push('Il nous manque vos informations de livraison. Votre commande ne sera préparée qu’une fois ces informations renseignées et validées :');
+      L.push('📍 Renseigner ma livraison : ' + lien('modifier'));
+    }
+    L.push('', 'Nous livrons en Île-de-France, au plus tôt ' + DELAI_JOURS + ' jours après la commande.', '', 'L’équipe Natty', CONTACT);
+    return { ok: true, brouillon: true, to, sujet, texte: L.join('\n'), complet, lien: lien('') };
+  }
+
   const env = await envoyerEmail(to, sujet, gabarit({ titre: t[0], intro: t[1], corps: blocModifs + tableau + appel + regle }));
   if (!env.ok) throw erreur('Email non envoyé : ' + env.err, 502);
+  await noterEnvoi(g, tete, o.raison);
+  return { ok: true, to, complet, lien: lien('') };
+}
 
+/* Le mail est parti — par Resend, ou envoyé à la main par l'équipe. */
+async function noterEnvoi(g, tete, raison) {
   const patch = {
     confirmation_envoyee_at: new Date().toISOString(),
     confirmation_nb_envois: (tete.confirmation_nb_envois || 0) + 1
   };
   // Une modification de l'équipe redemande la validation du client ; un simple
   // renvoi d'une commande déjà confirmée ne la défait pas.
-  if (o.raison === 'modification' || tete.confirmation_statut !== 'confirmee') patch.confirmation_statut = 'envoyee';
-  if (o.raison === 'modification') { patch.modif_non_notifiee = false; patch.notifiee_at = patch.confirmation_envoyee_at; }
+  if (raison === 'modification' || tete.confirmation_statut !== 'confirmee') patch.confirmation_statut = 'envoyee';
+  if (raison === 'modification') { patch.modif_non_notifiee = false; patch.notifiee_at = patch.confirmation_envoyee_at; }
   await sb('bons_commande?id=in.(' + g.bons.map(b => b.id).join(',') + ')', { method: 'PATCH', prefer: 'return=minimal', body: patch });
-  return { ok: true, to, complet, lien: lien('') };
+}
+
+/* L'équipe a envoyé le mail elle-même (mode sans Resend) : on le note comme
+   un envoi Resend — même compteur, même statut. */
+export async function marquerConfirmationEnvoyee(bonId, raison) {
+  const bon = await bonParId(bonId);
+  if (!bon) throw erreur('Commande introuvable', 404);
+  const g = await groupeDe(bon);
+  await noterEnvoi(g, g.tete, raison === 'modification' ? 'modification' : 'manuel');
+  return { ok: true };
 }
 
 /* L'annulation décidée par l'ÉQUIPE (CRM) — le client est prévenu par email.

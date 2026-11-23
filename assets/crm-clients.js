@@ -179,6 +179,7 @@
         + (actif ? '<div class="foot" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">'
           + (g.bons.some(b => b.modif_non_notifiee) ? '<button class="btn sm" data-cl-notifier="' + t.id + '">Notifier la modification</button><button class="btn sm ghost" data-cl-ignorer="' + t.id + '">Ignorer</button>' : '')
           + '<button class="btn sm ghost" data-cl-envoyer="' + t.id + '">✉ ' + (t.confirmation_envoyee_at ? 'Renvoyer' : 'Envoyer') + ' le mail de confirmation</button>'
+          + '<button class="btn sm ghost" data-cl-main="' + t.id + '" title="Préparer le mail et l’envoyer depuis votre propre messagerie (sans Resend)">✍ À la main</button>'
           + '<button class="btn sm primary" data-cl-modifier="' + g.bons.filter(b => FIGES.indexOf(b.statut) < 0).concat(g.bons)[0].id + '" data-cl-nom="' + esc(f.nom) + '">Modifier dans Production →</button></div>'
           : g.bons.some(b => b.modif_non_notifiee) ? '<div class="foot" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end"><button class="btn sm" data-cl-annul="' + g.bons.find(b => b.modif_non_notifiee).id + '">Prévenir le client de l’annulation</button><button class="btn sm ghost" data-cl-ignorer="' + t.id + '">Ignorer</button></div>'
           : (t.annulation_motif === 'hors_zone' ? '<p class="muted" style="font-size:12px;margin:10px 0 0">Annulée car hors Île-de-France — paiement à rembourser' + (t.type === 'abonnement' ? ' et abonnement Stripe à résilier' : '') + ' à la main.</p>' : ''));
@@ -210,6 +211,60 @@
     if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
     return d;
   }
+  /* ── SANS RESEND : le mail préparé, envoyé par l'équipe elle-même ───────
+     Le serveur compose le MÊME contenu que l'email Resend (récap, liens
+     Valider / Modifier avec le jeton du bon), en texte. On l'ouvre dans la
+     messagerie de l'équipe (mailto:) ou on le copie, puis « Marquer comme
+     envoyé » le note comme un envoi Resend. Rien n'est marqué avant ce geste :
+     un brouillon jamais parti ne doit pas s'afficher « envoyé ». */
+  async function appelStaff(corps) {
+    const r = await fetch('/api/checkout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jetonStaff() },
+      body: JSON.stringify(corps)
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    return d;
+  }
+  async function aLaMain(bonId, raison, modifications) {
+    raison = raison === 'modification' ? 'modification' : 'manuel';
+    let d;
+    try { d = await appelStaff({ action: 'commande_envoyer', bon_id: bonId, raison, modifications: modifications || [], brouillon: true }); }
+    catch (err) { toast('Préparation impossible : ' + String(err.message || err).slice(0, 140)); return; }
+    modal('<h2>Mail de confirmation — à la main</h2>'
+      + '<p class="muted" style="margin:0 0 10px;font-size:12.5px">Envoyez-le depuis votre messagerie, puis marquez-le comme envoyé. Les liens « Valider » et « Modifier » sont propres à cette commande.</p>'
+      + '<div class="form"><label>Destinataire<input class="inp" id="mmTo" type="email" value="' + esc(d.to || '') + '" placeholder="email du client"></label>'
+      + '<label>Objet<input class="inp" id="mmSujet" value="' + esc(d.sujet || '') + '"></label>'
+      + '<label>Message<textarea class="inp" id="mmTexte" rows="14" style="font-size:12.5px;line-height:1.45">' + esc(d.texte || '') + '</textarea></label></div>'
+      + '<div class="foot" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">'
+      + '<button type="button" class="btn ghost" data-close>Fermer</button>'
+      + '<button type="button" class="btn" id="mmCopier">Copier le message</button>'
+      + '<button type="button" class="btn" id="mmOuvrir">Ouvrir dans ma messagerie</button>'
+      + '<button type="button" class="btn primary" id="mmMarquer">Marquer comme envoyé</button></div>');
+    const val = id => (document.getElementById(id) || {}).value || '';
+    document.getElementById('mmOuvrir').onclick = () => {
+      const to = val('mmTo').trim();
+      if (!to) { toast('Renseignez l’email du client'); return; }
+      // Le corps va dans l'URL : certaines messageries tronquent au-delà de
+      // ~2 000 caractères — d'où « Copier » à côté, qui ne coupe rien.
+      location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(val('mmSujet')) + '&body=' + encodeURIComponent(val('mmTexte'));
+    };
+    document.getElementById('mmCopier').onclick = async () => {
+      const t = 'Objet : ' + val('mmSujet') + '\n\n' + val('mmTexte');
+      try { await navigator.clipboard.writeText(t); toast('Message copié'); }
+      catch (e) { const a = document.getElementById('mmTexte'); a.focus(); a.select(); try { document.execCommand('copy'); toast('Message copié'); } catch (x) { toast('Sélectionnez le texte et copiez-le'); } }
+    };
+    document.getElementById('mmMarquer').onclick = async ev => {
+      ev.target.disabled = true;
+      try {
+        await appelStaff({ action: 'commande_marquer', bon_id: bonId, raison });
+        toast('✉ Noté comme envoyé' + (val('mmTo') ? ' à ' + val('mmTo') : ''));
+        closeAll(); fermerAlerte(); CL = null;
+        const D = await charger(); const f = Object.values(D.M).find(x => x.bons.some(b => b.id === bonId));
+        if (f) ouvrirClient(f.uid); rafraichirSiClients();
+      } catch (err) { ev.target.disabled = false; toast('Impossible : ' + String(err.message || err).slice(0, 140)); }
+    };
+  }
   async function ignorer(bonId) {
     // Tout le groupe : la fiche lit le drapeau sur chacun des bons.
     const D = await charger(); const b = Object.values(D.M).flatMap(f => f.bons).find(x => x.id === bonId);
@@ -239,9 +294,10 @@
         : 'Notifier le client de cette modification ? Il recevra le récap à jour et devra la valider.') + '</div>'
       + (!annulee && o.changements && o.changements.length ? '<ul>' + o.changements.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '')
       + (annulee ? '<textarea class="inp" id="clMotif" rows="2" maxlength="500" placeholder="Message au client (facultatif) — ex. rupture d’un ingrédient" style="width:100%;margin-top:10px"></textarea>' : '')
-      + '<div class="acts"><button class="btn sm ghost" data-al="ignorer">Ignorer</button><button class="btn sm primary" data-al="notifier">' + (nouveau ? 'Envoyer' : annulee ? 'Prévenir le client' : 'Notifier') + '</button></div>';
+      + '<div class="acts"><button class="btn sm ghost" data-al="ignorer">Ignorer</button>' + (annulee ? '' : '<button class="btn sm" data-al="main" title="Sans Resend : depuis votre messagerie">✍ À la main</button>') + '<button class="btn sm primary" data-al="notifier">' + (nouveau ? 'Envoyer' : annulee ? 'Prévenir le client' : 'Notifier') + '</button></div>';
     el.onclick = async e => {
       const b = e.target.closest('[data-al]'); if (!b) return;
+      if (b.dataset.al === 'main') { aLaMain(o.bonId, nouveau ? 'manuel' : 'modification', o.changements); return; }
       b.disabled = true;
       try {
         if (b.dataset.al === 'notifier') {
@@ -307,6 +363,8 @@
       catch (err) { ev.disabled = false; ev.textContent = lib; toast('Envoi impossible : ' + String(err.message || err).slice(0, 140)); }
       return;
     }
+    const mm = e.target.closest('[data-cl-main]');
+    if (mm) { aLaMain(mm.dataset.clMain, 'manuel'); return; }
     const nt = e.target.closest('[data-cl-notifier]');
     if (nt) {
       nt.disabled = true;
@@ -347,5 +405,6 @@
   window.ouvrirClientCRM = ouvrirClient;
   window.apresModifBon = apresModifBon;
   window.envoyerConfirmationCRM = envoyer;
+  window.confirmationALaMainCRM = aLaMain;
   window.chipConfirmation = chipConf;
 })();
