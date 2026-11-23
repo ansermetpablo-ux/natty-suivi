@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Natty · Ma commande</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<script src="/assets/zoom.js"></script>
+<script src="/assets/theme.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<!--
+  La page du lien reçu par email après une commande : le client y VALIDE ou
+  MODIFIE la date et le lieu de livraison — ou les renseigne s'ils manquent.
+  Publique (pas de session : on arrive depuis une boîte mail), et c'est le
+  jeton `?t=` qui désigne la commande. Elle ne parle qu'à api/checkout.js
+  (actions commande_lire / commande_repondre), jamais directement à la base.
+  ?a=valider (bouton « Valider » de l'email) valide d'office si tout est
+  renseigné et dans la zone ; ?a=modifier ouvre le formulaire.
+  Règles refaites côté serveur et en base : livraison ≥ 7 jours après la
+  commande, Île-de-France seulement (hors zone = commande annulée).
+-->
+<style>
+:root{
+  --bg:#f0f0f3; --card:#ffffff; --ink:#1a1a2e; --on-ink:#ffffff; --txt:#2d2d3a;
+  --muted:#9a9aaa; --line:#e4e4ea; --vert:#34c759; --rouge:#ff3b30; --ambre:#ff9500;
+  --so:6px 6px 16px rgba(174,174,192,.42),-6px -6px 16px rgba(255,255,255,.88);
+  --si:inset 3px 3px 8px rgba(174,174,192,.35),inset -3px -3px 8px rgba(255,255,255,.85);
+}
+:root[data-theme="dark"]{
+  --bg:#0e0e11; --card:#1c1c22; --ink:#f0f0f4; --on-ink:#101014; --txt:#e9e9ef;
+  --muted:#8e8e99; --line:#2a2a32; --vert:#32d74b; --rouge:#ff453a; --ambre:#ffb340;
+  --so:6px 6px 16px rgba(0,0,0,.55),-6px -6px 16px rgba(255,255,255,.035);
+  --si:inset 3px 3px 8px rgba(0,0,0,.5),inset -3px -3px 8px rgba(255,255,255,.03);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:"DM Sans",-apple-system,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;padding:0 16px 140px}
+.col{max-width:520px;margin:0 auto}
+.top{padding:calc(22px + env(safe-area-inset-top,0px)) 4px 6px}
+.kick{font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+h1{font-size:28px;line-height:1.12;font-weight:800;letter-spacing:-.02em;color:var(--txt);margin-top:8px}
+.intro{font-size:15px;line-height:1.5;color:var(--muted);margin-top:8px}
+.card{background:var(--card);border-radius:24px;box-shadow:var(--so);padding:20px;margin-top:18px}
+.card h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted);margin-bottom:12px}
+.rows{display:grid;gap:12px}
+.row{display:flex;gap:14px;align-items:flex-start}
+.row .k{width:96px;flex:none;font-size:13px;color:var(--muted);padding-top:1px}
+.row .v{font-size:14.5px;font-weight:600;line-height:1.45;color:var(--txt);min-width:0;overflow-wrap:anywhere}
+.row .v small{display:block;font-weight:400;color:var(--muted);font-size:12.5px}
+.manque{color:var(--rouge)}
+.sem{padding-top:10px;margin-top:10px;border-top:1px solid var(--line)}
+.sem:first-child{border:0;margin:0;padding:0}
+.sem b{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;border-radius:999px;padding:6px 12px}
+.pill.ok{background:color-mix(in srgb,var(--vert) 16%,transparent);color:var(--vert)}
+.pill.warn{background:color-mix(in srgb,var(--ambre) 18%,transparent);color:var(--ambre)}
+.pill.bad{background:color-mix(in srgb,var(--rouge) 15%,transparent);color:var(--rouge)}
+.field{display:grid;gap:7px;margin-top:14px}
+.field>span{font-size:13px;font-weight:600;color:var(--txt)}
+.field>span em{font-style:normal;font-weight:400;color:var(--muted)}
+input,textarea{font:inherit;font-size:15px;color:var(--txt);background:var(--bg);border:0;border-radius:14px;box-shadow:var(--si);padding:13px 14px;width:100%;outline:none}
+input:focus,textarea:focus{box-shadow:var(--si),0 0 0 2px var(--ink)}
+.adr{display:grid;grid-template-columns:84px 1fr;gap:10px}
+.adr2{display:grid;grid-template-columns:110px 1fr;gap:10px}
+.cal-sem{margin-top:6px}
+.cal-lib{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600;margin:10px 2px 6px}
+.cal-jours{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-j{border:0;font:inherit;background:var(--card);border-radius:14px;box-shadow:var(--so);padding:8px 0;display:grid;gap:2px;cursor:pointer;color:var(--txt)}
+.cal-j small{font-size:10.5px;color:var(--muted)}
+.cal-j b{font-size:15px}
+.cal-j:disabled{box-shadow:none;background:transparent;opacity:.32;cursor:not-allowed}
+.cal-j.selected{background:var(--ink);color:var(--on-ink)}
+.cal-j.selected small{color:var(--on-ink);opacity:.7}
+.crens{display:flex;flex-wrap:wrap;gap:8px}
+.cren{border:0;font:inherit;font-size:13.5px;font-weight:600;background:var(--card);color:var(--txt);border-radius:999px;box-shadow:var(--so);padding:10px 14px;cursor:pointer}
+.cren.selected{background:var(--ink);color:var(--on-ink)}
+.alerte{border-radius:18px;padding:14px 16px;font-size:14px;line-height:1.5;margin-top:14px}
+.alerte.bad{background:color-mix(in srgb,var(--rouge) 12%,transparent);color:var(--txt)}
+.alerte.bad b{color:var(--rouge)}
+.alerte.info{background:color-mix(in srgb,var(--ambre) 14%,transparent)}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,var(--bg) 72%,transparent);z-index:20}
+.bar .col{display:flex;gap:10px}
+.btn{flex:1;border:0;font:inherit;font-size:15.5px;font-weight:700;border-radius:999px;padding:16px 18px;cursor:pointer;background:var(--card);color:var(--txt);box-shadow:var(--so)}
+.btn.prim{background:var(--ink);color:var(--on-ink)}
+.btn.danger{background:var(--rouge);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.done{display:flex;align-items:center;gap:14px}
+.vok{width:54px;height:54px;flex:none}
+.vok circle{fill:none;stroke:var(--vert);stroke-width:3;stroke-dasharray:160;stroke-dashoffset:160;animation:trace .6s ease-out forwards}
+.vok path{fill:none;stroke:var(--vert);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:40;stroke-dashoffset:40;animation:trace .35s .45s ease-out forwards}
+@keyframes trace{to{stroke-dashoffset:0}}
+.note{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:16px;padding:0 4px}
+.err{color:var(--rouge);font-size:13.5px;font-weight:600;margin-top:12px;min-height:1px}
+.load{padding:80px 0;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="col" id="app"><div class="load">Chargement de votre commande…</div></div>
+<div class="bar" id="bar" hidden><div class="col" id="barIn"></div></div>
+<script>
+'use strict';
+const API = '/api/checkout';
+const P = new URLSearchParams(location.search);
+const TOKEN = P.get('t') || '';
+let ACTION = P.get('a') || '';
+let V = null;            // la commande, telle que le serveur la rend
+let F = {};              // le formulaire en cours
+let envoi = false;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const JC = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const MC = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const dl = ymd => { if (!ymd) return ''; const d = new Date(ymd + 'T12:00:00'); return JOURS[d.getDay()].replace(/^./, c => c.toUpperCase()) + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]; };
+const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const estIDF = cp => /^(75|77|78|91|92|93|94|95)\d{3}$/.test(cp);
+
+async function api(body) {
+  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || 'Erreur ' + r.status);
+  return d;
+}
+
+function barre(html) { const b = $('#bar'); if (!html) { b.hidden = true; return; } $('#barIn').innerHTML = html; b.hidden = false; }
+
+function contenuHTML() {
+  return V.livraisons.map((l, i) => {
+    const items = l.contenu.length ? l.contenu.map(x => esc(x.nom) + ' × ' + x.n).join('<br>') : esc(l.nb_repas + ' repas — choisis par votre nutritionniste');
+    return '<div class="sem">' + (V.livraisons.length > 1 ? '<b>Semaine ' + (i + 1) + (l.date ? ' · ' + esc(dl(l.date)) : '') + '</b>' : '') + items + '</div>';
+  }).join('');
+}
+function recapHTML() {
+  const L = V.livraison, manque = '<span class="manque">à renseigner</span>';
+  const ligne = (k, v) => '<div class="row"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+  return '<div class="card"><h2>Votre commande</h2><div class="rows">'
+    + ligne('Formule', esc((V.commande.type === 'unite' ? 'À l’unité' : 'Abonnement') + ' · ' + V.commande.nb_repas + ' repas' + (V.commande.semaines > 1 ? ' × ' + V.commande.semaines + ' semaines' : '')) + '<small>Passée le ' + esc(dl(V.commande.passee_le).toLowerCase()) + '</small>')
+    + ligne('Au menu', contenuHTML())
+    + '</div></div>'
+    + '<div class="card"><h2>Livraison</h2><div class="rows">'
+    + ligne('Date', L.date ? esc(dl(L.date)) + (L.creneau ? '<small>' + esc(L.creneau) + '</small>' : '<small class="manque">créneau à renseigner</small>') : manque)
+    + ligne('Adresse', L.adresse ? esc(L.adresse) : manque)
+    + (L.tel ? ligne('Téléphone', esc(L.tel)) : '')
+    + (L.instructions ? ligne('Accès', esc(L.instructions)) : '')
+    + (V.commande.code ? ligne('Code', esc(V.commande.code) + '<small>à donner au livreur</small>') : '')
+    + '</div></div>';
+}
+
+function rendre() {
+  const app = $('#app');
+  const prenom = V.prenom ? esc(V.prenom) + ', ' : '';
+  if (V.annulee) {
+    const hz = V.motif === 'hors_zone';
+    app.innerHTML = '<div class="top"><div class="kick">Natty</div><h1>Commande annulée</h1><p class="intro">'
+      + (hz ? prenom + 'nous ne livrons pour le moment qu’en Île-de-France. Notre équipe vous recontacte pour le remboursement.' : 'Cette commande a été annulée. Une question ? Écrivez-nous à contact@natty-nutrition.com.')
+      + '</p></div>' + recapHTML();
+    barre('');
+    return;
+  }
+  if (ACTION === 'modifier' || V.manque.length) return rendreFormulaire();
+  const ok = V.statut === 'confirmee';
+  app.innerHTML = '<div class="top"><div class="kick">Natty</div>'
+    + (ok ? '<div class="done" style="margin-top:12px"><svg class="vok" viewBox="0 0 56 56"><circle cx="28" cy="28" r="25"/><path d="M17 29l7 7 15-16"/></svg><h1 style="margin:0">Commande confirmée</h1></div><p class="intro">' + prenom + 'merci ! Nous préparons votre commande pour le ' + esc(dl(V.livraison.date).toLowerCase()) + '.</p>'
+      : '<h1>Confirmez votre commande</h1><p class="intro">' + prenom + 'vérifiez la date et le lieu de livraison, puis validez.</p>')
+    + '</div>' + recapHTML()
+    + (V.verrou ? '<div class="alerte info">' + esc(V.verrou) + '</div>' : '')
+    + '<p class="note">Nous livrons en Île-de-France, au plus tôt ' + V.regles.delai + ' jours après la commande.</p>';
+  const mod = V.verrou ? '' : '<button class="btn" id="bMod">Modifier</button>';
+  barre(ok ? (mod || '') : mod + '<button class="btn prim" id="bVal">Valider</button>');
+  $('#bMod') && ($('#bMod').onclick = () => { ACTION = 'modifier'; rendre(); scrollTo(0, 0); });
+  $('#bVal') && ($('#bVal').onclick = valider);
+}
+
+/* ── Le formulaire ─────────────────────────────────────────────────────── */
+function rendreFormulaire() {
+  const L = V.livraison;
+  if (!F.init) F = { init: 1, date: L.date || '', creneau: L.creneau || '', num: L.num, rue: L.rue, cp: L.cp, ville: L.ville, tel: L.tel, instructions: L.instructions };
+  // La date déjà retenue reste sélectionnable même sous le minimum « modification ».
+  if (F.date && F.date !== L.date && (F.date < V.regles.date_min || F.date > V.regles.date_max)) F.date = '';
+  const incomplet = V.manque.length > 0;
+  $('#app').innerHTML = '<div class="top"><div class="kick">Natty</div><h1>' + (incomplet ? 'Votre livraison' : 'Modifier la livraison') + '</h1><p class="intro">'
+    + (incomplet ? 'Il nous manque quelques informations : votre commande ne sera préparée qu’une fois celles-ci validées.' : 'Choisissez une autre date, un autre créneau ou une autre adresse.') + '</p></div>'
+    + (V.verrou ? '<div class="alerte info">' + esc(V.verrou) + '</div>' + recapHTML() : formulaireHTML());
+  if (V.verrou) { barre(''); return; }
+  peindreCalendrier(); peindreCreneaux(); brancher(); majBarre();
+}
+function formulaireHTML() {
+  return '<div class="card"><h2>Date de livraison</h2><div id="cal"></div>'
+    + '<p class="note" style="margin:12px 0 0;padding:0">Au plus tôt le ' + esc(dl(V.regles.date_min).toLowerCase()) + ' — ' + V.regles.delai + ' jours après votre commande.</p>'
+    + (V.commande.semaines > 1 ? '<p class="note" style="margin:6px 0 0;padding:0">Les ' + (V.commande.semaines - 1) + ' livraisons suivantes se décalent d’autant, une par semaine.</p>' : '')
+    + '</div>'
+    + '<div class="card"><h2>Créneau</h2><div class="crens" id="crens"></div></div>'
+    + '<div class="card"><h2>Adresse</h2>'
+    + '<div class="adr"><label class="field" style="margin:0"><span>N°</span><input id="fNum" autocomplete="address-line1" maxlength="10" placeholder="12"></label>'
+    + '<label class="field" style="margin:0"><span>Rue</span><input id="fRue" autocomplete="street-address" maxlength="140" placeholder="rue de la Paix"></label></div>'
+    + '<div class="adr2" style="margin-top:12px"><label class="field" style="margin:0"><span>Code postal</span><input id="fCp" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="75002"></label>'
+    + '<label class="field" style="margin:0"><span>Ville</span><input id="fVille" autocomplete="address-level2" maxlength="80" placeholder="Paris"></label></div>'
+    + '<div id="zone"></div>'
+    + '<label class="field"><span>Téléphone <em>— le livreur vous appelle à l’arrivée</em></span><input id="fTel" type="tel" autocomplete="tel" maxlength="30" placeholder="06 12 34 56 78"></label>'
+    + '<label class="field"><span>Accès <em>— digicode, étage, bâtiment</em></span><textarea id="fAcc" rows="2" maxlength="300" placeholder="Digicode 1234, 3e étage"></textarea></label>'
+    + '</div><div class="err" id="err"></div>';
+}
+function peindreCalendrier() {
+  const min = V.regles.date_min, max = V.regles.date_max, garde = V.livraison.date;
+  const d0 = new Date((garde && garde < min ? garde : min) + 'T12:00:00');
+  const l0 = new Date(d0); l0.setDate(d0.getDate() - ((d0.getDay() + 6) % 7));
+  let h = '';
+  for (let k = 0; k < 4; k++) {
+    const deb = new Date(l0); deb.setDate(l0.getDate() + 7 * k);
+    const fin = new Date(deb); fin.setDate(deb.getDate() + 6);
+    h += '<div class="cal-sem"><div class="cal-lib"><span>Semaine du ' + deb.getDate() + ' ' + MC[deb.getMonth()] + '</span><span>' + fin.getDate() + ' ' + MC[fin.getMonth()] + '</span></div><div class="cal-jours">';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(deb); d.setDate(deb.getDate() + i);
+      const j = iso(d), ouvert = (j >= min && j <= max) || j === garde;
+      h += '<button type="button" class="cal-j' + (j === F.date ? ' selected' : '') + '" data-cal="' + j + '"' + (ouvert ? '' : ' disabled') + ' aria-label="' + dl(j) + '"><small>' + JC[i] + '</small><b>' + d.getDate() + '</b></button>';
+    }
+    h += '</div></div>';
+  }
+  $('#cal').innerHTML = h;
+}
+function peindreCreneaux() {
+  $('#crens').innerHTML = V.regles.creneaux.map(c => '<button type="button" class="cren' + (c === F.creneau ? ' selected' : '') + '" data-cren="' + esc(c) + '">' + esc(c) + '</button>').join('');
+}
+function brancher() {
+  const map = { fNum: 'num', fRue: 'rue', fCp: 'cp', fVille: 'ville', fTel: 'tel', fAcc: 'instructions' };
+  Object.keys(map).forEach(id => { const el = document.getElementById(id); el.value = F[map[id]] || ''; el.oninput = () => { F[map[id]] = el.value; if (id === 'fCp') zone(); majBarre(); }; });
+  $('#cal').onclick = e => { const b = e.target.closest('[data-cal]'); if (!b || b.disabled) return; F.date = b.dataset.cal; peindreCalendrier(); majBarre(); };
+  $('#crens').onclick = e => { const b = e.target.closest('[data-cren]'); if (!b) return; F.creneau = b.dataset.cren; peindreCreneaux(); majBarre(); };
+  zone();
+}
+const horsZone = () => /^\d{5}$/.test((F.cp || '').trim()) && !estIDF(F.cp.trim());
+function zone() {
+  $('#zone').innerHTML = horsZone()
+    ? '<div class="alerte bad"><b>Hors de notre zone de livraison.</b> Natty ne livre qu’en Île-de-France (75, 77, 78, 91, 92, 93, 94, 95). Si vous confirmez cette adresse, votre commande sera <b>annulée</b> et notre équipe vous recontactera pour le remboursement.</div>'
+    : '';
+}
+function complet() {
+  return F.date && F.creneau && (F.num || '').trim() && (F.rue || '').trim().length >= 3 && /^\d{5}$/.test((F.cp || '').trim()) && (F.ville || '').trim().length >= 2;
+}
+function majBarre() {
+  const hz = horsZone();
+  const lib = !F.date ? 'Choisissez une date ↑' : !F.creneau ? 'Choisissez un créneau ↑' : !complet() ? 'Complétez l’adresse ↑' : hz ? 'Annuler ma commande' : 'Valider ma livraison';
+  barre((V.manque.length ? '' : '<button class="btn" id="bRet">Retour</button>') + '<button class="btn ' + (hz && complet() ? 'danger' : 'prim') + '" id="bEnv"' + (complet() && !envoi ? '' : ' disabled') + '>' + lib + '</button>');
+  $('#bRet') && ($('#bRet').onclick = () => { ACTION = ''; F = {}; rendre(); scrollTo(0, 0); });
+  $('#bEnv').onclick = envoyer;
+}
+async function envoyer() {
+  if (!complet() || envoi) return;
+  if (horsZone() && !confirm('Cette adresse est hors Île-de-France : votre commande sera annulée. Confirmer ?')) return;
+  envoi = true; majBarre(); $('#err').textContent = '';
+  try {
+    V = await api(Object.assign({ action: 'commande_repondre', token: TOKEN, mode: 'modifier' }, {
+      date: F.date, creneau: F.creneau, num: F.num, rue: F.rue, cp: F.cp, ville: F.ville, tel: F.tel, instructions: F.instructions
+    }));
+    ACTION = ''; F = {}; envoi = false; rendre(); scrollTo(0, 0);
+  } catch (e) { envoi = false; majBarre(); $('#err').textContent = e.message; }
+}
+
+async function valider() {
+  if (envoi) return;
+  if (!estIDF((V.livraison.cp || '').trim()) && !confirm('Votre adresse est hors Île-de-France : votre commande sera annulée. Confirmer ?')) return;
+  envoi = true; const b = $('#bVal'); if (b) { b.disabled = true; b.textContent = 'Validation…'; }
+  try { V = await api({ action: 'commande_repondre', token: TOKEN, mode: 'valider' }); envoi = false; ACTION = ''; rendre(); }
+  catch (e) { envoi = false; if (b) { b.disabled = false; b.textContent = 'Valider'; } alerteErreur(e.message); }
+}
+function alerteErreur(m) {
+  const z = document.createElement('div'); z.className = 'alerte bad'; z.innerHTML = '<b>Impossible :</b> ' + esc(m);
+  $('#app').appendChild(z); z.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+(async () => {
+  if (!TOKEN) { $('#app').innerHTML = '<div class="top"><div class="kick">Natty</div><h1>Lien incomplet</h1><p class="intro">Ouvrez le lien reçu par email, en entier. Une question ? contact@natty-nutrition.com</p></div>'; return; }
+  try { V = await api({ action: 'commande_lire', token: TOKEN }); }
+  catch (e) { $('#app').innerHTML = '<div class="top"><div class="kick">Natty</div><h1>Commande introuvable</h1><p class="intro">' + esc(e.message) + '. Une question ? contact@natty-nutrition.com</p></div>'; return; }
+  // Retirer `a=` de la barre d'adresse : recharger la page ne doit pas
+  // revalider ni rouvrir le formulaire. Le jeton reste, sans lui un simple
+  // rechargement perdrait la commande.
+  try { history.replaceState(null, '', location.pathname + '?t=' + encodeURIComponent(TOKEN)); } catch (e) {}
+  /* « Valider » depuis l'email : on valide d'office quand tout est là et dans
+     la zone. Sinon (manque, hors zone), la page explique et laisse décider. */
+  if (ACTION === 'valider' && !V.annulee && V.statut !== 'confirmee' && !V.manque.length && estIDF((V.livraison.cp || '').trim())) {
+    rendre();
+    return valider();
+  }
+  if (ACTION === 'valider') ACTION = '';
+  rendre();
+})();
+</script>
+</body>
+</html>

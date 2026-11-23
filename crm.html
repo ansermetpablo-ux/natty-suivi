@@ -2462,6 +2462,11 @@ async function ouvrirFormBon(bonId,jourDefaut){
   <label>Notes<textarea class="inp" id="bfNotes" rows="2">${esc(reste)}</textarea></label>
   <div class="foot">${bonId?'<button type="button" class="btn danger" id="bfDel" style="margin-right:auto">Supprimer</button>':''}${bonId&&attrs.length?'<button type="button" class="btn ghost" id="bfFiche">📄 Fiche technique</button>':''}<button type="button" class="btn" data-close>Annuler</button><button class="btn primary" type="submit">Enregistrer</button></div>
  </form>`);
+ /* Règle J+7 : une commande client (abonnement, unité) n'est jamais livrée
+    moins de 7 jours après avoir été passée — la base le refuse (trigger
+    bons_commande_j7) ; l'écran ne le propose pas. Un bon manuel reste libre. */
+ const majMinJour=()=>{const t=$('#bfType').value,d=new Date(bon.created_at||Date.now());d.setDate(d.getDate()+7);$('#bfJour').min=(t==='abonnement'||t==='unite')?isoLocal(d):''};
+ $('#bfType').addEventListener('change',majMinJour);majMinJour();
  const zone=$('#bfLignes');
  /* La cible d'un repas : 45 % du besoin du jour du client Natty choisi
     (même calcul qu'admin.html) ; pour une commande libre, 45 % d'un besoin
@@ -2566,6 +2571,14 @@ async function ouvrirFormBon(bonId,jourDefaut){
    await sb('bons_attributions?bon_id=eq.'+id,{method:'DELETE'});
    if(rows.length)await sb('bons_attributions',{method:'POST',body:JSON.stringify(rows)});
    toast(bonId?'Commande modifiée':'Commande enregistrée');closeAll();chargerProd(true);render();
+   /* Le client doit-il être prévenu ? assets/crm-clients.js compare avant /
+      après et pose l'alerte « Notifier / Ignorer » (ou « Envoyer la
+      confirmation » pour une commande créée ici). */
+   if(window.apresModifBon){
+    const recAvant={};attrs.forEach(a=>{recAvant[a.recette_id]=(recAvant[a.recette_id]||0)+a.nb_portions});
+    const recApres={};Object.entries(lignes).forEach(([r,l])=>{recApres[r]=l.n});
+    apresModifBon({bonId:id,uid:champs.user_id||bon.user_id,nouveau:!bonId,avant:bon,apres:Object.assign({},bon,champs),recAvant,recApres});
+   }
   }catch(err){btn.disabled=false;toast('Enregistrement refusé : '+String(err.message||err).slice(0,140))}
  });
 }
@@ -3033,7 +3046,7 @@ async function ouvrirBonsDuBloc(blocId){
    regroupe encore les cinq génériques (rien n'est perdu, juste déplacé) —
    « aucun chemin ne doit mener vers admin.html » : chaque vue est native. */
 const VUES={
- commercial:[['pipeline','Pipe des ventes','commercial'],['profils','Profils','documents'],['comptes','Comptes & contacts','rh'],['emailing','Emailing & phoning','mail'],['prospection','Base de prospection','funnel'],['gestion','Gestion','projet']],
+ commercial:[['pipeline','Pipe des ventes','commercial'],['profils','Profils','documents'],['comptes','Comptes & contacts','rh'],['emailing','Emailing & phoning','mail'],['prospection','Base de prospection','funnel'],['clients','Clients','rh'],['gestion','Gestion','projet']],
  production:[['dashboard','Tableau de bord','dash'],['commandes','Commandes','logistique'],['calendrier','Calendrier','calendar'],['stocks','Stocks','stocks'],['production','Production','production'],['livraison','Livraison','livraison'],['gestion','Gestion','projet']],
  logistique:[['tournees','Tournées','logistique'],['commandes','Commandes','livraison'],['gestion','Gestion','projet']],
  // Opérationnel vit sous « Financement » (demande de Pablo, 26/09) : c'est là
@@ -3097,6 +3110,8 @@ async function rendreVueSpecifique(cle,vue){
   if(vue==='comptes')return await vCommerciauxContacts();
   if(vue==='emailing')return await vCommercialEmailing();
   if(vue==='prospection')return vCommercialProspection();
+  // Clients : assets/crm-clients.js (inscrits, commandes, confirmation par le client)
+  if(vue==='clients')return window.vCommercialClients?await vCommercialClients():'<div class="empty">Module assets/crm-clients.js absent.</div>';
  }
  if(cle==='production'){
   if(vue==='dashboard')return await vProdDashboard();
@@ -6116,5 +6131,6 @@ async function demarrerApp(){
 }
 </script>
 <script src="/assets/crm-production.js"></script>
+<script src="/assets/crm-clients.js"></script>
 </body>
 </html>

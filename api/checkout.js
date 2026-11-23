@@ -6,6 +6,8 @@
    douzaine de repas. Le plafond n'est pas là pour dire ce qui est raisonnable,
    il est là pour qu'une quantité bricolée ne crée pas une session à quatre
    chiffres. */
+import { CRENEAUX, dateMinPour, ajouterJours, codePostal, estIDF, lireParJeton, repondre, envoyerConfirmation, estStaff } from './_commande.js';
+
 const REPAS_MIN = 1, REPAS_MAX = 10;
 
 /* La DURÉE de l'abonnement, en semaines (offre.html la fait choisir en héros,
@@ -14,34 +16,55 @@ const REPAS_MIN = 1, REPAS_MAX = 10;
    semaines (`interval_count`). Facturer chaque semaine une quantité multipliée
    serait facturer N fois trop. 24 = le plafond du curseur ; Stripe accepte 52. */
 const SEMAINES_MIN = 1, SEMAINES_MAX = 24, SEMAINES_DEFAUT = 2;
-const CRENEAUX = ['11h30 – 13h30', '12h – 14h', '18h – 20h', '19h – 21h'];
 
-/* La date de la PREMIÈRE livraison. Règle produit (2026-09-30) : on ne commande
-   jamais du jour au lendemain, on commande pour la semaine SUIVANTE — donc du
-   lundi qui suit à cinq semaines. Calculé à l'heure de Paris : le serveur est
-   en UTC, et un dimanche 23 h à Paris y est encore dimanche… ou déjà lundi. */
-function aujourdhuiParis() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
-}
-function ajouterJours(ymd, n) {
-  const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-function lundiSuivant() {
-  const auj = aujourdhuiParis();
-  const j = new Date(auj + 'T12:00:00Z').getUTCDay();          // 0 = dimanche
-  return ajouterJours(auj, j === 0 ? 1 : 8 - j);
-}
+/* La date de la PREMIÈRE livraison. Règle produit (2026-11-23) : une commande
+   n'est JAMAIS livrée moins de 7 jours après avoir été passée — commandée un
+   mardi, livrée au plus tôt le mardi suivant. Calculé à l'heure de Paris : le
+   serveur est en UTC. La même règle vit dans api/_commande.js (questionnaire)
+   et en base (trigger `bons_commande_j7`, migration 0023). */
+function dateMinCommande() { return dateMinPour(null, false); }
 function dateValide(v) {
   if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return '';
-  const min = lundiSuivant(), max = ajouterJours(min, 34);
+  const min = dateMinCommande(), max = ajouterJours(min, 34);
   return v >= min && v <= max ? v : '';
+}
+
+/* Les actions de la confirmation de commande — fusionnées ici plutôt qu'une
+   13e fonction serverless (plafond Hobby : 12). Discriminant EXPLICITE
+   `action`, jamais une détection de forme.
+     commande_lire     { token }                 public — la page commande.html
+     commande_repondre { token, mode, …champs }  public — valider / modifier
+     commande_envoyer  { bon_id, raison, modifications? }  staff (JWT) — le CRM */
+async function actionCommande(req, res, body) {
+  try {
+    if (body.action === 'commande_lire') {
+      const v = await lireParJeton(body.token);
+      if (!v) return res.status(404).json({ error: 'Lien inconnu ou expiré' });
+      return res.status(200).json(v);
+    }
+    if (body.action === 'commande_repondre') {
+      return res.status(200).json(await repondre(body.token, body));
+    }
+    if (body.action === 'commande_envoyer') {
+      const jwt = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+      const moi = await estStaff(jwt);
+      if (!moi) return res.status(401).json({ error: 'Session d’équipe requise' });
+      const raison = ['manuel', 'modification'].indexOf(body.raison) >= 0 ? body.raison : 'manuel';
+      return res.status(200).json(await envoyerConfirmation(body.bon_id, { raison, modifications: body.modifications }));
+    }
+    return res.status(400).json({ error: 'Action inconnue' });
+  } catch (e) {
+    // Seuls les messages écrits pour le client sortent tels quels.
+    if (e && e.public) return res.status(e.status || 400).json({ error: e.message });
+    console.log('commande — %s', e && e.message);
+    return res.status(500).json({ error: 'Erreur serveur, réessayez dans un instant.' });
+  }
 }
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -80,6 +103,7 @@ export default async function handler(req, res) {
       });
       try { body = JSON.parse(raw); } catch(e) { body = {}; }
     }
+    if (body && body.action) return await actionCommande(req, res, body);
 
     const { priceId, userId, token, plateforme, mode, quantite, repas } = body;
 
@@ -122,7 +146,15 @@ export default async function handler(req, res) {
        suivante au plus tôt. L'écran grise la semaine en cours ; un POST
        bricolé, lui, ne passe pas par l'écran. */
     if (!livraison.date) {
-      return res.status(400).json({ error: 'Choisissez une date de livraison à partir du ' + lundiSuivant() });
+      return res.status(400).json({ error: 'Choisissez une date de livraison à partir du ' + dateMinCommande() + ' (7 jours après la commande)' });
+    }
+
+    /* ⚠️ Natty ne livre qu'en Île-de-France. Refusé AVANT le paiement quand
+       l'adresse est déjà connue : mieux vaut ne pas encaisser que rembourser.
+       Sans adresse (achat à l'unité), le questionnaire de confirmation la
+       demandera — et annulera la commande si elle est hors zone. */
+    if (livraison.adresse && !estIDF(codePostal(livraison.adresse))) {
+      return res.status(400).json({ error: 'Nous livrons uniquement en Île-de-France (75, 77, 78, 91, 92, 93, 94, 95).' });
     }
 
     /* ── L'achat À L'UNITÉ ─────────────────────────────────────────────────

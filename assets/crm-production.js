@@ -528,6 +528,7 @@ async function vCommandesNatif() {
       <div class="muted" style="font-size:12px">${b.jour_livraison ? 'Livraison ' + esc(cpJ(b.jour_livraison)) : '<span style="color:var(--red)">sans date de livraison</span>'} · ${esc(b.adresse || 'adresse non renseignée')}</div>
       ${recs ? `<div style="font-size:12.5px;margin-top:4px">🍽 ${esc(recs)}${pa !== b.nb_repas ? ` <b style="color:var(--red)">(${pa}/${b.nb_repas})</b>` : ''}</div>` : ''}</div>
       <div class="cmd-d"><label class="muted" style="font-size:12px">Repas <input class="inp" type="number" min="1" max="40" data-cmd-nb="${b.id}" value="${b.nb_repas}"></label><input class="inp" type="date" data-cmd-jour="${b.id}" value="${b.jour_livraison || ''}">${chipStatut(x)}
+      ${window.chipConfirmation && b.user_id && !/^(crm|bloc):/.test(b.user_id) ? chipConfirmation(b.confirmation_statut) + (b.modif_non_notifiee ? '<button class="btn sm" data-cl-notifier="' + b.id + '" title="Notifier le client de la modification">Notifier</button>' : '') + '<button class="btn sm ghost" data-cl-envoyer="' + b.id + '" title="Envoyer le mail de confirmation au client">✉</button>' : ''}
       <button class="btn sm primary" data-edit-bon="${b.id}">${att.length ? 'Modifier' : 'Attribuer'} →</button>${x === 'attribue' || x === 'en_production' ? `<button class="btn sm ghost" data-cmd-livre="${b.id}">Livré ✓</button>` : ''}<button class="btn sm ghost" data-cmd-annuler="${b.id}" title="Annuler ce bon">✕</button></div></div>`;
   };
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
@@ -559,7 +560,10 @@ document.addEventListener('change', async e => {
   if (nb) { const n = parseInt(nb.value, 10); if (!(n >= 1 && n <= 40)) { toast('Entre 1 et 40 repas'); nb.value = b ? b.nb_repas : 1; return; } patch.nb_repas = n;
     if (b && (b.statut === 'a_attribuer' || b.statut === 'attribue')) { const pa = E.attribs.filter(a => a.bon_id === id).reduce((t, a) => t + a.nb_portions, 0); patch.statut = pa >= n && pa > 0 ? 'attribue' : 'a_attribuer'; } }
   if (jr) { patch.jour_livraison = jr.value || null; patch.semaine = jr.value ? isoLocal(lundiLocal(new Date(jr.value + 'T00:00:00'))) : null; }
-  await sb('bons_commande?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(patch) }); toast('Enregistré'); await chargerProd(true); render();
+  try { await sb('bons_commande?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(patch) }); }
+  catch (err) { toast('Refusé : ' + String(err.message || err).slice(0, 140)); if (jr && b) jr.value = b.jour_livraison || ''; if (nb && b) nb.value = b.nb_repas; return; }
+  toast('Enregistré'); await chargerProd(true); render();
+  if (b && window.apresModifBon) apresModifBon({ bonId: id, uid: b.user_id, avant: b, apres: Object.assign({}, b, patch) });
 });
 document.addEventListener('input', e => {
   if (e.target.id !== 'cmdQ') return;

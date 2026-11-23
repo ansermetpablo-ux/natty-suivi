@@ -1,5 +1,9 @@
 export const config = { runtime: 'edge' };
 
+/* La confirmation par le client (email + questionnaire commande.html) et la
+   règle J+7 vivent dans api/_commande.js — partagé avec api/checkout.js. */
+import * as Commande from './_commande.js';
+
 async function verifyStripeSignature(rawBody, sigHeader, secret) {
   if (!sigHeader) return false;
   const parts = Object.fromEntries(sigHeader.split(',').map(p => p.split('=')));
@@ -306,13 +310,21 @@ export default async function handler(req) {
            (offre.html → modifier_adresse_bon) vit en BASE, pas dans les
            métadonnées Stripe figées au paiement : on reprend celle du dernier
            bon de l'abonnement, et la date suit la dernière livraison. */
-        let adresse = meta.adresse, creneau = meta.creneau, derniere = null;
+        let adresse = meta.adresse, creneau = meta.creneau, derniere = null, horsZone = false;
         if (aboId) {
           try {
-            const r = await supabase('bons_commande?abonnement_id=eq.' + aboId + '&select=adresse,creneau_livraison,jour_livraison&order=jour_livraison.desc.nullslast&limit=1', 'GET');
+            const r = await supabase('bons_commande?abonnement_id=eq.' + aboId + '&select=adresse,creneau_livraison,jour_livraison,annulation_motif&order=jour_livraison.desc.nullslast&limit=1', 'GET');
             const a = await r.json();
-            if (Array.isArray(a) && a[0]) { adresse = a[0].adresse || adresse; creneau = a[0].creneau_livraison || creneau; derniere = a[0].jour_livraison; }
+            if (Array.isArray(a) && a[0]) { adresse = a[0].adresse || adresse; creneau = a[0].creneau_livraison || creneau; derniere = a[0].jour_livraison; horsZone = a[0].annulation_motif === 'hors_zone'; }
           } catch (e) {}
+        }
+        /* Un abonnement dont la commande a été annulée hors zone ne doit pas
+           redonner une livraison au renouvellement : l'équipe est prévenue,
+           c'est elle qui résilie et rembourse. */
+        if (horsZone) {
+          await Commande.notifierEquipe('⛔ Renouvellement payé — client hors Île-de-France',
+            'L’abonnement ' + invoice.subscription + ' a été renouvelé alors que sa commande était annulée hors zone : aucun bon créé, abonnement Stripe à résilier et paiement à rembourser à la main.', null);
+          return new Response('ok', { status: 200 });
         }
         await creerBon(supabase, {
           user_id: userId, type: 'abonnement',
@@ -359,10 +371,22 @@ const JOURS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'
 function prochaineDate(jour) {
   const i = JOURS.indexOf(String(jour || '').toLowerCase());
   if (i < 0) return null;
-  const d = new Date(); d.setUTCHours(12, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() + 2);
-  while (d.getUTCDay() !== i) d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
+  // Jamais moins de 7 jours après la commande (règle J+7, api/_commande.js).
+  let d = Commande.dateMinPour(null, false);
+  while (new Date(d + 'T12:00:00Z').getUTCDay() !== i) d = ajouterJours(d, 1);
+  return d;
+}
+
+/* Une date reçue (métadonnée Stripe, dernière livraison + 7) qui tomberait à
+   moins de 7 jours d'aujourd'hui avance de semaine en semaine : le trigger
+   `bons_commande_j7` refuserait sinon le bon — et un bon refusé est une
+   livraison perdue, sans que personne ne le voie. Le jour de la semaine est
+   gardé. */
+function auPlusTot(ymd) {
+  if (!ymd) return ymd;
+  const min = Commande.dateMinPour(null, false);
+  while (ymd < min) ymd = ajouterJours(ymd, 7);
+  return ymd;
 }
 
 function lundiDe(ymd) {
@@ -402,7 +426,7 @@ function ajouterJours(ymd, n) {
    reste nue — un webhook rejoué retombe sur les mêmes `stripe_ref` (#1, #2…)
    et chaque POST repart en 409. Le récapitulatif ne part qu'une fois. */
 async function creerBon(supabase, b) {
-  const debut = /^\d{4}-\d{2}-\d{2}$/.test(b.date || '') ? b.date : prochaineDate(b.jour);
+  const debut = /^\d{4}-\d{2}-\d{2}$/.test(b.date || '') ? auPlusTot(b.date) : prochaineDate(b.jour);
   const n = Math.max(1, Math.min(24, Math.floor(Number(b.semaines) || 1)));
   let premier = null;
   for (let k = 0; k < n; k++) {
@@ -498,8 +522,11 @@ async function envoyerRecap(supabase, b) {
     b.montant ? ['Montant réglé', euros(b.montant)] : null
   ].filter(Boolean);
 
-  const texte = 'Votre commande est confirmée ✅\n' + lignes.map(l => l[0] + ' : ' + l[1]).join('\n')
-    + (b.type === 'abonnement' ? '\nVos recettes sont choisies par votre nutritionniste ; vous recevrez le détail avant la livraison.' : '');
+  let lien = '';
+  try { if (b.id) lien = await Commande.lienConfirmation(b.id); } catch (e) {}
+  const texte = 'Votre commande est enregistrée ✅\n' + lignes.map(l => l[0] + ' : ' + l[1]).join('\n')
+    + (b.type === 'abonnement' ? '\nVos recettes sont choisies par votre nutritionniste ; vous recevrez le détail avant la livraison.' : '')
+    + (lien ? '\n\nConfirmez la date et le lieu de livraison : ' + lien : '');
 
   // 3. dans l'app
   try {
@@ -527,7 +554,15 @@ async function envoyerRecap(supabase, b) {
 
   const taches = [envoyer(CONTACT, '🧾 Nouvelle commande — ' + (prenom || 'client') + ' · ' + b.nb_repas + ' repas · ' + dateLongue(b.jour_livraison),
     html('Nouvelle commande', (prenom || b.user_id) + (email ? ' · ' + email : '') + ' — le bon est dans l’onglet Production de l’admin.'))];
-  if (email) taches.push(envoyer(email, '✅ Votre commande Natty est confirmée',
-    html('Commande confirmée' + (prenom ? ', ' + prenom : ''), 'Merci ! Voici le récapitulatif de votre commande.')));
+  /* Le client reçoit l'email de CONFIRMATION (récap + valider / modifier, ou
+     « renseignez votre livraison » s'il manque des informations) — pas un
+     simple récapitulatif. Repli sur l'ancien récap si le bon n'a pas d'id. */
+  if (email && b.id) {
+    taches.push(Commande.envoyerConfirmation(b.id, { raison: 'commande', to: email })
+      .catch(e => console.log('confirmation client — %s', e.message)));
+  } else if (email) {
+    taches.push(envoyer(email, '✅ Votre commande Natty est enregistrée',
+      html('Commande enregistrée' + (prenom ? ', ' + prenom : ''), 'Merci ! Voici le récapitulatif de votre commande.')));
+  }
   await Promise.all(taches);
 }

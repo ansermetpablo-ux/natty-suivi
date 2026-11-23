@@ -628,7 +628,7 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
     </div>
     <div class="unite-quand" id="uniteQuand" style="display:none">
       <div class="neu-card livraison-block"><div class="liv-title">📦 Jour de livraison</div><div id="calUnite"></div>
-        <div class="cal-note">Pas de commande du jour au lendemain : la livraison se fait la semaine prochaine.</div></div>
+        <div class="cal-note">Livraison au plus tôt 7 jours après la commande — commandé un mardi, livré le mardi suivant.</div></div>
       <div class="neu-card livraison-block"><div class="liv-title">🕐 Créneau</div><div class="cren-row" id="crenUnite"></div></div>
     </div>
     <div class="unite-total" id="uniteTotal" style="display:none">
@@ -778,11 +778,11 @@ input[type=range].duree-range::-moz-range-thumb { width: 30px; height: 30px; bor
 
   <!-- STEP 5 LIVRAISON -->
   <div class="step" id="step5">
-    <div class="page-header"><h1>Livraison</h1><p>On commande pour la semaine suivante</p></div>
+    <div class="page-header"><h1>Livraison</h1><p>Livraison en Île-de-France, au plus tôt 7 jours après la commande</p></div>
     <div class="neu-card livraison-block">
       <div class="liv-title">📦 Première livraison</div>
       <div id="calLivraison"></div>
-      <div class="cal-note">Les plats sont cuisinés pour vous : la semaine en cours est fermée, la livraison commence la semaine prochaine. Les semaines suivantes, même jour.</div>
+      <div class="cal-note">Les plats sont cuisinés pour vous : la première livraison a lieu au plus tôt 7 jours après la commande (commandé un mardi, livré le mardi suivant). Les semaines suivantes, même jour.</div>
     </div>
     <div class="neu-card livraison-block">
       <div class="liv-title">🕐 Créneau</div>
@@ -870,7 +870,7 @@ let selectedObjectif = null;
 let selectedObjectifVal = 5;
 let selectedDuree = { semaines: 2, label: "2 semaines" };   // 2 semaines par défaut — c'est ce nombre qui multiplie la quantité Stripe
 let duUnite = 'sem';            // l'unité du héros de durée : 'sem' | 'mois' (1 mois = 4 semaines)
-let selectedDate = null;        // première livraison, 'AAAA-MM-JJ' — semaine N+1 au plus tôt
+let selectedDate = null;        // première livraison, AAAA-MM-JJ — 7 jours après la commande au plus tôt
 let selectedCreneau = null;
 let uniteDate = null, uniteCreneau = null;
 let clientBMRData = null; // { tdee, weeksPerKg } calculé depuis Supabase onboarding
@@ -954,6 +954,8 @@ function setStep(n) {
 function updateCTA() {
   const btn=document.getElementById("ctaBtn");
   const adrOk = !!adresseSaisie();
+  const cpSaisi = ((document.getElementById("adrCp")||{}).value||"").trim();
+  const horsZone = /^\d{5}$/.test(cpSaisi) && !estIDF(cpSaisi);
   const email=(document.getElementById("emailField")||{}).value?.trim()||"";
   const map={
     /* À l'unité, l'étape 1 ne mène pas au tunnel : elle mène au menu. Le
@@ -964,7 +966,7 @@ function updateCTA() {
     3:[selectedObjectif?"Voir les durées →":"Sélectionnez votre objectif",!selectedObjectif],
     4:["Choisir mon nutritionniste →",false],
     5:[selectedNutriId?"Choisir la livraison →":"Choisissez votre nutritionniste",!selectedNutriId],
-    6:[(selectedDate&&selectedCreneau&&adrOk)?"Voir le récapitulatif →":(!selectedDate?"Choisissez un jour de la semaine prochaine":!selectedCreneau?"Choisissez un créneau":"Complétez l'adresse"),!(selectedDate&&selectedCreneau&&adrOk)],
+    6:[(selectedDate&&selectedCreneau&&adrOk&&!horsZone)?"Voir le récapitulatif →":(!selectedDate?"Choisissez une date de livraison":!selectedCreneau?"Choisissez un créneau":horsZone?"Livraison en Île-de-France uniquement":"Complétez l'adresse"),!(selectedDate&&selectedCreneau&&adrOk&&!horsZone)],
     7:["Payer →", !email || !rgpdChecked],
   };
   const [text,dis]=map[currentStep]||["Continuer →",false];
@@ -1441,6 +1443,18 @@ function lundiCourant() {
   const j = d.getDay(); d.setDate(d.getDate() - (j === 0 ? 6 : j - 1));
   return d;
 }
+/* ⚠️ RÈGLE J+7 (2026-11-23) — une commande n'est JAMAIS livrée moins de 7
+   jours après avoir été passée : commandée un mardi, livrée au plus tôt le
+   mardi suivant. Remplace « la semaine N+1 entière », qui laissait commander
+   un dimanche pour le lendemain. Refaite par api/checkout.js et en base
+   (trigger bons_commande_j7). */
+const DELAI_LIVRAISON = 7;
+function dateMinLivraison() {
+  const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + DELAI_LIVRAISON);
+  return isoLoc(d);
+}
+/* Natty ne livre qu'en Île-de-France — le serveur refuse le paiement sinon. */
+function estIDF(cp) { return /^(75|77|78|91|92|93|94|95)\d{3}$/.test(String(cp || '').trim()); }
 function dateLisible(ymd) {
   if (!ymd) return '–';
   const d = new Date(ymd + 'T12:00:00');
@@ -1449,19 +1463,23 @@ function dateLisible(ymd) {
 function rendreCalendrier(hoteId, sel, surChoix) {
   const hote = document.getElementById(hoteId);
   if (!hote) return;
-  const l0 = lundiCourant();
+  const l0 = lundiCourant(), min = dateMinLivraison();
   let html = '';
-  [0, 1].forEach(k => {
+  /* Trois semaines : la semaine en cours (fermée, on voit pourquoi), puis
+     deux autres — le minimum J+7 tombe dans la deuxième, et la troisième
+     garantit au moins sept jours ouverts quel que soit le jour de commande. */
+  [0, 1, 2].forEach(k => {
     const debut = new Date(l0); debut.setDate(l0.getDate() + 7 * k);
     const fin = new Date(debut); fin.setDate(debut.getDate() + 6);
-    html += '<div class="cal-sem"><div class="cal-lib">' + (k ? 'Semaine prochaine' : 'Cette semaine')
+    const toutFerme = isoLoc(fin) < min;
+    html += '<div class="cal-sem"><div class="cal-lib">' + (k === 0 ? 'Cette semaine' : k === 1 ? 'Semaine prochaine' : 'Dans deux semaines')
       + '<span>' + debut.getDate() + ' ' + MOIS_C[debut.getMonth()] + ' – ' + fin.getDate() + ' ' + MOIS_C[fin.getMonth()]
-      + (k ? '' : ' · fermée') + '</span></div><div class="cal-jours">';
+      + (toutFerme ? ' · fermée' : '') + '</span></div><div class="cal-jours">';
     for (let i = 0; i < 7; i++) {
       const d = new Date(debut); d.setDate(debut.getDate() + i);
-      const iso = isoLoc(d);
-      html += '<button type="button" class="cal-j' + (iso === sel ? ' selected' : '') + '" data-cal="' + iso + '"'
-        + (k ? '' : ' disabled aria-disabled="true"') + ' aria-label="' + dateLisible(iso) + '">'
+      const iso = isoLoc(d), ouvert = iso >= min;
+      html += '<button type="button" class="cal-j' + (iso === sel && ouvert ? ' selected' : '') + '" data-cal="' + iso + '"'
+        + (ouvert ? '' : ' disabled aria-disabled="true"') + ' aria-label="' + dateLisible(iso) + '">'
         + '<small>' + JOURS_C[i] + '</small><b>' + d.getDate() + '</b></button>';
     }
     html += '</div></div>';
@@ -1488,8 +1506,7 @@ function rendreCreneaux(hoteId, sel, surChoix) {
 function rendreLivraison() {
   // Une date retenue qui serait passée dans la semaine en cours (page restée
   // ouverte depuis la semaine dernière) n'est plus valable.
-  const min = new Date(lundiCourant()); min.setDate(min.getDate() + 7);
-  if (selectedDate && selectedDate < isoLoc(min)) selectedDate = null;
+  if (selectedDate && selectedDate < dateMinLivraison()) selectedDate = null;
   rendreCalendrier('calLivraison', selectedDate, d => { selectedDate = d; selectedJour = JOURS_NOM[new Date(d + 'T12:00:00').getDay()]; updateCTA(); });
   rendreCreneaux('crenLivraison', selectedCreneau, c => { selectedCreneau = c; updateCTA(); });
   updateCTA();
