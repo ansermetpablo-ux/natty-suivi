@@ -1,5 +1,9 @@
 export const config = { runtime: 'edge' };
 
+/* La confirmation par le client (email + questionnaire commande.html) et la
+   règle J+7 vivent dans api/_commande.js — partagé avec api/checkout.js. */
+import * as Commande from './_commande.js';
+
 async function verifyStripeSignature(rawBody, sigHeader, secret) {
   if (!sigHeader) return false;
   const parts = Object.fromEntries(sigHeader.split(',').map(p => p.split('=')));
@@ -220,6 +224,7 @@ export default async function handler(req) {
           user_id: userId, type: 'unite',
           nb_repas: nombreDePlats(session),
           jour: session.metadata?.livraison, adresse: session.metadata?.adresse,
+          date: session.metadata?.date, creneau: session.metadata?.creneau,
           plats: lireJson(session.metadata?.plats),
           stripe_ref: 'cs_' + session.id,
           montant: session.amount_total, email: session.customer_details?.email
@@ -270,6 +275,9 @@ export default async function handler(req) {
         nb_repas: n || (formule === '4_repas' ? 4 : 3),
         jour: session.metadata?.livraison || sub.metadata?.livraison,
         adresse: session.metadata?.adresse || sub.metadata?.adresse,
+        date: session.metadata?.date,
+        creneau: session.metadata?.creneau || sub.metadata?.creneau,
+        semaines: Number(session.metadata?.semaines || sub.metadata?.semaines) || 1,
         // Les plats choisis pour la première semaine (la page de commande les
         // fait choisir dans les deux formules depuis le 13/10/2026).
         plats: lireJson(session.metadata?.plats),
@@ -301,10 +309,32 @@ export default async function handler(req) {
           const r = await supabase('abonnements?stripe_subscription_id=eq.' + invoice.subscription + '&select=id&limit=1', 'GET');
           const a = await r.json(); aboId = Array.isArray(a) && a[0] ? a[0].id : null;
         } catch (e) {}
+        /* L'adresse que le client a pu corriger depuis « Ma commande »
+           (offre.html → modifier_adresse_bon) vit en BASE, pas dans les
+           métadonnées Stripe figées au paiement : on reprend celle du dernier
+           bon de l'abonnement, et la date suit la dernière livraison. */
+        let adresse = meta.adresse, creneau = meta.creneau, derniere = null, horsZone = false;
+        if (aboId) {
+          try {
+            const r = await supabase('bons_commande?abonnement_id=eq.' + aboId + '&select=adresse,creneau_livraison,jour_livraison,annulation_motif&order=jour_livraison.desc.nullslast&limit=1', 'GET');
+            const a = await r.json();
+            if (Array.isArray(a) && a[0]) { adresse = a[0].adresse || adresse; creneau = a[0].creneau_livraison || creneau; derniere = a[0].jour_livraison; horsZone = a[0].annulation_motif === 'hors_zone'; }
+          } catch (e) {}
+        }
+        /* Un abonnement dont la commande a été annulée hors zone ne doit pas
+           redonner une livraison au renouvellement : l'équipe est prévenue,
+           c'est elle qui résilie et rembourse. */
+        if (horsZone) {
+          await Commande.notifierEquipe('⛔ Renouvellement payé — client hors Île-de-France',
+            'L’abonnement ' + invoice.subscription + ' a été renouvelé alors que sa commande était annulée hors zone : aucun bon créé, abonnement Stripe à résilier et paiement à rembourser à la main.', null);
+          return new Response('ok', { status: 200 });
+        }
         await creerBon(supabase, {
           user_id: userId, type: 'abonnement',
           nb_repas: Number(meta.repas) || 3,
-          jour: meta.livraison, adresse: meta.adresse,
+          jour: meta.livraison, adresse: adresse, creneau: creneau,
+          date: derniere ? ajouterJours(derniere, 7) : null,
+          semaines: Number(meta.semaines) || 1,
           abonnement_id: aboId,
           stripe_ref: 'in_' + invoice.id,
           montant: invoice.amount_paid, email: invoice.customer_email
@@ -344,10 +374,22 @@ const JOURS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'
 function prochaineDate(jour) {
   const i = JOURS.indexOf(String(jour || '').toLowerCase());
   if (i < 0) return null;
-  const d = new Date(); d.setUTCHours(12, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() + 2);
-  while (d.getUTCDay() !== i) d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
+  // Jamais moins de 7 jours après la commande (règle J+7, api/_commande.js).
+  let d = Commande.dateMinPour(null, false);
+  while (new Date(d + 'T12:00:00Z').getUTCDay() !== i) d = ajouterJours(d, 1);
+  return d;
+}
+
+/* Une date reçue (métadonnée Stripe, dernière livraison + 7) qui tomberait à
+   moins de 7 jours d'aujourd'hui avance de semaine en semaine : le trigger
+   `bons_commande_j7` refuserait sinon le bon — et un bon refusé est une
+   livraison perdue, sans que personne ne le voie. Le jour de la semaine est
+   gardé. */
+function auPlusTot(ymd) {
+  if (!ymd) return ymd;
+  const min = Commande.dateMinPour(null, false);
+  while (ymd < min) ymd = ajouterJours(ymd, 7);
+  return ymd;
 }
 
 function lundiDe(ymd) {
@@ -376,33 +418,52 @@ function nombreDePlats(session) {
   return Number.isFinite(r) && r > 0 ? Math.min(40, r) : 1;
 }
 
+function ajouterJours(ymd, n) {
+  const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/* Un paiement couvre `semaines` semaines (la durée choisie dans offre.html
+   multiplie la quantité Stripe) : on crée donc UN BON PAR SEMAINE, chacun avec
+   sa date et son propre code de réception. La référence Stripe du premier
+   reste nue — un webhook rejoué retombe sur les mêmes `stripe_ref` (#1, #2…)
+   et chaque POST repart en 409. Le récapitulatif ne part qu'une fois. */
 async function creerBon(supabase, b) {
-  const jour = prochaineDate(b.jour);
-  try {
-    const r = await supabase('bons_commande', 'POST', {
-      user_id: b.user_id,
-      type: b.type,
-      nb_repas: b.nb_repas,
-      jour_livraison: jour,
-      semaine: lundiDe(jour),
-      adresse: b.adresse || null,
-      plats: b.plats || null,
-      abonnement_id: b.abonnement_id || null,
-      stripe_ref: b.stripe_ref || null,
-      statut: 'a_attribuer'
-    });
-    // 409 = déjà créé pour cette référence Stripe : un webhook rejoué. Normal —
-    // et on ne renvoie pas le récapitulatif une seconde fois.
-    if (r.status === 409) return;
-    if (!r.ok) { console.log('bon de commande non créé — %s', r.status); return; }
-    let bon = null;
-    try { const a = await r.json(); bon = Array.isArray(a) ? a[0] : a; } catch (e) {}
-    await envoyerRecap(supabase, Object.assign({}, b, { jour_livraison: jour, id: bon && bon.id }));
-  } catch (e) {
-    // Ne jamais faire échouer le webhook pour un bon : l'abonnement, lui, est
-    // écrit. Stripe rejouerait sinon l'événement entier.
-    console.log('bon de commande — %s', e.message);
+  const debut = /^\d{4}-\d{2}-\d{2}$/.test(b.date || '') ? auPlusTot(b.date) : prochaineDate(b.jour);
+  const n = Math.max(1, Math.min(24, Math.floor(Number(b.semaines) || 1)));
+  let premier = null;
+  for (let k = 0; k < n; k++) {
+    const jour = debut ? ajouterJours(debut, 7 * k) : null;
+    try {
+      const r = await supabase('bons_commande', 'POST', {
+        user_id: b.user_id,
+        type: b.type,
+        nb_repas: b.nb_repas,
+        jour_livraison: jour,
+        semaine: lundiDe(jour),
+        adresse: b.adresse || null,
+        creneau_livraison: b.creneau || null,
+        plats: b.plats || null,
+        abonnement_id: b.abonnement_id || null,
+        stripe_ref: b.stripe_ref ? (k ? b.stripe_ref + '#' + k : b.stripe_ref) : null,
+        statut: 'a_attribuer'
+      });
+      // 409 = déjà créé pour cette référence Stripe : un webhook rejoué.
+      if (r.status === 409) { if (k === 0) return; continue; }
+      if (!r.ok) { console.log('bon de commande non créé — %s', r.status); continue; }
+      if (k === 0) { try { const a = await r.json(); premier = Array.isArray(a) ? a[0] : a; } catch (e) {} }
+    } catch (e) {
+      // Ne jamais faire échouer le webhook pour un bon : l'abonnement, lui, est
+      // écrit. Stripe rejouerait sinon l'événement entier.
+      console.log('bon de commande — %s', e.message);
+    }
   }
+  try {
+    await envoyerRecap(supabase, Object.assign({}, b, {
+      jour_livraison: debut, id: premier && premier.id,
+      code: premier && premier.code_reception, semaines: n
+    }));
+  } catch (e) { console.log('récap — %s', e.message); }
 }
 
 
@@ -465,13 +526,18 @@ async function envoyerRecap(supabase, b) {
   const lignes = [
     ['Formule', type + ' — ' + b.nb_repas + ' repas'],
     plats ? ['Plats', plats] : null,
-    ['Livraison', dateLongue(b.jour_livraison)],
+    ['Livraison', dateLongue(b.jour_livraison) + (b.creneau ? ' · ' + b.creneau : '')],
+    b.semaines > 1 ? ['Durée', b.semaines + ' semaines — une livraison par semaine'] : null,
+    b.code ? ['Code de réception', b.code + ' — à donner au livreur'] : null,
     ['Adresse', b.adresse || 'non renseignée — nous vous contactons'],
     b.montant ? ['Montant réglé', euros(b.montant)] : null
   ].filter(Boolean);
 
-  const texte = 'Votre commande est confirmée ✅\n' + lignes.map(l => l[0] + ' : ' + l[1]).join('\n')
-    + (b.type === 'abonnement' ? '\nLes plats des semaines suivantes sont choisis avec votre nutritionniste ; vous recevrez le détail avant chaque livraison.' : '');
+  let lien = '';
+  try { if (b.id) lien = await Commande.lienConfirmation(b.id); } catch (e) {}
+  const texte = 'Votre commande est enregistrée ✅\n' + lignes.map(l => l[0] + ' : ' + l[1]).join('\n')
+    + (b.type === 'abonnement' ? '\nLes plats des semaines suivantes sont choisis avec votre nutritionniste ; vous recevrez le détail avant chaque livraison.' : '')
+    + (lien ? '\n\nConfirmez la date et le lieu de livraison : ' + lien : '');
 
   // 3. dans l'app
   try {
@@ -499,7 +565,15 @@ async function envoyerRecap(supabase, b) {
 
   const taches = [envoyer(CONTACT, '🧾 Nouvelle commande — ' + (prenom || 'client') + ' · ' + b.nb_repas + ' repas · ' + dateLongue(b.jour_livraison),
     html('Nouvelle commande', (prenom || b.user_id) + (email ? ' · ' + email : '') + ' — le bon est dans l’onglet Production de l’admin.'))];
-  if (email) taches.push(envoyer(email, '✅ Votre commande Natty est confirmée',
-    html('Commande confirmée' + (prenom ? ', ' + prenom : ''), 'Merci ! Voici le récapitulatif de votre commande.')));
+  /* Le client reçoit l'email de CONFIRMATION (récap + valider / modifier, ou
+     « renseignez votre livraison » s'il manque des informations) — pas un
+     simple récapitulatif. Repli sur l'ancien récap si le bon n'a pas d'id. */
+  if (email && b.id) {
+    taches.push(Commande.envoyerConfirmation(b.id, { raison: 'commande', to: email })
+      .catch(e => console.log('confirmation client — %s', e.message)));
+  } else if (email) {
+    taches.push(envoyer(email, '✅ Votre commande Natty est enregistrée',
+      html('Commande enregistrée' + (prenom ? ', ' + prenom : ''), 'Merci ! Voici le récapitulatif de votre commande.')));
+  }
   await Promise.all(taches);
 }

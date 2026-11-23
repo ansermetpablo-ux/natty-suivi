@@ -6,14 +6,69 @@
    douzaine de repas. Le plafond n'est pas là pour dire ce qui est raisonnable,
    il est là pour qu'une quantité bricolée ne crée pas une session à quatre
    chiffres. */
+import { CRENEAUX, dateMinPour, ajouterJours, codePostal, estIDF, lireParJeton, repondre, envoyerConfirmation, envoyerAnnulation, estStaff } from './_commande.js';
+
 // L'abonnement commence à 3 plats par semaine (décision du 14/10/2026) :
 // en dessous, c'est la commande à l'unité.
 const REPAS_MIN = 3, REPAS_MAX = 10;
 
+/* La DURÉE de l'abonnement, en semaines (offre.html la fait choisir en héros,
+   2 par défaut). Elle MULTIPLIE la quantité Stripe : on facture « repas ×
+   semaines » plats d'un coup, et la souscription se renouvelle toutes les N
+   semaines (`interval_count`). Facturer chaque semaine une quantité multipliée
+   serait facturer N fois trop. 24 = le plafond du curseur ; Stripe accepte 52. */
+const SEMAINES_MIN = 1, SEMAINES_MAX = 24, SEMAINES_DEFAUT = 2;
+
+/* La date de la PREMIÈRE livraison. Règle produit (2026-11-23) : une commande
+   n'est JAMAIS livrée moins de 7 jours après avoir été passée — commandée un
+   mardi, livrée au plus tôt le mardi suivant. Calculé à l'heure de Paris : le
+   serveur est en UTC. La même règle vit dans api/_commande.js (questionnaire)
+   et en base (trigger `bons_commande_j7`, migration 0023). */
+function dateMinCommande() { return dateMinPour(null, false); }
+function dateValide(v) {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return '';
+  const min = dateMinCommande(), max = ajouterJours(min, 34);
+  return v >= min && v <= max ? v : '';
+}
+
+/* Les actions de la confirmation de commande — fusionnées ici plutôt qu'une
+   13e fonction serverless (plafond Hobby : 12). Discriminant EXPLICITE
+   `action`, jamais une détection de forme.
+     commande_lire     { token }                 public — la page commande.html
+     commande_repondre { token, mode, …champs }  public — valider / modifier
+     commande_envoyer  { bon_id, raison, modifications? }  staff (JWT) — le CRM
+                       raison 'annulation' (+ motif?) : l'email d'annulation */
+async function actionCommande(req, res, body) {
+  try {
+    if (body.action === 'commande_lire') {
+      const v = await lireParJeton(body.token);
+      if (!v) return res.status(404).json({ error: 'Lien inconnu ou expiré' });
+      return res.status(200).json(v);
+    }
+    if (body.action === 'commande_repondre') {
+      return res.status(200).json(await repondre(body.token, body));
+    }
+    if (body.action === 'commande_envoyer') {
+      const jwt = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+      const moi = await estStaff(jwt);
+      if (!moi) return res.status(401).json({ error: 'Session d’équipe requise' });
+      if (body.raison === 'annulation') return res.status(200).json(await envoyerAnnulation(body.bon_id, { motif: body.motif }));
+      const raison = ['manuel', 'modification'].indexOf(body.raison) >= 0 ? body.raison : 'manuel';
+      return res.status(200).json(await envoyerConfirmation(body.bon_id, { raison, modifications: body.modifications }));
+    }
+    return res.status(400).json({ error: 'Action inconnue' });
+  } catch (e) {
+    // Seuls les messages écrits pour le client sortent tels quels.
+    if (e && e.public) return res.status(e.status || 400).json({ error: e.message });
+    console.log('commande — %s', e && e.message);
+    return res.status(500).json({ error: 'Erreur serveur, réessayez dans un instant.' });
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -52,6 +107,7 @@ export default async function handler(req, res) {
       });
       try { body = JSON.parse(raw); } catch(e) { body = {}; }
     }
+    if (body && body.action) return await actionCommande(req, res, body);
 
     const { priceId, userId, token, plateforme, mode, quantite, repas } = body;
 
@@ -65,6 +121,8 @@ export default async function handler(req, res) {
     const livraison = {
       jour:    typeof body.jourLivraison === 'string' ? body.jourLivraison.slice(0, 20) : '',
       adresse: typeof body.adresse === 'string' ? body.adresse.slice(0, 480) : '',
+      date:    dateValide(body.dateLivraison),
+      creneau: CRENEAUX.indexOf(body.creneau) >= 0 ? body.creneau : '',
       // Les plats choisis à l'unité : [{id, n}] — l'attribution en cuisine
       // part de là. Bornée elle aussi.
       plats:   Array.isArray(body.plats)
@@ -94,6 +152,31 @@ export default async function handler(req, res) {
 
     if (!STRIPE_SECRET_KEY) {
       return res.status(500).json({ error: 'Missing STRIPE_SECRET_KEY' });
+    }
+
+    /* ⚠️ Une date de livraison est OBLIGATOIRE et doit tomber la semaine
+       suivante au plus tôt. L'écran grise la semaine en cours ; un POST
+       bricolé, lui, ne passe pas par l'écran. */
+    /* Une page qui ne fait choisir qu'un JOUR de la semaine (offre.html depuis
+       octobre 2026, le site Wix) : la date est sa prochaine occurrence à J+7. */
+    if (!livraison.date && livraison.jour) {
+      const J = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'].indexOf(livraison.jour.toLowerCase());
+      if (J >= 0) {
+        let d = dateMinCommande();
+        while (new Date(d + 'T12:00:00Z').getUTCDay() !== J) d = ajouterJours(d, 1);
+        livraison.date = d;
+      }
+    }
+    if (!livraison.date) {
+      return res.status(400).json({ error: 'Choisissez une date de livraison à partir du ' + dateMinCommande() + ' (7 jours après la commande)' });
+    }
+
+    /* ⚠️ Natty ne livre qu'en Île-de-France. Refusé AVANT le paiement quand
+       l'adresse est déjà connue : mieux vaut ne pas encaisser que rembourser.
+       Sans adresse (achat à l'unité), le questionnaire de confirmation la
+       demandera — et annulera la commande si elle est hors zone. */
+    if (livraison.adresse && !estIDF(codePostal(livraison.adresse))) {
+      return res.status(400).json({ error: 'Nous livrons uniquement en Île-de-France (75, 77, 78, 91, 92, 93, 94, 95).' });
     }
 
     /* ── L'achat À L'UNITÉ ─────────────────────────────────────────────────
@@ -168,11 +251,19 @@ export default async function handler(req, res) {
       });
     }
 
+    let semaines = Math.floor(Number(body.semaines));
+    if (!Number.isFinite(semaines) || semaines <= 0) semaines = SEMAINES_DEFAUT;
+    if (semaines < SEMAINES_MIN || semaines > SEMAINES_MAX) {
+      return res.status(400).json({ error: 'Entre ' + SEMAINES_MIN + ' et ' + SEMAINES_MAX + ' semaines' });
+    }
+
     return await creerSession({
       res, STRIPE_SECRET_KEY, token, userId, plateforme, livraison,
       priceId: PRIX_ABO || LEGACY[n],
-      quantite: PRIX_ABO ? n : 1,
-      stripeMode: 'subscription', repas: n
+      /* La quantité Stripe = plats × semaines (chemin au plat), ou semaines
+         (chemin historique, où le prix porte déjà les 3 ou 4 repas). */
+      quantite: (PRIX_ABO ? n : 1) * semaines,
+      stripeMode: 'subscription', repas: n, semaines
     });
 
   } catch (err) {
@@ -189,7 +280,7 @@ export default async function handler(req, res) {
    justement coûté le piège de la WebView (§8). */
 async function creerSession(o) {
   const { res, STRIPE_SECRET_KEY, token, userId, plateforme,
-          priceId, quantite, stripeMode, repas, livraison } = o;
+          priceId, quantite, stripeMode, repas, livraison, semaines } = o;
   const origin = 'https://natty-suivi.vercel.app';
   const unique = stripeMode === 'payment';
 
@@ -203,12 +294,36 @@ async function creerSession(o) {
   const site = livraison && livraison.retour;
   const retour = (statut) => natif
     ? origin + '/checkout-retour.html?statut=' + statut + '&token=' + encodeURIComponent(token || '')
+    /* Depuis le site Wix, on revient sur la page du site. Sinon, un paiement
+       réussi mène au récap de ce qui vient d'être payé (mes-commandes.html
+       attend que le webhook écrive le bon) ; un paiement abandonné revient sur
+       la page de commande, panier gardé. */
     : (site ? site + '?statut=' + statut
-            : origin + '/offre.html?statut=' + statut + (token ? '&token=' + encodeURIComponent(token) : ''));
+       : statut === 'ok'
+         ? origin + '/mes-commandes.html?nouvelle=1&type=' + (unique ? 'unite' : 'abonnement')
+         : origin + '/offre.html?statut=' + statut + (token ? '&token=' + encodeURIComponent(token) : ''));
 
   const params = new URLSearchParams();
   params.append('mode', stripeMode);
-  params.append('line_items[0][price]', priceId);
+  if (!unique && semaines && semaines > 1) {
+    /* ⚠️ UN PRIX RÉCURRENT PORTE SON INTERVALLE : le prix au plat est
+       HEBDOMADAIRE. Pour renouveler toutes les N semaines, on recompose un prix
+       à la volée (`price_data`) avec le MÊME produit et le MÊME montant unitaire
+       — lus chez Stripe, jamais pris du client — et `interval_count = N`. */
+    const pr = await fetch('https://api.stripe.com/v1/prices/' + encodeURIComponent(priceId), {
+      headers: { 'Authorization': 'Bearer ' + STRIPE_SECRET_KEY }
+    }).then(function (r) { return r.json(); });
+    if (!pr || !pr.unit_amount || !pr.product) {
+      return res.status(500).json({ error: 'Prix Stripe illisible' });
+    }
+    params.append('line_items[0][price_data][currency]', pr.currency || 'eur');
+    params.append('line_items[0][price_data][product]', typeof pr.product === 'string' ? pr.product : pr.product.id);
+    params.append('line_items[0][price_data][unit_amount]', String(pr.unit_amount));
+    params.append('line_items[0][price_data][recurring][interval]', 'week');
+    params.append('line_items[0][price_data][recurring][interval_count]', String(semaines));
+  } else {
+    params.append('line_items[0][price]', priceId);
+  }
   params.append('line_items[0][quantity]', String(quantite));
   params.append('success_url', retour('ok'));
   params.append('cancel_url', retour('annule'));
@@ -231,7 +346,12 @@ async function creerSession(o) {
   if (liv.jour)    params.append('metadata[livraison]', liv.jour);
   if (liv.adresse) params.append('metadata[adresse]', liv.adresse);
   if (liv.plats)   params.append('metadata[plats]', liv.plats);
+  if (liv.date)    params.append('metadata[date]', liv.date);
+  if (liv.creneau) params.append('metadata[creneau]', liv.creneau);
+  if (semaines)    params.append('metadata[semaines]', String(semaines));
   if (!unique) {
+    if (semaines)    params.append('subscription_data[metadata][semaines]', String(semaines));
+    if (liv.creneau) params.append('subscription_data[metadata][creneau]', liv.creneau);
     params.append('subscription_data[metadata][user_id]', userId || '');
     if (repas) params.append('subscription_data[metadata][repas]', String(repas));
     if (liv.jour)    params.append('subscription_data[metadata][livraison]', liv.jour);

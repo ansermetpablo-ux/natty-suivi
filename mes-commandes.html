@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Natty · Mes commandes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<script src="/assets/zoom.js"></script>
+<script src="/assets/theme.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<!--
+  « Me connecter » + « Mes commandes » — la même page pour le SITE et l'APP.
+
+  Pourquoi elle existe (2026-11-23, signalé par Pablo) : après un paiement à
+  l'unité, l'app renvoyait sur Suivi et le site sur l'ancien tableau de bord —
+  personne ne voyait jamais ce qu'il venait de commander. Les deux retours de
+  paiement mènent désormais ici, en `?nouvelle=1`.
+
+  Sur le site, c'est aussi la rubrique « Mes commandes » : on s'y connecte avec
+  les MÊMES identifiants que dans l'app (Supabase Auth, un seul compte), et on
+  retrouve toutes ses commandes. Lien à poser dans le menu Wix :
+    https://natty-suivi.vercel.app/mes-commandes.html
+
+  ⚠️ `?nouvelle=1` ATTEND la commande. Le bon est écrit par api/webhook.js quand
+  Stripe le prévient, quelques secondes APRÈS le retour du client — souvent
+  avant. On relit donc la base toutes les 2,5 s pendant ~45 s plutôt que
+  d'annoncer « aucune commande » à quelqu'un qui vient de payer.
+
+  ⚠️ Lecture seule, par la RLS : `bons_commande_soi` et `bons_attributions_soi`
+  ne donnent au client que SES bons. Rien n'est écrit ici ; la confirmation de
+  date et d'adresse passe par commande.html (jeton du bon).
+-->
+<style>
+:root{
+  --bg:#f0f0f3; --card:#ffffff; --ink:#1a1a2e; --on-ink:#ffffff; --txt:#2d2d3a;
+  --muted:#9a9aaa; --line:#e4e4ea; --vert:#34c759; --rouge:#ff3b30; --ambre:#ff9500;
+  --so:6px 6px 16px rgba(174,174,192,.42),-6px -6px 16px rgba(255,255,255,.88);
+  --si:inset 3px 3px 8px rgba(174,174,192,.35),inset -3px -3px 8px rgba(255,255,255,.85);
+}
+:root[data-theme="dark"]{
+  --bg:#0e0e11; --card:#1c1c22; --ink:#f0f0f4; --on-ink:#101014; --txt:#e9e9ef;
+  --muted:#8e8e99; --line:#2a2a32; --vert:#32d74b; --rouge:#ff453a; --ambre:#ffb340;
+  --so:6px 6px 16px rgba(0,0,0,.55),-6px -6px 16px rgba(255,255,255,.035);
+  --si:inset 3px 3px 8px rgba(0,0,0,.5),inset -3px -3px 8px rgba(255,255,255,.03);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:"DM Sans",-apple-system,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;padding:0 16px 120px}
+.col{max-width:560px;margin:0 auto}
+.top{padding:calc(16px + env(safe-area-inset-top,0px)) 0 4px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rond{width:42px;height:42px;border-radius:50%;border:0;background:var(--card);box-shadow:var(--so);color:var(--txt);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none}
+.lienTxt{background:none;border:0;color:var(--muted);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;text-decoration:underline}
+.kick{font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--muted);margin-top:14px}
+h1{font-size:28px;line-height:1.12;font-weight:800;letter-spacing:-.02em;margin-top:6px}
+.intro{font-size:15px;line-height:1.5;color:var(--muted);margin-top:8px}
+.card{background:var(--card);border-radius:24px;box-shadow:var(--so);padding:20px;margin-top:18px}
+.card.neuve{outline:2px solid var(--vert)}
+.ttl{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.ttl b{font-size:18px;font-weight:800;line-height:1.25}
+.ttl small{display:block;font-size:13px;color:var(--muted);font-weight:500;margin-top:3px}
+.pill{flex:none;display:inline-flex;align-items:center;font-size:12px;font-weight:700;border-radius:999px;padding:5px 11px;white-space:nowrap}
+.pill.ok{background:color-mix(in srgb,var(--vert) 16%,transparent);color:var(--vert)}
+.pill.warn{background:color-mix(in srgb,var(--ambre) 18%,transparent);color:var(--ambre)}
+.pill.bad{background:color-mix(in srgb,var(--rouge) 15%,transparent);color:var(--rouge)}
+.pill.neutre{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted)}
+.rows{display:grid;gap:11px;margin-top:16px}
+.row{display:flex;gap:14px;align-items:flex-start}
+.row .k{width:92px;flex:none;font-size:13px;color:var(--muted);padding-top:1px}
+.row .v{font-size:14.5px;font-weight:600;line-height:1.45;min-width:0;overflow-wrap:anywhere}
+.plats{display:grid;gap:8px;margin-top:2px}
+.plat{display:flex;align-items:center;gap:10px}
+.plat img,.plat i{width:40px;height:40px;border-radius:12px;object-fit:cover;flex:none;background:var(--bg);box-shadow:var(--si);font-style:normal;display:flex;align-items:center;justify-content:center;font-size:18px}
+.plat span{font-size:14px;font-weight:600;line-height:1.3}
+.plat em{font-style:normal;color:var(--muted);font-weight:500}
+.code{margin-top:16px;border-radius:18px;background:var(--bg);box-shadow:var(--si);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.code small{font-size:12.5px;color:var(--muted);line-height:1.4}
+.code b{font-size:26px;letter-spacing:.2em;font-weight:800}
+.btn{display:block;width:100%;border:0;border-radius:999px;background:var(--ink);color:var(--on-ink);font:inherit;font-size:15.5px;font-weight:700;padding:15px 20px;cursor:pointer;text-align:center;text-decoration:none;margin-top:14px}
+.btn.sec{background:var(--card);color:var(--txt);box-shadow:var(--so)}
+.btn:disabled{opacity:.5}
+.field{display:grid;gap:7px;margin-top:14px}
+.field span{font-size:13px;font-weight:600}
+.field input{width:100%;border:0;border-radius:16px;background:var(--bg);box-shadow:var(--si);padding:14px 16px;font:inherit;font-size:15px;color:var(--txt);outline:none}
+.ou{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12.5px;margin:18px 0 4px}
+.ou:before,.ou:after{content:"";flex:1;height:1px;background:var(--line)}
+.btn.apple{background:#000;color:#fff}
+.msg{font-size:13.5px;line-height:1.45;margin-top:12px;color:var(--rouge);min-height:1px}
+.attente{display:flex;align-items:center;gap:14px}
+.spin{width:26px;height:26px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--ink);animation:tour 1s linear infinite;flex:none}
+@keyframes tour{to{transform:rotate(360deg)}}
+.vide{text-align:center;color:var(--muted);font-size:14.5px;line-height:1.5}
+.sec-titre{font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted);margin:26px 4px 0}
+.alerte{margin-top:14px;font-size:13.5px;line-height:1.45;border-radius:16px;padding:12px 14px;background:color-mix(in srgb,var(--ambre) 14%,transparent)}
+.alerte.bad{background:color-mix(in srgb,var(--rouge) 12%,transparent)}
+</style>
+</head>
+<body>
+<div class="col">
+  <div class="top">
+    <a class="rond" id="retour" href="menu.html" aria-label="Retour">‹</a>
+    <button class="lienTxt" id="deco" type="button" hidden>Me déconnecter</button>
+  </div>
+
+  <!-- ── Me connecter ─────────────────────────────────────────────── -->
+  <section id="vConnexion" hidden>
+    <div class="kick">Me connecter</div>
+    <h1>Retrouvez vos commandes</h1>
+    <p class="intro">Connectez-vous avec les identifiants de l'application Natty : vous retrouverez ici toutes vos commandes, leur date de livraison et votre code de réception.</p>
+    <div class="card">
+      <label class="field"><span>Email</span><input id="cEmail" type="email" autocomplete="email" inputmode="email" placeholder="vous@exemple.fr"></label>
+      <label class="field"><span>Mot de passe</span><input id="cMdp" type="password" autocomplete="current-password" placeholder="••••••••"></label>
+      <button class="btn" id="cOk" type="button">Me connecter</button>
+      <div class="msg" id="cMsg" role="alert"></div>
+      <div class="ou">ou</div>
+      <button class="btn sec" id="cGoogle" type="button">Continuer avec Google</button>
+      <button class="btn apple" id="cApple" type="button"> Continuer avec Apple</button>
+      <p class="intro" style="font-size:13px;text-align:center;margin-top:16px">
+        <a href="login.html" id="cOubli" style="color:inherit">Mot de passe oublié ou pas encore de compte ?</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Mes commandes ────────────────────────────────────────────── -->
+  <section id="vCommandes" hidden>
+    <div class="kick" id="kCom">Mes commandes</div>
+    <h1 id="hCom">Mes commandes</h1>
+    <p class="intro" id="iCom"></p>
+    <div id="liste"></div>
+  </section>
+</div>
+
+<script src="assets/core.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var Q = new URLSearchParams(location.search);
+  var NOUVELLE = Q.get('nouvelle') === '1';
+  var ARRIVEE = Date.now();
+  var SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
+  var SB_KEY = Natty.SB_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
+
+  function estNatif() {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  }
+  function ech(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  var JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  var MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  function dateLongue(ymd) {
+    if (!ymd) return '';
+    var d = new Date(ymd + 'T12:00:00');
+    var s = JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()];
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  function quand(v) { return (Natty.quand ? Natty.quand(v) : new Date(v)); }
+  function dateCommande(ts) {
+    var d = quand(ts); if (isNaN(d)) return '';
+    return d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  /* Le statut, dans les mots du client. Une seule table : le CRM a les siens. */
+  function etat(b) {
+    if (b.confirmation_statut === 'annulee_hors_zone' || b.statut === 'annule') return ['Annulée', 'bad'];
+    if (b.statut === 'livre') return ['Livrée ✓', 'neutre'];
+    if (b.statut === 'en_livraison') return ['En cours de livraison', 'ok'];
+    if (b.statut === 'en_production') return ['En préparation', 'ok'];
+    return ['Confirmée', 'ok'];
+  }
+  function enCours(b) { return ['livre', 'annule'].indexOf(b.statut) < 0 && b.confirmation_statut !== 'annulee_hors_zone'; }
+
+  /* ── Connexion ─────────────────────────────────────────────────── */
+  function montrerConnexion() {
+    $('vConnexion').hidden = false; $('vCommandes').hidden = true; $('deco').hidden = true;
+    // Sur le site il n'y a pas de menu.html à quoi revenir : le retour mène au site vitrine.
+    if (!estNatif()) $('retour').href = 'https://www.natty-nutrition.com';
+  }
+  async function connexion() {
+    var email = $('cEmail').value.trim(), mdp = $('cMdp').value;
+    $('cMsg').textContent = '';
+    if (!email || !mdp) { $('cMsg').textContent = 'Renseignez votre email et votre mot de passe.'; return; }
+    var b = $('cOk'); b.disabled = true; b.textContent = 'Connexion…';
+    try {
+      var r = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
+        method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: mdp })
+      });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.error_description || d.msg || 'Connexion impossible');
+      Natty.ouvrirSession(d);
+      demarrer();
+    } catch (e) {
+      $('cMsg').textContent = e.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect.' : e.message;
+    }
+    b.disabled = false; b.textContent = 'Me connecter';
+  }
+  /* Google / Apple : l'URL de retour doit être une Redirect URL déclarée chez
+     Supabase — `login.html?oauth=1` l'est, cette page non (une URL hors liste
+     est remplacée SANS UN MOT par le Site URL). On passe donc par login.html,
+     en laissant la destination dans `natty_suite` : il la relit après le
+     retour (liste blanche, jamais une URL arbitraire). */
+  function fournisseur(p) {
+    try { localStorage.setItem('natty_suite', 'mes-commandes.html'); } catch (e) {}
+    location.href = SB_URL + '/auth/v1/authorize?provider=' + p + '&redirect_to='
+      + encodeURIComponent('https://natty-suivi.vercel.app/login.html?oauth=1');
+  }
+  $('cOk').addEventListener('click', connexion);
+  $('cMdp').addEventListener('keydown', function (e) { if (e.key === 'Enter') connexion(); });
+  $('cGoogle').addEventListener('click', function () { fournisseur('google'); });
+  $('cApple').addEventListener('click', function () { fournisseur('apple'); });
+  $('cOubli').addEventListener('click', function () { try { localStorage.setItem('natty_suite', 'mes-commandes.html'); } catch (e) {} });
+  $('deco').addEventListener('click', function () {
+    try { localStorage.removeItem('natty_session'); localStorage.removeItem('natty_token'); localStorage.removeItem('natty_user_id'); } catch (e) {}
+    location.replace('mes-commandes.html');
+  });
+
+  /* ── Les commandes ─────────────────────────────────────────────── */
+  async function lireBons(uid) {
+    return await Natty.sbFetch('bons_commande?user_id=eq.' + encodeURIComponent(uid)
+      + '&select=*&order=created_at.desc&limit=40') || [];
+  }
+  async function details(bons) {
+    var ids = bons.map(function (b) { return b.id; });
+    var att = {}, platIds = {}, plats = {};
+    if (ids.length) {
+      try {
+        (await Natty.sbFetch('bons_attributions?bon_id=in.(' + ids.join(',') + ')&select=bon_id,nb_portions,recettes(nom)') || [])
+          .forEach(function (a) { (att[a.bon_id] = att[a.bon_id] || []).push(a); });
+      } catch (e) {}
+    }
+    bons.forEach(function (b) {
+      (Array.isArray(b.plats) ? b.plats : []).forEach(function (p) { if (p && p.id) platIds[p.id] = 1; });
+    });
+    var liste = Object.keys(platIds);
+    if (liste.length) {
+      try {
+        (await Natty.sbFetch('plats_menu?id=in.(' + liste.join(',') + ')&select=id,nom,photo_url') || [])
+          .forEach(function (p) { plats[p.id] = p; });
+      } catch (e) {}
+    }
+    return { att: att, plats: plats };
+  }
+
+  function htmlPlats(b, D) {
+    var lignes = [];
+    if (Array.isArray(b.plats) && b.plats.length) {
+      lignes = b.plats.map(function (p) {
+        var m = D.plats[p.id] || {};
+        var img = m.photo_url ? '<img src="' + ech(m.photo_url) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<i>🍽️</i>\'">' : '<i>🍽️</i>';
+        return '<div class="plat">' + img + '<span>' + ech(m.nom || 'Plat') + ' <em>× ' + (p.n || 1) + '</em></span></div>';
+      });
+    } else if (D.att[b.id]) {
+      lignes = D.att[b.id].map(function (a) {
+        return '<div class="plat"><i>🍽️</i><span>' + ech((a.recettes && a.recettes.nom) || 'Plat') + ' <em>× ' + a.nb_portions + '</em></span></div>';
+      });
+    }
+    if (!lignes.length) return '<span style="font-weight:500;color:var(--muted)">' + (b.type === 'abonnement'
+      ? 'Vos recettes sont choisies par votre nutritionniste — le détail arrive avant la livraison.'
+      : 'Détail en préparation.') + '</span>';
+    return '<div class="plats">' + lignes.join('') + '</div>';
+  }
+
+  function carte(b, D, neuve) {
+    var e = etat(b), vive = enCours(b);
+    var h = '<div class="card' + (neuve ? ' neuve' : '') + '">'
+      + '<div class="ttl"><div><b>' + (b.jour_livraison ? dateLongue(b.jour_livraison) : 'Date de livraison à confirmer') + '</b>'
+      + '<small>' + (b.creneau_livraison ? 'Livraison entre ' + ech(b.creneau_livraison) : (vive ? 'Créneau communiqué la veille' : ''))
+      + (b.created_at ? (b.creneau_livraison || vive ? ' · ' : '') + 'commandée le ' + dateCommande(b.created_at) : '') + '</small></div>'
+      + '<span class="pill ' + e[1] + '">' + e[0] + '</span></div>'
+      + '<div class="rows">'
+      + '<div class="row"><div class="k">Commande</div><div class="v">' + (b.nb_repas || 0) + ' repas · ' + (b.type === 'unite' ? 'à l’unité' : b.type === 'abonnement' ? 'abonnement' : 'commande') + '</div></div>'
+      + '<div class="row"><div class="k">Plats</div><div class="v">' + htmlPlats(b, D) + '</div></div>'
+      + '<div class="row"><div class="k">Adresse</div><div class="v">' + (b.adresse ? ech(b.adresse) : '<span style="color:var(--rouge)">à renseigner</span>') + '</div></div>'
+      + '</div>';
+    if (vive && b.code_reception) {
+      h += '<div class="code"><small>Code de réception<br>à donner au livreur</small><b>' + ech(b.code_reception) + '</b></div>';
+    }
+    if (b.confirmation_statut === 'annulee_hors_zone') {
+      h += '<div class="alerte bad">Annulée : nous livrons uniquement en Île-de-France. Notre équipe revient vers vous pour le remboursement.</div>';
+    } else if (vive && b.confirmation_token && b.confirmation_statut !== 'confirmee' && ['en_production', 'en_livraison'].indexOf(b.statut) < 0) {
+      var manque = !b.jour_livraison || !b.adresse;
+      h += '<div class="alerte">' + (manque ? 'Il nous manque la date ou l’adresse de livraison.' : 'Vérifiez la date et l’adresse de livraison.') + '</div>'
+        + '<a class="btn" href="commande.html?t=' + encodeURIComponent(b.confirmation_token) + (manque ? '&a=modifier' : '') + '">'
+        + (manque ? 'Compléter ma commande' : 'Valider ou modifier') + '</a>';
+    }
+    return h + '</div>';
+  }
+
+  async function peindre(uid) {
+    var bons = [];
+    try { bons = await lireBons(uid); } catch (e) {
+      $('liste').innerHTML = '<div class="card vide">Impossible de lire vos commandes pour le moment.<button class="btn sec" id="rel" type="button">Réessayer</button></div>';
+      $('rel').addEventListener('click', function () { peindre(uid); });
+      return [];
+    }
+    var D = await details(bons);
+    /* La commande « neuve » : passée dans les 30 minutes qui précèdent l'arrivée. */
+    var neuve = NOUVELLE ? bons.find(function (b) { return b.created_at && ARRIVEE - quand(b.created_at).getTime() < 30 * 60000; }) : null;
+    var actives = bons.filter(function (b) { return b !== neuve && enCours(b); });
+    var passees = bons.filter(function (b) { return b !== neuve && !enCours(b); });
+    var h = '';
+    if (neuve) h += carte(neuve, D, true);
+    if (actives.length) h += (neuve ? '<div class="sec-titre">Autres commandes en cours</div>' : '') + actives.map(function (b) { return carte(b, D); }).join('');
+    if (passees.length) h += '<div class="sec-titre">Commandes passées</div>' + passees.map(function (b) { return carte(b, D); }).join('');
+    if (!h) h = '<div class="card vide">Aucune commande pour le moment.<a class="btn" href="offre.html?mode=unite">Commander des plats</a></div>';
+    $('liste').innerHTML = (NOUVELLE && !neuve ? attente() : '') + h;
+    return neuve;
+  }
+  function attente() {
+    return '<div class="card"><div class="attente"><div class="spin"></div><div><b style="font-size:15.5px">Paiement confirmé</b>'
+      + '<div class="intro" style="margin-top:3px;font-size:13.5px">Nous enregistrons votre commande, elle s’affiche ici dans quelques secondes.</div></div></div></div>';
+  }
+
+  async function demarrer() {
+    var p = Natty.profil && Natty.profil();
+    var uid = (p && p.sub) || Natty.USER_ID;
+    if (!uid) return montrerConnexion();
+    $('vConnexion').hidden = true; $('vCommandes').hidden = false;
+    $('deco').hidden = estNatif();
+    if (!estNatif()) $('retour').href = 'https://www.natty-nutrition.com';
+    if (NOUVELLE) {
+      $('kCom').textContent = 'Merci !';
+      $('hCom').textContent = 'Votre commande';
+      $('iCom').textContent = 'Voici le récapitulatif de ce que vous avez commandé. Vous le retrouvez à tout moment dans « Mes commandes », dans l’app comme sur le site.';
+    } else {
+      $('iCom').textContent = (p && p.email ? 'Connecté en tant que ' + p.email + '. ' : '') + 'Toutes vos commandes Natty, dans l’app comme sur le site.';
+    }
+    var neuve = await peindre(uid);
+    if (NOUVELLE && !neuve) {
+      // Le webhook Stripe écrit le bon quelques secondes après le retour : on attend.
+      var essais = 0;
+      var t = setInterval(async function () {
+        essais++;
+        var n = await peindre(uid);
+        if (n || essais >= 18) {
+          clearInterval(t);
+          if (!n) {
+            var l = $('liste'), c = l.querySelector('.attente');
+            if (c) c.parentNode.outerHTML = '<div class="card"><b style="font-size:15.5px">Paiement confirmé ✓</b>'
+              + '<div class="intro" style="font-size:13.5px">Votre commande met plus de temps que prévu à s’afficher. Elle apparaîtra ici d’elle-même — un récapitulatif vous est aussi envoyé par email.</div>'
+              + '<button class="btn sec" type="button" onclick="location.reload()">Actualiser</button></div>';
+          }
+        }
+      }, 2500);
+    }
+  }
+  demarrer();
+})();
+</script>
+</body>
+</html>

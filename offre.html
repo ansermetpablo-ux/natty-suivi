@@ -243,7 +243,7 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   <section id="fin" class="fin" hidden>
     <div class="ok">✓</div>
     <h1>Merci, c'est <em>commandé</em></h1>
-    <p>Vous recevez un récapitulatif par email. Créez ou complétez votre profil pour que nous calculions les quantités de vos plats.</p>
+    <p>Vous recevez un email pour confirmer la date et le lieu de livraison. Créez ou complétez votre profil pour que nous calculions les quantités de vos plats.</p>
     <a class="btn primary" href="menu.html">Aller à mon suivi</a>
   </section>
 
@@ -366,9 +366,12 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   }
 
   /* ── Étape 2 ─────────────────────────────────────────────────────── */
+  /* ⚠️ RÈGLE J+7 (2026-11-23) : jamais livré moins de 7 jours après la
+     commande — commandé un mardi, livré au plus tôt le mardi suivant. Refaite
+     par api/checkout.js et en base (trigger bons_commande_j7). */
   function prochaineDate(jour) {
     var i = ['dimanche'].concat(JOURS, ['samedi']).indexOf(jour);
-    var d = new Date(); d.setDate(d.getDate() + 2);
+    var d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + 7);
     while (d.getDay() !== i) d.setDate(d.getDate() + 1);
     return d;
   }
@@ -380,8 +383,8 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
       return '<button type="button" data-jour="' + j + '" aria-pressed="' + (etat.jour === j) + '">'
         + j.charAt(0).toUpperCase() + j.slice(1) + '<small>' + d + '</small></button>';
     }).join('');
-    $('noteJour').textContent = etat.freq === 'abo' && etat.jour
-      ? 'Puis chaque ' + etat.jour + ', tant que l\'abonnement est actif.' : '';
+    $('noteJour').textContent = 'Livraison au plus tôt 7 jours après la commande, en Île-de-France.'
+      + (etat.freq === 'abo' && etat.jour ? ' Puis chaque ' + etat.jour + ', tant que l\'abonnement est actif.' : '');
   }
   $('jours').addEventListener('click', function (e) {
     var b = e.target.closest('[data-jour]'); if (!b) return;
@@ -488,6 +491,7 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
       quantite: n, repas: etat.freq === 'abo' ? n : undefined,
       plats: Object.keys(etat.plats).map(function (id) { return { id: id, n: etat.plats[id] }; }),
       jourLivraison: etat.jour, adresse: adresseTexte(),
+      dateLivraison: (function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })(prochaineDate(etat.jour)),
       userId: profil.sub || Natty.USER_ID || '', token: Natty.TOKEN || '',
       plateforme: estNatif() ? 'natif' : 'web', retour: retourSite()
     };
@@ -515,7 +519,9 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
       var B = window.Capacitor.Plugins.Browser; if (B) B.close();
       var q = url.indexOf('?'), st = q < 0 ? 'ok' : (new URLSearchParams(url.slice(q + 1)).get('statut') || 'ok');
       if (st === 'annule') { toast('Paiement annulé'); return; }
-      terminer();
+      // Le récap de ce qui vient d'être payé (mes-commandes.html).
+      try { sessionStorage.removeItem(CLE); } catch (e) {}
+      location.href = 'mes-commandes.html?nouvelle=1&type=' + (etat.freq === 'unite' ? 'unite' : 'abonnement');
     });
   }
   function terminer() {
