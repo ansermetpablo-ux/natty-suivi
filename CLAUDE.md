@@ -298,8 +298,9 @@ personne côté serveur.
 > que le site transmet à l'app passe donc par le **fragment** : `#commandes` (onglet
 > « Me connecter » → `mes-commandes.html`), `#statut=ok|annule` (retour de paiement), relus par
 > `<natty-app>`. La page Wix **`/suivi` s'affiche vide** elle aussi, même sans `?` — donc
-> « Mon suivi » du menu ne mène à rien : à republier côté Wix. « Me connecter » passe par
-> `/commander`.
+> à republier côté Wix. En attendant, « Mon suivi » (`#suivi`, et `#suivi?inscription=1…`
+> pour « Créer mon compte ») et « Me connecter » passent par `/commander` — remettre `lien-suivi`
+> à `/suivi` dans `scripts/wix-composants.mjs` une fois la page réparée.
 Chaque page Wix porte UN élément personnalisé dont le script est servi par Vercel depuis
 `main` (`https://natty-suivi.vercel.app/wix/…`) : accueil → `natty-accueil.js`,
 /entreprises → `natty-entreprises.js`, /mentions-legales → `natty-mentions.js`, et

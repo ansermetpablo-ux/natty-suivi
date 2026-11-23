@@ -92,10 +92,18 @@
          mes-commandes.html ; `#statut=ok|annule` est le retour de Stripe. */
       var h = location.hash.replace(/^#/, '');
       if (h && !/(^|&)(access_token|error)=/.test(h)) {
-        if (h === 'commandes') page = 'mes-commandes.html';
-        else new URLSearchParams(h).forEach(function (v, k) { if (k === 'statut' && /^(ok|annule)$/.test(v)) q.set(k, v); });
+        // `#commandes`, `#suivi`, `#suivi?inscription=1&motif=…`, `#statut=ok`
+        var nom = h.indexOf('=') < 0 || h.indexOf('?') >= 0 ? h.split('?')[0] : '';
+        var params = nom ? (h.split('?')[1] || '') : h;
+        if (nom === 'commandes') page = 'mes-commandes.html';
+        if (nom === 'suivi') page = 'menu.html';
+        new URLSearchParams(params).forEach(function (v, k) {
+          if ((k === 'statut' && /^(ok|annule)$/.test(v)) || ((k === 'inscription' || k === 'motif') && /^[\w-]{1,30}$/.test(v))) q.set(k, v);
+        });
         try { history.replaceState(null, '', location.pathname); } catch (e) {}
       }
+      // Un lien « Créer mon compte » arrivé par le fragment : l'onglet Inscription.
+      if (q.get('inscription') === '1' || q.get('motif')) page = 'login.html';
       if (q.get('vue') === 'commandes') { page = 'mes-commandes.html'; q.delete('vue'); }
       q.set('retour', location.origin + location.pathname);
 

@@ -38,7 +38,9 @@ export const LIENS = {
   'entreprises.html':      { attribut: 'lien-entreprises', defaut: '/entreprises' },
   'mentions-legales.html': { attribut: 'lien-mentions',    defaut: '/mentions-legales' },
   // L'application : chacune de ces pages Vercel a sa page Wix qui l'embarque.
-  'https://natty-suivi.vercel.app/login.html':           { attribut: 'lien-suivi',    defaut: '/suivi' },
+  // ⚠️ « Mon suivi » passe par /commander#suivi : la page Wix /suivi s'affiche
+  // vide (23/11/2026). Revenir à '/suivi' une fois republiée dans Wix.
+  'https://natty-suivi.vercel.app/login.html':           { attribut: 'lien-suivi',    defaut: '/commander#suivi' },
   'https://natty-suivi.vercel.app/offre.html':           { attribut: 'lien-commande', defaut: '/commander' },
   // « Me connecter » : connexion + toutes ses commandes (mes-commandes.html),
   // servie par la page Wix /commander avec #commandes — aucune page Wix à
