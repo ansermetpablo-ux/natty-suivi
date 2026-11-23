@@ -6,7 +6,7 @@
    douzaine de repas. Le plafond n'est pas là pour dire ce qui est raisonnable,
    il est là pour qu'une quantité bricolée ne crée pas une session à quatre
    chiffres. */
-import { CRENEAUX, dateMinPour, ajouterJours, codePostal, estIDF, lireParJeton, repondre, envoyerConfirmation, estStaff } from './_commande.js';
+import { CRENEAUX, dateMinPour, ajouterJours, codePostal, estIDF, lireParJeton, repondre, envoyerConfirmation, envoyerAnnulation, estStaff } from './_commande.js';
 
 const REPAS_MIN = 1, REPAS_MAX = 10;
 
@@ -34,7 +34,8 @@ function dateValide(v) {
    `action`, jamais une détection de forme.
      commande_lire     { token }                 public — la page commande.html
      commande_repondre { token, mode, …champs }  public — valider / modifier
-     commande_envoyer  { bon_id, raison, modifications? }  staff (JWT) — le CRM */
+     commande_envoyer  { bon_id, raison, modifications? }  staff (JWT) — le CRM
+                       raison 'annulation' (+ motif?) : l'email d'annulation */
 async function actionCommande(req, res, body) {
   try {
     if (body.action === 'commande_lire') {
@@ -49,6 +50,7 @@ async function actionCommande(req, res, body) {
       const jwt = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
       const moi = await estStaff(jwt);
       if (!moi) return res.status(401).json({ error: 'Session d’équipe requise' });
+      if (body.raison === 'annulation') return res.status(200).json(await envoyerAnnulation(body.bon_id, { motif: body.motif }));
       const raison = ['manuel', 'modification'].indexOf(body.raison) >= 0 ? body.raison : 'manuel';
       return res.status(200).json(await envoyerConfirmation(body.bon_id, { raison, modifications: body.modifications }));
     }

@@ -540,7 +540,12 @@ async function vCommandesNatif() {
 document.addEventListener('click', async e => {
   const f = e.target.closest('[data-cmd-filtre]'); if (f) { CMD.filtre = f.dataset.cmdFiltre; render(); return; }
   const lv = e.target.closest('[data-cmd-livre]'); if (lv) { await sb('bons_commande?id=eq.' + lv.dataset.cmdLivre, { method: 'PATCH', body: JSON.stringify({ statut: 'livre', updated_at: new Date().toISOString() }) }); toast('Marquée livrée'); await chargerProd(true); render(); return; }
-  const an = e.target.closest('[data-cmd-annuler]'); if (an) { if (!confirm('Annuler cette commande ?')) return; await sb('bons_commande?id=eq.' + an.dataset.cmdAnnuler, { method: 'PATCH', body: JSON.stringify({ statut: 'annule', updated_at: new Date().toISOString() }) }); toast('Commande annulée'); await chargerProd(true); render(); return; }
+  const an = e.target.closest('[data-cmd-annuler]'); if (an) { if (!confirm('Annuler cette commande ?')) return;
+    const E0 = await chargerProd(), b0 = E0 && E0.bons.find(x => x.id === an.dataset.cmdAnnuler);
+    await sb('bons_commande?id=eq.' + an.dataset.cmdAnnuler, { method: 'PATCH', body: JSON.stringify({ statut: 'annule', updated_at: new Date().toISOString() }) }); toast('Commande annulée'); await chargerProd(true); render();
+    // Le client doit être prévenu : alerte « Prévenir le client / Ignorer » (assets/crm-clients.js).
+    if (b0 && window.apresModifBon) apresModifBon({ bonId: b0.id, uid: b0.user_id, avant: b0, apres: Object.assign({}, b0, { statut: 'annule' }) });
+    return; }
   if (e.target.closest('[data-cmd-abos]')) {
     const lundi = lundiLocal(new Date()); lundi.setDate(lundi.getDate() + 7); const sem = isoLocal(lundi);
     const E = await chargerProd(true);

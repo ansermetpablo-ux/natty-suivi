@@ -432,6 +432,47 @@ export async function envoyerConfirmation(bonId, o) {
   return { ok: true, to, complet, lien: lien('') };
 }
 
+/* L'annulation décidée par l'ÉQUIPE (CRM) — le client est prévenu par email.
+   Une seule semaine annulée d'un abonnement de N semaines : on le dit (« votre
+   livraison du … »), et les autres restent. Toutes annulées : « votre
+   commande ». `motif` : une phrase facultative écrite par l'équipe.
+   ⚠️ Le remboursement n'est pas automatique (argent) : l'email annonce que
+   l'équipe revient vers le client, rien de plus. */
+export async function envoyerAnnulation(bonId, o) {
+  o = o || {};
+  const bon = await bonParId(bonId);
+  if (!bon) throw erreur('Commande introuvable', 404);
+  if (bon.statut !== 'annule') throw erreur('Cette commande n’est pas annulée.', 409);
+  const g = await groupeDe(bon);
+  const cl = await client(bon.user_id);
+  const to = String(o.to || cl.email || '').trim();
+  if (!to) throw erreur('Aucun email connu pour ce client.', 422);
+  const C = await contenus([bon]);
+  const tout = g.bons.every(b => b.statut === 'annule');
+  const contenu = (C[bon.id] || []).length ? C[bon.id].map(x => esc(x.nom) + ' × ' + x.n).join('<br>') : esc(bon.nb_repas + ' repas');
+  const quoi = tout ? 'votre commande' : 'votre livraison' + (bon.jour_livraison ? ' du ' + dateLongue(bon.jour_livraison) : '');
+  const ligne = (k, v) => '<tr><td style="padding:9px 0;color:#9a9aaa;font-size:13px;vertical-align:top;white-space:nowrap;">' + esc(k)
+    + '</td><td style="padding:9px 0 9px 16px;font-weight:600;color:#1a1a2e;font-size:13.5px;line-height:1.45;">' + v + '</td></tr>';
+  const motif = String(o.motif || '').trim().slice(0, 500);
+  const restantes = g.bons.filter(b => b.statut !== 'annule' && b.statut !== 'livre' && b.jour_livraison);
+  const corps = (motif ? '<div style="background:#f7f7fa;border-radius:16px;padding:14px 16px;margin:0 0 18px;font-size:13.5px;color:#2d2d3a;line-height:1.5;">' + esc(motif) + '</div>' : '')
+    + '<table style="border-collapse:collapse;width:100%;">'
+    + ligne('Annulé', contenu)
+    + (bon.jour_livraison ? ligne('Livraison prévue', esc(dateLongue(bon.jour_livraison)) + (bon.creneau_livraison ? ' · ' + esc(bon.creneau_livraison) : '')) : '')
+    + (bon.adresse ? ligne('Adresse', esc(bon.adresse)) : '')
+    + (!tout && restantes.length ? ligne('Toujours prévu', restantes.map(b => esc(dateLongue(b.jour_livraison))).join('<br>')) : '')
+    + '</table>'
+    + '<p style="margin:20px 0 0;font-size:14px;line-height:1.55;color:#2d2d3a;">Si un paiement est concerné, notre équipe revient vers vous pour le remboursement. Une question ? Répondez simplement à cet email.</p>';
+  const env = await envoyerEmail(to, tout ? 'Votre commande Natty est annulée' : 'Une livraison Natty est annulée', gabarit({
+    titre: tout ? 'Commande annulée' : 'Livraison annulée',
+    intro: (cl.prenom ? cl.prenom + ', n' : 'N') + 'ous avons annulé ' + quoi + '.',
+    corps
+  }));
+  if (!env.ok) throw erreur('Email non envoyé : ' + env.err, 502);
+  await sb('bons_commande?id=eq.' + bon.id, { method: 'PATCH', prefer: 'return=minimal', body: { modif_non_notifiee: false, notifiee_at: new Date().toISOString() } });
+  return { ok: true, to, tout };
+}
+
 /* Le lien de confirmation d'une commande, sans rien envoyer — pour le message
    in-app que le webhook écrit à côté de l'email. */
 export async function lienConfirmation(bonId) {

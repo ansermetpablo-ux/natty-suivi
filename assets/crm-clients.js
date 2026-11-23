@@ -180,6 +180,7 @@
           + (g.bons.some(b => b.modif_non_notifiee) ? '<button class="btn sm" data-cl-notifier="' + t.id + '">Notifier la modification</button><button class="btn sm ghost" data-cl-ignorer="' + t.id + '">Ignorer</button>' : '')
           + '<button class="btn sm ghost" data-cl-envoyer="' + t.id + '">✉ ' + (t.confirmation_envoyee_at ? 'Renvoyer' : 'Envoyer') + ' le mail de confirmation</button>'
           + '<button class="btn sm primary" data-cl-modifier="' + g.bons.filter(b => FIGES.indexOf(b.statut) < 0).concat(g.bons)[0].id + '" data-cl-nom="' + esc(f.nom) + '">Modifier dans Production →</button></div>'
+          : g.bons.some(b => b.modif_non_notifiee) ? '<div class="foot" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end"><button class="btn sm" data-cl-annul="' + g.bons.find(b => b.modif_non_notifiee).id + '">Prévenir le client de l’annulation</button><button class="btn sm ghost" data-cl-ignorer="' + t.id + '">Ignorer</button></div>'
           : (t.annulation_motif === 'hors_zone' ? '<p class="muted" style="font-size:12px;margin:10px 0 0">Annulée car hors Île-de-France — paiement à rembourser' + (t.type === 'abonnement' ? ' et abonnement Stripe à résilier' : '') + ' à la main.</p>' : ''));
     };
 
@@ -200,10 +201,10 @@
   }
 
   /* ── Les envois ───────────────────────────────────────────────────────── */
-  async function envoyer(bonId, raison, modifications) {
+  async function envoyer(bonId, raison, modifications, motif) {
     const r = await fetch('/api/checkout', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jetonStaff() },
-      body: JSON.stringify({ action: 'commande_envoyer', bon_id: bonId, raison, modifications: modifications || [] })
+      body: JSON.stringify({ action: 'commande_envoyer', bon_id: bonId, raison, modifications: modifications || [], motif: motif || '' })
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
@@ -231,17 +232,21 @@
     css();
     let el = document.getElementById('clAlerte');
     if (!el) { el = document.createElement('div'); el.id = 'clAlerte'; el.setAttribute('role', 'alertdialog'); document.body.appendChild(el); }
-    const nouveau = o.nouveau;
-    el.innerHTML = '<b>' + (nouveau ? '🧾 Nouvelle commande pour ' : '✏️ Commande modifiée — ') + esc(o.nom || 'ce client') + '</b>'
-      + '<div class="muted" style="font-size:12.5px;margin-top:4px">' + (nouveau ? 'Envoyer le mail de confirmation au client ?' : 'Notifier le client de cette modification ? Il recevra le récap à jour et devra la valider.') + '</div>'
-      + (o.changements && o.changements.length ? '<ul>' + o.changements.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '')
-      + '<div class="acts"><button class="btn sm ghost" data-al="ignorer">Ignorer</button><button class="btn sm primary" data-al="notifier">' + (nouveau ? 'Envoyer' : 'Notifier') + '</button></div>';
+    const nouveau = o.nouveau, annulee = o.annulee;
+    el.innerHTML = '<b>' + (nouveau ? '🧾 Nouvelle commande pour ' : annulee ? '⛔ Commande annulée — ' : '✏️ Commande modifiée — ') + esc(o.nom || 'ce client') + '</b>'
+      + '<div class="muted" style="font-size:12.5px;margin-top:4px">' + (nouveau ? 'Envoyer le mail de confirmation au client ?'
+        : annulee ? 'Prévenir le client par email de cette annulation ?'
+        : 'Notifier le client de cette modification ? Il recevra le récap à jour et devra la valider.') + '</div>'
+      + (!annulee && o.changements && o.changements.length ? '<ul>' + o.changements.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '')
+      + (annulee ? '<textarea class="inp" id="clMotif" rows="2" maxlength="500" placeholder="Message au client (facultatif) — ex. rupture d’un ingrédient" style="width:100%;margin-top:10px"></textarea>' : '')
+      + '<div class="acts"><button class="btn sm ghost" data-al="ignorer">Ignorer</button><button class="btn sm primary" data-al="notifier">' + (nouveau ? 'Envoyer' : annulee ? 'Prévenir le client' : 'Notifier') + '</button></div>';
     el.onclick = async e => {
       const b = e.target.closest('[data-al]'); if (!b) return;
       b.disabled = true;
       try {
         if (b.dataset.al === 'notifier') {
-          const r = await envoyer(o.bonId, nouveau ? 'manuel' : 'modification', o.changements);
+          const motif = annulee ? ((document.getElementById('clMotif') || {}).value || '') : '';
+          const r = await envoyer(o.bonId, nouveau ? 'manuel' : annulee ? 'annulation' : 'modification', o.changements, motif);
           toast('✉ Envoyé à ' + r.to);
         } else if (!nouveau) { await ignorer(o.bonId); toast('Modification ignorée'); }
         fermerAlerte(); CL = null; rafraichirSiClients();
@@ -284,7 +289,9 @@
     }
     const D = await charger(true).catch(() => null);
     const f = D && D.M[uid];
-    alerte({ bonId: o.bonId, nom: f ? f.nom : '', changements: ch, nouveau: !!o.nouveau });
+    // Une annulation n'appelle pas une revalidation : c'est un autre email.
+    const annulee = !o.nouveau && B.statut === 'annule' && A.statut !== 'annule';
+    alerte({ bonId: o.bonId, nom: f ? f.nom : '', changements: ch, nouveau: !!o.nouveau, annulee });
   }
 
   /* ── Les gestes ───────────────────────────────────────────────────────── */
@@ -305,6 +312,13 @@
       nt.disabled = true;
       try { const r = await envoyer(nt.dataset.clNotifier, 'modification', []); toast('✉ Client notifié (' + r.to + ')'); CL = null; fermerAlerte(); const D = await charger(); const f = Object.values(D.M).find(x => x.bons.some(b => b.id === nt.dataset.clNotifier)); if (f) ouvrirClient(f.uid); rafraichirSiClients(); }
       catch (err) { nt.disabled = false; toast('Envoi impossible : ' + String(err.message || err).slice(0, 140)); }
+      return;
+    }
+    const ca = e.target.closest('[data-cl-annul]');
+    if (ca) {
+      ca.disabled = true;
+      try { const r = await envoyer(ca.dataset.clAnnul, 'annulation', []); toast('✉ Client prévenu (' + r.to + ')'); CL = null; fermerAlerte(); const D = await charger(); const f = Object.values(D.M).find(x => x.bons.some(b => b.id === ca.dataset.clAnnul)); if (f) ouvrirClient(f.uid); rafraichirSiClients(); }
+      catch (err) { ca.disabled = false; toast('Envoi impossible : ' + String(err.message || err).slice(0, 140)); }
       return;
     }
     const ig = e.target.closest('[data-cl-ignorer]');
