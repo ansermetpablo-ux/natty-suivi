@@ -8,7 +8,9 @@
    chiffres. */
 import { CRENEAUX, dateMinPour, ajouterJours, codePostal, estIDF, lireParJeton, repondre, envoyerConfirmation, envoyerAnnulation, estStaff } from './_commande.js';
 
-const REPAS_MIN = 1, REPAS_MAX = 10;
+// L'abonnement commence à 3 plats par semaine (décision du 14/10/2026) :
+// en dessous, c'est la commande à l'unité.
+const REPAS_MIN = 3, REPAS_MAX = 10;
 
 /* La DURÉE de l'abonnement, en semaines (offre.html la fait choisir en héros,
    2 par défaut). Elle MULTIPLIE la quantité Stripe : on facture « repas ×
@@ -129,6 +131,14 @@ export default async function handler(req, res) {
           })).slice(0, 490)
         : ''
     };
+    /* La page du SITE d'où vient la commande (www.natty-nutrition.com/commander).
+       Stripe ne s'affiche pas dans un cadre : depuis Wix, c'est la page entière
+       qui part au paiement, et elle doit revenir sur le site, pas sur Vercel.
+       ⚠️ Liste blanche stricte : une URL de retour libre ferait de cette route
+       une redirection ouverte. */
+    const retourSite = typeof body.retour === 'string'
+      && /^https:\/\/(www\.)?natty-nutrition\.com\/[\w\/-]*$/.test(body.retour) ? body.retour : '';
+    livraison.retour = retourSite;
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
     // ⚠️ Ne jamais journaliser le body : offre.html y met l'adresse de
@@ -147,6 +157,16 @@ export default async function handler(req, res) {
     /* ⚠️ Une date de livraison est OBLIGATOIRE et doit tomber la semaine
        suivante au plus tôt. L'écran grise la semaine en cours ; un POST
        bricolé, lui, ne passe pas par l'écran. */
+    /* Une page qui ne fait choisir qu'un JOUR de la semaine (offre.html depuis
+       octobre 2026, le site Wix) : la date est sa prochaine occurrence à J+7. */
+    if (!livraison.date && livraison.jour) {
+      const J = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'].indexOf(livraison.jour.toLowerCase());
+      if (J >= 0) {
+        let d = dateMinCommande();
+        while (new Date(d + 'T12:00:00Z').getUTCDay() !== J) d = ajouterJours(d, 1);
+        livraison.date = d;
+      }
+    }
     if (!livraison.date) {
       return res.status(400).json({ error: 'Choisissez une date de livraison à partir du ' + dateMinCommande() + ' (7 jours après la commande)' });
     }
@@ -268,14 +288,20 @@ async function creerSession(o) {
   // hors de l'app apres son paiement. Stripe n'acceptant que des URL http(s),
   // on passe par checkout-retour.html, qui rebondit vers com.nattynutrition.app://.
   const natif = plateforme === 'natif';
+  /* Web : retour sur la page de commande, qui affiche la confirmation (ok) ou
+     garde le panier (annule). Elle renvoyait vers « / », c'est-à-dire l'ancien
+     tableau de bord. Depuis le site Wix, on revient sur la page du site. */
+  const site = livraison && livraison.retour;
   const retour = (statut) => natif
     ? origin + '/checkout-retour.html?statut=' + statut + '&token=' + encodeURIComponent(token || '')
-    : (statut === 'ok'
-        /* Le récap de ce qui vient d'être payé (mes-commandes.html attend que le
-           webhook écrive le bon). L'ancien `/?token=` menait au vieux tableau de
-           bord, où aucune commande ne s'affichait. */
-        ? origin + '/mes-commandes.html?nouvelle=1&type=' + (unique ? 'unite' : 'abonnement')
-        : origin + '/offre.html?token=' + (token || '') + '&cancelled=1');
+    /* Depuis le site Wix, on revient sur la page du site. Sinon, un paiement
+       réussi mène au récap de ce qui vient d'être payé (mes-commandes.html
+       attend que le webhook écrive le bon) ; un paiement abandonné revient sur
+       la page de commande, panier gardé. */
+    : (site ? site + '?statut=' + statut
+       : statut === 'ok'
+         ? origin + '/mes-commandes.html?nouvelle=1&type=' + (unique ? 'unite' : 'abonnement')
+         : origin + '/offre.html?statut=' + statut + (token ? '&token=' + encodeURIComponent(token) : ''));
 
   const params = new URLSearchParams();
   params.append('mode', stripeMode);

@@ -159,13 +159,27 @@ function cpContexte(s, E) {
 async function vSession(s, E) {
   if (!E) return '<div class="exbar"><span class="chip bad">Calcul indisponible</span><span>assets/admin-production.js n’a pas pu charger les données.</span></div>';
   await chargerRH();
+  await chargerPlats();
   const ctx = cpContexte(s, E); CP.ctx = ctx; CP.s = s;
+  // Les plats déjà produits (sessions précédentes) assignés aux commandes de
+  // cette session : leur portion a été retirée des attributions, donc du plan
+  // et des courses — ils sont seulement à joindre à la commande.
+  const platsSession = ctx.bons.map(b => ({ b, ps: platsDuBon(b.id) })).filter(x => x.ps.length);
   const portions = ctx.lots.reduce((t, l) => t + l.portions, 0), kg = ctx.lots.reduce((t, l) => t + l.gTotal, 0) / 1000;
   const onglets = [['planning', 'Planning'], ['postes', 'Postes & PDF'], ['assemblage', 'Assemblage'], ['equipe', 'Équipe & RH'], ['cuisine', 'Réservation cuisine'], ['courses', 'Liste de courses'], ['livraison', 'Itinéraire de livraison']];
   let corps = '';
   if (CP.onglet === 'planning') corps = cpPlanning(ctx);
   if (CP.onglet === 'postes') corps = cpPostes(ctx, s);
-  if (CP.onglet === 'assemblage') corps = cpAssemblage(ctx);
+  if (CP.onglet === 'assemblage') {
+    // Les plats validés vivent dans crm_sessions.production_reelle._faits (migration 0021) ;
+    // le stock est celui de stocks_mp, réécrit par l'inventaire.
+    CP.colonneFaits = Object.prototype.hasOwnProperty.call(s, 'production_reelle');
+    CP.faits = (s.production_reelle && s.production_reelle._faits) || {};
+    const st = await prTry('stocks_mp?statut=eq.disponible&select=*');
+    CP.stock = prStockIndex(st.ok ? st.data : []);
+    CP.stockLu = st.ok;
+    corps = cpAssemblage(ctx);
+  }
   if (CP.onglet === 'equipe') corps = cpEquipe(s, ctx);
   if (CP.onglet === 'cuisine') corps = cpCuisine(s, ctx);
   if (CP.onglet === 'courses') corps = cpCourses(ctx);
@@ -173,7 +187,7 @@ async function vSession(s, E) {
   const recsTous = [...new Set(E.attribs.filter(a => ctx.bons.some(b => b.id === a.bon_id)).map(a => a.recette_id))];
   return `${cpBandeauLocal()}
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><button class="btn sm ghost" data-cp-retour>‹ Sessions</button><h2 style="margin:0;font-size:18px">Session du ${esc(cpJ(s.jour))}</h2>
-   <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm primary" data-cp-pdf-tout>📄 PDF de production</button><button class="btn sm danger" data-cp-supprimer>Supprimer</button></span></div>
+   <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-inventaire-session="${s.id}">📋 Inventaire de fin${s.inventaire_le ? ' ✓' : ''}</button><button class="btn sm primary" data-cp-pdf-tout>📄 PDF de production</button><button class="btn sm danger" data-cp-supprimer>Supprimer</button></span></div>
   <div class="cp-reglages">
    <label>Jour<input class="inp" type="date" data-cp-champ="jour" value="${s.jour}"></label>
    <label>Arrivée<input class="inp" type="time" data-cp-champ="creneau_debut" value="${(s.creneau_debut || '08:00').slice(0, 5)}"></label>
@@ -186,6 +200,7 @@ async function vSession(s, E) {
    <button class="card kpi click" data-cp-onglet="cuisine"><div class="lbl">Créneau cuisine</div><div class="val num">${ctx.heures} h</div><div class="kpi-go">${(s.creneau_debut || '08:00').slice(0, 5)}–${ctx.finCreneau} · ${ctx.heures * 30} €</div></button>
    <button class="card kpi click" data-cp-onglet="cuisine"><div class="lbl">Réservation</div><div class="val" style="font-size:15px">${{ a_reserver: '<span style="color:var(--red)">à envoyer</span>', envoyee: '<span style="color:var(--amber)">envoyée</span>', confirmee: '<span style="color:var(--green)">confirmée</span>' }[s.statut_reservation] || s.statut_reservation}</div><div class="kpi-go">${s.reunion_id ? 'au calendrier RH' : 'pas au calendrier RH'}</div></button>
   </div>
+  ${platsSession.length ? `<div class="card" style="margin-bottom:12px;border:1px solid var(--violet)"><b style="font-size:13.5px">Déjà produits — à joindre, pas à cuisiner</b><div class="muted" style="font-size:12px;margin:2px 0 8px">Plats en plus d’une session précédente, assignés à ces commandes : ils ne sont plus dans le planning, les fiches ni la liste de courses.</div>${platsSession.map(x => `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 0"><span style="font-size:12.5px;min-width:140px">${esc(cpNomClient(x.b))}</span>${x.ps.map(p => platPastille(p) + ` <span class="muted" style="font-size:11.5px">${esc(p.recette_nom || '')}</span>`).join(' ')}</div>`).join('')}</div>` : ''}
   <div class="tabs" role="tablist">${onglets.map(([k, l]) => `<button role="tab" data-cp-onglet="${k}" aria-selected="${CP.onglet === k}">${l}</button>`).join('')}</div>
   <div style="margin-top:12px">${ctx.lots.length ? corps : '<div class="empty">Aucune portion à produire : les recettes choisies n’apparaissent dans aucune commande de ces jours.</div>'}</div>`;
 }
@@ -223,12 +238,76 @@ function cpPostes(ctx, s) {
     ${p.lots.length ? `<div class="muted" style="font-size:12px;margin-top:6px">~${p.min} min${p.eco ? ' · ~' + p.eco + ' min gagnées ensemble' : ''}</div>` : ''}</div>`).join('')}</div>`;
 }
 
+/* L'assemblage valide les plats, client par client (demande de Pablo, 28/09) :
+   en tête de chaque recette, faits / commandés, puis ce que le stock permet
+   encore — le reste de la commande en vert, le surplus possible en violet
+   (« 3 / 10 faits, le stock en permet 15 → 7 en vert, 8 en violet »). Un
+   compteur « en plus » déclare les plats faits au-delà des commandes : ils
+   deviennent disponibles dans Financement → Produits. */
+function cpFaitsDe(recId) { return CP.faits[recId] || { clients: {}, enPlus: 0 }; }
+function cpParPortion(l) {
+  const E = NattyProd.etat;
+  return Object.keys(l.ingTot).map(nom => {
+    const ing = (E.ings[l.rec.id] || []).find(i => i.ingredient_nom === nom), u = (ing && ing.unite) || 'g';
+    return { nom: nom.trim(), fam: prFamille(u), q: l.portions ? prVersBase(l.ingTot[nom], u) / l.portions : 0, tag: (ing && ing.tag) || null };
+  });
+}
+function cpEnteteLot(l) {
+  const fa = cpFaitsDe(l.rec.id);
+  const faits = l.parClient.reduce((t, pc) => t + Math.min(pc.n, +(fa.clients || {})[pc.bon.id] || 0), 0);
+  const pos = CP.stockLu ? prPossibleStock(cpParPortion(l), CP.stock) : null;
+  const rep = prRepartition(l.portions, faits, pos ? pos.faisables : 0);
+  const inv = CP.s && CP.s.inventaire_le ? 'inventaire du ' + new Date(CP.s.inventaire_le).toLocaleDateString('fr-FR') : 'stock actuel, sans inventaire de cette session';
+  return `<div class="card" style="margin-bottom:10px">
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><span style="font-size:26px;font-weight:700" class="num">${faits}<span class="muted" style="font-size:16px;font-weight:500"> / ${l.portions}</span></span><span class="muted" style="font-size:12.5px">faits${faits >= l.portions ? ' — commande complète' : ''}</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+     ${rep.reste ? `<span class="chip ok" title="À faire pour finir les commandes, et le stock le permet">${rep.vert} à faire${rep.vert ? ' ✓ stock' : ''}</span>` : ''}
+     ${rep.manque ? `<span class="chip bad" title="Il reste à faire, mais le stock ne suffit pas">−${rep.manque} manquent</span>` : ''}
+     ${pos ? `<span class="chip vi" title="Plats supplémentaires que le stock permet, au-delà des commandes">+${rep.violet} en plus possibles</span>` : ''}
+    </div></div>
+   <div class="muted" style="font-size:12px;margin-top:6px">${!CP.stockLu ? 'Stock illisible.' : pos ? `Le stock (${inv}) permet encore <b style="color:var(--ink)">${pos.faisables}</b> portion${pos.faisables > 1 ? 's' : ''}, selon ${esc(pos.decideur)}${pos.completes < pos.faisables ? ` — dont ${pos.completes} complète${pos.completes > 1 ? 's' : ''}` : ''}.` : 'Aucun aliment pesable dans cette recette.'}</div>
+   ${pos && pos.manquants.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px"><span class="muted" style="font-size:12px">Pour les compléter :</span>${pos.manquants.map(m => `<span class="chip warn">${esc(m.nom)} −${prFmt(m.q, m.fam)}</span>`).join('')}</div>` : ''}
+   <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;font-size:12.5px"><span>Plats faits en plus des commandes</span>
+    <span style="display:inline-flex;gap:8px;align-items:center"><button class="btn sm ghost" type="button" data-cp-plus="${l.rec.id}|-1" ${fa.enPlus ? '' : 'disabled'}>−</button><b class="num" style="min-width:18px;text-align:center;color:var(--violet)">${fa.enPlus || 0}</b><button class="btn sm ghost" type="button" data-cp-plus="${l.rec.id}|1">+</button></span>
+    <span class="muted" style="font-size:11.5px">→ disponibles à la vente dans Financement → Produits</span></div>
+  </div>`;
+}
+function cpCompteurClient(l, pc) {
+  const n = Math.min(pc.n, +(cpFaitsDe(l.rec.id).clients || {})[pc.bon.id] || 0), k = l.rec.id + '|' + pc.bon.id;
+  return `<div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn sm ghost" type="button" data-cp-fait="${k}|-1" ${n ? '' : 'disabled'}>−</button><b class="num" style="color:${n >= pc.n ? 'var(--green)' : 'inherit'}">${n} / ${pc.n}</b><button class="btn sm ghost" type="button" data-cp-fait="${k}|1" ${n < pc.n ? '' : 'disabled'}>+</button>${n < pc.n ? `<button class="btn sm" type="button" data-cp-fait="${k}|${pc.n - n}">✓ Tout fait</button>` : '<span class="chip ok">fait</span>'}</div>`;
+}
 function cpAssemblage(ctx) {
-  return ctx.lots.map(l => `<div class="sect" style="margin-top:6px"><h2><span class="dot" style="background:${l.couleur};display:inline-block;margin:0 6px 0 0"></span>${esc(l.rec.nom)} — ${l.portions} portion(s)</h2></div>
+  const joindre = ctx.bons.filter(b => platsDuBon(b.id).length);
+  return (CP.colonneFaits ? '' : `<div class="exbar"><span class="chip bad">SQL</span><span>La colonne <span class="mono">crm_sessions.production_reelle</span> manque — exécuter ${PR_SQL} pour enregistrer les plats validés.</span></div>`) +
+   (joindre.length ? `<div class="sect" style="margin-top:6px"><h2>Plats déjà produits à joindre</h2></div><div class="grid g2" style="margin-bottom:10px">${joindre.map(b => `<div class="card"><b>${esc(cpNomClient(b))}</b>${platsPastillesHtml(b.id)}</div>`).join('')}</div>` : '') + ctx.lots.map(l => `<div class="sect" style="margin-top:6px"><h2><span class="dot" style="background:${l.couleur};display:inline-block;margin:0 6px 0 0"></span>${esc(l.rec.nom)} — ${l.portions} portion(s)</h2></div>
+   ${cpEnteteLot(l)}
    <div class="grid g2">${l.parClient.map(pc => `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${esc(cpNomClient(pc.bon))}</b><span class="muted" style="font-size:12px">× ${pc.n} · ${Math.round(pc.p.gPortion)} g${pc.p.kcal ? ' · ' + Math.round(pc.p.kcal) + ' kcal' : ''}${pc.p.mac ? ' · ' + NattyProd.libMacros(pc.p.mac) : ''}</span></div>
      <div class="cp-ings">${pc.p.ings.map(i => `<span><b class="num">${cpQ(i.g, i.unite)}</b>${esc(i.nom)}</span>`).join('')}</div>
+     ${cpCompteurClient(l, pc)}
      <div class="muted" style="font-size:11.5px;margin-top:6px">Grammages à corriger dans Commandes → Modifier la commande.</div></div>`).join('')}</div>`).join('');
 }
+/* Enregistre un compteur : relit production_reelle en base avant d'écrire,
+   pour ne pas écraser la saisie d'Opérationnel faite ailleurs. */
+async function cpMajFaits(recId, maj) {
+  const r = await prTry('crm_sessions?id=eq.' + CP.s.id + '&select=production_reelle');
+  if (!r.ok) { toast(r.manque ? 'Colonne production_reelle absente — exécuter la migration 0021' : 'Lecture de la session impossible'); return; }
+  const pr = (r.data[0] && r.data[0].production_reelle) || {};
+  pr._faits = pr._faits || {};
+  const fa = pr._faits[recId] || (pr._faits[recId] = { clients: {}, enPlus: 0 });
+  fa.clients = fa.clients || {};
+  maj(fa);
+  const w = await prTry('crm_sessions?id=eq.' + CP.s.id, { method: 'PATCH', body: JSON.stringify({ production_reelle: pr }) });
+  if (!w.ok) { toast('Échec de l’enregistrement'); return; }
+  render();
+}
+document.addEventListener('click', async e => {
+  const f = e.target.closest('[data-cp-fait]');
+  if (f) { const [rec, bon, d] = f.dataset.cpFait.split('|'); const lot = CP.ctx && CP.ctx.lots.find(l => l.rec.id === rec), pc = lot && lot.parClient.find(x => x.bon.id === bon);
+    await cpMajFaits(rec, fa => { fa.clients[bon] = Math.max(0, Math.min(pc ? pc.n : 99, (+fa.clients[bon] || 0) + (+d))); }); return; }
+  const p = e.target.closest('[data-cp-plus]');
+  if (p) { const [rec, d] = p.dataset.cpPlus.split('|'); await cpMajFaits(rec, fa => { fa.enPlus = Math.max(0, (+fa.enPlus || 0) + (+d)); }); }
+});
 
 /* L'équipe : les membres de l'équipe, leur disponibilité ce jour-là (RH), et
    la mise au calendrier RH — une RÉUNION « Session de production », pour que
@@ -509,7 +588,9 @@ const CMD = { filtre: 'tous', q: '' };
 async function vCommandesNatif() {
   const E = await chargerProd();
   if (!E) return '<div class="exbar"><span class="chip bad">Illisible</span><span>Impossible de lire les commandes — session d’équipe requise.</span></div>';
-  const st = b => { const n = E.attribs.filter(a => a.bon_id === b.id).reduce((t, a) => t + (a.nb_portions || 0), 0); return b.statut === 'livre' || b.statut === 'en_production' || b.statut === 'en_livraison' || b.statut === 'annule' ? b.statut : (n >= b.nb_repas && n > 0 ? 'attribue' : 'a_attribuer'); };
+  if (CMD.assigner) return await vAssignerCommande(CMD.assigner);   // la page « Assigner » d'une commande (crm-assigner.js)
+  await chargerPlats();   // plats déjà produits assignés (crm-produits.js) : ils comptent comme attribués
+  const st = b => { const n = E.attribs.filter(a => a.bon_id === b.id).reduce((t, a) => t + (a.nb_portions || 0), 0) + platsDuBon(b.id).length; return b.statut === 'livre' || b.statut === 'en_production' || b.statut === 'en_livraison' || b.statut === 'annule' ? b.statut : (n >= b.nb_repas && n > 0 ? 'attribue' : 'a_attribuer'); };
   const tous = E.bons.filter(b => b.statut !== 'annule');
   const compte = { tous: tous.filter(b => st(b) !== 'livre').length, rouge: tous.filter(b => st(b) === 'a_attribuer' || !b.jour_livraison).length, attribue: tous.filter(b => st(b) === 'attribue' || st(b) === 'en_production' || st(b) === 'en_livraison').length, livre: tous.filter(b => st(b) === 'livre').length };
   const q = CMD.q.trim().toLowerCase();
@@ -522,14 +603,14 @@ async function vCommandesNatif() {
     return !q || (cpNomClient(b) + ' ' + (b.adresse || '') + ' ' + (b.notes || '')).toLowerCase().indexOf(q) >= 0;
   }).sort((a, b) => (a.jour_livraison || '0000').localeCompare(b.jour_livraison || '0000'));
   const carte = b => {
-    const x = st(b), att = E.attribs.filter(a => a.bon_id === b.id), pa = att.reduce((t, a) => t + a.nb_portions, 0);
+    const x = st(b), att = E.attribs.filter(a => a.bon_id === b.id), pa = att.reduce((t, a) => t + a.nb_portions, 0) + platsDuBon(b.id).length;
     const recs = att.map(a => ((E.recettes.find(r => r.id === a.recette_id) || {}).nom || 'Recette') + ' × ' + a.nb_portions).join(' · ');
     return `<div class="card cmd ${x === 'a_attribuer' || !b.jour_livraison ? 'rouge' : (x === 'attribue' ? 'vert' : '')}"><div class="cmd-g"><b>${esc(cpNomClient(b))}</b> <span class="muted">· ${esc({ abonnement: 'Abonnement', unite: 'À l’unité', manuel: 'Manuelle' }[b.type] || b.type)}</span>
       <div class="muted" style="font-size:12px">${b.jour_livraison ? 'Livraison ' + esc(cpJ(b.jour_livraison)) : '<span style="color:var(--red)">sans date de livraison</span>'} · ${esc(b.adresse || 'adresse non renseignée')}</div>
-      ${recs ? `<div style="font-size:12.5px;margin-top:4px">🍽 ${esc(recs)}${pa !== b.nb_repas ? ` <b style="color:var(--red)">(${pa}/${b.nb_repas})</b>` : ''}</div>` : ''}</div>
+      ${recs ? `<div style="font-size:12.5px;margin-top:4px">🍽 ${esc(recs)}${pa !== b.nb_repas ? ` <b style="color:var(--red)">(${pa}/${b.nb_repas})</b>` : ''}</div>` : ''}${platsPastillesHtml(b.id)}</div>
       <div class="cmd-d"><label class="muted" style="font-size:12px">Repas <input class="inp" type="number" min="1" max="40" data-cmd-nb="${b.id}" value="${b.nb_repas}"></label><input class="inp" type="date" data-cmd-jour="${b.id}" value="${b.jour_livraison || ''}">${chipStatut(x)}
       ${window.chipConfirmation && b.user_id && !/^(crm|bloc):/.test(b.user_id) ? chipConfirmation(b.confirmation_statut) + (b.modif_non_notifiee ? '<button class="btn sm" data-cl-notifier="' + b.id + '" title="Notifier le client de la modification">Notifier</button>' : '') + '<button class="btn sm ghost" data-cl-envoyer="' + b.id + '" title="Envoyer le mail de confirmation au client">✉</button>' : ''}
-      <button class="btn sm primary" data-edit-bon="${b.id}">${att.length ? 'Modifier' : 'Attribuer'} →</button>${x === 'attribue' || x === 'en_production' ? `<button class="btn sm ghost" data-cmd-livre="${b.id}">Livré ✓</button>` : ''}<button class="btn sm ghost" data-cmd-annuler="${b.id}" title="Annuler ce bon">✕</button></div></div>`;
+      <button class="btn sm primary" data-cmd-assigner="${b.id}" title="Plats prêts en stock et recettes faisables avec l’inventaire">Assigner →</button><button class="btn sm ghost" data-edit-bon="${b.id}">${att.length ? 'Modifier' : 'Attribuer'}</button>${x === 'attribue' || x === 'en_production' ? `<button class="btn sm ghost" data-cmd-livre="${b.id}">Livré ✓</button>` : ''}<button class="btn sm ghost" data-cmd-annuler="${b.id}" title="Annuler ce bon">✕</button></div></div>`;
   };
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
    <div class="tabs" style="margin:0">${[['tous', 'En cours'], ['rouge', 'À traiter'], ['attribue', 'Attribués'], ['livre', 'Livrés']].map(([k, l]) => `<button data-cmd-filtre="${k}" aria-selected="${CMD.filtre === k}">${l} <span class="b">${compte[k]}</span></button>`).join('')}</div>

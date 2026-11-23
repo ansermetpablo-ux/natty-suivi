@@ -1055,7 +1055,6 @@ const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
 const CLOUDINARY_CLOUD = 'dujji1s6g';
 const CLOUDINARY_PRESET = 'meal_photos';
-const MASTER_PWD = 'Natty2026!';
 
 let allClients=[], allPlats=[], allNutris=[], allRdv=[];
 let currentFilter='tous', currentSearch='', currentCatFilter='all', currentRdvFilter='a_venir';
@@ -3402,43 +3401,10 @@ function retourRoleSelector() {
 
 /* ═══ CONNEXION ═══
    Un seul chemin : un vrai compte Supabase Auth, et le rôle vient de la base
-   (table `staff`), pas d'un mot de passe partagé écrit dans cette page.
-
-   Le mode de secours en dessous n'existe que tant qu'AUCUN compte d'équipe
-   n'a été créé — `staff_configure()` le dit. Dès la première ligne insérée
-   dans `staff`, il se ferme tout seul, sans nouveau déploiement. */
+   (table `staff`). Plus aucun mot de passe partagé dans cette page : le mode
+   de secours a été retiré, et un identifiant refusé reste refusé. */
 
 const STAFF_VERS_CONFIG = { admin:'admin', nutritionniste:'nutritionniste', chef:'chef', logistique:'commandes' };
-
-function afficherBandeauSecours() {
-  if (document.getElementById('bandeauSecours')) return;
-  const b = document.createElement('div');
-  b.id = 'bandeauSecours';
-  b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:900;background:#c0392b;color:#fff;'
-    + 'font-family:inherit;font-size:12.5px;font-weight:600;padding:10px 16px;text-align:center;line-height:1.45';
-  b.innerHTML = 'Connexion par mot de passe partagé — ces mots de passe sont lisibles dans le code de cette page. '
-    + 'Créez les comptes d\'équipe (natty_staff.sql) pour fermer cet accès.';
-  document.body.appendChild(b);
-}
-
-async function rpc(nom, args) {
-  const res = await fetch(SB_URL+'/rest/v1/rpc/'+nom, {
-    method:'POST',
-    headers:{ 'apikey':SB_KEY, 'Authorization':'Bearer '+jetonStaff(), 'Content-Type':'application/json' },
-    body: JSON.stringify(args||{})
-  });
-  if (!res.ok) throw new Error(await res.text());
-  const t = await res.text();
-  return t ? JSON.parse(t) : null;
-}
-
-/* Y a-t-il au moins un compte d'équipe ? Si la fonction n'existe pas encore
-   (natty_staff.sql pas exécuté), on répond « non » : le mode de secours doit
-   rester ouvert, sinon plus personne n'entre dans le back-office. */
-async function staffConfigure() {
-  try { return (await rpc('staff_configure')) === true; }
-  catch(e) { return false; }
-}
 
 /* Le refus « pas de l'équipe », détaillé. Rendu en HTML dans #loginErr, donc
    tout ce qui vient de la base ou d'un message d'erreur passe par escHtml.
@@ -3513,54 +3479,16 @@ window.login = async function() {
       demarrerAppAvecRole();
       return;
     }
-    // Identifiants refusés par Supabase : on ne bascule sur le secours que si
-    // aucun compte d'équipe n'existe encore.
-    if (await staffConfigure()) { errEl.textContent = 'Email ou mot de passe incorrect'; return; }
+    errEl.textContent = 'Email ou mot de passe incorrect';
+    return;
   }
-
-  await connexionDeSecours(email, pwd, errEl);
+  errEl.textContent = 'Email et mot de passe requis';
 };
 
-/* ⚠️ MODE DE SECOURS — mots de passe partagés, écrits dans cette page, donc
-   lisibles par quiconque ouvre le code source. Il ne survit que jusqu'à la
-   création du premier compte d'équipe (natty_staff.sql § 3), après quoi
-   `staff_configure()` renvoie true et ce chemin devient inaccessible. */
-async function connexionDeSecours(email, pwd, errEl) {
-  if (await staffConfigure()) {
-    errEl.textContent = 'Email et mot de passe requis';
-    return;
-  }
-  if (!currentRole) { selectionnerRole('admin'); return; }
-
-  if (currentRole === 'admin' && pwd === MASTER_PWD) {
-    isMasterAdmin = true; currentNutri = {nom:'Admin',id:null};
-    return demarrerAppAvecRole(true);
-  }
-  if ((currentRole === 'chef' || currentRole === 'commandes')
-      && (pwd === MASTER_PWD || pwd === 'Chef2026!' || pwd === 'Logistique2026!')) {
-    isMasterAdmin = false;
-    currentNutri = {nom: currentRole === 'chef' ? 'Chef' : 'Logistique', id:null};
-    return demarrerAppAvecRole(true);
-  }
-  // Les nutritionnistes n'ont plus de secours du tout : leur mot de passe
-  // vivait dans `nutritionnistes.mdp_hash`, colonne supprimée. Le dire, plutôt
-  // que de laisser « Mot de passe incorrect » envoyer chercher une faute de
-  // frappe qui n'existe pas.
-  if (currentRole === 'nutritionniste') {
-    errEl.textContent = "Les nutritionnistes entrent avec leur compte Supabase Auth — l'ancien mot de passe de la fiche n'existe plus. Demande à l'administrateur de créer le compte.";
-    return;
-  }
-  errEl.textContent = 'Mot de passe incorrect';
-}
-
-function demarrerAppAvecRole(deSecours) {
+function demarrerAppAvecRole() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').classList.add('visible');
   document.getElementById('nutriBadgeName').textContent = isMasterAdmin ? 'Admin' : (currentNutri.nom||'').split(' ')[0];
-
-  // Entré par le mode de secours : le dire, en évidence. Un back-office
-  // ouvert par un mot de passe partagé ne doit pas avoir l'air normal.
-  if (deSecours) afficherBandeauSecours();
 
   // Show/hide tabs based on role
   const cfg = currentRole ? ROLE_CONFIG[currentRole] : ROLE_CONFIG.admin;

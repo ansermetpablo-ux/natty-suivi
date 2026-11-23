@@ -313,7 +313,7 @@ create policy ingredients_base_lecture on public.ingredients_base for select to 
 alter table public.stocks_mp enable row level security;
 
 -- `nutritionnistes` expose mdp_hash, qui n'est pas un hash mais du base64
--- (TnV0cmkyNg== = Nutri26), aujourd'hui lisible par n'importe qui.
+-- (l'encodage réversible d'un mot de passe), aujourd'hui lisible par n'importe qui.
 -- offre.html n'a besoin que du nom, de la photo et des spécialités.
 alter table public.nutritionnistes enable row level security;
 
@@ -332,7 +332,7 @@ grant select on public.nutritionnistes_publics to authenticated;
 -- ║ LE BLOQUEUR TRANSVERSAL : admin.html — côté app, c'est fait║
 -- ╚═══════════════════════════════════════════════════════════╝
 -- admin.html s'authentifiait avec des mots de passe EN DUR dans le HTML
--- (Natty2026! / Chef2026! / Logistique2026!) et parlait à Supabase avec la clé
+-- (trois mots de passe partagés, retirés depuis) et parlait à Supabase avec la clé
 -- anon : aucune identité au sens de la base, donc toute policy
 -- `to authenticated` l'excluait.
 --

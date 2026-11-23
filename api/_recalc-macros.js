@@ -53,8 +53,10 @@ import { getNutri, cleNutri } from './_nutrition.js';
 
 /* Runtime Node, comme les autres routes du dépôt : on ne déclare rien (c'est le
    défaut) plutôt qu'un `config.runtime` — et surtout jamais `'edge'`, qui n'a ni
-   `http2` pour `_apns.js` ni ces durées d'exécution. */
-export const maxDuration = 120;
+   `http2` pour `_apns.js` ni ces durées d'exécution.
+   ⚠️ Depuis le 2026-10-12 ce fichier est appelé par api/push-amis.js : Vercel
+   ne lit `maxDuration` que sur le point d'entrée, c'est donc là qu'il est
+   déclaré (120 s). */
 
 const SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
 const PAGE = 500;        // lignes lues par requête

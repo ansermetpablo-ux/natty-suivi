@@ -1126,3 +1126,337 @@ Les deux points « à trancher », réglés :
 Vérifié : banc 98/98 ; dans la page, sur une base simulée en écriture, appliquer retire les
 chilis (aucun aliment principal) et le curry de Marc (poulet épuisé par Julie, livrée la
 veille), sauvegarde 9 lignes ; annuler rétablit les commandes À L'IDENTIQUE.
+
+---
+
+## Inventaire, production réelle, Produits et plats numérotés (28/09/2026)
+
+Demande de Pablo : (1) un **inventaire** de toutes les MP alimentaires après chaque session,
+qui met à jour les stocks ; (2) dans Opérationnel, les **portions réellement réalisées** —
+« 10 L de bourguignon = 30 portions ; 5 kg de riz, 2 kg de poulet, 400 g de légumes, 300 ml
+de sauce = 10 complètes et 10 à compléter », complètes en haut, à compléter en dessous avec le
+détail ; (3) sous Opérationnel, un dossier **Produits** : les repas faits en plus, disponibles
+à la vente, assignables à une commande ; l'assignation donne un numéro + un nom (« curry266 »),
+en pastille dans la commande et dans la production, et retire les MP et les portions à produire.
+
+### Où c'est
+- Nouveau fichier **`assets/crm-produits.js`** (chargé après `crm-production.js`) : calcul pur
+  de la production réelle, carte d'Opérationnel, inventaire, vue Produits, assignation, pastilles.
+- `crm.html` : entrée `produits` dans `VUES.financement`, carte `prCarteHtml()` sous le héros de
+  la page d'une session, bouton « 📋 Inventaire de fin de session » dans Stocks, unité affichée
+  dans Stocks, `.plat-pastille` et `.modal.large` en CSS, plats comptés dans le formulaire de commande.
+- `crm-production.js` : pastilles dans Commandes (et plats comptés dans le statut), bandeau
+  « Déjà produits — à joindre, pas à cuisiner » et bouton Inventaire dans une session, plats à
+  joindre dans Assemblage.
+- 🔄 **`supabase/migrations/0021_inventaire_production_reelle_produits.sql` à exécuter** :
+  `stocks_mp.unite` (kg / L / pièce, défaut kg), `crm_session_inventaire`, `crm_sessions.
+  inventaire_le` et `.production_reelle`, `crm_plats` (numéro par identité, code posé par
+  trigger). Sans elle, chaque écran le dit et n'écrit rien à moitié (les requêtes passent par
+  `prTry`, pas `sbTry`, pour ne pas déclencher le faux bandeau « natty_crm.sql »).
+
+### Les règles
+- **Portion moyenne de la session** : le prévu de la recette (fiche × coefficients, saisie du
+  tableau des matières comprise) ÷ portions commandées. Pas le grammage de chaque client.
+- **Faisables** = selon l'aliment principal le plus disponible (étiquette `proteine`, sinon
+  ≥ 15 % du poids — `PART_PRINCIPALE`, la règle de « Réorganiser ») ; **complètes** = ce que
+  tous les aliments pesés permettent ; le reste est **à compléter**, manque chiffré par aliment.
+- **Un aliment laissé vide n'est pas compté** (on ne pèse pas le sel) — nommé sous la recette.
+- **Plat entier** : portions comptées, sinon quantité ÷ portion servie saisie. **Jamais déduit
+  de la fiche** : une première version divisait 10 L par les 150 ml de vin de la fiche (66
+  « portions ») — retiré avant livraison.
+- Unités par famille (g/kg, ml/L, pièce), jamais mélangées.
+- **Inventaire** : attendu = stock + acheté (pièces MP, kg) − utilisé (réel saisi par
+  ingrédient, sinon prévu). Le **compté remplace** le stock de l'aliment : excédent retiré des
+  lots les plus proches de la péremption (un lot vidé passe `epuise`), surplus ajouté en lot
+  `inventaire-<jour>`. Case vide = stock inchangé. Historique dans `crm_session_inventaire`.
+- **En plus** = complètes − commandées, par recette et par session ; disponibles = en plus −
+  plats déjà assignés. Les à compléter sont listés, pas vendables.
+- **Assignation** : à une commande en cours d'une AUTRE session (celles de la session source
+  sont exclues — sinon la demande baisserait et le « en plus » monterait en boucle). Chaque plat
+  remplace : une portion d'une recette attribuée (`bons_attributions` décrémenté ou supprimé →
+  planning, fiches et liste de courses suivent, car NattyProd lit ces portions), un repas non
+  attribué, ou un repas de plus (`nb_repas + 1`). Préfixe = premier mot significatif de la
+  recette (« Bœuf bourguignon » → `boeuf`). Retirer un plat rend exactement ce qu'il avait pris
+  (ligne d'attribution d'avant gardée dans `attribution_avant`) et le plat redevient disponible.
+  Si l'écriture sur la commande échoue, les plats créés sont supprimés.
+
+### Vérifié
+Banc Node sur les fonctions extraites des fichiers (`calculerFinance`, `productionReelle`,
+`prLignesInventaire`, `prefixePlat`) : **23/23**, dont l'exemple de Pablo au chiffre près
+(curry 20 faisables selon le poulet, 10 complètes, 10 à compléter : légumes −400 g, sauce
+−300 ml ; bourguignon 30 portions, 5 en plus). Navigateur, sur une copie de crm.html avec un
+faux PostgREST en mémoire (`_test-produits.html`, gitignoré) : saisie tapée champ par champ,
+enregistrée dans `production_reelle` ; Produits → assigner → `boeuf266`, portion de Léa retirée,
+statut resté « attribué » ; pastille dans Commandes ; session du 30/09 à 2 portions au lieu de 3
+avec le bandeau « à joindre » ; retrait → attribution rétablie à l'identique ; « repas de plus »
+× 2 → `boeuf267`, `boeuf268`, commande à 5 repas ; inventaire → lot B (péremption la plus
+proche) épuisé, lot A à 1,5 kg, +0,5 L d'huile et +0,3 kg de poulet en lots `inventaire-…`.
+Aucune erreur console ; 0 px de débordement à 375 px.
+🔄 **Pas joué** : la migration 0021 en base, une vraie session d'équipe, les vraies données.
+
+### Points ouverts
+- La vente d'un plat en plus n'entre pas au CA de la session source (le repas « de plus »
+  augmente le CA de la commande cible, les deux autres cas non).
+- Les grammages par client (`bons_attributions.grammes`) ne sont pas lus par la portion
+  moyenne — même limite que tout Opérationnel.
+- admin.html lit `stocks_mp.quantite_kg` sans l'unité : une ligne en litres y passerait pour
+  des kilos si une fiche donne ce liquide en grammes.
+- Pas de DLC sur les plats en plus : l'écran affiche seulement J+n depuis la production.
+
+---
+
+## Production → Menu, et Produits → Marges par produit (28/09/2026, suite)
+
+Demande de Pablo : voir le menu dans Production, ajouter et retirer des plats comme sur
+admin ; sous Opérationnel, dans Produits, un onglet pour vérifier les marges par produit
+« sur ce modèle » (lu comme le modèle d'Opérationnel : héros, tableau, page de détail —
+aucune maquette jointe), avec le réalisé : chaque sortie du plat, et au clic le prix des MP
+payé pondéré avec la moyenne et le nombre de plats produits, croisé inventaire / produits /
+commandes / surplus.
+
+### Production → Menu — `assets/crm-menu.js`
+L'onglet « Menu de la semaine » d'admin.html (`plats_menu`, ce que voient les clients),
+dans le style du CRM : cartes photo, filtre par catégorie (Performance / Objectif /
+Bien-être), « ✓ Au menu » ↔ « ✗ Retiré » (`actif`), Modifier, Supprimer, « + Ajouter un
+plat » (nom, description, catégorie, photo Cloudinary — même preset qu'admin —, macros,
+ingrédients). Les macros se recalculent depuis `ingredients_base` quand au moins un
+ingrédient y est trouvé.
+Trois écarts voulus avec admin :
+- **La fiche technique est préservée** : les ingrédients d'un plat sont ceux de la recette
+  du même nom (comme admin), mais une ligne restée dans la liste GARDE ses colonnes de
+  production (unité, étiquette `proteine`, ordre). admin réécrivait nom + grammes seuls.
+  Une fiche identique n'est pas réécrite ; si la réécriture échoue, l'ancienne est remise.
+- **Un plat renommé ne renomme pas sa fiche** (des commandes et des sessions l'utilisent) :
+  il pointe vers la recette du nouveau nom, trouvée ou créée — le comportement d'admin.
+- **Rapprochement des macros mot à mot**, jamais en sous-chaîne (admin : `ilike *nom*`).
+Supprimer un plat du menu garde la recette.
+🐛 Trouvé au test : le champ grammes avait `step="5"` — le 1 g de sel d'une fiche rendait
+le formulaire invalide et le navigateur bloquait l'envoi sans message. `step="any"` partout.
+🐛 Et un débordement de 8 px à 375 px (le sélecteur de fichier imposait sa largeur à la
+grille du formulaire) : `min-width:0` sur les enfants de `#menuForm`.
+
+### Produits → Marges par produit — `assets/crm-marges.js`
+Produits a deux onglets : « Disponibles à la vente » (l'écran d'avant, `prVueDisponibles`)
+et « Marges par produit ». Sessions PASSÉES seulement (le réalisé).
+- **Tableau** : un héros (marge moyenne par produit, résultat, marge globale, chips) et une
+  ligne par produit — sorties, commandés, produits, en plus · assignés, CA, coûts, coût par
+  plat, résultat, marge.
+- **Page d'un produit** : héros, quatre indicateurs, « Chaque sortie » (une ligne par
+  session). Clic sur une sortie → les chips commandés / produits complets / à compléter /
+  en plus / plats assignés (pastilles) / inventaire, le calcul du coût par plat, et le
+  tableau des matières : prévu, produit, acheté (part du produit), surplus, inventaire
+  (compté, attendu), prix payé, moyenne pondérée (et l'écart), coût. En bas, les matières
+  toutes sorties confondues avec prix moyen pondéré et fourchette payée.
+Règles :
+- CA et part de cuisine = `bilanSession` (réels si les trois pièces sont reliées).
+- Matière = quantité PRODUITE pesée (production réelle), sinon besoin prévu ; au prix payé
+  dans la session, sinon au prix de référence.
+- Plats en plus assignés : au CA de la recette qui les a produits, au prix moyen d'une
+  portion de la session. Dans Opérationnel ils restent au CA de la commande qui les reçoit.
+- Coût par plat = coûts ÷ portions produites, **complètes ET à compléter** (première
+  version : complètes seules — 26 € de matière sur 10 plats alors qu'elle avait servi à 20
+  portions commencées ; corrigé à la vue des chiffres).
+- Prix moyen pondéré = total payé ÷ kg achetés, toutes pièces MP de toutes les sessions passées.
+
+### Vérifié
+Navigateur, copie de crm.html + faux PostgREST (`_test-produits.html`, supprimée après) :
+deux sessions passées avec factures — poulet 1 kg à 10 € et 2 kg à 16 € → moyenne 8,67 €/kg,
+fourchette 8–10 € ; matière du 27/09 = 5 kg riz × 2 € + 2 kg poulet × 8 € = 26 € ; coût par
+plat (26 + 17,14) ÷ 20 = 2,16 € ; CA bourguignon 25 × 10,50 + 1 plat assigné = 273 €. Menu :
+retirer/remettre, ajout d'un plat (150 g poulet + 200 g riz → 508 kcal, 51,9 g P, recette
+créée), modification du curry (riz 250 → 260 g, étiquette et ml conservés, pas de recette en
+double), suppression. Console vide ; 0 px de débordement à 375 px sur les trois écrans.
+🔄 Pas joué sur les vraies données ni avec une vraie photo Cloudinary.
+
+---
+
+## Valider les plats à l'assemblage — faits, reste à faire, en plus possibles (28/09/2026, soir)
+
+Retour de Pablo : « j'ai validé l'inventaire mais toujours rien dans Produits », et : pouvoir
+valider les plats dans Assemblage pour voir combien de repas sont faits, combien de la
+commande restent à faire, combien on pourra faire en plus — « 3 bourguignons / 10 faits,
+l'inventaire montre qu'on peut encore en faire 15 → 7 en vert et 8 en violet ».
+
+### Pourquoi Produits restait vide
+Produits ne lisait que la production réelle SAISIE dans Opérationnel ; l'inventaire ne crée
+pas de plats (il réécrit le stock). Rien n'avait été saisi, donc rien d'« en plus ». La
+validation à l'assemblage alimente maintenant la même production réelle, et le message
+vide de Produits dit d'où viennent les plats. (Non vérifiable d'ici : si la migration 0021
+n'était pas passée, Produits affiche aussi un bandeau SQL.)
+
+### Ce qui change
+- **Production → session → Assemblage** : chaque client a un compteur « − n / N + » et
+  « ✓ Tout fait ». En tête de chaque recette : **faits / commandés**, puis
+  **vert** = reste à faire de la commande que le stock couvre, **violet** = en plus
+  possibles, **rouge** = ce qui manquera ; la phrase « le stock permet encore N portions,
+  selon <aliment> », les manques pour les compléter, et un compteur **« plats faits en plus
+  des commandes »** — ceux-là deviennent disponibles dans Financement → Produits.
+- Stockage : `crm_sessions.production_reelle._faits = { recId: { clients: { bonId: n },
+  enPlus: n } }` (pas de nouvelle migration — colonne de 0021). L'écriture relit la ligne
+  avant de PATCHer, pour ne pas écraser la saisie d'Opérationnel.
+- `productionReelle` : une recette sans saisie d'Opérationnel mais validée à l'assemblage
+  est en mode `assemblage` — complètes = faits (plafonnés à la commande de chaque client) +
+  en plus ; `enPlus` = le compteur déclaré ; manque = commandé − faits. Une saisie
+  d'Opérationnel pour la recette l'emporte (elle dit aussi ce qui est à compléter).
+- **Le stock** (`prStockIndex`, `prPossibleStock`, `prRepartition`) : `stocks_mp`
+  disponible, donc le compté du dernier inventaire ; portion = moyenne du lot de la
+  session (grammes réels des clients ÷ portions) ; les aliments de moins de 3 g/ml par
+  portion ne bloquent pas ; chaque recette seule sur tout le stock (non cumulables).
+
+### 🔴 Le principal le PLUS LIMITANT, pas le plus disponible
+Attrapé au banc : sans étiquette, le bœuf (180 g) et le vin (150 ml) d'un bourguignon sont
+tous deux « principaux » (≥ 15 % du poids), et la règle de « Réorganiser » — le principal
+le plus disponible décide — annonçait 20 bourguignons avec du bœuf pour 15. Pour dire ce
+que le stock PERMET, tous les principaux sont nécessaires : le plus limitant décide ;
+l'étiquette `proteine` restreint les principaux à elle. « Réorganiser » garde sa règle
+(choix de Pablo : faire le plat même sans assez d'accompagnement).
+
+### Vérifié
+Banc 32/32 (l'exemple de Pablo : 3/10 faits + 15 possibles → 7 vert, 8 violet ; 5 possibles
+→ 5 vert, 2 manquent ; bœuf étiqueté + vin court → 15 faisables, 10 complètes, vin −750 ml ;
+mode assemblage ; saisie d'Opérationnel prioritaire ; faits plafonnés). Navigateur sur la
+copie + faux PostgREST : trois clics « + » → `_faits` écrit, 3/25 puis, rejoué à 10
+commandés et du bœuf pour 15, **« 3 / 10 faits · 7 à faire ✓ stock · +8 en plus possibles »** ;
+« en plus » ×2 → Opérationnel « validé à l'assemblage · 3 de la commande + 2 en plus » et
+Produits « 2 en plus, 1 déjà assigné, 1 dispo » ; la saisie curry d'Opérationnel conservée.
+Console vide, 0 px de débordement à 375 px.
+
+---
+
+## Marges par produit : le coût de la cuisine imputé à chaque recette (28/09/2026, nuit)
+
+Capture de Pablo : les coûts des marges (17 à 38 € pour 10 portions) ne montraient pas la
+cuisine. Elle y était, mais presque nulle : sans heures saisies ni mapping généré,
+Opérationnel estimait les heures depuis les étapes des fiches (1 h minimum), qui ne
+connaissent ni le nombre de portions ni le parallélisme — sur la session de test, 2 h
+estimées pour 6 h de plan.
+- **Heures** : une source de plus dans `calculerFinance`, entre le mapping et les fiches :
+  `raw.heuresPlan`, posées par `chargerFinanceGlobal` depuis le plan de production
+  (`cpContexte` → `NattyProd.planSession`, durée + 30 min arrondie à l'heure — le même calcul
+  que « Réservation cuisine »). Opérationnel affiche « · plan de production ». Ordre :
+  saisie > mapping > plan > fiches. Opérationnel et les marges disent donc le même montant.
+- **Imputation** (`prmCuisineSession`, crm-marges.js) : location (ou facture de cuisine) +
+  équipe, répartie au **temps de travail actif** de chaque recette dans le plan (les étapes
+  passives — mijoter, four — ne prennent personne) ; au prorata des portions si la session
+  n'a pas de plan ou qu'une recette n'y figure pas.
+- **Affichage** : colonnes Matière et Cuisine séparées dans le tableau ; le détail d'une
+  sortie dit « cuisine 148,76 € = 83 % de 180,00 € (6 h × 30 € selon le plan), au temps de
+  travail : 300 min sur 363 ».
+Vérifié sur la copie + faux PostgREST : 180 € dans Opérationnel ET dans les marges,
+bourguignon 83 % / curry 17 % ; banc 32/32 ; console vide.
+
+---
+
+## Production réelle : déjà produites, prêtes à faire, à compléter — commande et surplus (28/09/2026, nuit)
+
+Capture de Pablo (poulet à la moutarde, 10 commandées, ingrédients saisis) : « saisir combien
+sont déjà produites dans la commande ; avec la saisie des ingrédients du reste, combien sont
+prêtes à être faites, combien à compléter dans la commande, et combien à compléter ou prêtes
+en surplus ».
+- **« Déjà produites dans la commande »** (par recette, mode ingrédients) : saisi, sinon les
+  plats validés à l'assemblage. Les ingrédients saisis deviennent le RESTE de la production.
+- **`prRepartir`** : N commandées, D déjà faites, P déjà faites en plus (assemblage), et avec le
+  reste C prêtes (tous les aliments) / F faisables (F − C à compléter). La commande est servie
+  d'abord — prêtes puis à compléter —, le reste va au surplus :
+  commande = { déjà, prêtes, à compléter, manquent } ; surplus = { prêtes, à compléter }.
+  `enPlus` (Produits) = surplus prêtes ; Produits ne liste comme « à compléter » que celles du surplus.
+- **Écran** : quatre indicateurs (déjà produites, prêtes à faire, à compléter, surplus), un
+  tableau par recette avec les sept colonnes, et sous la saisie de chaque recette un
+  récapitulatif en pastilles mis à jour à chaque frappe.
+- 🔴 **Même correction qu'en Assemblage** : le principal le PLUS LIMITANT fixe les faisables.
+  Sur la capture, riz et poulet sont tous deux principaux ; « le plus disponible » annonçait 15
+  (le riz) avec du poulet pour 4. Avec la règle corrigée : 4 faisables, 0 prêtes (carotte à 0),
+  4 à compléter. Le premier exemple de Pablo (riz et poulet pour 20) ne change pas.
+  « Réorganiser » garde sa règle.
+- L'inventaire compte comme utilisé le reste pesé + les portions déjà faites.
+Vérifié : banc 36/36 (la capture de Pablo, avec et sans 3 déjà produites ; poulet à 5 kg →
+7 prêtes pour la commande, 1 prête et 7 à compléter en surplus) ; navigateur : curry 3 déjà
+faites → « 7 prêtes à faire · surplus 3 prêtes · 10 à compléter », enregistré, curseur gardé,
+console vide. 🔄 Largeur 375 px non remesurée (fenêtre réduite pendant le test).
+
+---
+
+## Marges : la matière = P × q ÷ Q, aliment par aliment (28/09/2026, nuit)
+
+Règle de Pablo : prix payé P pour une quantité achetée Q ; une recette consomme q → son coût
+pour cette matière = P × q ÷ Q ; la recette = la somme sur toutes ses matières.
+C'était déjà l'intention (prix au kilo × q), mais trois écarts la trahissaient :
+1. **Seuls les kilos comptaient** (le rapprochement ne convertit que g/kg) : crème au litre,
+   œufs à la pièce restaient « sans prix ». Nouveau `prmAchats(raw)` : les lignes des pièces MP
+   par aliment ET par famille d'unités (g/kg, ml/L, pièce), la saisie manuelle remplaçant les
+   factures pour son aliment, Q (tout) / Qp et P (lignes avec prix).
+2. **q oubliait les portions déjà faites** depuis « déjà produites » : q = reste pesé + (déjà
+   faites + déjà en plus) × portion moyenne.
+3. **Plat entier / validé à l'assemblage** : q = portions produites × portion moyenne (au lieu
+   du besoin prévu).
+Sans achat de l'aliment dans la session : prix de référence (kg), écrit sous le coût. Le tableau
+d'une sortie montre q, Q, P, q ÷ Q, le coût, le prix payé vs la moyenne pondérée (par kg, L ou
+pièce), et le **reste de l'achat** = Q − ce que toutes les recettes de la session ont consommé
+(du stock, pas un coût : la somme des recettes ne dépasse jamais P).
+Vérifié : banc 43/43 (kg + g additionnés, litres et pièces à part, ligne sans prix, saisie
+manuelle prioritaire, facture de cuisine exclue, 20 € × 1 kg ÷ 2,5 kg = 8 €) ; navigateur :
+riz 10 € × 5 ÷ 5 = 10 €, poulet 16 € × 2 ÷ 2 = 16 €, session du 20/09 poulet 10 € × 0,8 ÷ 1 = 8 €
++ riz au prix de référence 4 € = 12 € ; console vide.
+
+---
+
+## Plats en stock, et la page « Assigner » d'une commande (28/09/2026, nuit)
+
+Demande de Pablo : dans Stocks, une page des plats en stock (nom, quantité, date de
+production) ; les assigner depuis Commandes ; et « Assigner » en page complète, qui met en
+avant les recettes dont les ingrédients sont déjà en inventaire, avec leurs quantités et le
+nombre de plats possibles. Nouveau fichier **`assets/crm-assigner.js`**.
+- **Production → Stocks** a deux onglets : Matières premières (l'écran d'avant) et **Plats
+  en stock** — plat, quantité, produit le (J+n), « Assigner → » (la fenêtre d'assignation de
+  Produits). Un plat en stock = un plat en plus des commandes, pas encore assigné
+  (`prProduitsDisponibles`) ; les plus anciens d'abord.
+- **Commandes** : chaque carte a « Assigner → » (la nouvelle page) à côté de
+  Modifier/Attribuer. La page (`vAssignerCommande`, `CMD.assigner`) : commandés / déjà
+  attribués (avec les pastilles) / à attribuer ; **Plats déjà prêts** — une ligne par plat
+  avec « à la place de » (repas libre d'abord, sinon la même recette, sinon une autre, sinon
+  un repas de plus) et le nombre ; **Recettes faisables avec le stock**, triées par plats
+  complets possibles puis faisables : pour chacune, ses ingrédients — par plat (fiche), en
+  stock, plats possibles (vert / orange / rouge) —, les manques pour compléter, bordure verte
+  quand le stock couvre tous les repas à attribuer. Les recettes sans l'ingrédient principal
+  en stock sont repliées en bas.
+- Les plats d'une session qui produit CETTE commande sont exclus (même garde que la fenêtre).
+- **« Attribuer »** d'une recette ouvre le formulaire de commande avec la recette ajoutée
+  (`ouvrirFormBon(bonId, null, { recette, n })`) : c'est lui qui calcule la portion du client
+  (45 %, base de recette) — la page n'affiche que la portion de la fiche, comme repère.
+- Le nombre de plats possibles suit la règle d'Assemblage (`prPossibleStock` : principal le
+  plus limitant, < 3 g/ml par portion ne bloque pas).
+Vérifié sur la copie + faux PostgREST : 4 bourguignons en stock (5 en plus, 1 assigné) ;
+page de Léa : curry ×3 possibles selon 0,35 kg de poulet, 0 complet, bourguignon replié (vin
+absent) ; assigner → `boeuf267` à la place de la portion de bourguignon, on reste sur la page ;
+« Attribuer » curry → formulaire avec curry 2 → 3. Console vide, 0 px de débordement à 375 px.
+
+---
+
+## Opérationnel : la page d'une session en onglets (29/09/2026)
+
+Demande de Pablo : fractionner la page d'une session d'Opérationnel en onglets — « Prévisionnel »
+avec les tableaux et les facteurs variables affichés (plus dans un volet replié) et modifiables
+en direct ; « Matières premières » avec le tableau de saisie, un total tout en haut et le
+tableau réparti par recette avec de simples sous-titres.
+- Le héros (résultat) reste au-dessus, commun ; trois onglets : **Prévisionnel** (cartes prévu /
+  réel, *Facteurs variables*, équipe), **Matières premières** (tableau, réorganisation, plats en
+  plus), **Réel & pièces** (portions réalisées, pièces, analytique). Changer d'onglet ne recharge
+  rien (`basculerOngletSession`) : les éditions en cours restent.
+- *Facteurs variables* : heures et taux horaire s'enregistrent à la sortie du champ
+  (`enregistrerReglageCuisine`, comme les nombres de repas) ; les coefficients sont un tableau
+  (recette, portions, repas groupés par coefficient, coût matière en direct, coefficient) et
+  attendent « Valider » puisqu'ils réécrivent `bons_attributions`. Corrigé au passage : seul un
+  coefficient **changé** est validé — avant, n'importe quelle frappe recopiait la moyenne
+  affichée dans toutes les recettes, et « Valider » écrasait des coefficients différents.
+- Tableau des matières : ligne **Total de la session** en tête (kg prévus, prévu €, kg achetés,
+  payé €, écart kg, payé − prévu €), puis une section par recette (sous-titre : portions, prévu,
+  payé). Tout se saisit dans chaque section : la quantité prévue vaut pour la recette
+  (clé `recette|aliment` dans `mp_prevu_override`, prioritaire sur la clé de l'aliment seul — pas
+  de migration, c'est du jsonb) ; l'achat reste un par aliment, réparti au prorata du besoin, et
+  saisir X dans la case d'une recette fixe l'achat total à X ÷ sa part. Le filtre par recette du
+  tableau a disparu (les sections le remplacent) ; celui de l'analytique reste.
+Vérifié sur la copie + faux PostgREST : curry 7,60 € / bourguignon 4,92 € ; 4 h → location
+120 € en direct, PATCH `heures_cuisine_override` ; coefficient bourguignon 1,5 → 6,15 € en direct,
+« Valider » ne réécrit que r2 (le curry à 0,9/1,0 intact) ; oignon du bourguignon 0,1 kg →
+`{"r2|oignon":0.1}`, curry inchangé ; achat oignon curry 0,72 kg à 65,5 % → 1,099 kg au total.
+Onglets sans requête, console vide, 0 px de débordement à 375 px.

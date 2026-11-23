@@ -51,11 +51,32 @@
 // Authorization: Bearer — voir `autorise`).
 //
 // ⚠️ RUNTIME NODE OBLIGATOIRE : _apns.js utilise `http2`. Pas d'edge ici.
+//
+// FUSIONNÉ AUSSI AVEC api/rappel-macros.js ET api/recalc-macros.js
+// (2026-10-12, demande de Pablo) : 12 fonctions sur 12 au plan Hobby, plus
+// aucune place pour une treizième. Leur code vit tel quel dans
+// _rappel-macros.js et _recalc-macros.js (Vercel ignore les fichiers `_`),
+// et leurs ANCIENNES ADRESSES RESTENT VALABLES : vercel.json les réécrit vers
+// /api/push-amis?op=… — le cron du soir, le bouton de l'admin et tout lien
+// déjà écrit continuent de marcher sans être touchés.
+// ⚠️ L'aiguillage passe AVANT `autorise` : recalc-macros accepte aussi un JWT
+// d'équipe (x-staff-jwt) à la place du secret, et chaque module garde sa
+// propre garde.
 // ═══════════════════════════════════════════════════════════
 
 import { apnsEnvoyer, apnsConfigure, sbGet, jetonsPar, lireEtat, ecrireEtat, autorise } from './_apns.js';
+import { operation } from './_operation.js';
+import rappelMacros from './_rappel-macros.js';
+import recalcMacros from './_recalc-macros.js';
+
+// Le recalcul de l'historique est la plus longue des trois opérations.
+export const maxDuration = 120;
 
 export default async function handler(req, res) {
+  const op = operation(req, ['rappel-macros', 'recalc-macros']);
+  if (op === 'rappel-macros') return rappelMacros(req, res);
+  if (op === 'recalc-macros') return recalcMacros(req, res);
+
   if (!autorise(req)) return res.status(401).json({ error: 'Unauthorized' });
   if (req.query?.diag === '1') return diagnostic(req, res);
 

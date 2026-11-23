@@ -39,10 +39,8 @@ Elle permet aux clients de :
 - Sophie Martin (`sophie@natty.fr`) — spécialiste Performance / Prise de masse
 - Lucas Bernard (`lucas@natty.fr`) — spécialiste Perte de poids / Rééquilibrage
 - Emma Rousseau (`emma@natty.fr`) — spécialiste Bien-être / Alimentation intuitive
-- Mot de passe commun démo : `Nutri26` (encodé base64 dans Supabase : `TnV0cmkyNg==`)
-- Admin global : mdp `Natty2026!` (accès via "Accès administrateur" dans l'écran login)
-- Chef : mdp `Chef2026!`
-- Logistique : mdp `Logistique2026!`
+- Mot de passe commun démo : **retiré de ce document** — l'ancienne colonne `nutritionnistes.mdp_hash` a été supprimée, les nutritionnistes entrent par leur compte Supabase Auth
+- Admin, Chef, Logistique : un compte Supabase Auth par personne + une ligne `staff` (`natty_staff.sql`). **Les mots de passe partagés ont été retirés d'`admin.html` le 2026-10-12** ; ceux qui ont circulé sont à considérer comme compromis
 - Back-office admin : `natty-suivi.vercel.app/admin.html`
 
 ### Modèle commercial
@@ -269,14 +267,44 @@ Défis perso/duo/entreprise. Autonome, aucune dépendance avec `narration.html`.
 - Fonctions : `chargerPerso`, `startChallenge`, `abandonnerChallenge`, `chargerDuo`, `inviterDuo`/`creerDuo`/`accepterDuo`, `chargerEntreprise`, `chargerClassement`/`afficherClassementDemo` (fallback avec données factices codées en dur si la requête échoue), `subscribeRealtime` (même pattern WebSocket manuel obsolète que `chat.html`, topic `realtime:public:challenges`).
 - ⚠️ Onclick inline avec quotes échappées manuellement (lignes ~391/423/514/555/556) — fragile, à migrer vers `data-*` + `addEventListener` (règle #8) si retouché. `navigator.clipboard` (ligne ~587) exige un contexte sécurisé — à tester dans la WebView Capacitor.
 
-### `offre.html`
-**Fonctionnel et complet** — contrairement au statut "à faire" indiqué historiquement dans ce document (corrigé en §8). Contient l'intégration Stripe Checkout complète.
+### `offre.html` — la commande, en trois étapes (refonte du 13-14/10/2026)
+Une seule page de commande pour le site Wix (`/commander`, embarquée par `<natty-app>`) et
+l'app (onglet « Offre »). L'ancien tunnel en six étapes (formule, objectif, durée,
+nutritionniste, livraison, récap) a disparu : trois de ses réponses n'étaient lues par
+personne côté serveur.
+1. **Les plats** — « Chaque semaine » (9 €/plat) ou « Une seule fois » (10,50 €), puis +/−
+   par plat, filtres par objectif. Source : `data/plats.js` (les 9 plats `coherent` du
+   catalogue de l'accueil). ⚠️ Pas encore les 38 fiches de `plats_menu` : à brancher.
+   `?plats=a,b` (envoyé par le panier de l'accueil) pré-remplit, `?mode=unite` aussi.
+2. **Livraison** — 5 prochains jours ouvrés (triés par DATE, à J+2 minimum comme
+   `prochaineDate()` du webhook), adresse ; code postal limité à 75/77/78/91/92/93/94/95.
+3. **Paiement** — récap, compte obligatoire (le webhook ne crée rien sans `user_id`) :
+   `login.html?suite=offre.html%3Fetape%3D3` ramène ici après connexion (liste blanche
+   `SUITE_OK`, gardée en sessionStorage pour l'aller-retour Google/Apple), CGV, Stripe.
+- **Abonnement : 3 à 10 plats par semaine** (`REPAS_MIN = 3` dans `api/checkout.js`, relu
+  par le GET ; décision du 14/10/2026). À l'unité : 1 à 20.
+- Le panier vit en `sessionStorage` (`natty_commande`) : il survit à la connexion et à un
+  paiement annulé.
+- **Stripe ne s'affiche pas dans un cadre** : depuis Wix, `window.top` part au paiement.
+  `retour` (liste blanche natty-nutrition.com) fait revenir sur `/commander?statut=ok|annule`
+  ; hors Wix, sur `offre.html?statut=…`. En natif : `Browser.open` + deep link, inchangé.
+- La barre d'onglets de l'app (`nav.js`) n'est chargée que hors iframe.
+- Style : `css/natty.css` (celui du site). ⚠️ `.cmd section{padding:0}` annule les 115 px
+  que natty.css donne à toute `<section>`.
 
-- Prix en dur : `PRICE_3 = "price_1TbhMB0TTrkVKRpiPvbGHLyI"`, `PRICE_4 = "price_1TbhWk0TTrkVKRpiFNYOOcEJ"`.
-- Flux `souscrire()` (ligne ~786) : 1) PATCH `onboarding?user_id=eq.<id>` (email, non bloquant) ; 2) `POST /api/checkout` avec `{priceId, userId, token, formule, objectif, objectifValeur, dureeSemaines, nutritionnisteId, jourLivraison, adresse, emailRecap}` ; 3) redirection vers `data.url` (`window.top.location.href` si iframe, sinon `location.href`).
-- Table lue : `nutritionnistes` (`?actif=eq.true`), fallback `NUTRI_DEMO` (3 profils factices) si vide/erreur.
-- Autres fonctions : `setStep`, `updateCTA`, `initSlider`/`drawSliderGraph`, `chargerNutris`, `choisirNutri`, `selectJour`, `buildRecap`, `toggleRGPD`.
-- ⚠️ Lignes ~205/213 : images inline base64 volumineuses (poids fichier).
+### Site Wix ↔ dépôt (octobre 2026)
+Chaque page Wix porte UN élément personnalisé dont le script est servi par Vercel depuis
+`main` (`https://natty-suivi.vercel.app/wix/…`) : accueil → `natty-accueil.js`,
+/entreprises → `natty-entreprises.js`, /mentions-legales → `natty-mentions.js`, et
+/suivi, /commander, /cgv, /cgu, /confidentialite → `natty-app.js` (menu du site + la page
+de l'app en iframe, déduite de l'adresse). Les pages sont GÉNÉRÉES depuis `nouveau.html`,
+`entreprises.html`, `mentions-legales.html` par `node scripts/build-wix.mjs`
+(`NATTY_DATE=2026-10-12`), vérifiées par `npm test`. Une fusion dans `main` met le site à
+jour sans toucher à Wix. Pages Wix d'avant (Ancien accueil, Inscription, Mon suivi, Menu,
+Login) : gardées, masquées.
+⚠️ Mentions légales : plus de téléphone (pas de ligne pro), les quatre co-fondateurs
+(Pablo Ansermet, Anatole Bouhours, Antoine Canivet, Ferreol Weisman-Morel), Pablo
+directeur de la publication. Ne pas réintroduire le portable personnel.
 
 #### « Ma commande », la semaine N+1, la durée qui multiplie Stripe (2026-09-30)
 - **Tunnel en 7 étapes** — Formule · **Repas** (page entière de tuiles-héros, `stepRepas`) · Objectif · Durée · Nutri · Livraison · Récap. `ETAPES_IDS` dit l'ordre : les anciens `step2…step6` sont gardés, jamais renumérotés.
@@ -309,10 +337,10 @@ Existait comme dashboard "progression nutritionnelle" (suggestions IA, analyse c
 ### `admin.html`
 Back-office multi-rôles — accessible à `natty-suivi.vercel.app/admin.html`.
 
-**Authentification** : 3 rôles avec mots de passe hardcodés :
-- Admin : `Natty2026!` — accès complet
-- Chef : `Chef2026!` — onglets Chef et Menu
-- Logistique : `Logistique2026!` — onglets Stocks et Commandes
+**Authentification** : un compte Supabase Auth par personne, rôle lu dans la table `staff`. Le mode de secours par mots de passe partagés a été **supprimé le 2026-10-12** — un identifiant refusé reste refusé :
+- Admin — accès complet
+- Chef — onglets Chef et Menu
+- Logistique — onglets Stocks et Commandes
 
 **Onglets disponibles** :
 - Clients, Repas à programmer, Messages, RDV, Menu, Commandes, Chef, Stocks, Équipe
@@ -3419,6 +3447,15 @@ préfixés `_`) :
   > derrière `{action:'reserver_cuisine'}` dans le corps de la requête.
   > `api/` compte **12 fonctions** depuis — vérifié en comptant les fichiers
   > non préfixés `_`, jamais en supposant qu'une seule fusion suffirait.
+  > ✅ **Ramené à 9 le 2026-10-12** (demande de Pablo) : `rappel-macros` et
+  > `recalc-macros` vivent dans `api/push-amis.js`, `save-conseils` dans
+  > `api/generer-conseils.js`. Leur code est inchangé, dans `_rappel-macros.js`,
+  > `_recalc-macros.js` et `_save-conseils.js`, et **leurs anciennes adresses
+  > marchent toujours** : `vercel.json` (`rewrites`) les réécrit vers la
+  > fonction hôte avec `?op=…`, que lit `api/_operation.js`. Le cron, le bouton
+  > de l'admin et l'ancien `index.html` n'ont rien eu à changer. Ne pas fusionner
+  > `send-email` (ESM, public) dans `notifications` (CommonJS, réservé à
+  > l'équipe) sans réécrire l'un des deux : les formats ne se mélangent pas.
   passage, même si trois personnes qu'il suit ont publié.
 
 > ⚠️ **Le secret d'un cron Vercel ne voyage pas là où on croit.** Une entrée `crons` de
@@ -4077,6 +4114,23 @@ par macro ; ils sont le POINT DE DÉPART, les macros du client ajustent ensuite 
   les clients de la recette), refusé tant que le total ≠ 100 %. « ↺ » repasse en déduit (null).
 - ⚠️ Les ratios saisis sont gardés BRUTS (`ratiosBruts`) : les renormaliser à chaque frappe
   déformait les deux autres champs (50/25/25 saisi → 48/26/26 enregistré, attrapé au banc).
+
+**CE QUI SORT VRAIMENT DE LA CUISINE — `assets/crm-produits.js`** (2026-09-28, Pablo). Inventaire de
+fin de session (le compté réécrit `stocks_mp`, lots les plus proches de la péremption consommés
+d'abord), portions réellement réalisées dans Opérationnel (complètes / à compléter, même règle de
+l'aliment principal que « Réorganiser »), Financement → **Produits** (plats en plus des commandes)
+et assignation à une commande : chaque plat reçoit un code (`curry266`, table `crm_plats`), en
+pastille violette dans Commandes et dans la session qui produit la commande ; il décrémente
+`bons_attributions`, donc le plan, les fiches et les courses. 🔄 **`supabase/migrations/
+0021_inventaire_production_reelle_produits.sql` à exécuter.** Détail et règles : `docs/crm-journal.md`
+(entrée du 28/09).
+
+**PRODUCTION → MENU (`assets/crm-menu.js`) ET PRODUITS → MARGES PAR PRODUIT (`assets/crm-marges.js`)**
+(2026-09-28). Le menu = `plats_menu` d'admin, en natif ; il garde les colonnes de production
+d'une fiche (unité, étiquette) et ne renomme jamais une recette. Marges : sessions passées,
+une ligne par produit, puis chaque sortie avec ses matières (prix payé vs moyenne pondérée,
+produit, acheté, surplus, inventaire). Coût par plat = coûts ÷ portions produites (complètes +
+à compléter). Détail : `docs/crm-journal.md`.
 
 **LA PRODUCTION DU CRM EST NATIVE** (2026-09-25, Pablo : « tu as juste intégré admin, je veux que tu
 reprennes nativement les fonctionnalités »). `assets/crm-production.js`, chargé après le script de
@@ -5046,6 +5100,7 @@ Colonnes **relevées en base** (`select=*`, juillet 2026) :
 | statut | text | disponible/epuise/perime |
 | lot | text | |
 | created_at | timestamptz | |
+| unite | text | 🔄 `kg` / `L` / `pièce`, défaut `kg` (migration 0021) — l'unité de `quantite_kg` |
 
 #### `recettes`
 | Colonne | Type | Notes |
