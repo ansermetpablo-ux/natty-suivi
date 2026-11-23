@@ -48,7 +48,10 @@
      saisis dans l'éditeur Wix ne sont pas fiables (le « Nom du tag » ne
      tenait pas), l'adresse, elle, est celle qu'on choisit en créant la page. */
   var PAR_ADRESSE = {
-    'suivi': 'menu.html', 'mon-suivi': 'menu.html', 'commander': 'offre.html',
+    /* « Mon suivi » SUR LE SITE = le récap et l'avancement de ses commandes
+       (mes-commandes.html), pas l'application entière : le site n'est pas
+       l'app (demande de Pablo, 23/11/2026). */
+    'suivi': 'mes-commandes.html', 'mon-suivi': 'mes-commandes.html', 'commander': 'offre.html',
     'inscription': 'login.html', 'connexion': 'login.html', 'mes-commandes': 'mes-commandes.html',
     'cgv': 'cgv.html', 'cgu': 'cgu.html', 'confidentialite': 'confidentialite.html'
   };
@@ -83,8 +86,8 @@
     adresseCadre() {
       var base = this.attr('base');
       var dernier = location.pathname.replace(/\/+$/, '').split('/').pop();
-      var page = this.getAttribute('page') || PAR_ADRESSE[dernier] || 'menu.html';
-      if (PAGES.indexOf(page.split('?')[0]) < 0) page = 'menu.html';
+      var page = this.getAttribute('page') || PAR_ADRESSE[dernier] || 'mes-commandes.html';
+      if (PAGES.indexOf(page.split('?')[0]) < 0) page = 'mes-commandes.html';
       var q = new URLSearchParams(page.split('?')[1] || '');
       new URLSearchParams(location.search).forEach(function (v, k) { q.set(k, v); });
       // Venir d'un lien « Créer mon compte » : l'onglet Inscription, pas l'accueil de l'app.
@@ -99,7 +102,7 @@
         var nom = h.indexOf('=') < 0 || h.indexOf('?') >= 0 ? h.split('?')[0] : '';
         var params = nom ? (h.split('?')[1] || '') : h;
         if (nom === 'commandes') page = 'mes-commandes.html';
-        if (nom === 'suivi') page = 'menu.html';
+        if (nom === 'suivi') page = 'mes-commandes.html';
         new URLSearchParams(params).forEach(function (v, k) {
           if ((k === 'statut' && /^(ok|annule)$/.test(v)) || ((k === 'inscription' || k === 'motif') && /^[\w-]{1,30}$/.test(v))) q.set(k, v);
         });

@@ -87,6 +87,15 @@ h1{font-size:28px;line-height:1.12;font-weight:800;letter-spacing:-.02em;margin-
 .attente{display:flex;align-items:center;gap:14px}
 .spin{width:26px;height:26px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--ink);animation:tour 1s linear infinite;flex:none}
 @keyframes tour{to{transform:rotate(360deg)}}
+.suivi{display:flex;align-items:flex-start;margin-top:18px}
+.suivi .et{flex:none;width:54px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.suivi .et i{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;font-weight:800;background:var(--bg);box-shadow:var(--si);color:var(--muted)}
+.suivi .et span{font-size:10.5px;line-height:1.25;color:var(--muted);font-weight:600}
+.suivi .et.fait i{background:var(--vert);color:#fff;box-shadow:none}
+.suivi .et.cours i{background:var(--ink);color:var(--on-ink);box-shadow:none}
+.suivi .et.cours span{color:var(--txt);font-weight:800}
+.suivi .tr{flex:1;height:3px;border-radius:2px;background:var(--line);margin-top:12px;min-width:4px}
+.suivi .tr.fait{background:var(--vert)}
 .vide{text-align:center;color:var(--muted);font-size:14.5px;line-height:1.5}
 .sec-titre{font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted);margin:26px 4px 0}
 .alerte{margin-top:14px;font-size:13.5px;line-height:1.45;border-radius:16px;padding:12px 14px;background:color-mix(in srgb,var(--ambre) 14%,transparent)}
@@ -139,6 +148,13 @@ h1{font-size:28px;line-height:1.12;font-weight:800;letter-spacing:-.02em;margin-
   var SB_URL = 'https://hrsvcelmwdlcswwagxfa.supabase.co';
   var SB_KEY = Natty.SB_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3ZjZWxtd2RsY3N3d2FneGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDAwMjgsImV4cCI6MjA5MDI3NjAyOH0._M1B_FOhNcgfUaBQFmr-VMGWETui-R28RSUGG553R1w';
 
+  /* Dans le site (cadre de <natty-app>), le menu du site est déjà au-dessus :
+     pas de bouton retour, et la rubrique s'appelle « Mon suivi ». */
+  var DANS_SITE = window.self !== window.top;
+  if (DANS_SITE) {
+    document.getElementById('retour').style.visibility = 'hidden';
+    document.getElementById('kCom').textContent = 'Mon suivi';
+  }
   function estNatif() {
     return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   }
@@ -221,7 +237,7 @@ h1{font-size:28px;line-height:1.12;font-weight:800;letter-spacing:-.02em;margin-
   $('cOubli').addEventListener('click', function () { try { localStorage.setItem('natty_suite', 'mes-commandes.html'); } catch (e) {} });
   $('deco').addEventListener('click', function () {
     try { localStorage.removeItem('natty_session'); localStorage.removeItem('natty_token'); localStorage.removeItem('natty_user_id'); } catch (e) {}
-    location.replace('mes-commandes.html');
+    location.replace('mes-commandes.html' + location.search.replace(/[?&]nouvelle=1/, ''));
   });
 
   /* ── Les commandes ─────────────────────────────────────────────── */
@@ -270,6 +286,25 @@ h1{font-size:28px;line-height:1.12;font-weight:800;letter-spacing:-.02em;margin-
     return '<div class="plats">' + lignes.join('') + '</div>';
   }
 
+  /* L'avancement, dans l'ordre de la cuisine : la même ligne que le CRM fait
+     avancer (Production → Livraison). « Validée » = le client a confirmé la
+     date et l'adresse (commande.html). */
+  var ETAPES = ['Commandée', 'Validée', 'En préparation', 'En livraison', 'Livrée'];
+  function rang(b) {
+    if (b.statut === 'livre') return 4;
+    if (b.statut === 'en_livraison') return 3;
+    if (b.statut === 'en_production') return 2;
+    return b.confirmation_statut === 'confirmee' ? 1 : 0;
+  }
+  function suivi(b) {
+    var r = rang(b);
+    return '<div class="suivi" aria-label="Avancement : ' + ETAPES[r] + '">' + ETAPES.map(function (e, i) {
+      var cl = i < r || (i === r && r === 4) ? 'fait' : i === r ? 'cours' : '';
+      return (i ? '<div class="tr' + (i <= r ? ' fait' : '') + '"></div>' : '')
+        + '<div class="et ' + cl + '"><i>' + (cl === 'fait' ? '✓' : i + 1) + '</i><span>' + e + '</span></div>';
+    }).join('') + '</div>';
+  }
+
   function carte(b, D, neuve) {
     var e = etat(b), vive = enCours(b);
     var h = '<div class="card' + (neuve ? ' neuve' : '') + '">'
@@ -282,6 +317,7 @@ h1{font-size:28px;line-height:1.12;font-weight:800;letter-spacing:-.02em;margin-
       + '<div class="row"><div class="k">Plats</div><div class="v">' + htmlPlats(b, D) + '</div></div>'
       + '<div class="row"><div class="k">Adresse</div><div class="v">' + (b.adresse ? ech(b.adresse) : '<span style="color:var(--rouge)">à renseigner</span>') + '</div></div>'
       + '</div>';
+    if (b.statut !== 'annule' && b.confirmation_statut !== 'annulee_hors_zone') h += suivi(b);
     if (vive && b.code_reception) {
       h += '<div class="code"><small>Code de réception<br>à donner au livreur</small><b>' + ech(b.code_reception) + '</b></div>';
     }

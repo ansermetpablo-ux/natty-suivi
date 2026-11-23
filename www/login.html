@@ -537,7 +537,10 @@ async function entrerDansApp(auth) {
   var suite = null;
   try { suite = sessionStorage.getItem('natty_suite'); sessionStorage.removeItem('natty_suite'); } catch (e) {}
   try { suite = suite || localStorage.getItem('natty_suite'); localStorage.removeItem('natty_suite'); } catch (e) {}
-  window.location.href = suite && (SUITE_OK.test(suite) || ['mes-commandes.html'].indexOf(suite) >= 0) ? suite : 'menu.html';
+  /* Connecté depuis le SITE (dans le cadre de <natty-app>) : on arrive sur
+     le récap de ses commandes, pas dans l'application entière. */
+  var defaut = (window.self !== window.top || retourSiteWix()) ? 'mes-commandes.html' : 'menu.html';
+  window.location.href = suite && (SUITE_OK.test(suite) || ['mes-commandes.html'].indexOf(suite) >= 0) ? suite : defaut;
 }
 
 async function doLogin() {
