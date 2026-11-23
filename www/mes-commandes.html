@@ -203,6 +203,14 @@ h1{font-size:28px;line-height:1.12;font-weight:800;letter-spacing:-.02em;margin-
      retour (liste blanche, jamais une URL arbitraire). */
   function fournisseur(p) {
     try { localStorage.setItem('natty_suite', 'mes-commandes.html'); } catch (e) {}
+    /* Dans le cadre du site Wix, Google et Apple refusent de s'afficher : la
+       PAGE ENTIÈRE part chez le fournisseur et revient sur la page Wix
+       (?retour=, posé par <natty-app>), qui rend les jetons à login.html —
+       lequel relit natty_suite et revient ici. Même chemin que login.html. */
+    var r = new URLSearchParams(location.search).get('retour') || '';
+    if (window.self !== window.top && /^https:\/\/(www\.)?natty-nutrition\.com\/[\w\/-]*$/.test(r)) {
+      try { window.top.location.href = SB_URL + '/auth/v1/authorize?provider=' + p + '&redirect_to=' + encodeURIComponent(r); return; } catch (e) {}
+    }
     location.href = SB_URL + '/auth/v1/authorize?provider=' + p + '&redirect_to='
       + encodeURIComponent('https://natty-suivi.vercel.app/login.html?oauth=1');
   }

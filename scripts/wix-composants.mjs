@@ -40,6 +40,9 @@ export const LIENS = {
   // L'application : chacune de ces pages Vercel a sa page Wix qui l'embarque.
   'https://natty-suivi.vercel.app/login.html':           { attribut: 'lien-suivi',    defaut: '/suivi' },
   'https://natty-suivi.vercel.app/offre.html':           { attribut: 'lien-commande', defaut: '/commander' },
+  // « Me connecter » : connexion + toutes ses commandes (mes-commandes.html),
+  // servie par la page Wix /suivi avec ?vue=commandes — aucune page Wix à créer.
+  'https://natty-suivi.vercel.app/mes-commandes.html':   { attribut: 'lien-commandes', defaut: '/suivi?vue=commandes' },
   'https://natty-suivi.vercel.app/cgv.html':             { attribut: 'lien-cgv',      defaut: '/cgv' },
   'https://natty-suivi.vercel.app/cgu.html':             { attribut: 'lien-cgu',      defaut: '/cgu' },
   'https://natty-suivi.vercel.app/confidentialite.html': { attribut: 'lien-confidentialite', defaut: '/confidentialite' },
