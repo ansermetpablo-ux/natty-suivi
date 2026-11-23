@@ -354,7 +354,7 @@ dialog.explique::backdrop{background:rgba(10,10,12,.55);backdrop-filter:blur(3px
           +   '<p class="desc">' + esc(d.description) + '</p>'
           +   VERROU
           +   '<div class="pied">'
-          +     '<span class="prix"><b class="num">' + eur(d.prix.abonnement) + '</b><span>abonné · ' + eur(d.prix.unite) + ' à l\'unité</span></span>'
+          +     '<span class="prix"><b class="num">' + eur(d.prix.abonnement) + '</b><span>le plat en abonnement</span></span>'
           +     '<button class="ajout" type="button" aria-pressed="' + pris + '" aria-label="' + (pris ? 'Retirer ' : 'Ajouter ') + esc(d.nom) + '">' + (pris ? '✓' : '+') + '</button>'
           +   '</div>'
           + '</div>'
@@ -396,7 +396,7 @@ dialog.explique::backdrop{background:rgba(10,10,12,.55);backdrop-filter:blur(3px
         +   '.</p></div>'
         +   '<div class="bloc"><h4>Allergènes</h4>' + allerg + '</div>'
         +   '<div class="achat">'
-        +     '<span class="prix"><b class="num">' + eur(d.prix.abonnement) + '</b><span>abonné · ' + eur(d.prix.unite) + ' à l\'unité</span></span>'
+        +     '<span class="prix"><b class="num">' + eur(d.prix.abonnement) + '</b><span>le plat en abonnement</span></span>'
         +     '<button class="btn ' + (pris ? 'vert' : 'pri') + '" type="button" data-bascule="' + esc(d.id) + '">'
         +       (pris ? '✓ Dans ma semaine' : 'Ajouter à ma semaine') + '</button>'
         +   '</div>'
@@ -427,7 +427,7 @@ dialog.explique::backdrop{background:rgba(10,10,12,.55);backdrop-filter:blur(3px
       if (!n) return;
       var prix = CATALOGUE.prix;
       this._$('pTitre').textContent = n + (n > 1 ? ' plats' : ' plat') + ' · ' + nb(n * prix.abonnement) + ' € la semaine';
-      this._$('pDetail').textContent = eur(prix.abonnement) + ' le plat en abonnement, au lieu de ' + eur(prix.unite);
+      this._$('pDetail').textContent = eur(prix.abonnement) + ' le plat en abonnement, à partir de 3 plats par semaine';
       this._$('pLien').setAttribute('href', this.lienOffre);
     }
   }

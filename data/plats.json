@@ -1,5 +1,5 @@
 {
-  "genere_le": "2026-10-12",
+  "genere_le": "2026-11-23",
   "genere_par": "scripts/gen-plats.mjs",
   "avertissement": "Fichier généré. Ne pas éditer à la main : relancer le script. Les valeurs sont calculées depuis les fiches techniques et NON VALIDÉES tant que nutrition_validee et allergenes_valides sont à false. Un plat avec coherent:false ne doit pas être publié en l'état.",
   "methode": "Densité pour 100 g calculée depuis la fiche du chef après application des rendements, puis multipliée par le poids de portion décidé dans le tableau VENTE du générateur.",

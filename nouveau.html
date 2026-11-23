@@ -148,7 +148,7 @@
         <div class="step">
           <div class="step-n num">1</div>
           <h3>Vous composez votre semaine</h3>
-          <p>De un à dix plats. Vous changez la sélection chaque semaine, vous mettez en pause quand vous partez, vous arrêtez quand vous voulez.</p>
+          <p>De trois à dix plats par semaine. Vous changez la sélection chaque semaine, vous mettez en pause quand vous partez, vous arrêtez quand vous voulez.</p>
         </div>
         <div class="step">
           <div class="step-n num">2</div>
@@ -240,17 +240,6 @@
       <p class="lede" style="margin:18px 0 42px">Neuf euros, c'est le prix d'un déjeuner de cantine. Avec un chef derrière, et sans la queue.</p>
 
       <div class="plans">
-        <div class="plan">
-          <h3>À l'unité</h3>
-          <div class="amount"><b class="num">10,50</b><span>€ le plat</span></div>
-          <ul>
-            <li>Vous commandez quand vous voulez</li>
-            <li>Aucun engagement</li>
-            <li>Livraison incluse</li>
-          </ul>
-          <a class="btn ghost" href="https://natty-suivi.vercel.app/offre.html">Commander à l'unité</a>
-        </div>
-
         <div class="plan feature">
           <span class="plan-flag">Le plus choisi</span>
           <h3>Abonnement</h3>
@@ -507,7 +496,7 @@ function carte(d){
     +   '<p class="dish-desc">' + d.description + '</p>'
     +   VERROU
     +   '<div class="dish-foot">'
-    +     '<span class="dish-price"><b class="num">' + eur(PRIX_ABO) + '</b><span>abonné · ' + eur(PRIX_UNITE) + ' à l\'unité</span></span>'
+    +     '<span class="dish-price"><b class="num">' + eur(PRIX_ABO) + '</b><span>le plat en abonnement</span></span>'
     +     '<button class="add" type="button" aria-pressed="' + pris + '" aria-label="' + (pris ? 'Retirer ' : 'Ajouter ') + d.nom + '">' + (pris ? '✓' : '+') + '</button>'
     +   '</div>'
     + '</div>'
@@ -601,7 +590,7 @@ function contenuFiche(d){
     +     allerg
     +   '</div>'
     +   '<div class="sheet-buy">'
-    +     '<span class="p"><b class="num">' + eur(PRIX_ABO) + '</b><span>abonné · ' + eur(PRIX_UNITE) + ' à l\'unité</span></span>'
+    +     '<span class="p"><b class="num">' + eur(PRIX_ABO) + '</b><span>le plat en abonnement</span></span>'
     +     '<button class="btn ' + (pris ? '' : 'primary ') + 'sm" type="button" data-toggle="' + d.id + '">'
     +       (pris ? 'Retirer de ma semaine' : 'Ajouter à ma semaine')
     +     '</button>'

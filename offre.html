@@ -174,7 +174,7 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
         <span class="prix">9,00 € <small>le plat</small></span>
         <span>À partir de 3 plats par semaine · suivi nutritionniste inclus · sans engagement</span>
       </button>
-      <button type="button" data-freq="unite" aria-pressed="false">
+      <button type="button" data-freq="unite" aria-pressed="false" hidden>
         <b>Une seule fois</b>
         <span class="prix">10,50 € <small>le plat</small></span>
         <span>Une livraison, sans abonnement</span>
@@ -533,7 +533,7 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
       if (PLATS.some(function (p) { return p.id === id; })) etat.plats[id] = Math.max(1, etat.plats[id] || 0);
     });
   }
-  if (q.get('mode') === 'unite') etat.freq = 'unite';
+  // Commande à l'unité arrêtée (23/11/2026) : ?mode=unite est ignoré.
   majFreq(); dessinerFiltres(); dessinerPlats();
   $('rue').value = etat.rue; $('complement').value = etat.complement; $('cp').value = etat.cp; $('ville').value = etat.ville;
   if (q.get('statut') === 'ok') terminer();

@@ -26,7 +26,9 @@ export default async function handler(req, res) {
      n'est pas authentifiée. */
   if (req.method === 'GET') {
     return res.status(200).json({
-      unite: !!process.env.STRIPE_PRICE_UNITE,
+      /* Commande à l'unité ARRÊTÉE (décision de l'équipe, 23/11/2026) : la
+         route répond toujours `false`, quelle que soit la variable Vercel. */
+      unite: false,
       /* `abo` dit si l'abonnement se vend AU PLAT — donc si un nombre
          quelconque de repas par semaine est possible. Sans ce prix, seules les
          deux formules historiques (3 et 4) existent, et l'écran ne doit
@@ -111,20 +113,13 @@ export default async function handler(req, res) {
        sans plancher, une quantité nulle ou négative fait échouer Stripe avec
        un message que personne ne saura lire. */
     const aLUnite = mode === 'unite';
+    // Arrêt de la commande à l'unité (23/11/2026) : refus serveur, même pour
+    // un POST bricolé ou une ancienne version de l'app.
     if (aLUnite) {
-      const PRIX_UNITE = process.env.STRIPE_PRICE_UNITE;
-      if (!PRIX_UNITE) {
-        return res.status(503).json({ error: 'La commande à l’unité n’est pas encore ouverte' });
-      }
-      const n = Math.floor(Number(quantite));
-      if (!Number.isFinite(n) || n < 1 || n > 20) {
-        return res.status(400).json({ error: 'Quantité invalide (1 à 20 plats)' });
-      }
-      return await creerSession({
-        res, STRIPE_SECRET_KEY, token, userId, plateforme, livraison,
-        priceId: PRIX_UNITE, quantite: n, stripeMode: 'payment'
-      });
+      return res.status(410).json({ error: 'La commande à l’unité n’est plus proposée : l’abonnement commence à 3 plats par semaine.' });
     }
+    /* L'ancien code de session à l'unité (prix STRIPE_PRICE_UNITE, 1 à 20 plats,
+       mode=payment) est dans l'historique git si l'offre revient. */
 
     /* ── L'ABONNEMENT, au plat ─────────────────────────────────────────────
        Le nombre de repas par semaine est libre : Stripe facture un prix
