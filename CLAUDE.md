@@ -282,7 +282,10 @@ personne côté serveur.
    `login.html?suite=offre.html%3Fetape%3D3` ramène ici après connexion (liste blanche
    `SUITE_OK`, gardée en sessionStorage pour l'aller-retour Google/Apple), CGV, Stripe.
 - **Abonnement : 3 à 10 plats par semaine** (`REPAS_MIN = 3` dans `api/checkout.js`, relu
-  par le GET ; décision du 14/10/2026). À l'unité : 1 à 20.
+  par le GET ; décision du 14/10/2026). ⛔ **À l'unité : ARRÊTÉ le 23/11/2026** —
+  `GET /api/checkout` répond toujours `unite:false`, `POST mode=unite` répond **410**,
+  le bouton « Une seule fois » est masqué et la carte tarif retirée de l'accueil. Ne pas
+  rouvrir sans décision de l'équipe (et penser à retirer `STRIPE_PRICE_UNITE` de Vercel).
 - Le panier vit en `sessionStorage` (`natty_commande`) : il survit à la connexion et à un
   paiement annulé.
 - **Stripe ne s'affiche pas dans un cadre** : depuis Wix, `window.top` part au paiement.
