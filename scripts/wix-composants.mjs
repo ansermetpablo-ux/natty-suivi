@@ -41,10 +41,10 @@ export const LIENS = {
   'https://natty-suivi.vercel.app/login.html':           { attribut: 'lien-suivi',    defaut: '/suivi' },
   'https://natty-suivi.vercel.app/offre.html':           { attribut: 'lien-commande', defaut: '/commander' },
   // « Me connecter » : connexion + toutes ses commandes (mes-commandes.html),
-  // servie par la page Wix /commander avec ?vue=commandes — aucune page Wix à
-  // créer. ⚠️ Pas /suivi : cette page Wix s'affichait vide le 23/11/2026
-  // (introuvable ou protégée côté Wix).
-  'https://natty-suivi.vercel.app/mes-commandes.html':   { attribut: 'lien-commandes', defaut: '/commander?vue=commandes' },
+  // servie par la page Wix /commander avec #commandes — aucune page Wix à
+  // créer. ⚠️ Un `#` et pas un `?` : Wix sert une page VIDE dès qu'une adresse
+  // porte une requête. ⚠️ Pas /suivi : cette page Wix s'affiche vide (23/11/2026).
+  'https://natty-suivi.vercel.app/mes-commandes.html':   { attribut: 'lien-commandes', defaut: '/commander#commandes' },
   'https://natty-suivi.vercel.app/cgv.html':             { attribut: 'lien-cgv',      defaut: '/cgv' },
   'https://natty-suivi.vercel.app/cgu.html':             { attribut: 'lien-cgu',      defaut: '/cgu' },
   'https://natty-suivi.vercel.app/confidentialite.html': { attribut: 'lien-confidentialite', defaut: '/confidentialite' },

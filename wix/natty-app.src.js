@@ -86,8 +86,16 @@
       new URLSearchParams(location.search).forEach(function (v, k) { q.set(k, v); });
       // Venir d'un lien « Créer mon compte » : l'onglet Inscription, pas l'accueil de l'app.
       if (q.get('inscription') === '1' || q.get('motif')) page = 'login.html';
-      // « Me connecter » du menu : ?vue=commandes (sur /commander) ouvre
-      // mes-commandes.html (connexion, puis toutes ses commandes) dans une page Wix existante.
+      /* ⚠️ Wix sert une page VIDE dès que l'adresse porte une requête (`?…`,
+         relevé le 23/11/2026) : ce que le site doit transmettre passe donc par
+         le FRAGMENT. `#commandes` (« Me connecter » du menu) ouvre
+         mes-commandes.html ; `#statut=ok|annule` est le retour de Stripe. */
+      var h = location.hash.replace(/^#/, '');
+      if (h && !/(^|&)(access_token|error)=/.test(h)) {
+        if (h === 'commandes') page = 'mes-commandes.html';
+        else new URLSearchParams(h).forEach(function (v, k) { if (k === 'statut' && /^(ok|annule)$/.test(v)) q.set(k, v); });
+        try { history.replaceState(null, '', location.pathname); } catch (e) {}
+      }
       if (q.get('vue') === 'commandes') { page = 'mes-commandes.html'; q.delete('vue'); }
       q.set('retour', location.origin + location.pathname);
 

@@ -306,7 +306,11 @@ async function creerSession(o) {
        réussi mène au récap de ce qui vient d'être payé (mes-commandes.html
        attend que le webhook écrive le bon) ; un paiement abandonné revient sur
        la page de commande, panier gardé. */
-    : (site ? site + '?statut=' + statut
+    /* ⚠️ `#statut=`, pas `?statut=` : Wix sert une page VIDE dès qu'une adresse
+       du site porte une requête (relevé le 23/11/2026 sur /commander et /suivi).
+       Le fragment ne part pas au serveur ; <natty-app> le relit et le passe à
+       la page de l'app. */
+    : (site ? site + '#statut=' + statut
        : statut === 'ok'
          ? origin + '/mes-commandes.html?nouvelle=1&type=' + (unique ? 'unite' : 'abonnement')
          : origin + '/offre.html?statut=' + statut + (token ? '&token=' + encodeURIComponent(token) : ''));
