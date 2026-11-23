@@ -312,7 +312,7 @@ h1{font-size:28px;line-height:1.12;font-weight:800;letter-spacing:-.02em;margin-
     if (neuve) h += carte(neuve, D, true);
     if (actives.length) h += (neuve ? '<div class="sec-titre">Autres commandes en cours</div>' : '') + actives.map(function (b) { return carte(b, D); }).join('');
     if (passees.length) h += '<div class="sec-titre">Commandes passées</div>' + passees.map(function (b) { return carte(b, D); }).join('');
-    if (!h) h = '<div class="card vide">Aucune commande pour le moment.<a class="btn" href="offre.html?mode=unite">Commander des plats</a></div>';
+    if (!h) h = '<div class="card vide">Aucune commande pour le moment.<a class="btn" href="offre.html">Commander des plats</a></div>';
     $('liste').innerHTML = (NOUVELLE && !neuve ? attente() : '') + h;
     return neuve;
   }

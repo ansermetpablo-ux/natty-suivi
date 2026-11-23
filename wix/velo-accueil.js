@@ -1,5 +1,5 @@
 // Natty — code Velo de la page qui porte <natty-accueil>.
-// FICHIER GÉNÉRÉ par scripts/build-wix.mjs le 2026-11-23, depuis nouveau.html.
+// FICHIER GÉNÉRÉ par scripts/build-wix.mjs le 2026-10-12, depuis nouveau.html.
 // À coller dans le code de la page Wix ; l'élément Custom Element doit
 // avoir l'ID #nattyPage. seoMarkup donne à Google le texte du composant,
 // qu'il ne lit pas dans le Shadow DOM.

@@ -286,6 +286,10 @@ personne côté serveur.
   `GET /api/checkout` répond toujours `unite:false`, `POST mode=unite` répond **410**,
   le bouton « Une seule fois » est masqué et la carte tarif retirée de l'accueil. Ne pas
   rouvrir sans décision de l'équipe (et penser à retirer `STRIPE_PRICE_UNITE` de Vercel).
+  `?mode=unite` est ignoré et un panier `sessionStorage` resté sur « unité » repasse à
+  l'abonnement au chargement (sans attendre le GET, qui peut échouer). Le webhook garde
+  son traitement des paiements `unite` : Stripe peut rejouer un ancien événement, et les
+  bons à l'unité déjà payés restent honorés (CGV §2 bis).
 - Le panier vit en `sessionStorage` (`natty_commande`) : il survit à la connexion et à un
   paiement annulé.
 - **Stripe ne s'affiche pas dans un cadre** : depuis Wix, `window.top` part au paiement.
