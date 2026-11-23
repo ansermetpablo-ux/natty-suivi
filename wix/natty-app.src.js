@@ -86,8 +86,8 @@
       new URLSearchParams(location.search).forEach(function (v, k) { q.set(k, v); });
       // Venir d'un lien « Créer mon compte » : l'onglet Inscription, pas l'accueil de l'app.
       if (q.get('inscription') === '1' || q.get('motif')) page = 'login.html';
-      // « Me connecter » du menu : /suivi?vue=commandes ouvre mes-commandes.html
-      // (connexion, puis toutes ses commandes) dans la page Wix existante.
+      // « Me connecter » du menu : ?vue=commandes (sur /commander) ouvre
+      // mes-commandes.html (connexion, puis toutes ses commandes) dans une page Wix existante.
       if (q.get('vue') === 'commandes') { page = 'mes-commandes.html'; q.delete('vue'); }
       q.set('retour', location.origin + location.pathname);
 
