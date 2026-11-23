@@ -1,5 +1,5 @@
 /* Natty — <natty-app> pour Wix Studio.
-   FICHIER GÉNÉRÉ par scripts/build-wix.mjs le 2026-10-12, depuis wix/natty-app.src.js et le menu de nouveau.html.
+   FICHIER GÉNÉRÉ par scripts/build-wix.mjs le 2026-11-23, depuis wix/natty-app.src.js et le menu de nouveau.html.
    Ne pas éditer à la main. */
 /* ═══════════════════════════════════════════════════════════════
    Natty — <natty-app>, l'application DANS une page du site Wix

@@ -42,6 +42,8 @@ body{ padding-bottom: 120px; }
 
 /* Une fois / chaque semaine */
 .freq{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+/* Une seule formule depuis l'arrêt de l'unité (23/11/2026) : pleine largeur. */
+.freq:has(> button[hidden]){ grid-template-columns: 1fr; }
 .freq button{
   text-align: left; padding: 18px 18px 16px; border-radius: var(--r-md);
   background: var(--surface); border: 1.5px solid var(--line); color: var(--ink);
@@ -174,7 +176,7 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
         <span class="prix">9,00 € <small>le plat</small></span>
         <span>À partir de 3 plats par semaine · suivi nutritionniste inclus · sans engagement</span>
       </button>
-      <button type="button" data-freq="unite" aria-pressed="false">
+      <button type="button" data-freq="unite" aria-pressed="false" hidden>
         <b>Une seule fois</b>
         <span class="prix">10,50 € <small>le plat</small></span>
         <span>Une livraison, sans abonnement</span>
@@ -539,7 +541,9 @@ body.avec-nav .barre{ bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
       if (PLATS.some(function (p) { return p.id === id; })) etat.plats[id] = Math.max(1, etat.plats[id] || 0);
     });
   }
-  if (q.get('mode') === 'unite') etat.freq = 'unite';
+  // Commande à l'unité arrêtée (23/11/2026) : ?mode=unite est ignoré, et un
+  // panier gardé en sessionStorage avant l'arrêt repasse à l'abonnement.
+  etat.freq = 'abo';
   majFreq(); dessinerFiltres(); dessinerPlats();
   $('rue').value = etat.rue; $('complement').value = etat.complement; $('cp').value = etat.cp; $('ville').value = etat.ville;
   if (q.get('statut') === 'ok') terminer();
