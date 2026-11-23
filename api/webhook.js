@@ -431,7 +431,7 @@ function ajouterJours(ymd, n) {
 async function creerBon(supabase, b) {
   const debut = /^\d{4}-\d{2}-\d{2}$/.test(b.date || '') ? auPlusTot(b.date) : prochaineDate(b.jour);
   const n = Math.max(1, Math.min(24, Math.floor(Number(b.semaines) || 1)));
-  let premier = null;
+  let premier = null, cree = false;
   for (let k = 0; k < n; k++) {
     const jour = debut ? ajouterJours(debut, 7 * k) : null;
     try {
@@ -451,12 +451,29 @@ async function creerBon(supabase, b) {
       // 409 = déjà créé pour cette référence Stripe : un webhook rejoué.
       if (r.status === 409) { if (k === 0) return; continue; }
       if (!r.ok) { console.log('bon de commande non créé — %s', r.status); continue; }
-      if (k === 0) { try { const a = await r.json(); premier = Array.isArray(a) ? a[0] : a; } catch (e) {} }
+      if (k === 0) { cree = true; try { const a = await r.json(); premier = Array.isArray(a) ? a[0] : a; } catch (e) {} }
     } catch (e) {
       // Ne jamais faire échouer le webhook pour un bon : l'abonnement, lui, est
       // écrit. Stripe rejouerait sinon l'événement entier.
       console.log('bon de commande — %s', e.message);
     }
+  }
+  /* Le FILET de l'équipe, qui ne dépend pas de Resend (issue #14) : sans
+     domaine vérifié, l'email « Nouvelle commande » à contact@ échoue en
+     silence, et une commande payée sans date ni adresse passait inaperçue.
+     Une notification CRM (popup) est écrite AVANT l'email — l'admin, lui,
+     relit les bons directement (bandeau « nouvelles commandes »). Une seule
+     par paiement : un webhook rejoué retombe sur le 409 et n'arrive pas ici. */
+  if (cree) {
+    const manque = [!debut && 'date', !b.adresse && 'adresse'].filter(Boolean);
+    try {
+      await Commande.notifierEquipe(
+        '🧾 Nouvelle commande — ' + (b.type === 'unite' ? 'à l’unité' : 'abonnement') + ' · ' + b.nb_repas + ' plat' + (b.nb_repas > 1 ? 's' : '')
+          + (n > 1 ? ' × ' + n + ' semaines' : ''),
+        'Livraison : ' + dateLongue(debut) + (b.creneau ? ' · ' + b.creneau : '')
+          + (manque.length ? ' — ⚠️ À rappeler : ' + manque.join(' et ') + ' manquante' + (manque.length > 1 ? 's' : '') : ''),
+        premier && premier.id);
+    } catch (e) { console.log('notification nouvelle commande — %s', e.message); }
   }
   try {
     await envoyerRecap(supabase, Object.assign({}, b, {

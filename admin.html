@@ -48,6 +48,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 10
 .nav-badge { position: absolute; top: -4px; right: -4px; background: var(--red); color: white; border-radius: 99px; font-size: 10px; font-weight: 600; padding: 2px 6px; display: none; }
 .nav-badge.visible { display: block; }
 .content { max-width: 900px; margin: 0 auto; padding: 0 20px 40px; }
+/* Bandeau « nouvelles commandes » (issue #14) — le filet qui ne dépend pas de l'email. */
+.cmd-alerte { max-width: 860px; margin: 0 auto 14px; padding: 12px 14px; border-radius: 16px; background: var(--al); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.cmd-alerte[hidden] { display: none; }
+.cmd-alerte-txt { flex: 1 1 220px; font-size: 13px; color: var(--text); line-height: 1.45; }
+.cmd-alerte-txt b { color: var(--black); }
+.cmd-alerte-rap { color: var(--red); font-weight: 600; }
+.cmd-alerte-btn { margin-left: auto; padding: 9px 14px; border: none; border-radius: 12px; background: var(--black); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
+@media (max-width: 920px) { .cmd-alerte { margin: 0 20px 14px; } }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 .stats-strip { display: flex; gap: 10px; margin-bottom: 16px; }
@@ -651,6 +659,12 @@ input[type="file"] { display: none; }
              l'admin, comme Équipe : un signalement nomme deux membres. -->
         <button class="nav-tab" id="navSignalements" style="display:none;">🚩 Signalements<span class="nav-badge" id="navSignBadge" style="display:none">0</span></button>
       </div>
+      <!-- Nouvelles commandes payées + bons « à rappeler » (sans date ou sans
+           adresse). Lit `bons_commande` directement : rien ne dépend de Resend. -->
+      <div class="cmd-alerte" id="cmdAlerte" role="status" hidden>
+        <div class="cmd-alerte-txt" id="cmdAlerteTxt"></div>
+        <button class="cmd-alerte-btn" type="button" id="cmdAlerteVoir">Voir les commandes →</button>
+      </div>
       <div class="content">
         <div class="tab-content active" id="tabClients">
           <div class="stats-strip">
@@ -1174,6 +1188,8 @@ function logout() {
   localStorage.removeItem('nutri_session');
   ecrireStaffSession(null);              // le JWT d'équipe part avec le reste
   STAFF_ROLE = null;
+  clearInterval(_alerteCmdMinuteur);
+  var ca = document.getElementById('cmdAlerte'); if (ca) ca.hidden = true;
   currentNutri=null; isMasterAdmin=false;
   var b = document.getElementById('bandeauSecours'); if (b) b.remove();
   document.getElementById('mainApp').classList.remove('visible');
@@ -3513,6 +3529,76 @@ function demarrerAppAvecRole() {
   if (cfg.tabs.includes('navCommandes')) chargerCommandesCalendrier();
   if (isMasterAdmin || cfg.tabs.includes('navEquipe')) chargerEquipe();
   subscribeGlobalRealtime();
+  if (isMasterAdmin || cfg.tabs.includes('navCommandes')) armerAlerteCommandes();
+}
+
+/* ═══ NOUVELLES COMMANDES — le filet qui ne dépend pas de l'email (issue #14) ═══
+   Une commande payée sur Stripe crée un bon (`bons_commande`, webhook). L'email
+   « Nouvelle commande » à contact@ part par Resend, qui échoue EN SILENCE tant
+   que `RESEND_FROM` n'est pas sur un domaine vérifié : le 23/11/2026 une
+   commande de 9 plats, sans date ni adresse, n'a été vue que par hasard.
+   Ce bandeau relit les bons eux-mêmes, à la connexion, toutes les 2 min et au
+   retour sur l'onglet. Deux informations, et elles ne se confondent pas :
+   - « nouvelles » : créées depuis la dernière fois qu'on a cliqué « Voir » sur
+     CET appareil (repère en localStorage, par compte ; 14 jours au premier
+     passage, pour rattraper ce qui serait passé inaperçu) ;
+   - « à rappeler » : tout bon client non livré ni annulé, sans date OU sans
+     adresse. Celles-là restent affichées tant que le manque n'est pas comblé,
+     « vu » ou pas — c'est un client qu'il faut appeler, pas une info.
+   Les bons `manuel` (créés par l'équipe dans le CRM) sont exclus des deux. */
+let _alerteCmdMinuteur = null;
+function cleVuCommandes() {
+  const uid = (STAFF_SESSION && STAFF_SESSION.user_id) || 'equipe';
+  return 'natty_admin_cmd_vu_' + uid;
+}
+function lireVuCommandes() {
+  try { const v = localStorage.getItem(cleVuCommandes()); if (v) return v; } catch (e) {}
+  return new Date(Date.now() - 14 * 864e5).toISOString();
+}
+function bonARappeler(b) {
+  return !b.jour_livraison || !String(b.adresse || '').trim();
+}
+// Une commande de N semaines = N bons (`stripe_ref`, `#1`, `#2`…) : on compte des
+// COMMANDES, pas des bons, sinon un abonnement de 4 semaines « vaut » 4 nouvelles.
+function refCommande(b) { return String(b.stripe_ref || b.id).split('#')[0]; }
+
+async function verifierNouvellesCommandes() {
+  const el = document.getElementById('cmdAlerte');
+  if (!el) return;
+  let bons;
+  try {
+    bons = await sb('bons_commande?type=neq.manuel&statut=not.in.(annule,livre)'
+      + '&select=id,type,nb_repas,jour_livraison,adresse,created_at,stripe_ref&order=created_at.desc&limit=300');
+  } catch (e) { console.warn('bandeau commandes :', e); return; }   // garder l'état affiché
+  const vu = lireVuCommandes();
+  const nouvelles = new Set(), aRappeler = new Set();
+  (bons || []).forEach(b => {
+    if (b.created_at && b.created_at > vu) nouvelles.add(refCommande(b));
+    if (bonARappeler(b)) aRappeler.add(refCommande(b));
+  });
+  const n = nouvelles.size, r = aRappeler.size;
+  if (!n && !r) { el.hidden = true; return; }
+  const morceaux = [];
+  if (n) morceaux.push('🧾 <b>' + n + ' nouvelle' + (n > 1 ? 's' : '') + ' commande' + (n > 1 ? 's' : '') + '</b> depuis votre dernière visite');
+  if (r) morceaux.push('<span class="cmd-alerte-rap">⚠️ ' + r + ' à rappeler</span> — sans date ou sans adresse de livraison');
+  document.getElementById('cmdAlerteTxt').innerHTML = morceaux.join('<br>');
+  el.hidden = false;
+}
+
+function armerAlerteCommandes() {
+  const btn = document.getElementById('cmdAlerteVoir');
+  if (btn && !btn.dataset.arme) {
+    btn.dataset.arme = '1';
+    btn.addEventListener('click', () => {
+      try { localStorage.setItem(cleVuCommandes(), new Date().toISOString()); } catch (e) {}
+      switchNav('commandes');
+      verifierNouvellesCommandes();
+    });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) verifierNouvellesCommandes(); });
+  }
+  clearInterval(_alerteCmdMinuteur);
+  _alerteCmdMinuteur = setInterval(verifierNouvellesCommandes, 120000);
+  verifierNouvellesCommandes();
 }
 
 
