@@ -4872,9 +4872,59 @@ function prCheckValider() {
 // PLATS PROCHAINS — proposés par le nutritionniste
 // Charger depuis table commandes (statut = 'propose') pour cette semaine
 // ═══════════════════════════════════════════════════════════════
+/* ⚠️ UNE COMMANDE PAYÉE VIT DANS `bons_commande`, PAS DANS `commandes`
+   (issue #14, cause 3). Le webhook Stripe y écrit un bon par semaine livrée ;
+   ce bloc ne lisait que `commandes`, donc un client qui venait de payer lisait
+   « Votre nutritionniste prépare votre sélection ». Le bon passe d'abord
+   (policy `bons_commande_soi`, lecture seule) ; l'ancienne table reste en repli.
+   Le détail complet (plats, code de réception, confirmation) est dans
+   `mes-commandes.html` : ce bloc y renvoie au lieu d'en refaire une copie. */
+async function prChargerBonClient() {
+  var today = Natty.jour();
+  var champs = '&select=id,type,nb_repas,jour_livraison,creneau_livraison,adresse,plats,statut,confirmee_at';
+  // Le prochain bon daté, sinon un bon payé encore sans date.
+  var bons = await sbFetch('bons_commande?user_id=eq.' + USER_ID + '&statut=not.in.(livre,annule)&jour_livraison=gte.' + today + champs + '&order=jour_livraison.asc&limit=1');
+  if (!bons || !bons.length) bons = await sbFetch('bons_commande?user_id=eq.' + USER_ID + '&statut=not.in.(livre,annule)&jour_livraison=is.null' + champs + '&order=created_at.desc&limit=1');
+  if (!bons || !bons.length) return false;
+  var b = bons[0];
+  var vide = document.getElementById('prDateVide');
+  var choisie = document.getElementById('prDateChoisie');
+  var lblDate = document.getElementById('prDateLabel');
+  var lblCreneau = document.getElementById('prCreneauLabel');
+  var n = b.nb_repas || 0;
+  var date = b.jour_livraison ? new Date(b.jour_livraison + 'T12:00:00').toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'}) : '';
+  if (vide) vide.style.display = 'none';
+  if (choisie) choisie.style.display = 'flex';
+  if (lblDate) lblDate.textContent = date ? '📦 Livraison ' + date : '📦 Commande payée — date à convenir';
+  var manque = [];
+  if (!b.jour_livraison) manque.push('la date');
+  if (!String(b.adresse || '').trim()) manque.push('l’adresse');
+  if (lblCreneau) lblCreneau.textContent = n + ' plat' + (n > 1 ? 's' : '')
+    + (b.creneau_livraison ? ' · ' + b.creneau_livraison : '')
+    + (manque.length ? ' · nous vous contactons pour ' + manque.join(' et ')
+      : (b.type === 'abonnement' && !(b.plats && b.plats.length) ? ' · plats choisis avec votre nutritionniste' : (b.confirmee_at ? ' · confirmée ✓' : '')));
+  var btn = choisie ? choisie.querySelector('button') : null;
+  if (btn) {
+    btn.textContent = 'Voir ma commande';
+    // Remplace l'ancien « Modifier » (qui écrivait dans `commandes`) : la
+    // commande payée se consulte — et se modifie par son lien — là-bas.
+    btn.onclick = function () { if (window.Natty && Natty.goto) Natty.goto('mes-commandes.html'); else location.href = 'mes-commandes.html'; };
+  }
+  // Les plats choisis : seuls ceux de `plats_menu` (uuid) ont une fiche à montrer.
+  var uuids = (Array.isArray(b.plats) ? b.plats : []).map(function (p) { return p.id; })
+    .filter(function (id) { return /^[0-9a-f-]{36}$/i.test(String(id || '')); });
+  if (uuids.length) {
+    var plats = await sbFetch('plats_menu?id=in.(' + uuids.join(',') + ')');
+    if (plats && plats.length) prBlocRenderCarrousel(plats);
+  }
+  return true;
+}
+
 async function prChargerPlatsNutri() {
   if (!USER_ID) return;
   try {
+    try { if (await prChargerBonClient()) return; }
+    catch (e) { console.warn('prChargerBonClient:', e); }   // repli sur l'ancienne table
     // Chercher la commande de la semaine en cours ou à venir proposée par le nutri
     var today = Natty.jour();
     var commandes = await sbFetch('commandes?user_id=eq.' + USER_ID + '&semaine=gte.' + today + '&order=semaine.asc&limit=1');
