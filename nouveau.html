@@ -66,53 +66,77 @@
 
 <main id="top">
 
-  <!-- ═══ HERO ═══════════════════════════════════════════ -->
-  <section class="hero">
-    <div class="wrap hero-grid">
-      <div>
-        <h1>Des plats de chef au bureau. Vos macros <em>remplies toutes seules.</em></h1>
-        <p class="hero-sub">Nos déjeuners sont conçus avec un chef passé par le Cheval Blanc, livrés à Paris et en Île-de-France, et enregistrés dans votre suivi nutritionnel le jour de la livraison. Vous ne saisissez rien.</p>
-        <div class="hero-cta">
-          <a class="btn primary" href="#plats">Voir les plats de la semaine</a>
-          <span class="price-inline"><b class="num">9 €</b> le plat en abonnement</span>
-        </div>
-      </div>
-      <figure class="hero-photo" style="margin:0">
-        <img src="img/hero.webp" alt="Assiette Natty : filet de poisson, légumes rôtis et céréales complètes" width="1400" height="1367">
-        <figcaption class="hero-tag">Recettes signées par un chef</figcaption>
-      </figure>
+  <!-- ═══ OUVERTURE (25/11/2026) ═════════════════════════
+       Un fond vidéo qui alterne cuisine et sport : la cuisine vient des
+       rushes du chef (C0007, C0012, C0049, C0064), le sport des clips
+       générés pour Natty. Montage, étalonnage sombre et fondus dans le
+       fichier lui-même (video/accueil.mp4, 22 s, 1,7 Mo) : une seule
+       requête, rien à synchroniser dans la page. -->
+  <section class="ouverture" aria-label="Natty">
+    <video class="ouverture-video" id="ouvVideo" src="video/accueil.mp4" poster="img/accueil-fond.webp"
+           autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
+    <div class="ouverture-voile"></div>
+    <div class="wrap ouverture-in">
+      <p class="ouverture-kicker">Cuisine &nbsp;·&nbsp; Sport &nbsp;·&nbsp; Nutrition</p>
+      <h1>Des repas performants<br>et gastronomiques.</h1>
+      <p class="ouverture-sous">Livrés toutes les semaines, à Paris et en Île-de-France.</p>
+      <a class="btn ouverture-btn" href="#made">Découvrir nos plats</a>
+    </div>
+    <button class="ouverture-pause" id="ouvPause" type="button" aria-label="Mettre la vidéo en pause">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>
+    </button>
+  </section>
+
+  <!-- ═══ PRÉSENTATION ═══════════════════════════════════ -->
+  <section class="presente">
+    <div class="wrap presente-in">
+      <p class="eyebrow">À propos</p>
+      <p class="presente-citation">« Rendre l'alimentation performante accessible, et retrouver le plaisir de manger sainement. »</p>
+      <p class="presente-texte">Natty est née à Paris. Des chefs et des experts en nutrition réunis pour que chaque sportif mange aussi bien qu'il s'entraîne : tes besoins calculés, tes plats cuisinés, ta semaine livrée.</p>
+      <a class="presente-lien" href="https://natty-suivi.vercel.app/narration.html">Tester notre entraînement <span aria-hidden="true">→</span></a>
+      <p class="presente-note">Dix chapitres courts pour apprendre à manger pour performer. Gratuit, sans inscription.</p>
     </div>
   </section>
 
-  <!-- ═══ PREUVES ════════════════════════════════════════ -->
-  <div class="proofs">
-    <div class="proof">
-      <b>Un chef passé par le Cheval Blanc</b>
-      <span>Francis D'Almeida signe chaque fiche technique.</span>
-    </div>
-    <div class="proof">
-      <b>Un nutritionniste suit votre semaine</b>
-      <span>Inclus dans l'abonnement, par messagerie et rendez-vous.</span>
-    </div>
-    <div class="proof">
-      <b>Paris et Île-de-France</b>
-      <span>Livré au bureau, prêt à réchauffer.</span>
-    </div>
-  </div>
+  <!-- ═══ MADE FOR ME ════════════════════════════════════
+       Un carrousel au format d'une publication Instagram : une photo à la
+       fois, le compteur en haut à droite, les points en dessous. Le geste
+       est un défilement natif (scroll-snap) — aucun suivi de pointeur. -->
+  <section id="made" class="rule made">
+    <div class="wrap made-grid">
+      <div class="made-txt">
+        <p class="eyebrow">La formule</p>
+        <h2>Made For Me.</h2>
+        <p class="lede">Tes plats, cuisinés par nos chefs et dosés sur tes besoins. Ton objectif, ton sport et ton rythme décident des quantités : chaque barquette est faite pour toi, pas pour la moyenne.</p>
+        <ul class="made-liste">
+          <li>Tes macros calculées et réparties dans chaque plat</li>
+          <li>Une cuisine de chef, gastronomique</li>
+          <li>Un nutritionniste qui suit ta semaine</li>
+          <li>Rien à peser, rien à cuisiner</li>
+        </ul>
+        <div class="hero-cta">
+          <a class="btn primary" href="#plats">Composer ma semaine</a>
+          <span class="price-inline"><b class="num">9 €</b> le plat en abonnement</span>
+        </div>
+      </div>
 
-  <!-- ═══ MANIFESTE ══════════════════════════════════════ -->
-  <section class="manifesto">
-    <div class="wrap manifesto-grid">
-      <div>
-        <p class="eyebrow">Pourquoi Natty existe</p>
-        <h2>Bien manger au bureau ne devrait pas être un arbitrage.</h2>
-      </div>
-      <div class="manifesto-body">
-        <p>Treize heures cinq, la réunion se termine. On descend prendre un truc rapide, on le mange d'une main, l'autre sur la souris. À treize heures trente-cinq c'est fini, et on ne sait déjà plus ce qu'on a avalé.</p>
-        <p>Le déjeuner est le seul moment de la journée qu'on sacrifie sans jamais l'inscrire à l'ordre du jour. On protège les créneaux de réunion. Celui-là, jamais. Pourtant c'est lui qui décide de l'après-midi.</p>
-        <p>Natty prend le problème par le seul bout réaliste : <strong>rendre le bon déjeuner plus simple que le mauvais</strong>. Un chef écrit la recette au gramme, les plats arrivent au bureau, c'est prêt en deux minutes. Au prix d'un déjeuner de cantine.</p>
-        <p>Et le plat se compte tout seul. Calories et macronutriments arrivent dans votre application sans que vous ayez rien à photographier. Personne d'autre ne fait ça en France aujourd'hui.</p>
-      </div>
+      <figure class="post" aria-roledescription="carrousel" aria-label="Plats Made For Me">
+        <header class="post-tete">
+          <span class="post-avatar">N</span>
+          <span class="post-nom"><b>natty</b><span>Made For Me</span></span>
+          <span class="post-compte num" id="madeCompte">1/5</span>
+        </header>
+        <div class="post-piste" id="madePiste" tabindex="0">
+          <div class="post-slide"><img style="--cadrage:50% 78%" src="img/made/poulet-risotto.webp" alt="Poulet rôti sur risotto aux champignons" width="900" height="1048" loading="lazy"><p>Poulet rôti, risotto aux champignons</p></div>
+          <div class="post-slide"><img src="img/made/saumon-puree.webp" alt="Saumon, purée et légumes rôtis" width="900" height="900" loading="lazy"><p>Saumon, purée &amp; légumes rôtis</p></div>
+          <div class="post-slide"><img src="img/made/poulet-snacke.webp" alt="Poulet snacké sur riz et légumes" width="900" height="900" loading="lazy"><p>Poulet snacké, riz &amp; légumes</p></div>
+          <div class="post-slide"><img src="img/made/wrap-poulet.webp" alt="Wrap complet au poulet" width="900" height="900" loading="lazy"><p>Wrap complet au poulet</p></div>
+          <div class="post-slide"><img src="img/made/bowl-quinoa.webp" alt="Bowl de quinoa et légumes rôtis" width="900" height="900" loading="lazy"><p>Bowl quinoa &amp; légumes rôtis</p></div>
+        </div>
+        <button class="post-fleche prec" id="madePrec" type="button" aria-label="Plat précédent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="post-fleche suiv" id="madeSuiv" type="button" aria-label="Plat suivant"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        <div class="post-points" id="madePoints" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      </figure>
     </div>
   </section>
 
@@ -689,6 +713,67 @@ document.getElementById('filters').addEventListener('click', function(e){
 });
 
 dessine();
+
+/* ═══ Ouverture vidéo ═════════════════════════════════════════
+   muted est reposé en propriété : c'est elle que lisent les règles
+   d'autoplay, et un attribut posé par innerHTML (Wix) ne suffit pas
+   partout. Mouvement réduit : la vidéo ne part pas, le poster reste. */
+(function(){
+  var v = document.getElementById('ouvVideo'), b = document.getElementById('ouvPause');
+  if (!v || !b) return;
+  v.muted = true; v.defaultMuted = true;
+  var calme = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>';
+  var LIRE  = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
+  function etat(){
+    var p = v.paused;
+    b.innerHTML = p ? LIRE : PAUSE;
+    b.setAttribute('aria-label', p ? 'Lire la vidéo' : 'Mettre la vidéo en pause');
+  }
+  if (calme) { v.removeAttribute('autoplay'); v.pause(); }
+  else { var r = v.play(); if (r && r.catch) r.catch(function(){}); }
+  v.addEventListener('play', etat); v.addEventListener('pause', etat); etat();
+  b.addEventListener('click', function(){ if (v.paused) { var r = v.play(); if (r && r.catch) r.catch(function(){}); } else v.pause(); });
+})();
+
+/* ═══ Made For Me : le carrousel ══════════════════════════════
+   La position se LIT sur le défilement (scrollLeft / largeur), elle ne
+   se tient pas dans une variable : le doigt, le clavier et les flèches
+   déplacent tous la même piste. */
+(function(){
+  var piste = document.getElementById('madePiste');
+  if (!piste) return;
+  var points = document.getElementById('madePoints').children;
+  var compte = document.getElementById('madeCompte');
+  var prec = document.getElementById('madePrec'), suiv = document.getElementById('madeSuiv');
+  var n = piste.children.length, cadre = 0;
+  function index(){ var w = piste.clientWidth || 1; return Math.max(0, Math.min(n - 1, Math.round(piste.scrollLeft / w))); }
+  function peindre(){
+    var i = index();
+    for (var k = 0; k < points.length; k++) points[k].className = k === i ? 'on' : '';
+    compte.textContent = (i + 1) + '/' + n;
+    prec.disabled = i === 0; suiv.disabled = i === n - 1;
+  }
+  /* Deux taps rapprochés : le second part de la CIBLE du premier, pas de
+     la position à mi-défilement (qui arrondit encore à l'ancien plat). */
+  var cible = null, oubli = 0;
+  function base(){ return cible === null ? index() : cible; }
+  function aller(i){
+    cible = Math.max(0, Math.min(n - 1, i));
+    clearTimeout(oubli); oubli = setTimeout(function(){ cible = null; peindre(); }, 700);
+    piste.scrollTo({ left: cible * piste.clientWidth });
+  }
+  piste.addEventListener('scroll', function(){ if (cadre) return; cadre = requestAnimationFrame(function(){ cadre = 0; peindre(); }); }, { passive: true });
+  /* Une page qui ne peint pas ne reçoit aucune rAF : un filet. */
+  piste.addEventListener('scrollend', peindre);
+  prec.addEventListener('click', function(){ aller(base() - 1); });
+  suiv.addEventListener('click', function(){ aller(base() + 1); });
+  piste.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight') { e.preventDefault(); aller(base() + 1); }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); aller(base() - 1); }
+  });
+  peindre();
+})();
 </script>
 
 </body>

@@ -48,18 +48,19 @@ export function cssPourHote(css) {
 
 /* Les liens d'une page à l'autre deviennent des jetons @@attribut@@,
    remplacés à l'exécution par l'adresse Wix. Les chemins relatifs
-   d'images visent Vercel. */
+   d'images et de vidéos visent Vercel. */
 function reecrireLiens(html, liens) {
   for (const [page, l] of Object.entries(liens)) {
     html = html.split(`href="${page}`).join(`href="@@${l.attribut}@@`);
   }
-  return html.replace(/(src|href)="(img\/[^"]*)"/g, `$1="@@base@@$2"`);
+  return html.replace(/(src|href|poster)="((?:img|video)\/[^"]*)"/g, `$1="@@base@@$2"`);
 }
 
 export function texteSeo(main, catalogue) {
   let h = main
     .replace(/<script[\s\S]*?<\/script>/g, '')
     .replace(/<svg[\s\S]*?<\/svg>/g, '')
+    .replace(/<video[\s\S]*?<\/video>/g, '')
     .replace(/<button[\s\S]*?<\/button>/g, '')
     .replace(/<(figure|img)[^>]*>/g, '').replace(/<\/figure>/g, '')
     .replace(/<!--[\s\S]*?-->/g, '')

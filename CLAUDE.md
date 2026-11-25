@@ -314,6 +314,29 @@ Login) : gardées, masquées.
 (Pablo Ansermet, Anatole Bouhours, Antoine Canivet, Ferreol Weisman-Morel), Pablo
 directeur de la publication. Ne pas réintroduire le portable personnel.
 
+#### L'ouverture de l'accueil : vidéo, présentation, Made For Me (2026-11-25)
+Le haut de `nouveau.html` est refait. L'ancien héros (photo + « Des plats de chef au bureau »),
+le bandeau de preuves et le manifeste ont disparu ; trois blocs les remplacent.
+1. **Fond vidéo plein écran** : `video/accueil.mp4`, 22 s, 1,7 Mo, avec l'affiche
+   `img/accueil-fond.webp`. Le montage est fait dans le fichier lui-même : il alterne quatre
+   rushes du chef (C0012, C0007, C0049, C0064, issus des WeTransfer du 29/09) et quatre clips de
+   sport générés (boxeur, deux dunks, football). Il porte un étalonnage sombre et des fondus de
+   0,5 s. Une seule requête, rien à synchroniser dans la page. Le texte est posé sur la vidéo,
+   donc en couleurs écrites en dur, quel que soit le thème. Sous `prefers-reduced-motion`,
+   l'affiche reste fixe. Un bouton pause est prévu.
+   ⚠️ Pour refaire le montage, la commande ffmpeg et ses fenêtres de temps sont dans le message
+   du commit.
+2. **Présentation** : la citation « À propos » et un lien texte sobre, « Tester notre
+   entraînement → », vers `narration.html`.
+3. **Made For Me** : un carrousel au format d'une publication Instagram (`#made`). Les photos
+   carrées sont dans `img/made/`, tirées du PDF « Site internet ». Le défilement est natif,
+   avec compteur, points et flèches. Deux taps rapprochés partent de la CIBLE du premier, pas de
+   la position atteinte à mi-défilement.
+- `scripts/page-vers-wix.mjs` réécrit désormais aussi `video/…` et `poster=` vers Vercel, et
+  retire les `<video>` du texte SEO.
+- ⚠️ Les deux vidéos Instagram fournies (squat, Hyrox) ne sont **pas** utilisées : ce sont des
+  contenus de tiers, sans droits connus.
+
 #### « Ma commande », la semaine N+1, la durée qui multiplie Stripe (2026-09-30)
 - **Tunnel en 7 étapes** — Formule · **Repas** (page entière de tuiles-héros, `stepRepas`) · Objectif · Durée · Nutri · Livraison · Récap. `ETAPES_IDS` dit l'ordre : les anciens `step2…step6` sont gardés, jamais renumérotés.
 - **Durée en héros** (semaines ou mois = 4 sem., 2 semaines par défaut), synchronisée avec le curseur du graphique. `semaines` part à `api/checkout.js` et **multiplie la quantité Stripe** (repas × semaines) ; la souscription se renouvelle toutes les N semaines via `price_data` (même produit, même montant unitaire lus chez Stripe, `interval_count = N`). Le webhook crée **un bon par semaine** (`stripe_ref`, `#1`, `#2`…).
