@@ -11,6 +11,8 @@ import { CRENEAUX, dateMinPour, ajouterJours, codePostal, estIDF, lireParJeton, 
 // L'abonnement commence à 3 plats par semaine (décision du 14/10/2026) :
 // en dessous, c'est la commande à l'unité.
 const REPAS_MIN = 3, REPAS_MAX = 10;
+/* À l'unité : 4 plats minimum (décision du 25/11/2026), 20 au plus. */
+const UNITE_MIN = 4, UNITE_MAX = 20;
 
 /* La DURÉE de l'abonnement, en semaines (offre.html la fait choisir en héros,
    2 par défaut). Elle MULTIPLIE la quantité Stripe : on facture « repas ×
@@ -90,6 +92,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     return res.status(200).json({
       unite: !!process.env.STRIPE_PRICE_UNITE,
+      uniteLimites: { min: UNITE_MIN, max: UNITE_MAX },
       /* `abo` dit si l'abonnement se vend AU PLAT — donc si un nombre
          quelconque de repas par semaine est possible. Sans ce prix, seules les
          deux formules historiques (3 et 4) existent, et l'écran ne doit
@@ -208,8 +211,8 @@ export default async function handler(req, res) {
         return res.status(503).json({ error: 'La commande à l’unité n’est pas encore ouverte' });
       }
       const n = Math.floor(Number(quantite));
-      if (!Number.isFinite(n) || n < 1 || n > 20) {
-        return res.status(400).json({ error: 'Quantité invalide (1 à 20 plats)' });
+      if (!Number.isFinite(n) || n < UNITE_MIN || n > UNITE_MAX) {
+        return res.status(400).json({ error: 'À l’unité : de ' + UNITE_MIN + ' à ' + UNITE_MAX + ' plats' });
       }
       return await creerSession({
         res, STRIPE_SECRET_KEY, token, userId, plateforme, livraison,
