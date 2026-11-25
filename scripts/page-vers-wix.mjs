@@ -26,7 +26,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-const POLICES = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Instrument+Sans:ital,wght@0,400..700;1,400..600&display=swap';
+const POLICES = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Poppins:ital,wght,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap';
 const BASE = 'https://natty-suivi.vercel.app/';
 
 function entre(t, a, b, depuis = 0) {

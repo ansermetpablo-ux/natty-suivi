@@ -39,7 +39,7 @@
   var MENU = /*__MENU__*/ "";
   var DEFAUTS = /*__DEFAUTS__*/ {};
   var ATTRIBUTS = /*__ATTRIBUTS__*/ [];
-  var POLICES = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Instrument+Sans:ital,wght@0,400..700;1,400..600&display=swap';
+  var POLICES = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Poppins:ital,wght,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap';
   var PAGES = ['menu.html', 'suivi.html', 'offre.html', 'login.html', 'mes-commandes.html', 'cgv.html', 'cgu.html', 'confidentialite.html'];
   /* La page de l'app se déduit de l'adresse de la page Wix : les attributs
      saisis dans l'éditeur Wix ne sont pas fiables (le « Nom du tag » ne

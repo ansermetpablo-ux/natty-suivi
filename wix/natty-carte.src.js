@@ -48,7 +48,7 @@
   var CATALOGUE = /*__CATALOGUE__*/ null;
   if (!CATALOGUE || !CATALOGUE.plats) return;
 
-  var POLICES = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Instrument+Sans:ital,wght@0,400..700&display=swap';
+  var POLICES = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Poppins:ital,wght,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap';
 
   /* Les polices se chargent dans le document hôte : une @import dans le
      Shadow DOM bloque le premier rendu, et Wix ne les charge pas pour nous.
@@ -75,8 +75,8 @@
   --ink:#101014; --on-ink:#FFFFFF; --muted:#70707C; --line:#E8E8EE;
   --green:#2A9E4F; --amber:#B07400; --amber-bg:rgba(176,116,0,.10);
   --r-xl:30px; --r-lg:24px; --r-md:18px; --r-full:999px;
-  --display:'Fraunces','Iowan Old Style',Georgia,serif;
-  --text:'Instrument Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --display:'The Season','Fraunces','Iowan Old Style',Georgia,serif;
+  --text:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 
   display:block;
   font-family:var(--text);

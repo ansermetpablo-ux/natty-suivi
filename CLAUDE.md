@@ -337,6 +337,57 @@ le bandeau de preuves et le manifeste ont disparu ; trois blocs les remplacent.
 - ⚠️ Les deux vidéos Instagram fournies (squat, Hyrox) ne sont **pas** utilisées : ce sont des
   contenus de tiers, sans droits connus.
 
+#### Le test de préparation (`preparation.html` + `assets/preparation.js`, 2026-11-25)
+Lien « Tester ma préparation » dans la présentation de l'accueil. Page autonome, sans
+réseau ni compte. Les réponses restent en `localStorage` (`natty_prepa_v1`), et l'on reprend
+où l'on s'était arrêté.
+- **Une scène = une question**, et le parcours se recalcule à chaque pas (`parcours()`).
+  - Les questions, dans l'ordre : prénom (texte), taille (règle VERTICALE), poids (roues façon
+    minuteur), sexe, âge (règle horizontale), discipline, compétition, objectif.
+  - Selon l'objectif : un temps visé (roues h:min) ou un poids visé.
+  - Puis la semaine type : 7 jours × matin, journée, soir. Chaque créneau coché ajoute trois
+    scènes : le type de séance, les exercices, l'intensité et la durée.
+  - Enfin les repas jour par jour, les ingrédients, le calcul et les résultats.
+- **Les compétitions sont des badges dessinés**, pas les logos officiels (HYROX, IRONMAN…
+  sont des marques). Elles sont filtrées par discipline. Leur `base` est le temps d'un
+  finisseur médian, en ordre de grandeur.
+- **L'analyse est une ESTIMATION, et l'écran le dit.**
+  - Besoins : Mifflin-St Jeor × 1,4, plus les séances, calculées en MET.
+  - Glucides cibles : 3 à 10 g/kg selon la charge du jour, plus environ 1 g/kg avant et après
+    une séance exigeante.
+  - Protéines : 1,6 à 2,2 g/kg, et environ 0,3 g/kg dans le repas qui suit une séance.
+  - Cinq critères : répartition, qualité, quantité, glucides et phases, protéines et
+    récupération.
+  - Le temps probable = base × (1,22 − 0,40 × préparation) × âge × IMC × alimentation, avec
+    une fourchette de ± 3,5 %.
+  - Les notes sont données par jour, par séance et exercice, par repas et par ingrédient. Les
+    conseils sont triés par impact.
+- ⚠️ **Note par exercice = moyenne GÉOMÉTRIQUE** (spécificité, carburant du jour,
+  récupération). La moyenne arithmétique affichait « Très bien » à un exercice nourri à 27 %.
+- ⚠️ **Les règles et les roues lisent leur valeur DANS l'événement `scroll`**, pas dans une
+  rAF. Une page qui ne peint pas n'en reçoit aucune : mesuré au banc, la taille restait à 175
+  malgré le défilement.
+- ⚠️ Un verrou de 450 ms dans `suivant()` : sans lui, un choix qui avance seul et un tap sur
+  « Continuer » faisaient sauter une scène.
+- Les repas : une journée complète se reporte sur les jours encore vides (« Repris de lundi »).
+  On décrit sa semaine type une fois, puis on corrige les jours qui diffèrent.
+
+#### Typographie du site (2026-11-25) : The Season pour les titres, Poppins pour le texte
+`--display: 'The Season', 'Fraunces', …` et `--text: 'Poppins', …` dans `css/natty.css` (et
+`wix/natty-carte.src.js`). La police Google des pages et de `POLICES` (page-vers-wix,
+natty-app, natty-carte) charge Poppins à la place d'Instrument Sans.
+🔴 **The Season est une police sous licence, absente du dépôt et du Mac** : les titres
+retombent sur Fraunces. Pour l'activer :
+1. déposer `fonts/the-season.woff2` ;
+2. la déclarer en `@font-face` au niveau du DOCUMENT : une `@font-face` posée dans un Shadow
+   DOM ne charge rien, donc il faut une feuille injectée comme `POLICES` ;
+3. ajouter dans `vercel.json` un en-tête `Access-Control-Allow-Origin` sur `/fonts/` :
+   natty-nutrition.com charge la police depuis Vercel.
+`preparation.html` déclare déjà l'`@font-face` (même origine, pas de CORS).
+L'accueil : la présentation est passée sans sur-titre (titre à gauche, texte et bouton à
+droite), et Made For Me est centré, son titre en héros, ses promesses en petit avec une
+illustration. Le risotto est recadré sur l'assiette.
+
 #### « Ma commande », la semaine N+1, la durée qui multiplie Stripe (2026-09-30)
 - **Tunnel en 7 étapes** — Formule · **Repas** (page entière de tuiles-héros, `stepRepas`) · Objectif · Durée · Nutri · Livraison · Récap. `ETAPES_IDS` dit l'ordre : les anciens `step2…step6` sont gardés, jamais renumérotés.
 - **Durée en héros** (semaines ou mois = 4 sem., 2 semaines par défaut), synchronisée avec le curseur du graphique. `semaines` part à `api/checkout.js` et **multiplie la quantité Stripe** (repas × semaines) ; la souscription se renouvelle toutes les N semaines via `price_data` (même produit, même montant unitaire lus chez Stripe, `interval_count = N`). Le webhook crée **un bon par semaine** (`stripe_ref`, `#1`, `#2`…).
